@@ -1,4 +1,4 @@
-import type { ContentType } from "@/data/content";
+import type { ContentType } from "@/lib/content";
 
 const CONTENT_TYPE_META: Record<ContentType, { label: string; emoji: string }> =
   {

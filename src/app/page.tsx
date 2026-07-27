@@ -3,7 +3,7 @@ import { Calendar, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
 import { ContentCard } from "@/components/content/content-card";
-import { getUpcomingEvents, getLatestPosts } from "@/data/content";
+import { getUpcomingEvents, getLatestPosts } from "@/lib/content";
 import { formatDate } from "@/lib/format";
 
 export default function HomePage() {

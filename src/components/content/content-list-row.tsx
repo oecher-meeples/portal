@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ContentItem } from "@/data/content";
+import type { ContentItem } from "@/lib/content";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
 import { ContentTypeBadge } from "@/components/content/content-type-badge";
 import { formatDate } from "@/lib/format";

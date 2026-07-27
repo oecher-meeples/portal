@@ -4,7 +4,7 @@ import { RoleGate } from "@/components/shared/role-gate";
 import { PageHeading } from "@/components/shared/page-heading";
 import { StatTile } from "@/components/shared/stat-tile";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
-import { CONTENT_ITEMS } from "@/data/content";
+import { getAllContent } from "@/lib/content";
 import { formatDateShort } from "@/lib/format";
 
 const QUICK_LINKS = [
@@ -15,7 +15,7 @@ const QUICK_LINKS = [
 ];
 
 export default function DashboardPage() {
-  const internalNews = CONTENT_ITEMS.filter((item) => item.internal);
+  const internalNews = getAllContent().filter((item) => item.internal);
 
   return (
     <RoleGate minRole="mitglied">
