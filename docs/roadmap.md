@@ -17,10 +17,10 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
     * [x] **Datenbank & ORM:** **PostgreSQL** via **Neon** (serverless), ORM: **Prisma**.
     * [x] **UI & Styling:** **Tailwind CSS v4** + **shadcn/ui**.
     * [x] **Hosting & Deployment:** App → **Vercel**, Datenbank → **Neon**, Assets → **Vercel Blob**.
-* **[ ] Meilenstein 0.2: Infrastruktur-Vorbereitung**
-    * [ ] Initialisierung des/der GitHub-Repositories mit passender `.gitignore` und Lizenz.
-    * [ ] Einrichtung von Branch-Protection-Rules (z. B. `main` geschützt, Änderungen nur via Pull Request).
-    * [ ] Konfiguration von grundlegenden Tooling-Standards (Prettier, ESLint).
+* [x] **Meilenstein 0.2: Infrastruktur-Vorbereitung**
+    * [x] Initialisierung des/der GitHub-Repositories mit passender `.gitignore` und Lizenz.
+    * [x] Einrichtung von Branch-Protection-Rules (`main` geschützt via Ruleset, Änderungen nur via Pull Request).
+    * [x] Konfiguration von grundlegenden Tooling-Standards (Prettier, ESLint, EditorConfig).
 
 ---
 
