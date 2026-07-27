@@ -1,0 +1,155 @@
+import type { Role } from "@/lib/role-context";
+import {
+  Home,
+  Newspaper,
+  HeartHandshake,
+  FileText,
+  LayoutDashboard,
+  Dice5,
+  ScanLine,
+  Users,
+  ShieldCheck,
+  Tag,
+  UserCircle,
+  BarChart3,
+  Boxes,
+  UserCog,
+  ShoppingBasket,
+  type LucideIcon,
+} from "lucide-react";
+
+export type NavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  /** Breadcrumb label for the section this item belongs to. */
+  section: string;
+};
+
+export type NavGroup = {
+  title: string | null;
+  minRole: Role;
+  items: NavItem[];
+};
+
+export const ROLE_ORDER: Role[] = ["gast", "mitglied", "admin"];
+
+export function roleAtLeast(current: Role, minRole: Role) {
+  return ROLE_ORDER.indexOf(current) >= ROLE_ORDER.indexOf(minRole);
+}
+
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    title: null,
+    minRole: "gast",
+    items: [
+      { label: "Startseite", href: "/", icon: Home, section: "Öffentlich" },
+      {
+        label: "Termine & Blog",
+        href: "/news",
+        icon: Newspaper,
+        section: "Öffentlich",
+      },
+      {
+        label: "Support & Spenden",
+        href: "/spenden",
+        icon: HeartHandshake,
+        section: "Öffentlich",
+      },
+      {
+        label: "Downloads & Rechtliches",
+        href: "/downloads",
+        icon: FileText,
+        section: "Öffentlich",
+      },
+    ],
+  },
+  {
+    title: "Mitgliederbereich",
+    minRole: "mitglied",
+    items: [
+      {
+        label: "Mein Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Ludothek",
+        href: "/ludothek",
+        icon: Dice5,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "QR-/EAN-Scan",
+        href: "/scan",
+        icon: ScanLine,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Spielergesuche",
+        href: "/lfg",
+        icon: Users,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Helferplan",
+        href: "/helfer",
+        icon: ShieldCheck,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Markt & Ersatzteile",
+        href: "/markt",
+        icon: Tag,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Mein Profil",
+        href: "/profil",
+        icon: UserCircle,
+        section: "Mitgliederbereich",
+      },
+    ],
+  },
+  {
+    title: "Administration",
+    minRole: "admin",
+    items: [
+      {
+        label: "Admin-Dashboard",
+        href: "/admin",
+        icon: BarChart3,
+        section: "Administration",
+      },
+      {
+        label: "Bestand & Inventur",
+        href: "/admin/bestand",
+        icon: Boxes,
+        section: "Administration",
+      },
+      {
+        label: "Mitglieder & Einladungen",
+        href: "/admin/mitglieder",
+        icon: UserCog,
+        section: "Administration",
+      },
+      {
+        label: "Bring & Buy Kasse",
+        href: "/admin/bringbuy",
+        icon: ShoppingBasket,
+        section: "Administration",
+      },
+    ],
+  },
+];
+
+export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+
+export function findNavItem(pathname: string): NavItem | undefined {
+  const exact = ALL_NAV_ITEMS.find((item) => item.href === pathname);
+  if (exact) return exact;
+  return ALL_NAV_ITEMS.filter((item) => pathname.startsWith(item.href))
+    .sort((a, b) => b.href.length - a.href.length)
+    .at(0);
+}
