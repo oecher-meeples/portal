@@ -32,9 +32,15 @@ export default function DownloadsPage() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm">
-                Download
-              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <a href={file.href} download>
+                    Download
+                  </a>
+                }
+              />
             </div>
           ))}
         </div>
