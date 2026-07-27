@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { RoleProvider } from "@/lib/role-context";
 import { AppShell } from "@/components/layout/app-shell";
+import { BrandWatermark } from "@/components/layout/brand-watermark";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,6 +20,9 @@ export const metadata: Metadata = {
   title: "Oecher Meeples – Ludothek & Vereinsportal",
   description:
     "Der Brettspielverein für Aachen und Umgebung: Termine, News, Ludothek und Vereinsleben.",
+  icons: {
+    icon: "/meeple-150x150.png",
+  },
 };
 
 export default function RootLayout({
@@ -33,6 +37,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col antialiased">
+        <BrandWatermark />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
