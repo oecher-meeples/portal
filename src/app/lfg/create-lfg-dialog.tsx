@@ -18,12 +18,20 @@ import { Textarea } from "@/components/ui/textarea";
 export function CreateLfgDialog() {
   return (
     <Dialog>
-      <DialogTrigger render={<Button className="gap-1.5"><Plus className="size-4" />Gesuch erstellen</Button>} />
+      <DialogTrigger
+        render={
+          <Button className="gap-1.5">
+            <Plus className="size-4" />
+            Gesuch erstellen
+          </Button>
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Neues Spielergesuch</DialogTitle>
           <DialogDescription>
-            Finde Mitspielende für ein bestimmtes Spiel oder spontan für einen Abend.
+            Finde Mitspielende für ein bestimmtes Spiel oder spontan für einen
+            Abend.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
@@ -47,7 +55,11 @@ export function CreateLfgDialog() {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="lfg-desc">Beschreibung</Label>
-            <Textarea id="lfg-desc" rows={3} placeholder="Worauf freust du dich, wen suchst du?" />
+            <Textarea
+              id="lfg-desc"
+              rows={3}
+              placeholder="Worauf freust du dich, wen suchst du?"
+            />
           </div>
         </div>
         <DialogFooter>

@@ -31,7 +31,8 @@ export const CONTENT_ITEMS: ContentItem[] = [
     slug: "arche-nova-cup-2026-bericht",
     type: "blog",
     title: "Arche Nova Cup 2026 – der Bericht",
-    excerpt: "Zwölf Teilnehmende, drei Runden, ein Sieger. Wir blicken zurück auf ein packendes Turnier.",
+    excerpt:
+      "Zwölf Teilnehmende, drei Runden, ein Sieger. Wir blicken zurück auf ein packendes Turnier.",
     body: [
       "Am vergangenen Samstag traten zwölf Meeples in drei Runden gegeneinander an, um die Arche-Nova-Krone des Jahres zu erringen.",
       "Nach spannenden Endrunden setzte sich Nadia knapp gegen den Titelverteidiger durch. Danke an alle Teilnehmenden und an unsere Erklärbären für die Turnierleitung!",
@@ -68,7 +69,8 @@ export const CONTENT_ITEMS: ContentItem[] = [
     slug: "familien-nachmittag-15-08",
     type: "termin",
     title: "Familien-Nachmittag",
-    excerpt: "Ab 15:00 – Spiele für die ganze Familie, von Kindern bis Großeltern.",
+    excerpt:
+      "Ab 15:00 – Spiele für die ganze Familie, von Kindern bis Großeltern.",
     body: [
       "Unser monatlicher Familien-Nachmittag richtet sich an alle Altersgruppen. Wir stellen eine Auswahl leichter Familienspiele bereit.",
       "Kein Anmeldung nötig, einfach vorbeikommen.",

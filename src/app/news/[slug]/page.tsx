@@ -24,7 +24,7 @@ export default async function PostDetailPage({
       <div className="flex items-center gap-3">
         <ContentTypeBadge type={item.type} />
         {item.instagram && (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
             <Share2 className="size-3.5" />
             Auch auf Instagram
           </span>
@@ -33,7 +33,7 @@ export default async function PostDetailPage({
       <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
         {item.title}
       </h1>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {formatDate(item.date)}
         {item.author && <> · {item.author}</>}
         {item.location && <> · {item.location}</>}

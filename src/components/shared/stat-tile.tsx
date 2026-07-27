@@ -8,12 +8,12 @@ export function StatTile({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-5">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="bg-card rounded-lg border p-5">
+      <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {label}
       </p>
       <p className="mt-2 font-serif text-3xl font-bold">{value}</p>
-      {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-muted-foreground mt-1 text-sm">{hint}</p>}
     </div>
   );
 }

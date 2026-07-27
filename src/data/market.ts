@@ -23,7 +23,8 @@ export const MARKET_LISTINGS: MarketListing[] = [
     price: 8,
     condition: "Gebraucht",
     seller: "Lea",
-    description: "Grundspiel inkl. aller Landschaftsplättchen und Meeple. Karton etwas eingerissen.",
+    description:
+      "Grundspiel inkl. aller Landschaftsplättchen und Meeple. Karton etwas eingerissen.",
   },
   {
     id: "meeple-set-bunt",
@@ -39,7 +40,8 @@ export const MARKET_LISTINGS: MarketListing[] = [
     price: 25,
     condition: "Gut, komplett",
     seller: "Tobias",
-    description: "Terra Mystica Grundspiel, alle Fraktionsplatten und Ressourcen vorhanden.",
+    description:
+      "Terra Mystica Grundspiel, alle Fraktionsplatten und Ressourcen vorhanden.",
   },
   {
     id: "sanduhr-30s",
@@ -47,7 +49,8 @@ export const MARKET_LISTINGS: MarketListing[] = [
     price: 2,
     condition: "Neuwertig",
     seller: "Nadia",
-    description: "30-Sekunden-Sanduhr aus einer Partyspiel-Sammlung, kaum benutzt.",
+    description:
+      "30-Sekunden-Sanduhr aus einer Partyspiel-Sammlung, kaum benutzt.",
   },
   {
     id: "wuerfelturm-holz",
@@ -55,7 +58,8 @@ export const MARKET_LISTINGS: MarketListing[] = [
     price: 10,
     condition: "Bespielt",
     seller: "Jan",
-    description: "Handgefertigter Würfelturm aus Holz, funktionstüchtig, leichte Gebrauchsspuren.",
+    description:
+      "Handgefertigter Würfelturm aus Holz, funktionstüchtig, leichte Gebrauchsspuren.",
   },
 ];
 
@@ -71,19 +75,22 @@ export const SPARE_PART_LISTINGS: SparePartListing[] = [
     id: "allgemeines",
     title: "Allgemeines",
     condition: "gemischt",
-    description: "Sammelbehälter für lose Würfel, Holzteile und Karten ohne festes Spiel.",
+    description:
+      "Sammelbehälter für lose Würfel, Holzteile und Karten ohne festes Spiel.",
   },
   {
     id: "agricola-ausschlachtung",
     title: "Agricola (Ausschlachtung)",
     condition: "beschädigt",
-    description: "Deinventarisiertes Exemplar, Tableaus und Holzressourcen zur Weiterverwendung.",
+    description:
+      "Deinventarisiertes Exemplar, Tableaus und Holzressourcen zur Weiterverwendung.",
   },
   {
     id: "root-ausschlachtung",
     title: "Root (Ausschlachtung)",
     condition: "Wasserschaden",
-    description: "Spielplan beschädigt, Fraktionskomponenten größtenteils intakt.",
+    description:
+      "Spielplan beschädigt, Fraktionskomponenten größtenteils intakt.",
   },
 ];
 

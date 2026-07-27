@@ -9,10 +9,28 @@ export type FleaMarketItem = {
 };
 
 export const FLEA_MARKET_ITEMS: FleaMarketItem[] = [
-  { id: "A-021", title: "Wingspan", seller: "Lea", price: 28, status: "FOR_SALE" },
-  { id: "A-088", title: "7 Wonders", seller: "Tobias", price: 15, status: "RESERVED" },
+  {
+    id: "A-021",
+    title: "Wingspan",
+    seller: "Lea",
+    price: 28,
+    status: "FOR_SALE",
+  },
+  {
+    id: "A-088",
+    title: "7 Wonders",
+    seller: "Tobias",
+    price: 15,
+    status: "RESERVED",
+  },
   { id: "A-014", title: "Splendor", seller: "Jan", price: 10, status: "SOLD" },
-  { id: "A-102", title: "Azul", seller: "Nadia", price: 22, status: "FOR_SALE" },
+  {
+    id: "A-102",
+    title: "Azul",
+    seller: "Nadia",
+    price: 22,
+    status: "FOR_SALE",
+  },
 ];
 
 export const FLEA_MARKET_STATS = {

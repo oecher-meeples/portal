@@ -6,7 +6,6 @@ Entwickle einen komplexen, robusten Proof of Concept (PoC) nach professionellen 
 
 Wähle ein eigenes, anspruchsvolles Thema, mit dem du dich einigermaßen auskennst (z. B. Simulation, Engine, Tool). Der Umfang soll ca. 2000+ Zeilen Code umfassen. Achte auf Wartbarkeit und Erweiterbarkeit.
 
-
 ## Abgabe
 
 Pushe deine Lösung in dieses Repository und warte auf Feedback im Feedback PR.

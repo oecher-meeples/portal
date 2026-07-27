@@ -13,7 +13,7 @@ export function PageHeading({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+      <p className="text-primary text-xs font-semibold tracking-wider uppercase">
         {eyebrow}
       </p>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -23,7 +23,7 @@ export function PageHeading({
         {action}
       </div>
       {description && (
-        <p className="max-w-2xl text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground max-w-2xl">{description}</p>
       )}
     </div>
   );

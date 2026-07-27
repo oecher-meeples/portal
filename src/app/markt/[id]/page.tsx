@@ -31,9 +31,11 @@ export default async function MarketListingPage({
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <h1 className="font-serif text-2xl font-bold">{listing.title}</h1>
-            <span className="shrink-0 font-serif text-2xl font-bold text-primary">{listing.price} €</span>
+            <span className="text-primary shrink-0 font-serif text-2xl font-bold">
+              {listing.price} €
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Zustand: {listing.condition} · von {listing.seller}
           </p>
           <p className="leading-relaxed">{listing.description}</p>

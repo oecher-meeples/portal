@@ -17,7 +17,7 @@ export function Sidebar() {
         {groups.map((group) => (
           <div key={group.title ?? "root"} className="flex flex-col gap-1">
             {group.title && (
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wider uppercase">
                 {group.title}
               </p>
             )}
@@ -46,7 +46,7 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="mt-auto border-t pt-4 text-xs text-muted-foreground">
+      <div className="text-muted-foreground mt-auto border-t pt-4 text-xs">
         Klickbarer Prototyp &middot; Oecher Meeples
         <br />
         alle Inhalte sind Platzhalter

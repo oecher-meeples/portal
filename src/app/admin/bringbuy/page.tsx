@@ -38,7 +38,10 @@ export default function AdminBringBuyPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile label="Artikel gelistet" value={FLEA_MARKET_STATS.listed} />
-          <StatTile label="Verkauft heute" value={FLEA_MARKET_STATS.soldToday} />
+          <StatTile
+            label="Verkauft heute"
+            value={FLEA_MARKET_STATS.soldToday}
+          />
           <StatTile label="Umsatz" value={`${FLEA_MARKET_STATS.revenue} €`} />
           <StatTile label="Reserviert" value={FLEA_MARKET_STATS.reserved} />
         </div>
@@ -58,12 +61,19 @@ export default function AdminBringBuyPage() {
               <TableBody>
                 {FLEA_MARKET_ITEMS.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-mono text-sm">{item.id}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {item.id}
+                    </TableCell>
                     <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.seller}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.seller}
+                    </TableCell>
                     <TableCell>{item.price} €</TableCell>
                     <TableCell>
-                      <StatusPill label={FLEA_STATUS_LABELS[item.status]} tone={STATUS_TONE[item.status]} />
+                      <StatusPill
+                        label={FLEA_STATUS_LABELS[item.status]}
+                        tone={STATUS_TONE[item.status]}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -72,10 +82,10 @@ export default function AdminBringBuyPage() {
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="rounded-lg border bg-card p-5">
+            <div className="bg-card rounded-lg border p-5">
               <h2 className="font-serif text-lg font-bold">Kasse</h2>
               <div className="relative mt-3">
-                <ScanLine className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <ScanLine className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input placeholder="Artikel-QR scannen …" className="pl-9" />
               </div>
               <div className="mt-3 flex gap-2">
@@ -86,9 +96,11 @@ export default function AdminBringBuyPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border bg-primary/10 p-5">
-              <h2 className="font-serif text-lg font-bold">Excel-Massenimport</h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
+            <div className="bg-primary/10 rounded-lg border p-5">
+              <h2 className="font-serif text-lg font-bold">
+                Excel-Massenimport
+              </h2>
+              <p className="text-muted-foreground mt-1.5 text-sm">
                 Alle Artikel eines Events per Vorlage hochladen.
               </p>
               <Button variant="outline" className="mt-3">

@@ -13,18 +13,21 @@ export default function DownloadsPage() {
         description="Anträge, Satzung und rechtliche Dokumente zum direkten Abruf."
       />
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="flex flex-col divide-y rounded-lg border bg-card">
+        <div className="bg-card flex flex-col divide-y rounded-lg border">
           {DOWNLOADS.map((file) => (
-            <div key={file.title} className="flex items-center justify-between gap-4 p-4">
+            <div
+              key={file.title}
+              className="flex items-center justify-between gap-4 p-4"
+            >
               <div className="flex items-center gap-3">
                 {file.filetype === "XLSX" ? (
                   <FileSpreadsheet className="size-5 text-emerald-600" />
                 ) : (
-                  <FileText className="size-5 text-muted-foreground" />
+                  <FileText className="text-muted-foreground size-5" />
                 )}
                 <div>
                   <p className="font-medium">{file.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {file.filetype} · {file.size}
                   </p>
                 </div>
@@ -36,14 +39,19 @@ export default function DownloadsPage() {
           ))}
         </div>
 
-        <div className="flex flex-col divide-y rounded-lg border bg-card">
+        <div className="bg-card flex flex-col divide-y rounded-lg border">
           {LEGAL_DOCS.map((doc) => (
-            <div key={doc.slug} className="flex items-center justify-between gap-4 p-4">
+            <div
+              key={doc.slug}
+              className="flex items-center justify-between gap-4 p-4"
+            >
               <p className="font-medium">{doc.title}</p>
               <Button
                 variant="outline"
                 size="sm"
-                render={<Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>}
+                render={
+                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
+                }
               />
             </div>
           ))}

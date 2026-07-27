@@ -54,7 +54,9 @@ export const GAMES: BoardGame[] = [
       "Wirtschafts-Strategiespiel im industriellen England: baue Netzwerke, Fabriken und Handelsrouten über zwei Epochen.",
     mechanics: ["Netzwerkbau", "Handkartenmanagement", "Wirtschaftssimulation"],
     status: "BORROWED",
-    copies: [{ code: "OM-2025-0113", location: "privat · Lea", status: "BORROWED" }],
+    copies: [
+      { code: "OM-2025-0113", location: "privat · Lea", status: "BORROWED" },
+    ],
     explainers: [{ name: "Tobias K.", level: 3 }],
   },
   {
@@ -67,7 +69,9 @@ export const GAMES: BoardGame[] = [
       "Lege Landschafts- und Tierplättchen, um Habitate für die Tierwelt des pazifischen Nordwestens zu gestalten.",
     mechanics: ["Plättchenlegen", "Mustererkennung"],
     status: "AVAILABLE",
-    copies: [{ code: "OM-2024-0087", location: "Regal A2", status: "AVAILABLE" }],
+    copies: [
+      { code: "OM-2024-0087", location: "Regal A2", status: "AVAILABLE" },
+    ],
     explainers: [{ name: "Lea Meier", level: 2 }],
   },
   {
@@ -80,7 +84,9 @@ export const GAMES: BoardGame[] = [
       "Asymmetrischer Waldkrieg: jede Fraktion verfolgt eigene Regeln und Siegbedingungen in einer wimmelnden Tierwelt.",
     mechanics: ["Asymmetrie", "Gebietskontrolle", "Konflikt"],
     status: "MAINTENANCE",
-    copies: [{ code: "OM-2025-0188", location: "Werkstatt", status: "MAINTENANCE" }],
+    copies: [
+      { code: "OM-2025-0188", location: "Werkstatt", status: "MAINTENANCE" },
+    ],
     explainers: [{ name: "Jan Herwig", level: 2 }],
   },
   {
@@ -89,10 +95,13 @@ export const GAMES: BoardGame[] = [
     players: "1–4",
     duration: "90’",
     weight: 3.5,
-    description: "Erweiterung für Arche Nova mit neuen Gehegen, Sponsoren und Herausforderungen.",
+    description:
+      "Erweiterung für Arche Nova mit neuen Gehegen, Sponsoren und Herausforderungen.",
     mechanics: ["Engine-Building", "Erweiterung"],
     status: "AVAILABLE",
-    copies: [{ code: "OM-2026-0501", location: "Regal C4", status: "AVAILABLE" }],
+    copies: [
+      { code: "OM-2026-0501", location: "Regal C4", status: "AVAILABLE" },
+    ],
     explainers: [{ name: "Nadia", level: 1 }],
   },
   {
@@ -105,7 +114,9 @@ export const GAMES: BoardGame[] = [
       "Locke seltene Vogelarten in dein Habitat-Netzwerk und sammle Eier, Futter und Karteneffekte.",
     mechanics: ["Kartenmanagement", "Engine-Building"],
     status: "AVAILABLE",
-    copies: [{ code: "OM-2023-0044", location: "Regal A1", status: "AVAILABLE" }],
+    copies: [
+      { code: "OM-2023-0044", location: "Regal A1", status: "AVAILABLE" },
+    ],
     explainers: [
       { name: "Lea Meier", level: 3 },
       { name: "Tobias K.", level: 2 },
@@ -121,7 +132,9 @@ export const GAMES: BoardGame[] = [
       "Konzerne wetteifern um die Terraformierung des Mars durch Temperatur-, Sauerstoff- und Ozeanprojekte.",
     mechanics: ["Kartenmanagement", "Tableau-Building"],
     status: "BORROWED",
-    copies: [{ code: "OM-2024-0210", location: "privat · Nadia", status: "BORROWED" }],
+    copies: [
+      { code: "OM-2024-0210", location: "privat · Nadia", status: "BORROWED" },
+    ],
     explainers: [{ name: "Jan Herwig", level: 3 }],
   },
   {
@@ -134,7 +147,9 @@ export const GAMES: BoardGame[] = [
       "Kooperatives Stichspiel: die Raumschiff-Crew muss gemeinsame Missionen ohne Kommunikation über Handkarten meistern.",
     mechanics: ["Kooperativ", "Stichspiel"],
     status: "AVAILABLE",
-    copies: [{ code: "OM-2022-0009", location: "Regal B3", status: "AVAILABLE" }],
+    copies: [
+      { code: "OM-2022-0009", location: "Regal B3", status: "AVAILABLE" },
+    ],
     explainers: [{ name: "Nadia", level: 2 }],
   },
 ];

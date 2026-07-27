@@ -13,7 +13,7 @@ export function RoleSwitcher() {
   const { role, setRole } = useRole();
 
   return (
-    <div className="flex items-center gap-1 rounded-full border bg-muted/40 p-1 text-sm">
+    <div className="bg-muted/40 flex items-center gap-1 rounded-full border p-1 text-sm">
       {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
         <button
           key={r}

@@ -14,14 +14,14 @@ export function GameCard({ game }: { game: BoardGame }) {
   return (
     <Link
       href={`/ludothek/${game.slug}`}
-      className="group flex flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/60"
+      className="group bg-card hover:border-primary/60 flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
       <PlaceholderMedia label="COVER" />
       <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <h3 className="font-serif text-lg font-semibold leading-snug group-hover:text-primary">
+        <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {game.title}
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {game.players} · {game.duration}
         </p>
         <StatusPill

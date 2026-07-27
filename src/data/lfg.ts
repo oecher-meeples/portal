@@ -32,7 +32,8 @@ export const LFG_REQUESTS: LfgRequest[] = [
       { name: "Jan", initial: "J" },
     ],
     status: "offen",
-    description: "Suche noch zwei Mitspielende für eine entspannte Runde Arche Nova.",
+    description:
+      "Suche noch zwei Mitspielende für eine entspannte Runde Arche Nova.",
   },
   {
     id: "suche-runde-egal-was",
@@ -42,7 +43,8 @@ export const LFG_REQUESTS: LfgRequest[] = [
     maxParticipants: 5,
     participants: [{ name: "Tobias", initial: "T" }],
     status: "offen",
-    description: "Bin spontan am Samstag da und offen für alles zwischen Kennerspiel und Party-Spiel.",
+    description:
+      "Bin spontan am Samstag da und offen für alles zwischen Kennerspiel und Party-Spiel.",
   },
   {
     id: "brass-kennerrunde",
@@ -58,7 +60,8 @@ export const LFG_REQUESTS: LfgRequest[] = [
       { name: "Tobias", initial: "T" },
     ],
     status: "voll",
-    description: "Feste Vierergruppe für eine ernsthafte Brass-Partie, keine weiteren Plätze frei.",
+    description:
+      "Feste Vierergruppe für eine ernsthafte Brass-Partie, keine weiteren Plätze frei.",
   },
   {
     id: "familienabend-mit-kids",
@@ -72,7 +75,8 @@ export const LFG_REQUESTS: LfgRequest[] = [
       { name: "Lea", initial: "L" },
     ],
     status: "offen",
-    description: "Leichte Familienspiele, auch für Kinder ab 8 geeignet. Gerne mit euren Kids vorbeikommen.",
+    description:
+      "Leichte Familienspiele, auch für Kinder ab 8 geeignet. Gerne mit euren Kids vorbeikommen.",
   },
 ];
 

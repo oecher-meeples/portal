@@ -18,7 +18,7 @@ export function PlaceholderMedia({
         className,
       )}
     >
-      <span className="flex items-center gap-1.5 rounded bg-background/80 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <span className="bg-background/80 text-muted-foreground flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium tracking-wide uppercase">
         <ImageIcon className="size-3.5" />
         {label}
       </span>

@@ -17,7 +17,7 @@ export function PillToggle<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="flex w-fit flex-wrap gap-1 rounded-full border bg-muted/40 p-1 text-sm">
+    <div className="bg-muted/40 flex w-fit flex-wrap gap-1 rounded-full border p-1 text-sm">
       {options.map((option) => (
         <button
           key={option.value}

@@ -18,9 +18,11 @@ export default function ScanPage() {
             <div className="relative flex aspect-video items-center justify-center">
               <div className="flex flex-col items-center gap-2 text-neutral-500">
                 <Camera className="size-8" />
-                <span className="text-xs">Kamera-Vorschau · QR im Rahmen platzieren</span>
+                <span className="text-xs">
+                  Kamera-Vorschau · QR im Rahmen platzieren
+                </span>
               </div>
-              <div className="pointer-events-none absolute inset-12 rounded-lg border-2 border-primary sm:inset-24" />
+              <div className="border-primary pointer-events-none absolute inset-12 rounded-lg border-2 sm:inset-24" />
             </div>
             <div className="flex items-center justify-between gap-3 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100">
               <span className="flex items-center gap-1.5">
@@ -31,26 +33,30 @@ export default function ScanPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-lg border bg-card p-5">
-            <h2 className="font-serif text-lg font-bold">Ausleihe bestätigen</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+            <h2 className="font-serif text-lg font-bold">
+              Ausleihe bestätigen
+            </h2>
+            <p className="text-muted-foreground text-sm">
               Transaktionssicher – der Status springt sofort auf „Verliehen“.
             </p>
             <dl className="flex flex-col divide-y border-t">
               <div className="flex items-center justify-between py-2.5">
-                <dt className="text-sm text-muted-foreground">Spiel</dt>
+                <dt className="text-muted-foreground text-sm">Spiel</dt>
                 <dd className="font-medium">Arche Nova</dd>
               </div>
               <div className="flex items-center justify-between py-2.5">
-                <dt className="text-sm text-muted-foreground">Exemplar</dt>
-                <dd className="rounded bg-muted px-2 py-0.5 font-mono text-sm">OM-2026-0421</dd>
+                <dt className="text-muted-foreground text-sm">Exemplar</dt>
+                <dd className="bg-muted rounded px-2 py-0.5 font-mono text-sm">
+                  OM-2026-0421
+                </dd>
               </div>
               <div className="flex items-center justify-between py-2.5">
-                <dt className="text-sm text-muted-foreground">Leiher</dt>
+                <dt className="text-muted-foreground text-sm">Leiher</dt>
                 <dd className="font-medium">Jan H. (du)</dd>
               </div>
               <div className="flex items-center justify-between py-2.5">
-                <dt className="text-sm text-muted-foreground">Rückgabe bis</dt>
+                <dt className="text-muted-foreground text-sm">Rückgabe bis</dt>
                 <dd className="font-medium">10.08.2026</dd>
               </div>
             </dl>

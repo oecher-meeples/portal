@@ -29,26 +29,44 @@ export default function AdminDashboardPage() {
         />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatTile label="Spiele im Bestand" value={612} hint="+12 diesen Monat" />
+          <StatTile
+            label="Spiele im Bestand"
+            value={612}
+            hint="+12 diesen Monat"
+          />
           <StatTile label="Aktuell verliehen" value={48} hint="7 überfällig" />
-          <StatTile label="Aktive Mitglieder" value={96} hint="4 Einladungen offen" />
+          <StatTile
+            label="Aktive Mitglieder"
+            value={96}
+            hint="4 Einladungen offen"
+          />
           <StatTile label="In Wartung" value={5} hint="1 Totalschaden" />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-lg border bg-card p-5">
+          <div className="bg-card rounded-lg border p-5">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="font-serif text-lg font-bold">Überfällige Ausleihen</h2>
-              <Link href="/admin/bestand" className="text-sm text-primary hover:underline">
+              <h2 className="font-serif text-lg font-bold">
+                Überfällige Ausleihen
+              </h2>
+              <Link
+                href="/admin/bestand"
+                className="text-primary text-sm hover:underline"
+              >
                 Alle
               </Link>
             </div>
             <ul className="flex flex-col divide-y">
               {OVERDUE_LOANS.map((loan) => (
-                <li key={loan.game} className="flex items-center justify-between gap-3 py-2.5">
+                <li
+                  key={loan.game}
+                  className="flex items-center justify-between gap-3 py-2.5"
+                >
                   <div>
                     <p className="font-medium">{loan.game}</p>
-                    <p className="text-sm text-muted-foreground">{loan.borrower}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {loan.borrower}
+                    </p>
                   </div>
                   <StatusPill label={loan.overdue} tone="negative" />
                 </li>
@@ -63,10 +81,12 @@ export default function AdminDashboardPage() {
                 <Link
                   key={action.label}
                   href={action.href}
-                  className="flex flex-col items-center gap-2 rounded-lg border bg-card p-6 text-center transition-colors hover:border-primary/60"
+                  className="bg-card hover:border-primary/60 flex flex-col items-center gap-2 rounded-lg border p-6 text-center transition-colors"
                 >
-                  <action.icon className="size-6 text-primary" />
-                  <span className="font-serif text-sm font-semibold">{action.label}</span>
+                  <action.icon className="text-primary size-6" />
+                  <span className="font-serif text-sm font-semibold">
+                    {action.label}
+                  </span>
                 </Link>
               ))}
             </div>

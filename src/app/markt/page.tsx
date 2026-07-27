@@ -12,7 +12,10 @@ export default function MarktPage() {
           title="Marktplatz & Ersatzteillager"
           description="Interner Kleinanzeigen-Markt zwischen Mitgliedern – plus das Ausschlacht-Lager für einzelne Komponenten."
         />
-        <MarktBrowser listings={MARKET_LISTINGS} spareParts={SPARE_PART_LISTINGS} />
+        <MarktBrowser
+          listings={MARKET_LISTINGS}
+          spareParts={SPARE_PART_LISTINGS}
+        />
       </div>
     </RoleGate>
   );

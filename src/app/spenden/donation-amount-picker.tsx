@@ -13,5 +13,7 @@ const AMOUNTS = [
 export function DonationAmountPicker() {
   const [selected, setSelected] = useState("15");
 
-  return <PillToggle options={AMOUNTS} value={selected} onChange={setSelected} />;
+  return (
+    <PillToggle options={AMOUNTS} value={selected} onChange={setSelected} />
+  );
 }

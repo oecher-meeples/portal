@@ -14,7 +14,9 @@ const FILTERS: { label: string; value: ContentType | "alle" }[] = [
 
 export function NewsFilter({ items }: { items: ContentItem[] }) {
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
-  const visible = items.filter((item) => filter === "alle" || item.type === filter);
+  const visible = items.filter(
+    (item) => filter === "alle" || item.type === filter,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -24,7 +26,9 @@ export function NewsFilter({ items }: { items: ContentItem[] }) {
           <ContentListRow key={item.slug} item={item} />
         ))}
         {visible.length === 0 && (
-          <p className="text-sm text-muted-foreground">Keine Beiträge in dieser Kategorie.</p>
+          <p className="text-muted-foreground text-sm">
+            Keine Beiträge in dieser Kategorie.
+          </p>
         )}
       </div>
     </div>

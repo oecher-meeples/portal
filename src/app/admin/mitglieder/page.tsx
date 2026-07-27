@@ -36,13 +36,15 @@ export default function AdminMitgliederPage() {
         />
 
         <div className="flex flex-wrap gap-2 text-sm">
-          <span className="rounded-full bg-primary px-3 py-1 font-medium text-primary-foreground">
+          <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 font-medium">
             Alle ({MEMBER_STATS.total})
           </span>
-          <span className="rounded-full border px-3 py-1 text-muted-foreground">
+          <span className="text-muted-foreground rounded-full border px-3 py-1">
             Einladung offen ({MEMBER_STATS.openInvitations})
           </span>
-          <span className="rounded-full border px-3 py-1 text-muted-foreground">Ausgetreten</span>
+          <span className="text-muted-foreground rounded-full border px-3 py-1">
+            Ausgetreten
+          </span>
         </div>
 
         <div className="overflow-hidden rounded-lg border">
@@ -61,10 +63,16 @@ export default function AdminMitgliederPage() {
                 <TableRow key={member.id}>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
-                      <span className="flex size-7 items-center justify-center rounded-full bg-muted font-semibold">
+                      <span className="bg-muted flex size-7 items-center justify-center rounded-full font-semibold">
                         {member.initial}
                       </span>
-                      <span className={member.anonymized ? "text-muted-foreground" : "font-medium"}>
+                      <span
+                        className={
+                          member.anonymized
+                            ? "text-muted-foreground"
+                            : "font-medium"
+                        }
+                      >
                         {member.name}
                       </span>
                     </div>
@@ -73,16 +81,23 @@ export default function AdminMitgliederPage() {
                     {member.anonymized ? "—" : member.role}
                   </TableCell>
                   <TableCell>
-                    <StatusPill label={STATUS_LABELS[member.status]} tone={STATUS_TONE[member.status]} />
+                    <StatusPill
+                      label={STATUS_LABELS[member.status]}
+                      tone={STATUS_TONE[member.status]}
+                    />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{member.joined}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {member.joined}
+                  </TableCell>
                   <TableCell className="text-right">
                     {member.status === "einladung" ? (
                       <Button variant="outline" size="sm">
                         Token erneut senden
                       </Button>
                     ) : member.status === "ausgetreten" ? (
-                      <span className="text-sm text-muted-foreground">Historie erhalten</span>
+                      <span className="text-muted-foreground text-sm">
+                        Historie erhalten
+                      </span>
                     ) : (
                       <Button variant="ghost" size="sm">
                         Verwalten

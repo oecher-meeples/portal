@@ -11,7 +11,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { HELFER_EVENT, HELFER_SHIFTS, type ShiftStatus } from "@/data/helferplan";
+import {
+  HELFER_EVENT,
+  HELFER_SHIFTS,
+  type ShiftStatus,
+} from "@/data/helferplan";
 
 const STATUS_TONE: Record<ShiftStatus, StatusTone> = {
   sicher: "positive",
@@ -47,10 +51,15 @@ export default function HelferPage() {
                   <TableCell className="text-muted-foreground">
                     {shift.emoji} {shift.role}
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{shift.time}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {shift.time}
+                  </TableCell>
                   <TableCell>
                     {shift.status === "voll" ? (
-                      <StatusPill label={`${shift.assigned}/${shift.capacity} · voll`} tone="positive" />
+                      <StatusPill
+                        label={`${shift.assigned}/${shift.capacity} · voll`}
+                        tone="positive"
+                      />
                     ) : shift.assignedToMe ? (
                       <StatusPill
                         label={`${shift.assigned}/${shift.capacity} · du dabei`}
@@ -78,7 +87,7 @@ export default function HelferPage() {
             </TableBody>
           </Table>
         </div>
-        <p className="rounded-md bg-primary/10 p-3 text-sm">
+        <p className="bg-primary/10 rounded-md p-3 text-sm">
           Zusage-Status je Schicht: <strong>sicher</strong> (bestätigt) oder{" "}
           <strong>vorläufig</strong> – so behalten die Admins den Überblick.
         </p>

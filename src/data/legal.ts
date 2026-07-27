@@ -57,7 +57,11 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
     {
       id: "angaben",
       heading: "Angaben gemäß § 5 TMG",
-      paragraphs: ["Oecher Meeples e. V.", "Musterstraße 1, 52062 Aachen", "Platzhalter – finale Angaben folgen."],
+      paragraphs: [
+        "Oecher Meeples e. V.",
+        "Musterstraße 1, 52062 Aachen",
+        "Platzhalter – finale Angaben folgen.",
+      ],
     },
     {
       id: "kontakt",
@@ -76,7 +80,9 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
     {
       id: "faelligkeit",
       heading: "2. Fälligkeit",
-      paragraphs: ["Der Beitrag wird jährlich zum 1. Februar per SEPA-Lastschrift eingezogen."],
+      paragraphs: [
+        "Der Beitrag wird jährlich zum 1. Februar per SEPA-Lastschrift eingezogen.",
+      ],
     },
   ],
 };

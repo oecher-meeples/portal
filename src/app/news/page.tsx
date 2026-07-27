@@ -15,10 +15,10 @@ export default function NewsPage() {
       />
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <NewsFilter items={publicItems} />
-        <div className="rounded-lg border bg-card p-5">
+        <div className="bg-card rounded-lg border p-5">
           <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
           <PlaceholderMedia label="KALENDER-SYNC" className="mt-3" />
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-3 text-sm">
             Automatisch synchronisiert aus dem öffentlichen Vereinskalender.
           </p>
         </div>

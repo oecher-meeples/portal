@@ -35,12 +35,15 @@ function maxDuration(duration: string) {
 
 export function LudothekBrowser({ games }: { games: BoardGame[] }) {
   const [query, setQuery] = useState("");
-  const [players, setPlayers] = useState<(typeof PLAYER_FILTERS)[number]["value"]>("alle");
-  const [duration, setDuration] = useState<(typeof DURATION_FILTERS)[number]["value"]>("alle");
+  const [players, setPlayers] =
+    useState<(typeof PLAYER_FILTERS)[number]["value"]>("alle");
+  const [duration, setDuration] =
+    useState<(typeof DURATION_FILTERS)[number]["value"]>("alle");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
 
   const visible = games.filter((game) => {
-    if (query && !game.title.toLowerCase().includes(query.toLowerCase())) return false;
+    if (query && !game.title.toLowerCase().includes(query.toLowerCase()))
+      return false;
     if (onlyAvailable && game.status !== "AVAILABLE") return false;
     const players_ = maxPlayers(game.players);
     if (players === "1-2" && players_ > 2) return false;
@@ -55,10 +58,10 @@ export function LudothekBrowser({ games }: { games: BoardGame[] }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -66,13 +69,34 @@ export function LudothekBrowser({ games }: { games: BoardGame[] }) {
               className="pl-9"
             />
           </div>
-          <Button variant="outline" className="gap-2" render={<Link href="/scan"><ScanLine className="size-4" />Scannen</Link>} />
+          <Button
+            variant="outline"
+            className="gap-2"
+            render={
+              <Link href="/scan">
+                <ScanLine className="size-4" />
+                Scannen
+              </Link>
+            }
+          />
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span className="font-semibold uppercase tracking-wider text-muted-foreground">Spieler</span>
-          <PillToggle options={[...PLAYER_FILTERS]} value={players} onChange={setPlayers} />
-          <span className="font-semibold uppercase tracking-wider text-muted-foreground">Dauer</span>
-          <PillToggle options={[...DURATION_FILTERS]} value={duration} onChange={setDuration} />
+          <span className="text-muted-foreground font-semibold tracking-wider uppercase">
+            Spieler
+          </span>
+          <PillToggle
+            options={[...PLAYER_FILTERS]}
+            value={players}
+            onChange={setPlayers}
+          />
+          <span className="text-muted-foreground font-semibold tracking-wider uppercase">
+            Dauer
+          </span>
+          <PillToggle
+            options={[...DURATION_FILTERS]}
+            value={duration}
+            onChange={setDuration}
+          />
           <button
             type="button"
             onClick={() => setOnlyAvailable((v) => !v)}
@@ -92,7 +116,9 @@ export function LudothekBrowser({ games }: { games: BoardGame[] }) {
           <GameCard key={game.slug} game={game} />
         ))}
         {visible.length === 0 && (
-          <p className="col-span-full text-sm text-muted-foreground">Keine Spiele gefunden.</p>
+          <p className="text-muted-foreground col-span-full text-sm">
+            Keine Spiele gefunden.
+          </p>
         )}
       </div>
     </div>

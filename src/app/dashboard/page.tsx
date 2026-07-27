@@ -20,7 +20,11 @@ export default function DashboardPage() {
   return (
     <RoleGate minRole="mitglied">
       <div className="flex flex-col gap-6">
-        <PageHeading eyebrow="Angemeldet als Mitglied" title="Hallo, Jan 👋" description="Dein persönlicher Einstieg in den internen Bereich." />
+        <PageHeading
+          eyebrow="Angemeldet als Mitglied"
+          title="Hallo, Jan 👋"
+          description="Dein persönlicher Einstieg in den internen Bereich."
+        />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile label="Aktuell geliehen" value={2} hint="Spiele" />
@@ -30,16 +34,21 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-lg border bg-card p-5">
+          <div className="bg-card rounded-lg border p-5">
             <h2 className="font-serif text-lg font-bold">Interner Newsroom</h2>
             <ul className="mt-3 flex flex-col divide-y">
               {internalNews.map((item) => (
-                <li key={item.slug} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <li
+                  key={item.slug}
+                  className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                >
                   <div>
                     <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">{item.excerpt}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {item.excerpt}
+                    </p>
                   </div>
-                  <span className="shrink-0 rounded bg-muted px-2 py-1 font-mono text-xs">
+                  <span className="bg-muted shrink-0 rounded px-2 py-1 font-mono text-xs">
                     {formatDateShort(item.date)}
                   </span>
                 </li>
@@ -47,10 +56,10 @@ export default function DashboardPage() {
             </ul>
           </div>
 
-          <div className="rounded-lg border bg-card p-5">
+          <div className="bg-card rounded-lg border p-5">
             <h2 className="font-serif text-lg font-bold">Interner Kalender</h2>
             <PlaceholderMedia label="VEREINSINTERNE TERMINE" className="mt-3" />
-            <p className="mt-3 rounded-md bg-primary/10 p-3 text-sm">
+            <p className="bg-primary/10 mt-3 rounded-md p-3 text-sm">
               Separater interner Kalender – nur für Mitglieder sichtbar.
             </p>
           </div>
@@ -63,9 +72,9 @@ export default function DashboardPage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="flex flex-col items-center gap-2 rounded-lg border bg-card p-6 text-center transition-colors hover:border-primary/60"
+                className="bg-card hover:border-primary/60 flex flex-col items-center gap-2 rounded-lg border p-6 text-center transition-colors"
               >
-                <link.icon className="size-6 text-primary" />
+                <link.icon className="text-primary size-6" />
                 <span className="font-serif font-semibold">{link.label}</span>
               </Link>
             ))}

@@ -9,7 +9,7 @@ export function ScanModeSwitcher() {
   const [mode, setMode] = useState<(typeof MODES)[number]>("Ausleihe");
 
   return (
-    <p className="rounded-md bg-primary/10 p-3 text-sm">
+    <p className="bg-primary/10 rounded-md p-3 text-sm">
       Modus wechseln:{" "}
       {MODES.map((m, index) => (
         <span key={m}>

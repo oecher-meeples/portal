@@ -20,28 +20,28 @@ Eine ausführliche Beschreibung aller Funktionsbereiche findet sich in [`docs/Co
 
 ## 📚 Dokumentation
 
-| Dokument | Inhalt |
-|---|---|
-| [`docs/Concept.md`](./docs/Concept.md) | Konzept, Funktionsübersicht, Rollen, Onboarding-Prozess |
-| [`docs/schema.md`](./docs/schema.md) | Datenmodelle (ER-Diagramme) für Public-, Member- und Event-Bereich |
-| [`docs/flow.md`](./docs/flow.md) | Datenfluss-Diagramme zentraler Prozesse |
-| [`docs/setup.md`](./docs/setup.md) | Architektur- & Technologie-Entscheidungen sowie lokale Setup-Anleitung |
-| [`docs/roadmap.md`](./docs/roadmap.md) | Meilensteinbasierter Entwicklungsablauf |
+| Dokument                               | Inhalt                                                                 |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| [`docs/Concept.md`](./docs/Concept.md) | Konzept, Funktionsübersicht, Rollen, Onboarding-Prozess                |
+| [`docs/schema.md`](./docs/schema.md)   | Datenmodelle (ER-Diagramme) für Public-, Member- und Event-Bereich     |
+| [`docs/flow.md`](./docs/flow.md)       | Datenfluss-Diagramme zentraler Prozesse                                |
+| [`docs/setup.md`](./docs/setup.md)     | Architektur- & Technologie-Entscheidungen sowie lokale Setup-Anleitung |
+| [`docs/roadmap.md`](./docs/roadmap.md) | Meilensteinbasierter Entwicklungsablauf                                |
 
 ---
 
 ## 🛠️ Technologie-Stack (geplant)
 
-| Kategorie | Entscheidung |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Sprache | TypeScript |
-| Datenbank | PostgreSQL via Neon |
-| ORM | Prisma |
-| Styling | Tailwind CSS v4 |
-| Komponenten | shadcn/ui |
+| Kategorie         | Entscheidung                         |
+| ----------------- | ------------------------------------ |
+| Framework         | Next.js 15 (App Router)              |
+| Sprache           | TypeScript                           |
+| Datenbank         | PostgreSQL via Neon                  |
+| ORM               | Prisma                               |
+| Styling           | Tailwind CSS v4                      |
+| Komponenten       | shadcn/ui                            |
 | Authentifizierung | Auth.js (NextAuth v5) mit Google SSO |
-| Hosting | Vercel |
+| Hosting           | Vercel                               |
 
 Details und Begründungen siehe [`docs/setup.md`](./docs/setup.md).
 
@@ -64,4 +64,4 @@ Eine Schritt-für-Schritt-Anleitung zum Aufsetzen der lokalen Entwicklungsumgebu
 
 ## 🔗 Lizenz
 
-Noch nicht festgelegt.
+Proprietär – alle Rechte vorbehalten. Siehe [`LICENSE`](./LICENSE).

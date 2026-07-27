@@ -11,9 +11,30 @@ export type Member = {
 };
 
 export const MEMBERS: Member[] = [
-  { id: "jan", name: "Jan Herwig", role: "Admin", status: "aktiv", joined: "2024", initial: "J" },
-  { id: "lea", name: "Lea Meier", role: "Moderatorin", status: "aktiv", joined: "2023", initial: "L" },
-  { id: "tobias", name: "Tobias K.", role: "Mitglied", status: "aktiv", joined: "2025", initial: "T" },
+  {
+    id: "jan",
+    name: "Jan Herwig",
+    role: "Admin",
+    status: "aktiv",
+    joined: "2024",
+    initial: "J",
+  },
+  {
+    id: "lea",
+    name: "Lea Meier",
+    role: "Moderatorin",
+    status: "aktiv",
+    joined: "2023",
+    initial: "L",
+  },
+  {
+    id: "tobias",
+    name: "Tobias K.",
+    role: "Mitglied",
+    status: "aktiv",
+    joined: "2025",
+    initial: "T",
+  },
   {
     id: "invite-1",
     name: "neu@example.de",
