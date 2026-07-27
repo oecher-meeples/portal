@@ -27,15 +27,15 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
 ## 📌 Phase 1: Die Demo-Webseite (Public Area - Readonly)
 *Ziel: Schnelle Bereitstellung eines visuellen Prototyps für die Öffentlichkeit mit Mock-Daten.*
 
-* **[ ] Meilenstein 1.1: Konzept & Datenstruktur-Mocking**
-    * [ ] Definition der benötigten Felder für die Demo-Inhalte (Blog-Beiträge, statische Seiten).
-    * [ ] Erstellung einer lokalen JSON-Datei (`demo-posts.json`) für anstehende und vergangene Blog-Beiträge.
-* **[ ] Meilenstein 1.2: Projekt-Setup & Layout**
-    * [ ] Initialisierung des gewählten Frameworks basierend auf der Phase-0-Entscheidung.
-    * [ ] Erstellung des Grunddesigns (Tailwind CSS) im Look & Feel der Oecher Meeples.
-    * [ ] Bereitstellung der Pflichtseiten (Satzung, Datenschutzverordnung, Impressum).
-    * [ ] Einrichtung eines Download-Bereichs für die PDF-Mitgliedsanträge.
-    * [ ] Implementierung der Blog-Übersicht und Detailseiten basierend auf den Demodaten.
+* [x] **Meilenstein 1.1: Konzept & Datenstruktur-Mocking**
+    * [x] Definition der benötigten Felder für die Demo-Inhalte (Blog-Beiträge, statische Seiten).
+    * [x] Erstellung lokaler Demo-Blogbeiträge im **Markdown-Format** (statt einer reinen JSON-Datei): Redakteur:innen verfassen Beiträge auch im späteren Live-Editor (Meilenstein 2.3) in Markdown, daher soll die Demo-Datenstruktur von Anfang an dieselbe Form haben. Metadaten (Titel, Slug, Datum, Typ, Autor) bleiben strukturiert, nur der Beitragstext wird als Markdown gespeichert und über eine Markdown-Rendering-Bibliothek (z. B. `react-markdown`) ausgegeben.
+* [x] **Meilenstein 1.2: Projekt-Setup & Layout**
+    * [x] Initialisierung des gewählten Frameworks basierend auf der Phase-0-Entscheidung.
+    * [x] Erstellung des Grunddesigns (Tailwind CSS) im Look & Feel der Oecher Meeples.
+    * [x] Bereitstellung der Pflichtseiten (Satzung, Datenschutzverordnung, Impressum).
+    * [x] Einrichtung eines Download-Bereichs für die PDF-Mitgliedsanträge.
+    * [x] Implementierung der Blog-Übersicht und Detailseiten basierend auf den Demodaten.
 
 ---
 
@@ -50,7 +50,7 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
     * [ ] Implementierung des sicheren Logins inklusive **Google Single Sign-On (SSO)** für Moderatoren und Admins.
 * **[ ] Meilenstein 2.3: Dynamischer Content & Spenden**
     * [ ] Anbindung des öffentlichen Google Calendars zur automatischen Synchronisation von Vereinsterminen.
-    * [ ] Entwicklung eines einfachen Web-Editors für Moderatoren, um Blog-Beiträge live auf der Seite zu veröffentlichen.
+    * [ ] Entwicklung eines einfachen Web-Editors (Markdown) für Moderatoren, um Blog-Beiträge live auf der Seite zu veröffentlichen.
     * [ ] Integration einer Spendenmöglichkeit für Gäste/Unterstützer im öffentlichen Bereich (z.B. PayPal-Spendenbutton oder strukturierte Support-Info).
 
 ---

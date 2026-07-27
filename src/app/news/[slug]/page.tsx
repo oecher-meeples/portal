@@ -39,7 +39,7 @@ export default async function PostDetailPage({
         {item.author && <> · {item.author}</>}
         {item.location && <> · {item.location}</>}
       </p>
-      <div className="flex flex-col gap-4 text-base leading-relaxed [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold">
+      <div className="[&_a]:text-primary flex flex-col gap-4 text-base leading-relaxed [&_a]:underline [&_strong]:font-semibold">
         <ReactMarkdown>{item.body}</ReactMarkdown>
       </div>
     </article>
