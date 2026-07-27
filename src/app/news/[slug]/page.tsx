@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import { Share2 } from "lucide-react";
-import { CONTENT_ITEMS, getContentBySlug } from "@/data/content";
+import ReactMarkdown from "react-markdown";
+import { getAllContent, getContentBySlug } from "@/lib/content";
 import { ContentTypeBadge } from "@/components/content/content-type-badge";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
 import { formatDate } from "@/lib/format";
 
 export function generateStaticParams() {
-  return CONTENT_ITEMS.map((item) => ({ slug: item.slug }));
+  return getAllContent().map((item) => ({ slug: item.slug }));
 }
 
 export default async function PostDetailPage({
@@ -38,10 +39,8 @@ export default async function PostDetailPage({
         {item.author && <> · {item.author}</>}
         {item.location && <> · {item.location}</>}
       </p>
-      <div className="flex flex-col gap-4 text-base leading-relaxed">
-        {item.body.map((paragraph, index) => (
-          <p key={index}>{paragraph}</p>
-        ))}
+      <div className="flex flex-col gap-4 text-base leading-relaxed [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold">
+        <ReactMarkdown>{item.body}</ReactMarkdown>
       </div>
     </article>
   );

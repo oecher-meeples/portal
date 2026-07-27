@@ -1,10 +1,10 @@
 import { PageHeading } from "@/components/shared/page-heading";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
-import { CONTENT_ITEMS } from "@/data/content";
+import { getAllContent } from "@/lib/content";
 import { NewsFilter } from "@/app/news/news-filter";
 
 export default function NewsPage() {
-  const publicItems = CONTENT_ITEMS.filter((item) => !item.internal);
+  const publicItems = getAllContent().filter((item) => !item.internal);
 
   return (
     <div className="flex flex-col gap-6">
