@@ -1,8 +1,101 @@
+import Link from "next/link";
+import { Calendar, HeartHandshake } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PlaceholderMedia } from "@/components/shared/placeholder-media";
+import { ContentCard } from "@/components/content/content-card";
+import { getUpcomingEvents, getLatestPosts } from "@/data/content";
+import { formatDate } from "@/lib/format";
+
 export default function HomePage() {
+  const events = getUpcomingEvents();
+  const posts = getLatestPosts();
+
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="text-2xl font-bold">Oecher Meeples</h1>
-      <p className="text-muted-foreground">Projekt-Grundgerüst steht.</p>
+    <div className="flex flex-col gap-10">
+      <section className="flex flex-col gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+          Willkommen bei den Oecher Meeples
+        </p>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
+          Der Brettspielverein für Aachen und Umgebung
+        </h1>
+        <p className="max-w-2xl text-muted-foreground">
+          Spielen, leihen, treffen. Von Kennerspiel bis Familienabend – bei
+          uns findest du Runde, Regelerklärung und über 600 Spiele in der
+          Vereins-Ludothek.
+        </p>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="flex flex-col gap-4 rounded-lg border bg-card p-6">
+          <PlaceholderMedia label="VEREINSFOTO / SPIELEABEND" className="aspect-[16/9]" />
+          <div className="flex flex-wrap gap-3">
+            <Button render={<Link href="/downloads">Mitglied werden</Link>} />
+            <Button
+              variant="outline"
+              render={<Link href="/news">Nächster Spieleabend →</Link>}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg border bg-card p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
+                <Calendar className="size-4 text-primary" />
+                Nächste Termine
+              </h2>
+              <Link href="/news" className="text-sm text-primary hover:underline">
+                Kalender
+              </Link>
+            </div>
+            <ul className="flex flex-col divide-y">
+              {events.map((event) => (
+                <li key={event.slug} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                  <div>
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {event.location ?? "Details folgen"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded bg-muted px-2 py-1 font-mono text-xs">
+                    {formatDate(event.date)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-lg border bg-primary/10 p-5">
+            <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
+              <HeartHandshake className="size-4" />
+              Unterstütze uns
+            </h2>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Deine Spende hält die Ludothek am Leben – neue Spiele,
+              Etiketten, Eventmaterial.
+            </p>
+            <Button
+              className="mt-3"
+              render={<Link href="/spenden">Jetzt spenden (PayPal)</Link>}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-xl font-bold">Aus dem Newsroom</h2>
+          <Link href="/news" className="text-sm text-primary hover:underline">
+            Alle Beiträge →
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {posts.map((post) => (
+            <ContentCard key={post.slug} item={post} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
