@@ -17,9 +17,9 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
     * [x] **Datenbank & ORM:** **PostgreSQL** via **Neon** (serverless), ORM: **Prisma**.
     * [x] **UI & Styling:** **Tailwind CSS v4** + **shadcn/ui**.
     * [x] **Hosting & Deployment:** App → **Vercel**, Datenbank → **Neon**, Assets → **Vercel Blob**.
-* [x] **Meilenstein 0.2: Infrastruktur-Vorbereitung**
+* **[ ] Meilenstein 0.2: Infrastruktur-Vorbereitung**
     * [x] Initialisierung des/der GitHub-Repositories mit passender `.gitignore` und Lizenz.
-    * [x] Einrichtung von Branch-Protection-Rules (`main` geschützt via Ruleset, Änderungen nur via Pull Request).
+    * [ ] Einrichtung von Branch-Protection-Rules (`main` geschützt, Änderungen nur via Pull Request). Zurückgestellt: benötigt Admin-Rechte auf dem Repo (aktuell nur „write“). Vorbereitetes Ruleset liegt unter [`.github/ruleset-protect-main.json`](../.github/ruleset-protect-main.json), anwendbar via `gh api repos/App-Akademie-Students/rapid-extendable-prototyping-v1-0-JHerwig/rulesets -X POST --input .github/ruleset-protect-main.json`.
     * [x] Konfiguration von grundlegenden Tooling-Standards (Prettier, ESLint, EditorConfig).
 
 ---
