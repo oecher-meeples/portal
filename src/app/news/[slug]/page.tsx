@@ -2,7 +2,7 @@
 import { Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { getAllContent, getContentBySlug } from "@/lib/content";
-import { ContentTypeBadge } from "@/components/content/content-type-badge";
+import { ContentTypeBadge } from "@/components/domain/content-type-badge";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { formatDate } from "@/lib/format";
 

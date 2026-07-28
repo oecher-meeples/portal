@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import type { ContentItem } from "@/lib/content";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
-import { ContentTypeBadge } from "@/components/content/content-type-badge";
+import { ContentTypeBadge } from "@/components/domain/content-type-badge";
 import { formatDate } from "@/lib/format";
 
 export function ContentListRow({ item }: { item: ContentItem }) {

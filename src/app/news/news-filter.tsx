@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ContentItem, ContentType } from "@/lib/content";
-import { ContentListRow } from "@/components/content/content-list-row";
+import { ContentListRow } from "@/components/domain/content-list-row";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { formatDate } from "@/lib/format";
 

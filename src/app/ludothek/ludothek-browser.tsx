@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, ScanLine } from "lucide-react";
 import type { BoardGame } from "@/data/games";
-import { GameCard } from "@/components/content/game-card";
+import { GameCard } from "@/components/domain/game-card";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

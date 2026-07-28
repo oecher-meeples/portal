@@ -2,7 +2,7 @@
 import { Calendar, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
-import { ContentCard } from "@/components/content/content-card";
+import { ContentCard } from "@/components/domain/content-card";
 import { getLatestPosts } from "@/lib/content";
 import { getUpcomingEventsWithCalendar } from "@/lib/calendar";
 import { formatDate } from "@/lib/format";
