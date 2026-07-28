@@ -52,18 +52,7 @@ export function NewsCalendar({
 
   return (
     <div className="bg-card rounded-lg border p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
-        {selectedDate && (
-          <button
-            type="button"
-            onClick={() => onSelectDate(null)}
-            className="text-primary text-sm hover:underline"
-          >
-            Alle anzeigen
-          </button>
-        )}
-      </div>
+      <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
 
       <div className="mt-3 flex items-center justify-between">
         <Button

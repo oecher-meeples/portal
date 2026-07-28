@@ -19,7 +19,11 @@ export function NewsBrowser({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-      <NewsFilter items={visibleItems} />
+      <NewsFilter
+        items={visibleItems}
+        selectedDate={selectedDate}
+        onClearDate={() => setSelectedDate(null)}
+      />
       <NewsCalendar
         items={items}
         selectedDate={selectedDate}
