@@ -62,7 +62,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ Login mit einem manuell in Neon Auth angelegten Test-User funktioniert lokal (`pnpm dev`), `getCurrentUser()` liefert die eingeloggte Session server-seitig.
       `git commit -m "feat: integrate neon auth for session-based login"`
 
-- [ ] **4. Permission-Helper & Route-Guards**
+- [x] **4. Permission-Helper & Route-Guards**
       `src/lib/permissions.ts`: Funktion `hasPermission(neonAuthUserId, permissionKey)`, die über `UserRole` → `RolePermission` → `Permission` prüft. Helper `requirePermission()` für Server Components/Route Handler, der bei fehlender Berechtigung auf eine 403-Seite umleitet bzw. `null`/Redirect zurückgibt. Unit-Tests mit gemocktem Prisma-Client aus Schritt 1.
       _Definition of Done:_ Tests für `hasPermission` (Positiv-/Negativfall, mehrere Rollen) grün.
       `git commit -m "feat: add permission checking helpers"`
