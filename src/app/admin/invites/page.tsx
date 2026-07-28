@@ -1,0 +1,18 @@
+import { PageHeading } from "@/components/shared/page-heading";
+import { requirePermission } from "@/lib/permissions";
+import { InviteForm } from "@/app/admin/invites/invite-form";
+
+export default async function AdminInvitesPage() {
+  await requirePermission("invites:create");
+
+  return (
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
+      <PageHeading
+        eyebrow="Onboarding"
+        title="Einladungen"
+        description="Erzeuge einen zeitlich begrenzten Registrierungslink für neue Mitglieder."
+      />
+      <InviteForm />
+    </div>
+  );
+}

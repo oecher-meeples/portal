@@ -72,7 +72,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ `pnpm db:seed` läuft fehlerfrei durch, Admin-User kann sich danach über die Login-Seite aus Schritt 3 einloggen und hat alle Permissions.
       `git commit -m "feat: add prisma seed script for admin and demo data"`
 
-- [ ] **6. Invite-Flow**
+- [x] **6. Invite-Flow**
       Admin-UI unter `src/app/admin/invites/page.tsx`: Formular zum Erzeugen eines Invite-Tokens (Server Action, prüft `invites:create`-Permission), Token wird mit Ablaufdatum (z. B. 7 Tage) in `Invite`-Tabelle gespeichert. Nach Erzeugung wird ein `mailto:`-Link mit vorausgefülltem Betreff/Text inkl. Registrierungslink (`/register?token=...`) angezeigt. Registrierungsseite `src/app/register/page.tsx`: validiert Token (nicht abgelaufen, nicht eingelöst), bindet Neon-Auth-Signup-Flow ein, markiert Token nach erfolgreicher Registrierung als eingelöst und weist eine Standard-Rolle (z. B. "mitglied") zu.
       _Definition of Done:_ Unit-Tests für Token-Validierung (gültig/abgelaufen/bereits eingelöst) grün; manueller Durchlauf lokal: Invite erzeugen → Registrierungslink öffnen → Account erstellen → Standard-Rolle zugewiesen.
       `git commit -m "feat: add invitation-based registration flow"`
