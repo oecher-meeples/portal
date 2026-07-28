@@ -67,7 +67,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ Tests für `hasPermission` (Positiv-/Negativfall, mehrere Rollen) grün.
       `git commit -m "feat: add permission checking helpers"`
 
-- [ ] **5. Seed-Skript (Admin + Demo-Daten)**
+- [x] **5. Seed-Skript (Admin + Demo-Daten)**
       `prisma/seed.ts`: legt Basis-Permissions (z. B. `posts:write`, `posts:delete`, `invites:create`, `members:manage`) und eine `admin`-Rolle mit allen Permissions an. Legt über die Neon-Auth-Server-API einen ersten Admin-User an (Zugangsdaten aus ENV-Variablen `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`, Platzhalter in `.env.local` ergänzen) und verknüpft ihn mit der `admin`-Rolle. Zusätzliches Demo-Seed: 2–3 Beispiel-Mitglieder-Rollen und ein paar Beispiel-Datensätze (nur Rollen/Nutzer, Posts folgen in Schritt 8 aus der echten Migration). `package.json`-Skript `db:seed` ergänzen.
       _Definition of Done:_ `pnpm db:seed` läuft fehlerfrei durch, Admin-User kann sich danach über die Login-Seite aus Schritt 3 einloggen und hat alle Permissions.
       `git commit -m "feat: add prisma seed script for admin and demo data"`
