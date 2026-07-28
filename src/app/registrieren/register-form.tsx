@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { redeemInvite } from "@/app/registrieren/actions";
 
-export function RegisterForm({ token }: { token: string }) {
+export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
   const router = useRouter();
+  const [token, setToken] = useState(defaultToken ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,6 +38,17 @@ export function RegisterForm({ token }: { token: string }) {
       onSubmit={handleSubmit}
       className="bg-card flex flex-col gap-4 rounded-lg border p-6"
     >
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="token">Einladungs-Token</Label>
+        <Input
+          id="token"
+          value={token}
+          onChange={(event) => setToken(event.target.value)}
+          placeholder="Aus der Einladungs-E-Mail"
+          className="font-mono text-sm"
+          required
+        />
+      </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="name">Name</Label>
         <Input
