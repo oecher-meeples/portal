@@ -6,3 +6,73 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum PostType {
+  BLOG
+  TERMIN
+  TURNIER
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  description String
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  neonAuthUserId String
+  roleId         String
+  role           Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([neonAuthUserId, roleId])
+  @@map("user_roles")
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  type      PostType
+  title     String
+  excerpt   String
+  body      String
+  date      DateTime
+  author    String?
+  location  String?
+  internal  Boolean?
+  instagram Boolean?
+
+  @@map("posts")
+}
+
+model Invite {
+  id              String    @id @default(cuid())
+  token           String    @unique
+  createdByUserId String
+  expiresAt       DateTime
+  redeemedAt      DateTime?
+
+  @@map("invites")
+}
