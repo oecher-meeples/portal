@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import { PillToggle } from "@/components/shared/pill-toggle";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
+import { PillToggle } from "@/components/ui/pill-toggle";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { Button } from "@/components/ui/button";
 import type { MarketListing, SparePartListing } from "@/data/market";
 
@@ -45,14 +45,14 @@ export function MarktBrowser({
                     {listing.title}
                   </Link>
                   <span className="text-primary shrink-0 font-serif font-bold">
-                    {listing.price} €
+                    {listing.price} â‚¬
                   </span>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                  Zustand: {listing.condition} · von {listing.seller}
+                  Zustand: {listing.condition} Â· von {listing.seller}
                 </p>
                 <Button variant="outline" size="sm" className="mt-2 gap-1.5">
-                  ✉️ Verkäufer kontaktieren
+                  âœ‰ï¸ VerkÃ¤ufer kontaktieren
                 </Button>
               </div>
             </div>

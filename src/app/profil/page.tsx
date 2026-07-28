@@ -1,6 +1,6 @@
-import { requireMember } from "@/lib/session";
-import { PageHeading } from "@/components/shared/page-heading";
-import { StatusPill } from "@/components/shared/status-pill";
+﻿import { requireMember } from "@/lib/session";
+import { PageHeading } from "@/components/ui/page-heading";
+import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ export default async function ProfilPage() {
       <PageHeading
         eyebrow="Self-Service"
         title="Mein Profil"
-        description="DSGVO-konforme Verwaltung deiner Daten und Verknüpfung externer Plattformen."
+        description="DSGVO-konforme Verwaltung deiner Daten und VerknÃ¼pfung externer Plattformen."
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
@@ -38,29 +38,29 @@ export default async function ProfilPage() {
             <Label htmlFor="profile-iban">IBAN (Lastschrift)</Label>
             <Input
               id="profile-iban"
-              defaultValue="•••• •••• •••• 1234 · verschlüsselt"
+              defaultValue="â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ 1234 Â· verschlÃ¼sselt"
               readOnly
             />
           </div>
           <Button variant="outline" className="w-fit">
-            Änderungen speichern
+            Ã„nderungen speichern
           </Button>
         </div>
 
         <div className="flex flex-col gap-4">
           <div className="bg-card rounded-lg border p-5">
             <h2 className="font-serif text-lg font-bold">
-              Externe Verknüpfungen
+              Externe VerknÃ¼pfungen
             </h2>
             <ul className="mt-3 flex flex-col divide-y">
               <li className="flex items-center justify-between py-2.5">
-                <span>🎮 Board Game Arena</span>
+                <span>ðŸŽ® Board Game Arena</span>
                 <StatusPill label="verbunden" tone="positive" />
               </li>
               <li className="flex items-center justify-between py-2.5">
-                <span>🎲 BoardGameGeek</span>
+                <span>ðŸŽ² BoardGameGeek</span>
                 <Button variant="outline" size="sm">
-                  Verknüpfen
+                  VerknÃ¼pfen
                 </Button>
               </li>
             </ul>
@@ -69,7 +69,7 @@ export default async function ProfilPage() {
           <div className="bg-card rounded-lg border p-5">
             <h2 className="font-serif text-lg font-bold">Anmeldung</h2>
             <p className="bg-primary/10 mt-3 rounded-md p-3 text-sm">
-              🔒 Angemeldet via <strong>Google SSO</strong>
+              ðŸ”’ Angemeldet via <strong>Google SSO</strong>
             </p>
           </div>
 
@@ -78,7 +78,7 @@ export default async function ProfilPage() {
               Konto &amp; DSGVO
             </h2>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              Bei Austritt wird dein Konto gelöscht, deine Verleih-Historie
+              Bei Austritt wird dein Konto gelÃ¶scht, deine Verleih-Historie
               bleibt anonymisiert erhalten.
             </p>
             <Button

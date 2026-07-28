@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import type { LfgRequest } from "@/data/lfg";
-import { PillToggle } from "@/components/shared/pill-toggle";
-import { StatusPill } from "@/components/shared/status-pill";
+import { PillToggle } from "@/components/ui/pill-toggle";
+import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 
 const FILTERS = [
@@ -43,7 +43,7 @@ export function LfgList({ requests }: { requests: LfgRequest[] }) {
                 </Link>
                 <p className="text-muted-foreground text-sm">
                   {request.date}
-                  {request.location && ` · ${request.location}`}
+                  {request.location && ` Â· ${request.location}`}
                 </p>
               </div>
               <StatusPill
@@ -56,7 +56,7 @@ export function LfgList({ requests }: { requests: LfgRequest[] }) {
                 <span className="bg-muted flex size-7 items-center justify-center rounded-full font-semibold">
                   {request.creator.initial}
                 </span>
-                {request.creator.name} · {request.participants.length}/
+                {request.creator.name} Â· {request.participants.length}/
                 {request.maxParticipants}
               </div>
               <Button

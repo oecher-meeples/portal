@@ -1,9 +1,9 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import { Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { getAllContent, getContentBySlug } from "@/lib/content";
 import { ContentTypeBadge } from "@/components/content/content-type-badge";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { formatDate } from "@/lib/format";
 
 export async function generateStaticParams() {
@@ -37,8 +37,8 @@ export default async function PostDetailPage({
       </h1>
       <p className="text-muted-foreground text-sm">
         {formatDate(item.date)}
-        {item.author && <> · {item.author}</>}
-        {item.location && <> · {item.location}</>}
+        {item.author && <> Â· {item.author}</>}
+        {item.location && <> Â· {item.location}</>}
       </p>
       <div className="[&_a]:text-primary flex flex-col gap-4 text-base leading-relaxed [&_a]:underline [&_strong]:font-semibold">
         <ReactMarkdown>{item.body}</ReactMarkdown>

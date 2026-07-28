@@ -1,9 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { requireMember } from "@/lib/session";
-import { PageHeading } from "@/components/shared/page-heading";
-import { StatTile } from "@/components/shared/stat-tile";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
+import { PageHeading } from "@/components/ui/page-heading";
+import { StatTile } from "@/components/ui/stat-tile";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { getAllContent } from "@/lib/content";
 import { formatDateShort } from "@/lib/format";
 
@@ -22,8 +22,8 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Angemeldet als Mitglied"
-        title={`Hallo, ${user.name} 👋`}
-        description="Dein persönlicher Einstieg in den internen Bereich."
+        title={`Hallo, ${user.name} ðŸ‘‹`}
+        description="Dein persÃ¶nlicher Einstieg in den internen Bereich."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -60,7 +60,7 @@ export default async function DashboardPage() {
           <h2 className="font-serif text-lg font-bold">Interner Kalender</h2>
           <PlaceholderMedia label="VEREINSINTERNE TERMINE" className="mt-3" />
           <p className="bg-primary/10 mt-3 rounded-md p-3 text-sm">
-            Separater interner Kalender – nur für Mitglieder sichtbar.
+            Separater interner Kalender â€“ nur fÃ¼r Mitglieder sichtbar.
           </p>
         </div>
       </div>

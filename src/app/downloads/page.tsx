@@ -1,6 +1,6 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { FileText, FileSpreadsheet } from "lucide-react";
-import { PageHeading } from "@/components/shared/page-heading";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { DOWNLOADS, LEGAL_DOCS } from "@/data/downloads";
 
@@ -10,7 +10,7 @@ export default function DownloadsPage() {
       <PageHeading
         eyebrow="Formales"
         title="Downloads & Rechtliches"
-        description="Anträge, Satzung und rechtliche Dokumente zum direkten Abruf."
+        description="AntrÃ¤ge, Satzung und rechtliche Dokumente zum direkten Abruf."
       />
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-card flex flex-col divide-y rounded-lg border">
@@ -28,7 +28,7 @@ export default function DownloadsPage() {
                 <div>
                   <p className="font-medium">{file.title}</p>
                   <p className="text-muted-foreground text-xs">
-                    {file.filetype} · {file.size}
+                    {file.filetype} Â· {file.size}
                   </p>
                 </div>
               </div>
@@ -56,7 +56,7 @@ export default function DownloadsPage() {
                 variant="outline"
                 size="sm"
                 render={
-                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
+                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen â†’</Link>
                 }
               />
             </div>

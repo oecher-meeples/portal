@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import Link from "next/link";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -23,7 +23,7 @@ export default async function AdminNewsPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Redaktion"
-        title="Beiträge"
+        title="BeitrÃ¤ge"
         description="Blog, Termine und Turniere verwalten."
         action={
           <Button

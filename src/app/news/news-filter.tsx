@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import type { ContentItem, ContentType } from "@/lib/content";
 import { ContentListRow } from "@/components/content/content-list-row";
-import { PillToggle } from "@/components/shared/pill-toggle";
+import { PillToggle } from "@/components/ui/pill-toggle";
 import { formatDate } from "@/lib/format";
 
 const FILTERS: { label: string; value: ContentType | "alle" }[] = [
@@ -55,7 +55,7 @@ export function NewsFilter({
         ))}
         {visible.length === 0 && (
           <p className="text-muted-foreground text-sm">
-            Keine Beiträge in dieser Kategorie.
+            Keine BeitrÃ¤ge in dieser Kategorie.
           </p>
         )}
       </div>

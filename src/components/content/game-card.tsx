@@ -1,8 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { BoardGame } from "@/data/games";
 import { STATUS_LABELS } from "@/data/games";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
-import { StatusPill, type StatusTone } from "@/components/shared/status-pill";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 
 const STATUS_TONE: Record<BoardGame["status"], StatusTone> = {
   AVAILABLE: "positive",
@@ -22,7 +22,7 @@ export function GameCard({ game }: { game: BoardGame }) {
           {game.title}
         </h3>
         <p className="text-muted-foreground text-sm">
-          {game.players} · {game.duration}
+          {game.players} Â· {game.duration}
         </p>
         <StatusPill
           label={STATUS_LABELS[game.status]}

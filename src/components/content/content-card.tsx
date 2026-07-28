@@ -1,7 +1,7 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Share2 } from "lucide-react";
 import type { ContentItem } from "@/lib/content";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { ContentTypeBadge } from "@/components/content/content-type-badge";
 import { formatDate } from "@/lib/format";
 

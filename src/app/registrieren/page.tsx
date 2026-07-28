@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { PageHeading } from "@/components/ui/page-heading";
 import { RegisterForm } from "@/app/registrieren/register-form";
 
 export default async function RegistrierenPage({

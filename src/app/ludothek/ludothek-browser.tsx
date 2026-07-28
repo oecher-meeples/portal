@@ -1,35 +1,35 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Search, ScanLine } from "lucide-react";
 import type { BoardGame } from "@/data/games";
 import { GameCard } from "@/components/content/game-card";
-import { PillToggle } from "@/components/shared/pill-toggle";
+import { PillToggle } from "@/components/ui/pill-toggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const PLAYER_FILTERS = [
   { label: "Alle", value: "alle" },
-  { label: "1–2", value: "1-2" },
-  { label: "3–4", value: "3-4" },
+  { label: "1â€“2", value: "1-2" },
+  { label: "3â€“4", value: "3-4" },
   { label: "5+", value: "5+" },
 ] as const;
 
 const DURATION_FILTERS = [
   { label: "Alle", value: "alle" },
-  { label: "<60’", value: "short" },
-  { label: "60–120’", value: "mid" },
-  { label: ">120’", value: "long" },
+  { label: "<60â€™", value: "short" },
+  { label: "60â€“120â€™", value: "mid" },
+  { label: ">120â€™", value: "long" },
 ] as const;
 
 function maxPlayers(players: string) {
-  const digits = players.replace(/[^0-9–-]/g, "").split(/[–-]/);
+  const digits = players.replace(/[^0-9â€“-]/g, "").split(/[â€“-]/);
   return Number(digits[digits.length - 1] ?? digits[0]);
 }
 
 function maxDuration(duration: string) {
-  const digits = duration.replace(/[^0-9–-]/g, "").split(/[–-]/);
+  const digits = duration.replace(/[^0-9â€“-]/g, "").split(/[â€“-]/);
   return Number(digits[digits.length - 1] ?? digits[0]);
 }
 
@@ -65,7 +65,7 @@ export function LudothekBrowser({ games }: { games: BoardGame[] }) {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Spiel, Autor oder Barcode suchen …"
+              placeholder="Spiel, Autor oder Barcode suchen â€¦"
               className="pl-9"
             />
           </div>
@@ -106,7 +106,7 @@ export function LudothekBrowser({ games }: { games: BoardGame[] }) {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Nur verfügbar
+            Nur verfÃ¼gbar
           </button>
         </div>
       </div>

@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PageHeading } from "@/components/shared/page-heading";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,7 +60,7 @@ export default function LoginPage() {
           <Input
             id="password"
             type="password"
-            placeholder="••••••••"
+            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -68,7 +68,7 @@ export default function LoginPage() {
         </div>
         {error && <p className="text-destructive text-sm">{error}</p>}
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Anmelden…" : "Anmelden"}
+          {isSubmitting ? "Anmeldenâ€¦" : "Anmelden"}
         </Button>
       </form>
       <p className="text-muted-foreground text-center text-sm">

@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { notFound } from "next/navigation";
+import { PageHeading } from "@/components/ui/page-heading";
 import { LEGAL_DOCS } from "@/data/downloads";
 import { LEGAL_CONTENT } from "@/data/legal";
 

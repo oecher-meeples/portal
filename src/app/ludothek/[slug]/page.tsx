@@ -1,7 +1,7 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/session";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
-import { StatusPill, type StatusTone } from "@/components/shared/status-pill";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import {
   GAMES,
@@ -43,7 +43,7 @@ export default async function GameDetailPage({
           <Button size="lg">Ausleihen</Button>
         ) : (
           <p className="text-muted-foreground text-sm">
-            Aktuell nicht verfügbar – Reservierung über die Erklärbären möglich.
+            Aktuell nicht verfÃ¼gbar â€“ Reservierung Ã¼ber die ErklÃ¤rbÃ¤ren mÃ¶glich.
           </p>
         )}
       </div>
@@ -54,7 +54,7 @@ export default async function GameDetailPage({
             {game.title}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {game.players} Spieler · {game.duration} · Gewichtung{" "}
+            {game.players} Spieler Â· {game.duration} Â· Gewichtung{" "}
             {game.weight.toFixed(1)}/5
           </p>
         </div>
@@ -96,7 +96,7 @@ export default async function GameDetailPage({
         </div>
 
         <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Erklärbären</h2>
+          <h2 className="font-serif text-lg font-bold">ErklÃ¤rbÃ¤ren</h2>
           <ul className="mt-3 flex flex-col gap-2.5">
             {game.explainers.map((explainer) => (
               <li
@@ -105,9 +105,9 @@ export default async function GameDetailPage({
               >
                 <span>{explainer.name}</span>
                 <span aria-label={`Erfahrungsstufe ${explainer.level} von 3`}>
-                  {"★".repeat(explainer.level)}
+                  {"â˜…".repeat(explainer.level)}
                   <span className="text-muted-foreground">
-                    {"★".repeat(3 - explainer.level)}
+                    {"â˜…".repeat(3 - explainer.level)}
                   </span>
                 </span>
               </li>

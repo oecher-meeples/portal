@@ -1,9 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Tag, Mail, ClipboardCheck, Wallet } from "lucide-react";
 import { requireAdmin } from "@/lib/session";
-import { PageHeading } from "@/components/shared/page-heading";
-import { StatTile } from "@/components/shared/stat-tile";
-import { StatusPill } from "@/components/shared/status-pill";
+import { PageHeading } from "@/components/ui/page-heading";
+import { StatTile } from "@/components/ui/stat-tile";
+import { StatusPill } from "@/components/ui/status-pill";
 
 const OVERDUE_LOANS = [
   { game: "Root", borrower: "Tobias", overdue: "+4 Tage" },
@@ -26,7 +26,7 @@ export default async function AdminDashboardPage() {
       <PageHeading
         eyebrow="Admin-Bereich"
         title="Verwaltung"
-        description="Überblick über Bestand, Ausleihen und laufende Vorgänge."
+        description="Ãœberblick Ã¼ber Bestand, Ausleihen und laufende VorgÃ¤nge."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -35,7 +35,7 @@ export default async function AdminDashboardPage() {
           value={612}
           hint="+12 diesen Monat"
         />
-        <StatTile label="Aktuell verliehen" value={48} hint="7 überfällig" />
+        <StatTile label="Aktuell verliehen" value={48} hint="7 Ã¼berfÃ¤llig" />
         <StatTile
           label="Aktive Mitglieder"
           value={96}
@@ -48,7 +48,7 @@ export default async function AdminDashboardPage() {
         <div className="bg-card rounded-lg border p-5">
           <div className="mb-1 flex items-center justify-between">
             <h2 className="font-serif text-lg font-bold">
-              Überfällige Ausleihen
+              ÃœberfÃ¤llige Ausleihen
             </h2>
             <Link
               href="/admin/bestand"

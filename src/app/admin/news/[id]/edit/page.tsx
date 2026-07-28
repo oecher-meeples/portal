@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { notFound } from "next/navigation";
+import { PageHeading } from "@/components/ui/page-heading";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { PostForm } from "@/app/admin/news/post-form";

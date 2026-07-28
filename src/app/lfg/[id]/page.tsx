@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/session";
-import { StatusPill } from "@/components/shared/status-pill";
+import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { LFG_REQUESTS, getLfgById } from "@/data/lfg";
 
@@ -27,8 +27,8 @@ export default async function LfgDetailPage({
           <h1 className="font-serif text-2xl font-bold">{request.title}</h1>
           <p className="text-muted-foreground text-sm">
             {request.date}
-            {request.location && ` · ${request.location}`}
-            {request.game && ` · ${request.game}`}
+            {request.location && ` Â· ${request.location}`}
+            {request.game && ` Â· ${request.game}`}
           </p>
         </div>
         <StatusPill

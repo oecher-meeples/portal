@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { PageHeading } from "@/components/ui/page-heading";
 import { requirePermission } from "@/lib/permissions";
 import { InviteForm } from "@/app/admin/invites/invite-form";
 
@@ -10,7 +10,7 @@ export default async function AdminInvitesPage() {
       <PageHeading
         eyebrow="Onboarding"
         title="Einladungen"
-        description="Erzeuge einen zeitlich begrenzten Registrierungslink für neue Mitglieder."
+        description="Erzeuge einen zeitlich begrenzten Registrierungslink fÃ¼r neue Mitglieder."
       />
       <InviteForm />
     </div>

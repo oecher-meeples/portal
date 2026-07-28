@@ -1,7 +1,7 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Calendar, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlaceholderMedia } from "@/components/shared/placeholder-media";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { ContentCard } from "@/components/content/content-card";
 import { getLatestPosts } from "@/lib/content";
 import { getUpcomingEventsWithCalendar } from "@/lib/calendar";
@@ -18,11 +18,11 @@ export default async function HomePage() {
           Willkommen bei den Oecher Meeples
         </p>
         <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-          Der Brettspielverein für Aachen und Umgebung
+          Der Brettspielverein fÃ¼r Aachen und Umgebung
         </h1>
         <p className="text-muted-foreground max-w-2xl">
-          Spielen, leihen, treffen. Von Kennerspiel bis Familienabend – bei uns
-          findest du Runde, Regelerklärung und über 600 Spiele in der
+          Spielen, leihen, treffen. Von Kennerspiel bis Familienabend â€“ bei uns
+          findest du Runde, RegelerklÃ¤rung und Ã¼ber 600 Spiele in der
           Vereins-Ludothek.
         </p>
       </section>
@@ -37,7 +37,7 @@ export default async function HomePage() {
             <Button render={<Link href="/downloads">Mitglied werden</Link>} />
             <Button
               variant="outline"
-              render={<Link href="/news">Nächster Spieleabend →</Link>}
+              render={<Link href="/news">NÃ¤chster Spieleabend â†’</Link>}
             />
           </div>
         </div>
@@ -47,7 +47,7 @@ export default async function HomePage() {
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
                 <Calendar className="text-primary size-4" />
-                Nächste Termine
+                NÃ¤chste Termine
               </h2>
               <Link
                 href="/news"
@@ -79,10 +79,10 @@ export default async function HomePage() {
           <div className="bg-primary/10 rounded-lg border p-5">
             <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
               <HeartHandshake className="size-4" />
-              Unterstütze uns
+              UnterstÃ¼tze uns
             </h2>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              Deine Spende hält die Ludothek am Leben – neue Spiele, Etiketten,
+              Deine Spende hÃ¤lt die Ludothek am Leben â€“ neue Spiele, Etiketten,
               Eventmaterial.
             </p>
             <Button
@@ -97,7 +97,7 @@ export default async function HomePage() {
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-xl font-bold">Aus dem Newsroom</h2>
           <Link href="/news" className="text-primary text-sm hover:underline">
-            Alle Beiträge →
+            Alle BeitrÃ¤ge â†’
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { PageHeading } from "@/components/ui/page-heading";
 import { requirePermission } from "@/lib/permissions";
 import { PostForm } from "@/app/admin/news/post-form";
 

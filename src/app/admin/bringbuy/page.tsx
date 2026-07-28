@@ -1,8 +1,8 @@
-import { ScanLine } from "lucide-react";
+﻿import { ScanLine } from "lucide-react";
 import { requireAdmin } from "@/lib/session";
-import { PageHeading } from "@/components/shared/page-heading";
-import { StatTile } from "@/components/shared/stat-tile";
-import { StatusPill, type StatusTone } from "@/components/shared/status-pill";
+import { PageHeading } from "@/components/ui/page-heading";
+import { StatTile } from "@/components/ui/stat-tile";
+import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,14 +33,14 @@ export default async function AdminBringBuyPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Flohmarkt"
-        title="Bring & Buy – Kassenansicht"
-        description="Großevent-Abwicklung mit Excel-Massenimport. Artikel scannen, reservieren, Verkauf bestätigen."
+        title="Bring & Buy â€“ Kassenansicht"
+        description="GroÃŸevent-Abwicklung mit Excel-Massenimport. Artikel scannen, reservieren, Verkauf bestÃ¤tigen."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="Artikel gelistet" value={FLEA_MARKET_STATS.listed} />
         <StatTile label="Verkauft heute" value={FLEA_MARKET_STATS.soldToday} />
-        <StatTile label="Umsatz" value={`${FLEA_MARKET_STATS.revenue} €`} />
+        <StatTile label="Umsatz" value={`${FLEA_MARKET_STATS.revenue} â‚¬`} />
         <StatTile label="Reserviert" value={FLEA_MARKET_STATS.reserved} />
       </div>
 
@@ -51,7 +51,7 @@ export default async function AdminBringBuyPage() {
               <TableRow className="bg-muted/50">
                 <TableHead>#</TableHead>
                 <TableHead>Artikel</TableHead>
-                <TableHead>Verkäufer</TableHead>
+                <TableHead>VerkÃ¤ufer</TableHead>
                 <TableHead>Preis</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -64,7 +64,7 @@ export default async function AdminBringBuyPage() {
                   <TableCell className="text-muted-foreground">
                     {item.seller}
                   </TableCell>
-                  <TableCell>{item.price} €</TableCell>
+                  <TableCell>{item.price} â‚¬</TableCell>
                   <TableCell>
                     <StatusPill
                       label={FLEA_STATUS_LABELS[item.status]}
@@ -82,10 +82,10 @@ export default async function AdminBringBuyPage() {
             <h2 className="font-serif text-lg font-bold">Kasse</h2>
             <div className="relative mt-3">
               <ScanLine className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-              <Input placeholder="Artikel-QR scannen …" className="pl-9" />
+              <Input placeholder="Artikel-QR scannen â€¦" className="pl-9" />
             </div>
             <div className="mt-3 flex gap-2">
-              <Button className="flex-1">Verkauf bestätigen</Button>
+              <Button className="flex-1">Verkauf bestÃ¤tigen</Button>
               <Button variant="outline" className="flex-1">
                 Reservieren
               </Button>
@@ -98,7 +98,7 @@ export default async function AdminBringBuyPage() {
               Alle Artikel eines Events per Vorlage hochladen.
             </p>
             <Button variant="outline" className="mt-3">
-              Datei wählen …
+              Datei wÃ¤hlen â€¦
             </Button>
           </div>
         </div>

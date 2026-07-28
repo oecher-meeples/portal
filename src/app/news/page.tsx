@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { PageHeading } from "@/components/ui/page-heading";
 import { getAllContentWithCalendar } from "@/lib/calendar";
 import { NewsBrowser } from "@/app/news/news-browser";
 
@@ -12,7 +12,7 @@ export default async function NewsPage() {
       <PageHeading
         eyebrow="Newsroom"
         title="Termine & Blog"
-        description="Alle Veranstaltungen, Turniere und Vereinsnews. Beiträge der Moderator:innen erscheinen automatisch auch auf Instagram."
+        description="Alle Veranstaltungen, Turniere und Vereinsnews. BeitrÃ¤ge der Moderator:innen erscheinen automatisch auch auf Instagram."
       />
       <NewsBrowser
         items={publicItems}

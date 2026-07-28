@@ -1,6 +1,6 @@
-import { Search } from "lucide-react";
+﻿import { Search } from "lucide-react";
 import { requireAdmin } from "@/lib/session";
-import { PageHeading } from "@/components/shared/page-heading";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusPill, type StatusTone } from "@/components/shared/status-pill";
+import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { GAMES, STATUS_LABELS, type GameStatus } from "@/data/games";
 
 const STATUS_TONE: Record<GameStatus, StatusTone> = {
@@ -38,13 +38,13 @@ export default async function AdminBestandPage() {
       <PageHeading
         eyebrow="Bestandsverwaltung"
         title="Bestand & Deinventarisierung"
-        description="Exemplare verwalten, Standorte tauschen, QR-Etiketten generieren. Ausgemusterte Spiele werden deinventarisiert – nie gelöscht."
+        description="Exemplare verwalten, Standorte tauschen, QR-Etiketten generieren. Ausgemusterte Spiele werden deinventarisiert â€“ nie gelÃ¶scht."
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full max-w-sm">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input placeholder="Spiel oder QR-Code suchen …" className="pl-9" />
+          <Input placeholder="Spiel oder QR-Code suchen â€¦" className="pl-9" />
         </div>
         <div className="flex gap-2">
           <Button variant="outline">Inventur</Button>
@@ -98,7 +98,7 @@ export default async function AdminBestandPage() {
               <TableCell className="font-medium line-through">
                 {DEINVENTORIZED_EXAMPLE.game}
               </TableCell>
-              <TableCell className="text-muted-foreground">—</TableCell>
+              <TableCell className="text-muted-foreground">â€”</TableCell>
               <TableCell>
                 <StatusPill label="Deinventarisiert" tone="neutral" />
               </TableCell>
@@ -112,7 +112,7 @@ export default async function AdminBestandPage() {
 
       <p className="bg-primary/10 rounded-md p-3 text-sm">
         Deinventarisierte Exemplare bleiben mit ihren Verleih-Belegen
-        (BorrowReceipt) verknüpft – die Historie bleibt lückenlos.
+        (BorrowReceipt) verknÃ¼pft â€“ die Historie bleibt lÃ¼ckenlos.
       </p>
     </div>
   );

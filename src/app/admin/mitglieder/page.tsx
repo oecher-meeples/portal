@@ -1,7 +1,7 @@
-import { requireAdmin } from "@/lib/session";
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { requireAdmin } from "@/lib/session";
+import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
-import { StatusPill, type StatusTone } from "@/components/shared/status-pill";
+import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import {
   Table,
   TableBody,
@@ -79,7 +79,7 @@ export default async function AdminMitgliederPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {member.anonymized ? "—" : member.role}
+                  {member.anonymized ? "â€”" : member.role}
                 </TableCell>
                 <TableCell>
                   <StatusPill

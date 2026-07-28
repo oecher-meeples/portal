@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/shared/page-heading";
+﻿import { PageHeading } from "@/components/ui/page-heading";
 
 export default function ForbiddenPage() {
   return (
@@ -6,7 +6,7 @@ export default function ForbiddenPage() {
       <PageHeading
         eyebrow="Zugriff verweigert"
         title="Keine Berechtigung"
-        description="Du hast nicht die nötigen Rechte, um diese Seite aufzurufen."
+        description="Du hast nicht die nÃ¶tigen Rechte, um diese Seite aufzurufen."
       />
     </div>
   );
