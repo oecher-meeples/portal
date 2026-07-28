@@ -14,7 +14,10 @@ export default async function NewsPage() {
         title="Termine & Blog"
         description="Alle Veranstaltungen, Turniere und Vereinsnews. Beiträge der Moderator:innen erscheinen automatisch auch auf Instagram."
       />
-      <NewsBrowser items={publicItems} />
+      <NewsBrowser
+        items={publicItems}
+        icsUrl={process.env.PUBLIC_CALENDAR_ICS_URL}
+      />
     </div>
   );
 }

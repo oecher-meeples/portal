@@ -5,7 +5,13 @@ import type { ContentItem } from "@/lib/content";
 import { NewsFilter } from "@/app/news/news-filter";
 import { NewsCalendar } from "@/app/news/news-calendar";
 
-export function NewsBrowser({ items }: { items: ContentItem[] }) {
+export function NewsBrowser({
+  items,
+  icsUrl,
+}: {
+  items: ContentItem[];
+  icsUrl?: string;
+}) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const visibleItems = selectedDate
     ? items.filter((item) => item.date === selectedDate)
@@ -18,6 +24,7 @@ export function NewsBrowser({ items }: { items: ContentItem[] }) {
         items={items}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
+        icsUrl={icsUrl}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ContentItem } from "@/lib/content";
@@ -34,10 +34,12 @@ export function NewsCalendar({
   items,
   selectedDate,
   onSelectDate,
+  icsUrl,
 }: {
   items: ContentItem[];
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
+  icsUrl?: string;
 }) {
   const [viewMonth, setViewMonth] = useState(() => {
     const now = new Date();
@@ -129,6 +131,19 @@ export function NewsCalendar({
         Automatisch synchronisiert aus dem öffentlichen Vereinskalender. Tage
         mit Terminen sind markiert – anklicken filtert die Liste.
       </p>
+
+      {icsUrl && (
+        <Button
+          variant="outline"
+          className="mt-3 w-full gap-1.5"
+          render={
+            <a href={icsUrl.replace(/^https?:\/\//, "webcal://")}>
+              <CalendarPlus className="size-4" />
+              Kalender abonnieren (iCal)
+            </a>
+          }
+        />
+      )}
     </div>
   );
 }
