@@ -57,7 +57,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ `prisma migrate dev` läuft ohne Fehler gegen die Neon-DB, `src/lib/prisma.ts` exportiert einen funktionierenden Client, Build (`pnpm build`) bricht nicht.
       `git commit -m "feat: add prisma schema and client for roles, permissions, posts, invites"`
 
-- [ ] **3. Neon Auth SDK integrieren**
+- [x] **3. Neon Auth SDK integrieren**
       Neon-Auth-/Stack-Auth-SDK-Paket installieren, gemäß Neon-Auth-Doku für Next.js App Router konfigurieren (Provider im Root-Layout, Middleware für geschützte Routen, Server-seitige Session-Helper `getCurrentUser()`). Login-Seite unter `src/app/login/page.tsx`, die Neon-Auth-Login-UI/Flow einbindet. Kein eigenes Passwort-Handling.
       _Definition of Done:_ Login mit einem manuell in Neon Auth angelegten Test-User funktioniert lokal (`pnpm dev`), `getCurrentUser()` liefert die eingeloggte Session server-seitig.
       `git commit -m "feat: integrate neon auth for session-based login"`
