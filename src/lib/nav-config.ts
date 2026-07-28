@@ -1,4 +1,3 @@
-import type { Role } from "@/lib/role-context";
 import {
   Home,
   Newspaper,
@@ -26,22 +25,24 @@ export type NavItem = {
   section: string;
 };
 
+export type Tier = "gast" | "mitglied" | "admin";
+
 export type NavGroup = {
   title: string | null;
-  minRole: Role;
+  minTier: Tier;
   items: NavItem[];
 };
 
-export const ROLE_ORDER: Role[] = ["gast", "mitglied", "admin"];
+export const TIER_ORDER: Tier[] = ["gast", "mitglied", "admin"];
 
-export function roleAtLeast(current: Role, minRole: Role) {
-  return ROLE_ORDER.indexOf(current) >= ROLE_ORDER.indexOf(minRole);
+export function tierAtLeast(current: Tier, minTier: Tier) {
+  return TIER_ORDER.indexOf(current) >= TIER_ORDER.indexOf(minTier);
 }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
     title: null,
-    minRole: "gast",
+    minTier: "gast",
     items: [
       { label: "Startseite", href: "/", icon: Home, section: "Öffentlich" },
       {
@@ -66,7 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Mitgliederbereich",
-    minRole: "mitglied",
+    minTier: "mitglied",
     items: [
       {
         label: "Mein Dashboard",
@@ -114,7 +115,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Administration",
-    minRole: "admin",
+    minTier: "admin",
     items: [
       {
         label: "Admin-Dashboard",

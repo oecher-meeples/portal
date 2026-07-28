@@ -92,7 +92,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ Unit-Test mit gemocktem ICS-Response (Fixture-Datei) prüft korrektes Parsing; manueller Test zeigt echte Termine aus dem öffentlichen Kalender auf der Seite.
       `git commit -m "feat: sync public google calendar events via ics feed"`
 
-- [ ] **10. Demo-Rollen-Mock durch echte Sessions ersetzen**
+- [x] **10. Demo-Rollen-Mock durch echte Sessions ersetzen**
       `src/lib/role-context.tsx` (Client-seitiger `"gast"|"mitglied"|"admin"`-Switcher aus Phase 1) durch echte serverseitige Session-/Permission-Prüfung ersetzen. Alle Konsumenten (u. a. `admin/page.tsx`, `dashboard/page.tsx`) auf `getCurrentUser()`/`hasPermission()` aus Schritt 3/4 umstellen. Den alten Rollen-Switcher entfernen, sofern nicht anderweitig für Demo-Zwecke benötigt (mit Nutzer klären, falls unklar bei Umsetzung).
       _Definition of Done:_ Keine Referenz auf `useRole`/`RoleProvider` mehr im Code (`grep` liefert keine Treffer außer ggf. Tests, die dann ebenfalls entfernt/angepasst wurden); Zugriff auf `/admin` ohne Admin-Session wird geblockt (manueller Test).
       `git commit -m "refactor: replace mock role switcher with real session-based permissions"`

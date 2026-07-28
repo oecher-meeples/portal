@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { RoleProvider } from "@/lib/role-context";
 import { AppShell } from "@/components/layout/app-shell";
 import { BrandWatermark } from "@/components/layout/brand-watermark";
 import "./globals.css";
@@ -44,9 +43,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <RoleProvider>
-            <AppShell>{children}</AppShell>
-          </RoleProvider>
+          <AppShell>{children}</AppShell>
         </ThemeProvider>
       </body>
     </html>

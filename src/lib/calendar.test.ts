@@ -26,9 +26,9 @@ describe("parseCalendarEvents", () => {
   it("excludes events that already happened", () => {
     const events = parseCalendarEvents(FIXTURE, { now: REFERENCE_NOW });
 
-    expect(events.some((event) => event.title === "Vergangener Spieleabend")).toBe(
-      false,
-    );
+    expect(
+      events.some((event) => event.title === "Vergangener Spieleabend"),
+    ).toBe(false);
   });
 
   it("respects the limit parameter", () => {

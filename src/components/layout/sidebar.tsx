@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_GROUPS, roleAtLeast } from "@/lib/nav-config";
-import { useRole } from "@/lib/role-context";
+import { NAV_GROUPS, tierAtLeast, type Tier } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
-export function Sidebar() {
-  const { role } = useRole();
+export function Sidebar({ tier }: { tier: Tier }) {
   const pathname = usePathname();
-  const groups = NAV_GROUPS.filter((g) => roleAtLeast(role, g.minRole));
+  const groups = NAV_GROUPS.filter((g) => tierAtLeast(tier, g.minTier));
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col gap-6 overflow-y-auto border-r px-3 py-6 sm:flex">

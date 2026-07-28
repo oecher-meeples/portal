@@ -26,7 +26,9 @@ export default async function AdminNewsPage() {
         title="Beiträge"
         description="Blog, Termine und Turniere verwalten."
         action={
-          <Button render={<Link href="/admin/news/new">+ Neuer Beitrag</Link>} />
+          <Button
+            render={<Link href="/admin/news/new">+ Neuer Beitrag</Link>}
+          />
         }
       />
 

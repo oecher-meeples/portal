@@ -2,8 +2,8 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 allowBuilds:
-  '@prisma/client': true
-  '@prisma/engines': true
+  "@prisma/client": true
+  "@prisma/engines": true
   core-js: true
   esbuild: true
   prisma: true

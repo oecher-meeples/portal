@@ -26,7 +26,9 @@ function loadMockPost(filename: string) {
 }
 
 async function main() {
-  const files = fs.readdirSync(POSTS_DIR).filter((file) => file.endsWith(".md"));
+  const files = fs
+    .readdirSync(POSTS_DIR)
+    .filter((file) => file.endsWith(".md"));
 
   for (const file of files) {
     const post = loadMockPost(file);

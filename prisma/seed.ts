@@ -15,9 +15,21 @@ const PERMISSIONS = [
 ];
 
 const ROLES = [
-  { name: "admin", description: "Vollzugriff", permissionKeys: PERMISSIONS.map((p) => p.key) },
-  { name: "moderator", description: "Redaktion", permissionKeys: ["posts:write"] },
-  { name: "mitglied", description: "Standardrolle nach Registrierung", permissionKeys: [] },
+  {
+    name: "admin",
+    description: "Vollzugriff",
+    permissionKeys: PERMISSIONS.map((p) => p.key),
+  },
+  {
+    name: "moderator",
+    description: "Redaktion",
+    permissionKeys: ["posts:write"],
+  },
+  {
+    name: "mitglied",
+    description: "Standardrolle nach Registrierung",
+    permissionKeys: [],
+  },
 ];
 
 async function upsertNeonAuthUser({
@@ -80,7 +92,10 @@ async function seedRoles() {
 
       await prisma.rolePermission.upsert({
         where: {
-          roleId_permissionId: { roleId: dbRole.id, permissionId: dbPermission.id },
+          roleId_permissionId: {
+            roleId: dbRole.id,
+            permissionId: dbPermission.id,
+          },
         },
         update: {},
         create: { roleId: dbRole.id, permissionId: dbPermission.id },
@@ -90,7 +105,9 @@ async function seedRoles() {
 }
 
 async function assignRole(neonAuthUserId: string, roleName: string) {
-  const role = await prisma.role.findUniqueOrThrow({ where: { name: roleName } });
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { name: roleName },
+  });
   await prisma.userRole.upsert({
     where: { neonAuthUserId_roleId: { neonAuthUserId, roleId: role.id } },
     update: {},

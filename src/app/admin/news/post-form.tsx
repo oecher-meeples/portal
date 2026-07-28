@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContentType } from "@/lib/content";
-import { createPost, updatePost, type PostInput } from "@/app/admin/news/actions";
+import {
+  createPost,
+  updatePost,
+  type PostInput,
+} from "@/app/admin/news/actions";
 
 const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
   { value: "blog", label: "Blog" },
@@ -152,7 +156,11 @@ export function PostForm({
 
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting} className="self-start">
-        {isSubmitting ? "Speichere…" : postId ? "Änderungen speichern" : "Beitrag erstellen"}
+        {isSubmitting
+          ? "Speichere…"
+          : postId
+            ? "Änderungen speichern"
+            : "Beitrag erstellen"}
       </Button>
     </form>
   );

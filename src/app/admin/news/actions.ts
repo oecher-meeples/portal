@@ -27,7 +27,13 @@ function slugify(title: string) {
 }
 
 function validatePostInput(input: PostInput) {
-  if (!input.title || !input.type || !input.date || !input.excerpt || !input.body) {
+  if (
+    !input.title ||
+    !input.type ||
+    !input.date ||
+    !input.excerpt ||
+    !input.body
+  ) {
     return "Bitte Titel, Typ, Datum, Excerpt und Inhalt ausfüllen.";
   }
   return null;

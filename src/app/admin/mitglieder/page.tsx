@@ -1,4 +1,4 @@
-import { RoleGate } from "@/components/shared/role-gate";
+import { requireAdmin } from "@/lib/session";
 import { PageHeading } from "@/components/shared/page-heading";
 import { Button } from "@/components/ui/button";
 import { StatusPill, type StatusTone } from "@/components/shared/status-pill";
@@ -24,92 +24,92 @@ const STATUS_TONE: Record<MemberStatus, StatusTone> = {
   ausgetreten: "neutral",
 };
 
-export default function AdminMitgliederPage() {
+export default async function AdminMitgliederPage() {
+  await requireAdmin();
+
   return (
-    <RoleGate minRole="admin">
-      <div className="flex flex-col gap-6">
-        <PageHeading
-          eyebrow="Onboarding"
-          title="Mitglieder & Einladungen"
-          description="Geschlossenes Registrierungssystem: Admin legt ein Meeple an, das System versendet einen Einladungs-Token per E-Mail."
-          action={<Button>+ Meeple anlegen &amp; einladen</Button>}
-        />
+    <div className="flex flex-col gap-6">
+      <PageHeading
+        eyebrow="Onboarding"
+        title="Mitglieder & Einladungen"
+        description="Geschlossenes Registrierungssystem: Admin legt ein Meeple an, das System versendet einen Einladungs-Token per E-Mail."
+        action={<Button>+ Meeple anlegen &amp; einladen</Button>}
+      />
 
-        <div className="flex flex-wrap gap-2 text-sm">
-          <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 font-medium">
-            Alle ({MEMBER_STATS.total})
-          </span>
-          <span className="text-muted-foreground rounded-full border px-3 py-1">
-            Einladung offen ({MEMBER_STATS.openInvitations})
-          </span>
-          <span className="text-muted-foreground rounded-full border px-3 py-1">
-            Ausgetreten
-          </span>
-        </div>
-
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Mitglied</TableHead>
-                <TableHead>Rolle</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Beigetreten</TableHead>
-                <TableHead className="text-right"> </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {MEMBERS.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <span className="bg-muted flex size-7 items-center justify-center rounded-full font-semibold">
-                        {member.initial}
-                      </span>
-                      <span
-                        className={
-                          member.anonymized
-                            ? "text-muted-foreground"
-                            : "font-medium"
-                        }
-                      >
-                        {member.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {member.anonymized ? "—" : member.role}
-                  </TableCell>
-                  <TableCell>
-                    <StatusPill
-                      label={STATUS_LABELS[member.status]}
-                      tone={STATUS_TONE[member.status]}
-                    />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {member.joined}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {member.status === "einladung" ? (
-                      <Button variant="outline" size="sm">
-                        Token erneut senden
-                      </Button>
-                    ) : member.status === "ausgetreten" ? (
-                      <span className="text-muted-foreground text-sm">
-                        Historie erhalten
-                      </span>
-                    ) : (
-                      <Button variant="ghost" size="sm">
-                        Verwalten
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+      <div className="flex flex-wrap gap-2 text-sm">
+        <span className="bg-primary text-primary-foreground rounded-full px-3 py-1 font-medium">
+          Alle ({MEMBER_STATS.total})
+        </span>
+        <span className="text-muted-foreground rounded-full border px-3 py-1">
+          Einladung offen ({MEMBER_STATS.openInvitations})
+        </span>
+        <span className="text-muted-foreground rounded-full border px-3 py-1">
+          Ausgetreten
+        </span>
       </div>
-    </RoleGate>
+
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Mitglied</TableHead>
+              <TableHead>Rolle</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Beigetreten</TableHead>
+              <TableHead className="text-right"> </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {MEMBERS.map((member) => (
+              <TableRow key={member.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <span className="bg-muted flex size-7 items-center justify-center rounded-full font-semibold">
+                      {member.initial}
+                    </span>
+                    <span
+                      className={
+                        member.anonymized
+                          ? "text-muted-foreground"
+                          : "font-medium"
+                      }
+                    >
+                      {member.name}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {member.anonymized ? "—" : member.role}
+                </TableCell>
+                <TableCell>
+                  <StatusPill
+                    label={STATUS_LABELS[member.status]}
+                    tone={STATUS_TONE[member.status]}
+                  />
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {member.joined}
+                </TableCell>
+                <TableCell className="text-right">
+                  {member.status === "einladung" ? (
+                    <Button variant="outline" size="sm">
+                      Token erneut senden
+                    </Button>
+                  ) : member.status === "ausgetreten" ? (
+                    <span className="text-muted-foreground text-sm">
+                      Historie erhalten
+                    </span>
+                  ) : (
+                    <Button variant="ghost" size="sm">
+                      Verwalten
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }

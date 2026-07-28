@@ -3,12 +3,8 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 
-const {
-  getAllContent,
-  getContentBySlug,
-  getLatestPosts,
-  getUpcomingEvents,
-} = await import("@/lib/content");
+const { getAllContent, getContentBySlug, getLatestPosts, getUpcomingEvents } =
+  await import("@/lib/content");
 
 function makePost(overrides: Partial<Record<string, unknown>> = {}) {
   return {
