@@ -144,13 +144,3 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
-
-export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
-
-export function findNavItem(pathname: string): NavItem | undefined {
-  const exact = ALL_NAV_ITEMS.find((item) => item.href === pathname);
-  if (exact) return exact;
-  return ALL_NAV_ITEMS.filter((item) => pathname.startsWith(item.href))
-    .sort((a, b) => b.href.length - a.href.length)
-    .at(0);
-}

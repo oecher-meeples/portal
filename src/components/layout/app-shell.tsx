@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { getSessionTier } from "@/lib/session";
 import { getCurrentUser } from "@/lib/auth/server";
 
@@ -15,7 +14,6 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <Sidebar tier={tier} />
         <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            <Breadcrumb />
             {children}
           </div>
         </main>
