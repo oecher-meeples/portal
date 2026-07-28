@@ -1,6 +1,6 @@
 ﻿import { PageHeading } from "@/components/ui/page-heading";
 import { requirePermission } from "@/lib/permissions";
-import { PostForm } from "@/app/admin/news/post-form";
+import { PostForm } from "@/components/feature/admin-news/post-form";
 
 export default async function NewPostPage() {
   await requirePermission("posts:write");

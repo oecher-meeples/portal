@@ -1,16 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { deletePost } from "@/app/admin/news/actions";
+import { deletePost } from "@/components/feature/admin-news/actions";
 
 export function DeletePostButton({ postId }: { postId: string }) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
 
   async function handleDelete() {
-    if (!confirm("Beitrag wirklich löschen?")) return;
+    if (!confirm("Beitrag wirklich lÃ¶schen?")) return;
     setIsPending(true);
     await deletePost(postId);
     setIsPending(false);
@@ -24,7 +24,7 @@ export function DeletePostButton({ postId }: { postId: string }) {
       onClick={handleDelete}
       disabled={isPending}
     >
-      Löschen
+      LÃ¶schen
     </Button>
   );
 }

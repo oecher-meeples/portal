@@ -1,7 +1,7 @@
 ﻿import { requireMember } from "@/lib/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { GAMES, TOTAL_GAMES_IN_INVENTORY } from "@/data/games";
-import { LudothekBrowser } from "@/app/ludothek/ludothek-browser";
+import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 
 export default async function LudothekPage() {
   await requireMember();

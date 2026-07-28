@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { redeemInvite } from "@/app/registrieren/actions";
+import { redeemInvite } from "@/components/feature/registrieren/actions";
 
 export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
   const router = useRouter();
@@ -80,7 +80,7 @@ export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Konto wird aktiviert…" : "Konto aktivieren"}
+        {isSubmitting ? "Konto wird aktiviertâ€¦" : "Konto aktivieren"}
       </Button>
     </form>
   );

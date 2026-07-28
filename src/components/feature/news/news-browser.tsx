@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import type { ContentItem } from "@/lib/content";
-import { NewsFilter } from "@/app/news/news-filter";
-import { NewsCalendar } from "@/app/news/news-calendar";
+import { NewsFilter } from "@/components/feature/news/news-filter";
+import { NewsCalendar } from "@/components/feature/news/news-calendar";
 
 export function NewsBrowser({
   items,

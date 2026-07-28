@@ -12,7 +12,7 @@ import {
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { formatDateShort } from "@/lib/format";
-import { DeletePostButton } from "@/app/admin/news/delete-post-button";
+import { DeletePostButton } from "@/components/feature/admin-news/delete-post-button";
 
 export default async function AdminNewsPage() {
   await requirePermission("posts:write");

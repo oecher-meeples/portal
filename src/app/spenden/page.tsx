@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DonationAmountPicker } from "@/app/spenden/donation-amount-picker";
+import { DonationAmountPicker } from "@/components/feature/spenden/donation-amount-picker";
 
 export default function SpendenPage() {
   return (

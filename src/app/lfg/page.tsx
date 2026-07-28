@@ -1,8 +1,8 @@
 ﻿import { requireMember } from "@/lib/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { LFG_REQUESTS } from "@/data/lfg";
-import { LfgList } from "@/app/lfg/lfg-list";
-import { CreateLfgDialog } from "@/app/lfg/create-lfg-dialog";
+import { LfgList } from "@/components/feature/lfg/lfg-list";
+import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
 
 export default async function LfgPage() {
   await requireMember();

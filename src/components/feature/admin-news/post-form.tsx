@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ import {
   createPost,
   updatePost,
   type PostInput,
-} from "@/app/admin/news/actions";
+} from "@/components/feature/admin-news/actions";
 
 const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
   { value: "blog", label: "Blog" },
@@ -157,9 +157,9 @@ export function PostForm({
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting} className="self-start">
         {isSubmitting
-          ? "Speichere…"
+          ? "Speichereâ€¦"
           : postId
-            ? "Änderungen speichern"
+            ? "Ã„nderungen speichern"
             : "Beitrag erstellen"}
       </Button>
     </form>

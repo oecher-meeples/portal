@@ -1,5 +1,5 @@
 ﻿import { PageHeading } from "@/components/ui/page-heading";
-import { RegisterForm } from "@/app/registrieren/register-form";
+import { RegisterForm } from "@/components/feature/registrieren/register-form";
 
 export default async function RegistrierenPage({
   searchParams,

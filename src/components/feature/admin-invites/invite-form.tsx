@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { createInvite } from "@/app/admin/invites/actions";
+import { createInvite } from "@/components/feature/admin-invites/actions";
 
 export function InviteForm() {
   const [isPending, setIsPending] = useState(false);
@@ -17,7 +17,7 @@ export function InviteForm() {
       const { token, expiresAt } = await createInvite();
       const registrationUrl = `${window.location.origin}/registrieren?token=${token}`;
       setInviteLink(registrationUrl);
-      console.log(`Einladung gültig bis ${expiresAt}`);
+      console.log(`Einladung gÃ¼ltig bis ${expiresAt}`);
     } catch {
       setError("Einladung konnte nicht erzeugt werden.");
     } finally {
@@ -29,20 +29,20 @@ export function InviteForm() {
     ? `mailto:?subject=${encodeURIComponent(
         "Einladung zu Oecher Meeples",
       )}&body=${encodeURIComponent(
-        `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich über diesen Link:\n${inviteLink}\n\nDer Link ist 7 Tage gültig.`,
+        `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich Ã¼ber diesen Link:\n${inviteLink}\n\nDer Link ist 7 Tage gÃ¼ltig.`,
       )}`
     : null;
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
       <Button onClick={handleCreateInvite} disabled={isPending}>
-        {isPending ? "Erzeuge Einladung…" : "+ Einladung erzeugen"}
+        {isPending ? "Erzeuge Einladungâ€¦" : "+ Einladung erzeugen"}
       </Button>
       {error && <p className="text-destructive text-sm">{error}</p>}
       {inviteLink && mailtoHref && (
         <div className="flex flex-col gap-2">
           <p className="text-muted-foreground text-sm">
-            Registrierungslink (7 Tage gültig):
+            Registrierungslink (7 Tage gÃ¼ltig):
           </p>
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">
             {inviteLink}

@@ -2,7 +2,7 @@
 import { requireMember } from "@/lib/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
-import { ScanModeSwitcher } from "@/app/scan/scan-mode-switcher";
+import { ScanModeSwitcher } from "@/components/feature/scan/scan-mode-switcher";
 
 export default async function ScanPage() {
   await requireMember();

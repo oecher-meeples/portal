@@ -1,6 +1,6 @@
 ﻿import { PageHeading } from "@/components/ui/page-heading";
 import { getAllContentWithCalendar } from "@/lib/calendar";
-import { NewsBrowser } from "@/app/news/news-browser";
+import { NewsBrowser } from "@/components/feature/news/news-browser";
 
 export default async function NewsPage() {
   const publicItems = (await getAllContentWithCalendar()).filter(

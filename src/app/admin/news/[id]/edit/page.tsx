@@ -2,7 +2,7 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { requirePermission } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { PostForm } from "@/app/admin/news/post-form";
+import { PostForm } from "@/components/feature/admin-news/post-form";
 
 const DB_TO_TYPE = {
   BLOG: "blog",

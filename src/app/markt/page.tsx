@@ -1,7 +1,7 @@
 ﻿import { requireMember } from "@/lib/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { MARKET_LISTINGS, SPARE_PART_LISTINGS } from "@/data/market";
-import { MarktBrowser } from "@/app/markt/markt-browser";
+import { MarktBrowser } from "@/components/feature/markt/markt-browser";
 
 export default async function MarktPage() {
   await requireMember();
