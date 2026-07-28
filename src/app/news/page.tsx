@@ -3,8 +3,10 @@ import { PlaceholderMedia } from "@/components/shared/placeholder-media";
 import { getAllContent } from "@/lib/content";
 import { NewsFilter } from "@/app/news/news-filter";
 
-export default function NewsPage() {
-  const publicItems = getAllContent().filter((item) => !item.internal);
+export default async function NewsPage() {
+  const publicItems = (await getAllContent()).filter(
+    (item) => !item.internal,
+  );
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,50 +1,104 @@
-import { describe, expect, it } from "vitest";
-import {
+import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/lib/__mocks__/prisma";
+
+vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+
+const {
   getAllContent,
   getContentBySlug,
   getLatestPosts,
   getUpcomingEvents,
-} from "@/lib/content";
+} = await import("@/lib/content");
+
+function makePost(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    slug: "sommerfest-der-meeples",
+    type: "BLOG" as const,
+    title: "Sommerfest der Meeples",
+    excerpt: "Danke an alle Helfer:innen!",
+    body: "Unser Sommerfest war ein voller Erfolg.",
+    date: new Date("2026-06-15"),
+    author: "Jan Herwig",
+    location: null,
+    internal: null,
+    instagram: true,
+    ...overrides,
+  };
+}
+
+const ALL_POSTS = [
+  makePost(),
+  makePost({
+    slug: "kennerspiel-turnier-09-08",
+    type: "TURNIER",
+    title: "Kennerspiel-Turnier",
+    date: new Date("2026-08-09"),
+    author: null,
+    instagram: null,
+  }),
+  makePost({
+    slug: "offener-spieleabend-01-08",
+    type: "TERMIN",
+    title: "Offener Spieleabend",
+    date: new Date("2026-08-01"),
+    author: null,
+    instagram: null,
+  }),
+];
 
 describe("getAllContent", () => {
-  it("loads all markdown posts from content/posts", () => {
-    expect(getAllContent()).toHaveLength(7);
+  it("loads all posts from the database", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    const items = await getAllContent();
+
+    expect(items).toHaveLength(3);
+    expect(items[0].date).toBe("2026-06-15");
   });
 });
 
 describe("getContentBySlug", () => {
-  it("resolves a post by its slug", () => {
-    const item = getContentBySlug("sommerfest-der-meeples");
+  it("resolves a post by its slug", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(ALL_POSTS[0]);
+
+    const item = await getContentBySlug("sommerfest-der-meeples");
+
     expect(item?.title).toBe("Sommerfest der Meeples");
     expect(item?.author).toBe("Jan Herwig");
   });
 
-  it("returns undefined for an unknown slug", () => {
-    expect(getContentBySlug("does-not-exist")).toBeUndefined();
+  it("returns undefined for an unknown slug", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(null);
+
+    expect(await getContentBySlug("does-not-exist")).toBeUndefined();
   });
 });
 
 describe("getUpcomingEvents", () => {
-  it("excludes blog posts and sorts ascending by date", () => {
-    const events = getUpcomingEvents(10);
-    expect(events.every((item) => item.type !== "blog")).toBe(true);
-    const dates = events.map((item) => item.date);
-    expect(dates).toEqual([...dates].sort());
-  });
+  it("excludes blog posts and queries ascending by date", async () => {
+    const events = ALL_POSTS.filter((post) => post.type !== "BLOG");
+    prismaMock.post.findMany.mockResolvedValue(events);
 
-  it("respects the limit parameter", () => {
-    expect(getUpcomingEvents(2)).toHaveLength(2);
+    const result = await getUpcomingEvents(10);
+
+    expect(result.every((item) => item.type !== "blog")).toBe(true);
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith({
+      where: { type: { not: "BLOG" } },
+      orderBy: { date: "asc" },
+      take: 10,
+    });
   });
 });
 
 describe("getLatestPosts", () => {
-  it("sorts all content descending by date", () => {
-    const posts = getLatestPosts(10);
-    const dates = posts.map((item) => item.date);
-    expect(dates).toEqual([...dates].sort().reverse());
-  });
+  it("queries all posts descending by date with a limit", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
-  it("respects the limit parameter", () => {
-    expect(getLatestPosts(3)).toHaveLength(3);
+    await getLatestPosts(3);
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith({
+      orderBy: { date: "desc" },
+      take: 3,
+    });
   });
 });

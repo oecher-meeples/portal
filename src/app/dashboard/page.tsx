@@ -14,8 +14,10 @@ const QUICK_LINKS = [
   { href: "/markt", label: "Marktplatz", icon: Tag },
 ];
 
-export default function DashboardPage() {
-  const internalNews = getAllContent().filter((item) => item.internal);
+export default async function DashboardPage() {
+  const internalNews = (await getAllContent()).filter(
+    (item) => item.internal,
+  );
 
   return (
     <RoleGate minRole="mitglied">

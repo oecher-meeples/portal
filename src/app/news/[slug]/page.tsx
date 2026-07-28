@@ -6,8 +6,9 @@ import { ContentTypeBadge } from "@/components/content/content-type-badge";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
 import { formatDate } from "@/lib/format";
 
-export function generateStaticParams() {
-  return getAllContent().map((item) => ({ slug: item.slug }));
+export async function generateStaticParams() {
+  const items = await getAllContent();
+  return items.map((item) => ({ slug: item.slug }));
 }
 
 export default async function PostDetailPage({
@@ -16,7 +17,7 @@ export default async function PostDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const item = getContentBySlug(slug);
+  const item = await getContentBySlug(slug);
   if (!item) notFound();
 
   return (

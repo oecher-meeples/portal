@@ -6,9 +6,9 @@ import { ContentCard } from "@/components/content/content-card";
 import { getUpcomingEvents, getLatestPosts } from "@/lib/content";
 import { formatDate } from "@/lib/format";
 
-export default function HomePage() {
-  const events = getUpcomingEvents();
-  const posts = getLatestPosts();
+export default async function HomePage() {
+  const events = await getUpcomingEvents();
+  const posts = await getLatestPosts();
 
   return (
     <div className="flex flex-col gap-10">

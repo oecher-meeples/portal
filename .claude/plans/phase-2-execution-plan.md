@@ -77,7 +77,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ Unit-Tests für Token-Validierung (gültig/abgelaufen/bereits eingelöst) grün; manueller Durchlauf lokal: Invite erzeugen → Registrierungslink öffnen → Account erstellen → Standard-Rolle zugewiesen.
       `git commit -m "feat: add invitation-based registration flow"`
 
-- [ ] **7. Blog-Datenmigration auf Prisma umstellen**
+- [x] **7. Blog-Datenmigration auf Prisma umstellen**
       Einmal-Migrationsskript `scripts/migrate-mock-posts.ts`: liest alle Dateien aus `content/posts/*.md` (bestehende Logik aus `src/lib/content.ts` wiederverwenden), erzeugt daraus `Post`-Datensätze in der DB. `src/lib/content.ts` intern von Dateisystem-Zugriff auf Prisma-Queries umstellen, **Funktionssignaturen unverändert** (`getAllContent`, `getContentBySlug`, `getUpcomingEvents`, `getLatestPosts`), damit die 9 bestehenden Aufrufer unverändert bleiben. Bestehende Tests in `src/lib/content.test.ts` auf das Prisma-Mock aus Schritt 1 umstellen.
       _Definition of Done:_ Migrationsskript einmalig erfolgreich gegen die Neon-DB gelaufen (7 Posts in DB verifiziert), `src/lib/content.test.ts` grün, `/news`-Seite zeigt lokal dieselben 7 Beiträge wie vorher aus den Mock-Dateien.
       `git commit -m "refactor: migrate blog content from markdown files to database"`
