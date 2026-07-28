@@ -27,6 +27,7 @@ export function BrandWatermark() {
         alt=""
         width={3840}
         height={1000}
+        priority
         className="relative h-40 w-auto lg:h-56 dark:hidden"
       />
       <Image
@@ -34,6 +35,7 @@ export function BrandWatermark() {
         alt=""
         width={3840}
         height={1000}
+        priority
         className="relative hidden h-40 w-auto lg:h-56 dark:block"
       />
     </div>
