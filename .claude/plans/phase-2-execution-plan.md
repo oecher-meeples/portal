@@ -82,7 +82,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ Migrationsskript einmalig erfolgreich gegen die Neon-DB gelaufen (7 Posts in DB verifiziert), `src/lib/content.test.ts` grün, `/news`-Seite zeigt lokal dieselben 7 Beiträge wie vorher aus den Mock-Dateien.
       `git commit -m "refactor: migrate blog content from markdown files to database"`
 
-- [ ] **8. Live-Markdown-Editor für Moderatoren**
+- [x] **8. Live-Markdown-Editor für Moderatoren**
       Admin-Bereich `src/app/admin/news/page.tsx` (Liste bestehender Posts, geschützt durch `posts:write`) und `src/app/admin/news/[id]/edit/page.tsx` bzw. `new/page.tsx`: Formular mit Feldern Titel, Typ, Datum, Excerpt, Autor sowie Markdown-Textarea mit Live-Preview via `react-markdown` (Split-View oder Tab-Umschalter). Server Actions für Create/Update/Delete, jeweils mit Permission-Check (`posts:write` / `posts:delete`).
       _Definition of Done:_ Unit-Tests für die Server Actions (Berechtigungsprüfung, Validierung Pflichtfelder) grün; manueller Test: neuer Beitrag im Editor erstellt erscheint auf `/news`.
       `git commit -m "feat: add markdown editor for blog post management"`
