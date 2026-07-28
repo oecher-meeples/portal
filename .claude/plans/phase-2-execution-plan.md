@@ -87,7 +87,7 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       _Definition of Done:_ Unit-Tests für die Server Actions (Berechtigungsprüfung, Validierung Pflichtfelder) grün; manueller Test: neuer Beitrag im Editor erstellt erscheint auf `/news`.
       `git commit -m "feat: add markdown editor for blog post management"`
 
-- [ ] **9. Google-Kalender-ICS-Sync**
+- [x] **9. Google-Kalender-ICS-Sync**
       `src/lib/calendar.ts`: Funktion `getUpcomingCalendarEvents()`, die `PUBLIC_CALENDAR_ICS_URL` fetcht, mit `node-ical` parst und in ein einheitliches, zu `ContentItem`-ähnliches Format konvertiert. Next.js `fetch`-Caching mit sinnvollem `revalidate`-Intervall (z. B. 15 Minuten) nutzen. Einbindung in die bestehenden Termin-Ansichten (`/news`-Filter "termin", Homepage-Vorschau), zusammengeführt mit den DB-Terminen aus Schritt 7.
       _Definition of Done:_ Unit-Test mit gemocktem ICS-Response (Fixture-Datei) prüft korrektes Parsing; manueller Test zeigt echte Termine aus dem öffentlichen Kalender auf der Seite.
       `git commit -m "feat: sync public google calendar events via ics feed"`

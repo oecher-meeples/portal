@@ -1,10 +1,10 @@
 import { PageHeading } from "@/components/shared/page-heading";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
-import { getAllContent } from "@/lib/content";
+import { getAllContentWithCalendar } from "@/lib/calendar";
 import { NewsFilter } from "@/app/news/news-filter";
 
 export default async function NewsPage() {
-  const publicItems = (await getAllContent()).filter(
+  const publicItems = (await getAllContentWithCalendar()).filter(
     (item) => !item.internal,
   );
 

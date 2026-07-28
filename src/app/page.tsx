@@ -3,11 +3,12 @@ import { Calendar, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlaceholderMedia } from "@/components/shared/placeholder-media";
 import { ContentCard } from "@/components/content/content-card";
-import { getUpcomingEvents, getLatestPosts } from "@/lib/content";
+import { getLatestPosts } from "@/lib/content";
+import { getUpcomingEventsWithCalendar } from "@/lib/calendar";
 import { formatDate } from "@/lib/format";
 
 export default async function HomePage() {
-  const events = await getUpcomingEvents();
+  const events = await getUpcomingEventsWithCalendar();
   const posts = await getLatestPosts();
 
   return (
