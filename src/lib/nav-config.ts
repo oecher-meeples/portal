@@ -18,6 +18,8 @@ import {
   UserCog,
   ShoppingBasket,
   Settings,
+  GraduationCap,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -116,6 +118,12 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Mitgliederbereich",
       },
       {
+        label: "Erklärbären",
+        href: "/erklaerbaeren",
+        icon: GraduationCap,
+        section: "Mitgliederbereich",
+      },
+      {
         label: "Markt & Ersatzteile",
         href: "/markt",
         icon: Tag,
@@ -161,6 +169,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Beitragseinzug",
         href: "/admin/bank",
         icon: Landmark,
+        section: "Administration",
+      },
+      {
+        label: "Events & Schichten",
+        href: "/admin/events",
+        icon: CalendarClock,
         section: "Administration",
       },
       {

@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/permissions";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/meeples";
 import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
+import { uniqueSlug } from "@/lib/slug";
 import {
   BggApiError,
   BggNotFoundError,
@@ -26,33 +27,18 @@ export type BoardGameInput = {
   description?: string | null;
   mechanics?: string[];
   condition?: string | null;
+  explainerVideoUrl?: string | null;
 };
 
-function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
-
-async function uniqueSlug(title: string, excludeId?: string) {
-  const base = slugify(title);
-  let slug = base;
-  let suffix = 2;
-
-  while (
-    await prisma.boardGame.findFirst({
-      where: { slug, ...(excludeId ? { id: { not: excludeId } } : {}) },
-      select: { id: true },
-    })
-  ) {
-    slug = `${base}-${suffix}`;
-    suffix += 1;
-  }
-
-  return slug;
+async function uniqueBoardGameSlug(title: string, excludeId?: string) {
+  return uniqueSlug(
+    title,
+    async (slug) =>
+      (await prisma.boardGame.findFirst({
+        where: { slug, ...(excludeId ? { id: { not: excludeId } } : {}) },
+        select: { id: true },
+      })) !== null,
+  );
 }
 
 function validateBoardGameInput(input: BoardGameInput) {
@@ -77,6 +63,7 @@ function toBoardGameData(input: BoardGameInput) {
     description: input.description || null,
     mechanics: input.mechanics ?? [],
     condition: input.condition || null,
+    explainerVideoUrl: input.explainerVideoUrl || null,
   };
 }
 
@@ -116,7 +103,7 @@ export async function createBoardGame(input: BoardGameInput) {
   }
 
   const [slug, hint, actor] = await Promise.all([
-    uniqueSlug(input.title),
+    uniqueBoardGameSlug(input.title),
     duplicateEanHint(input.ean),
     ensureMeeple(user),
   ]);
@@ -155,7 +142,7 @@ export async function updateBoardGame(id: string, input: BoardGameInput) {
   }
 
   const [slug, hint] = await Promise.all([
-    uniqueSlug(input.title, id),
+    uniqueBoardGameSlug(input.title, id),
     duplicateEanHint(input.ean, id),
   ]);
 
