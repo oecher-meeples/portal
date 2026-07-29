@@ -24,10 +24,19 @@ export async function getOpenHoldingsSummary(meepleId: string) {
 export async function recordResignation(meepleId: string, endsAt: Date) {
   await requireMembersManage();
 
-  await prisma.meeple.update({
-    where: { id: meepleId },
-    data: { resignedAt: new Date(), membershipEndsAt: endsAt },
-  });
+  await prisma.$transaction([
+    prisma.meeple.update({
+      where: { id: meepleId },
+      data: { resignedAt: new Date(), membershipEndsAt: endsAt },
+    }),
+    // No cron marks the exact turn-of-year moment, so this is the closest
+    // practical hook to "wird ausgetreten" — close now rather than leave
+    // open Gesuche nobody will ever close once access is revoked.
+    prisma.lfgPost.updateMany({
+      where: { createdByMeepleId: meepleId, closedAt: null },
+      data: { closedAt: new Date() },
+    }),
+  ]);
 
   revalidatePath("/admin/mitglieder");
   return { success: true as const };

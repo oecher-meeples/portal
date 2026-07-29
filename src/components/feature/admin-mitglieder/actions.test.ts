@@ -67,6 +67,15 @@ describe("recordResignation", () => {
 
     vi.useRealTimers();
   });
+
+  it("closes the meeple's open Spielergesuche in the same transaction", async () => {
+    await recordResignation("meeple-1", new Date("2027-01-01T00:00:00Z"));
+
+    expect(prismaMock.lfgPost.updateMany).toHaveBeenCalledWith({
+      where: { createdByMeepleId: "meeple-1", closedAt: null },
+      data: { closedAt: expect.any(Date) },
+    });
+  });
 });
 
 describe("revokeResignation", () => {

@@ -109,8 +109,44 @@ model Meeple {
   movedUnitsAsKeeper        StorageUnitMove[]   @relation("StorageUnitMoveKeeper")
   holdings                  GameHolding[]       @relation("GameHoldingMeeple")
   recordedHoldings          GameHolding[]       @relation("GameHoldingRecorder")
+  lfgPosts                  LfgPost[]           @relation("LfgPostCreator")
+  lfgParticipations         LfgParticipant[]
 
   @@map("meeples")
+}
+
+/// A player-search post. `gameTitle` is deliberately free text, not a relation to
+/// BoardGame — a Gesuch can be for a title the club doesn't own (see docs/schema.md).
+model LfgPost {
+  id                String    @id @default(cuid())
+  title             String
+  gameTitle         String?
+  description       String
+  plannedAt         DateTime?
+  dateNote          String?
+  location          String?
+  maxParticipants   Int
+  createdByMeepleId String
+  closedAt          DateTime?
+  createdAt         DateTime  @default(now())
+
+  createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
+  participants LfgParticipant[]
+
+  @@index([createdByMeepleId])
+  @@map("lfg_posts")
+}
+
+model LfgParticipant {
+  postId   String
+  meepleId String
+  joinedAt DateTime @default(now())
+
+  post   LfgPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  meeple Meeple  @relation(fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@id([postId, meepleId])
+  @@map("lfg_participants")
 }
 
 /// Audit trail for every decrypted read of bank data (see docs/adr/0003). Kept 24 months.
