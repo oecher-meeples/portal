@@ -14,6 +14,7 @@ import {
   Boxes,
   UserCog,
   ShoppingBasket,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 
@@ -139,6 +140,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Bring & Buy Kasse",
         href: "/admin/bringbuy",
         icon: ShoppingBasket,
+        section: "Administration",
+      },
+      {
+        label: "Einstellungen",
+        href: "/admin/einstellungen",
+        icon: Settings,
         section: "Administration",
       },
     ],
