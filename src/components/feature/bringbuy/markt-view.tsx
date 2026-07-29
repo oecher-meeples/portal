@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireMeeple } from "@/lib/meeples";
 import { formatDate } from "@/lib/format";
 import { CreateFleaMarketItemDialog } from "@/components/feature/bringbuy/create-flea-market-item-dialog";
+import { ImportFleaMarketItemsDialog } from "@/components/feature/bringbuy/import-flea-market-items-dialog";
 import {
   OwnFleaMarketItemList,
   type OwnFleaMarketItem,
@@ -50,7 +51,10 @@ export async function FleaMarketSection() {
             Gäste-Bereich sichtbar sind.
           </p>
         </div>
-        <CreateFleaMarketItemDialog events={eventOptions} />
+        <div className="flex gap-2">
+          <ImportFleaMarketItemsDialog events={eventOptions} />
+          <CreateFleaMarketItemDialog events={eventOptions} />
+        </div>
       </div>
       <OwnFleaMarketItemList items={items} />
     </div>
