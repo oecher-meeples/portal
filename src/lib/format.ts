@@ -1,4 +1,4 @@
-import type { ExplainerExperienceLevel } from "@prisma/client";
+import type { ExplainerExperienceLevel, FleaMarketItemStatus } from "@prisma/client";
 import type { StatusTone } from "@/components/ui/status-pill";
 import type { MembershipState } from "@/lib/meeples";
 
@@ -38,4 +38,24 @@ export const EXPLAINER_EXPERIENCE_LEVEL_LABELS: Record<
   WITH_MANUAL: "Mit Anleitung",
   WITHOUT_MANUAL: "Ohne Anleitung",
   BY_HEART: "Im Schlaf",
+};
+
+export const FLEA_MARKET_ITEM_STATUS_LABELS: Record<
+  FleaMarketItemStatus,
+  string
+> = {
+  PENDING: "Wartet auf Freigabe",
+  FOR_SALE: "Im Verkauf",
+  RESERVED: "Reserviert",
+  SOLD: "Verkauft",
+};
+
+export const FLEA_MARKET_ITEM_STATUS_TONES: Record<
+  FleaMarketItemStatus,
+  StatusTone
+> = {
+  PENDING: "neutral",
+  FOR_SALE: "positive",
+  RESERVED: "warning",
+  SOLD: "info",
 };

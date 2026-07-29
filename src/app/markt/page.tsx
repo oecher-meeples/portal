@@ -1,7 +1,9 @@
 ﻿import { requireMember } from "@/lib/session";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Separator } from "@/components/ui/separator";
 import { MARKET_LISTINGS, SPARE_PART_LISTINGS } from "@/data/market";
 import { MarktBrowser } from "@/components/feature/markt/markt-browser";
+import { FleaMarketSection } from "@/components/feature/bringbuy/markt-view";
 
 export default async function MarktPage() {
   await requireMember();
@@ -17,6 +19,8 @@ export default async function MarktPage() {
         listings={MARKET_LISTINGS}
         spareParts={SPARE_PART_LISTINGS}
       />
+      <Separator />
+      <FleaMarketSection />
     </div>
   );
 }
