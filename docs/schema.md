@@ -282,41 +282,76 @@ Spiele, deren Standort noch nie erfasst wurde, liegen in der Einheit „Unsortie
 
 ## 5. Events und Flohmarkt
 
-Noch nicht modelliert. Beschlossen ist bisher nur, wie Events an das Ludothek-Modell anschließen: **„beim Event" ist kein eigener Aufenthalts-Zieltyp**, sondern ein Regal, das dem Event zugeordnet ist. Ein Spiel beim Event liegt also in `OM-SHELF-C4`, und dieses Regal steht beim Event. Die Ausgabe an Gäste am Tisch berührt die Aufenthalts-Kette nicht und wird separat erfasst; betroffene Spiele erhalten anschließend das Flag `needsCompletenessCheck`.
+`Event` ist eigenständig und losgelöst vom öffentlichen/internen ICS-Kalender-Feed (siehe ADR 0004) — der Feed bleibt Ankündigung, das Event die Betriebsgrundlage für Schichten, Erklärbären und Flohmarkt-Artikel. „Beim Event" ist kein eigener Aufenthalts-Zieltyp, sondern eine `EventShelfAssignment`: ein Regal, das dem Event zugeordnet ist. Diese Zuordnung ist rein informativ und verändert keinen `GameHolding` — sie grenzt nur ein, welche Spiele der Gäste-Bereich als „im Raum" anzeigt (Standort-Kette über `StorageUnit`-Vorfahren, siehe ADR 0005).
+
+Wer die Flohmarkt-Kasse bedienen oder Artikel freigeben darf, ergibt sich zur Laufzeit aus der Permission `events:manage` oder einer aktiven `ShiftBooking` für eine `KASSE`-Schicht des jeweiligen Events — nicht aus einer eigenen dauerhaften Permission (siehe ADR 0006, `src/lib/events/shift-rights.ts`).
 
 ```mermaid
 erDiagram
     Event {
         String id PK
+        String slug UK
         String title
         DateTime startsAt
         DateTime endsAt
         String location
     }
 
+    EventShelfAssignment {
+        String eventId FK
+        String unitId FK
+    }
+
     Shift {
         String id PK
         String eventId FK
-        String meepleId FK
-        String role "THEKE, KASSE, LEIHE, ERKLAERBAER"
+        String type "THEKE, KASSE, LEIHE"
         DateTime startsAt
         DateTime endsAt
-        Boolean tentative
+        Int capacity
+    }
+
+    ShiftBooking {
+        String shiftId FK
+        String meepleId FK
+        Boolean uncertain
+    }
+
+    ExplainerGame {
+        String id PK
+        String meepleId FK
+        String boardGameId FK
+        String level "WITH_MANUAL, WITHOUT_MANUAL, BY_HEART"
+    }
+
+    ExplainerAttendance {
+        String eventId FK
+        String meepleId FK
     }
 
     FleaMarketItem {
         String id PK
+        String code UK
+        String eventId FK
         String sellerMeepleId FK
         String title
-        String itemCondition
-        Decimal price
-        String status "FOR_SALE, RESERVED, SOLD"
-        Boolean isBringAndBuy
+        Int priceEuros
+        String status "PENDING, FOR_SALE, RESERVED, SOLD"
+        DateTime approvedAt
+        String approvedByMeepleId
     }
 
+    Event ||--o{ EventShelfAssignment : "hat"
+    StorageUnit ||--o{ EventShelfAssignment : "zugeordnet"
     Event ||--o{ Shift : "hat"
-    Shift }o--|| Meeple : "besetzt von"
-    FleaMarketItem }o--|| Meeple : "angeboten von"
+    Shift ||--o{ ShiftBooking : "gebucht von"
+    Meeple ||--o{ ShiftBooking : "bucht"
+    Meeple ||--o{ ExplainerGame : "kann erklären"
+    BoardGame ||--o{ ExplainerGame : "erklärt von"
+    Event ||--o{ ExplainerAttendance : "anwesend bei"
+    Meeple ||--o{ ExplainerAttendance : "meldet an"
+    Event ||--o{ FleaMarketItem : "verkauft bei"
+    Meeple ||--o{ FleaMarketItem : "bietet an"
 
     Meeple {
         String id PK
@@ -325,6 +360,9 @@ erDiagram
 
 | Tabelle | Stand |
 |---|---|
-| `events`, `shifts` (Helferplan, Erklärbären) | 📋 Phase 6 |
-| `flea_market_items` (Bring & Buy) | 📋 Phase 6 |
+| `events`, `event_shelf_assignments`, `shifts`, `shift_bookings` | ✅ migriert |
+| `explainer_games`, `explainer_attendances` | ✅ migriert |
+| `flea_market_items` | ✅ migriert |
+| `board_games.explainerVideoUrl` | ✅ migriert |
+| Permission `events:manage` | ✅ migriert |
 | Ersatzteillager-Ansicht für deinventarisierte Spiele, Kleinanzeigen | 📋 Phase 7 |

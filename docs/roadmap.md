@@ -115,19 +115,19 @@ Bewusst zurückgestellt bzw. nicht Teil von Phase 5 (siehe `.claude/plans/phase-
 ## 📅 Phase 6: Event-Betrieb & Bring & Buy Flohmarkt
 *Ziel: IT-Unterstützung für Spieletage, Großveranstaltungen und den internen Flohmarkt.*
 
-* **[ ] Meilenstein 6.1: Konzeption Event-Strukturen & Flohmarkt-Datenmodell**
-    * [ ] Prisma-Datenmodellierung für das Bring & Buy Flohmarkt-Modul (Isolierte Tabellen für Artikel, Preise, Status und Verkäufer-Zuordnung).
-    * [ ] Ablauf-Planung für den mobilen Gäste-Modus vor Ort auf Großevents.
-* **[ ] Meilenstein 6.2: Helferplan & Erklärbären (Umsetzung)**
-    * [ ] Möglichkeit für Mitglieder, sich bei Spielen als "Erklärbär" (inkl. Erfahrungsstufe) einzutragen.
-    * [ ] Dashboard für Admins zur Erstellung von Event-Schichten (Theke, Kasse, Spieleleihe).
-    * [ ] Buchungssystem: Mitglieder tragen sich selbstständig in Schichten ein (inkl. Kennzeichnung für "unsichere Zusage").
-* **[ ] Meilenstein 6.3: Mobiler Public Event-Bereich (Gäste-Modus vor Ort)**
-    * [ ] Optimierte Ansicht für Event-Besucher: Scannen eines Spiele-QR-Codes zeigt sofort die Spielinfos, verlinkt Erklärvideos (YouTube) und listet anwesende Vereins-Erklärbären auf.
-    * [ ] Filterbare Spieleliste für Event-Gäste ("Welche Absacker für 4 Personen sind gerade im Raum verfügbar?").
-* **[ ] Meilenstein 6.4: Bring & Buy Flohmarkt-Modul**
-    * [ ] Formular für Mitglieder, um eigene Flohmarkt-Artikel anzulegen (manuell oder via CSV-Massenimport).
-    * [ ] Bereitstellung einer zentralen Listen- und Kassenansicht für den Verkaufstag (Wer verkauft was zu welchem Preis?).
+* **[x] Meilenstein 6.1: Konzeption Event-Strukturen & Flohmarkt-Datenmodell**
+    * [x] Prisma-Datenmodellierung für das Bring & Buy Flohmarkt-Modul (Isolierte Tabellen für Artikel, Preise, Status und Verkäufer-Zuordnung).
+    * [x] Ablauf-Planung für den mobilen Gäste-Modus vor Ort auf Großevents.
+* **[x] Meilenstein 6.2: Helferplan & Erklärbären (Umsetzung)**
+    * [x] Möglichkeit für Mitglieder, sich bei Spielen als "Erklärbär" (inkl. Erfahrungsstufe) einzutragen.
+    * [x] Dashboard für Admins zur Erstellung von Event-Schichten (Theke, Kasse, Spieleleihe).
+    * [x] Buchungssystem: Mitglieder tragen sich selbstständig in Schichten ein (inkl. Kennzeichnung für "unsichere Zusage").
+* **[x] Meilenstein 6.3: Mobiler Public Event-Bereich (Gäste-Modus vor Ort)**
+    * [x] Optimierte Ansicht für Event-Besucher: Scannen des EAN-Barcodes zeigt sofort die Spielinfos, verlinkt Erklärvideos (YouTube) und listet anwesende Vereins-Erklärbären auf (EAN statt spiel-eigenem QR-Code, siehe ADR 0005).
+    * [x] Filterbare Spieleliste für Event-Gäste ("Welche Absacker für 4 Personen sind gerade im Raum verfügbar?").
+* **[x] Meilenstein 6.4: Bring & Buy Flohmarkt-Modul**
+    * [x] Formular für Mitglieder, um eigene Flohmarkt-Artikel anzulegen (manuell oder via CSV-Massenimport).
+    * [x] Bereitstellung einer zentralen Listen- und Kassenansicht für den Verkaufstag (Wer verkauft was zu welchem Preis?).
 
 ---
 
