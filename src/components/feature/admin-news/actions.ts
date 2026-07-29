@@ -1,5 +1,7 @@
 "use server";
 
+import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
+import { InstagramStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/permissions";
@@ -15,6 +17,7 @@ export type PostInput = {
   location?: string;
   internal?: boolean;
   instagram?: boolean;
+  coverImageUrl?: string;
 };
 
 function slugify(title: string) {
@@ -50,6 +53,7 @@ function toPostData(input: PostInput) {
     location: input.location || null,
     internal: input.internal ?? null,
     instagram: input.instagram ?? null,
+    coverImageUrl: input.coverImageUrl || null,
   };
 }
 
@@ -65,7 +69,11 @@ export async function createPost(input: PostInput) {
   }
 
   const post = await prisma.post.create({
-    data: { slug: slugify(input.title), ...toPostData(input) },
+    data: {
+      slug: slugify(input.title),
+      ...toPostData(input),
+      instagramStatus: input.instagram ? InstagramStatus.PENDING : null,
+    },
   });
 
   return { success: true as const, id: post.id };
@@ -82,9 +90,39 @@ export async function updatePost(id: string, input: PostInput) {
     return { error: validationError };
   }
 
-  await prisma.post.update({ where: { id }, data: toPostData(input) });
+  let instagramStatus: InstagramStatus | undefined;
+  if (input.instagram) {
+    const existing = await prisma.post.findUnique({
+      where: { id },
+      select: { instagramStatus: true },
+    });
+    if (!existing?.instagramStatus) {
+      instagramStatus = InstagramStatus.PENDING;
+    }
+  }
+
+  await prisma.post.update({
+    where: { id },
+    data: {
+      ...toPostData(input),
+      ...(instagramStatus ? { instagramStatus } : {}),
+    },
+  });
 
   return { success: true as const };
+}
+
+export async function getUploadToken(pathname: string) {
+  const user = await getCurrentUser();
+  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+    throw new Error("Keine Berechtigung.");
+  }
+
+  return generateClientTokenFromReadWriteToken({
+    pathname,
+    allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
+    addRandomSuffix: true,
+  });
 }
 
 export async function deletePost(id: string) {

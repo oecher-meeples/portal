@@ -64,6 +64,30 @@ describe("createPost", () => {
       }),
     });
   });
+
+  it("initializes instagramStatus to PENDING when instagram sharing is enabled", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+
+    await createPost({ ...VALID_INPUT, instagram: true });
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ instagramStatus: "PENDING" }),
+    });
+  });
+
+  it("leaves instagramStatus unset when instagram sharing is disabled", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+
+    await createPost(VALID_INPUT);
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ instagramStatus: null }),
+    });
+  });
 });
 
 describe("updatePost", () => {
@@ -88,6 +112,45 @@ describe("updatePost", () => {
       where: { id: "post-1" },
       data: expect.objectContaining({ title: "Neuer Beitrag" }),
     });
+  });
+
+  it("sets instagramStatus to PENDING when enabling instagram sharing for the first time", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.findUnique.mockResolvedValue({
+      instagramStatus: null,
+    } as never);
+
+    await updatePost("post-1", { ...VALID_INPUT, instagram: true });
+
+    expect(prismaMock.post.update).toHaveBeenCalledWith({
+      where: { id: "post-1" },
+      data: expect.objectContaining({ instagramStatus: "PENDING" }),
+    });
+  });
+
+  it("does not reset instagramStatus when instagram was already active", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.findUnique.mockResolvedValue({
+      instagramStatus: "POSTED",
+    } as never);
+
+    await updatePost("post-1", { ...VALID_INPUT, instagram: true });
+
+    const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
+    expect(call?.data).not.toHaveProperty("instagramStatus");
+  });
+
+  it("does not touch instagramStatus when instagram sharing stays disabled", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await updatePost("post-1", VALID_INPUT);
+
+    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
+    const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
+    expect(call?.data).not.toHaveProperty("instagramStatus");
   });
 });
 

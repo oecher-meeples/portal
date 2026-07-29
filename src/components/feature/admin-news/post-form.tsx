@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { put } from "@vercel/blob/client";
 import ReactMarkdown from "react-markdown";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +12,17 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ContentType } from "@/lib/content";
 import {
   createPost,
+  getUploadToken,
   updatePost,
   type PostInput,
 } from "@/components/feature/admin-news/actions";
+
+const INSTAGRAM_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Ausstehend",
+  QUEUED: "In Warteschlange",
+  POSTED: "Erfolgreich gepostet",
+  FAILED: "Fehlgeschlagen",
+};
 
 const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
   { value: "blog", label: "Blog" },
@@ -25,7 +35,7 @@ export function PostForm({
   initialValues,
 }: {
   postId?: string;
-  initialValues?: Partial<PostInput>;
+  initialValues?: Partial<PostInput> & { instagramStatus?: string | null };
 }) {
   const router = useRouter();
   const [type, setType] = useState<ContentType>(initialValues?.type ?? "blog");
@@ -34,16 +44,52 @@ export function PostForm({
   const [excerpt, setExcerpt] = useState(initialValues?.excerpt ?? "");
   const [author, setAuthor] = useState(initialValues?.author ?? "");
   const [body, setBody] = useState(initialValues?.body ?? "");
+  const [instagram, setInstagram] = useState(
+    initialValues?.instagram ?? false,
+  );
+  const [coverImageUrl, setCoverImageUrl] = useState(
+    initialValues?.coverImageUrl ?? "",
+  );
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleCoverImageChange(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCover(true);
+    setError(null);
+    try {
+      const pathname = `instagram-covers/${file.name}`;
+      const token = await getUploadToken(pathname);
+      const blob = await put(pathname, file, { access: "public", token });
+      setCoverImageUrl(blob.url);
+    } catch {
+      setError("Cover-Bild konnte nicht hochgeladen werden.");
+    } finally {
+      setIsUploadingCover(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
-    const input: PostInput = { type, title, date, excerpt, author, body };
+    const input: PostInput = {
+      type,
+      title,
+      date,
+      excerpt,
+      author,
+      body,
+      instagram,
+      coverImageUrl: coverImageUrl || undefined,
+    };
     const result = postId
       ? await updatePost(postId, input)
       : await createPost(input);
@@ -151,6 +197,44 @@ export function PostForm({
           <div className="[&_a]:text-primary min-h-64 rounded-md border p-4 text-sm leading-relaxed [&_a]:underline [&_strong]:font-semibold">
             <ReactMarkdown>{body || "*Keine Vorschau*"}</ReactMarkdown>
           </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="coverImage">Cover-Bild</Label>
+        <Input
+          id="coverImage"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={handleCoverImageChange}
+          disabled={isUploadingCover}
+        />
+        {isUploadingCover && (
+          <p className="text-muted-foreground text-sm">Lade Bild hoch…</p>
+        )}
+        {coverImageUrl && !isUploadingCover && (
+          <img
+            src={coverImageUrl}
+            alt="Cover-Bild-Vorschau"
+            className="h-32 w-32 rounded-md border object-cover"
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={instagram}
+            onChange={(event) => setInstagram(event.target.checked)}
+          />
+          Auch auf Instagram teilen
+        </label>
+        {initialValues?.instagramStatus && (
+          <Badge variant="secondary" className="self-start">
+            {INSTAGRAM_STATUS_LABELS[initialValues.instagramStatus] ??
+              initialValues.instagramStatus}
+          </Badge>
         )}
       </div>
 
