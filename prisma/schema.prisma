@@ -27,7 +27,21 @@ enum BankDataAccessKind {
 
 enum GameInventoryStatus {
   ACTIVE
+  MAINTENANCE
   DEINVENTARISED
+}
+
+enum StorageUnitKind {
+  BOX
+  SHELF
+}
+
+enum HoldingOrigin {
+  INITIAL
+  LOAN
+  RETURN
+  HANDOVER
+  RELOCATION
 }
 
 model Permission {
@@ -90,6 +104,11 @@ model Meeple {
 
   bankDataAccessesMade      BankDataAccessLog[] @relation("BankDataAccessActor")
   bankDataAccessesReceived  BankDataAccessLog[] @relation("BankDataAccessSubject")
+  keptUnits                 StorageUnit[]       @relation("StorageUnitKeeper")
+  recordedUnitMoves         StorageUnitMove[]   @relation("StorageUnitMoveRecorder")
+  movedUnitsAsKeeper        StorageUnitMove[]   @relation("StorageUnitMoveKeeper")
+  holdings                  GameHolding[]       @relation("GameHoldingMeeple")
+  recordedHoldings          GameHolding[]       @relation("GameHoldingRecorder")
 
   @@map("meeples")
 }
@@ -145,7 +164,10 @@ model BoardGame {
   id              String              @id @default(cuid())
   slug            String              @unique
   title           String
-  bggId           Int?                @unique
+  /// Indexed, deliberately NOT unique — duplicates of a title are allowed (ADR 0001).
+  bggId           Int?
+  /// The manufacturer barcode identifies the product, not the single game — never unique.
+  ean             String?
   minPlayers      Int?
   maxPlayers      Int?
   playTimeMinutes Int?
@@ -153,16 +175,96 @@ model BoardGame {
   imageUrl        String?
   description     String?
   mechanics       String[]
+  /// Removed together with `location` in step 14, once the holding migration has run.
   quantity        Int                 @default(1)
   location        String?
+  /// The single condition note — a defect is recorded here, not in a second field.
   condition       String?
+  needsCompletenessCheck Boolean      @default(false)
+  lastCheckedAt   DateTime?
   status          GameInventoryStatus @default(ACTIVE)
   archivedAt      DateTime?
   archivedReason  String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
+  holdings GameHolding[]
+
+  @@index([bggId])
+  @@index([ean])
   @@map("board_games")
+}
+
+/// A QR-labelled physical container: a box that travels as a whole, or a club-owned shelf.
+/// Units can nest (box in shelf) and end up with a keeper (see CONTEXT.md).
+model StorageUnit {
+  id             String          @id @default(cuid())
+  code           String          @unique
+  kind           StorageUnitKind
+  label          String
+  parentUnitId   String?
+  keeperMeepleId String?
+  /// Free text, only meaningful where no parent unit exists. Independent of the keeper.
+  locationNote   String?
+  retiredAt      DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  parentUnit StorageUnit?      @relation("StorageUnitTree", fields: [parentUnitId], references: [id], onDelete: SetNull)
+  childUnits StorageUnit[]     @relation("StorageUnitTree")
+  keeper     Meeple?           @relation("StorageUnitKeeper", fields: [keeperMeepleId], references: [id], onDelete: SetNull)
+  moves      StorageUnitMove[]
+  holdings   GameHolding[]
+
+  @@index([parentUnitId])
+  @@index([keeperMeepleId])
+  @@map("storage_units")
+}
+
+/// Lean history of where a unit stood, so "who had this box when" is answerable
+/// without loading it onto every game query.
+model StorageUnitMove {
+  id                 String    @id @default(cuid())
+  unitId             String
+  keeperMeepleId     String?
+  parentUnitId       String?
+  locationNote       String?
+  startedAt          DateTime  @default(now())
+  endedAt            DateTime?
+  recordedByMeepleId String
+
+  unit       StorageUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  keeper     Meeple?     @relation("StorageUnitMoveKeeper", fields: [keeperMeepleId], references: [id], onDelete: SetNull)
+  recordedBy Meeple      @relation("StorageUnitMoveRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([unitId])
+  @@map("storage_unit_moves")
+}
+
+/// Where a game was during a period. Exactly one target (unit or meeple) and exactly
+/// one open holding per game — both enforced by hand-written constraints, see ADR 0001.
+model GameHolding {
+  id                 String        @id @default(cuid())
+  boardGameId        String
+  unitId             String?
+  meepleId           String?
+  origin             HoldingOrigin
+  startedAt          DateTime      @default(now())
+  endedAt            DateTime?
+  /// Empty while only the handing-over side has recorded the holding.
+  confirmedAt        DateTime?
+  recordedByMeepleId String
+  note               String?
+
+  boardGame  BoardGame    @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  unit       StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  meeple     Meeple?      @relation("GameHoldingMeeple", fields: [meepleId], references: [id], onDelete: Restrict)
+  recordedBy Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([boardGameId])
+  @@index([unitId])
+  @@index([meepleId])
+  @@map("game_holdings")
 }
 
 model InstagramConnection {

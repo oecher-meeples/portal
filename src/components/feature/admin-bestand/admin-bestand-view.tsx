@@ -16,11 +16,13 @@ import { DeinventoriseBoardGameDialog } from "@/components/feature/admin-bestand
 
 const STATUS_TONE: Record<BoardGame["status"], StatusTone> = {
   ACTIVE: "positive",
+  MAINTENANCE: "warning",
   DEINVENTARISED: "neutral",
 };
 
 const STATUS_LABELS: Record<BoardGame["status"], string> = {
   ACTIVE: "Aktiv",
+  MAINTENANCE: "Wartung",
   DEINVENTARISED: "Deinventarisiert",
 };
 

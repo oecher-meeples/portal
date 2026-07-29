@@ -98,16 +98,6 @@ export async function createBoardGame(input: BoardGameInput) {
     return { error: validationError };
   }
 
-  if (input.bggId) {
-    const existing = await prisma.boardGame.findUnique({
-      where: { bggId: input.bggId },
-      select: { id: true },
-    });
-    if (existing) {
-      return { error: "Spiel mit dieser BGG-ID existiert bereits." };
-    }
-  }
-
   const slug = await uniqueSlug(input.title);
   const game = await prisma.boardGame.create({
     data: { slug, title: input.title, ...toBoardGameData(input) },
@@ -125,16 +115,6 @@ export async function updateBoardGame(id: string, input: BoardGameInput) {
   const validationError = validateBoardGameInput(input);
   if (validationError) {
     return { error: validationError };
-  }
-
-  if (input.bggId) {
-    const existing = await prisma.boardGame.findUnique({
-      where: { bggId: input.bggId },
-      select: { id: true },
-    });
-    if (existing && existing.id !== id) {
-      return { error: "Spiel mit dieser BGG-ID existiert bereits." };
-    }
   }
 
   const slug = await uniqueSlug(input.title, id);

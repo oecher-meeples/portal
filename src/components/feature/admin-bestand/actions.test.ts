@@ -89,19 +89,18 @@ describe("createBoardGame", () => {
     });
   });
 
-  it("rejects with a speaking error when the bggId is already taken", async () => {
+  it("allows a duplicate bggId (a second copy of the same title, ADR 0001)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "existing",
-    } as never);
+    prismaMock.boardGame.findFirst.mockResolvedValue(null);
+    prismaMock.boardGame.create.mockResolvedValue({ id: "game-2" } as never);
 
     const result = await createBoardGame({ ...VALID_INPUT, bggId: 342942 });
 
-    expect(result).toEqual({
-      error: "Spiel mit dieser BGG-ID existiert bereits.",
+    expect(result).toEqual({ success: true, id: "game-2" });
+    expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ bggId: 342942 }),
     });
-    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
   });
 });
 
