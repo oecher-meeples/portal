@@ -42,29 +42,30 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
 ## 🔓 Phase 2: Funktionale Webseite (Public Area & Admin-Einstieg)
 *Ziel: Anbindung der Datenbank, Live-Inhalte, Google-SSO und Spendenmöglichkeit.*
 
-* **[ ] Meilenstein 2.1: Konzeption Datenbank & Auth-Flow**
-    * [ ] Planung der Prisma-Datenbank-Erweiterung für das Blog-System (Beitragstabellen, Autorenverknüpfung).
-    * [ ] Architektur-Planung des Authentifizierungs-Flows (Kombination aus klassischem Login und Google Single Sign-On via Auth.js/NextAuth).
+* [x] **Meilenstein 2.1: Konzeption Datenbank & Auth-Flow**
+    * [x] Planung der Prisma-Datenbank-Erweiterung für das Blog-System (Beitragstabellen, Autorenverknüpfung).
+    * [x] Architektur-Planung des Authentifizierungs-Flows — umgesetzt als **Neon Auth (Stack Auth)** statt Auth.js/NextAuth (siehe `.claude/plans/phase-2-execution-plan.md`, Annahme „Auth-Architektur"); Google SSO dabei bewusst zurückgestellt.
 * **[ ] Meilenstein 2.2: Datenbank-Fundament & Authentifizierung (Umsetzung)**
-    * [ ] Einbindung des Prisma-Schemas und Durchführung der ersten Migration auf die Live-Datenbank.
-    * [ ] Implementierung des sicheren Logins inklusive **Google Single Sign-On (SSO)** für Moderatoren und Admins.
+    * [x] Einbindung des Prisma-Schemas und Durchführung der ersten Migration auf die Live-Datenbank.
+    * [ ] Implementierung des sicheren Logins inklusive **Google Single Sign-On (SSO)** für Moderatoren und Admins. Login/Registrierung via Neon Auth + einladungsbasiertem Invite-Flow ist umgesetzt; Google SSO selbst ist laut Plan explizit zurückgestellt (offen).
 * **[ ] Meilenstein 2.3: Dynamischer Content & Spenden**
-    * [ ] Anbindung des öffentlichen Google Calendars zur automatischen Synchronisation von Vereinsterminen.
-    * [ ] Entwicklung eines einfachen Web-Editors (Markdown) für Moderatoren, um Blog-Beiträge live auf der Seite zu veröffentlichen.
-    * [ ] Integration einer Spendenmöglichkeit für Gäste/Unterstützer im öffentlichen Bereich (z.B. PayPal-Spendenbutton oder strukturierte Support-Info).
+    * [x] Anbindung des Kalenders zur automatischen Synchronisation von Vereinsterminen — umgesetzt über den **öffentlichen ICS-Feed** statt der Google Calendar API (siehe Plan-Annahme „Kalender-Sync").
+    * [x] Entwicklung eines einfachen Web-Editors (Markdown) für Moderatoren, um Blog-Beiträge live auf der Seite zu veröffentlichen.
+    * [ ] Integration einer Spendenmöglichkeit für Gäste/Unterstützer im öffentlichen Bereich (z.B. PayPal-Spendenbutton oder strukturierte Support-Info). Laut Plan explizit aus Phase 2 herausgenommen (offen).
 
 ---
 
 ## 📸 Phase 3: Instagram-Anbindung
 *Ziel: Zeitersparnis bei der Öffentlichkeitsarbeit durch automatisiertes Cross-Posting.*
 
-* **[ ] Meilenstein 3.1: Konzeption API & Queue-Design**
-    * [ ] Analyse der Meta Graph API (Instagram) Anforderungen bezüglich Token-Laufzeiten und Berechtigungen.
-    * [ ] Konzeption einer Hintergrund-Warteschlange (Queue), damit Webseiten-Ladezeiten nicht von der Instagram-API blockiert werden.
-* **[ ] Meilenstein 3.2: Instagram Integration & Moderations-Erweiterung (Umsetzung)**
-    * [ ] Einrichten des OAuth-Verfahrens für den Vereins-Instagram-Account im Backend.
-    * [ ] Implementierung der Queue zum sicheren Übermitteln von Bildern und Texten.
-    * [ ] Integration einer Checkbox im Blog-Editor: "Auch auf Instagram teilen" inkl. Status-Anzeige (Erfolgreich gepostet / Fehlgeschlagen).
+* [x] **Meilenstein 3.1: Konzeption API & Queue-Design**
+    * [x] Analyse der Meta Graph API (Instagram) Anforderungen bezüglich Token-Laufzeiten und Berechtigungen — umgesetzt in `src/lib/instagram/graph-client.ts` (OAuth-Code-Exchange, Long-Lived-Token, Token-Refresh, Media-Container, Publish).
+    * [x] Konzeption einer Hintergrund-Warteschlange (Queue), damit Webseiten-Ladezeiten nicht von der Instagram-API blockiert werden — umgesetzt als **DB-Spalten-Queue** (`InstagramStatus`-Enum auf `Post`) statt externem Queue-Dienst, verarbeitet durch einen täglichen **Vercel-Cron-Job** (siehe Plan `.claude/plans/phase-3-instagram-execution-plan.md`, Annahme „Queue-Technologie").
+* [x] **Meilenstein 3.2: Instagram Integration & Moderations-Erweiterung (Umsetzung)**
+    * [x] Einrichten des OAuth-Verfahrens für den Vereins-Instagram-Account im Backend — Admin-Connect-Flow unter `/admin/einstellungen/instagram`, gegated über neue Permission `instagram:connect`.
+    * [x] Implementierung der Queue zum sicheren Übermitteln von Bildern und Texten — `src/lib/instagram/queue.ts` inkl. Cover-Bild-Fallback (`@vercel/og` + `@vercel/blob`), Retry-Zähler und täglichem Token-Refresh.
+    * [x] Integration einer Checkbox im Blog-Editor: "Auch auf Instagram teilen" inkl. Status-Anzeige (Erfolgreich gepostet / Fehlgeschlagen) — inkl. manuellem "Erneut versuchen"-Button bei `FAILED`.
+    * Feature ist vollständig implementiert und getestet, aber ohne echte Meta-App-Zugangsdaten inaktiv — externe Vorbedingungen (Instagram-Business-Account, Meta-App, App-Review, Env-Variablen) siehe [`docs/instagram-setup.md`](./instagram-setup.md).
 
 ---
 

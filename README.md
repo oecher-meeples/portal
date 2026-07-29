@@ -27,6 +27,7 @@ Eine ausführliche Beschreibung aller Funktionsbereiche findet sich in [`docs/Co
 | [`docs/flow.md`](./docs/flow.md)       | Datenfluss-Diagramme zentraler Prozesse                                |
 | [`docs/setup.md`](./docs/setup.md)     | Architektur- & Technologie-Entscheidungen sowie lokale Setup-Anleitung |
 | [`docs/roadmap.md`](./docs/roadmap.md) | Meilensteinbasierter Entwicklungsablauf                                |
+| [`docs/instagram-setup.md`](./docs/instagram-setup.md) | Checkliste externer Vorbedingungen für die Instagram-Anbindung |
 
 ---
 
