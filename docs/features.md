@@ -85,20 +85,32 @@
 - Formular: Spiel auswählen (Suchfeld mit Cover-Vorschau), Titel, Beschreibung, Datum, max. Teilnehmer
 - Detailansicht: Teilnehmerliste mit Avataren, Beitreten/Verlassen-Button, "Gesuch voll"-Zustand
 
-### 2.7 Ludothek — Spielsuche
-- Suchleiste + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik, Verfügbarkeit)
-- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer, Verfügbarkeits-Badge: AVAILABLE/BORROWED/MAINTENANCE)
+### 2.7 Ludothek — Spielsuche (zwei Projektionen)
+- Eine Komponente, zwei Sichten: **öffentlich** ohne Standort, Zustand und Personen; **intern** (eingeloggt) zusätzlich mit Standort-Kette, Zustand und Verantwortliche:r
+- Suchleiste + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
+- **Alle Filter liegen in `searchParams`** und werden serverseitig angewendet, damit jede Filterkombination als Link teilbar ist
+- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
+- Deinventarisierte Spiele erscheinen nicht
 
 ### 2.8 Spiel-Detailseite
 - Cover, Metadaten (BGG-Import: Spieleranzahl, Dauer, Gewichtung), Beschreibung
-- Liste der Exemplare (`GameCopy`) mit Standort (Vereinslager/Meeple-Name) und Status
-- Liste der "Erklärbären" mit Erfahrungsstufe
-- Ausleih-Button (falls verfügbar) / Reservierungs-Hinweis
+- Intern zusätzlich: **Standort-Kette** (Spiel → Karton → Regal → Verwahrer), Verantwortliche:r, Zustand, letzte Prüfung
+- Intern: **Aufenthalts-Historie** (Vorgang, Ziel, Zeitraum, erfasst von; unbestätigte Aufenthalte mit Herkunftshinweis)
+- Aktionen: "Ausleihen", "Zurückgeben", "Weitergeben", "Ich habe dieses Spiel erhalten" — je nach aktuellem Aufenthalt
+- Liste der "Erklärbären" mit Erfahrungsstufe (Phase 6)
+- Keine Reservierung und keine Leihfrist
 
-### 2.9 QR-/Barcode-Scanner (Ausleihe/Rückgabe)
-- Kamera-Viewfinder-Overlay mit Scan-Rahmen
-- Erfolgs-Zustand: erkanntes Spiel + Status-Check (verfügbar? → Ausleihe bestätigen mit Fälligkeitsdatum)
-- Fehler-Zustand: "Kein Code erkannt" / "Spiel nicht verfügbar"
+### 2.9 QR-/EAN-Scan (kontextabhängig)
+- Kamera-Viewfinder-Overlay mit Scan-Rahmen, dazu **immer** ein manuelles Eingabefeld
+- Erst scannen, dann werden **nur die möglichen Vorgänge** angeboten:
+  - Spiel in einer Einheit → Ausleihen / Umlagern / Prüfen
+  - eigenes ausgeliehenes Spiel → Zurückgeben / Weitergeben
+  - Spiel bei anderer Person → "Ich habe es erhalten" / "Ich nehme es zur Rückgabe an"
+  - Einheiten-QR → Inhalt anzeigen, Spiel einlagern, Einheit umlagern
+  - unbekannter Code → "nicht im Bestand", bei `games:manage` mit Anlage-Link (EAN vorbefüllt)
+  - mehrere EAN-Treffer → Auswahlliste (die EAN kennzeichnet das Produkt, nicht das Spiel)
+- **Serienmodi** für Reihenarbeit: "Einlagern in \<Einheit\>" und "Prüfen" halten das Ziel für Folgescans fest
+- Fehler-Zustände: "Kein Kamerazugriff", "Kein Code erkannt"
 
 ### 2.10 Erklärbär-Verzeichnis
 - Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA
@@ -123,7 +135,7 @@
 ## 3. Admin-Bereich
 
 ### 3.1 Admin-Dashboard
-- Kennzahlen-Kacheln: aktive Mitglieder, offene Ausleihen, überfällige Rückgaben, offene Invitations
+- Kennzahlen-Kacheln: aktive Mitglieder, offene Ausleihen, Spiele im Bestand, nicht erfasste Spiele, offene Prüfungen, offene Invitations (kein Überfälligkeits-Widget — es gibt keine Leihfrist)
 - Schnellzugriff: Mitglied einladen, Spiel anlegen, Event erstellen
 
 ### 3.2 Mitgliederverwaltung
@@ -137,12 +149,22 @@
 - Termin-Formular getrennt oder kombiniert (Titel, Zeit, Ort, öffentlich/intern-Toggle)
 
 ### 3.4 Spielebestand-Verwaltung
-- Tabelle aller `BoardGame`-Einträge mit Anzahl Exemplare, Aktion "Neues Spiel via BGG-ID importieren" (zeigt Vorschau: Cover, Metadaten vor Bestätigung)
-- Pro Spiel: Exemplare (`GameCopy`) verwalten — hinzufügen, Barcode/QR generieren & drucken, Status ändern
-- Deinventarisierungs-Dialog: Grund auswählen (Beschädigung/Verkauf/Verlust), Bestätigung mit Hinweis "Verleih-Historie bleibt erhalten"
+- Tabelle aller `BoardGame`-Einträge (ein Datensatz je physischem Spiel) mit Standort-Kette, Zustand, letzter Prüfung und Prüf-Flag; Aktion "Neues Spiel via BGG-ID importieren" (zeigt Vorschau: Cover, Metadaten vor Bestätigung)
+- EAN-Feld mit Prüfsummen-Validierung; mehrfach vergebene EAN ist erlaubt und erzeugt nur einen Hinweis
+- Filter "ungeprüft", "Mangel", "nicht erfasst"; deinventarisierte Spiele standardmäßig ausgefiltert, per Umschalter einblendbar
+- Deinventarisierungs-Dialog: Grund angeben, Bestätigung mit Hinweis "Aufenthalts-Historie und Standort bleiben erhalten"
 
-### 3.5 Inventur-Prüfbogen
-- Listen-/Scan-Modus: Exemplar scannen → Zustand bestätigen/Mangel melden → Status aktualisieren
+### 3.4a Aufbewahrungseinheiten-Verwaltung
+- Tabelle aller Kartons und Regale (Code, Art, Label, Standort-Kette, Verwahrer, Anzahl Spiele)
+- Detailansicht: Inhalt, Bewegungshistorie (`StorageUnitMove`), Aktionen (bearbeiten, Eltern-Einheit setzen, stilllegen — nur wenn leer)
+- **Etiketten-Druckansicht**: QR-Raster für Einheiten, QR-Inhalt ist der reine Code (`OM-BOX-0001`, `OM-SHELF-C4`) — domainunabhängig und offline lesbar
+- Rückholliste "Bestände bei ausgetretenen Mitgliedern"
+
+### 3.5 Vollständigkeitsprüfung (Prüfbogen)
+- Scan-Serienmodus "Prüfen": Spiel scannen → Zustand bestätigen oder Mangel melden (Notiz ist Pflicht)
+- Bestätigung setzt `lastCheckedAt` und löscht das Prüf-Flag; ein Mangel setzt den Bestandsstatus auf `MAINTENANCE`
+- Zustand bestätigen und Mangel melden darf **jedes** Mitglied; Mängel schließen erfordert `games:manage`
+- Prüfbedürftige Spiele bleiben ausleihbar
 
 ### 3.6 Event- & Schichtplanung (Admin)
 - Event anlegen/bearbeiten

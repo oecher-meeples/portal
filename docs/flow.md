@@ -20,7 +20,9 @@ flowchart LR
         Event[(Event)]
         BlogPost[(BlogPost)]
         BoardGame[(BoardGame)]
-        UserMeeple[(User / Meeple)]
+        Meeple[("Meeple<br/>= Login-Konto")]
+        Unit[(Aufbewahrungseinheit)]
+        Holding[(Aufenthalt)]
     end
 
     subgraph UI["Interfaces"]
@@ -31,45 +33,59 @@ flowchart LR
 
     GCal -->|Termine-Sync| Event
     BGGAPI -->|Spieldaten| BoardGame
-    EmailSvc -->|Einladungslink| UserMeeple
-    GoogleOAuth -->|SSO-Token| UserMeeple
+    EmailSvc -->|Einladungslink| Invite[(Invite-Token)]
+    GoogleOAuth -->|SSO-Token| Meeple
+    Invite -->|eingelöst beim ersten Login| Meeple
     BlogPost -.->|Cross-Post| MetaAPI
+
+    BoardGame --> Holding
+    Holding -->|Ziel: Einheit| Unit
+    Holding -->|Ziel: Person| Meeple
+    Unit -->|Verwahrer| Meeple
 
     Event --> PublicSite
     BlogPost --> PublicSite
-    UserMeeple --> MemberArea
-    UserMeeple --> AdminArea
+    Meeple --> MemberArea
+    Meeple --> AdminArea
     BoardGame --> MemberArea
 ```
 
+> Ein `Meeple` ist dasselbe Objekt wie das Login-Konto, kein zweiter Personendatensatz — siehe [ADR 0002](adr/0002-meeple-eins-zu-eins-zum-login.md).
+
 ---
 
-## 2. Onboarding & Authentifizierung
+## 2. Onboarding & Mitgliedschafts-Lebenszyklus
+
+Vor der Registrierung existiert **kein** Meeple — der Einladungslink ist ein reines Token ohne Personenbezug, der Meeple entsteht beim ersten Login.
 
 ```mermaid
 flowchart LR
-    A([Admin]) -->|erstellt| M[(Meeple)]
-    M -->|generiert Token| I[(Invitation)]
-    I -->|sendet| Email[E-Mail-Link]
+    A([Admin]) -->|erzeugt Token| I[(Invite)]
+    I -->|Link weitergeben| Link[Einladungslink]
 
-    Email --> Choice{Registrierungsweg}
+    Link --> Choice{Registrierungsweg}
     Choice -->|Klassisch| TV{Token gültig?}
-    Choice -->|Google SSO| EV{E-Mail-Match?}
+    Choice -->|Google SSO – zurückgestellt| EV{E-Mail-Match?}
 
     TV -->|nein| Deny1[Zugang verweigert]
-    TV -->|ja| Create[User erstellen]
+    TV -->|ja| Create[Login-Konto erstellen]
     EV -->|nein| Deny2[Zugang verweigert]
     EV -->|ja| Create
 
-    Create --> U[(User)]
-    U -->|verknüpft mit| M
-    I -->|isUsed = true| I
+    Create -->|erster Login| M[("Meeple<br/>aktiv")]
+    I -->|redeemedAt setzen| I
 
     A -->|widerrufen| Revoke[Token invalidiert]
 
-    U -->|DSGVO-Selbstlöschung| Anon[Daten anonymisiert]
-    Anon -.->|Verlinkungen erhalten| U
+    M -->|Kündigung vermerken| K[("Meeple<br/>gekündigt")]
+    K -->|Jahreswechsel erreicht| Aus[("Meeple<br/>ausgetreten")]
+    K -->|Kündigung widerrufen| M
+    Aus -->|keine Vereinsspiele mehr bei ihm| Anon[Anonymisierung]
+    Anon -->|Konto und Kontaktdaten gelöscht| Rest[("Meeple<br/>anonymisiert")]
+    Rest -.->|Aufenthalte und Gesuche bleiben lesbar| Rest
 ```
+
+> Die Zustände `aktiv` / `gekündigt` / `ausgetreten` / `anonymisiert` werden aus `resignedAt`, `membershipEndsAt` und `anonymizedAt` **abgeleitet**, nicht gespeichert.
 
 ---
 
@@ -98,50 +114,71 @@ flowchart LR
 
 ---
 
-## 4. Spielekatalog & Deinventarisierung
+## 4. Spielekatalog, Aufbewahrung & Deinventarisierung
+
+Ein Datensatz pro physischem Spiel — keine getrennte Exemplar-Ebene. Etiketten hängen an den **Aufbewahrungseinheiten**, nicht an den Spielen; die EAN kennzeichnet das Produkt und ist deshalb nicht eindeutig. Begründung: [ADR 0001](adr/0001-ludothek-aufenthalte-statt-exemplare.md).
 
 ```mermaid
 flowchart LR
     BGGAPI([BGG API]) -->|Spieldaten| BG[(BoardGame)]
     A([Admin]) -->|manuell anlegen| BG
+    A -->|EAN pflegen| BG
 
-    BG -->|Exemplar hinzufügen| GC[(GameCopy)]
-    GC -->|Label generieren| QR[QR-Etikett]
+    A -->|Einheit anlegen| SU[("Aufbewahrungseinheit<br/>Karton / Regal")]
+    SU -->|Etikett drucken| QR["QR-Etikett<br/>Inhalt = reiner Code"]
+    SU -->|steht in| SU
+    SU -->|Verwahrer| M([Meeple])
+    SU -->|Ortsangabe Freitext| Ort[z. B. Keller links]
 
-    GC --> S_AV[AVAILABLE]
-    S_AV -->|Ausleihe| S_BO[BORROWED]
-    S_BO -->|Rückgabe| S_AV
-    S_AV -->|Schaden| S_MA[MAINTENANCE]
-    S_MA -->|Repariert| S_AV
+    BG -->|genau ein offener| H[(Aufenthalt)]
+    H -->|Ziel: Einheit| SU
+    H -->|Ziel: Person| M
 
-    M1([Meeple A]) -->|Tausch initiieren| Trade[(Trade)]
-    Trade -->|neuer Besitzer| M2([Meeple B])
-    GC -->|Eigentümer wechselt| Trade
+    H --> Z{Zustand abgeleitet}
+    Z --> Z_FR[frei]
+    Z --> Z_AU[ausgeliehen]
+    Z --> Z_WA[Wartung]
+    Z --> Z_NE["nicht erfasst<br/>liegt in Unsortiert"]
 
-    S_AV -->|Grund angeben| S_DI[DEINVENTARISED]
-    S_MA -->|Totalschaden| S_DI
-    S_DI -.->|Verknüpfung bleibt erhalten| BR[(BorrowReceipt)]
+    Pruef[Vollständigkeitsprüfung] -->|bestanden| BG
+    Pruef -->|Mangel gemeldet| Z_WA
+
+    BG -->|Grund + Datum| DI[deinventarisiert]
+    DI -.->|Aufenthalt bleibt offen, Standort unverändert| H
 ```
 
 ---
 
-## 5. Ausleihvorgang
+## 5. Aufenthalte: Ausleihe, Rückgabe, Weitergabe, Umlagern
+
+Alle vier Vorgänge sind derselbe Schreibvorgang — den offenen Aufenthalt schließen, den nächsten öffnen. Es gibt **keine Leihfrist**.
 
 ```mermaid
 flowchart LR
-    Scan[QR / EAN-Scan] --> GC[(GameCopy)]
-    GC --> Check{AVAILABLE?}
-    Check -->|nein| Info[Status anzeigen]
-    Check -->|ja| BR[(BorrowReceipt)]
+    Scan["QR-/EAN-Scan<br/>Einheiten-Code oder EAN"] --> Res{Auflösung}
+    Res -->|EAN, n Treffer| Wahl[Spiel auswählen]
+    Res -->|Einheiten-Code| SU[(Aufbewahrungseinheit)]
+    Res -->|unbekannt| NF["nicht im Bestand<br/>+ Anlage-Link bei games:manage"]
+    Wahl --> BG[(BoardGame)]
 
-    BR --> Fields[borrowedAt + dueDate]
-    BR -->|setzt| S_BO[BORROWED]
+    BG --> Vor{Vorgänger-Aufenthalt}
+    Vor -->|aus Einheit| Aus["Ausleihe<br/>origin LOAN"]
+    Vor -->|von Person| Weiter["Weitergabe<br/>origin HANDOVER"]
+    Aus --> NeuP["neuer Aufenthalt<br/>Ziel: Meeple"]
+    Weiter --> NeuP
 
-    ReturnScan[Rückgabe-Scan] --> BR
-    BR -->|returnedAt setzen| Closed[Abgeschlossen]
-    Closed -->|setzt| S_AV[AVAILABLE]
+    NeuP -->|Rückgabe in Einheit| Rueck["Aufenthalt<br/>origin RETURN, Ziel: Einheit"]
+    NeuP -->|Rückgabe an Person| RueckP["Aufenthalt<br/>origin RETURN, Ziel: Meeple<br/>keine Ausleihe"]
+    RueckP -->|einlagern| Rueck
 
-    Prüfbogen[Inventur-Prüfbogen] -->|state aktualisieren| GC
+    SU -->|Spiel einlagern / Standort korrigieren| Umlag["Aufenthalt<br/>origin RELOCATION, Ziel: Einheit"]
+    SU -->|Einheit umlagern| Move[(StorageUnitMove)]
+
+    NeuP --> Best{"Wer hat gebucht?"}
+    Best -->|Empfänger selbst| OK["confirmedAt gesetzt"]
+    Best -->|abgebende Person| Unbest["unbestätigt<br/>Weitergabe: per Klick bestätigen<br/>Rückgabe: durch Einlagern bestätigen"]
+
+    Pruef[Prüfbogen] -->|condition + lastCheckedAt| BG
 ```
 
 ---
@@ -150,16 +187,19 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    M([Mitglied]) -->|inseriert| Post[(LFGPost)]
-    Post --> BG[(BoardGame)]
+    M([Mitglied]) -->|inseriert| Post[(LfgPost)]
+    Post --> Titel["Spieltitel als Freitext<br/>keine Relation auf BoardGame"]
     Post --> Meta[Datum + max. Teilnehmer]
+    Post -->|Ersteller ist erste:r Teilnehmer:in| LFGMem[(LfgParticipant)]
 
-    Other([Mitspieler]) -->|meldet sich an| LFGMem[(LFGMember)]
+    Other([Mitspieler]) -->|meldet sich an| LFGMem
     LFGMem --> Post
 
-    Post --> Full{Limit erreicht?}
-    Full -->|nein| Open[Gesuch offen]
-    Full -->|ja| Closed[Gesuch geschlossen]
+    Post --> Full{abgeleitet}
+    Full -->|Plätze frei und Termin in der Zukunft| Open[Gesuch offen]
+    Full -->|Limit erreicht| Voll[Gesuch voll]
+    Full -->|Termin vergangen| Abg[abgelaufen]
+    Post -->|closedAt gesetzt| Closed[Gesuch geschlossen]
 ```
 
 ---
