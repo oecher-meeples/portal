@@ -150,7 +150,8 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
       _Definition of Done:_ Tests decken ab: fehlende Permission → Fehler ohne DB-Änderung; Stilllegen einer nicht leeren Einheit wird abgelehnt; Setzen einer Eltern-Einheit verhindert Zyklen (Einheit kann nicht ihr eigener Vorfahre werden); jede Standortänderung schreibt genau einen `StorageUnitMove` und schließt den vorherigen. `pnpm test` grün.
       `git commit -m "feat: add storage unit administration with move history"`
 
-- [ ] **13. Etiketten-Druckansicht**
+- [x] **13. Etiketten-Druckansicht**
+      _Umsetzungsnotiz:_ Datenaufbereitung (Auswahl/Sortierung/Seitenaufteilung) als reine Funktionen in `src/lib/inventory/labels.ts`, unit-getestet. Manueller Test nur strukturell möglich (Route erfordert `games:manage`-Login) — `/admin/einheiten/etiketten` liefert korrekt 307 zu `/login` statt 500, QR-Erzeugung selbst nicht am echten Etikett verifiziert.
       `qrcode` installieren. `src/components/feature/admin-einheiten/unit-label-sheet.tsx`: Etiketten-Raster mit QR (Inhalt = reiner Code), Label und Klartext-Code, QR clientseitig als Data-URL, Druck-Styles über `@media print` (keine Navigation, feste Etikettengröße, sauberer Seitenumbruch). Print-Route `/admin/einheiten/etiketten` mit Auswahl „alle", „nur Kartons", „nur Regale" oder markierte Einheiten.
       _Definition of Done:_ Unit-Test für die Etiketten-Datenaufbereitung (Auswahl, Sortierung, Aufteilung in Seiten); manueller Test: Druckvorschau zeigt scanbare QR-Codes im Raster. `pnpm test` grün.
       `git commit -m "feat: add printable qr label sheet for storage units"`
