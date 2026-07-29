@@ -39,6 +39,7 @@ describe("fetchBggGame", () => {
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
+      explainerVideoUrl: null,
     });
   });
 
@@ -56,7 +57,48 @@ describe("fetchBggGame", () => {
       imageUrl: null,
       description: null,
       mechanics: [],
+      explainerVideoUrl: null,
     });
+  });
+
+  it("picks the first instructional video with a youtube host, skipping non-matching entries", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-with-instructional-video.xml"),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.explainerVideoUrl).toBe(
+      "https://www.youtube.com/watch?v=correct123",
+    );
+  });
+
+  it("returns null when the videos block has no instructional entry", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-videos-no-instructional.xml"),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.explainerVideoUrl).toBeNull();
+  });
+
+  it("requests the videos block from the bgg api", async () => {
+    const fetchMock = mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-minimal.xml"),
+    );
+
+    await fetchBggGame(1);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("videos=1"),
+    );
   });
 
   it("throws BggNotFoundError for an unknown BGG id", async () => {

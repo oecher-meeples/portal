@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+	<item type="boardgame" id="342942">
+		<thumbnail>https://cf.geekdo-images.com/thumb.jpg</thumbnail>
+		<image>https://cf.geekdo-images.com/full.jpg</image>
+		<name type="primary" sortindex="1" value="Ark Nova" />
+		<minplayers value="1" />
+		<maxplayers value="4" />
+		<playingtime value="150" />
+		<videos>
+			<video id="1" title="Ark Nova Review" category="review" link="https://www.youtube.com/watch?v=review1" username="reviewer" />
+			<video id="2" title="Ark Nova How to Play" category="instructional" link="https://vimeo.com/123456" username="vimeouser" />
+			<video id="3" title="Ark Nova Unboxing" category="unboxing" link="https://www.youtube.com/watch?v=unboxing1" username="unboxer" />
+			<video id="4" title="Ark Nova Tutorial" category="instructional" link="https://www.youtube.com/watch?v=correct123" username="tutorialmaker" />
+			<video id="5" title="Ark Nova Tutorial 2" category="instructional" link="https://www.youtube.com/watch?v=shouldnotbepicked" username="other" />
+		</videos>
+		<statistics page="1">
+			<ratings>
+				<averageweight value="3.6912" />
+			</ratings>
+		</statistics>
+	</item>
+</items>

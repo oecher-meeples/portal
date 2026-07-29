@@ -94,6 +94,7 @@ export function CreateBoardGameDialog({
             imageUrl: preview.imageUrl,
             description: preview.description,
             mechanics: preview.mechanics,
+            explainerVideoUrl: preview.explainerVideoUrl,
           }
         : {}),
     };

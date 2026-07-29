@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+	<item type="boardgame" id="342942">
+		<name type="primary" sortindex="1" value="Ark Nova" />
+		<minplayers value="1" />
+		<maxplayers value="4" />
+		<videos>
+			<video id="1" title="Ark Nova Review" category="review" link="https://www.youtube.com/watch?v=review1" username="reviewer" />
+			<video id="3" title="Ark Nova Unboxing" category="unboxing" link="https://www.youtube.com/watch?v=unboxing1" username="unboxer" />
+		</videos>
+	</item>
+</items>

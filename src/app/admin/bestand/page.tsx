@@ -70,6 +70,16 @@ export default async function AdminBestandPage({
         : null,
       archivedReason: game.archivedReason,
       zustand,
+      bggId: game.bggId,
+      minPlayers: game.minPlayers,
+      maxPlayers: game.maxPlayers,
+      playTimeMinutes: game.playTimeMinutes,
+      weight: game.weight,
+      imageUrl: game.imageUrl,
+      description: game.description,
+      mechanics: game.mechanics,
+      condition: game.condition,
+      explainerVideoUrl: game.explainerVideoUrl,
       locationChain: holding?.meepleId
         ? `bei ${holding.meeple?.displayName ?? "Meeple"}`
         : holding?.unitId

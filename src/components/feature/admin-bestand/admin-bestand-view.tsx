@@ -17,6 +17,7 @@ import {
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { CreateBoardGameDialog } from "@/components/feature/admin-bestand/create-board-game-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/feature/admin-bestand/deinventorise-board-game-dialog";
+import { EditBoardGameDialog } from "@/components/feature/admin-bestand/edit-board-game-dialog";
 import { requestCompletenessCheck } from "@/components/feature/admin-bestand/actions";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
@@ -30,6 +31,16 @@ export type AdminBoardGameRow = {
   archivedReason: string | null;
   zustand: GameZustand;
   locationChain: string;
+  bggId: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playTimeMinutes: number | null;
+  weight: number | null;
+  imageUrl: string | null;
+  description: string | null;
+  mechanics: string[];
+  condition: string | null;
+  explainerVideoUrl: string | null;
 };
 
 const ZUSTAND_TONE: Record<GameZustand, StatusTone> = {
@@ -202,6 +213,7 @@ export function AdminBestandView({
                             Prüfung anfordern
                           </Button>
                         )}
+                        <EditBoardGameDialog game={game} />
                         <DeinventoriseBoardGameDialog
                           gameId={game.id}
                           gameTitle={game.title}

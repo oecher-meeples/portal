@@ -28,6 +28,7 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  explainerVideoUrl: string | null;
 }
 
 interface BggNameEntry {
@@ -38,6 +39,11 @@ interface BggNameEntry {
 interface BggLinkEntry {
   type?: string;
   value: string;
+}
+
+interface BggVideoEntry {
+  category?: string;
+  link?: string;
 }
 
 interface BggItem {
@@ -53,6 +59,9 @@ interface BggItem {
       averageweight?: { value?: string };
     };
   };
+  videos?: {
+    video?: BggVideoEntry | BggVideoEntry[];
+  };
 }
 
 interface BggThingResponse {
@@ -65,7 +74,8 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "",
   htmlEntities: true,
-  isArray: (name) => name === "name" || name === "link",
+  isArray: (name, _jpath, _isLeafNode, isAttribute) =>
+    !isAttribute && (name === "name" || name === "link" || name === "video"),
 });
 
 const HTML_ENTITY_MAP: Record<string, string> = {
@@ -102,6 +112,26 @@ function parseNumber(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "youtu.be"]);
+
+function isYoutubeLink(link: string): boolean {
+  try {
+    return YOUTUBE_HOSTS.has(new URL(link).hostname);
+  } catch {
+    return false;
+  }
+}
+
+function selectExplainerVideoUrl(videos: BggItem["videos"]): string | null {
+  const entry = toArray(videos?.video).find(
+    (video) =>
+      video.category === "instructional" &&
+      video.link !== undefined &&
+      isYoutubeLink(video.link),
+  );
+  return entry?.link ?? null;
+}
+
 function mapItem(item: BggItem): BggGameData {
   const names = toArray(item.name);
   const primaryName = names.find((name) => name.type === "primary") ?? names[0];
@@ -124,11 +154,14 @@ function mapItem(item: BggItem): BggGameData {
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
+    explainerVideoUrl: selectExplainerVideoUrl(item.videos),
   };
 }
 
 export async function fetchBggGame(bggId: number): Promise<BggGameData> {
-  const response = await fetch(`${BGG_API_BASE}/thing?id=${bggId}&stats=1`);
+  const response = await fetch(
+    `${BGG_API_BASE}/thing?id=${bggId}&stats=1&videos=1`,
+  );
   if (!response.ok) {
     throw new BggApiError(
       `BoardGameGeek-API-Anfrage fehlgeschlagen (${response.status}).`,
