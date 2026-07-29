@@ -13,6 +13,13 @@ enum PostType {
   TURNIER
 }
 
+enum InstagramStatus {
+  PENDING
+  QUEUED
+  POSTED
+  FAILED
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -52,17 +59,22 @@ model UserRole {
 }
 
 model Post {
-  id        String   @id @default(cuid())
-  slug      String   @unique
-  type      PostType
-  title     String
-  excerpt   String
-  body      String
-  date      DateTime
-  author    String?
-  location  String?
-  internal  Boolean?
-  instagram Boolean?
+  id                 String           @id @default(cuid())
+  slug               String           @unique
+  type               PostType
+  title              String
+  excerpt            String
+  body               String
+  date               DateTime
+  author             String?
+  location           String?
+  internal           Boolean?
+  instagram          Boolean?
+  coverImageUrl      String?
+  instagramStatus    InstagramStatus?
+  instagramPostUrl   String?
+  instagramAttempts  Int              @default(0)
+  instagramLastError String?
 
   @@map("posts")
 }
@@ -75,4 +87,15 @@ model Invite {
   redeemedAt      DateTime?
 
   @@map("invites")
+}
+
+model InstagramConnection {
+  id                  String   @id @default(cuid())
+  accessToken         String
+  igBusinessAccountId String
+  pageId              String
+  expiresAt           DateTime
+  updatedAt           DateTime @updatedAt
+
+  @@map("instagram_connections")
 }
