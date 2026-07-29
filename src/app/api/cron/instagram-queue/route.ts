@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
+import { deleteExpiredBankDataAccessLogs } from "@/lib/bank-access-log";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -9,5 +10,6 @@ export async function GET(request: Request) {
 
   await refreshConnectionIfNeeded();
   const summary = await processQueue();
-  return NextResponse.json(summary);
+  const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
+  return NextResponse.json({ ...summary, bankLogCleanup });
 }

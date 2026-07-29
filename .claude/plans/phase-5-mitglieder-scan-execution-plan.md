@@ -101,12 +101,13 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
       _Definition of Done:_ `src/lib/meeples.test.ts` deckt ab: Neuanlage; kein Duplikat bei erneutem Aufruf; Namensaktualisierung; `requireMeeple` ohne Session redirectet; Zustandsableitung für alle vier Zustände inkl. Grenzfall „membershipEndsAt heute"; ausgetretener Meeple wird auf gesperrten Pfaden abgewiesen und auf erlaubten durchgelassen. `pnpm test` grün.
       `git commit -m "feat: derive membership state and gate access for resigned members"`
 
-- [ ] **5. Profil-Self-Service**
+- [x] **5. Profil-Self-Service**
       `src/components/feature/profil/actions.ts`: `updateOwnProfile` (Anzeigename, BGG-/BGA-Username), `updateOwnBankDetails` (Kontoinhaber + IBAN, verschlüsselt, setzt `ibanLast4`), `clearOwnBankDetails`. Alle arbeiten ausschließlich auf dem eigenen `Meeple` über `requireMeeple()`, nie mit einer übergebenen Fremd-ID. `profil-view.tsx` ersetzt `profil-mock-view.tsx`: IBAN nur maskiert (Klartext verlässt den Server nicht), DSGVO-Hinweisbox, Mitgliedsnummer/Beitrittsdatum read-only, Mitgliedschaftszustand sichtbar, Aktion „Mitgliedschaft kündigen" mit Hinweis auf Wirkung zum Jahreswechsel.
       _Definition of Done:_ `actions.test.ts` deckt ab: ohne Session kein Schreibzugriff; IBAN wird verschlüsselt persistiert und nie im Klartext zurückgegeben; `ibanLast4` korrekt; ungültige IBAN abgelehnt; `clearOwnBankDetails` leert alle Bankfelder; Kündigung setzt `resignedAt` und `membershipEndsAt` auf den kommenden Jahreswechsel. `pnpm test` grün.
       `git commit -m "feat: add member profile self-service with encrypted bank details"`
 
-- [ ] **6. Bankdaten-Leseweg für den Kassenwart**
+- [x] **6. Bankdaten-Leseweg für den Kassenwart**
+      _Umsetzungsnotiz:_ Aufräumen läuft im bestehenden täglichen Cron (`/api/cron/instagram-queue`) mit, siehe ADR 0003 — keine zweite Cron-Route und kein zusätzlicher `vercel.json`-Eintrag. Route `/admin/bank`, Navigationseintrag „Beitragseinzug" in der Admin-Gruppe.
       `prisma/schema.prisma`: `BankDataAccessLog` ergänzen und migrieren. `src/components/feature/admin-bank/actions.ts`: `revealIban(meepleId)` und `exportBankDataCsv()` — beide mit `requirePermission("bank:read")`, entschlüsseln erst nach explizitem Aufruf und schreiben je einen Log-Eintrag. CSV mit Mitgliedsnummer, Name, Kontoinhaber, IBAN. Admin-Ansicht mit Liste (nur `**** 1234`), Einzel-Aufdecken und Export-Button. Im bestehenden Cron (`src/app/api/cron/instagram-queue/route.ts` bzw. einer zusätzlichen Route mit demselben Muster) Log-Einträge älter als 24 Monate löschen. **Kein SEPA-XML** (ADR 0003).
       _Definition of Done:_ Tests decken ab: ohne `bank:read` kein Zugriff und kein Log-Eintrag; erfolgreiches Aufdecken schreibt genau einen Log-Eintrag; Export schreibt genau einen Log-Eintrag; CSV enthält keine Spalten über die vier definierten hinaus; Aufräumen löscht nur Einträge älter als 24 Monate. `pnpm test` grün.
       `git commit -m "feat: add audited bank data access for the kassenwart role"`

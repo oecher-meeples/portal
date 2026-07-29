@@ -20,6 +20,11 @@ enum InstagramStatus {
   FAILED
 }
 
+enum BankDataAccessKind {
+  SINGLE_REVEAL
+  CSV_EXPORT
+}
+
 enum GameInventoryStatus {
   ACTIVE
   DEINVENTARISED
@@ -83,7 +88,26 @@ model Meeple {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  bankDataAccessesMade      BankDataAccessLog[] @relation("BankDataAccessActor")
+  bankDataAccessesReceived  BankDataAccessLog[] @relation("BankDataAccessSubject")
+
   @@map("meeples")
+}
+
+/// Audit trail for every decrypted read of bank data (see docs/adr/0003). Kept 24 months.
+model BankDataAccessLog {
+  id                 String             @id @default(cuid())
+  accessedByMeepleId String
+  subjectMeepleId    String?
+  kind               BankDataAccessKind
+  at                 DateTime           @default(now())
+
+  accessedBy Meeple  @relation("BankDataAccessActor", fields: [accessedByMeepleId], references: [id], onDelete: Cascade)
+  subject    Meeple? @relation("BankDataAccessSubject", fields: [subjectMeepleId], references: [id], onDelete: SetNull)
+
+  @@index([at])
+  @@index([subjectMeepleId])
+  @@map("bank_data_access_logs")
 }
 
 model Post {

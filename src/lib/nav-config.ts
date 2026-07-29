@@ -12,6 +12,7 @@ import {
   UserCircle,
   BarChart3,
   Boxes,
+  Landmark,
   UserCog,
   ShoppingBasket,
   Settings,
@@ -134,6 +135,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Mitglieder & Einladungen",
         href: "/admin/mitglieder",
         icon: UserCog,
+        section: "Administration",
+      },
+      {
+        label: "Beitragseinzug",
+        href: "/admin/bank",
+        icon: Landmark,
         section: "Administration",
       },
       {
