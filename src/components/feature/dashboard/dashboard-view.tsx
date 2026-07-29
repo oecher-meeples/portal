@@ -15,7 +15,7 @@ const QUICK_LINKS = [
 ];
 
 type DashboardViewProps = {
-  user: Awaited<ReturnType<typeof requireMember>>;
+  user: Awaited<ReturnType<typeof requireMember>>["user"];
   internalNews: Awaited<ReturnType<typeof getAllContent>>;
 };
 
