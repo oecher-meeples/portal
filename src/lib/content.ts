@@ -83,6 +83,16 @@ export async function getLatestPosts(limit = 3) {
   return posts.map(toContentItem);
 }
 
+/** Same as `getUpcomingEvents`, but includes internal Termine — for the internal calendar. */
+export async function getUpcomingEventsIncludingInternal(limit = 3) {
+  const posts = await prisma.post.findMany({
+    where: { type: { not: "BLOG" } },
+    orderBy: { date: "asc" },
+    take: limit,
+  });
+  return posts.map(toContentItem);
+}
+
 /** Interne Beiträge sind nur mit Session sichtbar — used to gate the detail page. */
 export function canViewContentItem(
   item: Pick<ContentItem, "internal">,

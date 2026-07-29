@@ -2,6 +2,7 @@ import ical, { type VEvent } from "node-ical";
 import {
   getAllContent,
   getUpcomingEvents,
+  getUpcomingEventsIncludingInternal,
   type ContentItem,
 } from "@/lib/content";
 
@@ -40,19 +41,44 @@ export function parseCalendarEvents(
     }));
 }
 
+/** Never throws — a feed outage must not break whichever calendar rendered next to it. */
+async function fetchIcsFeed(
+  icsUrl: string | undefined,
+  options: { limit?: number; now?: Date } = {},
+): Promise<ContentItem[]> {
+  if (!icsUrl) return [];
+
+  try {
+    const response = await fetch(icsUrl, {
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+    if (!response.ok) return [];
+
+    const icsText = await response.text();
+    return parseCalendarEvents(icsText, options);
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchPublicEvents(
+  options: { limit?: number; now?: Date } = {},
+): Promise<ContentItem[]> {
+  return fetchIcsFeed(process.env.PUBLIC_CALENDAR_ICS_URL, options);
+}
+
+/** Marks every event `internal: true` so views can badge and colour them apart. */
+export async function fetchInternalEvents(
+  options: { limit?: number; now?: Date } = {},
+): Promise<ContentItem[]> {
+  const events = await fetchIcsFeed(process.env.ICS_FEED_URL_INTERNAL, options);
+  return events.map((event) => ({ ...event, internal: true }));
+}
+
 export async function getUpcomingCalendarEvents(
   limit = 3,
 ): Promise<ContentItem[]> {
-  const icsUrl = process.env.PUBLIC_CALENDAR_ICS_URL;
-  if (!icsUrl) return [];
-
-  const response = await fetch(icsUrl, {
-    next: { revalidate: REVALIDATE_SECONDS },
-  });
-  if (!response.ok) return [];
-
-  const icsText = await response.text();
-  return parseCalendarEvents(icsText, { limit });
+  return fetchPublicEvents({ limit });
 }
 
 export async function getUpcomingEventsWithCalendar(
@@ -76,6 +102,19 @@ export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
   ]);
 
   return [...dbItems, ...calendarEvents].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+}
+
+/** Public and internal termine together, for the members-only calendar view. */
+export async function getInternalCalendarEvents(limit = 50): Promise<ContentItem[]> {
+  const [dbEvents, publicEvents, internalEvents] = await Promise.all([
+    getUpcomingEventsIncludingInternal(limit),
+    fetchPublicEvents({ limit }),
+    fetchInternalEvents({ limit }),
+  ]);
+
+  return [...dbEvents, ...publicEvents, ...internalEvents].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
 }

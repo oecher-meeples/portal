@@ -193,7 +193,8 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
       _Definition of Done:_ Tests decken ab: interne Beiträge fehlen in der öffentlichen Liste und erscheinen in der internen; interner Beitrag mit Instagram-Flag erzeugt keinen Queue-Eintrag; Detailaufruf eines internen Beitrags ohne Session ⇒ `notFound()`. `pnpm test` grün.
       `git commit -m "feat: add internal members-only newsroom"`
 
-- [ ] **20. Vereinsinterner Kalender**
+- [x] **20. Vereinsinterner Kalender**
+      _Umsetzungsnotiz:_ Beide Feed-Abrufe fangen Netzwerkfehler jetzt explizit ab (`fetchIcsFeed`) — vorher hätte ein Fetch-Fehler (nicht nur `!response.ok`) ungefangen durchgeschlagen und auch den öffentlichen Kalender mitgerissen. Neue Route `/dashboard/kalender` (Abwicklungs-Pfad, für Ausgetretene erreichbar), nutzt die bestehende `NewsBrowser`/`NewsCalendar`-Kombination unverändert weiter. `getUpcomingEventsIncludingInternal()` ergänzt, da `getUpcomingEvents()` seit Schritt 19 interne DB-Termine ausschließt.
       `src/lib/calendar.ts` so umbauen, dass Parse- und Mapping-Logik für mehrere Feeds nutzbar ist (Feed-URL als Parameter — kein zweiter Parser): `fetchPublicEvents()` und `fetchInternalEvents()` (liest `ICS_FEED_URL_INTERNAL`, liefert ohne Variable eine leere Liste ohne Fehler). Interner Kalender-View für eingeloggte Nutzer (auch für ausgetretene Meeples erreichbar), zeigt öffentliche und interne Termine zusammen, interne farblich und mit Badge abgesetzt; bestehende `news-calendar.tsx` wiederverwenden.
       _Definition of Done:_ `calendar.test.ts` erweitert: interner Feed wird geparst und als intern markiert; fehlende Env-Variable ⇒ leere Liste ohne Throw; Netzwerkfehler des internen Feeds bricht den öffentlichen Kalender nicht. `pnpm test` grün.
       `git commit -m "feat: add internal club calendar feed"`

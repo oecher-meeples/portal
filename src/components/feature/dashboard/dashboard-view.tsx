@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { formatDateShort } from "@/lib/format";
 import type { requireMember } from "@/lib/session";
 import type { getAllContent } from "@/lib/content";
@@ -60,10 +59,15 @@ export function DashboardView({ user, internalNews }: DashboardViewProps) {
 
         <div className="bg-card rounded-lg border p-5">
           <h2 className="font-serif text-lg font-bold">Interner Kalender</h2>
-          <PlaceholderMedia label="VEREINSINTERNE TERMINE" className="mt-3" />
-          <p className="bg-primary/10 mt-3 rounded-md p-3 text-sm">
-            Separater interner Kalender â€“ nur fÃ¼r Mitglieder sichtbar.
+          <p className="text-muted-foreground mt-2 text-sm">
+            Öffentliche und interne Termine an einem Ort.
           </p>
+          <Link
+            href="/dashboard/kalender"
+            className="text-primary mt-3 inline-block text-sm hover:underline"
+          >
+            Zum Vereinskalender →
+          </Link>
         </div>
       </div>
 
