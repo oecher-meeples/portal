@@ -20,6 +20,10 @@ import {
   cancelBooking,
   updateBookingCertainty,
 } from "@/components/feature/helfer/actions";
+import {
+  markAttending,
+  markNotAttending,
+} from "@/components/feature/helfer/attendance-actions";
 
 const dateTime = new Intl.DateTimeFormat("de-DE", {
   dateStyle: "short",
@@ -46,10 +50,14 @@ export function HelferView({
   events,
   selectedEventId,
   shifts,
+  isExplainer,
+  isAttendingAsExplainer,
 }: {
   events: HelferEventOption[];
   selectedEventId: string | null;
   shifts: HelferShiftRow[];
+  isExplainer: boolean;
+  isAttendingAsExplainer: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -91,6 +99,30 @@ export function HelferView({
               {event.title}
             </Button>
           ))}
+        </div>
+      )}
+
+      {isExplainer && selectedEventId && (
+        <div className="bg-primary/10 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
+          <span>
+            {isAttendingAsExplainer
+              ? "Du bist heute als Erklärbär angemeldet."
+              : "Du kannst dich für dieses Event als Erklärbär anmelden."}
+          </span>
+          <Button
+            size="sm"
+            variant={isAttendingAsExplainer ? "outline" : "default"}
+            disabled={isPending}
+            onClick={() =>
+              withErrorHandling(() =>
+                isAttendingAsExplainer
+                  ? markNotAttending(selectedEventId)
+                  : markAttending(selectedEventId),
+              )
+            }
+          >
+            {isAttendingAsExplainer ? "Abmelden" : "Ich bin heute als Erklärbär da"}
+          </Button>
         </div>
       )}
 

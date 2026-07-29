@@ -25,13 +25,23 @@ export default async function HelferPage({
     ? requestedEventId!
     : (events[0]?.id ?? null);
 
-  const shifts = selectedEventId
-    ? await prisma.shift.findMany({
-        where: { eventId: selectedEventId },
-        orderBy: { startsAt: "asc" },
-        include: { bookings: true },
-      })
-    : [];
+  const [shifts, explainerGameCount, ownAttendance] = await Promise.all([
+    selectedEventId
+      ? prisma.shift.findMany({
+          where: { eventId: selectedEventId },
+          orderBy: { startsAt: "asc" },
+          include: { bookings: true },
+        })
+      : Promise.resolve([]),
+    prisma.explainerGame.count({ where: { meepleId: meeple.id } }),
+    selectedEventId
+      ? prisma.explainerAttendance.findUnique({
+          where: {
+            eventId_meepleId: { eventId: selectedEventId, meepleId: meeple.id },
+          },
+        })
+      : Promise.resolve(null),
+  ]);
 
   const eventOptions: HelferEventOption[] = events.map((event) => ({
     id: event.id,
@@ -58,6 +68,8 @@ export default async function HelferPage({
       events={eventOptions}
       selectedEventId={selectedEventId}
       shifts={shiftRows}
+      isExplainer={explainerGameCount > 0}
+      isAttendingAsExplainer={ownAttendance !== null}
     />
   );
 }
