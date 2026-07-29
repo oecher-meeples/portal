@@ -85,12 +85,12 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
 
 ### B — Mitgliedschaft, Profil, Bankdaten
 
-- [ ] **2. Prisma-Schema: `Meeple`, Rollen und Permissions**
+- [x] **2. Prisma-Schema: `Meeple`, Rollen und Permissions**
       `prisma/schema.prisma`: Modell `Meeple` (Felder siehe Annahmen), `@@map("meeples")`. `prisma/seed.ts`: Permission `bank:read` („Bankdaten entschlüsselt einsehen und exportieren") ergänzen, neue Rolle `kassenwart` mit ausschließlich `bank:read`, Beschreibung von `games:manage` auf Einheiten und Prüfungen erweitern. Env-Dokumentation um `MEMBER_DATA_ENCRYPTION_KEY` und `ICS_FEED_URL_INTERNAL` ergänzen (inkl. Hinweis zur Schlüsselerzeugung und zum Backup außerhalb Vercel, siehe ADR 0003).
       _Definition of Done:_ `pnpm prisma migrate dev` fehlerfrei gegen die Neon-DB, `pnpm db:seed` läuft durch und legt Rolle und Permission an, `pnpm build` bricht nicht.
       `git commit -m "feat: add meeple model, kassenwart role and bank read permission"`
 
-- [ ] **3. Verschlüsselung und IBAN-Hilfsfunktionen**
+- [x] **3. Verschlüsselung und IBAN-Hilfsfunktionen**
       `src/lib/crypto.ts`: `encryptSecret` / `decryptSecret` mit AES-256-GCM über `node:crypto`, Schlüssel aus `MEMBER_DATA_ENCRYPTION_KEY` (base64, 32 Byte; sprechender Fehler bei fehlendem oder zu kurzem Schlüssel). Format `v1:<iv-b64>:<tag-b64>:<ciphertext-b64>`; unbekannter Versionspräfix und manipulierte Nutzlast führen zu einem klaren Fehler statt stillem Fehlverhalten. Dazu `normaliseIban`, `ibanLast4`, `maskIban` und eine Formatprüfung (Länge/Zeichen, keine externe Bibliothek).
       _Definition of Done:_ `src/lib/crypto.test.ts` deckt ab: Round-Trip; unterschiedliche Ciphertexts bei gleichem Klartext (zufälliger IV); Fehler bei fehlendem Schlüssel; Fehler bei manipuliertem Tag; Fehler bei fremdem Versionspräfix; Maskierung und Last-4. `pnpm test` grün.
       `git commit -m "feat: add aes-gcm encryption and iban helpers"`
