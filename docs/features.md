@@ -116,9 +116,10 @@
 - Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA
 
 ### 2.11 Event-Helferplan — Übersicht
-- Event-Auswahl, darunter Schichtplan-Tabelle (Zeit × Rolle: Theke/Kasse/Leihe/Erklärbär)
+- Event-Auswahl, darunter Schichtplan-Tabelle (Zeit × Schicht-Typ: Theke/Kasse/Leihe)
 - Eigene Zusagen hervorgehoben, Status-Badges "Bestätigt"/"Vorläufig"
 - Button "In Schicht eintragen" je freiem Slot
+- Eigener Abschnitt "Ich bin heute als Erklärbär da": Anwesenheits-Toggle für das ausgewählte Event, sichtbar für Meeples mit mindestens einem Erklärbär-Profileintrag — kein Schicht-Slot, siehe 2.10
 
 ### 2.12 Ersatzteillager
 - Grid "Ausschlacht"-Spiele/Teile (inkl. Dummy-Eintrag "Allgemeines"), Zustand, Kurzbeschreibung
@@ -168,13 +169,13 @@
 
 ### 3.6 Event- & Schichtplanung (Admin)
 - Event anlegen/bearbeiten
-- Schicht-Editor: Rollen-Slots (Theke/Kasse/Leihe/Erklärbär) mit Zeitfenstern anlegen
+- Schicht-Editor: Schicht-Typen (Theke/Kasse/Leihe) mit Zeitfenstern und Kapazität anlegen
 - Übersicht Füllstand je Schicht (besetzt/frei/vorläufig)
 
 ### 3.7 Bring & Buy Flohmarkt — Kassenansicht
 - Such-/Scanleiste für Artikel
 - Artikelliste mit Status-Toggle (FOR_SALE → RESERVED → SOLD)
-- Excel-Massenimport-Dialog (Datei-Upload, Vorschau-Tabelle vor Bestätigung)
+- CSV-Massenimport-Dialog (Datei-Upload, Vorschau-Tabelle vor Bestätigung)
 
 ### 3.8 Mobiler Gäste-Modus (Event vor Ort)
 - Reduzierte, touch-optimierte Ansicht für Tablet/Smartphone am Eingang

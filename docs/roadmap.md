@@ -126,7 +126,7 @@ Bewusst zurückgestellt bzw. nicht Teil von Phase 5 (siehe `.claude/plans/phase-
     * [ ] Optimierte Ansicht für Event-Besucher: Scannen eines Spiele-QR-Codes zeigt sofort die Spielinfos, verlinkt Erklärvideos (YouTube) und listet anwesende Vereins-Erklärbären auf.
     * [ ] Filterbare Spieleliste für Event-Gäste ("Welche Absacker für 4 Personen sind gerade im Raum verfügbar?").
 * **[ ] Meilenstein 6.4: Bring & Buy Flohmarkt-Modul**
-    * [ ] Formular für Mitglieder, um eigene Flohmarkt-Artikel anzulegen (manuell oder via Excel-Massenimport).
+    * [ ] Formular für Mitglieder, um eigene Flohmarkt-Artikel anzulegen (manuell oder via CSV-Massenimport).
     * [ ] Bereitstellung einer zentralen Listen- und Kassenansicht für den Verkaufstag (Wer verkauft was zu welchem Preis?).
 
 ---
