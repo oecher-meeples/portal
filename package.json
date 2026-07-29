@@ -16,6 +16,8 @@
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@neondatabase/auth": "0.4.2-beta",
+    "@vercel/blob": "^2.6.1",
+    "@vercel/og": "^0.11.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
