@@ -126,7 +126,8 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
       _Definition of Done:_ `pnpm prisma migrate dev` fehlerfrei; manueller Gegentest per SQL: zweiter offener Aufenthalt für dasselbe Spiel schlägt fehl, Aufenthalt mit beiden bzw. keinem Ziel schlägt fehl; `pnpm build` bricht nicht.
       `git commit -m "feat: add storage units, unit moves and game holdings to the schema"`
 
-- [ ] **9. Datenmigration des Phase-4-Bestands**
+- [x] **9. Datenmigration des Phase-4-Bestands**
+      _Umsetzungsnotiz:_ `recordedByMeepleId` für die INITIAL-Aufenthalte ist der Meeple des Seed-Admins (`SEED_ADMIN_EMAIL`), bei Bedarf per `neon_auth."user"` nachgezogen. Aktuell liegen keine Spiele in der DB (Phase 4 lief nur gegen Mock-Daten) — Skript real gegen die leere DB verifiziert (`0 zu migrieren`), Verhalten für echte Bestände über gemockten Prisma-Client getestet (`scripts/migrate-boardgames-to-holdings.test.ts`).
       Skript unter `scripts/` analog `scripts/migrate-mock-posts.ts`, idempotent und mit Trockenlauf-Ausgabe: Einheit „Unsortiert" (`OM-BOX-0000`, ohne Verwahrer und ohne Ortsangabe) anlegen; für jeden vorkommenden alten `location`-Freitext einen Karton mit diesem `locationNote` erzeugen; jedes bestehende Spiel mit `quantity > 1` in entsprechend viele Datensätze aufteilen (Slug mit Suffix, restliche Felder kopiert); für **jedes** Spiel einen offenen Aufenthalt (`origin: INITIAL`, bestätigt) auf den passenden Karton bzw. auf „Unsortiert" anlegen. Skript-Aufruf in `package.json` ergänzen.
       _Definition of Done:_ Test gegen einen gemockten Prisma-Client: jedes Spiel hat danach genau einen offenen Aufenthalt; `quantity: 3` erzeugt drei Datensätze mit eindeutigen Slugs; gleicher Freitext erzeugt nur einen Karton; zweiter Lauf ändert nichts. `pnpm test` grün.
       `git commit -m "feat: migrate existing board games into storage units and holdings"`
