@@ -18,7 +18,12 @@ const PERMISSIONS = [
   },
   {
     key: "games:manage",
-    description: "Ludothek-Bestand verwalten (anlegen, bearbeiten, deinventarisieren)",
+    description:
+      "Ludothek verwalten: Spiele und Aufbewahrungseinheiten anlegen, bearbeiten und stilllegen, EAN pflegen, Etiketten drucken, fremde Aufenthalte korrigieren, Mängel schließen, deinventarisieren",
+  },
+  {
+    key: "bank:read",
+    description: "Bankdaten entschlüsselt einsehen und exportieren",
   },
 ];
 
@@ -32,6 +37,11 @@ const ROLES = [
     name: "moderator",
     description: "Redaktion",
     permissionKeys: ["posts:write"],
+  },
+  {
+    name: "kassenwart",
+    description: "Beitragseinzug — darf Bankdaten entschlüsseln, jeder Zugriff wird protokolliert",
+    permissionKeys: ["bank:read"],
   },
   {
     name: "mitglied",

@@ -71,12 +71,12 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
 
 ### A — Vorbereitung und Doku-Korrektur
 
-- [ ] **0. Repository- und Toolchain-Zustand prüfen**
+- [x] **0. Repository- und Toolchain-Zustand prüfen**
       `git status` ausführen, die vorbestehenden untracked Dateien zur Kenntnis nehmen und nicht anfassen. `pnpm test` einmal laufen lassen (grüner Ausgangszustand, vorhandene Vitest-Einrichtung bestätigt). `CONTEXT.md` und `docs/adr/0001`–`0003` lesen.
       _Definition of Done:_ `git status` läuft fehlerfrei, `pnpm test` grün, fremde Änderungen unangetastet.
       Kein Commit (rein informativ).
 
-- [ ] **1. Datenfluss-Doku korrigieren**
+- [x] **1. Datenfluss-Doku korrigieren**
       `docs/schema.md` ist bereits auf das entschiedene Modell umgestellt (inkl. Stand-Markierungen ✅ / 🔜 pro Tabelle) — **nicht** erneut anfassen, nur lesen. Offen ist `docs/flow.md`: Abschnitt 2 (Onboarding — es gibt keinen Meeple vor der Registrierung), Abschnitte 4 und 5 (`GameCopy`, `BorrowReceipt` und `Trade` durch Aufenthalte ersetzen; `Trade` ist kein Vorgang dieses Portals) sowie Abschnitt 1 (`User / Meeple` als eine Einheit darstellen) anpassen. Vorgänge in den Diagrammen mit der Fachsprache aus `CONTEXT.md` benennen (Ausleihe, Rückgabe, Weitergabe, Umlagern).
       Ebenfalls offen: `docs/features.md` nennt in Abschnitt 2.8 („Liste der Exemplare (`GameCopy`)") und 3.4 („Pro Spiel: Exemplare (`GameCopy`) verwalten") noch die Exemplar-Ebene — auf Standort-Kette, Aufenthalts-Historie und Etiketten für Aufbewahrungseinheiten umschreiben. Abschnitt 2.9 (Scanner) auf den kontextabhängigen Flow mit Serienmodi anpassen, 2.7 auf die zwei Ludothek-Projektionen (öffentlich/intern) und die Filter über `searchParams`.
       _Begründung für die frühe Position:_ Wer die Schritte 8–12 umsetzt und dabei `flow.md` oder `features.md` liest, würde sonst ein `GameCopy`-Modell bauen.

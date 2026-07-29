@@ -63,6 +63,29 @@ model UserRole {
   @@map("user_roles")
 }
 
+/// Mitgliedsprofil, 1:1 zum Login-Konto (siehe docs/adr/0002).
+/// Der Mitgliedschaftszustand wird aus resignedAt/membershipEndsAt/anonymizedAt abgeleitet.
+model Meeple {
+  id               String    @id @default(cuid())
+  neonAuthUserId   String?   @unique
+  memberNumber     Int       @unique @default(autoincrement())
+  displayName      String
+  email            String?
+  joinedAt         DateTime  @default(now())
+  resignedAt       DateTime?
+  membershipEndsAt DateTime?
+  anonymizedAt     DateTime?
+  ibanEncrypted    String?
+  ibanLast4        String?
+  accountHolder    String?
+  bggUsername      String?
+  bgaUsername      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("meeples")
+}
+
 model Post {
   id                 String           @id @default(cuid())
   slug               String           @unique
