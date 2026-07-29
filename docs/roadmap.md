@@ -72,14 +72,14 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
 ## 🎲 Phase 4: Die Basis-Ludothek & Deinventarisierung (Admin-Sicht)
 *Ziel: Digitale Erfassung des Spielebestands, BGG-Import und Lösch-Schutz.*
 
-* **[ ] Meilenstein 4.1: Konzeption Ludothek & Archivierungs-Logik**
-    * [ ] Validierung des `BoardGame`-Prisma-Modells: Wie bilden wir Zustände und Standorte sauber ab?
-    * [ ] **Konzept Deinventarisierung:** Planung einer Archivierungs-Logik (z.B. neuer Status `DEINVENTARISED` oder Feld `archivedAt`), damit Spiele bei Verkauf/Verlust/Zerstörung nicht hart gelöscht werden müssen (Schutz der `Borrow`-Historie) und ein Grund hinterlegt werden kann.
-* **[ ] Meilenstein 4.2: Spiele-Erfassung & Deinventarisierung (Umsetzung)**
-    * [ ] Aktivierung und Migration der `BoardGame`-Tabellen im Prisma-Schema.
-    * [ ] Erstellung einer Eingabemaske für Admins zur manuellen Anlage sowie zur Deinventarisierung von Spielen (inkl. Angabe des Grundes).
-* **[ ] Meilenstein 4.3: BoardGameGeek (BGG) API-Sync**
-    * [ ] Implementierung des API-Importeurs: Nach Eingabe einer BGG-ID werden Spieldaten (Spieleranzahl, Spieldauer, Kategorien, Coverbild) automatisch geladen und gespeichert.
+* **[x] Meilenstein 4.1: Konzeption Ludothek & Archivierungs-Logik**
+    * [x] Validierung des `BoardGame`-Prisma-Modells: Wie bilden wir Zustände und Standorte sauber ab?
+    * [x] **Konzept Deinventarisierung:** Planung einer Archivierungs-Logik (z.B. neuer Status `DEINVENTARISED` oder Feld `archivedAt`), damit Spiele bei Verkauf/Verlust/Zerstörung nicht hart gelöscht werden müssen (Schutz der `Borrow`-Historie) und ein Grund hinterlegt werden kann.
+* **[x] Meilenstein 4.2: Spiele-Erfassung & Deinventarisierung (Umsetzung)**
+    * [x] Aktivierung und Migration der `BoardGame`-Tabellen im Prisma-Schema.
+    * [x] Erstellung einer Eingabemaske für Admins zur manuellen Anlage sowie zur Deinventarisierung von Spielen (inkl. Angabe des Grundes).
+* **[x] Meilenstein 4.3: BoardGameGeek (BGG) API-Sync**
+    * [x] Implementierung des API-Importeurs: Nach Eingabe einer BGG-ID werden Spieldaten (Spieleranzahl, Spieldauer, Kategorien, Coverbild) automatisch geladen und gespeichert.
 
 ---
 
