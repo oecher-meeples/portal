@@ -56,6 +56,13 @@ enum ExplainerExperienceLevel {
   BY_HEART
 }
 
+enum FleaMarketItemStatus {
+  PENDING
+  FOR_SALE
+  RESERVED
+  SOLD
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -126,6 +133,7 @@ model Meeple {
   shiftBookings             ShiftBooking[]      @relation("ShiftBookingMeeple")
   explainerGames            ExplainerGame[]       @relation("ExplainerGameMeeple")
   explainerAttendances      ExplainerAttendance[] @relation("ExplainerAttendanceMeeple")
+  fleaMarketItems           FleaMarketItem[]      @relation("FleaMarketItemSeller")
 
   @@map("meeples")
 }
@@ -337,6 +345,7 @@ model Event {
   shifts          Shift[]
   shelfAssignments EventShelfAssignment[]
   explainerAttendances ExplainerAttendance[]
+  fleaMarketItems FleaMarketItem[]
 
   @@map("events")
 }
@@ -416,6 +425,30 @@ model ExplainerAttendance {
 
   @@id([eventId, meepleId])
   @@map("explainer_attendances")
+}
+
+/// A member's item for an event's Bring & Buy flea market. Starts PENDING and only
+/// appears in the guest area once approved (see CONTEXT.md "Flohmarkt-Artikel").
+model FleaMarketItem {
+  id                  String               @id @default(cuid())
+  code                String               @unique
+  eventId             String
+  sellerMeepleId      String
+  title               String
+  description         String?
+  priceEuros          Int
+  status              FleaMarketItemStatus @default(PENDING)
+  approvedAt          DateTime?
+  approvedByMeepleId  String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seller Meeple @relation("FleaMarketItemSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([sellerMeepleId])
+  @@map("flea_market_items")
 }
 
 model InstagramConnection {
