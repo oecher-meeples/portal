@@ -6,7 +6,13 @@ vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
 
-const { createPost, updatePost, deletePost } = await import("./actions");
+const processPostMock = vi.fn();
+vi.mock("@/lib/instagram/queue", () => ({
+  processPost: (...args: unknown[]) => processPostMock(...args),
+}));
+
+const { createPost, updatePost, deletePost, retryInstagramPost } =
+  await import("./actions");
 
 const VALID_INPUT = {
   type: "blog" as const,
@@ -151,6 +157,43 @@ describe("updatePost", () => {
     expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
     expect(call?.data).not.toHaveProperty("instagramStatus");
+  });
+});
+
+describe("retryInstagramPost", () => {
+  it("rejects when the user lacks the posts:write permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    const result = await retryInstagramPost("post-1");
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(prismaMock.post.update).not.toHaveBeenCalled();
+    expect(processPostMock).not.toHaveBeenCalled();
+  });
+
+  it("resets the attempt counter and immediately reprocesses the post", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.update.mockResolvedValue({
+      id: "post-1",
+      instagramAttempts: 0,
+      instagramStatus: "PENDING",
+    } as never);
+    processPostMock.mockResolvedValue(true);
+
+    const result = await retryInstagramPost("post-1");
+
+    expect(prismaMock.post.update).toHaveBeenCalledWith({
+      where: { id: "post-1" },
+      data: {
+        instagramAttempts: 0,
+        instagramStatus: "PENDING",
+        instagramLastError: null,
+      },
+    });
+    expect(processPostMock).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ success: true, posted: true });
   });
 });
 

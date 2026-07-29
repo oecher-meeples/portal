@@ -13,6 +13,7 @@ import type { ContentType } from "@/lib/content";
 import {
   createPost,
   getUploadToken,
+  retryInstagramPost,
   updatePost,
   type PostInput,
 } from "@/components/feature/admin-news/actions";
@@ -54,6 +55,24 @@ export function PostForm({
   const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [instagramStatus, setInstagramStatus] = useState(
+    initialValues?.instagramStatus,
+  );
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  async function handleRetry() {
+    if (!postId) return;
+    setIsRetrying(true);
+    setError(null);
+    const result = await retryInstagramPost(postId);
+    setIsRetrying(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setInstagramStatus(result.posted ? "POSTED" : "PENDING");
+  }
 
   async function handleCoverImageChange(
     event: React.ChangeEvent<HTMLInputElement>,
@@ -230,11 +249,23 @@ export function PostForm({
           />
           Auch auf Instagram teilen
         </label>
-        {initialValues?.instagramStatus && (
-          <Badge variant="secondary" className="self-start">
-            {INSTAGRAM_STATUS_LABELS[initialValues.instagramStatus] ??
-              initialValues.instagramStatus}
-          </Badge>
+        {instagramStatus && (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="self-start">
+              {INSTAGRAM_STATUS_LABELS[instagramStatus] ?? instagramStatus}
+            </Badge>
+            {instagramStatus === "FAILED" && postId && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isRetrying}
+                onClick={handleRetry}
+              >
+                {isRetrying ? "Wird erneut versucht…" : "Erneut versuchen"}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

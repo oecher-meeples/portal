@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content";
+import { processPost } from "@/lib/instagram/queue";
 
 export type PostInput = {
   type: ContentType;
@@ -123,6 +124,25 @@ export async function getUploadToken(pathname: string) {
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
   });
+}
+
+export async function retryInstagramPost(postId: string) {
+  const user = await getCurrentUser();
+  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const post = await prisma.post.update({
+    where: { id: postId },
+    data: {
+      instagramAttempts: 0,
+      instagramStatus: InstagramStatus.PENDING,
+      instagramLastError: null,
+    },
+  });
+
+  const success = await processPost(post);
+  return { success: true as const, posted: success };
 }
 
 export async function deletePost(id: string) {
