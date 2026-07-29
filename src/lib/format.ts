@@ -1,3 +1,4 @@
+import type { ExplainerExperienceLevel } from "@prisma/client";
 import type { StatusTone } from "@/components/ui/status-pill";
 import type { MembershipState } from "@/lib/meeples";
 
@@ -29,3 +30,12 @@ export function formatDateShort(iso: string) {
     month: "2-digit",
   }).format(new Date(iso));
 }
+
+export const EXPLAINER_EXPERIENCE_LEVEL_LABELS: Record<
+  ExplainerExperienceLevel,
+  string
+> = {
+  WITH_MANUAL: "Mit Anleitung",
+  WITHOUT_MANUAL: "Ohne Anleitung",
+  BY_HEART: "Im Schlaf",
+};

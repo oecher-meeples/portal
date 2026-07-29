@@ -50,6 +50,12 @@ enum ShiftType {
   LEIHE
 }
 
+enum ExplainerExperienceLevel {
+  WITH_MANUAL
+  WITHOUT_MANUAL
+  BY_HEART
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -118,6 +124,8 @@ model Meeple {
   lfgPosts                  LfgPost[]           @relation("LfgPostCreator")
   lfgParticipations         LfgParticipant[]
   shiftBookings             ShiftBooking[]      @relation("ShiftBookingMeeple")
+  explainerGames            ExplainerGame[]       @relation("ExplainerGameMeeple")
+  explainerAttendances      ExplainerAttendance[] @relation("ExplainerAttendanceMeeple")
 
   @@map("meeples")
 }
@@ -228,10 +236,13 @@ model BoardGame {
   status          GameInventoryStatus @default(ACTIVE)
   archivedAt      DateTime?
   archivedReason  String?
+  /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
+  explainerVideoUrl String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   holdings GameHolding[]
+  explainerGames ExplainerGame[]
 
   @@index([bggId])
   @@index([ean])
@@ -325,6 +336,7 @@ model Event {
 
   shifts          Shift[]
   shelfAssignments EventShelfAssignment[]
+  explainerAttendances ExplainerAttendance[]
 
   @@map("events")
 }
@@ -374,6 +386,36 @@ model ShiftBooking {
 
   @@id([shiftId, meepleId])
   @@map("shift_bookings")
+}
+
+/// A Meeple's durable profile as an Erklärbär for one game, with an experience level.
+/// Combined with ExplainerAttendance for an event, this yields "heute hier erklärbar".
+model ExplainerGame {
+  id          String                   @id @default(cuid())
+  meepleId    String
+  boardGameId String
+  level       ExplainerExperienceLevel
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  meeple    Meeple    @relation("ExplainerGameMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@unique([meepleId, boardGameId])
+  @@map("explainer_games")
+}
+
+/// A Meeple marking themselves present as an Erklärbär at an event (see CONTEXT.md).
+model ExplainerAttendance {
+  eventId   String
+  meepleId  String
+  createdAt DateTime @default(now())
+
+  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  meeple Meeple @relation("ExplainerAttendanceMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, meepleId])
+  @@map("explainer_attendances")
 }
 
 model InstagramConnection {
