@@ -29,10 +29,10 @@ function locationChain(
 export default async function AdminBestandPage({
   searchParams,
 }: {
-  searchParams: Promise<{ deinventarisiert?: string }>;
+  searchParams: Promise<{ deinventarisiert?: string; ean?: string }>;
 }) {
   await requireAdmin();
-  const { deinventarisiert } = await searchParams;
+  const { deinventarisiert, ean } = await searchParams;
   const showDeinventarised = deinventarisiert === "1";
 
   const [games, units] = await Promise.all([
@@ -78,5 +78,11 @@ export default async function AdminBestandPage({
     };
   });
 
-  return <AdminBestandView games={rows} showDeinventarised={showDeinventarised} />;
+  return (
+    <AdminBestandView
+      games={rows}
+      showDeinventarised={showDeinventarised}
+      defaultEan={ean}
+    />
+  );
 }

@@ -1,8 +1,20 @@
+import { PageHeading } from "@/components/ui/page-heading";
 import { requireMember } from "@/lib/session";
-import { ScanMockView } from "@/components/feature/scan/scan-mock-view";
+import { hasPermission } from "@/lib/permissions";
+import { ScanView } from "@/components/feature/scan/scan-view";
 
 export default async function ScanPage() {
-  await requireMember();
+  const { user } = await requireMember();
+  const canManageGames = await hasPermission(user.id, "games:manage");
 
-  return <ScanMockView />;
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeading
+        eyebrow="Kamera-Scan"
+        title="Spiel scannen"
+        description="Halte ein Einheiten-Etikett oder den EAN-Barcode vor die Kamera — die passenden Vorgänge werden danach angeboten."
+      />
+      <ScanView canManageGames={canManageGames} />
+    </div>
+  );
 }

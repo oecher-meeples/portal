@@ -51,9 +51,11 @@ type QuickFilter = "all" | "ungeprueft" | "mangel" | "nicht-erfasst";
 export function AdminBestandView({
   games,
   showDeinventarised,
+  defaultEan,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
+  defaultEan?: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -97,7 +99,7 @@ export function AdminBestandView({
         eyebrow="Bestandsverwaltung"
         title="Bestand & Vollständigkeitsprüfung"
         description="Ein Datensatz pro physischem Spiel. Standort und Verantwortlichkeit ergeben sich aus dem Aufenthalt, nicht aus einem Feld."
-        action={<CreateBoardGameDialog />}
+        action={<CreateBoardGameDialog defaultEan={defaultEan} />}
       />
 
       <div className="flex flex-wrap items-center gap-3">
