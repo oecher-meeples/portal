@@ -5,6 +5,7 @@ import {
   InstagramApiError,
   createMediaContainer,
   exchangeCodeForShortLivedToken,
+  getInstagramBusinessAccount,
   getLongLivedToken,
   publishMedia,
   refreshLongLivedToken,
@@ -122,6 +123,35 @@ describe("graph-client", () => {
         code: 4,
         type: "OAuthException",
       });
+    });
+  });
+
+  describe("getInstagramBusinessAccount", () => {
+    it("returns the page and ig business account ids on success", async () => {
+      mockFetchOnce(true, 200, loadFixture("pages-with-ig-account.json"));
+
+      const result = await getInstagramBusinessAccount("token");
+
+      expect(result).toEqual({
+        pageId: "102345678901234",
+        igBusinessAccountId: "17841400000000000",
+      });
+    });
+
+    it("throws when no page has a linked instagram business account", async () => {
+      mockFetchOnce(true, 200, loadFixture("pages-without-ig-account.json"));
+
+      await expect(getInstagramBusinessAccount("token")).rejects.toThrow(
+        InstagramApiError,
+      );
+    });
+
+    it("throws InstagramApiError on failure", async () => {
+      mockFetchOnce(false, 401, loadFixture("error-rate-limit.json"));
+
+      await expect(getInstagramBusinessAccount("token")).rejects.toThrow(
+        InstagramApiError,
+      );
     });
   });
 

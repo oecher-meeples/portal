@@ -120,6 +120,31 @@ export async function createMediaContainer({
   return { creationId: body.id };
 }
 
+export async function getInstagramBusinessAccount(
+  accessToken: string,
+): Promise<{ pageId: string; igBusinessAccountId: string }> {
+  const params = new URLSearchParams({
+    fields: "instagram_business_account",
+    access_token: accessToken,
+  });
+  const response = await fetch(graphApiUrl(`/me/accounts?${params}`));
+  const body = await parseJsonOrThrow<{
+    data: Array<{ id: string; instagram_business_account?: { id: string } }>;
+  }>(response);
+
+  const page = body.data.find((entry) => entry.instagram_business_account);
+  if (!page?.instagram_business_account) {
+    throw new InstagramApiError(
+      "Keine mit einer Facebook-Seite verknüpfte Instagram-Business-Account gefunden.",
+    );
+  }
+
+  return {
+    pageId: page.id,
+    igBusinessAccountId: page.instagram_business_account.id,
+  };
+}
+
 export async function publishMedia({
   igBusinessAccountId,
   creationId,

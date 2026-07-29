@@ -12,6 +12,10 @@ const PERMISSIONS = [
   { key: "posts:delete", description: "Beiträge löschen" },
   { key: "invites:create", description: "Einladungen erzeugen" },
   { key: "members:manage", description: "Mitgliederverwaltung" },
+  {
+    key: "instagram:connect",
+    description: "Instagram-Verbindung verwalten (OAuth verbinden/trennen)",
+  },
 ];
 
 const ROLES = [
