@@ -1,239 +1,329 @@
-# 📊 Systemarchitektur & Datenmodelle
+# 📊 Datenmodell
 
-Dieses Dokument beschreibt die aufgeteilte Datenbankarchitektur für die Plattform der *Oecher Meeples Ludothek*. Das gesamte Datenmodell ist in drei funktionale Module unterteilt, um eine klare Strukturierung der API-Endpunkte und eine einfache Erweiterbarkeit während der Entwicklung zu garantieren.
+Beschreibt das Datenmodell der Plattform der *Oecher Meeples Ludothek*. Maßgeblich ist [`prisma/schema.prisma`](../prisma/schema.prisma) — dieses Dokument erklärt Zusammenhänge, die dort nicht sichtbar sind.
+
+Jede Tabelle ist mit ihrem Stand markiert:
+
+- **✅ migriert** — existiert in der Datenbank
+- **🔜 Phase 5** — beschlossen, noch nicht migriert (siehe `.claude/plans/phase-5-mitglieder-scan-execution-plan.md`)
+- **📋 später** — nur Skizze, Details noch offen
+
+Die Fachsprache (Meeple, Aufenthalt, Aufbewahrungseinheit, Ausleihe, Weitergabe, …) definiert [`CONTEXT.md`](../CONTEXT.md) und ist im Code verbindlich.
 
 ---
 
-## 1. Öffentlicher Bereich (Public Area)
+## 1. Benutzer und Berechtigungen
 
-### Beschreibung
+**Benutzerkonten liegen nicht in diesem Schema.** Authentifizierung läuft über Neon Auth, die Konten liegen im separaten DB-Schema `neon_auth."user"`. Prisma kann darauf keinen Fremdschlüssel setzen — die Verknüpfung ist überall ein reines String-Feld (`neonAuthUserId`). Rollen und Rechte liegen dagegen in diesem Schema, damit sie ohne Abhängigkeit vom Auth-Anbieter erweiterbar sind.
 
-Das Datenmodell für den öffentlichen Bereich bildet die Grundlage für alle Interaktionen von nicht-angemeldeten Besuchern der Webseite. Dieses Modul steuert die allgemeinen redaktionellen Inhalte und die Außendarstellung des Vereins.
-
-Es verwaltet die Basis-Metadaten von Benutzern, die als Autoren für Blogeinträge fungieren, die eigentlichen Blogposts (inklusive Verknüpfungen zu externen Plattformen wie Instagram) sowie die offiziellen Vereinstermine, welche über Schnittstellen wie die Google Calendar API synchronisiert werden können.
-
-### Diagramm
+Berechtigungen sind **nicht** als Rollen-Rangordnung modelliert, sondern als Permissions, die Rollen zugeordnet werden. Eine Person kann mehrere Rollen haben; geprüft wird immer die Permission, nie die Rolle.
 
 ```mermaid
 erDiagram
-    User {
+    Permission {
         String id PK
-        String name
-        String email
-        String roleId FK
+        String key UK "z. B. games:manage"
+        String description
     }
 
-    BlogPost {
+    Role {
         String id PK
-        String title
-        Text content
-        DateTime publishedAt
-        String authorId FK
-        String instagramPostUrl
+        String name UK "admin, moderator, mitglied, kassenwart"
+        String description
     }
 
-    Event {
-        String id PK
-        String googleCalendarEventId
-        String title
-        Text description
-        DateTime startTime
-        DateTime endTime
-        String location
-        Boolean isPublic
+    RolePermission {
+        String roleId PK "FK"
+        String permissionId PK "FK"
     }
 
-    User ||--o{ BlogPost : "writes"
+    UserRole {
+        String neonAuthUserId PK "kein FK — Neon-Auth-Schema"
+        String roleId PK "FK"
+    }
 
+    Invite {
+        String id PK
+        String token UK
+        String createdByUserId
+        DateTime expiresAt
+        DateTime redeemedAt
+    }
+
+    Role ||--o{ RolePermission : "hat"
+    Permission ||--o{ RolePermission : "gilt für"
+    Role ||--o{ UserRole : "zugewiesen an"
 ```
 
+| Tabelle | Stand |
+|---|---|
+| `permissions`, `roles`, `role_permissions`, `user_roles` | ✅ migriert |
+| `invites` | ✅ migriert |
+| Rolle `kassenwart` + Permission `bank:read` (Seed) | 🔜 Phase 5 |
+
+Eine Einladung (`Invite`) trägt **keinen** Personenbezug: sie ist ein Token mit Ablaufdatum. Wer sie einlöst, wird dadurch Mitglied — es gibt keinen Mitgliedsdatensatz vor der Registrierung.
+
 ---
 
-## 2. Mitgliederbereich (Members Area)
+## 2. Redaktionelle Inhalte
 
-### Beschreibung
+Blogbeiträge und Termine liegen in **einer** Tabelle, unterschieden über `type`. Der Beitragstext ist Markdown. Termine kommen zusätzlich aus einem öffentlichen ICS-Feed und werden nicht persistiert — nur redaktionell angelegte Termine liegen in `posts`.
 
-Der Mitgliederbereich umfasst alle Datenstrukturen, die nur für authentifizierte Vereinsmitglieder nach einem Login zugänglich sind. Dieser Abschnitt steuert die sichere Profilverwaltung, vereinsinterne Finanzdaten (z. B. für Mitgliedsbeiträge) sowie die Anbindung an externe Brettspiel-Datenbanken (BoardGameGeek und BoardGameArena).
-
-Zusätzlich ist hier das komplette Verleihsystem der Ludothek verankert. Es verknüpft den globalen Spielekatalog mit den physisch im Verein vorhandenen Exemplaren (`GameCopy`), protokolliert die Ausleihvorgänge, verwaltet das Wissen der Spieleerklärer (`GameExplanation`) und steuert die integrierte Spielersuche (`LFGPost`).
-
-### Diagramm
+`internal` markiert Beiträge, die nur eingeloggte Mitglieder sehen. Die Instagram-Spalten bilden eine Warteschlange ohne externen Queue-Dienst ab: `instagramStatus` wird von einem täglichen Cron-Job abgearbeitet, `instagramAttempts` begrenzt die Wiederholungen.
 
 ```mermaid
 erDiagram
-    Enum_CopyStatus {
-        AVAILABLE status
-        BORROWED status
-        MAINTENANCE status
-        DEINVENTARISED status
+    Post {
+        String id PK
+        String slug UK
+        PostType type "BLOG, TERMIN, TURNIER"
+        String title
+        String excerpt
+        String body "Markdown"
+        DateTime date
+        String author
+        String location
+        Boolean internal
+        Boolean instagram
+        String coverImageUrl
+        InstagramStatus instagramStatus "PENDING, QUEUED, POSTED, FAILED"
+        String instagramPostUrl
+        Int instagramAttempts
+        String instagramLastError
     }
 
-    User {
+    InstagramConnection {
         String id PK
-        String name
+        String accessToken
+        String igBusinessAccountId
+        String pageId
+        DateTime expiresAt
+    }
+```
+
+| Tabelle | Stand |
+|---|---|
+| `posts` | ✅ migriert |
+| `instagram_connections` | ✅ migriert |
+
+`InstagramConnection` hält genau eine Verbindung für den Vereins-Account; das Long-Lived-Token wird täglich erneuert.
+
+---
+
+## 3. Mitglieder
+
+Ein `Meeple` ist das Mitgliedsprofil und entspricht 1:1 einem Login-Konto. Der Mitgliedschaftszustand wird **aus Datumsfeldern abgeleitet**, nicht gespeichert: aktiv → gekündigt (`resignedAt` gesetzt, `membershipEndsAt` in der Zukunft) → ausgetreten (`membershipEndsAt` erreicht) → anonymisiert.
+
+Bei der Anonymisierung wird das Auth-Konto gelöscht und der `Meeple` behält nur, was die Historie lesbar hält — deshalb ist `neonAuthUserId` nullable, obwohl sonst jedes Profil ein Konto hat.
+
+Die IBAN liegt mit AES-256-GCM verschlüsselt (`ibanEncrypted`); `ibanLast4` liegt im Klartext, damit Listen ohne Entschlüsselung anzeigen können. Jeder entschlüsselte Zugriff erzeugt einen Eintrag in `BankDataAccessLog`.
+
+```mermaid
+erDiagram
+    Meeple {
+        String id PK
+        String neonAuthUserId UK "nullable nach Anonymisierung"
+        Int memberNumber UK
+        String displayName
         String email
-        String bankDetails
+        DateTime joinedAt
+        DateTime resignedAt "Kündigungsvermerk"
+        DateTime membershipEndsAt "Jahreswechsel"
+        DateTime anonymizedAt
+        String ibanEncrypted "AES-256-GCM"
+        String ibanLast4 "Klartext, nur Anzeige"
+        String accountHolder
         String bggUsername
         String bgaUsername
     }
 
-    Meeple {
+    BankDataAccessLog {
         String id PK
-        String userId FK 
-        String memberNumber 
-        String bankDetails 
-        DateTime joinedAt
-        DateTime leftAt
+        String accessedByMeepleId FK
+        String subjectMeepleId FK
+        String kind "Einzelanzeige, CSV-Export"
+        DateTime at
     }
 
-    BoardGame {
+    LfgPost {
         String id PK
-        Int bggId
         String title
-        Int minPlayers
-        Int maxPlayers
-        Int playTime
-        Float weight
-        String imageUrl
-    }
-
-    GameCopy {
-        String id PK
-        String gameId FK
-        String barcode
-        String statusId FK
-        String state
-        String currentLocation
-    }
-
-    GameExplanation {
-        String userId PK "FK"
-        String gameId PK "FK"
-        Int experienceLevel
-    }
-
-    BorrowReceipt {
-        String id PK
-        String copyId FK
-        String userId FK
-        DateTime borrowedAt
-        DateTime dueDate
-        DateTime returnedAt
-    }
-
-    LFGPost {
-        String id PK
-        String creatorId FK
-        String gameId FK
-        String title
-        Text description
+        String gameTitle "Freitext, keine Relation"
+        String description
         DateTime plannedAt
+        String dateNote
+        String location
         Int maxParticipants
+        String createdByMeepleId FK
+        DateTime closedAt
     }
 
-    LFGMember {
+    LfgParticipant {
         String postId PK "FK"
-        String userId PK "FK"
+        String meepleId PK "FK"
+        DateTime joinedAt
     }
 
-    Invitation {
-        String id PK
-        String meepleId FK   "Für welches Mitglied ist diese Einladung?"
-        String email         "Wohin ging die Einladung"
-        String token         "Einzigartiger Registrierungs-Hash"
-        DateTime expiresAt   "Gültigkeitsdauer der Einladung"
-        Boolean isUsed
-    }
-
-
-%% --- OBERE PERIPHERIE (Spiele & Exemplare) ---
-    GameCopy }o--|| BoardGame : "is_copy_of"
-    GameCopy ||--o| Enum_CopyStatus : "has_status"
-
-    %% --- AUSLEIHSYSTEM (Fließt nach unten auf User zu) ---
-    BorrowReceipt }o--|| GameCopy : "borrows"
-    BorrowReceipt }o--|| Meeple : "borrowed_by"
-    
-    %% --- ERKLÄRER (Fließt diagonal auf User zu) ---
-    GameExplanation }o--|| BoardGame : "refers_to"
-    GameExplanation }o--|| Meeple : "explained_by"
-    
-    %% --- SPIELERSUCHE (Umlagert User von unten) ---
-    LFGPost }o--o| BoardGame : "plays_game"
-    LFGPost }o--|| Meeple : "created_by"
-    User |o--|| Meeple : "belongs_to"
-    LFGMember }o--|| LFGPost : "belongs_to_group"
-    LFGMember }o--|| Meeple : "is_player"
-
-    Invitation }o--|| Meeple : "invites_for"
-
+    Meeple ||--o{ BankDataAccessLog : "zugegriffen von"
+    Meeple ||--o{ LfgPost : "erstellt"
+    LfgPost ||--o{ LfgParticipant : "hat"
+    Meeple ||--o{ LfgParticipant : "nimmt teil"
 ```
+
+| Tabelle | Stand |
+|---|---|
+| `meeples` | 🔜 Phase 5 |
+| `bank_data_access_logs` | 🔜 Phase 5 |
+| `lfg_posts`, `lfg_participants` | 🔜 Phase 5 |
+
+`LfgPost.gameTitle` ist bewusst Freitext statt einer Relation auf `BoardGame`: Gesuche sollen auch für Spiele möglich sein, die dem Verein nicht gehören. „Voll" und „abgelaufen" werden aus `maxParticipants` und `plannedAt` berechnet, nicht gespeichert.
 
 ---
 
-## 3. Events & Vor-Ort-Betrieb (Events & Operations)
+## 4. Ludothek: Bestand, Aufbewahrung, Verleih
 
-### Beschreibung
+### Ein Datensatz pro physischem Spiel
 
-Dieses Teilschema koordiniert die Logistik vor Ort während der Spieletreffs und steuert den schulinternen Sekundärmarkt des Vereins. Es konzentriert sich auf den physischen Betrieb bei Veranstaltungen.
+`BoardGame` beschreibt **ein physisches Spiel** zusammen mit seinen Titel-Metadaten aus BoardGameGeek — es gibt keine getrennte Titel-/Exemplar-Ebene. Der Verein besitzt von jedem Titel genau ein Spiel; mehrere Spiele desselben Titels sind erlaubt und dann zwei Zeilen mit derselben EAN, unterscheidbar über ihren Standort. Deshalb sind `ean` und `bggId` **indexiert, aber nicht eindeutig**: die EAN kennzeichnet das Produkt, nicht das Exemplar.
 
-Hierzu gehört die Personal- und Helferplanung über ein Schichtsystem, bei dem den Mitgliedern spezifische Aufgabenbereiche (Kasse, Theke, Spieleausleihe) über vordefinierte Rollen (`Enum_ShiftRole`) zugewiesen werden. Gleichzeitig wird hierüber der "Bring & Buy Flohmarkt" abgebildet, um den Zustand, die Besitzverhältnisse und die Preise der zum Verkauf stehenden Spiele lückenlos zu überwachen.
+Deinventarisierte Spiele werden nie gelöscht (`status`, `archivedAt`, `archivedReason`), damit die Verleih-Historie erhalten bleibt. Sie sind überall standardmäßig ausgefiltert.
 
-### Diagramm
+### Standort: eine Kette von Aufenthalten
+
+Es gibt **kein Standortfeld**. Wo ein Spiel ist, steht in `GameHolding`: jeder Aufenthalt zeigt auf genau eines von Aufbewahrungseinheit oder Meeple, hat `startedAt` und optional `endedAt`. Ein partieller Unique-Index (`WHERE endedAt IS NULL`) garantiert genau einen offenen Aufenthalt pro Spiel, eine `CHECK`-Constraint genau ein Ziel. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang: einen Aufenthalt schließen, den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, steht in `origin`.
+
+**Als Ausleihe zählt ein Aufenthalt genau dann, wenn `meepleId` gesetzt ist und `origin` `LOAN` oder `HANDOVER` ist.** Eine Rückgabe an eine Person (`origin: RETURN`) ist damit ausdrücklich keine Ausleihe — wer ein Spiel zum Einlagern annimmt, hat es nicht ausgeliehen. `confirmedAt` ist leer, solange nur die abgebende Seite den Vorgang eingetragen hat.
+
+Aufbewahrungseinheiten sind Kartons (`OM-BOX-0001`) und vereinseigene Regale (`OM-SHELF-C4`) — strukturell dasselbe, unterschieden über `kind`. Eine Einheit kann in einer anderen stehen (`parentUnitId`) und steht am Ende der Kette bei einem Verwahrer. Der Verein hat kein Vereinsheim: Kartons bei Mitgliedern sind der Normalfall, und deren Inhalt gilt **nicht** als ausgeliehen. `keeperMeepleId` und `locationNote` sind unabhängig — ein Karton steht bei Lea *und* dort im Keller.
+
+Wer ein Spiel verantwortet, wird abgeleitet und nie gespeichert: Spiel → Karton → Regal → Meeple. Ebenso der Zustand: frei, ausgeliehen, Wartung oder nicht erfasst.
 
 ```mermaid
 erDiagram
-    Enum_ShiftRole {
-        THEKE role
-        KASSE role
-        LEIHE role
-        ERKLAERBAER role
-    }
-
-    Enum_FleaMarketStatus {
-        FOR_SALE status
-        SOLD status
-        RESERVED status
-    }
-
-    User {
+    BoardGame {
         String id PK
-        String name
-        String email
+        String slug UK
+        String title
+        Int bggId "Index, nicht eindeutig"
+        String ean "Index, nicht eindeutig — Produkt, nicht Exemplar"
+        Int minPlayers
+        Int maxPlayers
+        Int playTimeMinutes
+        Float weight
+        String imageUrl
+        String description
+        String_Array mechanics
+        String condition "einzige Zustandsnotiz"
+        Boolean needsCompletenessCheck
+        DateTime lastCheckedAt
+        GameInventoryStatus status "ACTIVE, MAINTENANCE, DEINVENTARISED"
+        DateTime archivedAt
+        String archivedReason
     }
 
+    StorageUnit {
+        String id PK
+        String code UK "OM-BOX-0001 / OM-SHELF-C4"
+        StorageUnitKind kind "BOX, SHELF"
+        String label
+        String parentUnitId FK "Karton steht in Regal"
+        String keeperMeepleId FK "Verwahrer"
+        String locationNote "Freitext, z. B. Keller links"
+        DateTime retiredAt
+    }
+
+    StorageUnitMove {
+        String id PK
+        String unitId FK
+        String keeperMeepleId FK
+        String parentUnitId FK
+        String locationNote
+        DateTime startedAt
+        DateTime endedAt
+        String recordedByMeepleId FK
+    }
+
+    GameHolding {
+        String id PK
+        String boardGameId FK
+        String unitId FK "entweder dies"
+        String meepleId FK "oder dies"
+        HoldingOrigin origin "INITIAL, LOAN, RETURN, HANDOVER, RELOCATION"
+        DateTime startedAt
+        DateTime endedAt "leer = aktueller Standort"
+        DateTime confirmedAt "leer = von der abgebenden Seite eingetragen"
+        String recordedByMeepleId FK
+        String note
+    }
+
+    Meeple {
+        String id PK
+        String displayName
+    }
+
+    BoardGame ||--o{ GameHolding : "war/ist"
+    StorageUnit ||--o{ GameHolding : "beherbergt"
+    Meeple ||--o{ GameHolding : "hat"
+    StorageUnit ||--o{ StorageUnit : "steht in"
+    Meeple ||--o{ StorageUnit : "verwahrt"
+    StorageUnit ||--o{ StorageUnitMove : "wurde bewegt"
+```
+
+| Tabelle | Stand |
+|---|---|
+| `board_games` (Grundfelder, BGG-Import, Deinventarisierung) | ✅ migriert |
+| `board_games`: `ean`, `needsCompletenessCheck`, `lastCheckedAt`; `location` und `quantity` entfallen; `bggId` verliert die Eindeutigkeit; Status `MAINTENANCE` | 🔜 Phase 5 |
+| `storage_units`, `storage_unit_moves`, `game_holdings` | 🔜 Phase 5 |
+
+Spiele, deren Standort noch nie erfasst wurde, liegen in der Einheit „Unsortiert" (`OM-BOX-0000`) — sie behauptet keinen echten Ort und hat keinen Verwahrer; ihr Inhalt ist die Arbeitsliste der Ersterfassung.
+
+---
+
+## 5. Events und Flohmarkt
+
+Noch nicht modelliert. Beschlossen ist bisher nur, wie Events an das Ludothek-Modell anschließen: **„beim Event" ist kein eigener Aufenthalts-Zieltyp**, sondern ein Regal, das dem Event zugeordnet ist. Ein Spiel beim Event liegt also in `OM-SHELF-C4`, und dieses Regal steht beim Event. Die Ausgabe an Gäste am Tisch berührt die Aufenthalts-Kette nicht und wird separat erfasst; betroffene Spiele erhalten anschließend das Flag `needsCompletenessCheck`.
+
+```mermaid
+erDiagram
     Event {
         String id PK
         String title
-        DateTime startTime
-        DateTime endTime
+        DateTime startsAt
+        DateTime endsAt
         String location
     }
 
     Shift {
         String id PK
         String eventId FK
-        String userId FK
-        String shiftRoleId FK
-        DateTime startTime
-        DateTime endTime
+        String meepleId FK
+        String role "THEKE, KASSE, LEIHE, ERKLAERBAER"
+        DateTime startsAt
+        DateTime endsAt
+        Boolean tentative
     }
 
     FleaMarketItem {
         String id PK
-        String sellerId FK
+        String sellerMeepleId FK
         String title
         String itemCondition
         Decimal price
-        String statusId FK
+        String status "FOR_SALE, RESERVED, SOLD"
         Boolean isBringAndBuy
     }
 
-    Shift }o--|| Event : "belongs_to"
-    Shift }o--o| User : "assigned_to"
-    Shift ||--o| Enum_ShiftRole : "requires_role"
-    
-    FleaMarketItem }o--|| User : "offered_by"
-    FleaMarketItem ||--o| Enum_FleaMarketStatus : "has_status"
+    Event ||--o{ Shift : "hat"
+    Shift }o--|| Meeple : "besetzt von"
+    FleaMarketItem }o--|| Meeple : "angeboten von"
 
+    Meeple {
+        String id PK
+    }
 ```
+
+| Tabelle | Stand |
+|---|---|
+| `events`, `shifts` (Helferplan, Erklärbären) | 📋 Phase 6 |
+| `flea_market_items` (Bring & Buy) | 📋 Phase 6 |
+| Ersatzteillager-Ansicht für deinventarisierte Spiele, Kleinanzeigen | 📋 Phase 7 |

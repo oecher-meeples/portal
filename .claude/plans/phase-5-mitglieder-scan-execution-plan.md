@@ -1,0 +1,204 @@
+# Ausführungsplan: Phase 5 — Mitgliederbereich, Ludothek-Standortmodell, Scan & Community
+
+- **Erstellt/Aktualisiert:** 2026-07-29 21:30
+- **Ziel:** Interner Mitgliederbereich (Mitgliedschafts-Lebenszyklus, Profil mit verschlüsselten Bankdaten, interne News, interner Kalender), ein tragfähiges Standort- und Verleihmodell für die Ludothek (Kartons und Regale mit QR, Spiele mit EAN, Aufenthalte statt Ausleih-Tabelle) inklusive Kamera-Scan, Vollständigkeitsprüfung und Spielergesuchen (Meilensteine 5.1–5.4 aus `docs/roadmap.md`).
+- **Quelle:** `docs/roadmap.md` (Abschnitt „Phase 5"), `CONTEXT.md` (verbindliches Glossar), `docs/adr/0001`–`0003` (Modellentscheidungen), ergänzend `docs/features.md` (2.1–2.9, 3.2, 3.4, 3.5).
+- **Git-Base-State:** Branch `develop`, HEAD `8cb75270515b6e5c29924c4f42e928641a6ed1a7`
+
+> **Fachsprache ist verbindlich:** `CONTEXT.md` definiert Meeple, Aufbewahrungseinheit, Aufenthalt, Ausleihe, Rückgabe, Weitergabe, Umlagern, Verwahrer, Ausleiher, Verantwortliche:r, Zustand, Unsortiert, Kündigung, Ausgetreten, Anonymisierung, Vollständigkeitsprüfung, Deinventarisierung. Diese Begriffe hier nicht neu definieren und im Code konsistent verwenden.
+
+> **Modellentscheidungen und ihre Begründung** stehen in `docs/adr/0001-ludothek-aufenthalte-statt-exemplare.md`, `0002-meeple-eins-zu-eins-zum-login.md` und `0003-bankdaten-verschluesselt-mit-protokolliertem-leseweg.md`. Vor Schritt 2 und Schritt 9 lesen.
+
+> ⚠️ **Vorbestehender Working-Tree-Zustand:** `.claude/TODO.md` und `.claude/plans/component-architecture-refactor.md` liegen untracked vor und gehören **nicht** zu diesem Plan — nicht anfassen, nicht committen.
+
+## Persona
+
+Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 16 (App Router, Server Actions), Prisma/PostgreSQL inkl. handgeschriebener Migrationen, Web-APIs für Kamera und Barcode-Dekodierung sowie angewandter Kryptografie für personenbezogene Daten. Du arbeitest inkrementell und testgetrieben und hältst dich strikt an die bestehenden Repo-Konventionen: Domänenlogik in flachen Modulen unter `src/lib/<thema>/` mit co-lokalisierten `.test.ts`, dünne Server-Actions je Feature-Ordner unter `src/components/feature/<bereich>/actions.ts` mit Permission-Check als erster Zeile, externe I/O hinter schmalen mockbaren Clients, Prisma-Mocks über `src/lib/__mocks__/prisma.ts`.
+
+## Getroffene Annahmen
+
+Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegriffe siehe `CONTEXT.md`, Begründungen der drei großen Modellentscheidungen siehe ADRs — hier steht nur, was für die Ausführung zusätzlich nötig ist.
+
+### Scope
+
+- **Ein Plan über 5.1–5.4.** Meilenstein 5.1 (Konzeption) ist durch `CONTEXT.md` und die ADRs erledigt und wird am Ende nur noch abgehakt.
+- **Google SSO bleibt zurückgestellt** (wie in Phase 2): externe Vorbedingungen wie bei Instagram. Umgesetzt wird aus 5.2 das Mitglieder-Onboarding, nicht der SSO-Teil; der Roadmap-Punkt bleibt offen und wird kommentiert.
+- **Nicht in diesem Plan:** Erklärbär-Verzeichnis und Helferplan (Phase 6, Meilenstein 6.2), Event-Modell und Event-Zuordnung von Regalen (Phase 6), Ersatzteillager-Ansicht für deinventarisierte Spiele (Phase 7), SEPA-XML-Erzeugung. Die Mocks unter `/helfer` und `/admin/bringbuy` bleiben unangetastet.
+- **Kein `EVENT`-Zieltyp** für Aufenthalte: „Spiel beim Event" ist in Phase 6 ein Regal, das dem Event zugeordnet ist. Aus den Event-Hinweisen wird jetzt nur das Prüf-Flag umgesetzt.
+
+### Datenmodell (englische Bezeichner, deutsche Fachsprache siehe `CONTEXT.md`)
+
+- **`Meeple`** — `id`, `neonAuthUserId String? @unique` (nullable ausschließlich für anonymisierte Meeples, siehe ADR 0002), `memberNumber Int @unique @default(autoincrement())`, `displayName`, `email String?`, `joinedAt`, `resignedAt DateTime?` (Kündigungsvermerk), `membershipEndsAt DateTime?` (Jahreswechsel nach der Kündigung), `anonymizedAt DateTime?`, `ibanEncrypted String?`, `ibanLast4 String?`, `accountHolder String?`, `bggUsername String?`, `bgaUsername String?`, Zeitstempel. **Mitgliedschaftszustand wird abgeleitet**, nicht gespeichert: `aktiv` / `gekuendigt` (resignedAt gesetzt, membershipEndsAt in der Zukunft) / `ausgetreten` (membershipEndsAt erreicht) / `anonymisiert`.
+- **`StorageUnit`** — `id`, `code String @unique`, `kind StorageUnitKind { BOX, SHELF }`, `label`, `parentUnitId String?` (Selbstrelation: Karton steht in Regal), `keeperMeepleId String?` (Verwahrer), `locationNote String?`, `retiredAt DateTime?`, Zeitstempel. `keeperMeepleId` und `locationNote` sind **unabhängig** voneinander (es gibt kein Vereinsheim; ein Karton steht bei Lea *und* dort im Keller).
+- **`StorageUnitMove`** — schlanke Historie der Einheiten: `unitId`, `keeperMeepleId String?`, `parentUnitId String?`, `locationNote String?`, `startedAt`, `endedAt DateTime?`, `recordedByMeepleId`. Beantwortet „wer hatte diesen Karton wann", ohne die Spiel-Abfragen zu belasten.
+- **`GameHolding`** (Aufenthalt) — `id`, `boardGameId`, **genau eines von** `unitId String?` / `meepleId String?`, `origin HoldingOrigin { INITIAL, LOAN, RETURN, HANDOVER, RELOCATION }`, `startedAt`, `endedAt DateTime?`, `confirmedAt DateTime?`, `recordedByMeepleId`, `note String?`. **Als Ausleihe zählt ein Aufenthalt genau dann, wenn `meepleId` gesetzt ist und `origin` `LOAN` oder `HANDOVER` ist** — eine Rückgabe an eine Person (`origin: RETURN`, `meepleId` gesetzt) ist keine Ausleihe.
+- **`BoardGame`-Änderungen** — neu: `ean String?` (**nicht** unique, siehe ADR 0001), `needsCompletenessCheck Boolean @default(false)`, `lastCheckedAt DateTime?`, `holdings GameHolding[]`. Entfällt: `location`, `quantity`. `bggId` verliert `@unique` und wird zum Index. `condition` bleibt die **einzige** Zustandsnotiz (kein zusätzliches Mangel-Freitextfeld — DRY). `GameInventoryStatus` wird um `MAINTENANCE` ergänzt.
+- **`BankDataAccessLog`** — `id`, `accessedByMeepleId`, `subjectMeepleId String?`, `kind` (Einzelanzeige / CSV-Export), `at`. Aufbewahrung 24 Monate.
+- **`LfgPost`** — `id`, `title`, `gameTitle String?` (Freitext, **keine** Relation auf `BoardGame`), `description`, `plannedAt DateTime?`, `dateNote String?`, `location String?`, `maxParticipants`, `createdByMeepleId`, `closedAt DateTime?`, `createdAt`. **`LfgParticipant`** — `postId`, `meepleId`, `joinedAt`, `@@id([postId, meepleId])`. „Voll" und „abgelaufen" werden abgeleitet, nicht gespeichert.
+
+### Regeln, die sich nicht aus dem Glossar ergeben
+
+- **Genau ein offener Aufenthalt pro Spiel**, erzwungen per handgeschriebenem partiellen Unique-Index (`WHERE "endedAt" IS NULL`). Spiele ohne bekannten Standort liegen in der Einheit „Unsortiert" (`OM-BOX-0000`), die keinen Verwahrer und keine Ortsangabe hat.
+- **Codes:** `OM-BOX-0001` für Kartons, `OM-SHELF-C4` für Regale, fortlaufend generiert, kollisionssicher bei Lücken. QR-Inhalt ist der **reine Code**, keine URL — damit sind Etiketten domainunabhängig und offline lesbar.
+- **Ausleihe oder Weitergabe wird nicht gewählt, sondern folgt aus dem Vorgänger-Aufenthalt:** kam das Spiel aus einer Einheit, ist es eine Ausleihe (`LOAN`); kam es von einer Person, eine Weitergabe (`HANDOVER`).
+- **Bestätigung:** Wer den Vorgang selbst als Empfänger scannt, erzeugt einen bestätigten Aufenthalt. Trägt die abgebende Person ihn ein, ist er unbestätigt (`confirmedAt = null`) und wird mit Herkunftshinweis angezeigt. Eine **Weitergabe** bestätigt der Empfänger per Klick; eine **Rückgabe** bestätigt er, indem er das Spiel in eine Einheit einlagert. Unbestätigte Aufenthalte blockieren nichts und laufen nicht ab.
+- **Deinventarisierung** ändert nur die Bestandszugehörigkeit, nie den Standort: der offene Aufenthalt bleibt bestehen. Deinventarisierte Spiele sind **überall standardmäßig ausgefiltert**, im Admin-Bestand über einen Umschalter sichtbar.
+- **Prüf-Flag:** in Phase 5 nur manuell setzbar und über „Mangel melden" im Prüfbogen; eine nicht bestandene Prüfung setzt `MAINTENANCE`. `lastCheckedAt` ist ein Sortierkriterium, kein Flag. Prüfbedürftige Spiele bleiben ausleihbar.
+- **Rechte — Mitglieder bewegen, Admins definieren:** Jedes eingeloggte Mitglied darf ausleihen, zurückgeben, weitergeben, umlagern, einlagern, Zustand bestätigen und Mängel melden (keine neue Permission). `games:manage` deckt: Spiele und Einheiten anlegen/bearbeiten/stilllegen, EAN pflegen, Etiketten drucken, fremde Aufenthalte korrigieren, Mängel schließen, deinventarisieren. `members:manage` deckt Mitgliederverwaltung, Kündigungsvermerke und Anonymisierung. Neue Permission `bank:read` in der neuen Rolle `kassenwart`.
+- **Zugang nach dem Jahreswechsel:** ausgetretene Meeples erreichen Profil, eigene Bestände, Rückgabe/Weitergabe (nur abgebend), Kalender und Mitgliederverzeichnis. Gesperrt: Ludothek (interne Sicht), interne News, Spielergesuche, Annehmen von Spielen. Geprüft **zentral** in `src/lib/session.ts`, nicht pro Seite.
+- **Ludothek zweigleisig:** öffentlich ohne Standort, Zustand und Personen; intern zusätzlich mit Zustand, Standort-Kette, Verantwortliche:r und den Filtern „ausgeliehen" und „bei Meeple X". Eine Komponente mit zwei Projektionen, **alle Filter über `searchParams`**, damit Quicklinks teilbar sind.
+- **Scan:** Standard ist kontextabhängig (erst scannen, dann passende Vorgänge anbieten), zusätzlich Serienmodi für Reihenarbeit („alles was ich jetzt scanne, lagere ich in `OM-BOX-0003` ein" bzw. „alles was ich scanne, prüfe ich"). Scan-Library `@zxing/browser` (funktioniert auch auf iOS-Safari, anders als die native `BarcodeDetector`-API), gekapselt in einem Hook, plus immer ein manuelles Eingabefeld.
+- **Interne News** über das bestehende `Post.internal`; öffentliche Liste **und** Detailseite filtern interne Beiträge konsequent aus, interne Beiträge werden nie zu Instagram gequeued.
+- **Interner Kalender** als zweiter ICS-Feed über `ICS_FEED_URL_INTERNAL`, mit der bestehenden Parser-Logik aus `src/lib/calendar.ts` (kein zweiter Parser).
+- **Keine Reservierung, keine Anfrage, keine Benachrichtigungen.** Es existiert keine Mail-Infrastruktur im Projekt, und sie wird hier nicht aufgebaut.
+- **Mock-Abbau:** `src/data/games.ts`, `src/data/lfg.ts` und `src/data/members.ts` werden entfernt, sobald die jeweiligen Views echte Daten lesen. Vorher alle Referenzen prüfen und mit umstellen; Status-Label-Mappings wandern nach `src/lib/format.ts` bzw. in ein gemeinsames Modul statt doppelt zu existieren.
+- **Testframework:** Vitest ist eingerichtet (`vitest.config.ts`, `pnpm test`) — der im Template vorgesehene Setup-Schritt entfällt und wird in Schritt 0 nur verifiziert.
+
+## Regeln für die Ausführung
+
+- Code auf Englisch, Benutzerausgaben auf Deutsch. Fachbegriffe aus `CONTEXT.md` konsistent verwenden.
+- Halte dich an Best-Practices und das DRY-Prinzip (keine Logik/Markup/Styling doppelt). Bestehende Bausteine aus `src/components/ui/` wiederverwenden statt neu bauen.
+- Verzichte auf überflüssige Kommentare; verweise bei Kontextbedarf auf `CONTEXT.md` oder die ADRs.
+- Dateien über 400 Zeilen möglichst in kleinere Dateien aufteilen.
+- **Unit-Tests:** Für neue Logik/Funktionen Unit-Tests schreiben. Die Definition of Done eines Schritts gilt erst als erfüllt, wenn die zugehörigen Tests grün sind (`pnpm test`). Ausgenommen sind rein mechanische/nicht-testbare Schritte (Config, Doku, reines Layout/Routing).
+- **Committe nur Dateien, die du selbst geschrieben hast** — gezieltes `git add <datei>`, kein `git add -A`/`git add .`. `.claude/TODO.md` und `.claude/plans/component-architecture-refactor.md` nicht anfassen.
+- **Blockierende Prozesse:** Du darfst Prozesse beenden, die für einen Schritt benötigte Ressourcen blockieren (laufender `next dev` auf dem Port, Prisma-Lock). Gezielt identifizieren, nur diesen beenden, Schritt nicht abbrechen.
+- **Ein Schritt = ein abgeschlossener Commit** (Richtwert: < 1 h Arbeit).
+- **Bei Fehlschlag eines Schritts:** prüfen, ob die Definition of Done teilweise erfüllt ist. Falls ja, Teilstand mit `wip:`-Präfix committen; falls nein, nichts committen. In beiden Fällen den Schritt mit `[!]` markieren, den Fehler als Stichpunkt darunter notieren und **mit dem nächsten Schritt fortfahren**. Erst nachdem alle Schritte durchlaufen sind, alle offenen Punkte gesammelt auf Deutsch besprechen.
+- Markiere jeden erledigten Schritt mit `[x]`, sobald er abgeschlossen und committet ist.
+
+## Schritte
+
+### A — Vorbereitung und Doku-Korrektur
+
+- [ ] **0. Repository- und Toolchain-Zustand prüfen**
+      `git status` ausführen, die vorbestehenden untracked Dateien zur Kenntnis nehmen und nicht anfassen. `pnpm test` einmal laufen lassen (grüner Ausgangszustand, vorhandene Vitest-Einrichtung bestätigt). `CONTEXT.md` und `docs/adr/0001`–`0003` lesen.
+      _Definition of Done:_ `git status` läuft fehlerfrei, `pnpm test` grün, fremde Änderungen unangetastet.
+      Kein Commit (rein informativ).
+
+- [ ] **1. Datenfluss-Doku korrigieren**
+      `docs/schema.md` ist bereits auf das entschiedene Modell umgestellt (inkl. Stand-Markierungen ✅ / 🔜 pro Tabelle) — **nicht** erneut anfassen, nur lesen. Offen ist `docs/flow.md`: Abschnitt 2 (Onboarding — es gibt keinen Meeple vor der Registrierung), Abschnitte 4 und 5 (`GameCopy`, `BorrowReceipt` und `Trade` durch Aufenthalte ersetzen; `Trade` ist kein Vorgang dieses Portals) sowie Abschnitt 1 (`User / Meeple` als eine Einheit darstellen) anpassen. Vorgänge in den Diagrammen mit der Fachsprache aus `CONTEXT.md` benennen (Ausleihe, Rückgabe, Weitergabe, Umlagern).
+      Ebenfalls offen: `docs/features.md` nennt in Abschnitt 2.8 („Liste der Exemplare (`GameCopy`)") und 3.4 („Pro Spiel: Exemplare (`GameCopy`) verwalten") noch die Exemplar-Ebene — auf Standort-Kette, Aufenthalts-Historie und Etiketten für Aufbewahrungseinheiten umschreiben. Abschnitt 2.9 (Scanner) auf den kontextabhängigen Flow mit Serienmodi anpassen, 2.7 auf die zwei Ludothek-Projektionen (öffentlich/intern) und die Filter über `searchParams`.
+      _Begründung für die frühe Position:_ Wer die Schritte 8–12 umsetzt und dabei `flow.md` oder `features.md` liest, würde sonst ein `GameCopy`-Modell bauen.
+      _Definition of Done:_ Kein Dokument in `docs/` nennt mehr `GameCopy`, `BorrowReceipt` oder `Trade`. Kein Code, keine Tests.
+      `git commit -m "docs: align data flow diagrams with the holding model"`
+
+### B — Mitgliedschaft, Profil, Bankdaten
+
+- [ ] **2. Prisma-Schema: `Meeple`, Rollen und Permissions**
+      `prisma/schema.prisma`: Modell `Meeple` (Felder siehe Annahmen), `@@map("meeples")`. `prisma/seed.ts`: Permission `bank:read` („Bankdaten entschlüsselt einsehen und exportieren") ergänzen, neue Rolle `kassenwart` mit ausschließlich `bank:read`, Beschreibung von `games:manage` auf Einheiten und Prüfungen erweitern. Env-Dokumentation um `MEMBER_DATA_ENCRYPTION_KEY` und `ICS_FEED_URL_INTERNAL` ergänzen (inkl. Hinweis zur Schlüsselerzeugung und zum Backup außerhalb Vercel, siehe ADR 0003).
+      _Definition of Done:_ `pnpm prisma migrate dev` fehlerfrei gegen die Neon-DB, `pnpm db:seed` läuft durch und legt Rolle und Permission an, `pnpm build` bricht nicht.
+      `git commit -m "feat: add meeple model, kassenwart role and bank read permission"`
+
+- [ ] **3. Verschlüsselung und IBAN-Hilfsfunktionen**
+      `src/lib/crypto.ts`: `encryptSecret` / `decryptSecret` mit AES-256-GCM über `node:crypto`, Schlüssel aus `MEMBER_DATA_ENCRYPTION_KEY` (base64, 32 Byte; sprechender Fehler bei fehlendem oder zu kurzem Schlüssel). Format `v1:<iv-b64>:<tag-b64>:<ciphertext-b64>`; unbekannter Versionspräfix und manipulierte Nutzlast führen zu einem klaren Fehler statt stillem Fehlverhalten. Dazu `normaliseIban`, `ibanLast4`, `maskIban` und eine Formatprüfung (Länge/Zeichen, keine externe Bibliothek).
+      _Definition of Done:_ `src/lib/crypto.test.ts` deckt ab: Round-Trip; unterschiedliche Ciphertexts bei gleichem Klartext (zufälliger IV); Fehler bei fehlendem Schlüssel; Fehler bei manipuliertem Tag; Fehler bei fremdem Versionspräfix; Maskierung und Last-4. `pnpm test` grün.
+      `git commit -m "feat: add aes-gcm encryption and iban helpers"`
+
+- [ ] **4. Mitgliedsprofil an die Session binden, Mitgliedschaftszustand durchsetzen**
+      `src/lib/meeples.ts`: `ensureMeeple(user)` (Upsert über `neonAuthUserId`, `displayName`/`email` aktualisieren), `getCurrentMeeple()`, `requireMeeple()`, `getMembershipState(meeple)` (abgeleitet: aktiv / gekuendigt / ausgetreten / anonymisiert). `src/lib/session.ts`: `requireMember()` ruft `ensureMeeple` und blockiert **ausgetretene** Meeples zentral auf allen Routen außer den Abwicklungs-Routen (Profil, eigene Bestände, Scan mit Rückgabe/Weitergabe, Kalender, Mitgliederverzeichnis) — die Liste erlaubter Pfade als eine Konstante, nicht verteilt.
+      _Definition of Done:_ `src/lib/meeples.test.ts` deckt ab: Neuanlage; kein Duplikat bei erneutem Aufruf; Namensaktualisierung; `requireMeeple` ohne Session redirectet; Zustandsableitung für alle vier Zustände inkl. Grenzfall „membershipEndsAt heute"; ausgetretener Meeple wird auf gesperrten Pfaden abgewiesen und auf erlaubten durchgelassen. `pnpm test` grün.
+      `git commit -m "feat: derive membership state and gate access for resigned members"`
+
+- [ ] **5. Profil-Self-Service**
+      `src/components/feature/profil/actions.ts`: `updateOwnProfile` (Anzeigename, BGG-/BGA-Username), `updateOwnBankDetails` (Kontoinhaber + IBAN, verschlüsselt, setzt `ibanLast4`), `clearOwnBankDetails`. Alle arbeiten ausschließlich auf dem eigenen `Meeple` über `requireMeeple()`, nie mit einer übergebenen Fremd-ID. `profil-view.tsx` ersetzt `profil-mock-view.tsx`: IBAN nur maskiert (Klartext verlässt den Server nicht), DSGVO-Hinweisbox, Mitgliedsnummer/Beitrittsdatum read-only, Mitgliedschaftszustand sichtbar, Aktion „Mitgliedschaft kündigen" mit Hinweis auf Wirkung zum Jahreswechsel.
+      _Definition of Done:_ `actions.test.ts` deckt ab: ohne Session kein Schreibzugriff; IBAN wird verschlüsselt persistiert und nie im Klartext zurückgegeben; `ibanLast4` korrekt; ungültige IBAN abgelehnt; `clearOwnBankDetails` leert alle Bankfelder; Kündigung setzt `resignedAt` und `membershipEndsAt` auf den kommenden Jahreswechsel. `pnpm test` grün.
+      `git commit -m "feat: add member profile self-service with encrypted bank details"`
+
+- [ ] **6. Bankdaten-Leseweg für den Kassenwart**
+      `prisma/schema.prisma`: `BankDataAccessLog` ergänzen und migrieren. `src/components/feature/admin-bank/actions.ts`: `revealIban(meepleId)` und `exportBankDataCsv()` — beide mit `requirePermission("bank:read")`, entschlüsseln erst nach explizitem Aufruf und schreiben je einen Log-Eintrag. CSV mit Mitgliedsnummer, Name, Kontoinhaber, IBAN. Admin-Ansicht mit Liste (nur `**** 1234`), Einzel-Aufdecken und Export-Button. Im bestehenden Cron (`src/app/api/cron/instagram-queue/route.ts` bzw. einer zusätzlichen Route mit demselben Muster) Log-Einträge älter als 24 Monate löschen. **Kein SEPA-XML** (ADR 0003).
+      _Definition of Done:_ Tests decken ab: ohne `bank:read` kein Zugriff und kein Log-Eintrag; erfolgreiches Aufdecken schreibt genau einen Log-Eintrag; Export schreibt genau einen Log-Eintrag; CSV enthält keine Spalten über die vier definierten hinaus; Aufräumen löscht nur Einträge älter als 24 Monate. `pnpm test` grün.
+      `git commit -m "feat: add audited bank data access for the kassenwart role"`
+
+- [ ] **7. Mitgliederverwaltung mit Lebenszyklus und Anonymisierung**
+      `src/components/feature/admin-mitglieder/actions.ts` (alle mit `requirePermission("members:manage")`): `recordResignation(meepleId, endsAt)` — zeigt vor dem Speichern die Anzahl der bei dieser Person liegenden Spiele und Einheiten, blockiert aber nicht; `revokeResignation(meepleId)`; `anonymiseMeeple(meepleId)` — nur erlaubt für ausgetretene Meeples **ohne** offene Bestände, löscht in **einer Transaktion** die Auth-Zeilen (`neon_auth."user"`, `"account"`, Sessions) per Raw-SQL analog `prisma/seed.ts`, setzt `displayName` auf „(anonymisiert)", `neonAuthUserId`, `email` und alle Bankfelder auf `null` und `anonymizedAt`. `admin-mitglieder-view.tsx` ersetzt den Mock: Tabelle mit Mitgliedsnummer, Name, Rollen, Zustand, Beitritt/Kündigung/Austritt; Rollenzuweisung sichtbar (inkl. `kassenwart`); Abschnitte „Kündigungen mit offenen Beständen" (ab Dezember hervorgehoben) und „bereit zur Anonymisierung" mit Bestätigungsdialog, der auflistet, was gelöscht wird; bestehende Invite-Liste eingebettet (Komponente wiederverwenden). `src/data/members.ts` entfernen, alle Referenzen umstellen.
+      _Definition of Done:_ Tests decken ab: fehlende Permission → Fehler ohne DB-Änderung; Kündigung setzt beide Datumsfelder; Anonymisierung mit offenen Beständen wird abgelehnt; erfolgreiche Anonymisierung leert genau die definierten Felder, löscht keine `Meeple`-Zeile und läuft transaktional (Fehler im Raw-SQL rollt die Prisma-Änderung zurück). `pnpm test` grün, `pnpm build` ohne Referenz auf `src/data/members.ts`.
+      `git commit -m "feat: manage membership lifecycle and gdpr anonymisation"`
+
+### C — Standortmodell und Verleih
+
+- [ ] **8. Prisma-Schema: Einheiten, Aufenthalte, Bestands-Bereinigung**
+      `prisma/schema.prisma`: `StorageUnitKind`, `HoldingOrigin`, Modelle `StorageUnit`, `StorageUnitMove`, `GameHolding` (Felder siehe Annahmen, `@@map("storage_units")` / `("storage_unit_moves")` / `("game_holdings")`, Indizes auf `boardGameId`, `unitId`, `meepleId`). `BoardGame`: `ean` (Index, **nicht** unique), `needsCompletenessCheck`, `lastCheckedAt` ergänzen; `location` und `quantity` entfernen; `@unique` von `bggId` zu `@@index` ändern; `GameInventoryStatus` um `MAINTENANCE` erweitern. In der generierten Migration **manuell** ergänzen: `CREATE UNIQUE INDEX "game_holdings_open_unique" ON "game_holdings"("boardGameId") WHERE "endedAt" IS NULL;` sowie eine `CHECK`-Constraint, die genau eines von `unitId`/`meepleId` erzwingt.
+      _Definition of Done:_ `pnpm prisma migrate dev` fehlerfrei; manueller Gegentest per SQL: zweiter offener Aufenthalt für dasselbe Spiel schlägt fehl, Aufenthalt mit beiden bzw. keinem Ziel schlägt fehl; `pnpm build` bricht nicht.
+      `git commit -m "feat: add storage units, unit moves and game holdings to the schema"`
+
+- [ ] **9. Datenmigration des Phase-4-Bestands**
+      Skript unter `scripts/` analog `scripts/migrate-mock-posts.ts`, idempotent und mit Trockenlauf-Ausgabe: Einheit „Unsortiert" (`OM-BOX-0000`, ohne Verwahrer und ohne Ortsangabe) anlegen; für jeden vorkommenden alten `location`-Freitext einen Karton mit diesem `locationNote` erzeugen; jedes bestehende Spiel mit `quantity > 1` in entsprechend viele Datensätze aufteilen (Slug mit Suffix, restliche Felder kopiert); für **jedes** Spiel einen offenen Aufenthalt (`origin: INITIAL`, bestätigt) auf den passenden Karton bzw. auf „Unsortiert" anlegen. Skript-Aufruf in `package.json` ergänzen.
+      _Definition of Done:_ Test gegen einen gemockten Prisma-Client: jedes Spiel hat danach genau einen offenen Aufenthalt; `quantity: 3` erzeugt drei Datensätze mit eindeutigen Slugs; gleicher Freitext erzeugt nur einen Karton; zweiter Lauf ändert nichts. `pnpm test` grün.
+      `git commit -m "feat: migrate existing board games into storage units and holdings"`
+
+- [ ] **10. Codes und EAN**
+      `src/lib/inventory/codes.ts`: `nextUnitCode(kind, existingCodes)` (`OM-BOX-0001` / `OM-SHELF-C4`, fortlaufend, lückensicher) und `parseScannedCode(raw)` → `{ kind: "unit" | "ean" | "unknown", value }`. `src/lib/inventory/ean.ts`: `normaliseEan` (Leerzeichen/Bindestriche) und `isValidEan` (EAN-13 und EAN-8 inkl. Prüfsumme).
+      _Definition of Done:_ Tests decken ab: Codeformat und Fortlaufen inkl. Lücken; Regal- vs. Karton-Präfix; Parsing von Karton-Code, Regal-Code, gültiger EAN und Unsinn; gültige und ungültige Prüfsummen; Normalisierung. `pnpm test` grün.
+      `git commit -m "feat: add storage unit code generation and ean validation"`
+
+- [ ] **11. Kernlogik der Aufenthalte**
+      `src/lib/ludothek/holdings.ts` (bei Bedarf auf mehrere Dateien unter `src/lib/ludothek/` aufteilen): `resolveScannedCode(raw)` → Spiel **als Liste** (EAN kennzeichnet das Produkt, siehe ADR 0001) bzw. Einheit inkl. Inhalt, oder „unbekannt"; `borrowGame`, `returnGame({ toUnitId | toMeepleId })`, `handOverGame(toMeepleId)`, `relocateGame(toUnitId)`, `confirmHolding(holdingId)`, `moveStorageUnit(unitId, { keeperMeepleId?, parentUnitId?, locationNote? })` (schreibt `StorageUnitMove`), `getResponsibleMeeple(game)` (läuft die Kette Spiel → Karton → Regal → Meeple hoch, mit Tiefenbegrenzung), `getGameZustand(game)` (frei / ausgeliehen / Wartung / nicht erfasst). Alle Standortänderungen in `prisma.$transaction`: alten Aufenthalt schließen, neuen öffnen, `origin` nach der Regel „aus Einheit ⇒ `LOAN`, von Person ⇒ `HANDOVER`" bestimmen, `confirmedAt` setzen, wenn der Handelnde der Empfänger ist. Fehlerfälle als eigene Typen (`GameNotFoundError`, `GameDeinventarisedError`, `HoldingConflictError`, `UnitRetiredError`).
+      _Definition of Done:_ `holdings.test.ts` deckt mindestens ab: Ausleihe aus einer Einheit; Rückgabe in eine Einheit; Rückgabe an eine Person zählt **nicht** als Ausleihe; Weitergabe zählt als Ausleihe; von der abgebenden Person eingetragener Vorgang ist unbestätigt, vom Empfänger eingetragener bestätigt; Bestätigung einer Weitergabe per `confirmHolding`; Bestätigung einer Rückgabe nur durch Einlagern; Umlagern erzeugt **keine** Etappe auf die umlagernde Person; Spiel in einem Karton, der bei einem Meeple steht, ist „frei" und der Verwahrer ist verantwortlich; Verantwortlichkeit über zwei Ebenen (Karton in Regal bei Person); Ausleihe eines deinventarisierten Spiels wird abgelehnt, Rückgabe bleibt erlaubt; Deinventarisieren lässt den offenen Aufenthalt unberührt; `resolveScannedCode` liefert 0, 1 und n Treffer korrekt. `pnpm test` grün.
+      `git commit -m "feat: add transactional game holding logic for the ludothek"`
+
+- [ ] **12. Verwaltung der Aufbewahrungseinheiten**
+      `src/components/feature/admin-einheiten/actions.ts` (mit `requirePermission("games:manage")`): `createStorageUnit(kind, label, …)` (Code über Schritt 10), `updateStorageUnit`, `retireStorageUnit` (nur wenn leer), `setUnitParent`. Umlagern und Einlagern selbst brauchen **keine** Permission und liegen bei den Scan-Actions (Schritt 15). Admin-Route `/admin/einheiten`: Tabelle (Code, Art, Label, Standort-Kette, Verwahrer, Anzahl Spiele), Detailansicht mit Inhalt, Bewegungshistorie aus `StorageUnitMove` und Aktionen. Navigationseintrag ergänzen. Zusätzlich Admin-Liste „Bestände bei ausgetretenen Mitgliedern" als Rückholliste (Query über Verantwortlichkeit + Mitgliedschaftszustand).
+      _Definition of Done:_ Tests decken ab: fehlende Permission → Fehler ohne DB-Änderung; Stilllegen einer nicht leeren Einheit wird abgelehnt; Setzen einer Eltern-Einheit verhindert Zyklen (Einheit kann nicht ihr eigener Vorfahre werden); jede Standortänderung schreibt genau einen `StorageUnitMove` und schließt den vorherigen. `pnpm test` grün.
+      `git commit -m "feat: add storage unit administration with move history"`
+
+- [ ] **13. Etiketten-Druckansicht**
+      `qrcode` installieren. `src/components/feature/admin-einheiten/unit-label-sheet.tsx`: Etiketten-Raster mit QR (Inhalt = reiner Code), Label und Klartext-Code, QR clientseitig als Data-URL, Druck-Styles über `@media print` (keine Navigation, feste Etikettengröße, sauberer Seitenumbruch). Print-Route `/admin/einheiten/etiketten` mit Auswahl „alle", „nur Kartons", „nur Regale" oder markierte Einheiten.
+      _Definition of Done:_ Unit-Test für die Etiketten-Datenaufbereitung (Auswahl, Sortierung, Aufteilung in Seiten); manueller Test: Druckvorschau zeigt scanbare QR-Codes im Raster. `pnpm test` grün.
+      `git commit -m "feat: add printable qr label sheet for storage units"`
+
+- [ ] **14. Admin-Bestand an das neue Modell anpassen**
+      `src/components/feature/admin-bestand/`: EAN-Feld mit Validierung aus Schritt 10 im Anlage- und Bearbeiten-Dialog, vorbefüllbar über `?ean=` (Sprung von der Scan-Seite); Standort-Freitextfeld und Anzahl-Feld entfernen (ersetzt durch Standort-Kette bzw. je einen Datensatz pro Spiel); Spalten für Standort-Kette, Zustand, letzte Prüfung und Prüf-Flag; Filter „ungeprüft", „Mangel", „nicht erfasst"; deinventarisierte Spiele standardmäßig **ausgefiltert** mit Umschalter „deinventarisierte anzeigen" (ersetzt die bisherige durchgestrichene Darstellung); Aktion „Prüfung anfordern" setzt das Prüf-Flag. `actions.ts` entsprechend anpassen — mehrfach vergebene EAN ist **erlaubt** und erzeugt einen Hinweis, keinen Fehler.
+      _Definition of Done:_ Tests decken ab: ungültige EAN wird abgelehnt; doppelte EAN wird akzeptiert und als Hinweis gemeldet; Standardabfrage enthält keine deinventarisierten Spiele; Prüf-Flag setzen erfordert `games:manage`. `pnpm test` grün.
+      `git commit -m "feat: adapt board game administration to the holding model"`
+
+### D — Scan, Prüfung, Ludothek, Community
+
+- [ ] **15. Scan-Infrastruktur und Vorgänge**
+      `@zxing/browser` installieren. `src/components/feature/scan/use-code-scanner.ts`: Hook um Kamera-Stream und Dekodierung (Start/Stop, Zustände „kein Kamerazugriff", „kein Code erkannt"), plus immer verfügbares manuelles Eingabefeld. `src/components/feature/scan/actions.ts`: dünne Server-Actions über Schritt 11 (`requireMeeple`), Ausbuchen immer auf den eigenen Meeple; ausgetretene Meeples dürfen nur abgebende Vorgänge auslösen. `scan-view.tsx` ersetzt `scan-mock-view.tsx`: nach dem Scan erkanntes Objekt mit Standort-Kette und **nur die möglichen Vorgänge** anbieten (Spiel in Einheit → Ausleihen/Umlagern/Prüfen; eigenes ausgeliehenes Spiel → Zurückgeben/Weitergeben; Spiel bei anderer Person → „Ich habe es erhalten"/„Ich nehme es zur Rückgabe an"; Einheit → Inhalt, Spiel einlagern, Einheit umlagern; unbekannter Code → „nicht im Bestand" plus Anlage-Link bei `games:manage`; mehrere EAN-Treffer → Auswahl). Zusätzlich Serienmodi („Einlagern in <Einheit>", „Prüfen"), die die Zielwahl für Folgescans festhalten.
+      _Definition of Done:_ `actions.test.ts` deckt ab: ohne Session keine Buchung; übergebene Fremd-Meeple-ID beim Ausbuchen wird ignoriert/abgelehnt; Rückgabe fremder Ausleihen erlaubt; ausgetretener Meeple kann nicht annehmen, aber abgeben; unbekannter Code liefert einen definierten „nicht gefunden"-Rückgabewert statt einer Exception. Manueller Test auf einem Smartphone: EAN und Einheiten-QR werden erkannt. `pnpm test` grün.
+      `git commit -m "feat: add camera scan view with context-aware holding actions"`
+
+- [ ] **16. Vollständigkeitsprüfung**
+      `src/components/feature/scan/inventory-actions.ts`: `confirmGameCondition(boardGameId, condition)` (setzt `condition`, `lastCheckedAt`, löscht das Prüf-Flag), `reportGameDefect(boardGameId, note)` (setzt `condition` mit Mangelvermerk, `lastCheckedAt`, `status: MAINTENANCE`, Prüf-Flag bleibt), `clearGameDefect(boardGameId)` (zurück auf `ACTIVE`) — Zustandsbestätigung und Mangelmeldung für **jedes** Mitglied, `clearGameDefect` nur mit `games:manage`. UI: Prüfbogen-Panel nach dem Scan im Serienmodus „Prüfen", Pflicht-Notiz bei Mangel.
+      _Definition of Done:_ Tests decken ab: Zustandsbestätigung setzt `lastCheckedAt` und löscht das Prüf-Flag; Mangelmeldung setzt `MAINTENANCE` und lehnt eine leere Notiz ab; `clearGameDefect` ohne `games:manage` schlägt fehl; ein Spiel mit gesetztem Prüf-Flag bleibt ausleihbar. `pnpm test` grün.
+      `git commit -m "feat: add completeness check with defect reporting"`
+
+- [ ] **17. Ludothek: öffentliche und interne Sicht**
+      Filter- und Sortierlogik als reine Funktion unter `src/lib/ludothek/` (testbar, nicht in der Komponente). `ludothek-browser.tsx` liest **alle** Filter aus `searchParams` (Spieleranzahl, Dauer, Gewichtung, Mechanik, Suchtext; intern zusätzlich Zustand, „ist ausgeliehen", „bei Meeple X") — serverseitig gefiltert und als Link teilbar. Zwei Projektionen aus einer Komponente: öffentlich ohne Standort, Zustand und Personen; intern mit Standort-Kette, Zustand und Verantwortliche:r. `game-detail-view.tsx` ersetzt `game-detail-mock-view.tsx`: Metadaten, intern zusätzlich Standort-Kette, Verantwortliche:r, Aufenthalts-Historie und Aktionen („Ich habe dieses Spiel erhalten", „Zurückgeben"). Deinventarisierte Spiele erscheinen nirgends. Navigationseintrag für die Ludothek in die öffentliche Gruppe verschieben. `src/data/games.ts` entfernen und alle Referenzen (u. a. `TOTAL_GAMES_IN_INVENTORY`, `STATUS_LABELS`) ersetzen.
+      _Definition of Done:_ Tests für die Filterfunktion (Spieleranzahl-Bereich, Dauer, Gewichtung, Mechanik-Mehrfachauswahl, „ist ausgeliehen", „bei Meeple X" inkl. Kartoninhalten, kombinierte Filter, leeres Ergebnis) und für die Projektion (öffentliche Variante enthält keine Personen- und Standortdaten). `pnpm build` ohne Referenz auf `src/data/games.ts`. `pnpm test` grün.
+      `git commit -m "feat: replace mock ludothek with public and internal database views"`
+
+- [ ] **18. Spielergesuche**
+      Migration für `LfgPost` und `LfgParticipant` (Felder siehe Annahmen). `src/components/feature/lfg/actions.ts`: `createLfgPost` (Ersteller wird erste:r Teilnehmer:in), `joinLfgPost` (lehnt volle, geschlossene und abgelaufene Gesuche sowie Doppelbeitritte ab), `leaveLfgPost` (Ersteller kann nicht verlassen), `closeLfgPost` (Ersteller oder `members:manage`). Ablauf wird abgeleitet (`plannedAt` in der Vergangenheit), nicht gespeichert; Standardliste ohne abgelaufene, Filter „auch vergangene". Beim Wirksamwerden eines Austritts werden offene Gesuche des Meeples geschlossen (in `recordResignation` bzw. beim Zustandswechsel). `lfg-list.tsx`, `create-lfg-dialog.tsx` und `lfg-detail-view.tsx` auf echte Daten umstellen; `src/data/lfg.ts` entfernen.
+      _Definition of Done:_ Tests decken ab: ohne Session kein Schreibzugriff; Erstellen legt die Ersteller-Teilnahme an; Beitritt zu vollem, geschlossenem und abgelaufenem Gesuch wird abgelehnt; Doppelbeitritt abgelehnt; Ersteller kann nicht verlassen; Schließen nur durch Ersteller oder `members:manage`; Ablaufableitung inkl. Gesuch ohne Termin (läuft nie ab). `pnpm build` ohne Referenz auf `src/data/lfg.ts`. `pnpm test` grün.
+      `git commit -m "feat: replace mock player-search module with database-backed lfg"`
+
+- [ ] **19. Interner Newsroom**
+      Interne Route `src/app/dashboard/news/page.tsx` (nur eingeloggt, gesperrt für ausgetretene Meeples) mit Feed der Posts mit `internal === true`, Kennzeichnung „nur intern", Detailansicht über die bestehende `post-detail-view.tsx`. Öffentliche Listen, Startseiten-Vorschau und Detailseiten filtern interne Beiträge konsequent aus (Detailaufruf ohne Session ⇒ `notFound()`). `post-form.tsx` erhält die Checkbox „Nur intern"; in `admin-news/actions.ts` sicherstellen, dass interne Beiträge **nie** in die Instagram-Queue gelangen. Navigationseintrag ergänzen.
+      _Definition of Done:_ Tests decken ab: interne Beiträge fehlen in der öffentlichen Liste und erscheinen in der internen; interner Beitrag mit Instagram-Flag erzeugt keinen Queue-Eintrag; Detailaufruf eines internen Beitrags ohne Session ⇒ `notFound()`. `pnpm test` grün.
+      `git commit -m "feat: add internal members-only newsroom"`
+
+- [ ] **20. Vereinsinterner Kalender**
+      `src/lib/calendar.ts` so umbauen, dass Parse- und Mapping-Logik für mehrere Feeds nutzbar ist (Feed-URL als Parameter — kein zweiter Parser): `fetchPublicEvents()` und `fetchInternalEvents()` (liest `ICS_FEED_URL_INTERNAL`, liefert ohne Variable eine leere Liste ohne Fehler). Interner Kalender-View für eingeloggte Nutzer (auch für ausgetretene Meeples erreichbar), zeigt öffentliche und interne Termine zusammen, interne farblich und mit Badge abgesetzt; bestehende `news-calendar.tsx` wiederverwenden.
+      _Definition of Done:_ `calendar.test.ts` erweitert: interner Feed wird geparst und als intern markiert; fehlende Env-Variable ⇒ leere Liste ohne Throw; Netzwerkfehler des internen Feeds bricht den öffentlichen Kalender nicht. `pnpm test` grün.
+      `git commit -m "feat: add internal club calendar feed"`
+
+- [ ] **21. Dashboards mit echten Daten**
+      Aggregation als eigene Funktion (`src/lib/dashboard.ts`, ohne Rendering testbar). Mitglieder-Dashboard: „bei mir liegen X Spiele" mit Aufschlüsselung nach eigenen Ausleihen und Einheiten-Inhalten, jeweils als **Quicklink** auf den entsprechenden Ludothek-Filter (keine eigene Ansicht); unbestätigte Weitergaben mit Ein-Klick-Bestätigung und unabgeschlossene Rückgaben mit „Jetzt einlagern"; eigene und offene Gesuche; neueste interne News; Hinweis auf eine laufende Kündigung inkl. offener Bestände. „Anstehende Schichten" bleibt sichtbarer Platzhalter mit Verweis auf Phase 6. Admin-Dashboard: aktive Mitglieder, offene Ausleihen, offene Einladungen, Spiele im Bestand, nicht erfasste Spiele, Prüfungen offen — kein Überfälligkeits-Widget (es gibt keine Leihfrist).
+      _Definition of Done:_ Tests für die Aggregation: nur eigene Ausleihen; geschlossene Aufenthalte zählen nicht; Kartoninhalte werden der verwahrenden Person zugerechnet; unbestätigte Vorgänge korrekt nach Weitergabe und Rückgabe getrennt; leerer Zustand ohne Fehler. `pnpm test` grün.
+      `git commit -m "feat: populate member and admin dashboards with live data"`
+
+### E — Abschluss
+
+- [ ] **22. Roadmap- und Setup-Doku aktualisieren**
+      `docs/schema.md`: die Stand-Markierungen der in diesem Plan migrierten Tabellen von 🔜 Phase 5 auf ✅ migriert umstellen (`meeples`, `bank_data_access_logs`, `lfg_posts`, `lfg_participants`, `storage_units`, `storage_unit_moves`, `game_holdings`, die `board_games`-Änderungen sowie Rolle `kassenwart`/`bank:read`). Nur die Markierungen anpassen — die Beschreibungen stimmen bereits.
+      `docs/roadmap.md`: Meilensteine 5.1, 5.3, 5.4 und die umgesetzten Punkte von 5.2 auf `[x]`; der Google-SSO-Punkt bleibt `[ ]` mit Kommentar, dass das Mitglieder-Onboarding umgesetzt und SSO weiter zurückgestellt ist. Ergänzen, dass Spiele-QR-Codes (Duplikatfall), Event-Zuordnung von Regalen und das Ersatzteillager bewusst in Phase 6/7 liegen. `docs/setup.md`: `MEMBER_DATA_ENCRYPTION_KEY` (Erzeugung, Backup außerhalb Vercel, Folge eines Schlüsselverlusts) und `ICS_FEED_URL_INTERNAL` dokumentieren, dazu den einmaligen Migrations-Skriptaufruf aus Schritt 9 und den Hinweis, dass „Unsortiert" und der erste Karton-/Regal-Satz physisch etikettiert werden müssen.
+      _Definition of Done:_ Roadmap und Setup spiegeln den umgesetzten Stand; `CONTEXT.md` und die ADRs sind unverändert gültig. Kein Code, keine Tests.
+      `git commit -m "docs: mark phase 5 milestones complete and document new env vars"`
+
+## Empfohlenes Claude-Modell für die Umsetzung
+
+- **Empfehlung:** `claude-sonnet-5` (Claude Sonnet 5) als Standard. Für Schritt 11 (Kernlogik der Aufenthalte), Schritt 8 (handgepatchte Migration mit partiellem Index und CHECK-Constraint) und Schritt 7 (transaktionale Anonymisierung über zwei DB-Schemata) `claude-opus-5` verwenden.
+- **Reasoning/Thinking:** an. Hoher Effort für Schritte 7, 8, 11 und 3; mittlerer Effort für 4, 5, 6, 9, 12, 15, 16, 17, 18, 21; niedriger Effort genügt für 0, 1, 10, 13, 14, 19, 20, 22.
+- **Begründung:** Die Risiken konzentrieren sich auf drei Stellen. Erstens die Aufenthalts-Kernlogik: Sie ist die einzige Wahrheit über Standort und Verantwortlichkeit, und ein falsch bestimmtes `origin` oder eine nicht geschlossene Etappe erzeugt stille Bestandsfehler, die niemand bemerkt, bis ein Spiel gesucht wird. Zweitens die Migration: partieller Unique-Index und CHECK-Constraint sind das Sicherheitsnetz, das genau diese Fehler unmöglich macht — falsch geschrieben fällt das erst im Betrieb auf. Drittens Kryptografie und Anonymisierung: unumkehrbare Löschung über Raw-SQL gegen ein fremdes Schema, dazu eine veröffentlichte Datenschutzzusage, die eingehalten werden muss. Der übrige Umfang ist breite, aber konventionelle Next.js/Prisma-Arbeit entlang etablierter Repo-Muster.
