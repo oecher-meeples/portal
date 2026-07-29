@@ -4,6 +4,9 @@ import { GameInventoryStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/permissions";
+import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
+import { ensureMeeple } from "@/lib/meeples";
+import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
 import {
   BggApiError,
   BggNotFoundError,
@@ -14,6 +17,7 @@ import {
 export type BoardGameInput = {
   title: string;
   bggId?: number | null;
+  ean?: string | null;
   minPlayers?: number | null;
   maxPlayers?: number | null;
   playTimeMinutes?: number | null;
@@ -21,8 +25,6 @@ export type BoardGameInput = {
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
-  quantity: number;
-  location?: string | null;
   condition?: string | null;
 };
 
@@ -57,8 +59,8 @@ function validateBoardGameInput(input: BoardGameInput) {
   if (!input.title) {
     return "Bitte einen Titel angeben.";
   }
-  if (!input.quantity || input.quantity < 1) {
-    return "Anzahl der Exemplare muss mindestens 1 sein.";
+  if (input.ean && !isValidEan(input.ean)) {
+    return "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.";
   }
   return null;
 }
@@ -66,6 +68,7 @@ function validateBoardGameInput(input: BoardGameInput) {
 function toBoardGameData(input: BoardGameInput) {
   return {
     bggId: input.bggId ?? null,
+    ean: input.ean ? normaliseEan(input.ean) : null,
     minPlayers: input.minPlayers ?? null,
     maxPlayers: input.maxPlayers ?? null,
     playTimeMinutes: input.playTimeMinutes ?? null,
@@ -73,10 +76,24 @@ function toBoardGameData(input: BoardGameInput) {
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
-    quantity: input.quantity,
-    location: input.location || null,
     condition: input.condition || null,
   };
+}
+
+/** Duplicate EANs are allowed by design (ADR 0001) — surfaced only as a hint. */
+async function duplicateEanHint(ean: string | null | undefined, excludeId?: string) {
+  if (!ean) return undefined;
+
+  const count = await prisma.boardGame.count({
+    where: {
+      ean: normaliseEan(ean),
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+  });
+
+  return count > 0
+    ? "Diese EAN ist bereits einem anderen Spiel zugeordnet — das ist bei mehreren Exemplaren desselben Titels normal."
+    : undefined;
 }
 
 async function requireGamesManagePermission() {
@@ -98,12 +115,32 @@ export async function createBoardGame(input: BoardGameInput) {
     return { error: validationError };
   }
 
-  const slug = await uniqueSlug(input.title);
-  const game = await prisma.boardGame.create({
-    data: { slug, title: input.title, ...toBoardGameData(input) },
+  const [slug, hint, actor] = await Promise.all([
+    uniqueSlug(input.title),
+    duplicateEanHint(input.ean),
+    ensureMeeple(user),
+  ]);
+
+  const game = await prisma.$transaction(async (tx) => {
+    const created = await tx.boardGame.create({
+      data: { slug, title: input.title, ...toBoardGameData(input) },
+    });
+
+    const unsortiert = await ensureUnsortiertUnit(tx);
+    await tx.gameHolding.create({
+      data: {
+        boardGameId: created.id,
+        unitId: unsortiert.id,
+        origin: "INITIAL",
+        confirmedAt: new Date(),
+        recordedByMeepleId: actor.id,
+      },
+    });
+
+    return created;
   });
 
-  return { success: true as const, id: game.id };
+  return { success: true as const, id: game.id, hint };
 }
 
 export async function updateBoardGame(id: string, input: BoardGameInput) {
@@ -117,13 +154,17 @@ export async function updateBoardGame(id: string, input: BoardGameInput) {
     return { error: validationError };
   }
 
-  const slug = await uniqueSlug(input.title, id);
+  const [slug, hint] = await Promise.all([
+    uniqueSlug(input.title, id),
+    duplicateEanHint(input.ean, id),
+  ]);
+
   await prisma.boardGame.update({
     where: { id },
     data: { slug, title: input.title, ...toBoardGameData(input) },
   });
 
-  return { success: true as const };
+  return { success: true as const, hint };
 }
 
 export async function previewBggImport(bggId: number) {
@@ -166,6 +207,20 @@ export async function deinventoriseBoardGame(id: string, reason: string) {
       archivedAt: new Date(),
       archivedReason: reason.trim(),
     },
+  });
+
+  return { success: true as const };
+}
+
+export async function requestCompletenessCheck(id: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  await prisma.boardGame.update({
+    where: { id },
+    data: { needsCompletenessCheck: true },
   });
 
   return { success: true as const };

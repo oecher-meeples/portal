@@ -1,6 +1,7 @@
 import {
   GameInventoryStatus,
   HoldingOrigin,
+  StorageUnitKind,
   type BoardGame,
   type GameHolding,
   type Prisma,
@@ -333,6 +334,19 @@ export async function moveStorageUnit({
   });
 }
 
+/** The unit for games whose physical location has never been recorded (see CONTEXT.md). */
+export async function ensureUnsortiertUnit(tx: Tx = prisma) {
+  return tx.storageUnit.upsert({
+    where: { code: UNSORTIERT_CODE },
+    update: {},
+    create: {
+      code: UNSORTIERT_CODE,
+      kind: StorageUnitKind.BOX,
+      label: "Unsortiert",
+    },
+  });
+}
+
 export type ResolvedScan =
   | { kind: "games"; games: BoardGame[] }
   | { kind: "unit"; unit: StorageUnit; contents: BoardGame[] }
@@ -391,6 +405,18 @@ export async function getResponsibleMeeple(
   return null;
 }
 
+/** Pure so bulk views (e.g. admin-bestand) can reuse it without a query per game. */
+export function zustandFromHoldingAndUnit(
+  holding: Pick<GameHolding, "meepleId">,
+  unit: Pick<StorageUnit, "code"> | null,
+  gameStatus: GameInventoryStatus,
+): GameZustand {
+  if (holding.meepleId) return "ausgeliehen";
+  if (unit?.code === UNSORTIERT_CODE) return "nicht-erfasst";
+  if (gameStatus === GameInventoryStatus.MAINTENANCE) return "wartung";
+  return "frei";
+}
+
 export async function getGameZustand(
   game: Pick<BoardGame, "id" | "status">,
 ): Promise<GameZustand> {
@@ -404,10 +430,7 @@ export async function getGameZustand(
       `Spiel ${game.id} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
     );
   }
-  if (holding.meepleId) return "ausgeliehen";
-  if (holding.unit?.code === UNSORTIERT_CODE) return "nicht-erfasst";
-  if (game.status === GameInventoryStatus.MAINTENANCE) return "wartung";
-  return "frei";
+  return zustandFromHoldingAndUnit(holding, holding.unit, game.status);
 }
 
 export {

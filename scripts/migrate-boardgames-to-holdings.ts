@@ -1,7 +1,8 @@
 import { pathToFileURL } from "node:url";
 import { HoldingOrigin, StorageUnitKind } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
-import { UNSORTIERT_CODE, nextUnitCode } from "../src/lib/inventory/codes";
+import { nextUnitCode } from "../src/lib/inventory/codes";
+import { ensureUnsortiertUnit } from "../src/lib/ludothek/holdings";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -38,18 +39,6 @@ async function findOrCreateSystemMeeple() {
       neonAuthUserId: authUser.id,
       displayName: authUser.name || "Admin",
       email: adminEmail,
-    },
-  });
-}
-
-async function ensureUnsortiert() {
-  return prisma.storageUnit.upsert({
-    where: { code: UNSORTIERT_CODE },
-    update: {},
-    create: {
-      code: UNSORTIERT_CODE,
-      kind: StorageUnitKind.BOX,
-      label: "Unsortiert",
     },
   });
 }
@@ -120,7 +109,7 @@ export async function migrateBoardGamesToHoldings({
   }
 
   const systemMeeple = await findOrCreateSystemMeeple();
-  const unsortiert = await ensureUnsortiert();
+  const unsortiert = await ensureUnsortiertUnit();
 
   const existingBoxCodes = (
     await prisma.storageUnit.findMany({
