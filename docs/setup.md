@@ -163,6 +163,36 @@ pnpm dev
 
 ---
 
+### 10. Phase 5: Mitgliederbereich, Bankdaten-Verschlüsselung, interner Kalender
+
+Zusätzliche Umgebungsvariablen (siehe `.env.example`):
+
+```env
+# Verschlüsselung der Mitglieder-Bankdaten (IBAN), siehe docs/adr/0003
+MEMBER_DATA_ENCRYPTION_KEY="generate-with-openssl-rand-base64-32"
+
+# Vereinsinterner ICS-Feed (zusätzlich zu PUBLIC_CALENDAR_ICS_URL)
+ICS_FEED_URL_INTERNAL="https://calendar.google.com/calendar/ical/internal%40group.calendar.google.com/private-xxxx/basic.ics"
+```
+
+**`MEMBER_DATA_ENCRYPTION_KEY` erzeugen:**
+
+```bash
+openssl rand -base64 32
+```
+
+Der Schlüssel verschlüsselt alle gespeicherten IBANs (AES-256-GCM). **Backup außerhalb von Vercel aufbewahren** (z. B. Passwort-Manager des Vorstands) — geht der Schlüssel verloren, sind alle gespeicherten IBANs unwiederbringlich weg; nur die letzten vier Stellen (`ibanLast4`) bleiben lesbar. Ein Schlüsselwechsel macht alle bestehenden Ciphertexte ungültig, Mitglieder müssten ihre IBAN erneut eingeben.
+
+**Einmalige Migration des Phase-4-Bestands** in das Standort-/Aufenthalts-Modell (siehe ADR 0001), nachdem die Prisma-Migrationen aus Phase 5 angewendet wurden:
+
+```bash
+pnpm migrate:holdings          # Trockenlauf zuerst: pnpm migrate:holdings -- --dry-run
+```
+
+Legt die Einheit „Unsortiert" (`OM-BOX-0000`) an, wandelt jeden vorhandenen `location`-Freitext in einen Karton um und gibt jedem Spiel genau einen offenen Aufenthalt. Danach **„Unsortiert" und den ersten Satz Kartons/Regale physisch etikettieren** (`/admin/einheiten/etiketten`), bevor der reguläre Scan-Betrieb beginnt — sonst liegen alle migrierten Spiele ohne auffindbares Etikett in „Unsortiert".
+
+---
+
 ## Nützliche Befehle
 
 | Befehl                               | Beschreibung                               |

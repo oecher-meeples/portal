@@ -207,7 +207,8 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
 
 ### E — Abschluss
 
-- [ ] **22. Roadmap- und Setup-Doku aktualisieren**
+- [x] **22. Roadmap- und Setup-Doku aktualisieren**
+      _Umsetzungsnotiz:_ `location`/`quantity` an `BoardGame` sind noch nicht entfernt (bewusste Rückstellung aus Schritt 8/14, siehe dortige Umsetzungsnotizen) — `docs/schema.md` weist das jetzt als eigene Zeile „🔜 spätere Aufräum-Migration" statt fälschlich „✅ migriert" aus.
       `docs/schema.md`: die Stand-Markierungen der in diesem Plan migrierten Tabellen von 🔜 Phase 5 auf ✅ migriert umstellen (`meeples`, `bank_data_access_logs`, `lfg_posts`, `lfg_participants`, `storage_units`, `storage_unit_moves`, `game_holdings`, die `board_games`-Änderungen sowie Rolle `kassenwart`/`bank:read`). Nur die Markierungen anpassen — die Beschreibungen stimmen bereits.
       `docs/roadmap.md`: Meilensteine 5.1, 5.3, 5.4 und die umgesetzten Punkte von 5.2 auf `[x]`; der Google-SSO-Punkt bleibt `[ ]` mit Kommentar, dass das Mitglieder-Onboarding umgesetzt und SSO weiter zurückgestellt ist. Ergänzen, dass Spiele-QR-Codes (Duplikatfall), Event-Zuordnung von Regalen und das Ersatzteillager bewusst in Phase 6/7 liegen. `docs/setup.md`: `MEMBER_DATA_ENCRYPTION_KEY` (Erzeugung, Backup außerhalb Vercel, Folge eines Schlüsselverlusts) und `ICS_FEED_URL_INTERNAL` dokumentieren, dazu den einmaligen Migrations-Skriptaufruf aus Schritt 9 und den Hinweis, dass „Unsortiert" und der erste Karton-/Regal-Satz physisch etikettiert werden müssen.
       _Definition of Done:_ Roadmap und Setup spiegeln den umgesetzten Stand; `CONTEXT.md` und die ADRs sind unverändert gültig. Kein Code, keine Tests.

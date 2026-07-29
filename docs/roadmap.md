@@ -86,23 +86,29 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
 ## 📱 Phase 5: Spiele-Verwaltung, Mitglieder-Bereich, Scan & Community
 *Ziel: Interner Bereich für Mitglieder, physischer Verleih, interne News, Kalender und Spielergesuche.*
 
-* **[ ] Meilenstein 5.1: Konzeption Mitglieder-Features & QR-Infrastruktur**
-    * [ ] Datenbank-Planung für das **Spielergesuche-Modul** (Wer sucht Mitspieler für welches Spiel/wann?).
-    * [ ] Konzeption der QR-Code-Generierung für Spiele und der Kamera-Scan-Schnittstelle im Browser.
-    * [ ] Planung des Datenflusses für interne News und den internen Google-Kalender.
-* **[ ] Meilenstein 5.2: Mitglieder-Einstieg, Interne News & Kalender (Umsetzung)**
-    * [ ] Erweiterung des Google-SSO/Logins für reguläre Vereinsmitglieder (Meeples).
-    * [ ] Self-Service-Bereich zur sicheren Änderung der eigenen Bankdaten (DSGVO-konforme Verschlüsselung).
-    * [ ] **Interne Newsroom-Seite:** Ein geschützter News-Feed, der nur für eingeloggte Mitglieder sichtbar ist.
-    * [ ] **Vereinsinterner Google Kalender:** Integration eines zweiten, internen Kalenders für vereinsinterne Veranstaltungen (z.B. Jahreshauptversammlung, Helfertreffen).
-* **[ ] Meilenstein 5.3: Intelligente Spielsuche & Spielergesuche**
-    * [ ] Bereitstellung der Spiele-Suche für Mitglieder mit Filtern (Dauer, Komplexität, Mechaniken).
-    * [ ] **Spielergesuche-Modul:** Mitglieder können Gesuche inserieren ("Suche 3 Leute für Twilight Imperium am Samstag") und andere können sich per Klick anmelden.
-* **[ ] Meilenstein 5.4: Scan-Infrastruktur & Verleih**
-    * [ ] Entwicklung einer Admin-Funktion zur Generierung und zum Ausdruck von QR-Code-Etiketten für Spiele.
-    * [ ] Integration einer Smartphone-Kamera-Scanfunktion im Browser (für EAN-Barcodes und Vereins-QR-Codes).
-    * [ ] Implementierung der transaktionssicheres Ausleih- und Rückgabelogik (Verknüpfung der `Borrow`-Historie).
-    * [ ] Digitaler Prüfbogen für die Inventur (Zustandserfassung, Mängelmeldung).
+* [x] **Meilenstein 5.1: Konzeption Mitglieder-Features & QR-Infrastruktur**
+    * [x] Datenbank-Planung für das **Spielergesuche-Modul** (Wer sucht Mitspieler für welches Spiel/wann?) — siehe `CONTEXT.md` und `docs/adr/0001`–`0003`.
+    * [x] Konzeption der QR-Code-Generierung für Spiele und der Kamera-Scan-Schnittstelle im Browser — Standort-Modell mit Aufbewahrungseinheiten statt Spiele-QR (siehe ADR 0001); Spiele-QR-Duplikatfall bewusst zurückgestellt (offen, siehe unten).
+    * [x] Planung des Datenflusses für interne News und den internen Google-Kalender.
+* [x] **Meilenstein 5.2: Mitglieder-Einstieg, Interne News & Kalender (Umsetzung)**
+    * [ ] Erweiterung des Google-SSO/Logins für reguläre Vereinsmitglieder (Meeples). Mitglieder-Onboarding (Einladungs-Flow, Meeple entsteht beim ersten Login, Mitgliedschafts-Lebenszyklus) ist umgesetzt; Google SSO selbst bleibt wie in Phase 2 zurückgestellt (offen).
+    * [x] Self-Service-Bereich zur sicheren Änderung der eigenen Bankdaten (DSGVO-konforme Verschlüsselung) — AES-256-GCM, Leseweg nur für die Rolle `kassenwart` mit Zugriffsprotokoll (siehe ADR 0003).
+    * [x] **Interne Newsroom-Seite:** Ein geschützter News-Feed, der nur für eingeloggte Mitglieder sichtbar ist.
+    * [x] **Vereinsinterner Kalender:** Zweiter ICS-Feed (`ICS_FEED_URL_INTERNAL`) statt Google-Calendar-API, zeigt öffentliche und interne Termine zusammen (siehe Plan-Annahme „Kalender-Sync" aus Phase 2).
+* [x] **Meilenstein 5.3: Intelligente Spielsuche & Spielergesuche**
+    * [x] Bereitstellung der Spiele-Suche für Mitglieder mit Filtern (Dauer, Komplexität, Mechaniken) — zwei Projektionen (öffentlich/intern) einer Komponente, alle Filter über `searchParams`.
+    * [x] **Spielergesuche-Modul:** Mitglieder können Gesuche inserieren und andere sich per Klick anmelden.
+* [x] **Meilenstein 5.4: Scan-Infrastruktur & Verleih**
+    * [x] Entwicklung einer Admin-Funktion zur Generierung und zum Ausdruck von QR-Code-Etiketten — für Aufbewahrungseinheiten (Kartons/Regale) statt einzelner Spiele (siehe ADR 0001).
+    * [x] Integration einer Smartphone-Kamera-Scanfunktion im Browser (`@zxing/browser`, EAN-Barcodes und Einheiten-QR-Codes).
+    * [x] Implementierung der transaktionssicheren Ausleih- und Rückgabelogik — Aufenthalte (`GameHolding`) statt einer `Borrow`-Historie (siehe ADR 0001).
+    * [x] Digitaler Prüfbogen für die Inventur (Zustandserfassung, Mängelmeldung).
+
+Bewusst zurückgestellt bzw. nicht Teil von Phase 5 (siehe `.claude/plans/phase-5-mitglieder-scan-execution-plan.md`):
+- Google SSO (Meilenstein 5.2, s. o.).
+- Spiele-eigene QR-Codes für den Duplikatfall (mehrere Spiele desselben Titels unterscheidbar auch ohne Standort) — Standort-Kette reicht für Phase 5, ein zusätzlicher Vereins-QR pro Spiel wäre eine spätere Ergänzung.
+- Event-Zuordnung von Regalen ("Spiel beim Event") — Phase 6.
+- Ersatzteillager-Ansicht für deinventarisierte Spiele — Phase 7.
 
 ---
 

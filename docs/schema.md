@@ -59,7 +59,7 @@ erDiagram
 |---|---|
 | `permissions`, `roles`, `role_permissions`, `user_roles` | ✅ migriert |
 | `invites` | ✅ migriert |
-| Rolle `kassenwart` + Permission `bank:read` (Seed) | 🔜 Phase 5 |
+| Rolle `kassenwart` + Permission `bank:read` (Seed) | ✅ migriert |
 
 Eine Einladung (`Invite`) trägt **keinen** Personenbezug: sie ist ein Token mit Ablaufdatum. Wer sie einlöst, wird dadurch Mitglied — es gibt keinen Mitgliedsdatensatz vor der Registrierung.
 
@@ -172,9 +172,9 @@ erDiagram
 
 | Tabelle | Stand |
 |---|---|
-| `meeples` | 🔜 Phase 5 |
-| `bank_data_access_logs` | 🔜 Phase 5 |
-| `lfg_posts`, `lfg_participants` | 🔜 Phase 5 |
+| `meeples` | ✅ migriert |
+| `bank_data_access_logs` | ✅ migriert |
+| `lfg_posts`, `lfg_participants` | ✅ migriert |
 
 `LfgPost.gameTitle` ist bewusst Freitext statt einer Relation auf `BoardGame`: Gesuche sollen auch für Spiele möglich sein, die dem Verein nicht gehören. „Voll" und „abgelaufen" werden aus `maxParticipants` und `plannedAt` berechnet, nicht gespeichert.
 
@@ -272,8 +272,9 @@ erDiagram
 | Tabelle | Stand |
 |---|---|
 | `board_games` (Grundfelder, BGG-Import, Deinventarisierung) | ✅ migriert |
-| `board_games`: `ean`, `needsCompletenessCheck`, `lastCheckedAt`; `location` und `quantity` entfallen; `bggId` verliert die Eindeutigkeit; Status `MAINTENANCE` | 🔜 Phase 5 |
-| `storage_units`, `storage_unit_moves`, `game_holdings` | 🔜 Phase 5 |
+| `board_games`: `ean`, `needsCompletenessCheck`, `lastCheckedAt`; `bggId` verliert die Eindeutigkeit; Status `MAINTENANCE` | ✅ migriert |
+| `board_games`: `location` und `quantity` entfernen (Felder liegen noch am Schema, ungenutzt seit der Migration in Aufenthalte) | 🔜 spätere Aufräum-Migration |
+| `storage_units`, `storage_unit_moves`, `game_holdings` | ✅ migriert |
 
 Spiele, deren Standort noch nie erfasst wurde, liegen in der Einheit „Unsortiert" (`OM-BOX-0000`) — sie behauptet keinen echten Ort und hat keinen Verwahrer; ihr Inhalt ist die Arbeitsliste der Ersterfassung.
 
