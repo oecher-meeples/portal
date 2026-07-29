@@ -44,6 +44,12 @@ enum HoldingOrigin {
   RELOCATION
 }
 
+enum ShiftType {
+  THEKE
+  KASSE
+  LEIHE
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -111,6 +117,7 @@ model Meeple {
   recordedHoldings          GameHolding[]       @relation("GameHoldingRecorder")
   lfgPosts                  LfgPost[]           @relation("LfgPostCreator")
   lfgParticipations         LfgParticipant[]
+  shiftBookings             ShiftBooking[]      @relation("ShiftBookingMeeple")
 
   @@map("meeples")
 }
@@ -251,6 +258,7 @@ model StorageUnit {
   keeper     Meeple?           @relation("StorageUnitKeeper", fields: [keeperMeepleId], references: [id], onDelete: SetNull)
   moves      StorageUnitMove[]
   holdings   GameHolding[]
+  eventShelfAssignments EventShelfAssignment[]
 
   @@index([parentUnitId])
   @@index([keeperMeepleId])
@@ -301,6 +309,71 @@ model GameHolding {
   @@index([unitId])
   @@index([meepleId])
   @@map("game_holdings")
+}
+
+/// A play day or larger event, independent of the public/internal ICS calendar feed
+/// (see docs/adr/0004). The basis for shifts, explainer attendance and flea market items.
+model Event {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  title     String
+  startsAt  DateTime
+  endsAt    DateTime?
+  location  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  shifts          Shift[]
+  shelfAssignments EventShelfAssignment[]
+
+  @@map("events")
+}
+
+/// Which shelves are set up at an event. Purely informational — it never changes a
+/// GameHolding, it only narrows what the guest area shows as "im Raum" (see CONTEXT.md).
+model EventShelfAssignment {
+  eventId String
+  unitId  String
+
+  event Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  unit  StorageUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, unitId])
+  @@map("event_shelf_assignments")
+}
+
+/// A time slot with a fixed type and capacity within an event, self-service bookable
+/// by members. Booking a KASSE shift grants time-bound flea market rights (ADR 0006).
+model Shift {
+  id        String    @id @default(cuid())
+  eventId   String
+  type      ShiftType
+  startsAt  DateTime
+  endsAt    DateTime
+  capacity  Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookings ShiftBooking[]
+
+  @@index([eventId])
+  @@map("shifts")
+}
+
+/// A member's booking of a shift. `uncertain` marks an unsure commitment but still
+/// counts against capacity — the simplest rule that avoids overbooking.
+model ShiftBooking {
+  shiftId   String
+  meepleId  String
+  uncertain Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  meeple Meeple @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@id([shiftId, meepleId])
+  @@map("shift_bookings")
 }
 
 model InstagramConnection {

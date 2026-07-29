@@ -25,6 +25,11 @@ const PERMISSIONS = [
     key: "bank:read",
     description: "Bankdaten entschlüsselt einsehen und exportieren",
   },
+  {
+    key: "events:manage",
+    description:
+      "Events, Schichten und Regal-Zuordnungen verwalten, Flohmarkt-Artikel freigeben/Kasse bedienen außerhalb einer Kasse-Schicht",
+  },
 ];
 
 const ROLES = [
