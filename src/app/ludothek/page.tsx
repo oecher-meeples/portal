@@ -1,19 +1,66 @@
-﻿import { requireMember } from "@/lib/session";
 import { PageHeading } from "@/components/ui/page-heading";
-import { GAMES, TOTAL_GAMES_IN_INVENTORY } from "@/data/games";
+import { getSessionTier } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import {
+  filterLudothekGames,
+  parseLudothekSearchParams,
+  toPublicGame,
+} from "@/lib/ludothek/browser";
+import { buildLudothekGames } from "@/lib/ludothek/query";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 
-export default async function LudothekPage() {
-  await requireMember();
+export default async function LudothekPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const tier = await getSessionTier();
+  const internal = tier !== "gast";
+
+  const rawSearchParams = await searchParams;
+  const filters = parseLudothekSearchParams(rawSearchParams, { internal });
+
+  const allGames = await buildLudothekGames();
+  const filtered = filterLudothekGames(allGames, filters);
+
+  const mechanicsOptions = [
+    ...new Set(allGames.flatMap((g) => g.mechanics)),
+  ].sort();
+
+  const meepleOptions = internal
+    ? await (async () => {
+        const ids = [
+          ...new Set(
+            allGames
+              .map((g) => g.responsibleMeepleId)
+              .filter((id): id is string => id !== null),
+          ),
+        ];
+        if (ids.length === 0) return [];
+        return prisma.meeple.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, displayName: true },
+          orderBy: { displayName: "asc" },
+        });
+      })()
+    : undefined;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
-        eyebrow="Das HerzstÃ¼ck"
-        title={`Ludothek â€“ ${TOTAL_GAMES_IN_INVENTORY} Spiele`}
-        description="DurchstÃ¶bere den Vereinsbestand, filtere nach Spieleranzahl oder Dauer und leihe transaktionssicher aus."
+        eyebrow="Das Herzstück"
+        title={`Ludothek – ${allGames.length} Spiele`}
+        description="Durchstöbere den Vereinsbestand und filtere nach Spieleranzahl, Dauer oder Mechanik."
       />
-      <LudothekBrowser games={GAMES} />
+      <LudothekBrowser
+        games={internal ? filtered : filtered.map(toPublicGame)}
+        internal={internal}
+        basePath="/ludothek"
+        rawSearchParams={rawSearchParams}
+        filters={filters}
+        mechanicsOptions={mechanicsOptions}
+        meepleOptions={meepleOptions}
+      />
     </div>
   );
 }

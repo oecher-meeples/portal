@@ -1,74 +1,121 @@
-﻿"use client";
-
-import { useState } from "react";
-import { Search, ScanLine } from "lucide-react";
-import type { BoardGame } from "@/data/games";
-import { GameCard } from "@/components/domain/game-card";
-import { PillToggle } from "@/components/ui/pill-toggle";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { ScanLine } from "lucide-react";
+import { GameCard } from "@/components/domain/game-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type {
+  DurationFilter,
+  LudothekFilters,
+  LudothekGame,
+  PlayerCountFilter,
+  PublicLudothekGame,
+} from "@/lib/ludothek/browser";
+import type { GameZustand } from "@/lib/ludothek/holdings";
 
-const PLAYER_FILTERS = [
-  { label: "Alle", value: "alle" },
-  { label: "1â€“2", value: "1-2" },
-  { label: "3â€“4", value: "3-4" },
+const PLAYER_OPTIONS: { label: string; value: PlayerCountFilter }[] = [
+  { label: "1–2", value: "1-2" },
+  { label: "3–4", value: "3-4" },
   { label: "5+", value: "5+" },
-] as const;
+];
 
-const DURATION_FILTERS = [
-  { label: "Alle", value: "alle" },
-  { label: "<60â€™", value: "short" },
-  { label: "60â€“120â€™", value: "mid" },
-  { label: ">120â€™", value: "long" },
-] as const;
+const DURATION_OPTIONS: { label: string; value: DurationFilter }[] = [
+  { label: "<60’", value: "short" },
+  { label: "60–120’", value: "mid" },
+  { label: ">120’", value: "long" },
+];
 
-function maxPlayers(players: string) {
-  const digits = players.replace(/[^0-9â€“-]/g, "").split(/[â€“-]/);
-  return Number(digits[digits.length - 1] ?? digits[0]);
+const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
+  { label: "Frei", value: "frei" },
+  { label: "Ausgeliehen", value: "ausgeliehen" },
+  { label: "Wartung", value: "wartung" },
+  { label: "Nicht erfasst", value: "nicht-erfasst" },
+];
+
+function buildHref(
+  basePath: string,
+  current: Record<string, string | string[] | undefined>,
+  patch: Record<string, string | string[] | undefined>,
+) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(current)) {
+    if (key in patch || value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) params.append(key, v);
+    } else {
+      params.set(key, value);
+    }
+  }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) params.append(key, v);
+    } else {
+      params.set(key, value);
+    }
+  }
+  const query = params.toString();
+  return query ? `${basePath}?${query}` : basePath;
 }
 
-function maxDuration(duration: string) {
-  const digits = duration.replace(/[^0-9â€“-]/g, "").split(/[â€“-]/);
-  return Number(digits[digits.length - 1] ?? digits[0]);
+function FilterPill({
+  label,
+  href,
+  active,
+}: {
+  label: string;
+  href: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </Link>
+  );
 }
 
-export function LudothekBrowser({ games }: { games: BoardGame[] }) {
-  const [query, setQuery] = useState("");
-  const [players, setPlayers] =
-    useState<(typeof PLAYER_FILTERS)[number]["value"]>("alle");
-  const [duration, setDuration] =
-    useState<(typeof DURATION_FILTERS)[number]["value"]>("alle");
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
-
-  const visible = games.filter((game) => {
-    if (query && !game.title.toLowerCase().includes(query.toLowerCase()))
-      return false;
-    if (onlyAvailable && game.status !== "AVAILABLE") return false;
-    const players_ = maxPlayers(game.players);
-    if (players === "1-2" && players_ > 2) return false;
-    if (players === "3-4" && (players_ < 3 || players_ > 4)) return false;
-    if (players === "5+" && players_ < 5) return false;
-    const duration_ = maxDuration(game.duration);
-    if (duration === "short" && duration_ >= 60) return false;
-    if (duration === "mid" && (duration_ < 60 || duration_ > 120)) return false;
-    if (duration === "long" && duration_ <= 120) return false;
-    return true;
-  });
+export function LudothekBrowser({
+  games,
+  internal,
+  basePath,
+  rawSearchParams,
+  filters,
+  mechanicsOptions,
+  meepleOptions,
+}: {
+  games: (PublicLudothekGame | LudothekGame)[];
+  internal: boolean;
+  basePath: string;
+  rawSearchParams: Record<string, string | string[] | undefined>;
+  filters: LudothekFilters;
+  mechanicsOptions: string[];
+  meepleOptions?: { id: string; displayName: string }[];
+}) {
+  const href = (patch: Record<string, string | string[] | undefined>) =>
+    buildHref(basePath, rawSearchParams, patch);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Spiel, Autor oder Barcode suchen â€¦"
-              className="pl-9"
-            />
-          </div>
+        <form action={basePath} className="flex gap-2">
+          {Object.entries(rawSearchParams)
+            .filter(([key]) => key !== "q")
+            .flatMap(([key, value]) =>
+              (Array.isArray(value) ? value : [value]).map(
+                (v, i) =>
+                  v !== undefined && (
+                    <input key={`${key}-${i}`} type="hidden" name={key} value={v} />
+                  ),
+              ),
+            )}
+          <Input name="q" defaultValue={filters.search ?? ""} placeholder="Spiel suchen …" />
+          <Button type="submit">Suchen</Button>
           <Button
             variant="outline"
             className="gap-2"
@@ -79,43 +126,122 @@ export function LudothekBrowser({ games }: { games: BoardGame[] }) {
               </Link>
             }
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-xs">
-          <span className="text-muted-foreground font-semibold tracking-wider uppercase">
+        </form>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Spieler
           </span>
-          <PillToggle
-            options={[...PLAYER_FILTERS]}
-            value={players}
-            onChange={setPlayers}
+          <FilterPill
+            label="Alle"
+            href={href({ spieler: undefined })}
+            active={!filters.players}
           />
-          <span className="text-muted-foreground font-semibold tracking-wider uppercase">
+          {PLAYER_OPTIONS.map((option) => (
+            <FilterPill
+              key={option.value}
+              label={option.label}
+              href={href({ spieler: option.value })}
+              active={filters.players === option.value}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             Dauer
           </span>
-          <PillToggle
-            options={[...DURATION_FILTERS]}
-            value={duration}
-            onChange={setDuration}
+          <FilterPill
+            label="Alle"
+            href={href({ dauer: undefined })}
+            active={!filters.duration}
           />
-          <button
-            type="button"
-            onClick={() => setOnlyAvailable((v) => !v)}
-            className={`rounded-full border px-3 py-1 font-medium transition-colors ${
-              onlyAvailable
-                ? "border-primary bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Nur verfÃ¼gbar
-          </button>
+          {DURATION_OPTIONS.map((option) => (
+            <FilterPill
+              key={option.value}
+              label={option.label}
+              href={href({ dauer: option.value })}
+              active={filters.duration === option.value}
+            />
+          ))}
         </div>
+
+        {mechanicsOptions.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Mechanik
+            </span>
+            {mechanicsOptions.map((mechanic) => {
+              const selected = filters.mechanics?.includes(mechanic) ?? false;
+              const nextMechanics = selected
+                ? (filters.mechanics ?? []).filter((m) => m !== mechanic)
+                : [...(filters.mechanics ?? []), mechanic];
+              return (
+                <FilterPill
+                  key={mechanic}
+                  label={mechanic}
+                  href={href({ mechanik: nextMechanics })}
+                  active={selected}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {internal && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                Zustand
+              </span>
+              <FilterPill
+                label="Alle"
+                href={href({ zustand: undefined })}
+                active={!filters.zustand}
+              />
+              {ZUSTAND_OPTIONS.map((option) => (
+                <FilterPill
+                  key={option.value}
+                  label={option.label}
+                  href={href({ zustand: option.value })}
+                  active={filters.zustand === option.value}
+                />
+              ))}
+              <FilterPill
+                label="Ist ausgeliehen"
+                href={href({ ausgeliehen: filters.onlyLoanedOut ? undefined : "1" })}
+                active={Boolean(filters.onlyLoanedOut)}
+              />
+            </div>
+            {meepleOptions && meepleOptions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  Bei
+                </span>
+                <FilterPill
+                  label="Alle"
+                  href={href({ bei: undefined })}
+                  active={!filters.atMeepleId}
+                />
+                {meepleOptions.map((meeple) => (
+                  <FilterPill
+                    key={meeple.id}
+                    label={meeple.displayName}
+                    href={href({ bei: meeple.id })}
+                    active={filters.atMeepleId === meeple.id}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {visible.map((game) => (
+        {games.map((game) => (
           <GameCard key={game.slug} game={game} />
         ))}
-        {visible.length === 0 && (
+        {games.length === 0 && (
           <p className="text-muted-foreground col-span-full text-sm">
             Keine Spiele gefunden.
           </p>

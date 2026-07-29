@@ -66,6 +66,12 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: FileText,
         section: "Öffentlich",
       },
+      {
+        label: "Ludothek",
+        href: "/ludothek",
+        icon: Dice5,
+        section: "Öffentlich",
+      },
     ],
   },
   {
@@ -76,12 +82,6 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Mein Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
-        section: "Mitgliederbereich",
-      },
-      {
-        label: "Ludothek",
-        href: "/ludothek",
-        icon: Dice5,
         section: "Mitgliederbereich",
       },
       {

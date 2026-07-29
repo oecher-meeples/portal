@@ -1,16 +1,39 @@
-﻿import Link from "next/link";
-import type { BoardGame } from "@/data/games";
-import { STATUS_LABELS } from "@/data/games";
+import Link from "next/link";
+import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
+import type { GameZustand } from "@/lib/ludothek/holdings";
 
-const STATUS_TONE: Record<BoardGame["status"], StatusTone> = {
-  AVAILABLE: "positive",
-  BORROWED: "warning",
-  MAINTENANCE: "info",
+const ZUSTAND_TONE: Record<GameZustand, StatusTone> = {
+  frei: "positive",
+  ausgeliehen: "info",
+  wartung: "warning",
+  "nicht-erfasst": "neutral",
 };
 
-export function GameCard({ game }: { game: BoardGame }) {
+const ZUSTAND_LABELS: Record<GameZustand, string> = {
+  frei: "Frei",
+  ausgeliehen: "Ausgeliehen",
+  wartung: "Wartung",
+  "nicht-erfasst": "Nicht erfasst",
+};
+
+function playersAndDuration(game: PublicLudothekGame) {
+  const players =
+    game.minPlayers && game.maxPlayers
+      ? `${game.minPlayers}–${game.maxPlayers}`
+      : (game.minPlayers ?? game.maxPlayers ?? "?");
+  const duration = game.playTimeMinutes ? `${game.playTimeMinutes}’` : "";
+  return [players ? `${players} Spieler` : null, duration].filter(Boolean).join(" · ");
+}
+
+export function GameCard({
+  game,
+}: {
+  game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+}) {
+  const zustand = "zustand" in game ? game.zustand : undefined;
+
   return (
     <Link
       href={`/ludothek/${game.slug}`}
@@ -22,13 +45,15 @@ export function GameCard({ game }: { game: BoardGame }) {
           {game.title}
         </h3>
         <p className="text-muted-foreground text-sm">
-          {game.players} Â· {game.duration}
+          {playersAndDuration(game)}
         </p>
-        <StatusPill
-          label={STATUS_LABELS[game.status]}
-          tone={STATUS_TONE[game.status]}
-          className="mt-auto w-fit"
-        />
+        {zustand && (
+          <StatusPill
+            label={ZUSTAND_LABELS[zustand]}
+            tone={ZUSTAND_TONE[zustand]}
+            className="mt-auto w-fit"
+          />
+        )}
       </div>
     </Link>
   );
