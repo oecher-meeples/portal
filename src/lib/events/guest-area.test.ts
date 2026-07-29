@@ -13,6 +13,7 @@ const {
   isGameInEventRoom,
   getAttendingExplainers,
   getFreeGamesInRoom,
+  getGuestFleaMarketItems,
 } = await import("./guest-area");
 
 describe("unitOrAncestorAssigned", () => {
@@ -158,5 +159,36 @@ describe("getFreeGamesInRoom", () => {
     const result = await getFreeGamesInRoom("event-1", { players: "3-4" });
 
     expect(result.map((g) => g.id)).toEqual(["game-1"]);
+  });
+});
+
+describe("getGuestFleaMarketItems", () => {
+  it("never includes PENDING items", async () => {
+    prismaMock.fleaMarketItem.findMany.mockResolvedValue([
+      { id: "item-1", title: "Azul", description: null, priceEuros: 20, status: "FOR_SALE" },
+    ] as never);
+
+    const result = await getGuestFleaMarketItems("event-1");
+
+    expect(result).toEqual([
+      { id: "item-1", title: "Azul", description: null, priceEuros: 20, status: "FOR_SALE" },
+    ]);
+    expect(prismaMock.fleaMarketItem.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { eventId: "event-1", status: { in: ["FOR_SALE", "RESERVED"] } },
+      }),
+    );
+  });
+
+  it("queries only FOR_SALE and RESERVED, excluding SOLD", async () => {
+    prismaMock.fleaMarketItem.findMany.mockResolvedValue([]);
+
+    await getGuestFleaMarketItems("event-1");
+
+    const call = prismaMock.fleaMarketItem.findMany.mock.calls[0][0] as {
+      where: { status: { in: string[] } };
+    };
+    expect(call.where.status.in).not.toContain("SOLD");
+    expect(call.where.status.in).not.toContain("PENDING");
   });
 });

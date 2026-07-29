@@ -13,6 +13,8 @@ import {
   type GuestGameMatch,
 } from "@/components/feature/guest-area/actions";
 import { FreeGamesList, type FreeGameEntry } from "@/components/feature/guest-area/free-games-list";
+import type { GuestFleaMarketItem } from "@/lib/events/guest-area";
+import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/format";
 
 const EXPLAINER_LEVEL_LABELS: Record<string, string> = {
   WITH_MANUAL: "Mit Anleitung",
@@ -38,10 +40,12 @@ export function GuestAreaView({
   eventId,
   eventTitle,
   freeGames,
+  fleaMarketItems,
 }: {
   eventId: string;
   eventTitle: string;
   freeGames: FreeGameEntry[];
+  fleaMarketItems: GuestFleaMarketItem[];
 }) {
   const [state, setState] = useState<ViewState>({ kind: "idle" });
   const [manualInput, setManualInput] = useState("");
@@ -163,6 +167,30 @@ export function GuestAreaView({
       )}
 
       <FreeGamesList games={freeGames} />
+
+      {fleaMarketItems.length > 0 && (
+        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">Bring &amp; Buy Flohmarkt</h2>
+          <ul className="flex flex-col divide-y text-sm">
+            {fleaMarketItems.map((item) => (
+              <li key={item.id} className="flex items-center justify-between py-2">
+                <div>
+                  <p className="font-medium">{item.title}</p>
+                  {item.description && (
+                    <p className="text-muted-foreground text-xs">{item.description}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>{item.priceEuros} €</span>
+                  <span className="text-muted-foreground text-xs">
+                    {FLEA_MARKET_ITEM_STATUS_LABELS[item.status]}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

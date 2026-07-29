@@ -1,4 +1,4 @@
-import type { ExplainerExperienceLevel } from "@prisma/client";
+import type { ExplainerExperienceLevel, FleaMarketItemStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
@@ -130,4 +130,31 @@ export async function getFreeGamesInRoom(
     if (!unitId) return false;
     return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
   });
+}
+
+export type GuestFleaMarketItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  priceEuros: number;
+  status: FleaMarketItemStatus;
+};
+
+const GUEST_VISIBLE_STATUSES: FleaMarketItemStatus[] = ["FOR_SALE", "RESERVED"];
+
+/**
+ * Flea market items visible in the guest area: never PENDING (not yet approved)
+ * and SOLD items are hidden too, since they can no longer be bought (CONTEXT.md
+ * "Flohmarkt-Artikel"). A separate, read-only query — no duplicate of the
+ * cashier-side query in `src/components/feature/admin-bringbuy/cashier-actions.ts`.
+ */
+export async function getGuestFleaMarketItems(
+  eventId: string,
+): Promise<GuestFleaMarketItem[]> {
+  const items = await prisma.fleaMarketItem.findMany({
+    where: { eventId, status: { in: GUEST_VISIBLE_STATUSES } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, title: true, description: true, priceEuros: true, status: true },
+  });
+  return items;
 }
