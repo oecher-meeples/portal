@@ -85,6 +85,12 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Mitgliederbereich",
       },
       {
+        label: "Interner Newsroom",
+        href: "/dashboard/news",
+        icon: Newspaper,
+        section: "Mitgliederbereich",
+      },
+      {
         label: "QR-/EAN-Scan",
         href: "/scan",
         icon: ScanLine,

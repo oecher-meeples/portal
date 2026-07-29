@@ -48,6 +48,7 @@ export function PostForm({
   const [instagram, setInstagram] = useState(
     initialValues?.instagram ?? false,
   );
+  const [internal, setInternal] = useState(initialValues?.internal ?? false);
   const [coverImageUrl, setCoverImageUrl] = useState(
     initialValues?.coverImageUrl ?? "",
   );
@@ -107,6 +108,7 @@ export function PostForm({
       author,
       body,
       instagram,
+      internal,
       coverImageUrl: coverImageUrl || undefined,
     };
     const result = postId
@@ -244,10 +246,24 @@ export function PostForm({
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
+            checked={internal}
+            onChange={(event) => setInternal(event.target.checked)}
+          />
+          Nur intern (nur für eingeloggte Mitglieder sichtbar)
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
             checked={instagram}
+            disabled={internal}
             onChange={(event) => setInstagram(event.target.checked)}
           />
           Auch auf Instagram teilen
+          {internal && (
+            <span className="text-muted-foreground text-xs">
+              (nicht möglich für interne Beiträge)
+            </span>
+          )}
         </label>
         {instagramStatus && (
           <div className="flex items-center gap-2">

@@ -3,8 +3,13 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
 
-const { getAllContent, getContentBySlug, getLatestPosts, getUpcomingEvents } =
-  await import("@/lib/content");
+const {
+  canViewContentItem,
+  getAllContent,
+  getContentBySlug,
+  getLatestPosts,
+  getUpcomingEvents,
+} = await import("@/lib/content");
 
 function makePost(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -79,10 +84,35 @@ describe("getUpcomingEvents", () => {
 
     expect(result.every((item) => item.type !== "blog")).toBe(true);
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
-      where: { type: { not: "BLOG" } },
+      where: { type: { not: "BLOG" }, internal: { not: true } },
       orderBy: { date: "asc" },
       take: 10,
     });
+  });
+
+  it("excludes internal posts from the public preview", async () => {
+    prismaMock.post.findMany.mockResolvedValue([]);
+
+    await getUpcomingEvents(5);
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ internal: { not: true } }) }),
+    );
+  });
+});
+
+describe("canViewContentItem", () => {
+  it("allows a public post regardless of session", () => {
+    expect(canViewContentItem({ internal: undefined }, false)).toBe(true);
+    expect(canViewContentItem({ internal: undefined }, true)).toBe(true);
+  });
+
+  it("blocks an internal post without a session — detail call must 404", () => {
+    expect(canViewContentItem({ internal: true }, false)).toBe(false);
+  });
+
+  it("allows an internal post with a session", () => {
+    expect(canViewContentItem({ internal: true }, true)).toBe(true);
   });
 });
 
@@ -93,6 +123,7 @@ describe("getLatestPosts", () => {
     await getLatestPosts(3);
 
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
+      where: { internal: { not: true } },
       orderBy: { date: "desc" },
       take: 3,
     });

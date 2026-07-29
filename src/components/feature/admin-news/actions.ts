@@ -73,7 +73,9 @@ export async function createPost(input: PostInput) {
     data: {
       slug: slugify(input.title),
       ...toPostData(input),
-      instagramStatus: input.instagram ? InstagramStatus.PENDING : null,
+      // Interne Beiträge werden nie in die Instagram-Queue eingereiht.
+      instagramStatus:
+        input.instagram && !input.internal ? InstagramStatus.PENDING : null,
     },
   });
 
@@ -91,8 +93,12 @@ export async function updatePost(id: string, input: PostInput) {
     return { error: validationError };
   }
 
-  let instagramStatus: InstagramStatus | undefined;
-  if (input.instagram) {
+  let instagramStatus: InstagramStatus | null | undefined;
+  if (input.internal) {
+    // Interne Beiträge werden nie in die Instagram-Queue eingereiht, auch
+    // wenn sie es vorher schon waren.
+    instagramStatus = null;
+  } else if (input.instagram) {
     const existing = await prisma.post.findUnique({
       where: { id },
       select: { instagramStatus: true },
@@ -106,7 +112,7 @@ export async function updatePost(id: string, input: PostInput) {
     where: { id },
     data: {
       ...toPostData(input),
-      ...(instagramStatus ? { instagramStatus } : {}),
+      ...(instagramStatus !== undefined ? { instagramStatus } : {}),
     },
   });
 

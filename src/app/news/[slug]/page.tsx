@@ -1,11 +1,7 @@
 import { notFound } from "next/navigation";
-import { getAllContent, getContentBySlug } from "@/lib/content";
+import { canViewContentItem, getContentBySlug } from "@/lib/content";
+import { getCurrentUser } from "@/lib/auth/server";
 import { PostDetailView } from "@/components/feature/news/post-detail-view";
-
-export async function generateStaticParams() {
-  const items = await getAllContent();
-  return items.map((item) => ({ slug: item.slug }));
-}
 
 export default async function PostDetailPage({
   params,
@@ -15,6 +11,9 @@ export default async function PostDetailPage({
   const { slug } = await params;
   const item = await getContentBySlug(slug);
   if (!item) notFound();
+
+  const user = await getCurrentUser();
+  if (!canViewContentItem(item, user !== null)) notFound();
 
   return <PostDetailView item={item} />;
 }

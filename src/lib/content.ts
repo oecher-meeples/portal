@@ -63,21 +63,32 @@ export async function getContentBySlug(slug: string) {
   return post ? toContentItem(post) : undefined;
 }
 
+/** Public-facing by default — never surfaces internal posts (homepage preview, public calendar). */
 export async function getUpcomingEvents(limit = 3) {
   const posts = await prisma.post.findMany({
-    where: { type: { not: "BLOG" } },
+    where: { type: { not: "BLOG" }, internal: { not: true } },
     orderBy: { date: "asc" },
     take: limit,
   });
   return posts.map(toContentItem);
 }
 
+/** Public-facing by default — never surfaces internal posts (homepage preview). */
 export async function getLatestPosts(limit = 3) {
   const posts = await prisma.post.findMany({
+    where: { internal: { not: true } },
     orderBy: { date: "desc" },
     take: limit,
   });
   return posts.map(toContentItem);
+}
+
+/** Interne Beiträge sind nur mit Session sichtbar — used to gate the detail page. */
+export function canViewContentItem(
+  item: Pick<ContentItem, "internal">,
+  hasSession: boolean,
+) {
+  return !item.internal || hasSession;
 }
 
 export { TYPE_TO_DB };

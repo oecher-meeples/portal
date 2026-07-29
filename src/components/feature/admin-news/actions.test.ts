@@ -94,6 +94,18 @@ describe("createPost", () => {
       data: expect.objectContaining({ instagramStatus: null }),
     });
   });
+
+  it("never queues an internal post for instagram, even with the flag set", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+
+    await createPost({ ...VALID_INPUT, internal: true, instagram: true });
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ instagramStatus: null, internal: true }),
+    });
+  });
 });
 
 describe("updatePost", () => {
@@ -157,6 +169,19 @@ describe("updatePost", () => {
     expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
     expect(call?.data).not.toHaveProperty("instagramStatus");
+  });
+
+  it("clears an existing instagramStatus when a post becomes internal", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await updatePost("post-1", { ...VALID_INPUT, internal: true, instagram: true });
+
+    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.post.update).toHaveBeenCalledWith({
+      where: { id: "post-1" },
+      data: expect.objectContaining({ instagramStatus: null, internal: true }),
+    });
   });
 });
 
