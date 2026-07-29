@@ -149,7 +149,7 @@ export async function updateBoardGame(id: string, input: BoardGameInput) {
 export async function previewBggImport(bggId: number) {
   const user = await requireGamesManagePermission();
   if (!user) {
-    return { error: "Keine Berechtigung." };
+    return { success: false as const, error: "Keine Berechtigung." };
   }
 
   try {
@@ -157,10 +157,11 @@ export async function previewBggImport(bggId: number) {
     return { success: true as const, data };
   } catch (error) {
     if (error instanceof BggNotFoundError) {
-      return { error: error.message };
+      return { success: false as const, error: error.message };
     }
     if (error instanceof BggApiError) {
       return {
+        success: false as const,
         error: "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
       };
     }

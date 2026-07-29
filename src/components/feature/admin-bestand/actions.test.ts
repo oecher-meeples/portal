@@ -138,7 +138,7 @@ describe("previewBggImport", () => {
 
     const result = await previewBggImport(342942);
 
-    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(result).toEqual({ success: false, error: "Keine Berechtigung." });
     expect(fetchBggGameMock).not.toHaveBeenCalled();
   });
 
@@ -163,6 +163,7 @@ describe("previewBggImport", () => {
     const result = await previewBggImport(999999999);
 
     expect(result).toEqual({
+      success: false,
       error: "BoardGameGeek-Eintrag mit ID 999999999 wurde nicht gefunden.",
     });
   });
@@ -175,6 +176,7 @@ describe("previewBggImport", () => {
     const result = await previewBggImport(342942);
 
     expect(result).toEqual({
+      success: false,
       error:
         "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
     });
