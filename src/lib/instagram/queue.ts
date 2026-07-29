@@ -1,9 +1,15 @@
 import { InstagramStatus, type Post } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveCoverImageUrl } from "@/lib/instagram/cover-image";
-import { createMediaContainer, publishMedia } from "@/lib/instagram/graph-client";
+import {
+  createMediaContainer,
+  publishMedia,
+  refreshLongLivedToken,
+} from "@/lib/instagram/graph-client";
 
 const MAX_ATTEMPTS = 3;
+const REFRESH_THRESHOLD_MS = 10 * 24 * 60 * 60 * 1000;
+const DEFAULT_EXPIRES_IN_SECONDS = 60 * 24 * 60 * 60;
 
 function buildCaption(post: Pick<Post, "title" | "excerpt" | "slug">): string {
   const siteUrl = process.env.PUBLIC_SITE_URL ?? "";
@@ -66,6 +72,31 @@ export async function processPost(post: Post): Promise<boolean> {
       },
     });
     return false;
+  }
+}
+
+export async function refreshConnectionIfNeeded(): Promise<void> {
+  const connection = await prisma.instagramConnection.findFirst();
+  if (!connection) return;
+
+  const msUntilExpiry = connection.expiresAt.getTime() - Date.now();
+  if (msUntilExpiry >= REFRESH_THRESHOLD_MS) return;
+
+  try {
+    const { accessToken, expiresInSeconds } = await refreshLongLivedToken(
+      connection.accessToken,
+    );
+    await prisma.instagramConnection.update({
+      where: { id: connection.id },
+      data: {
+        accessToken,
+        expiresAt: new Date(
+          Date.now() + (expiresInSeconds ?? DEFAULT_EXPIRES_IN_SECONDS) * 1000,
+        ),
+      },
+    });
+  } catch (error) {
+    console.error("Instagram token refresh failed:", error);
   }
 }
 

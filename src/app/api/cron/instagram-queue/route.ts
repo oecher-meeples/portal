@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { processQueue } from "@/lib/instagram/queue";
+import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  await refreshConnectionIfNeeded();
   const summary = await processQueue();
   return NextResponse.json(summary);
 }

@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const processQueueMock = vi.fn();
+const refreshConnectionIfNeededMock = vi.fn();
 vi.mock("@/lib/instagram/queue", () => ({
   processQueue: (...args: unknown[]) => processQueueMock(...args),
+  refreshConnectionIfNeeded: (...args: unknown[]) =>
+    refreshConnectionIfNeededMock(...args),
 }));
 
 const { GET } = await import("./route");
@@ -10,6 +13,7 @@ const { GET } = await import("./route");
 describe("GET /api/cron/instagram-queue", () => {
   beforeEach(() => {
     processQueueMock.mockReset();
+    refreshConnectionIfNeededMock.mockReset();
     process.env.CRON_SECRET = "test-secret";
   });
 
@@ -49,6 +53,7 @@ describe("GET /api/cron/instagram-queue", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(refreshConnectionIfNeededMock).toHaveBeenCalledTimes(1);
     expect(processQueueMock).toHaveBeenCalledTimes(1);
     expect(body).toEqual({ processed: 2, succeeded: 1, failed: 1 });
   });

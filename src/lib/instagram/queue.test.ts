@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
@@ -11,15 +11,17 @@ vi.mock("@/lib/instagram/cover-image", () => ({
 
 const createMediaContainerMock = vi.fn();
 const publishMediaMock = vi.fn();
+const refreshLongLivedTokenMock = vi.fn();
 vi.mock("@/lib/instagram/graph-client", () => ({
   createMediaContainer: (...args: unknown[]) =>
     createMediaContainerMock(...args),
   publishMedia: (...args: unknown[]) => publishMediaMock(...args),
+  refreshLongLivedToken: (...args: unknown[]) =>
+    refreshLongLivedTokenMock(...args),
 }));
 
-const { findDuePosts, processPost, processQueue } = await import(
-  "./queue"
-);
+const { findDuePosts, processPost, processQueue, refreshConnectionIfNeeded } =
+  await import("./queue");
 
 const CONNECTION = {
   id: "connection-1",
@@ -156,5 +158,68 @@ describe("processQueue", () => {
     const summary = await processQueue();
 
     expect(summary).toEqual({ processed: 2, succeeded: 1, failed: 1 });
+  });
+});
+
+describe("refreshConnectionIfNeeded", () => {
+  const NOW = new Date("2026-07-01T00:00:00Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    refreshLongLivedTokenMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does nothing when there is no active connection", async () => {
+    prismaMock.instagramConnection.findFirst.mockResolvedValue(null);
+
+    await refreshConnectionIfNeeded();
+
+    expect(refreshLongLivedTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh when the token is not close to expiring", async () => {
+    prismaMock.instagramConnection.findFirst.mockResolvedValue({
+      ...CONNECTION,
+      expiresAt: new Date(NOW.getTime() + 30 * 24 * 60 * 60 * 1000),
+    } as never);
+
+    await refreshConnectionIfNeeded();
+
+    expect(refreshLongLivedTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("refreshes and updates the connection when the token expires within 10 days", async () => {
+    prismaMock.instagramConnection.findFirst.mockResolvedValue({
+      ...CONNECTION,
+      expiresAt: new Date(NOW.getTime() + 5 * 24 * 60 * 60 * 1000),
+    } as never);
+    refreshLongLivedTokenMock.mockResolvedValue({
+      accessToken: "refreshed-token",
+      expiresInSeconds: 5_184_000,
+    });
+
+    await refreshConnectionIfNeeded();
+
+    expect(refreshLongLivedTokenMock).toHaveBeenCalledWith("token");
+    expect(prismaMock.instagramConnection.update).toHaveBeenCalledWith({
+      where: { id: "connection-1" },
+      data: expect.objectContaining({ accessToken: "refreshed-token" }),
+    });
+  });
+
+  it("does not throw and leaves the connection untouched when the refresh fails", async () => {
+    prismaMock.instagramConnection.findFirst.mockResolvedValue({
+      ...CONNECTION,
+      expiresAt: new Date(NOW.getTime() + 5 * 24 * 60 * 60 * 1000),
+    } as never);
+    refreshLongLivedTokenMock.mockRejectedValue(new Error("boom"));
+
+    await expect(refreshConnectionIfNeeded()).resolves.toBeUndefined();
+    expect(prismaMock.instagramConnection.update).not.toHaveBeenCalled();
   });
 });
