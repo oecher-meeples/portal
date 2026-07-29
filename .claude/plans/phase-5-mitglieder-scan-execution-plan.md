@@ -131,7 +131,8 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
       _Definition of Done:_ Test gegen einen gemockten Prisma-Client: jedes Spiel hat danach genau einen offenen Aufenthalt; `quantity: 3` erzeugt drei Datensätze mit eindeutigen Slugs; gleicher Freitext erzeugt nur einen Karton; zweiter Lauf ändert nichts. `pnpm test` grün.
       `git commit -m "feat: migrate existing board games into storage units and holdings"`
 
-- [ ] **10. Codes und EAN**
+- [x] **10. Codes und EAN**
+      _Umsetzungsnotiz:_ Vorgezogen vor Schritt 9 — die Migration braucht die Codegenerierung. `parseScannedCode` erkennt Einheiten-Codes über Präfix + alphanumerischen Rest (`OM-SHELF-C4` neben `OM-BOX-0001`), `nextUnitCode` generiert nur fortlaufende numerische Codes je Art.
       `src/lib/inventory/codes.ts`: `nextUnitCode(kind, existingCodes)` (`OM-BOX-0001` / `OM-SHELF-C4`, fortlaufend, lückensicher) und `parseScannedCode(raw)` → `{ kind: "unit" | "ean" | "unknown", value }`. `src/lib/inventory/ean.ts`: `normaliseEan` (Leerzeichen/Bindestriche) und `isValidEan` (EAN-13 und EAN-8 inkl. Prüfsumme).
       _Definition of Done:_ Tests decken ab: Codeformat und Fortlaufen inkl. Lücken; Regal- vs. Karton-Präfix; Parsing von Karton-Code, Regal-Code, gültiger EAN und Unsinn; gültige und ungültige Prüfsummen; Normalisierung. `pnpm test` grün.
       `git commit -m "feat: add storage unit code generation and ean validation"`
