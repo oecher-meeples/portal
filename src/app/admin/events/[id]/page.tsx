@@ -11,15 +11,25 @@ export default async function AdminEventDetailPage({
   await requireAdmin();
   const { id } = await params;
 
-  const event = await prisma.event.findUnique({
-    where: { id },
-    include: {
-      shifts: {
-        orderBy: { startsAt: "asc" },
-        include: { bookings: { select: { uncertain: true } } },
+  const [event, shelves] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id },
+      include: {
+        shifts: {
+          orderBy: { startsAt: "asc" },
+          include: { bookings: { select: { uncertain: true } } },
+        },
+        shelfAssignments: {
+          include: { unit: { select: { id: true, label: true } } },
+        },
       },
-    },
-  });
+    }),
+    prisma.storageUnit.findMany({
+      where: { kind: "SHELF", retiredAt: null },
+      orderBy: { label: "asc" },
+      select: { id: true, label: true },
+    }),
+  ]);
 
   if (!event) {
     notFound();
@@ -34,7 +44,22 @@ export default async function AdminEventDetailPage({
     bookings: shift.bookings,
   }));
 
+  const assignedShelfIds = new Set(
+    event.shelfAssignments.map((assignment) => assignment.unit.id),
+  );
+  const assignedShelves = event.shelfAssignments.map((assignment) => ({
+    id: assignment.unit.id,
+    label: assignment.unit.label,
+  }));
+  const availableShelves = shelves.filter((shelf) => !assignedShelfIds.has(shelf.id));
+
   return (
-    <EventDetailView eventId={event.id} eventTitle={event.title} shifts={shifts} />
+    <EventDetailView
+      eventId={event.id}
+      eventTitle={event.title}
+      shifts={shifts}
+      assignedShelves={assignedShelves}
+      availableShelves={availableShelves}
+    />
   );
 }

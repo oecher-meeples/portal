@@ -10,6 +10,10 @@ import {
 import { StatusPill } from "@/components/ui/status-pill";
 import { ShiftDialog, SHIFT_TYPE_LABELS, type EditableShift } from "@/components/feature/admin-events/shift-dialog";
 import { DeleteShiftButton } from "@/components/feature/admin-events/delete-shift-button";
+import {
+  ShelfAssignmentSection,
+  type ShelfOption,
+} from "@/components/feature/admin-events/shelf-assignment-section";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
 
 const dateTime = new Intl.DateTimeFormat("de-DE", {
@@ -25,10 +29,14 @@ export function EventDetailView({
   eventId,
   eventTitle,
   shifts,
+  assignedShelves,
+  availableShelves,
 }: {
   eventId: string;
   eventTitle: string;
   shifts: ShiftRow[];
+  assignedShelves: ShelfOption[];
+  availableShelves: ShelfOption[];
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -89,6 +97,12 @@ export function EventDetailView({
           </TableBody>
         </Table>
       </div>
+
+      <ShelfAssignmentSection
+        eventId={eventId}
+        assignedShelves={assignedShelves}
+        availableShelves={availableShelves}
+      />
     </div>
   );
 }
