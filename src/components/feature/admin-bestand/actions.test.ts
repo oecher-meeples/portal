@@ -221,4 +221,14 @@ describe("deinventoriseBoardGame", () => {
       },
     });
   });
+
+  it("leaves the game's open holding untouched — only the inventory status changes", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await deinventoriseBoardGame("game-1", "Verkauft 2026");
+
+    expect(prismaMock.gameHolding.update).not.toHaveBeenCalled();
+    expect(prismaMock.gameHolding.updateMany).not.toHaveBeenCalled();
+  });
 });

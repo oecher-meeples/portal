@@ -1,9 +1,8 @@
 import { pathToFileURL } from "node:url";
 import { HoldingOrigin, StorageUnitKind } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
-import { nextUnitCode } from "../src/lib/inventory/codes";
+import { UNSORTIERT_CODE, nextUnitCode } from "../src/lib/inventory/codes";
 
-const UNSORTIERT_CODE = "OM-BOX-0000";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 function slugify(title: string) {

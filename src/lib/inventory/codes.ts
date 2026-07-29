@@ -1,5 +1,8 @@
 import { StorageUnitKind } from "@prisma/client";
 
+/** The fixed unit for games whose physical location has never been recorded. */
+export const UNSORTIERT_CODE = "OM-BOX-0000";
+
 const PREFIXES: Record<StorageUnitKind, string> = {
   BOX: "OM-BOX-",
   SHELF: "OM-SHELF-",
