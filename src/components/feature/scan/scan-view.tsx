@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { useCodeScanner } from "@/components/feature/scan/use-code-scanner";
 import { GameActionsPanel } from "@/components/feature/scan/game-actions-panel";
+import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
 import {
   scanPlaceGameInUnit,
   scanResolveCode,
@@ -24,6 +25,7 @@ type ViewState =
   | { kind: "unknown"; raw: string }
   | { kind: "select-game"; games: { id: string; title: string }[] }
   | { kind: "game"; boardGameId: string }
+  | { kind: "pruefen"; boardGameId: string; title: string }
   | { kind: "unit"; unitId: string; code: string; label: string; contents: string[] };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -80,7 +82,12 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
     }
 
     if (resolved.games.length === 1) {
-      setState({ kind: "game", boardGameId: resolved.games[0].id });
+      const game = resolved.games[0];
+      setState(
+        seriesMode?.type === "pruefen"
+          ? { kind: "pruefen", boardGameId: game.id, title: game.title }
+          : { kind: "game", boardGameId: game.id },
+      );
       return;
     }
     setState({
@@ -226,7 +233,13 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                       key={game.id}
                       type="button"
                       className="hover:bg-muted rounded-md border px-3 py-2 text-left text-sm"
-                      onClick={() => setState({ kind: "game", boardGameId: game.id })}
+                      onClick={() =>
+                        setState(
+                          seriesMode?.type === "pruefen"
+                            ? { kind: "pruefen", boardGameId: game.id, title: game.title }
+                            : { kind: "game", boardGameId: game.id },
+                        )
+                      }
                     >
                       {game.title}
                     </button>
@@ -239,6 +252,14 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
               <GameActionsPanel
                 boardGameId={state.boardGameId}
                 seriesMode={seriesMode}
+                onDone={reset}
+              />
+            )}
+
+            {state.kind === "pruefen" && (
+              <PruefbogenPanel
+                boardGameId={state.boardGameId}
+                title={state.title}
                 onDone={reset}
               />
             )}
@@ -282,7 +303,9 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
               </div>
             )}
 
-            {(state.kind === "unknown" || state.kind === "game") && (
+            {(state.kind === "unknown" ||
+              state.kind === "game" ||
+              state.kind === "pruefen") && (
               <Button variant="ghost" size="sm" className="mt-2" onClick={reset}>
                 Zurücksetzen
               </Button>

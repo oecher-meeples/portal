@@ -170,7 +170,7 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden. Fachbegri
       _Definition of Done:_ `actions.test.ts` deckt ab: ohne Session keine Buchung; übergebene Fremd-Meeple-ID beim Ausbuchen wird ignoriert/abgelehnt; Rückgabe fremder Ausleihen erlaubt; ausgetretener Meeple kann nicht annehmen, aber abgeben; unbekannter Code liefert einen definierten „nicht gefunden"-Rückgabewert statt einer Exception. Manueller Test auf einem Smartphone: EAN und Einheiten-QR werden erkannt. `pnpm test` grün.
       `git commit -m "feat: add camera scan view with context-aware holding actions"`
 
-- [ ] **16. Vollständigkeitsprüfung**
+- [x] **16. Vollständigkeitsprüfung**
       `src/components/feature/scan/inventory-actions.ts`: `confirmGameCondition(boardGameId, condition)` (setzt `condition`, `lastCheckedAt`, löscht das Prüf-Flag), `reportGameDefect(boardGameId, note)` (setzt `condition` mit Mangelvermerk, `lastCheckedAt`, `status: MAINTENANCE`, Prüf-Flag bleibt), `clearGameDefect(boardGameId)` (zurück auf `ACTIVE`) — Zustandsbestätigung und Mangelmeldung für **jedes** Mitglied, `clearGameDefect` nur mit `games:manage`. UI: Prüfbogen-Panel nach dem Scan im Serienmodus „Prüfen", Pflicht-Notiz bei Mangel.
       _Definition of Done:_ Tests decken ab: Zustandsbestätigung setzt `lastCheckedAt` und löscht das Prüf-Flag; Mangelmeldung setzt `MAINTENANCE` und lehnt eine leere Notiz ab; `clearGameDefect` ohne `games:manage` schlägt fehl; ein Spiel mit gesetztem Prüf-Flag bleibt ausleihbar. `pnpm test` grün.
       `git commit -m "feat: add completeness check with defect reporting"`

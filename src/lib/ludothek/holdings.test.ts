@@ -82,6 +82,21 @@ describe("borrowGame", () => {
     });
   });
 
+  it("allows borrowing a game whose completeness check is still pending", async () => {
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: GAME_ID,
+      status: "ACTIVE",
+      needsCompletenessCheck: true,
+    } as never);
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+
+    await expect(
+      borrowGame({ boardGameId: GAME_ID, meepleId: MEEPLE_A, recordedByMeepleId: MEEPLE_A }),
+    ).resolves.toBeDefined();
+  });
+
   it("rejects borrowing a game that is already with a person", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
       openHolding({ meepleId: MEEPLE_B }) as never,
