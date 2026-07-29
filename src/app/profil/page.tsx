@@ -1,8 +1,8 @@
 import { requireMember } from "@/lib/session";
-import { ProfilMockView } from "@/components/feature/profil/profil-mock-view";
+import { ProfilView } from "@/components/feature/profil/profil-view";
 
 export default async function ProfilPage() {
-  await requireMember();
+  const { meeple, membershipState } = await requireMember();
 
-  return <ProfilMockView />;
+  return <ProfilView meeple={meeple} membershipState={membershipState} />;
 }

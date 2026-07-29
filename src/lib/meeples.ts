@@ -21,13 +21,6 @@ export type AuthUser = {
   email?: string | null;
 };
 
-export const MEMBERSHIP_STATE_LABELS: Record<MembershipState, string> = {
-  aktiv: "aktiv",
-  gekuendigt: "gekündigt",
-  ausgetreten: "ausgetreten",
-  anonymisiert: "anonymisiert",
-};
-
 export function getMembershipState(
   meeple: MembershipDates,
   now: Date = new Date(),
