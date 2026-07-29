@@ -20,6 +20,11 @@ enum InstagramStatus {
   FAILED
 }
 
+enum GameInventoryStatus {
+  ACTIVE
+  DEINVENTARISED
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -87,6 +92,30 @@ model Invite {
   redeemedAt      DateTime?
 
   @@map("invites")
+}
+
+model BoardGame {
+  id              String              @id @default(cuid())
+  slug            String              @unique
+  title           String
+  bggId           Int?                @unique
+  minPlayers      Int?
+  maxPlayers      Int?
+  playTimeMinutes Int?
+  weight          Float?
+  imageUrl        String?
+  description     String?
+  mechanics       String[]
+  quantity        Int                 @default(1)
+  location        String?
+  condition       String?
+  status          GameInventoryStatus @default(ACTIVE)
+  archivedAt      DateTime?
+  archivedReason  String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@map("board_games")
 }
 
 model InstagramConnection {

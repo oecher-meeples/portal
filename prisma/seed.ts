@@ -16,6 +16,10 @@ const PERMISSIONS = [
     key: "instagram:connect",
     description: "Instagram-Verbindung verwalten (OAuth verbinden/trennen)",
   },
+  {
+    key: "games:manage",
+    description: "Ludothek-Bestand verwalten (anlegen, bearbeiten, deinventarisieren)",
+  },
 ];
 
 const ROLES = [
