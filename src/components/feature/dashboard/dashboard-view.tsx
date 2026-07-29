@@ -28,6 +28,7 @@ type DashboardViewProps = {
   unconfirmedHandovers: PendingHolding[];
   unconfirmedReturns: PendingHolding[];
   ownOpenLfgCount: number;
+  upcomingShiftCount: number;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
 };
 
@@ -40,6 +41,7 @@ export function DashboardView({
   unconfirmedHandovers,
   unconfirmedReturns,
   ownOpenLfgCount,
+  upcomingShiftCount,
   resignationNotice,
 }: DashboardViewProps) {
   return (
@@ -78,7 +80,13 @@ export function DashboardView({
         <Link href="/lfg">
           <StatTile label="Offene Gesuche" value={ownOpenLfgCount} hint="von dir" />
         </Link>
-        <StatTile label="Helfer-Schichten" value="—" hint="folgt in Phase 6" />
+        <Link href="/helfer">
+          <StatTile
+            label="Anstehende Schichten"
+            value={upcomingShiftCount}
+            hint="eigene Zusagen"
+          />
+        </Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

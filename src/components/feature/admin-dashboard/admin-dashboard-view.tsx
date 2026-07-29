@@ -17,6 +17,7 @@ export type AdminDashboardStats = {
   gamesInStock: number;
   unregisteredGames: number;
   openChecks: number;
+  activeEvents: number;
 };
 
 export function AdminDashboardView({ stats }: { stats: AdminDashboardStats }) {
@@ -35,6 +36,7 @@ export function AdminDashboardView({ stats }: { stats: AdminDashboardStats }) {
         <StatTile label="Spiele im Bestand" value={stats.gamesInStock} />
         <StatTile label="Nicht erfasst" value={stats.unregisteredGames} />
         <StatTile label="Prüfungen offen" value={stats.openChecks} />
+        <StatTile label="Aktive Events" value={stats.activeEvents} />
       </div>
 
       <div className="flex flex-col gap-3">

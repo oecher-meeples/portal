@@ -1,7 +1,7 @@
 import { requireMember } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getAllContent } from "@/lib/content";
-import { summariseMemberHoldings } from "@/lib/dashboard";
+import { countUpcomingShiftBookings, summariseMemberHoldings } from "@/lib/dashboard";
 import { DashboardView } from "@/components/feature/dashboard/dashboard-view";
 
 const dateFormatter = new Intl.DateTimeFormat("de-DE");
@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   const { user, meeple, membershipState } = await requireMember();
   const internalNews = (await getAllContent()).filter((item) => item.internal);
 
-  const [holdings, units, ownOpenLfgCount] = await Promise.all([
+  const [holdings, units, ownOpenLfgCount, shiftBookings] = await Promise.all([
     prisma.gameHolding.findMany({
       where: { endedAt: null },
       include: { boardGame: { select: { title: true } } },
@@ -21,7 +21,13 @@ export default async function DashboardPage() {
     prisma.lfgPost.count({
       where: { createdByMeepleId: meeple.id, closedAt: null },
     }),
+    prisma.shiftBooking.findMany({
+      where: { meepleId: meeple.id },
+      select: { meepleId: true, shift: { select: { endsAt: true } } },
+    }),
   ]);
+
+  const upcomingShiftCount = countUpcomingShiftBookings(meeple.id, shiftBookings);
 
   const gameTitleByHoldingId = new Map(
     holdings.map((h) => [h.id, h.boardGame.title]),
@@ -53,6 +59,7 @@ export default async function DashboardPage() {
         gameTitle: gameTitleByHoldingId.get(h.id) ?? "",
       }))}
       ownOpenLfgCount={ownOpenLfgCount}
+      upcomingShiftCount={upcomingShiftCount}
       resignationNotice={resignationNotice}
     />
   );

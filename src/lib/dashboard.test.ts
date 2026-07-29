@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { summariseMemberHoldings, type DashboardHolding, type DashboardUnit } from "./dashboard";
+import {
+  countActiveEvents,
+  countUpcomingShiftBookings,
+  summariseMemberHoldings,
+  type DashboardHolding,
+  type DashboardUnit,
+} from "./dashboard";
 
 const MEEPLE = "meeple-1";
 const OTHER = "meeple-2";
@@ -101,5 +107,35 @@ describe("summariseMemberHoldings", () => {
       unconfirmedHandovers: [],
       unconfirmedReturns: [],
     });
+  });
+});
+
+const NOW = new Date("2026-08-01T00:00:00Z");
+
+describe("countUpcomingShiftBookings", () => {
+  it("counts only the caller's own bookings for shifts that haven't ended", () => {
+    const bookings = [
+      { meepleId: MEEPLE, shift: { endsAt: new Date("2026-08-10T00:00:00Z") } },
+      { meepleId: MEEPLE, shift: { endsAt: new Date("2026-07-01T00:00:00Z") } },
+      { meepleId: OTHER, shift: { endsAt: new Date("2026-08-10T00:00:00Z") } },
+    ];
+
+    expect(countUpcomingShiftBookings(MEEPLE, bookings, NOW)).toBe(1);
+  });
+
+  it("returns 0 for no bookings", () => {
+    expect(countUpcomingShiftBookings(MEEPLE, [], NOW)).toBe(0);
+  });
+});
+
+describe("countActiveEvents", () => {
+  it("counts events without an end date and events ending in the future", () => {
+    const events = [
+      { endsAt: null },
+      { endsAt: new Date("2026-09-01T00:00:00Z") },
+      { endsAt: new Date("2026-07-01T00:00:00Z") },
+    ];
+
+    expect(countActiveEvents(events, NOW)).toBe(2);
   });
 });

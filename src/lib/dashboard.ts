@@ -55,3 +55,35 @@ export function summariseMemberHoldings(
     ),
   };
 }
+
+export type DashboardShiftBooking = {
+  meepleId: string;
+  shift: { endsAt: Date };
+};
+
+/**
+ * Own shift bookings for shifts that haven't ended yet — a past event's shift
+ * never counts as "anstehend", regardless of when it was booked.
+ */
+export function countUpcomingShiftBookings(
+  meepleId: string,
+  bookings: DashboardShiftBooking[],
+  now: Date = new Date(),
+): number {
+  return bookings.filter(
+    (b) => b.meepleId === meepleId && b.shift.endsAt.getTime() >= now.getTime(),
+  ).length;
+}
+
+export type DashboardEvent = {
+  endsAt: Date | null;
+};
+
+/** An event is "active" while it has no end date yet, or hasn't ended. */
+export function countActiveEvents(
+  events: DashboardEvent[],
+  now: Date = new Date(),
+): number {
+  return events.filter((e) => e.endsAt === null || e.endsAt.getTime() >= now.getTime())
+    .length;
+}
