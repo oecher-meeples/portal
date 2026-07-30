@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+# Ein laufender Check pro Branch reicht — ältere Läufe abbrechen.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma Client generieren
+        run: pnpm prisma generate
+
+      # Formatierung zuerst — der billigste Check.
+      - name: Formatierung
+        run: pnpm run format:check
+
+      # Typen.
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      # Enthält die Architekturregeln: Schichten-Import-Richtung,
+      # Feature-Isolation und max. 400 Zeilen pro Datei.
+      - name: Lint & Architekturregeln
+        run: pnpm run lint
+
+      - name: Tests
+        run: pnpm run test
+
+      # Nur Information: macht neue Duplikate sichtbar, bricht den Build nicht.
+      - name: Duplikate (DRY-Hinweis, nicht blockierend)
+        run: pnpm run dup
+        continue-on-error: true

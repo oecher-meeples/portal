@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireMember } from "@/lib/session";
+import { requireMember } from "@/lib/auth/session";
 import { MARKET_LISTINGS, getMarketListing } from "@/data/market";
 import { MarketListingMockView } from "@/components/feature/markt/market-listing-mock-view";
 

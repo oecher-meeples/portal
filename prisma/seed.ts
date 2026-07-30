@@ -1,5 +1,5 @@
 import { hashPassword } from "better-auth/crypto";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "../src/lib/utils/prisma";
 
 const ADMIN_USER = {
   email: process.env.SEED_ADMIN_EMAIL ?? "admin@jan-herwig.de",
@@ -45,7 +45,8 @@ const ROLES = [
   },
   {
     name: "kassenwart",
-    description: "Beitragseinzug — darf Bankdaten entschlüsseln, jeder Zugriff wird protokolliert",
+    description:
+      "Beitragseinzug — darf Bankdaten entschlüsseln, jeder Zugriff wird protokolliert",
     permissionKeys: ["bank:read"],
   },
   {

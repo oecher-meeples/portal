@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
 
 export async function markAttending(eventId: string) {
   const meeple = await requireMeeple();
@@ -12,7 +12,8 @@ export async function markAttending(eventId: string) {
   });
   if (hasExplainerGame === 0) {
     return {
-      error: "Nur Erklärbären mit mindestens einem Spiel im Profil können sich anmelden.",
+      error:
+        "Nur Erklärbären mit mindestens einem Spiel im Profil können sich anmelden.",
     };
   }
 

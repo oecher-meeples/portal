@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
-import { requireMember } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { requireMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
+import {
+  findUpcomingEvents,
+  resolveSelectedEventId,
+} from "@/lib/events/upcoming";
 import { hasFleaMarketRights } from "@/lib/events/shift-rights";
 import { computeFleaMarketStats } from "@/lib/bringbuy/stats";
 import {
@@ -17,15 +21,8 @@ export default async function AdminBringBuyPage({
   const { meeple } = await requireMember();
   const { event: requestedEventId } = await searchParams;
 
-  const events = await prisma.event.findMany({
-    where: { OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }] },
-    orderBy: { startsAt: "asc" },
-    select: { id: true, title: true },
-  });
-
-  const selectedEventId = events.some((event) => event.id === requestedEventId)
-    ? requestedEventId!
-    : (events[0]?.id ?? null);
+  const events = await findUpcomingEvents();
+  const selectedEventId = resolveSelectedEventId(events, requestedEventId);
 
   if (!selectedEventId) {
     return (

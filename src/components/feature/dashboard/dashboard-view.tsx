@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
-import { formatDateShort } from "@/lib/format";
-import type { requireMember } from "@/lib/session";
-import type { getAllContent } from "@/lib/content";
-import { ConfirmHoldingButton } from "@/components/feature/dashboard/confirm-holding-button";
+import { formatDateShort } from "@/lib/utils/format";
+import type { requireMember } from "@/lib/auth/session";
+import type { getAllContent } from "@/lib/content/content";
+import { ActionButton } from "@/components/ui/action-button";
+import { scanConfirmHolding } from "@/lib/ludothek/holding-actions";
 
 const QUICK_LINKS = [
   { href: "/ludothek", label: "Ludothek", icon: Dice5 },
@@ -54,8 +55,7 @@ export function DashboardView({
 
       {resignationNotice && (
         <div className="bg-primary/10 rounded-md p-4 text-sm">
-          Deine Kündigung ist vermerkt, wirksam zum{" "}
-          {resignationNotice.endsAt}.
+          Deine Kündigung ist vermerkt, wirksam zum {resignationNotice.endsAt}.
           {resignationNotice.openHoldingsCount > 0 && (
             <>
               {" "}
@@ -68,7 +68,11 @@ export function DashboardView({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}>
-          <StatTile label="Eigene Ausleihen" value={ownLoansCount} hint="Spiele" />
+          <StatTile
+            label="Eigene Ausleihen"
+            value={ownLoansCount}
+            hint="Spiele"
+          />
         </Link>
         <Link href={`/ludothek?bei=${meepleId}`}>
           <StatTile
@@ -78,7 +82,11 @@ export function DashboardView({
           />
         </Link>
         <Link href="/lfg">
-          <StatTile label="Offene Gesuche" value={ownOpenLfgCount} hint="von dir" />
+          <StatTile
+            label="Offene Gesuche"
+            value={ownOpenLfgCount}
+            hint="von dir"
+          />
         </Link>
         <Link href="/helfer">
           <StatTile
@@ -141,7 +149,12 @@ export function DashboardView({
                 className="flex items-center justify-between gap-3 py-2.5"
               >
                 <span>{holding.gameTitle} — Weitergabe bestätigen</span>
-                <ConfirmHoldingButton holdingId={holding.id} />
+                <ActionButton
+                  size="sm"
+                  action={scanConfirmHolding.bind(null, holding.id)}
+                >
+                  Bestätigen
+                </ActionButton>
               </li>
             ))}
             {unconfirmedReturns.map((holding) => (
@@ -150,7 +163,10 @@ export function DashboardView({
                 className="flex items-center justify-between gap-3 py-2.5"
               >
                 <span>{holding.gameTitle} — Rückgabe: jetzt einlagern</span>
-                <Link href="/scan" className="text-primary text-sm hover:underline">
+                <Link
+                  href="/scan"
+                  className="text-primary text-sm hover:underline"
+                >
                   Zum Scan →
                 </Link>
               </li>

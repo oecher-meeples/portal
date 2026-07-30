@@ -1,6 +1,6 @@
-import { requireAdmin } from "@/lib/session";
+import { requireAdmin } from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { SettingsCard } from "@/components/feature/admin-settings/settings-card";
 
 export default async function AdminSettingsPage() {

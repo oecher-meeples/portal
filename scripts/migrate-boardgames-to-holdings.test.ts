@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "../src/lib/__mocks__/prisma";
 
-vi.mock("../src/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("../src/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { migrateBoardGamesToHoldings } = await import(
-  "./migrate-boardgames-to-holdings"
-);
+const { migrateBoardGamesToHoldings } =
+  await import("./migrate-boardgames-to-holdings");
 
 const SYSTEM_MEEPLE = { id: "meeple-system", displayName: "Admin" };
 const UNSORTIERT = { id: "unit-unsortiert", code: "OM-BOX-0000" };

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { getFreeGamesInRoom, getGuestFleaMarketItems } from "@/lib/events/guest-area";
+import { prisma } from "@/lib/utils/prisma";
+import {
+  getFreeGamesInRoom,
+  getGuestFleaMarketItems,
+} from "@/lib/events/guest-area";
 import { GuestAreaView } from "@/components/feature/guest-area/guest-area-view";
 import type { FreeGameEntry } from "@/components/feature/guest-area/free-games-list";
 

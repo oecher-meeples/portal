@@ -1,12 +1,8 @@
-import { prisma } from "@/lib/prisma";
-import { maskIban } from "@/lib/crypto";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { maskIban } from "@/lib/utils/crypto";
+import { requirePermission } from "@/lib/auth/permissions";
 import { AdminBankView } from "@/components/feature/admin-bank/admin-bank-view";
-
-const dateTime = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
+import { formatDateTime } from "@/lib/utils/format";
 
 export default async function AdminBankPage() {
   await requirePermission("bank:read");
@@ -46,7 +42,7 @@ export default async function AdminBankPage() {
       }))}
       logs={logs.map((log) => ({
         id: log.id,
-        at: dateTime.format(log.at),
+        at: formatDateTime(log.at),
         kind: log.kind,
         accessedBy: log.accessedBy.displayName,
         subject: log.subject?.displayName ?? null,

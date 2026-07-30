@@ -1,6 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { GameInventoryStatus } from "@prisma/client";
-import { isLoanHolding, zustandFromHoldingAndUnit } from "@/lib/ludothek/holdings";
+import {
+  isLoanHolding,
+  zustandFromHoldingAndUnit,
+} from "@/lib/ludothek/holdings";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 
 const MAX_UNIT_CHAIN_DEPTH = 20;
@@ -22,7 +25,12 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       },
     }),
     prisma.storageUnit.findMany({
-      select: { id: true, label: true, parentUnitId: true, keeperMeepleId: true },
+      select: {
+        id: true,
+        label: true,
+        parentUnitId: true,
+        keeperMeepleId: true,
+      },
     }),
   ]);
 

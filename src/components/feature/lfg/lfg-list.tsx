@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
-import { JoinLfgButton } from "@/components/feature/lfg/join-lfg-button";
-import type { LfgStatus } from "@/lib/lfg";
+import { ActionButton } from "@/components/ui/action-button";
+import {
+  LfgStatusPill,
+  lfgStatusLabel,
+} from "@/components/entities/lfg-status-pill";
+import { joinLfgPost } from "@/components/feature/lfg/actions";
+import type { LfgStatus } from "@/lib/content/lfg";
 
 export type LfgPostSummary = {
   id: string;
@@ -16,20 +20,6 @@ export type LfgPostSummary = {
   isParticipant: boolean;
 };
 
-const STATUS_LABELS: Record<LfgStatus, string> = {
-  offen: "Offen",
-  voll: "Voll",
-  abgelaufen: "Abgelaufen",
-  geschlossen: "Geschlossen",
-};
-
-const STATUS_TONE: Record<LfgStatus, StatusTone> = {
-  offen: "positive",
-  voll: "warning",
-  abgelaufen: "neutral",
-  geschlossen: "neutral",
-};
-
 export function LfgList({
   posts,
   showExpiredHref,
@@ -41,7 +31,10 @@ export function LfgList({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <Link href={showExpiredHref} className="text-primary w-fit text-sm hover:underline">
+      <Link
+        href={showExpiredHref}
+        className="text-primary w-fit text-sm hover:underline"
+      >
         {showingExpired ? "Nur aktuelle anzeigen" : "Auch vergangene anzeigen"}
       </Link>
 
@@ -65,23 +58,28 @@ export function LfgList({
                   {post.gameTitle && ` · ${post.gameTitle}`}
                 </p>
               </div>
-              <StatusPill
-                label={STATUS_LABELS[post.status]}
-                tone={STATUS_TONE[post.status]}
-              />
+              <LfgStatusPill status={post.status} />
             </div>
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm">
-                {post.creatorName} · {post.participantCount}/{post.maxParticipants}
+                {post.creatorName} · {post.participantCount}/
+                {post.maxParticipants}
               </div>
               {post.isParticipant ? (
                 <span className="text-muted-foreground text-sm">dabei</span>
               ) : (
-                <JoinLfgButton
-                  postId={post.id}
+                <ActionButton
+                  size="sm"
+                  action={joinLfgPost.bind(null, post.id)}
                   disabled={post.status !== "offen"}
-                  label={post.status === "offen" ? "Mitspielen" : STATUS_LABELS[post.status]}
-                />
+                  pendingLabel="Trage ein…"
+                  wrapperClassName="items-start"
+                  errorClassName="max-w-none text-left"
+                >
+                  {post.status === "offen"
+                    ? "Mitspielen"
+                    : lfgStatusLabel(post.status)}
+                </ActionButton>
               )}
             </div>
           </div>

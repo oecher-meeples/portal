@@ -35,9 +35,9 @@ export function ImportFleaMarketItemsDialog({
   const [open, setOpen] = useState(false);
   const [eventId, setEventId] = useState(events[0]?.id ?? "");
   const [raw, setRaw] = useState("");
-  const [preview, setPreview] = useState<ReturnType<typeof parseFleaMarketCsv> | null>(
-    null,
-  );
+  const [preview, setPreview] = useState<ReturnType<
+    typeof parseFleaMarketCsv
+  > | null>(null);
   const [summary, setSummary] = useState<{ created: number } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -85,7 +85,7 @@ export function ImportFleaMarketItemsDialog({
           <DialogTitle>Artikel per CSV importieren</DialogTitle>
           <DialogDescription>
             Spalten: title,price,description (description optional). Alle Zeilen
-            werden als eigene Artikel im Status „Wartet auf Freigabe" angelegt.
+            werden als eigene Artikel im Status „Wartet auf Freigabe“ angelegt.
           </DialogDescription>
         </DialogHeader>
 
@@ -164,7 +164,9 @@ export function ImportFleaMarketItemsDialog({
         <DialogFooter>
           <Button
             onClick={handleImport}
-            disabled={isSubmitting || !preview || preview.items.length === 0 || !eventId}
+            disabled={
+              isSubmitting || !preview || preview.items.length === 0 || !eventId
+            }
           >
             {isSubmitting ? "Importiere…" : "Import bestätigen"}
           </Button>

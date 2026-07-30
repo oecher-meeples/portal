@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const resolveScannedCodeMock = vi.fn();
 vi.mock("@/lib/ludothek/holdings", () => ({
@@ -84,6 +84,8 @@ describe("getGuestGameDetail", () => {
     const result = await getGuestGameDetail("event-1", "game-1");
 
     expect(result?.isInRoom).toBe(true);
-    expect(result?.explainerVideoUrl).toBe("https://www.youtube.com/watch?v=abc");
+    expect(result?.explainerVideoUrl).toBe(
+      "https://www.youtube.com/watch?v=abc",
+    );
   });
 });

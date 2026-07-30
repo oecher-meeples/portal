@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/format";
+import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/utils/format";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 
 export type ExplainerDirectoryEntry = {

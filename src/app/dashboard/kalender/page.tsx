@@ -1,5 +1,5 @@
-import { requireMember } from "@/lib/session";
-import { getInternalCalendarEvents } from "@/lib/calendar";
+import { requireMember } from "@/lib/auth/session";
+import { getInternalCalendarEvents } from "@/lib/content/calendar";
 import { PageHeading } from "@/components/ui/page-heading";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 

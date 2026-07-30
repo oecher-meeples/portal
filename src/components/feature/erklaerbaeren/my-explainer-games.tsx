@@ -6,7 +6,7 @@ import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/format";
+import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/utils/format";
 import {
   addExplainerGame,
   removeExplainerGame,

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { canViewContentItem, getContentBySlug } from "@/lib/content";
+import { canViewContentItem, getContentBySlug } from "@/lib/content/content";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermissionInCurrentView } from "@/lib/session";
+import { hasPermissionInCurrentView } from "@/lib/auth/session";
 import { PostDetailView } from "@/components/feature/news/post-detail-view";
 
 export default async function PostDetailPage({

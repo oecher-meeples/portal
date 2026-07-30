@@ -1,13 +1,13 @@
 "use server";
 
 import { GameInventoryStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission } from "@/lib/auth/permissions";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
-import { ensureMeeple } from "@/lib/meeples";
+import { ensureMeeple } from "@/lib/members/meeples";
 import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
-import { uniqueSlug } from "@/lib/slug";
+import { uniqueSlug } from "@/lib/utils/slug";
 import {
   BggApiError,
   BggNotFoundError,
@@ -68,7 +68,10 @@ function toBoardGameData(input: BoardGameInput) {
 }
 
 /** Duplicate EANs are allowed by design (ADR 0001) — surfaced only as a hint. */
-async function duplicateEanHint(ean: string | null | undefined, excludeId?: string) {
+async function duplicateEanHint(
+  ean: string | null | undefined,
+  excludeId?: string,
+) {
   if (!ean) return undefined;
 
   const count = await prisma.boardGame.count({
@@ -170,7 +173,8 @@ export async function previewBggImport(bggId: number) {
     if (error instanceof BggApiError) {
       return {
         success: false as const,
-        error: "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
+        error:
+          "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
       };
     }
     throw error;

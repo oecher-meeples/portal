@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { HoldingOrigin, StorageUnitKind } from "@prisma/client";
-import { prisma } from "../src/lib/prisma";
+import { prisma } from "../src/lib/utils/prisma";
 import { nextUnitCode } from "../src/lib/inventory/codes";
 import { ensureUnsortiertUnit } from "../src/lib/ludothek/holdings";
 
@@ -69,7 +69,10 @@ async function ensureUnitForLocation(
 async function uniqueSlug(base: string, taken: Set<string>) {
   let slug = base;
   let suffix = 2;
-  while (taken.has(slug) || (await prisma.boardGame.findFirst({ where: { slug } }))) {
+  while (
+    taken.has(slug) ||
+    (await prisma.boardGame.findFirst({ where: { slug } }))
+  ) {
     slug = `${base}-${suffix}`;
     suffix += 1;
   }
@@ -129,7 +132,10 @@ export async function migrateBoardGamesToHoldings({
     let unitId = unsortiert.id;
     if (locationNote) {
       if (!unitByLocation.has(locationNote)) {
-        const unit = await ensureUnitForLocation(locationNote, existingBoxCodes);
+        const unit = await ensureUnitForLocation(
+          locationNote,
+          existingBoxCodes,
+        );
         unitByLocation.set(locationNote, unit.id);
       }
       unitId = unitByLocation.get(locationNote)!;

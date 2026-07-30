@@ -1,5 +1,8 @@
-import type { ExplainerExperienceLevel, FleaMarketItemStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type {
+  ExplainerExperienceLevel,
+  FleaMarketItemStatus,
+} from "@prisma/client";
+import { prisma } from "@/lib/utils/prisma";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
   filterLudothekGames,
@@ -116,12 +119,13 @@ export async function getFreeGamesInRoom(
   eventId: string,
   filters: LudothekFilters,
 ): Promise<LudothekGame[]> {
-  const [games, assignedUnitIds, parentById, holdingUnitByGame] = await Promise.all([
-    buildLudothekGames(),
-    loadAssignedUnitIds(eventId),
-    loadUnitParents(),
-    loadOpenHoldingUnitByGame(),
-  ]);
+  const [games, assignedUnitIds, parentById, holdingUnitByGame] =
+    await Promise.all([
+      buildLudothekGames(),
+      loadAssignedUnitIds(eventId),
+      loadUnitParents(),
+      loadOpenHoldingUnitByGame(),
+    ]);
 
   const freeGames = filterLudothekGames(games, { ...filters, zustand: "frei" });
 
@@ -154,7 +158,13 @@ export async function getGuestFleaMarketItems(
   const items = await prisma.fleaMarketItem.findMany({
     where: { eventId, status: { in: GUEST_VISIBLE_STATUSES } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, title: true, description: true, priceEuros: true, status: true },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      priceEuros: true,
+      status: true,
+    },
   });
   return items;
 }

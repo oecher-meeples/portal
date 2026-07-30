@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { ContentItem } from "@/lib/content";
+import { cn } from "@/lib/utils/cn";
+import type { ContentItem } from "@/lib/content/content";
 
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
@@ -104,10 +104,10 @@ export function NewsCalendar({
               className={cn(
                 "aspect-square rounded-md text-sm transition-colors",
                 hasEvent
-                  ? "bg-primary/15 font-semibold hover:bg-primary/25"
+                  ? "bg-primary/15 hover:bg-primary/25 font-semibold"
                   : "text-muted-foreground",
                 isSelected && "bg-primary text-primary-foreground",
-                isToday && !isSelected && "ring-1 ring-primary",
+                isToday && !isSelected && "ring-primary ring-1",
               )}
             >
               {date.getDate()}

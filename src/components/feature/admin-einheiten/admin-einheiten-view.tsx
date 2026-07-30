@@ -86,7 +86,9 @@ export function AdminEinheitenView({
             {units.map((unit) => (
               <TableRow key={unit.id}>
                 <TableCell className="font-mono">{unit.code}</TableCell>
-                <TableCell>{unit.kind === "BOX" ? "Karton" : "Regal"}</TableCell>
+                <TableCell>
+                  {unit.kind === "BOX" ? "Karton" : "Regal"}
+                </TableCell>
                 <TableCell>{unit.label}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {unit.locationChain}

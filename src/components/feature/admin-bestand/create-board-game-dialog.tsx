@@ -130,7 +130,8 @@ export function CreateBoardGameDialog({
     }
   }
 
-  const canSubmit = mode === "manual" ? form.title.trim().length > 0 : Boolean(preview);
+  const canSubmit =
+    mode === "manual" ? form.title.trim().length > 0 : Boolean(preview);
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -264,7 +265,7 @@ export function CreateBoardGameDialog({
                 />
               </div>
               <p className="text-muted-foreground text-xs">
-                Das Spiel liegt zunächst in „Unsortiert" — Standort per Scan
+                Das Spiel liegt zunächst in „Unsortiert“ — Standort per Scan
                 einlagern.
               </p>
             </div>
@@ -273,7 +274,10 @@ export function CreateBoardGameDialog({
           {error && <p className="text-destructive text-sm">{error}</p>}
 
           <DialogFooter>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !canSubmit}>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !canSubmit}
+            >
               {isSubmitting ? "Speichere…" : "Spiel anlegen"}
             </Button>
           </DialogFooter>

@@ -2,17 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
-import { useCodeScanner } from "@/components/feature/scan/use-code-scanner";
-import { GameActionsPanel } from "@/components/feature/scan/game-actions-panel";
+import { CodeScanner } from "@/components/ui/code-scanner";
+import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
 import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
 import {
   scanPlaceGameInUnit,
   scanResolveCode,
-} from "@/components/feature/scan/actions";
+} from "@/lib/ludothek/holding-actions";
 import type { ResolvedScan } from "@/lib/ludothek/holdings";
 
 export type SeriesMode =
@@ -26,15 +25,13 @@ type ViewState =
   | { kind: "select-game"; games: { id: string; title: string }[] }
   | { kind: "game"; boardGameId: string }
   | { kind: "pruefen"; boardGameId: string; title: string }
-  | { kind: "unit"; unitId: string; code: string; label: string; contents: string[] };
-
-const STATUS_LABELS: Record<string, string> = {
-  idle: "",
-  starting: "Kamera wird gestartet …",
-  scanning: "Bereit — Code in den Rahmen halten",
-  "no-camera-access": "Kein Kamerazugriff — bitte manuell eingeben",
-  "no-code-detected": "Kein Code erkannt — weiter versuchen",
-};
+  | {
+      kind: "unit";
+      unitId: string;
+      code: string;
+      label: string;
+      contents: string[];
+    };
 
 export function ScanView({ canManageGames }: { canManageGames: boolean }) {
   const [state, setState] = useState<ViewState>({ kind: "idle" });
@@ -102,10 +99,6 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
     await handleResolved(resolved);
   }
 
-  const { videoRef, status, start, stop } = useCodeScanner({
-    onDetected: handleCode,
-  });
-
   function reset() {
     setState({ kind: "idle" });
   }
@@ -113,33 +106,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="overflow-hidden rounded-lg border bg-neutral-950">
-          <div className="relative flex aspect-video items-center justify-center">
-            <video
-              ref={videoRef}
-              className="h-full w-full object-cover"
-              muted
-              playsInline
-            />
-            {status === "idle" && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500">
-                <Camera className="size-8" />
-                <Button size="sm" onClick={start}>
-                  Kamera starten
-                </Button>
-              </div>
-            )}
-            <div className="border-primary pointer-events-none absolute inset-12 rounded-lg border-2 sm:inset-24" />
-          </div>
-          <div className="flex items-center justify-between gap-3 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100">
-            <span>{STATUS_LABELS[status]}</span>
-            {status !== "idle" && (
-              <Button size="sm" variant="ghost" onClick={stop}>
-                Stoppen
-              </Button>
-            )}
-          </div>
-        </div>
+        <CodeScanner onDetected={handleCode} />
 
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
           <div className="flex flex-col gap-1.5">
@@ -236,7 +203,11 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                       onClick={() =>
                         setState(
                           seriesMode?.type === "pruefen"
-                            ? { kind: "pruefen", boardGameId: game.id, title: game.title }
+                            ? {
+                                kind: "pruefen",
+                                boardGameId: game.id,
+                                title: game.title,
+                              }
                             : { kind: "game", boardGameId: game.id },
                         )
                       }
@@ -249,9 +220,9 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
             )}
 
             {state.kind === "game" && (
-              <GameActionsPanel
+              <GameHoldingPanel
                 boardGameId={state.boardGameId}
-                seriesMode={seriesMode}
+                advanceAfterAction={Boolean(seriesMode)}
                 onDone={reset}
               />
             )}
@@ -306,7 +277,12 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
             {(state.kind === "unknown" ||
               state.kind === "game" ||
               state.kind === "pruefen") && (
-              <Button variant="ghost" size="sm" className="mt-2" onClick={reset}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={reset}
+              >
                 Zurücksetzen
               </Button>
             )}

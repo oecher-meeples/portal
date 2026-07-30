@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
-import { uniqueSlug } from "@/lib/slug";
+import { prisma } from "@/lib/utils/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
+import { uniqueSlug } from "@/lib/utils/slug";
 
 export type EventInput = {
   title: string;

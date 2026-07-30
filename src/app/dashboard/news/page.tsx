@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { requireMember } from "@/lib/session";
-import { getAllContent } from "@/lib/content";
+import { requireMember } from "@/lib/auth/session";
+import { getAllContent } from "@/lib/content/content";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Badge } from "@/components/ui/badge";
-import { formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/utils/format";
 
 export default async function InternalNewsPage() {
   await requireMember();

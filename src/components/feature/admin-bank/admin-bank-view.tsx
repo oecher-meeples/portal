@@ -12,7 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { exportBankDataCsv, revealIban } from "@/components/feature/admin-bank/actions";
+import {
+  exportBankDataCsv,
+  revealIban,
+} from "@/components/feature/admin-bank/actions";
 
 export type BankDataRow = {
   id: string;

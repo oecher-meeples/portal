@@ -7,13 +7,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
+import { ActionButton } from "@/components/ui/action-button";
 import { EventDialog } from "@/components/feature/admin-events/event-dialog";
-import { DeleteEventButton } from "@/components/feature/admin-events/delete-event-button";
-
-const dateTime = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
+import { deleteEvent } from "@/components/feature/admin-events/actions";
+import { formatDateTimeRange } from "@/lib/utils/format";
 
 export type EventRow = {
   id: string;
@@ -23,13 +21,6 @@ export type EventRow = {
   location: string | null;
   shiftCount: number;
 };
-
-function formatTimeframe(startsAt: string, endsAt: string | null) {
-  if (!endsAt) {
-    return dateTime.format(new Date(startsAt));
-  }
-  return `${dateTime.format(new Date(startsAt))} – ${dateTime.format(new Date(endsAt))}`;
-}
 
 export function AdminEventsView({ events }: { events: EventRow[] }) {
   return (
@@ -56,7 +47,10 @@ export function AdminEventsView({ events }: { events: EventRow[] }) {
           <TableBody>
             {events.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground text-center">
+                <TableCell
+                  colSpan={6}
+                  className="text-muted-foreground text-center"
+                >
                   Noch keine Events angelegt.
                 </TableCell>
               </TableRow>
@@ -65,7 +59,7 @@ export function AdminEventsView({ events }: { events: EventRow[] }) {
                 <TableRow key={event.id}>
                   <TableCell>{event.title}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatTimeframe(event.startsAt, event.endsAt)}
+                    {formatDateTimeRange(event.startsAt, event.endsAt)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {event.location ?? "—"}
@@ -83,7 +77,15 @@ export function AdminEventsView({ events }: { events: EventRow[] }) {
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <DeleteEventButton eventId={event.id} />
+                    <ActionButton
+                      variant="destructive"
+                      size="icon-sm"
+                      aria-label="Event löschen"
+                      confirm={`Event "${event.title}" wirklich löschen?`}
+                      action={deleteEvent.bind(null, event.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </ActionButton>
                   </TableCell>
                 </TableRow>
               ))

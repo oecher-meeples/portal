@@ -3,3 +3,7 @@ node_modules/
 pnpm-lock.yaml
 docs/
 mockups/
+# Verfasste Prosa und interne Notizen — Prettier soll Zeilenumbrüche in
+# Blogtexten und Plänen nicht umschreiben.
+content/
+.claude/

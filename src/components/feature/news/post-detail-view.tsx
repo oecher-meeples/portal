@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Pencil, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { ContentTypeBadge } from "@/components/domain/content-type-badge";
+import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/format";
-import type { getContentBySlug } from "@/lib/content";
+import { formatDate } from "@/lib/utils/format";
+import type { getContentBySlug } from "@/lib/content/content";
 
 type PostDetailViewProps = {
   item: NonNullable<Awaited<ReturnType<typeof getContentBySlug>>>;

@@ -1,15 +1,11 @@
 import {
   GameInventoryStatus,
   HoldingOrigin,
-  StorageUnitKind,
-  type BoardGame,
   type GameHolding,
   type Prisma,
   type PrismaClient,
-  type StorageUnit,
 } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { UNSORTIERT_CODE, parseScannedCode } from "@/lib/inventory/codes";
+import { prisma } from "@/lib/utils/prisma";
 import {
   GameDeinventarisedError,
   GameNotFoundError,
@@ -19,10 +15,6 @@ import {
 } from "@/lib/ludothek/errors";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
-
-export type GameZustand = "frei" | "ausgeliehen" | "wartung" | "nicht-erfasst";
 
 async function requireOpenHolding(tx: Tx, boardGameId: string) {
   const holding = await tx.gameHolding.findFirst({
@@ -95,7 +87,10 @@ async function closeAndOpen(
 }
 
 /** Whoever records the transition as the receiving party gets it confirmed right away. */
-function confirmationFor(recordedByMeepleId: string, receivingMeepleId: string) {
+function confirmationFor(
+  recordedByMeepleId: string,
+  receivingMeepleId: string,
+) {
   return recordedByMeepleId === receivingMeepleId ? new Date() : null;
 }
 
@@ -108,7 +103,8 @@ export function isLoanHolding(
 ) {
   return (
     holding.meepleId !== null &&
-    (holding.origin === HoldingOrigin.LOAN || holding.origin === HoldingOrigin.HANDOVER)
+    (holding.origin === HoldingOrigin.LOAN ||
+      holding.origin === HoldingOrigin.HANDOVER)
   );
 }
 
@@ -189,7 +185,10 @@ export async function returnGame({
   boardGameId: string;
   recordedByMeepleId: string;
   note?: string | null;
-} & ({ toUnitId: string; toMeepleId?: never } | { toMeepleId: string; toUnitId?: never })) {
+} & (
+  | { toUnitId: string; toMeepleId?: never }
+  | { toMeepleId: string; toUnitId?: never }
+)) {
   return prisma.$transaction(async (tx) => {
     const previous = await requireOpenHolding(tx, boardGameId);
     if (!previous.meepleId) {
@@ -266,7 +265,9 @@ export async function confirmHolding({
   holdingId: string;
   confirmingMeepleId: string;
 }) {
-  const holding = await prisma.gameHolding.findUnique({ where: { id: holdingId } });
+  const holding = await prisma.gameHolding.findUnique({
+    where: { id: holdingId },
+  });
   if (!holding || holding.endedAt) {
     throw new HoldingConflictError("Dieser Aufenthalt ist nicht mehr offen.");
   }
@@ -334,104 +335,15 @@ export async function moveStorageUnit({
   });
 }
 
-/** The unit for games whose physical location has never been recorded (see CONTEXT.md). */
-export async function ensureUnsortiertUnit(tx: Tx = prisma) {
-  return tx.storageUnit.upsert({
-    where: { code: UNSORTIERT_CODE },
-    update: {},
-    create: {
-      code: UNSORTIERT_CODE,
-      kind: StorageUnitKind.BOX,
-      label: "Unsortiert",
-    },
-  });
-}
-
-export type ResolvedScan =
-  | { kind: "games"; games: BoardGame[] }
-  | { kind: "unit"; unit: StorageUnit; contents: BoardGame[] }
-  | { kind: "unknown"; raw: string };
-
-export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
-  const parsed = parseScannedCode(raw);
-
-  if (parsed.kind === "unit") {
-    const unit = await prisma.storageUnit.findUnique({
-      where: { code: parsed.value },
-    });
-    if (!unit) {
-      return { kind: "unknown", raw };
-    }
-    const contents = await prisma.boardGame.findMany({
-      where: { holdings: { some: { unitId: unit.id, endedAt: null } } },
-    });
-    return { kind: "unit", unit, contents };
-  }
-
-  if (parsed.kind === "ean") {
-    const games = await prisma.boardGame.findMany({
-      where: { ean: parsed.value, status: { not: GameInventoryStatus.DEINVENTARISED } },
-    });
-    if (games.length === 0) {
-      return { kind: "unknown", raw };
-    }
-    return { kind: "games", games };
-  }
-
-  return { kind: "unknown", raw };
-}
-
-/** Walks Spiel → Karton → Regal → Meeple, stopping at the first keeper found. */
-export async function getResponsibleMeeple(
-  game: Pick<BoardGame, "id">,
-): Promise<string | null> {
-  const holding = await prisma.gameHolding.findFirst({
-    where: { boardGameId: game.id, endedAt: null },
-  });
-  if (!holding) return null;
-  if (holding.meepleId) return holding.meepleId;
-  if (!holding.unitId) return null;
-
-  let unitId: string | null = holding.unitId;
-  for (let depth = 0; unitId && depth < MAX_UNIT_CHAIN_DEPTH; depth++) {
-    const unit: StorageUnit | null = await prisma.storageUnit.findUnique({
-      where: { id: unitId },
-    });
-    if (!unit) return null;
-    if (unit.keeperMeepleId) return unit.keeperMeepleId;
-    unitId = unit.parentUnitId;
-  }
-
-  return null;
-}
-
-/** Pure so bulk views (e.g. admin-bestand) can reuse it without a query per game. */
-export function zustandFromHoldingAndUnit(
-  holding: Pick<GameHolding, "meepleId">,
-  unit: Pick<StorageUnit, "code"> | null,
-  gameStatus: GameInventoryStatus,
-): GameZustand {
-  if (holding.meepleId) return "ausgeliehen";
-  if (unit?.code === UNSORTIERT_CODE) return "nicht-erfasst";
-  if (gameStatus === GameInventoryStatus.MAINTENANCE) return "wartung";
-  return "frei";
-}
-
-export async function getGameZustand(
-  game: Pick<BoardGame, "id" | "status">,
-): Promise<GameZustand> {
-  const holding = await prisma.gameHolding.findFirst({
-    where: { boardGameId: game.id, endedAt: null },
-    include: { unit: true },
-  });
-
-  if (!holding) {
-    throw new HoldingConflictError(
-      `Spiel ${game.id} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
-    );
-  }
-  return zustandFromHoldingAndUnit(holding, holding.unit, game.status);
-}
+export {
+  ensureUnsortiertUnit,
+  getGameZustand,
+  getResponsibleMeeple,
+  resolveScannedCode,
+  zustandFromHoldingAndUnit,
+  type GameZustand,
+  type ResolvedScan,
+} from "@/lib/ludothek/holdings-lookup";
 
 export {
   GameDeinventarisedError,

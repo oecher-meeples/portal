@@ -47,7 +47,11 @@ describe("proxy", () => {
     );
 
     const response = await proxy(
-      makeRequest({ pathname: "/admin/bestand", nextAction: true, method: "POST" }),
+      makeRequest({
+        pathname: "/admin/bestand",
+        nextAction: true,
+        method: "POST",
+      }),
     );
 
     const isRedirect = response.status >= 300 && response.status < 400;
@@ -64,7 +68,11 @@ describe("proxy", () => {
     middlewareMock.mockResolvedValue(NextResponse.next());
 
     await proxy(
-      makeRequest({ pathname: "/admin/news/new", nextAction: true, method: "POST" }),
+      makeRequest({
+        pathname: "/admin/news/new",
+        nextAction: true,
+        method: "POST",
+      }),
     );
 
     const probeRequest = middlewareMock.mock.calls.at(-1)?.[0];

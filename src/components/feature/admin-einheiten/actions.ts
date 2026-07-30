@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { StorageUnitKind } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { nextUnitCode } from "@/lib/inventory/codes";
-import { ensureMeeple } from "@/lib/meeples";
+import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission } from "@/lib/auth/permissions";
 
 async function requireGamesManage() {
   const user = await requirePermission("games:manage");
@@ -56,7 +56,10 @@ export type UpdateStorageUnitInput = {
   locationNote?: string | null;
 };
 
-export async function updateStorageUnit(id: string, input: UpdateStorageUnitInput) {
+export async function updateStorageUnit(
+  id: string,
+  input: UpdateStorageUnitInput,
+) {
   await requireGamesManage();
 
   const label = input.label.trim();
@@ -118,7 +121,10 @@ async function wouldCreateCycle(unitId: string, parentId: string) {
   return false;
 }
 
-export async function setUnitParent(unitId: string, parentUnitId: string | null) {
+export async function setUnitParent(
+  unitId: string,
+  parentUnitId: string | null,
+) {
   const actor = await requireGamesManage();
 
   if (parentUnitId) {

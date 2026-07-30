@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/session";
-import { EventDetailView, type ShiftRow } from "@/components/feature/admin-events/event-detail-view";
+import { prisma } from "@/lib/utils/prisma";
+import { requireAdmin } from "@/lib/auth/session";
+import {
+  EventDetailView,
+  type ShiftRow,
+} from "@/components/feature/admin-events/event-detail-view";
 
 export default async function AdminEventDetailPage({
   params,
@@ -51,7 +54,9 @@ export default async function AdminEventDetailPage({
     id: assignment.unit.id,
     label: assignment.unit.label,
   }));
-  const availableShelves = shelves.filter((shelf) => !assignedShelfIds.has(shelf.id));
+  const availableShelves = shelves.filter(
+    (shelf) => !assignedShelfIds.has(shelf.id),
+  );
 
   return (
     <EventDetailView

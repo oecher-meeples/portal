@@ -69,7 +69,11 @@ function matchesDurationFilter(game: LudothekGame, filter: DurationFilter) {
 }
 
 const PLAYER_FILTER_VALUES = new Set<PlayerCountFilter>(["1-2", "3-4", "5+"]);
-const DURATION_FILTER_VALUES = new Set<DurationFilter>(["short", "mid", "long"]);
+const DURATION_FILTER_VALUES = new Set<DurationFilter>([
+  "short",
+  "mid",
+  "long",
+]);
 
 function firstString(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -105,7 +109,8 @@ export function parseLudothekSearchParams(
   };
 
   if (internal) {
-    filters.zustand = firstString(searchParams.zustand) as GameZustand | undefined;
+    filters.zustand = firstString(searchParams.zustand) as
+      GameZustand | undefined;
     filters.onlyLoanedOut = firstString(searchParams.ausgeliehen) === "1";
     filters.atMeepleId = firstString(searchParams.bei) || undefined;
   }

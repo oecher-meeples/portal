@@ -1,6 +1,5 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
-import { StatusPill } from "@/components/ui/status-pill";
 import {
   Table,
   TableBody,
@@ -9,12 +8,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MEMBERSHIP_STATE_LABELS, MEMBERSHIP_STATE_TONES } from "@/lib/format";
-import type { MembershipState } from "@/lib/meeples";
-import { InviteForm } from "@/components/feature/admin-invites/invite-form";
+import { formatDatePlain } from "@/lib/utils/format";
+import { MembershipStatePill } from "@/components/entities/membership-state-pill";
+import type { MembershipState } from "@/lib/members/meeples";
+import { ActionButton } from "@/components/ui/action-button";
+import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
-import { RevokeResignationButton } from "@/components/feature/admin-mitglieder/revoke-resignation-button";
+import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 
 export type MeepleRow = {
   id: string;
@@ -30,8 +31,7 @@ export type MeepleRow = {
 };
 
 function germanDate(value: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("de-DE").format(new Date(value));
+  return value ? formatDatePlain(value) : "—";
 }
 
 export function AdminMitgliederView({
@@ -42,10 +42,15 @@ export function AdminMitgliederView({
   isDecemberOrLater: boolean;
 }) {
   const withOpenHoldings = meeples.filter(
-    (m) => m.membershipState === "gekuendigt" && (m.openGames > 0 || m.openUnits > 0),
+    (m) =>
+      m.membershipState === "gekuendigt" &&
+      (m.openGames > 0 || m.openUnits > 0),
   );
   const readyForAnonymisation = meeples.filter(
-    (m) => m.membershipState === "ausgetreten" && m.openGames === 0 && m.openUnits === 0,
+    (m) =>
+      m.membershipState === "ausgetreten" &&
+      m.openGames === 0 &&
+      m.openUnits === 0,
   );
 
   return (
@@ -100,7 +105,10 @@ export function AdminMitgliederView({
             {readyForAnonymisation.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{m.displayName}</span>
-                <AnonymiseMeepleDialog meepleId={m.id} displayName={m.displayName} />
+                <AnonymiseMeepleDialog
+                  meepleId={m.id}
+                  displayName={m.displayName}
+                />
               </li>
             ))}
           </ul>
@@ -123,7 +131,9 @@ export function AdminMitgliederView({
           <TableBody>
             {meeples.map((meeple) => (
               <TableRow key={meeple.id}>
-                <TableCell className="font-mono">{meeple.memberNumber}</TableCell>
+                <TableCell className="font-mono">
+                  {meeple.memberNumber}
+                </TableCell>
                 <TableCell
                   className={
                     meeple.membershipState === "anonymisiert"
@@ -137,10 +147,7 @@ export function AdminMitgliederView({
                   {meeple.roles.length > 0 ? meeple.roles.join(", ") : "—"}
                 </TableCell>
                 <TableCell>
-                  <StatusPill
-                    label={MEMBERSHIP_STATE_LABELS[meeple.membershipState]}
-                    tone={MEMBERSHIP_STATE_TONES[meeple.membershipState]}
-                  />
+                  <MembershipStatePill state={meeple.membershipState} />
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {germanDate(meeple.joinedAt)}
@@ -156,7 +163,14 @@ export function AdminMitgliederView({
                       Historie erhalten
                     </span>
                   ) : meeple.resignedAt ? (
-                    <RevokeResignationButton meepleId={meeple.id} />
+                    <ActionButton
+                      variant="ghost"
+                      size="sm"
+                      action={revokeResignation.bind(null, meeple.id)}
+                      pendingLabel="Widerrufe…"
+                    >
+                      Kündigung widerrufen
+                    </ActionButton>
                   ) : (
                     <ResignMembershipDialog
                       meepleId={meeple.id}
@@ -171,7 +185,9 @@ export function AdminMitgliederView({
       </div>
 
       <div>
-        <h2 className="font-serif text-lg font-bold">Neues Mitglied einladen</h2>
+        <h2 className="font-serif text-lg font-bold">
+          Neues Mitglied einladen
+        </h2>
         <div className="mt-3 max-w-sm">
           <InviteForm />
         </div>

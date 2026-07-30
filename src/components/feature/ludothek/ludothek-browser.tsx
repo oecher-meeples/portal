@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ScanLine } from "lucide-react";
-import { GameCard } from "@/components/domain/game-card";
+import { GameCard } from "@/components/entities/game-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type {
@@ -110,11 +110,20 @@ export function LudothekBrowser({
               (Array.isArray(value) ? value : [value]).map(
                 (v, i) =>
                   v !== undefined && (
-                    <input key={`${key}-${i}`} type="hidden" name={key} value={v} />
+                    <input
+                      key={`${key}-${i}`}
+                      type="hidden"
+                      name={key}
+                      value={v}
+                    />
                   ),
               ),
             )}
-          <Input name="q" defaultValue={filters.search ?? ""} placeholder="Spiel suchen …" />
+          <Input
+            name="q"
+            defaultValue={filters.search ?? ""}
+            placeholder="Spiel suchen …"
+          />
           <Button type="submit">Suchen</Button>
           <Button
             variant="outline"
@@ -209,7 +218,9 @@ export function LudothekBrowser({
               ))}
               <FilterPill
                 label="Ist ausgeliehen"
-                href={href({ ausgeliehen: filters.onlyLoanedOut ? undefined : "1" })}
+                href={href({
+                  ausgeliehen: filters.onlyLoanedOut ? undefined : "1",
+                })}
                 active={Boolean(filters.onlyLoanedOut)}
               />
             </div>

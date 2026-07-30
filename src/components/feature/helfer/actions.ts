@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
 
 export async function bookShift(shiftId: string, uncertain: boolean) {
@@ -36,7 +36,10 @@ export async function bookShift(shiftId: string, uncertain: boolean) {
   return { success: true as const };
 }
 
-export async function updateBookingCertainty(shiftId: string, uncertain: boolean) {
+export async function updateBookingCertainty(
+  shiftId: string,
+  uncertain: boolean,
+) {
   const meeple = await requireMeeple();
 
   const updated = await prisma.shiftBooking.updateMany({

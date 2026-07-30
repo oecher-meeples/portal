@@ -1,7 +1,7 @@
 ﻿import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
-import { requirePermission } from "@/lib/permissions";
-import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
+import { prisma } from "@/lib/utils/prisma";
 import { PostForm } from "@/components/feature/admin-news/post-form";
 
 const DB_TO_TYPE = {

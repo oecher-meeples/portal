@@ -30,7 +30,9 @@ export function FreeGamesList({ games }: { games: FreeGameEntry[] }) {
   const [filter, setFilter] = useState<PlayerCountFilter | "all">("all");
 
   const filtered =
-    filter === "all" ? games : games.filter((game) => matchesPlayers(game, filter));
+    filter === "all"
+      ? games
+      : games.filter((game) => matchesPlayers(game, filter));
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">

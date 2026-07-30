@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const resolveCoverImageUrlMock = vi.fn();
 vi.mock("@/lib/instagram/cover-image", () => ({
@@ -78,9 +78,7 @@ describe("processPost", () => {
     prismaMock.instagramConnection.findFirst.mockResolvedValue(
       CONNECTION as never,
     );
-    resolveCoverImageUrlMock.mockResolvedValue(
-      "https://example.com/cover.png",
-    );
+    resolveCoverImageUrlMock.mockResolvedValue("https://example.com/cover.png");
   });
 
   it("marks the post as posted on success", async () => {
@@ -140,9 +138,7 @@ describe("processQueue", () => {
     prismaMock.instagramConnection.findFirst.mockResolvedValue(
       CONNECTION as never,
     );
-    resolveCoverImageUrlMock.mockResolvedValue(
-      "https://example.com/cover.png",
-    );
+    resolveCoverImageUrlMock.mockResolvedValue("https://example.com/cover.png");
   });
 
   it("summarizes processed, succeeded and failed posts", async () => {

@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/session";
-import { getMembershipState } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireAdmin } from "@/lib/auth/session";
+import { getMembershipState } from "@/lib/members/meeples";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
 
 export default async function AdminMitgliederPage() {

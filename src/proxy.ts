@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
-import { PATHNAME_HEADER } from "@/lib/session";
+import { PATHNAME_HEADER } from "@/lib/auth/session";
 
 const authMiddleware = auth.middleware({ loginUrl: "/login" });
 

@@ -126,7 +126,11 @@ export function UnitDetailView({
               {isSaving ? "Speichere…" : "Speichern"}
             </Button>
             {!unit.retired && (
-              <Button variant="outline" onClick={handleRetire} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={handleRetire}
+                disabled={isSaving}
+              >
                 Stilllegen
               </Button>
             )}
@@ -165,7 +169,10 @@ export function UnitDetailView({
           <TableBody>
             {moves.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground text-center">
+                <TableCell
+                  colSpan={5}
+                  className="text-muted-foreground text-center"
+                >
                   Noch keine Bewegungshistorie.
                 </TableCell>
               </TableRow>

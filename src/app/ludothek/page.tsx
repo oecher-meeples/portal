@@ -1,6 +1,6 @@
 import { PageHeading } from "@/components/ui/page-heading";
-import { getSessionTier } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { getSessionTier } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
   parseLudothekSearchParams,

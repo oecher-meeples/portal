@@ -59,7 +59,8 @@ describe("parseFleaMarketCsv", () => {
   });
 
   it("honours quoted fields containing a comma", () => {
-    const raw = 'title,price,description\n"Catan, Seefahrer",30,"Mit Erweiterung, komplett"\n';
+    const raw =
+      'title,price,description\n"Catan, Seefahrer",30,"Mit Erweiterung, komplett"\n';
 
     const result = parseFleaMarketCsv(raw);
 

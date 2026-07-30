@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { ExplainerExperienceLevel } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
 
 export async function addExplainerGame(
   boardGameId: string,

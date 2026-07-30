@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/session";
+import { prisma } from "@/lib/utils/prisma";
+import { requireAdmin } from "@/lib/auth/session";
 import {
   AdminEventsView,
   type EventRow,

@@ -1,8 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { auth } from "@/lib/auth/server";
-import { validateInviteToken } from "@/lib/invites";
+import { validateInviteToken } from "@/lib/members/invites";
 
 const DEFAULT_ROLE = "mitglied";
 

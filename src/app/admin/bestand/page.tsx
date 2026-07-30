@@ -1,13 +1,12 @@
-import { requireAdmin } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
 import { zustandFromHoldingAndUnit } from "@/lib/ludothek/holdings";
 import { boardGameAdminWhere } from "@/components/feature/admin-bestand/filters";
 import {
   AdminBestandView,
   type AdminBoardGameRow,
 } from "@/components/feature/admin-bestand/admin-bestand-view";
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE");
+import { formatDatePlain } from "@/lib/utils/format";
 
 function locationChain(
   unitId: string,
@@ -66,7 +65,7 @@ export default async function AdminBestandPage({
       status: game.status,
       needsCompletenessCheck: game.needsCompletenessCheck,
       lastCheckedAt: game.lastCheckedAt
-        ? dateFormatter.format(game.lastCheckedAt)
+        ? formatDatePlain(game.lastCheckedAt)
         : null,
       archivedReason: game.archivedReason,
       zustand,

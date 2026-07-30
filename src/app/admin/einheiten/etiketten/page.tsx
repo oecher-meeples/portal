@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
 import { UnitLabelSheet } from "@/components/feature/admin-einheiten/unit-label-sheet";
 
 export default async function AdminEinheitenEtikettenPage() {

@@ -1,10 +1,12 @@
-import { requireMember } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
-import { getAllContent } from "@/lib/content";
-import { countUpcomingShiftBookings, summariseMemberHoldings } from "@/lib/dashboard";
+import { requireMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
+import { getAllContent } from "@/lib/content/content";
+import {
+  countUpcomingShiftBookings,
+  summariseMemberHoldings,
+} from "@/lib/members/dashboard";
 import { DashboardView } from "@/components/feature/dashboard/dashboard-view";
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE");
+import { formatDatePlain } from "@/lib/utils/format";
 
 export default async function DashboardPage() {
   const { user, meeple, membershipState } = await requireMember();
@@ -27,7 +29,10 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const upcomingShiftCount = countUpcomingShiftBookings(meeple.id, shiftBookings);
+  const upcomingShiftCount = countUpcomingShiftBookings(
+    meeple.id,
+    shiftBookings,
+  );
 
   const gameTitleByHoldingId = new Map(
     holdings.map((h) => [h.id, h.boardGame.title]),
@@ -37,7 +42,7 @@ export default async function DashboardPage() {
   const resignationNotice =
     membershipState === "gekuendigt" && meeple.membershipEndsAt
       ? {
-          endsAt: dateFormatter.format(meeple.membershipEndsAt),
+          endsAt: formatDatePlain(meeple.membershipEndsAt),
           openHoldingsCount:
             summary.ownLoans.length + summary.ownUnitContents.length,
         }

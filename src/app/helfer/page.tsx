@@ -1,5 +1,9 @@
-import { requireMember } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { requireMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
+import {
+  findUpcomingEvents,
+  resolveSelectedEventId,
+} from "@/lib/events/upcoming";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
 import {
   HelferView,
@@ -15,15 +19,8 @@ export default async function HelferPage({
   const { meeple } = await requireMember();
   const { event: requestedEventId } = await searchParams;
 
-  const events = await prisma.event.findMany({
-    where: { OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }] },
-    orderBy: { startsAt: "asc" },
-    select: { id: true, title: true },
-  });
-
-  const selectedEventId = events.some((event) => event.id === requestedEventId)
-    ? requestedEventId!
-    : (events[0]?.id ?? null);
+  const events = await findUpcomingEvents();
+  const selectedEventId = resolveSelectedEventId(events, requestedEventId);
 
   const [shifts, explainerGameCount, ownAttendance] = await Promise.all([
     selectedEventId
@@ -50,7 +47,8 @@ export default async function HelferPage({
 
   const shiftRows: HelferShiftRow[] = shifts.map((shift) => {
     const fillLevel = computeShiftFillLevel(shift, shift.bookings);
-    const ownBooking = shift.bookings.find((b) => b.meepleId === meeple.id) ?? null;
+    const ownBooking =
+      shift.bookings.find((b) => b.meepleId === meeple.id) ?? null;
     return {
       id: shift.id,
       type: shift.type,

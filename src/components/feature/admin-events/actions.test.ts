@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/permissions", () => ({
+vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
@@ -54,7 +54,9 @@ describe("createEvent", () => {
       endsAt: new Date("2026-10-10T09:00:00Z"),
     });
 
-    expect(result).toEqual({ error: "Das Ende darf nicht vor dem Start liegen." });
+    expect(result).toEqual({
+      error: "Das Ende darf nicht vor dem Start liegen.",
+    });
     expect(prismaMock.event.create).not.toHaveBeenCalled();
   });
 

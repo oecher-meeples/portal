@@ -1,9 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { encryptSecret, ibanLast4, isValidIban, normaliseIban } from "@/lib/crypto";
-import { nextTurnOfTheYear, requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import {
+  encryptSecret,
+  ibanLast4,
+  isValidIban,
+  normaliseIban,
+} from "@/lib/utils/crypto";
+import { nextTurnOfTheYear, requireMeeple } from "@/lib/members/meeples";
 
 export type OwnProfileInput = {
   displayName: string;
@@ -85,7 +90,9 @@ export async function resignOwnMembership() {
   const meeple = await requireMeeple();
 
   if (meeple.resignedAt) {
-    return { error: "Für diese Mitgliedschaft liegt bereits eine Kündigung vor." };
+    return {
+      error: "Für diese Mitgliedschaft liegt bereits eine Kündigung vor.",
+    };
   }
 
   const now = new Date();

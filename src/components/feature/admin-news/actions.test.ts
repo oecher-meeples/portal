@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
@@ -85,7 +85,11 @@ describe("createPost", () => {
     prismaMock.rolePermission.count.mockResolvedValue(1);
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
-    await createPost({ ...VALID_INPUT, excerpt: "Handverlesen", body: "x".repeat(180) });
+    await createPost({
+      ...VALID_INPUT,
+      excerpt: "Handverlesen",
+      body: "x".repeat(180),
+    });
 
     expect(prismaMock.post.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ excerpt: "Handverlesen" }),
@@ -255,7 +259,11 @@ describe("updatePost", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
 
-    await updatePost("post-1", { ...VALID_INPUT, internal: true, instagram: true });
+    await updatePost("post-1", {
+      ...VALID_INPUT,
+      internal: true,
+      instagram: true,
+    });
 
     expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.post.update).toHaveBeenCalledWith({

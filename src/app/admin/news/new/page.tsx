@@ -1,5 +1,5 @@
 ﻿import { PageHeading } from "@/components/ui/page-heading";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission } from "@/lib/auth/permissions";
 import { PostForm } from "@/components/feature/admin-news/post-form";
 
 export default async function NewPostPage() {

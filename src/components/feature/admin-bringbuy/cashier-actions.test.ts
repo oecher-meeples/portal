@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
@@ -17,8 +18,11 @@ vi.mock("@/lib/events/shift-rights", () => ({
   hasFleaMarketRights: (...args: unknown[]) => hasFleaMarketRightsMock(...args),
 }));
 
-const { approveFleaMarketItem, setFleaMarketItemStatus, findFleaMarketItemByCode } =
-  await import("./cashier-actions");
+const {
+  approveFleaMarketItem,
+  setFleaMarketItemStatus,
+  findFleaMarketItemByCode,
+} = await import("./cashier-actions");
 
 const ME = { id: "meeple-1", neonAuthUserId: "auth-1" };
 

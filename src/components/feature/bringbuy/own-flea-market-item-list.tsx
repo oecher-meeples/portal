@@ -4,15 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import type { FleaMarketItemStatus } from "@prisma/client";
-import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  FLEA_MARKET_ITEM_STATUS_LABELS,
-  FLEA_MARKET_ITEM_STATUS_TONES,
-} from "@/lib/format";
+import { FleaMarketStatusPill } from "@/components/entities/flea-market-status-pill";
+import {} from "@/lib/utils/format";
 import {
   deleteOwnFleaMarketItem,
   updateOwnFleaMarketItem,
@@ -142,21 +139,20 @@ function ItemRow({ item }: { item: OwnFleaMarketItem }) {
             {item.code} · {item.eventTitle}
           </p>
         </div>
-        <StatusPill
-          label={FLEA_MARKET_ITEM_STATUS_LABELS[item.status]}
-          tone={FLEA_MARKET_ITEM_STATUS_TONES[item.status]}
-        />
+        <FleaMarketStatusPill status={item.status} />
       </div>
-      {item.description && (
-        <p className="text-sm">{item.description}</p>
-      )}
+      {item.description && <p className="text-sm">{item.description}</p>}
       <div className="flex items-center justify-between gap-3">
         <span className="text-primary font-serif font-bold">
           {item.priceEuros} €
         </span>
         {canEdit && (
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsEditing(true)}
+            >
               <Pencil className="size-4" />
               Bearbeiten
             </Button>

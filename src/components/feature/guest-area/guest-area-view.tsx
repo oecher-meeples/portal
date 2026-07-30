@@ -1,33 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeading } from "@/components/ui/page-heading";
-import { useCodeScanner } from "@/components/feature/scan/use-code-scanner";
+import { CodeScanner } from "@/components/ui/code-scanner";
 import {
   getGuestGameDetail,
   lookupGuestGame,
   type GuestGameDetail,
   type GuestGameMatch,
 } from "@/components/feature/guest-area/actions";
-import { FreeGamesList, type FreeGameEntry } from "@/components/feature/guest-area/free-games-list";
+import {
+  FreeGamesList,
+  type FreeGameEntry,
+} from "@/components/feature/guest-area/free-games-list";
 import type { GuestFleaMarketItem } from "@/lib/events/guest-area";
-import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/format";
+import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
 
 const EXPLAINER_LEVEL_LABELS: Record<string, string> = {
   WITH_MANUAL: "Mit Anleitung",
   WITHOUT_MANUAL: "Ohne Anleitung",
   BY_HEART: "Im Schlaf",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  idle: "",
-  starting: "Kamera wird gestartet …",
-  scanning: "Bereit — Code in den Rahmen halten",
-  "no-camera-access": "Kein Kamerazugriff — bitte manuell eingeben",
-  "no-code-detected": "Kein Code erkannt — weiter versuchen",
 };
 
 type ViewState =
@@ -72,13 +66,6 @@ export function GuestAreaView({
     setState({ kind: "detail", detail });
   }
 
-  const { videoRef, status, start, stop } = useCodeScanner({
-    onDetected: (text) => {
-      stop();
-      handleCode(text);
-    },
-  });
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -88,13 +75,8 @@ export function GuestAreaView({
       />
 
       <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-        <video ref={videoRef} className="aspect-video w-full rounded-md bg-black" muted />
-        <p className="text-muted-foreground text-sm">{STATUS_LABELS[status]}</p>
+        <CodeScanner onDetected={handleCode} frame={false} stopOnDetect />
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="gap-1.5" onClick={start}>
-            <Camera className="size-4" />
-            Kamera starten
-          </Button>
           <Input
             value={manualInput}
             onChange={(event) => setManualInput(event.target.value)}
@@ -117,7 +99,9 @@ export function GuestAreaView({
 
       {state.kind === "select" && (
         <div className="bg-card flex flex-col gap-2 rounded-lg border p-4">
-          <p className="text-sm font-medium">Mehrere Treffer — bitte auswählen:</p>
+          <p className="text-sm font-medium">
+            Mehrere Treffer — bitte auswählen:
+          </p>
           {state.games.map((game) => (
             <Button
               key={game.id}
@@ -135,7 +119,9 @@ export function GuestAreaView({
         <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
           <h2 className="font-serif text-xl font-bold">{state.detail.title}</h2>
           {state.detail.description && (
-            <p className="text-muted-foreground text-sm">{state.detail.description}</p>
+            <p className="text-muted-foreground text-sm">
+              {state.detail.description}
+            </p>
           )}
           <p className="text-sm">
             {state.detail.isInRoom ? "Aktuell im Raum" : "Nicht im Raum"}
@@ -170,14 +156,21 @@ export function GuestAreaView({
 
       {fleaMarketItems.length > 0 && (
         <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Bring &amp; Buy Flohmarkt</h2>
+          <h2 className="font-serif text-lg font-bold">
+            Bring &amp; Buy Flohmarkt
+          </h2>
           <ul className="flex flex-col divide-y text-sm">
             {fleaMarketItems.map((item) => (
-              <li key={item.id} className="flex items-center justify-between py-2">
+              <li
+                key={item.id}
+                className="flex items-center justify-between py-2"
+              >
                 <div>
                   <p className="font-medium">{item.title}</p>
                   {item.description && (
-                    <p className="text-muted-foreground text-xs">{item.description}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {item.description}
+                    </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
