@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
-import { requireMember } from "@/lib/session";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
 import { getLfgStatus } from "@/lib/lfg";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
 
@@ -23,7 +22,10 @@ export default async function LfgDetailPage({
   });
   if (!post) notFound();
 
-  const canManageMembers = await hasPermission(user.id, "members:manage");
+  const canManageMembers = await hasPermissionInCurrentView(
+    user.id,
+    "members:manage",
+  );
 
   return (
     <LfgDetailView

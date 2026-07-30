@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 export type ContentType = "termin" | "blog" | "turnier";
 
 export type ContentItem = {
+  /** Only set for DB-backed posts — absent for ICS-sourced calendar events. */
+  id?: string;
   slug: string;
   type: ContentType;
   title: string;
@@ -28,6 +30,7 @@ const DB_TO_TYPE: Record<"BLOG" | "TERMIN" | "TURNIER", ContentType> = {
 };
 
 function toContentItem(post: {
+  id: string;
   slug: string;
   type: "BLOG" | "TERMIN" | "TURNIER";
   title: string;
@@ -40,6 +43,7 @@ function toContentItem(post: {
   instagram: boolean | null;
 }): ContentItem {
   return {
+    id: post.id,
     slug: post.slug,
     type: DB_TO_TYPE[post.type],
     title: post.title,

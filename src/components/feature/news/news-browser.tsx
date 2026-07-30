@@ -8,9 +8,11 @@ import { NewsCalendar } from "@/components/feature/news/news-calendar";
 export function NewsBrowser({
   items,
   icsUrl,
+  canEdit,
 }: {
   items: ContentItem[];
   icsUrl?: string;
+  canEdit?: boolean;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const visibleItems = selectedDate
@@ -23,6 +25,7 @@ export function NewsBrowser({
         items={visibleItems}
         selectedDate={selectedDate}
         onClearDate={() => setSelectedDate(null)}
+        canEdit={canEdit}
       />
       <NewsCalendar
         items={items}

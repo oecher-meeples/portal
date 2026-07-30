@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
+import { clearPreviewTier } from "@/components/layout/preview-tier-actions";
 
 export function UserMenu({ user }: { user: { name: string } | null }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export function UserMenu({ user }: { user: { name: string } | null }) {
   }
 
   async function handleSignOut() {
-    await authClient.signOut();
+    await Promise.all([authClient.signOut(), clearPreviewTier()]);
     router.push("/");
     router.refresh();
   }

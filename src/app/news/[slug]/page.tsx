@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { canViewContentItem, getContentBySlug } from "@/lib/content";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermissionInCurrentView } from "@/lib/session";
 import { PostDetailView } from "@/components/feature/news/post-detail-view";
 
 export default async function PostDetailPage({
@@ -15,5 +16,9 @@ export default async function PostDetailPage({
   const user = await getCurrentUser();
   if (!canViewContentItem(item, user !== null)) notFound();
 
-  return <PostDetailView item={item} />;
+  const canEdit = user
+    ? await hasPermissionInCurrentView(user.id, "posts:write")
+    : false;
+
+  return <PostDetailView item={item} canEdit={canEdit} />;
 }

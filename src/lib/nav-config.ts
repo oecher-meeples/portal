@@ -148,6 +148,12 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Administration",
       },
       {
+        label: "News & Blog",
+        href: "/admin/news",
+        icon: Newspaper,
+        section: "Administration",
+      },
+      {
         label: "Bestand & Inventur",
         href: "/admin/bestand",
         icon: Boxes,

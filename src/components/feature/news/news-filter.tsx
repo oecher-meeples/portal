@@ -17,10 +17,12 @@ export function NewsFilter({
   items,
   selectedDate,
   onClearDate,
+  canEdit,
 }: {
   items: ContentItem[];
   selectedDate?: string | null;
   onClearDate?: () => void;
+  canEdit?: boolean;
 }) {
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
   const visible = items.filter(
@@ -51,7 +53,7 @@ export function NewsFilter({
       </div>
       <div className="flex flex-col gap-3">
         {visible.map((item) => (
-          <ContentListRow key={item.slug} item={item} />
+          <ContentListRow key={item.slug} item={item} canEdit={canEdit} />
         ))}
         {visible.length === 0 && (
           <p className="text-muted-foreground text-sm">

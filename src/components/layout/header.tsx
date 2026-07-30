@@ -1,12 +1,22 @@
 import { Logo } from "@/components/layout/logo";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { PreviewTierSwitcher } from "@/components/layout/preview-tier-switcher";
+import type { Tier } from "@/lib/nav-config";
 
-export function Header({ user }: { user: { name: string } | null }) {
+export function Header({
+  user,
+  previewTier,
+}: {
+  user: { name: string } | null;
+  /** Only passed for real admins — renders the tier switcher. */
+  previewTier?: Tier;
+}) {
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b px-4 backdrop-blur sm:px-6">
       <Logo />
       <div className="flex items-center gap-3">
+        {previewTier && <PreviewTierSwitcher tier={previewTier} />}
         <UserMenu user={user} />
         <ThemeToggle />
       </div>

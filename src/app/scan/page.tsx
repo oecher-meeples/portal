@@ -1,11 +1,13 @@
 import { PageHeading } from "@/components/ui/page-heading";
-import { requireMember } from "@/lib/session";
-import { hasPermission } from "@/lib/permissions";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/session";
 import { ScanView } from "@/components/feature/scan/scan-view";
 
 export default async function ScanPage() {
   const { user } = await requireMember();
-  const canManageGames = await hasPermission(user.id, "games:manage");
+  const canManageGames = await hasPermissionInCurrentView(
+    user.id,
+    "games:manage",
+  );
 
   return (
     <div className="flex flex-col gap-6">

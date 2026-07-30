@@ -1,24 +1,33 @@
 ﻿import Link from "next/link";
+import { Pencil } from "lucide-react";
 import type { ContentItem } from "@/lib/content";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { ContentTypeBadge } from "@/components/domain/content-type-badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { formatDate } from "@/lib/format";
 
-export function ContentListRow({ item }: { item: ContentItem }) {
+export function ContentListRow({
+  item,
+  canEdit,
+}: {
+  item: ContentItem;
+  canEdit?: boolean;
+}) {
   return (
-    <Link
-      href={`/news/${item.slug}`}
-      className={`group bg-card hover:border-primary/60 flex gap-4 rounded-lg border p-4 transition-colors ${
+    <div
+      className={`group bg-card hover:border-primary/60 relative flex gap-4 rounded-lg border p-4 transition-colors ${
         item.internal ? "border-l-4 border-l-primary" : ""
       }`}
     >
+      <Link href={`/news/${item.slug}`} className="absolute inset-0 z-0">
+        <span className="sr-only">{item.title} lesen</span>
+      </Link>
       <PlaceholderMedia
         label="BILD"
         aspect="aspect-square"
-        className="w-28 shrink-0 sm:w-36"
+        className="pointer-events-none w-28 shrink-0 sm:w-36"
       />
-      <div className="flex flex-1 flex-col gap-1.5">
+      <div className="pointer-events-none flex flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <ContentTypeBadge type={item.type} />
@@ -33,6 +42,15 @@ export function ContentListRow({ item }: { item: ContentItem }) {
         </h3>
         <p className="text-muted-foreground text-sm">{item.excerpt}</p>
       </div>
-    </Link>
+      {canEdit && item.id && (
+        <Link
+          href={`/admin/news/${item.id}/edit`}
+          className="bg-background hover:bg-accent hover:text-accent-foreground relative z-10 inline-flex size-8 shrink-0 items-center justify-center self-start rounded-md border"
+          aria-label="Beitrag bearbeiten"
+        >
+          <Pencil className="size-4" />
+        </Link>
+      )}
+    </div>
   );
 }

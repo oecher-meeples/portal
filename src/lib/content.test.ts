@@ -13,6 +13,7 @@ const {
 
 function makePost(overrides: Partial<Record<string, unknown>> = {}) {
   return {
+    id: "post-1",
     slug: "sommerfest-der-meeples",
     type: "BLOG" as const,
     title: "Sommerfest der Meeples",
@@ -23,6 +24,11 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     location: null,
     internal: null,
     instagram: true,
+    coverImageUrl: null,
+    instagramStatus: null,
+    instagramPostUrl: null,
+    instagramAttempts: 0,
+    instagramLastError: null,
     ...overrides,
   };
 }
