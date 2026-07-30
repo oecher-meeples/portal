@@ -54,4 +54,21 @@ describe("proxy", () => {
     expect(isRedirect).toBe(false);
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("always probes the auth middleware with GET, regardless of the request's own method", async () => {
+    // Regression test for a @neondatabase/auth bug (0.4.2-beta): its
+    // middleware proxies the get-session check upstream using the original
+    // request's method. Neon Auth's get-session endpoint only accepts GET,
+    // so a POST/HEAD request (e.g. a Server Action submit) was always
+    // treated as unauthenticated, even with a valid session cookie.
+    middlewareMock.mockResolvedValue(NextResponse.next());
+
+    await proxy(
+      makeRequest({ pathname: "/admin/news/new", nextAction: true, method: "POST" }),
+    );
+
+    const probeRequest = middlewareMock.mock.calls.at(-1)?.[0];
+    expect(probeRequest.method).toBe("GET");
+    expect(probeRequest.nextUrl.pathname).toBe("/admin/news/new");
+  });
 });

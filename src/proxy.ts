@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { PATHNAME_HEADER } from "@/lib/session";
 
@@ -28,7 +28,17 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  const authResponse = await authMiddleware(request);
+  // Work around a @neondatabase/auth bug (0.4.2-beta, latest as of writing):
+  // its middleware proxies the get-session check upstream using the
+  // *original* request's HTTP method. Neon Auth's get-session endpoint only
+  // accepts GET, so any POST (e.g. a Server Action submit) or HEAD request
+  // is proxied as a POST/HEAD too, the upstream call fails, and a perfectly
+  // valid session gets treated as logged-out. Probe with a same-URL GET
+  // clone so the auth decision never depends on the caller's method.
+  const sessionProbe = new NextRequest(request.url, {
+    headers: request.headers,
+  });
+  const authResponse = await authMiddleware(sessionProbe);
   if (authResponse.status !== 200) {
     if (request.headers.has(NEXT_ACTION_HEADER)) {
       return new NextResponse(
