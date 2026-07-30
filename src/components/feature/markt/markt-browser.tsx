@@ -45,14 +45,14 @@ export function MarktBrowser({
                     {listing.title}
                   </Link>
                   <span className="text-primary shrink-0 font-serif font-bold">
-                    {listing.price} â‚¬
+                    {listing.price} €
                   </span>
                 </div>
                 <p className="text-muted-foreground text-sm">
-                  Zustand: {listing.condition} Â· von {listing.seller}
+                  Zustand: {listing.condition} · von {listing.seller}
                 </p>
                 <Button variant="outline" size="sm" className="mt-2 gap-1.5">
-                  âœ‰ï¸ VerkÃ¤ufer kontaktieren
+                  ✉️ Verkäufer kontaktieren
                 </Button>
               </div>
             </div>

@@ -13,7 +13,7 @@ export default async function MarktPage() {
       <PageHeading
         eyebrow="Community-Handel"
         title="Marktplatz & Ersatzteillager"
-        description="Interner Kleinanzeigen-Markt zwischen Mitgliedern â€“ plus das Ausschlacht-Lager fÃ¼r einzelne Komponenten."
+        description="Interner Kleinanzeigen-Markt zwischen Mitgliedern – plus das Ausschlacht-Lager für einzelne Komponenten."
       />
       <MarktBrowser
         listings={MARKET_LISTINGS}

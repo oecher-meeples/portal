@@ -10,7 +10,7 @@ export function DeletePostButton({ postId }: { postId: string }) {
   const [isPending, setIsPending] = useState(false);
 
   async function handleDelete() {
-    if (!confirm("Beitrag wirklich lÃ¶schen?")) return;
+    if (!confirm("Beitrag wirklich löschen?")) return;
     setIsPending(true);
     await deletePost(postId);
     setIsPending(false);
@@ -24,7 +24,7 @@ export function DeletePostButton({ postId }: { postId: string }) {
       onClick={handleDelete}
       disabled={isPending}
     >
-      LÃ¶schen
+      Löschen
     </Button>
   );
 }

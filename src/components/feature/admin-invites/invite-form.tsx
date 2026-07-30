@@ -17,7 +17,7 @@ export function InviteForm() {
       const { token, expiresAt } = await createInvite();
       const registrationUrl = `${window.location.origin}/registrieren?token=${token}`;
       setInviteLink(registrationUrl);
-      console.log(`Einladung gÃ¼ltig bis ${expiresAt}`);
+      console.log(`Einladung gültig bis ${expiresAt}`);
     } catch {
       setError("Einladung konnte nicht erzeugt werden.");
     } finally {
@@ -29,20 +29,20 @@ export function InviteForm() {
     ? `mailto:?subject=${encodeURIComponent(
         "Einladung zu Oecher Meeples",
       )}&body=${encodeURIComponent(
-        `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich Ã¼ber diesen Link:\n${inviteLink}\n\nDer Link ist 7 Tage gÃ¼ltig.`,
+        `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich über diesen Link:\n${inviteLink}\n\nDer Link ist 7 Tage gültig.`,
       )}`
     : null;
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
       <Button onClick={handleCreateInvite} disabled={isPending}>
-        {isPending ? "Erzeuge Einladungâ€¦" : "+ Einladung erzeugen"}
+        {isPending ? "Erzeuge Einladung…" : "+ Einladung erzeugen"}
       </Button>
       {error && <p className="text-destructive text-sm">{error}</p>}
       {inviteLink && mailtoHref && (
         <div className="flex flex-col gap-2">
           <p className="text-muted-foreground text-sm">
-            Registrierungslink (7 Tage gÃ¼ltig):
+            Registrierungslink (7 Tage gültig):
           </p>
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">
             {inviteLink}

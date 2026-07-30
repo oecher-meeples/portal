@@ -20,11 +20,11 @@ export function HomeView({ events, posts }: HomeViewProps) {
           Willkommen bei den Oecher Meeples
         </p>
         <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-          Der Brettspielverein fÃ¼r Aachen und Umgebung
+          Der Brettspielverein für Aachen und Umgebung
         </h1>
         <p className="text-muted-foreground max-w-2xl">
-          Spielen, leihen, treffen. Von Kennerspiel bis Familienabend â€“ bei uns
-          findest du Runde, RegelerklÃ¤rung und Ã¼ber 600 Spiele in der
+          Spielen, leihen, treffen. Von Kennerspiel bis Familienabend – bei uns
+          findest du Runde, Regelerklärung und über 600 Spiele in der
           Vereins-Ludothek.
         </p>
       </section>
@@ -39,7 +39,7 @@ export function HomeView({ events, posts }: HomeViewProps) {
             <Button render={<Link href="/downloads">Mitglied werden</Link>} />
             <Button
               variant="outline"
-              render={<Link href="/news">NÃ¤chster Spieleabend â†’</Link>}
+              render={<Link href="/news">Nächster Spieleabend →</Link>}
             />
           </div>
         </div>
@@ -49,7 +49,7 @@ export function HomeView({ events, posts }: HomeViewProps) {
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
                 <Calendar className="text-primary size-4" />
-                NÃ¤chste Termine
+                Nächste Termine
               </h2>
               <Link
                 href="/news"
@@ -81,10 +81,10 @@ export function HomeView({ events, posts }: HomeViewProps) {
           <div className="bg-primary/10 rounded-lg border p-5">
             <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
               <HeartHandshake className="size-4" />
-              UnterstÃ¼tze uns
+              Unterstütze uns
             </h2>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              Deine Spende hÃ¤lt die Ludothek am Leben â€“ neue Spiele, Etiketten,
+              Deine Spende hält die Ludothek am Leben – neue Spiele, Etiketten,
               Eventmaterial.
             </p>
             <Button
@@ -99,7 +99,7 @@ export function HomeView({ events, posts }: HomeViewProps) {
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-xl font-bold">Aus dem Newsroom</h2>
           <Link href="/news" className="text-primary text-sm hover:underline">
-            Alle BeitrÃ¤ge â†’
+            Alle Beiträge →
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

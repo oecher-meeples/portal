@@ -60,7 +60,7 @@ export function LoginForm() {
           <Input
             id="password"
             type="password"
-            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+            placeholder="••••••••"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -68,7 +68,7 @@ export function LoginForm() {
         </div>
         {error && <p className="text-destructive text-sm">{error}</p>}
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Anmeldenâ€¦" : "Anmelden"}
+          {isSubmitting ? "Anmelden…" : "Anmelden"}
         </Button>
       </form>
       <p className="text-muted-foreground text-center text-sm">

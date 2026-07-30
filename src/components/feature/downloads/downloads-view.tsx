@@ -15,7 +15,7 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
       <PageHeading
         eyebrow="Formales"
         title="Downloads & Rechtliches"
-        description="AntrÃ¤ge, Satzung und rechtliche Dokumente zum direkten Abruf."
+        description="Anträge, Satzung und rechtliche Dokumente zum direkten Abruf."
       />
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-card flex flex-col divide-y rounded-lg border">
@@ -33,7 +33,7 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
                 <div>
                   <p className="font-medium">{file.title}</p>
                   <p className="text-muted-foreground text-xs">
-                    {file.filetype} Â· {file.size}
+                    {file.filetype} · {file.size}
                   </p>
                 </div>
               </div>
@@ -61,7 +61,7 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
                 variant="outline"
                 size="sm"
                 render={
-                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen â†’</Link>
+                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
                 }
               />
             </div>

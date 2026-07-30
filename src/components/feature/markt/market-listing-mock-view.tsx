@@ -21,14 +21,14 @@ export function MarketListingMockView({ listing }: MarketListingMockViewProps) {
         <div className="flex items-start justify-between gap-3">
           <h1 className="font-serif text-2xl font-bold">{listing.title}</h1>
           <span className="text-primary shrink-0 font-serif text-2xl font-bold">
-            {listing.price} â‚¬
+            {listing.price} €
           </span>
         </div>
         <p className="text-muted-foreground text-sm">
-          Zustand: {listing.condition} Â· von {listing.seller}
+          Zustand: {listing.condition} · von {listing.seller}
         </p>
         <p className="leading-relaxed">{listing.description}</p>
-        <Button className="mt-2 gap-1.5">âœ‰ï¸ VerkÃ¤ufer kontaktieren</Button>
+        <Button className="mt-2 gap-1.5">✉️ Verkäufer kontaktieren</Button>
       </div>
     </div>
   );

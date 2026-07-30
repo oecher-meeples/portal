@@ -4,9 +4,9 @@ import { useState } from "react";
 import { PillToggle } from "@/components/ui/pill-toggle";
 
 const AMOUNTS = [
-  { label: "5 â‚¬", value: "5" },
-  { label: "15 â‚¬", value: "15" },
-  { label: "30 â‚¬", value: "30" },
+  { label: "5 €", value: "5" },
+  { label: "15 €", value: "15" },
+  { label: "30 €", value: "30" },
   { label: "Frei", value: "frei" },
 ];
 

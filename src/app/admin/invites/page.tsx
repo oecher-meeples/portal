@@ -10,7 +10,7 @@ export default async function AdminInvitesPage() {
       <PageHeading
         eyebrow="Onboarding"
         title="Einladungen"
-        description="Erzeuge einen zeitlich begrenzten Registrierungslink fÃ¼r neue Mitglieder."
+        description="Erzeuge einen zeitlich begrenzten Registrierungslink für neue Mitglieder."
       />
       <InviteForm />
     </div>

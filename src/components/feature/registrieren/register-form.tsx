@@ -80,7 +80,7 @@ export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Konto wird aktiviertâ€¦" : "Konto aktivieren"}
+        {isSubmitting ? "Konto wird aktiviert…" : "Konto aktivieren"}
       </Button>
     </form>
   );

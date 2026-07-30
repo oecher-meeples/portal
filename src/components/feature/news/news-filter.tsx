@@ -55,7 +55,7 @@ export function NewsFilter({
         ))}
         {visible.length === 0 && (
           <p className="text-muted-foreground text-sm">
-            Keine BeitrÃ¤ge in dieser Kategorie.
+            Keine Beiträge in dieser Kategorie.
           </p>
         )}
       </div>

@@ -288,9 +288,9 @@ export function PostForm({
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting} className="self-start">
         {isSubmitting
-          ? "Speichereâ€¦"
+          ? "Speichere…"
           : postId
-            ? "Ã„nderungen speichern"
+            ? "Änderungen speichern"
             : "Beitrag erstellen"}
       </Button>
     </form>

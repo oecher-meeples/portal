@@ -23,7 +23,7 @@ export default async function AdminNewsPage() {
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Redaktion"
-        title="BeitrÃ¤ge"
+        title="Beiträge"
         description="Blog, Termine und Turniere verwalten."
         action={
           <Button
