@@ -31,23 +31,24 @@ function slugify(title: string) {
 }
 
 function validatePostInput(input: PostInput) {
-  if (
-    !input.title ||
-    !input.type ||
-    !input.date ||
-    !input.excerpt ||
-    !input.body
-  ) {
-    return "Bitte Titel, Typ, Datum, Excerpt und Inhalt ausfüllen.";
+  if (!input.title || !input.type || !input.date || !input.body) {
+    return "Bitte Titel, Typ, Datum und Inhalt ausfüllen.";
   }
   return null;
+}
+
+/** Falls back to the first 130 characters of the body when no excerpt was given. */
+function deriveExcerpt(excerpt: string | undefined, body: string) {
+  const trimmed = excerpt?.trim();
+  if (trimmed) return trimmed;
+  return body.length > 130 ? `${body.slice(0, 130)}...` : body;
 }
 
 function toPostData(input: PostInput) {
   return {
     type: TYPE_TO_DB[input.type],
     title: input.title,
-    excerpt: input.excerpt,
+    excerpt: deriveExcerpt(input.excerpt, input.body),
     body: input.body,
     date: new Date(input.date),
     author: input.author || null,

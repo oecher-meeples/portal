@@ -49,9 +49,47 @@ describe("createPost", () => {
     const result = await createPost({ ...VALID_INPUT, title: "" });
 
     expect(result).toEqual({
-      error: "Bitte Titel, Typ, Datum, Excerpt und Inhalt ausfüllen.",
+      error: "Bitte Titel, Typ, Datum und Inhalt ausfüllen.",
     });
     expect(prismaMock.post.create).not.toHaveBeenCalled();
+  });
+
+  it("derives the excerpt from the first 130 characters of the body when left empty", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+    const body = "x".repeat(180);
+
+    await createPost({ ...VALID_INPUT, excerpt: "", body });
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ excerpt: `${"x".repeat(130)}...` }),
+    });
+  });
+
+  it("uses the full body as the excerpt when it is 130 characters or shorter", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+    const body = "x".repeat(80);
+
+    await createPost({ ...VALID_INPUT, excerpt: "   ", body });
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ excerpt: body }),
+    });
+  });
+
+  it("keeps an explicitly given excerpt instead of deriving one from the body", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+
+    await createPost({ ...VALID_INPUT, excerpt: "Handverlesen", body: "x".repeat(180) });
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ excerpt: "Handverlesen" }),
+    });
   });
 
   it("creates the post when authorized and valid", async () => {
@@ -104,6 +142,48 @@ describe("createPost", () => {
 
     expect(prismaMock.post.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ instagramStatus: null, internal: true }),
+    });
+  });
+});
+
+describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
+  it("legt einen Blog-Beitrag mit allen vom Formular gesendeten Feldern an", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+
+    // Entspricht genau dem Input, den post-form.tsx beim Absenden sendet
+    // (inkl. der vorausgefüllten Felder Datum/Autor und optionalem Excerpt).
+    const input = {
+      type: "blog" as const,
+      title: "Sommerfest der Meeples",
+      date: "2026-07-30",
+      excerpt: "",
+      author: "Jan Herwig",
+      body: "Unser Sommerfest war ein voller Erfolg. Danke an alle Helfer:innen!",
+      instagram: false,
+      internal: false,
+      coverImageUrl: undefined,
+    };
+
+    const result = await createPost(input);
+
+    expect(result).toEqual({ success: true, id: "post-1" });
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: {
+        slug: "sommerfest-der-meeples",
+        type: "BLOG",
+        title: "Sommerfest der Meeples",
+        excerpt: input.body,
+        body: input.body,
+        date: new Date("2026-07-30"),
+        author: "Jan Herwig",
+        location: null,
+        internal: false,
+        instagram: false,
+        coverImageUrl: null,
+        instagramStatus: null,
+      },
     });
   });
 });

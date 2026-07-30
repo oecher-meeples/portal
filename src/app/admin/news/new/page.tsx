@@ -3,12 +3,17 @@ import { requirePermission } from "@/lib/permissions";
 import { PostForm } from "@/components/feature/admin-news/post-form";
 
 export default async function NewPostPage() {
-  await requirePermission("posts:write");
+  const user = await requirePermission("posts:write");
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeading eyebrow="Redaktion" title="Neuer Beitrag" />
-      <PostForm />
+      <PostForm
+        initialValues={{
+          date: new Date().toISOString().slice(0, 10),
+          author: user.name,
+        }}
+      />
     </div>
   );
 }

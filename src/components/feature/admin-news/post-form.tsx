@@ -45,9 +45,7 @@ export function PostForm({
   const [excerpt, setExcerpt] = useState(initialValues?.excerpt ?? "");
   const [author, setAuthor] = useState(initialValues?.author ?? "");
   const [body, setBody] = useState(initialValues?.body ?? "");
-  const [instagram, setInstagram] = useState(
-    initialValues?.instagram ?? false,
-  );
+  const [instagram, setInstagram] = useState(initialValues?.instagram ?? false);
   const [internal, setInternal] = useState(initialValues?.internal ?? false);
   const [coverImageUrl, setCoverImageUrl] = useState(
     initialValues?.coverImageUrl ?? "",
@@ -111,18 +109,27 @@ export function PostForm({
       internal,
       coverImageUrl: coverImageUrl || undefined,
     };
-    const result = postId
-      ? await updatePost(postId, input)
-      : await createPost(input);
 
-    setIsSubmitting(false);
+    try {
+      const result = postId
+        ? await updatePost(postId, input)
+        : await createPost(input);
 
-    if (result.error) {
-      setError(result.error);
-      return;
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      router.push("/admin/news");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Der Beitrag konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.push("/admin/news");
   }
 
   return (
@@ -179,7 +186,7 @@ export function PostForm({
           value={excerpt}
           onChange={(event) => setExcerpt(event.target.value)}
           rows={2}
-          required
+          placeholder="Leer lassen, um die ersten 130 Zeichen des Inhalts zu verwenden"
         />
       </div>
 
