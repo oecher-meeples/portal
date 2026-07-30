@@ -75,6 +75,31 @@ describe("getContentBySlug", () => {
   });
 });
 
+// Mimics Postgres three-valued `<>` comparison logic so tests catch what a
+// naive mock (that only asserts on the `where` argument) would miss: `not: true`
+// silently drops rows where the column is NULL.
+function evaluateWhere(post: Record<string, unknown>, where: Record<string, unknown>): boolean {
+  return Object.entries(where).every(([key, condition]) => {
+    if (key === "OR") {
+      return (condition as Record<string, unknown>[]).some((sub) => evaluateWhere(post, sub));
+    }
+    if (condition && typeof condition === "object" && "not" in condition) {
+      const excluded = (condition as { not: unknown }).not;
+      const value = post[key];
+      if (value === null || value === undefined) return false;
+      return value !== excluded;
+    }
+    return post[key] === condition;
+  });
+}
+
+const INTERNAL_VARIANTS = [
+  makePost({ slug: "termin-public-null", type: "TERMIN", internal: null }),
+  makePost({ slug: "termin-public-false", type: "TERMIN", internal: false }),
+  makePost({ slug: "termin-hidden", type: "TERMIN", internal: true }),
+  makePost({ slug: "blog-public-null", type: "BLOG", internal: null }),
+];
+
 describe("getUpcomingEvents", () => {
   it("excludes blog posts and queries ascending by date", async () => {
     const events = ALL_POSTS.filter((post) => post.type !== "BLOG");
@@ -84,20 +109,28 @@ describe("getUpcomingEvents", () => {
 
     expect(result.every((item) => item.type !== "blog")).toBe(true);
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
-      where: { type: { not: "BLOG" }, internal: { not: true } },
+      where: {
+        type: { not: "BLOG" },
+        OR: [{ internal: null }, { internal: false }],
+      },
       orderBy: { date: "asc" },
       take: 10,
     });
   });
 
-  it("excludes internal posts from the public preview", async () => {
-    prismaMock.post.findMany.mockResolvedValue([]);
-
-    await getUpcomingEvents(5);
-
-    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ internal: { not: true } }) }),
+  it("includes internal: null events but excludes internal: true and blog posts (real Prisma NULL semantics)", async () => {
+    prismaMock.post.findMany.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (async ({ where }: any) =>
+        INTERNAL_VARIANTS.filter((post) => evaluateWhere(post, where))) as never,
     );
+
+    const result = await getUpcomingEvents(10);
+
+    expect(result.map((item) => item.slug)).toEqual([
+      "termin-public-null",
+      "termin-public-false",
+    ]);
   });
 });
 
@@ -123,9 +156,25 @@ describe("getLatestPosts", () => {
     await getLatestPosts(3);
 
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
-      where: { internal: { not: true } },
+      where: { OR: [{ internal: null }, { internal: false }] },
       orderBy: { date: "desc" },
       take: 3,
     });
+  });
+
+  it("includes internal: null posts but excludes internal: true (real Prisma NULL semantics)", async () => {
+    prismaMock.post.findMany.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (async ({ where }: any) =>
+        INTERNAL_VARIANTS.filter((post) => evaluateWhere(post, where))) as never,
+    );
+
+    const result = await getLatestPosts(10);
+
+    expect(result.map((item) => item.slug).sort()).toEqual([
+      "blog-public-null",
+      "termin-public-false",
+      "termin-public-null",
+    ]);
   });
 });

@@ -66,7 +66,10 @@ export async function getContentBySlug(slug: string) {
 /** Public-facing by default — never surfaces internal posts (homepage preview, public calendar). */
 export async function getUpcomingEvents(limit = 3) {
   const posts = await prisma.post.findMany({
-    where: { type: { not: "BLOG" }, internal: { not: true } },
+    where: {
+      type: { not: "BLOG" },
+      OR: [{ internal: null }, { internal: false }],
+    },
     orderBy: { date: "asc" },
     take: limit,
   });
@@ -76,7 +79,7 @@ export async function getUpcomingEvents(limit = 3) {
 /** Public-facing by default — never surfaces internal posts (homepage preview). */
 export async function getLatestPosts(limit = 3) {
   const posts = await prisma.post.findMany({
-    where: { internal: { not: true } },
+    where: { OR: [{ internal: null }, { internal: false }] },
     orderBy: { date: "desc" },
     take: limit,
   });
