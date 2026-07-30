@@ -1,0 +1,16 @@
+{
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "config": "package.json, .prettierrc*, .prettierignore, .editorconfig, eslint*, tsconfig*, components.json, postcss*, vitest*, vercel.json, pnpm*",
+    // TypeScript-Formate: api.test.ts unter api.ts klappen
+    "*.ts": "${capture}.test.ts"
+  },
+  "search.useIgnoreFiles": true, // ignore files from gitignore in search.
+  "search.exclude": {
+    "**/pnpm-lock.yaml": true,
+    "**/package-lock.json": true,
+    "**/.git": true,
+    "**/*.min.js": true
+  }
+}
