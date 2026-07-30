@@ -64,16 +64,24 @@ export function CreateBoardGameDialog({
 
     setError(null);
     setIsFetchingPreview(true);
-    const result = await previewBggImport(bggId);
-    setIsFetchingPreview(false);
+    try {
+      const result = await previewBggImport(bggId);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
 
-    if (!result.success) {
-      setError(result.error);
-      return;
+      setPreview(result.data);
+      setForm((prev) => ({ ...prev, title: result.data.title }));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Die BGG-Vorschau konnte nicht geladen werden. Bitte erneut versuchen.",
+      );
+    } finally {
+      setIsFetchingPreview(false);
     }
-
-    setPreview(result.data);
-    setForm((prev) => ({ ...prev, title: result.data.title }));
   }
 
   async function handleSubmit() {
@@ -99,18 +107,27 @@ export function CreateBoardGameDialog({
         : {}),
     };
 
-    const result = await createBoardGame(input);
-    setIsSubmitting(false);
+    try {
+      const result = await createBoardGame(input);
+      setIsSubmitting(false);
 
-    if (result.error) {
-      setError(result.error);
-      return;
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      setLastHint(result.hint ?? null);
+      setOpen(false);
+      reset();
+      router.refresh();
+    } catch (err) {
+      setIsSubmitting(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Das Spiel konnte nicht angelegt werden. Bitte erneut versuchen.",
+      );
     }
-
-    setLastHint(result.hint ?? null);
-    setOpen(false);
-    reset();
-    router.refresh();
   }
 
   const canSubmit = mode === "manual" ? form.title.trim().length > 0 : Boolean(preview);
