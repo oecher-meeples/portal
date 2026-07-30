@@ -1,0 +1,20 @@
+{
+  "repo": "oecher-meeples/portal",
+  "owner": "oecher-meeples",
+  "ownerType": "organization",
+  "projectNumber": 1,
+  "projectTitle": "oecher meeples portal",
+  "projectNodeId": "PVT_kwDOCJfCSs4BertC",
+  "statusField": {
+    "id": "PVTSSF_lADOCJfCSs4BertCzhZEEz0",
+    "name": "Status",
+    "options": {
+      "Epics": "46ebb7c4",
+      "Backlog": "f75ad846",
+      "Ready": "61e4505c",
+      "In progress": "47fc9ee4",
+      "In review": "df73e18b",
+      "Done": "98236657"
+    }
+  }
+}
