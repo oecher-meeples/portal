@@ -40,3 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# editor: projektweite Einstellungen mitliefern, Persoenliches ignorieren
+# (Muster aus github/gitignore VisualStudioCode.gitignore)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# transiente Session-Notizen — Plaene und Audits in .claude/ bleiben getrackt
+.claude/TODO.md

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { FleaMarketItemStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
 import { hasFleaMarketRights } from "@/lib/events/shift-rights";
 
 const NEXT_STATUS: Record<FleaMarketItemStatus, FleaMarketItemStatus[]> = {
@@ -25,7 +25,9 @@ async function requireCashierRights(eventId: string) {
 }
 
 export async function approveFleaMarketItem(itemId: string) {
-  const item = await prisma.fleaMarketItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.fleaMarketItem.findUnique({
+    where: { id: itemId },
+  });
   if (!item) {
     return { error: "Artikel nicht gefunden." };
   }
@@ -58,7 +60,9 @@ export async function setFleaMarketItemStatus(
   itemId: string,
   status: FleaMarketItemStatus,
 ) {
-  const item = await prisma.fleaMarketItem.findUnique({ where: { id: itemId } });
+  const item = await prisma.fleaMarketItem.findUnique({
+    where: { id: itemId },
+  });
   if (!item) {
     return { error: "Artikel nicht gefunden." };
   }

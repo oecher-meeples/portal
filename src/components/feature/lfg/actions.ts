@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
-import { requireMeeple } from "@/lib/meeples";
-import { getLfgStatus } from "@/lib/lfg";
+import { prisma } from "@/lib/utils/prisma";
+import { hasPermission } from "@/lib/auth/permissions";
+import { requireMeeple } from "@/lib/members/meeples";
+import { getLfgStatus } from "@/lib/content/lfg";
 
 export type LfgPostInput = {
   title: string;
@@ -127,7 +127,9 @@ export async function closeLfgPost(postId: string) {
       : false);
 
   if (!canClose) {
-    return { error: "Nur der Ersteller oder die Mitgliederverwaltung kann schließen." };
+    return {
+      error: "Nur der Ersteller oder die Mitgliederverwaltung kann schließen.",
+    };
   }
 
   await prisma.lfgPost.update({

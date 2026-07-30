@@ -1,22 +1,11 @@
-import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
-import { JoinLfgButton } from "@/components/feature/lfg/join-lfg-button";
-import { LeaveLfgButton } from "@/components/feature/lfg/leave-lfg-button";
-import { CloseLfgButton } from "@/components/feature/lfg/close-lfg-button";
-import type { LfgStatus } from "@/lib/lfg";
-
-const STATUS_LABELS: Record<LfgStatus, string> = {
-  offen: "Offen",
-  voll: "Gesuch voll",
-  abgelaufen: "Abgelaufen",
-  geschlossen: "Geschlossen",
-};
-
-const STATUS_TONE: Record<LfgStatus, StatusTone> = {
-  offen: "positive",
-  voll: "warning",
-  abgelaufen: "neutral",
-  geschlossen: "neutral",
-};
+import { ActionButton } from "@/components/ui/action-button";
+import { LfgStatusPill } from "@/components/entities/lfg-status-pill";
+import {
+  closeLfgPost,
+  joinLfgPost,
+  leaveLfgPost,
+} from "@/components/feature/lfg/actions";
+import type { LfgStatus } from "@/lib/content/lfg";
 
 export type LfgParticipantRow = { meepleId: string; displayName: string };
 
@@ -61,7 +50,7 @@ export function LfgDetailView({
             {gameTitle && ` · ${gameTitle}`}
           </p>
         </div>
-        <StatusPill label={STATUS_LABELS[status]} tone={STATUS_TONE[status]} />
+        <LfgStatusPill status={status} />
       </div>
 
       <p className="leading-relaxed">{description}</p>
@@ -81,7 +70,9 @@ export function LfgDetailView({
               </span>
               {participant.displayName}
               {participant.meepleId === createdByMeepleId && (
-                <span className="text-muted-foreground text-xs">(Ersteller)</span>
+                <span className="text-muted-foreground text-xs">
+                  (Ersteller)
+                </span>
               )}
             </li>
           ))}
@@ -90,10 +81,35 @@ export function LfgDetailView({
 
       <div className="flex flex-wrap gap-3">
         {!isParticipant && (
-          <JoinLfgButton postId={id} disabled={status !== "offen"} label="Beitreten" />
+          <ActionButton
+            action={joinLfgPost.bind(null, id)}
+            disabled={status !== "offen"}
+            pendingLabel="Trage ein…"
+            wrapperClassName="items-start"
+            errorClassName="max-w-none text-left"
+          >
+            Beitreten
+          </ActionButton>
         )}
-        {isParticipant && !isCreator && <LeaveLfgButton postId={id} />}
-        {canClose && status !== "geschlossen" && <CloseLfgButton postId={id} />}
+        {isParticipant && !isCreator && (
+          <ActionButton
+            variant="outline"
+            action={leaveLfgPost.bind(null, id)}
+            pendingLabel="Verlasse…"
+          >
+            Verlassen
+          </ActionButton>
+        )}
+        {canClose && status !== "geschlossen" && (
+          <ActionButton
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10"
+            action={closeLfgPost.bind(null, id)}
+            pendingLabel="Schließe…"
+          >
+            Gesuch schließen
+          </ActionButton>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { requireMember } from "@/lib/session";
+import { requireMember } from "@/lib/auth/session";
 import { ProfilView } from "@/components/feature/profil/profil-view";
 
 export default async function ProfilPage() {

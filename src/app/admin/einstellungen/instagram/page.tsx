@@ -1,7 +1,7 @@
-import { requirePermission } from "@/lib/permissions";
-import { requireAdmin } from "@/lib/session";
+import { requirePermission } from "@/lib/auth/permissions";
+import { requireAdmin } from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { InstagramConnectionView } from "@/components/feature/admin-settings/instagram-connection-view";
 
 export default async function AdminInstagramSettingsPage() {

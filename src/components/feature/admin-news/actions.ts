@@ -2,10 +2,10 @@
 
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { InstagramStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/permissions";
-import { TYPE_TO_DB, type ContentType } from "@/lib/content";
+import { hasPermission } from "@/lib/auth/permissions";
+import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
 import { processPost } from "@/lib/instagram/queue";
 
 export type PostInput = {

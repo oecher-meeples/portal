@@ -1,5 +1,5 @@
 import { PageHeading } from "@/components/ui/page-heading";
-import { requireMember, hasPermissionInCurrentView } from "@/lib/session";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { ScanView } from "@/components/feature/scan/scan-view";
 
 export default async function ScanPage() {

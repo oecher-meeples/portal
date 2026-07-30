@@ -1,6 +1,6 @@
 ﻿import { PageHeading } from "@/components/ui/page-heading";
-import { requirePermission } from "@/lib/permissions";
-import { InviteForm } from "@/components/feature/admin-invites/invite-form";
+import { requirePermission } from "@/lib/auth/permissions";
+import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
 
 export default async function AdminInvitesPage() {
   await requirePermission("invites:create");

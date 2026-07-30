@@ -1,20 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
-const { bookShift, updateBookingCertainty, cancelBooking } = await import(
-  "./actions"
-);
+const { bookShift, updateBookingCertainty, cancelBooking } =
+  await import("./actions");
 
 class RedirectError extends Error {}
 
@@ -30,9 +30,9 @@ describe("without a session", () => {
 
     await expect(bookShift("shift-1", false)).rejects.toThrow(RedirectError);
     await expect(cancelBooking("shift-1")).rejects.toThrow(RedirectError);
-    await expect(
-      updateBookingCertainty("shift-1", true),
-    ).rejects.toThrow(RedirectError);
+    await expect(updateBookingCertainty("shift-1", true)).rejects.toThrow(
+      RedirectError,
+    );
 
     expect(prismaMock.shiftBooking.create).not.toHaveBeenCalled();
     expect(prismaMock.shiftBooking.deleteMany).not.toHaveBeenCalled();

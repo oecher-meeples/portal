@@ -4,7 +4,11 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 
 const QUICK_ACTIONS = [
-  { href: "/admin/einheiten/etiketten", label: "QR-Etiketten drucken", icon: Tag },
+  {
+    href: "/admin/einheiten/etiketten",
+    label: "QR-Etiketten drucken",
+    icon: Tag,
+  },
   { href: "/admin/mitglieder", label: "Mitglied einladen", icon: Mail },
   { href: "/admin/bestand", label: "Prüfung anfordern", icon: ClipboardCheck },
   { href: "/admin/bank", label: "Beitragseinzug", icon: Landmark },

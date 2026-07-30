@@ -1,11 +1,11 @@
 "use server";
 
 import { BankDataAccessKind } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { logBankDataAccess } from "@/lib/bank-access-log";
-import { decryptSecret } from "@/lib/crypto";
-import { ensureMeeple } from "@/lib/meeples";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { logBankDataAccess } from "@/lib/members/bank-access-log";
+import { decryptSecret } from "@/lib/utils/crypto";
+import { ensureMeeple } from "@/lib/members/meeples";
+import { requirePermission } from "@/lib/auth/permissions";
 
 /** The only columns the export ever contains. */
 export const BANK_CSV_COLUMNS = [

@@ -1,23 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
 
 const ensureMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
 
 const fetchBggGameMock = vi.fn();
 vi.mock("@/lib/bgg/client", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/bgg/client")>(
-    "@/lib/bgg/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/lib/bgg/client")>(
+      "@/lib/bgg/client",
+    );
   return {
     ...actual,
     fetchBggGame: (...args: unknown[]) => fetchBggGameMock(...args),
@@ -41,7 +43,9 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
-  prismaMock.storageUnit.upsert.mockResolvedValue({ id: "unit-unsortiert" } as never);
+  prismaMock.storageUnit.upsert.mockResolvedValue({
+    id: "unit-unsortiert",
+  } as never);
   prismaMock.gameHolding.create.mockResolvedValue({} as never);
   prismaMock.boardGame.count.mockResolvedValue(0);
 });
@@ -98,7 +102,10 @@ describe("createBoardGame", () => {
 
     expect(result).toEqual({ success: true, id: "game-1", hint: undefined });
     expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ slug: "arche-nova", title: "Arche Nova" }),
+      data: expect.objectContaining({
+        slug: "arche-nova",
+        title: "Arche Nova",
+      }),
     });
     expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -185,7 +192,10 @@ describe("updateBoardGame", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
 
-    const result = await updateBoardGame("game-1", { ...VALID_INPUT, ean: "x" });
+    const result = await updateBoardGame("game-1", {
+      ...VALID_INPUT,
+      ean: "x",
+    });
 
     expect(result).toEqual({
       error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",

@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/prisma";
-import { hasPermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { hasPermission } from "@/lib/auth/permissions";
 
 /**
  * Implements the ADR-0006 rule (docs/adr/0006-schicht-buchung-statt-permission-fuer-event-rechte.md):

@@ -19,7 +19,9 @@ export function BankDetailsForm({
   ibanLast4: string | null;
   maskedIban: string;
 }) {
-  const [accountHolder, setAccountHolder] = useState(initialAccountHolder ?? "");
+  const [accountHolder, setAccountHolder] = useState(
+    initialAccountHolder ?? "",
+  );
   const [iban, setIban] = useState("");
   const [storedLast4, setStoredLast4] = useState(initialIbanLast4);
   const [message, setMessage] = useState<string | null>(null);
@@ -75,7 +77,9 @@ export function BankDetailsForm({
           id="iban"
           value={iban}
           onChange={(event) => setIban(event.target.value)}
-          placeholder={storedLast4 ? `gespeichert: **** ${storedLast4}` : maskedIban}
+          placeholder={
+            storedLast4 ? `gespeichert: **** ${storedLast4}` : maskedIban
+          }
           autoComplete="off"
           required
         />

@@ -36,7 +36,8 @@ async function parseJsonOrThrow<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & MetaErrorBody;
   if (!response.ok) {
     throw new InstagramApiError(
-      body.error?.message ?? `Meta Graph API request failed (${response.status})`,
+      body.error?.message ??
+        `Meta Graph API request failed (${response.status})`,
       body.error,
     );
   }

@@ -1,11 +1,13 @@
-import { requireMember } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { requireMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
 import { PageHeading } from "@/components/ui/page-heading";
-import { getLfgStatus } from "@/lib/lfg";
-import { LfgList, type LfgPostSummary } from "@/components/feature/lfg/lfg-list";
+import { getLfgStatus } from "@/lib/content/lfg";
+import {
+  LfgList,
+  type LfgPostSummary,
+} from "@/components/feature/lfg/lfg-list";
 import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+import { formatDateMedium } from "@/lib/utils/format";
 
 export default async function LfgPage({
   searchParams,
@@ -31,7 +33,7 @@ export default async function LfgPage({
       title: post.title,
       gameTitle: post.gameTitle,
       dateLabel: post.plannedAt
-        ? dateFormatter.format(post.plannedAt)
+        ? formatDateMedium(post.plannedAt)
         : (post.dateNote ?? "Termin offen"),
       location: post.location,
       creatorName: post.createdBy.displayName,

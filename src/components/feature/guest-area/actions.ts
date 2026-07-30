@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { resolveScannedCode } from "@/lib/ludothek/holdings";
 import {
   getAttendingExplainers,
@@ -15,15 +15,16 @@ export type GuestGameMatch = {
 };
 
 export type GuestGameLookupResult =
-  | { kind: "games"; games: GuestGameMatch[] }
-  | { kind: "unknown" };
+  { kind: "games"; games: GuestGameMatch[] } | { kind: "unknown" };
 
 /**
  * Unauthenticated EAN lookup for the guest area (ADR 0005) — reuses the same
  * scan resolution as the internal scan, but only ever surfaces game matches,
  * never storage-unit contents (that's an internal concept guests don't see).
  */
-export async function lookupGuestGame(raw: string): Promise<GuestGameLookupResult> {
+export async function lookupGuestGame(
+  raw: string,
+): Promise<GuestGameLookupResult> {
   const resolved = await resolveScannedCode(raw);
 
   if (resolved.kind !== "games") {
@@ -62,7 +63,9 @@ export async function getGuestGameDetail(
   eventId: string,
   boardGameId: string,
 ): Promise<GuestGameDetail | null> {
-  const game = await prisma.boardGame.findUnique({ where: { id: boardGameId } });
+  const game = await prisma.boardGame.findUnique({
+    where: { id: boardGameId },
+  });
   if (!game) return null;
 
   const [isInRoom, attendingExplainers] = await Promise.all([

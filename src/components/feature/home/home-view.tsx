@@ -2,10 +2,10 @@ import Link from "next/link";
 import { Calendar, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
-import { ContentCard } from "@/components/domain/content-card";
-import { formatDate } from "@/lib/format";
-import type { getLatestPosts } from "@/lib/content";
-import type { getUpcomingEventsWithCalendar } from "@/lib/calendar";
+import { ContentCard } from "@/components/entities/content-card";
+import { formatDate } from "@/lib/utils/format";
+import type { getLatestPosts } from "@/lib/content/content";
+import type { getUpcomingEventsWithCalendar } from "@/lib/content/calendar";
 
 type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;

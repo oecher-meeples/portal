@@ -2,8 +2,8 @@
 
 import type { ShiftType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
 
 export type ShiftInput = {
   type: ShiftType;
@@ -47,10 +47,7 @@ export async function createShift(eventId: string, input: ShiftInput) {
   return { success: true as const, id: shift.id };
 }
 
-export async function updateShift(
-  shiftId: string,
-  input: ShiftInput,
-) {
+export async function updateShift(shiftId: string, input: ShiftInput) {
   await requirePermission("events:manage");
 
   const validationError = validateShiftInput(input);
@@ -81,8 +78,7 @@ export async function deleteShift(shiftId: string) {
 
   if (bookingCount > 0) {
     return {
-      error:
-        "Diese Schicht hat bereits Buchungen — erst diese entfernen.",
+      error: "Diese Schicht hat bereits Buchungen — erst diese entfernen.",
     };
   }
 

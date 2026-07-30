@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
-import { getMembershipState } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
+import { getMembershipState } from "@/lib/members/meeples";
 import {
   AdminEinheitenView,
   type ResignedHolderRow,
@@ -67,8 +67,8 @@ export default async function AdminEinheitenPage() {
       const gameCount =
         openHoldingsAll.find((r) => r.meepleId === meeple.id)?._count._all ?? 0;
       const unitCount =
-        unitsWithKeeper.find((r) => r.keeperMeepleId === meeple.id)?._count._all ??
-        0;
+        unitsWithKeeper.find((r) => r.keeperMeepleId === meeple.id)?._count
+          ._all ?? 0;
       return { meepleName: meeple.displayName, gameCount, unitCount };
     })
     .filter((holder) => holder.gameCount > 0 || holder.unitCount > 0);

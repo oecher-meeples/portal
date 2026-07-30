@@ -1,5 +1,5 @@
 import { ImageIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/cn";
 
 export function PlaceholderMedia({
   label = "BILD",

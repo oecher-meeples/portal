@@ -1,12 +1,12 @@
 import type { Meeple } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
-import { StatusPill } from "@/components/ui/status-pill";
-import { maskIban } from "@/lib/crypto";
-import { MEMBERSHIP_STATE_LABELS, MEMBERSHIP_STATE_TONES } from "@/lib/format";
-import type { MembershipState } from "@/lib/meeples";
+import { maskIban } from "@/lib/utils/crypto";
+import { MembershipStatePill } from "@/components/entities/membership-state-pill";
+import type { MembershipState } from "@/lib/members/meeples";
 import { BankDetailsForm } from "@/components/feature/profil/bank-details-form";
 import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-form";
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
+import { formatDatePlain } from "@/lib/utils/format";
 
 function initials(displayName: string) {
   return displayName
@@ -19,7 +19,7 @@ function initials(displayName: string) {
 
 function germanDate(value: Date | null) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("de-DE").format(value);
+  return formatDatePlain(value);
 }
 
 export function ProfilView({
@@ -48,10 +48,7 @@ export function ProfilView({
                 <p className="font-serif text-lg font-semibold">
                   {meeple.displayName}
                 </p>
-                <StatusPill
-                  label={MEMBERSHIP_STATE_LABELS[membershipState]}
-                  tone={MEMBERSHIP_STATE_TONES[membershipState]}
-                />
+                <MembershipStatePill state={membershipState} />
               </div>
             </div>
 
@@ -114,9 +111,9 @@ export function ProfilView({
                 protokolliert.
               </li>
               <li>
-                Nach einem Austritt werden Konto, Name und Kontaktdaten gelöscht,
-                sobald keine Vereinsspiele mehr bei dir liegen. Aufenthalte und
-                Gesuche bleiben dann namenlos lesbar.
+                Nach einem Austritt werden Konto, Name und Kontaktdaten
+                gelöscht, sobald keine Vereinsspiele mehr bei dir liegen.
+                Aufenthalte und Gesuche bleiben dann namenlos lesbar.
               </li>
               <li>Zugriffsprotokolle werden 24 Monate aufbewahrt.</li>
             </ul>
@@ -129,7 +126,9 @@ export function ProfilView({
             <div className="mt-3">
               <ResignMembershipPanel
                 resignedAt={meeple.resignedAt?.toISOString() ?? null}
-                membershipEndsAt={meeple.membershipEndsAt?.toISOString() ?? null}
+                membershipEndsAt={
+                  meeple.membershipEndsAt?.toISOString() ?? null
+                }
               />
             </div>
           </div>

@@ -78,8 +78,10 @@ export function AdminBestandView({
       if (search && !game.title.toLowerCase().includes(search.toLowerCase())) {
         return false;
       }
-      if (quickFilter === "ungeprueft" && !game.needsCompletenessCheck) return false;
-      if (quickFilter === "mangel" && game.status !== "MAINTENANCE") return false;
+      if (quickFilter === "ungeprueft" && !game.needsCompletenessCheck)
+        return false;
+      if (quickFilter === "mangel" && game.status !== "MAINTENANCE")
+        return false;
       if (quickFilter === "nicht-erfasst" && game.zustand !== "nicht-erfasst") {
         return false;
       }
@@ -142,7 +144,12 @@ export function AdminBestandView({
             </Button>
           ))}
         </div>
-        <Button size="sm" variant="outline" className="ml-auto" onClick={toggleShowDeinventarised}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-auto"
+          onClick={toggleShowDeinventarised}
+        >
           {showDeinventarised
             ? "Deinventarisierte ausblenden"
             : "Deinventarisierte anzeigen"}
@@ -170,7 +177,9 @@ export function AdminBestandView({
                 >
                   <TableCell
                     className={
-                      isDeinventarised ? "font-medium line-through" : "font-medium"
+                      isDeinventarised
+                        ? "font-medium line-through"
+                        : "font-medium"
                     }
                   >
                     {game.title}

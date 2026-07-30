@@ -10,9 +10,15 @@ import {
 } from "@/lib/inventory/labels";
 import { Button } from "@/components/ui/button";
 
-function Label({ unit, qrDataUrl }: { unit: LabelUnit; qrDataUrl: string | null }) {
+function Label({
+  unit,
+  qrDataUrl,
+}: {
+  unit: LabelUnit;
+  qrDataUrl: string | null;
+}) {
   return (
-    <div className="flex h-[3.2cm] w-[5.4cm] flex-col items-center justify-center gap-1 border border-dashed border-black/40 p-2 break-inside-avoid">
+    <div className="flex h-[3.2cm] w-[5.4cm] break-inside-avoid flex-col items-center justify-center gap-1 border border-dashed border-black/40 p-2">
       {qrDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={qrDataUrl} alt={unit.code} className="h-[1.8cm] w-[1.8cm]" />
@@ -38,7 +44,10 @@ export function UnitLabelSheet({ units }: { units: LabelUnit[] }) {
     let cancelled = false;
     Promise.all(
       selected.map(async (unit) => {
-        const dataUrl = await QRCode.toDataURL(unit.code, { margin: 0, width: 200 });
+        const dataUrl = await QRCode.toDataURL(unit.code, {
+          margin: 0,
+          width: 200,
+        });
         return [unit.id, dataUrl] as const;
       }),
     ).then((entries) => {
@@ -80,7 +89,11 @@ export function UnitLabelSheet({ units }: { units: LabelUnit[] }) {
           className="grid grid-cols-3 justify-items-center gap-3 print:break-after-page"
         >
           {page.map((unit) => (
-            <Label key={unit.id} unit={unit} qrDataUrl={qrCodes[unit.id] ?? null} />
+            <Label
+              key={unit.id}
+              unit={unit}
+              qrDataUrl={qrCodes[unit.id] ?? null}
+            />
           ))}
         </div>
       ))}

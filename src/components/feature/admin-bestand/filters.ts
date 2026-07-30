@@ -1,7 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { UNSORTIERT_CODE } from "@/lib/inventory/codes";
 
-export type AdminBestandFilter = "ungeprueft" | "mangel" | "nicht-erfasst" | null;
+export type AdminBestandFilter =
+  "ungeprueft" | "mangel" | "nicht-erfasst" | null;
 
 export function boardGameAdminWhere({
   showDeinventarised = false,

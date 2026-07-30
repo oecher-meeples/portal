@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 afterEach(() => {
@@ -28,13 +34,19 @@ async function openDialog(user: ReturnType<typeof userEvent.setup>) {
 }
 
 function submitButton(dialog: HTMLElement) {
-  return within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ });
+  return within(dialog).getByRole("button", {
+    name: /Spiel anlegen|Speichere/,
+  });
 }
 
 describe("CreateBoardGameDialog — manual entry via EAN", () => {
   it("submits the scanned EAN together with the title and closes the dialog on success", async () => {
     const user = userEvent.setup();
-    createBoardGameMock.mockResolvedValue({ success: true, id: "game-1", hint: undefined });
+    createBoardGameMock.mockResolvedValue({
+      success: true,
+      id: "game-1",
+      hint: undefined,
+    });
 
     // defaultEan opens the dialog straight away, prefilled from the barcode scan.
     render(<CreateBoardGameDialog defaultEan="5901234123457" />);
@@ -58,7 +70,9 @@ describe("CreateBoardGameDialog — manual entry via EAN", () => {
   it("shows the server error instead of crashing when the session has expired", async () => {
     const user = userEvent.setup();
     createBoardGameMock.mockRejectedValue(
-      new Error("Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und melde dich erneut an."),
+      new Error(
+        "Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und melde dich erneut an.",
+      ),
     );
 
     render(<CreateBoardGameDialog defaultEan="5901234123457" />);
@@ -93,16 +107,26 @@ describe("CreateBoardGameDialog — BGG-ID import", () => {
         explainerVideoUrl: null,
       },
     });
-    createBoardGameMock.mockResolvedValue({ success: true, id: "game-2", hint: undefined });
+    createBoardGameMock.mockResolvedValue({
+      success: true,
+      id: "game-2",
+      hint: undefined,
+    });
 
     render(<CreateBoardGameDialog />);
     const dialog = await openDialog(user);
 
-    await user.click(within(dialog).getByRole("button", { name: "Via BGG-ID" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Via BGG-ID" }),
+    );
     await user.type(within(dialog).getByLabelText("BGG-ID"), "342942");
-    await user.click(within(dialog).getByRole("button", { name: "Vorschau laden" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Vorschau laden" }),
+    );
 
-    await waitFor(() => expect(previewBggImportMock).toHaveBeenCalledWith(342942));
+    await waitFor(() =>
+      expect(previewBggImportMock).toHaveBeenCalledWith(342942),
+    );
     expect(await within(dialog).findByText("Ark Nova")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Titel")).toHaveValue("Ark Nova");
 
@@ -131,12 +155,18 @@ describe("CreateBoardGameDialog — BGG-ID import", () => {
     render(<CreateBoardGameDialog />);
     const dialog = await openDialog(user);
 
-    await user.click(within(dialog).getByRole("button", { name: "Via BGG-ID" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Via BGG-ID" }),
+    );
     await user.type(within(dialog).getByLabelText("BGG-ID"), "999999999");
-    await user.click(within(dialog).getByRole("button", { name: "Vorschau laden" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Vorschau laden" }),
+    );
 
     expect(
-      await within(dialog).findByText("BoardGameGeek-Eintrag mit ID 999999999 wurde nicht gefunden."),
+      await within(dialog).findByText(
+        "BoardGameGeek-Eintrag mit ID 999999999 wurde nicht gefunden.",
+      ),
     ).toBeInTheDocument();
     expect(createBoardGameMock).not.toHaveBeenCalled();
   });

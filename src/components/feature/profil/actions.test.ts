@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
-const { decryptSecret } = await import("@/lib/crypto");
+const { decryptSecret } = await import("@/lib/utils/crypto");
 const {
   clearOwnBankDetails,
   resignOwnMembership,
@@ -26,7 +27,9 @@ const IBAN = "DE89 3704 0044 0532 0130 00";
 class RedirectError extends Error {}
 
 beforeEach(() => {
-  process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 3).toString("base64");
+  process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 3).toString(
+    "base64",
+  );
   requireMeepleMock.mockResolvedValue(OWN);
 });
 
@@ -104,7 +107,10 @@ describe("updateOwnBankDetails", () => {
   });
 
   it("rejects a missing account holder", async () => {
-    const result = await updateOwnBankDetails({ accountHolder: " ", iban: IBAN });
+    const result = await updateOwnBankDetails({
+      accountHolder: " ",
+      iban: IBAN,
+    });
 
     expect(result).toEqual({ error: "Bitte den Kontoinhaber angeben." });
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();

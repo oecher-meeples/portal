@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { resignOwnMembership } from "@/components/feature/profil/actions";
+import { formatDatePlain } from "@/lib/utils/format";
 
 export function ResignMembershipPanel({
   resignedAt,
@@ -40,13 +41,11 @@ export function ResignMembershipPanel({
   if (done) {
     return (
       <p className="bg-primary/10 rounded-md p-3 text-sm">
-        Deine Kündigung ist vermerkt. Die Mitgliedschaft läuft unverändert weiter
-        bis zum Jahreswechsel
-        {endsAt
-          ? ` (${new Intl.DateTimeFormat("de-DE").format(new Date(endsAt))})`
-          : ""}
-        . Bis dahin kannst du weiter ausleihen. Danach bleibt dir nur noch die
-        Abwicklung: Profil, eigene Bestände, Rückgabe und Weitergabe.
+        Deine Kündigung ist vermerkt. Die Mitgliedschaft läuft unverändert
+        weiter bis zum Jahreswechsel
+        {endsAt ? ` (${formatDatePlain(endsAt)})` : ""}. Bis dahin kannst du
+        weiter ausleihen. Danach bleibt dir nur noch die Abwicklung: Profil,
+        eigene Bestände, Rückgabe und Weitergabe.
       </p>
     );
   }

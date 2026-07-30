@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const buildLudothekGamesMock = vi.fn();
 vi.mock("@/lib/ludothek/query", () => ({
@@ -141,9 +141,19 @@ function ludothekGame(overrides: Partial<Record<string, unknown>> = {}) {
 describe("getFreeGamesInRoom", () => {
   it("combines zustand and player-count filters with the in-room check", async () => {
     buildLudothekGamesMock.mockResolvedValue([
-      ludothekGame({ id: "game-1", zustand: "frei", minPlayers: 2, maxPlayers: 4 }),
+      ludothekGame({
+        id: "game-1",
+        zustand: "frei",
+        minPlayers: 2,
+        maxPlayers: 4,
+      }),
       ludothekGame({ id: "game-2", zustand: "ausgeliehen" }),
-      ludothekGame({ id: "game-3", zustand: "frei", minPlayers: 5, maxPlayers: 8 }),
+      ludothekGame({
+        id: "game-3",
+        zustand: "frei",
+        minPlayers: 5,
+        maxPlayers: 8,
+      }),
     ]);
     prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
       { unitId: "shelf-1" },
@@ -165,13 +175,25 @@ describe("getFreeGamesInRoom", () => {
 describe("getGuestFleaMarketItems", () => {
   it("never includes PENDING items", async () => {
     prismaMock.fleaMarketItem.findMany.mockResolvedValue([
-      { id: "item-1", title: "Azul", description: null, priceEuros: 20, status: "FOR_SALE" },
+      {
+        id: "item-1",
+        title: "Azul",
+        description: null,
+        priceEuros: 20,
+        status: "FOR_SALE",
+      },
     ] as never);
 
     const result = await getGuestFleaMarketItems("event-1");
 
     expect(result).toEqual([
-      { id: "item-1", title: "Azul", description: null, priceEuros: 20, status: "FOR_SALE" },
+      {
+        id: "item-1",
+        title: "Azul",
+        description: null,
+        priceEuros: 20,
+        status: "FOR_SALE",
+      },
     ]);
     expect(prismaMock.fleaMarketItem.findMany).toHaveBeenCalledWith(
       expect.objectContaining({

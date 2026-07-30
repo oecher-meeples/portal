@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { getMembershipState } from "@/lib/meeples";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { getMembershipState } from "@/lib/members/meeples";
+import { requirePermission } from "@/lib/auth/permissions";
 
 async function requireMembersManage() {
   return requirePermission("members:manage");
@@ -15,7 +15,9 @@ export async function getOpenHoldingsSummary(meepleId: string) {
 
   const [games, units] = await Promise.all([
     prisma.gameHolding.count({ where: { meepleId, endedAt: null } }),
-    prisma.storageUnit.count({ where: { keeperMeepleId: meepleId, retiredAt: null } }),
+    prisma.storageUnit.count({
+      where: { keeperMeepleId: meepleId, retiredAt: null },
+    }),
   ]);
 
   return { games, units };
@@ -70,7 +72,9 @@ export async function anonymiseMeeple(meepleId: string) {
 
   const [openGames, openUnits] = await Promise.all([
     prisma.gameHolding.count({ where: { meepleId, endedAt: null } }),
-    prisma.storageUnit.count({ where: { keeperMeepleId: meepleId, retiredAt: null } }),
+    prisma.storageUnit.count({
+      where: { keeperMeepleId: meepleId, retiredAt: null },
+    }),
   ]);
   if (openGames > 0 || openUnits > 0) {
     return {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission } from "@/lib/auth/permissions";
 import { buildStateCookie, generateState } from "@/lib/instagram/oauth-state";
 
 export async function GET() {

@@ -1,5 +1,5 @@
 import { InstagramStatus, type Post } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/utils/prisma";
 import { resolveCoverImageUrl } from "@/lib/instagram/cover-image";
 import {
   createMediaContainer,
@@ -20,7 +20,9 @@ export function findDuePosts() {
   return prisma.post.findMany({
     where: {
       instagram: true,
-      instagramStatus: { in: [InstagramStatus.PENDING, InstagramStatus.QUEUED] },
+      instagramStatus: {
+        in: [InstagramStatus.PENDING, InstagramStatus.QUEUED],
+      },
       instagramAttempts: { lt: MAX_ATTEMPTS },
     },
   });

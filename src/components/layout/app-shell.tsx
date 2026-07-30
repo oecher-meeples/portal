@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
-import { getPreviewTier, getRealSessionTier } from "@/lib/session";
+import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 
 export async function AppShell({ children }: { children: ReactNode }) {

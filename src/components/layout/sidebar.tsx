@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
-import { NAV_GROUPS, tierAtLeast, type Tier } from "@/lib/nav-config";
-import { cn } from "@/lib/utils";
+import { NAV_GROUPS, tierAtLeast, type Tier } from "@/lib/utils/nav-config";
+import { cn } from "@/lib/utils/cn";
 
 export function Sidebar({ tier }: { tier: Tier }) {
   const pathname = usePathname();
@@ -26,7 +26,9 @@ export function Sidebar({ tier }: { tier: Tier }) {
               key={key}
               className={cn(
                 "flex flex-col gap-1",
-                group.title && index > 0 && "border-sidebar-border mt-2 border-t pt-3",
+                group.title &&
+                  index > 0 &&
+                  "border-sidebar-border mt-2 border-t pt-3",
               )}
             >
               {group.title && (
@@ -38,7 +40,7 @@ export function Sidebar({ tier }: { tier: Tier }) {
                       [key]: !prev[key],
                     }))
                   }
-                  className="text-sidebar-foreground flex items-center justify-between rounded-md px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-colors hover:bg-sidebar-accent"
+                  className="text-sidebar-foreground hover:bg-sidebar-accent flex items-center justify-between rounded-md px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-colors"
                 >
                   {group.title}
                   <ChevronDown

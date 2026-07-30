@@ -25,7 +25,9 @@ export function ShelfAssignmentSection({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [selectedUnitId, setSelectedUnitId] = useState(availableShelves[0]?.id ?? "");
+  const [selectedUnitId, setSelectedUnitId] = useState(
+    availableShelves[0]?.id ?? "",
+  );
   const [error, setError] = useState<string | null>(null);
 
   function handleAssign() {
@@ -60,7 +62,10 @@ export function ShelfAssignmentSection({
       {assignedShelves.length > 0 && (
         <ul className="flex flex-col divide-y text-sm">
           {assignedShelves.map((shelf) => (
-            <li key={shelf.id} className="flex items-center justify-between py-2">
+            <li
+              key={shelf.id}
+              className="flex items-center justify-between py-2"
+            >
               <span>{shelf.label}</span>
               <Button
                 variant="ghost"

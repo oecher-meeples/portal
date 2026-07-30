@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
-import { deleteExpiredBankDataAccessLogs } from "@/lib/bank-access-log";
+import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");

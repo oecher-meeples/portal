@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ScanLine } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
-import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,20 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/format";
+import { FleaMarketStatusPill } from "@/components/entities/flea-market-status-pill";
 import type { FleaMarketStats } from "@/lib/bringbuy/stats";
 import {
   approveFleaMarketItem,
   findFleaMarketItemByCode,
   setFleaMarketItemStatus,
 } from "@/components/feature/admin-bringbuy/cashier-actions";
-
-const STATUS_TONE: Record<string, StatusTone> = {
-  PENDING: "neutral",
-  FOR_SALE: "positive",
-  RESERVED: "warning",
-  SOLD: "info",
-};
 
 export type CashierItem = {
   id: string;
@@ -133,17 +125,16 @@ export function AdminBringBuyView({
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="font-mono text-sm">{item.code}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {item.code}
+                  </TableCell>
                   <TableCell className="font-medium">{item.title}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.sellerName}
                   </TableCell>
                   <TableCell>{item.priceEuros} €</TableCell>
                   <TableCell>
-                    <StatusPill
-                      label={FLEA_MARKET_ITEM_STATUS_LABELS[item.status]}
-                      tone={STATUS_TONE[item.status]}
-                    />
+                    <FleaMarketStatusPill status={item.status} />
                   </TableCell>
                   <TableCell className="flex justify-end gap-1.5 text-right">
                     {item.status === "PENDING" && (
@@ -175,7 +166,9 @@ export function AdminBringBuyView({
                           size="sm"
                           disabled={isPending}
                           onClick={() =>
-                            runAction(() => setFleaMarketItemStatus(item.id, "SOLD"))
+                            runAction(() =>
+                              setFleaMarketItemStatus(item.id, "SOLD"),
+                            )
                           }
                         >
                           Verkauft
@@ -187,7 +180,9 @@ export function AdminBringBuyView({
                         size="sm"
                         disabled={isPending}
                         onClick={() =>
-                          runAction(() => setFleaMarketItemStatus(item.id, "SOLD"))
+                          runAction(() =>
+                            setFleaMarketItemStatus(item.id, "SOLD"),
+                          )
                         }
                       >
                         Verkauft
@@ -215,7 +210,9 @@ export function AdminBringBuyView({
             <Button className="mt-3 w-full" onClick={handleCodeSearch}>
               Suchen
             </Button>
-            {message && <p className="text-muted-foreground mt-2 text-sm">{message}</p>}
+            {message && (
+              <p className="text-muted-foreground mt-2 text-sm">{message}</p>
+            )}
           </div>
         </div>
       </div>

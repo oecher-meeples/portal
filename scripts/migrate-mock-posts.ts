@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import { prisma } from "../src/lib/prisma";
-import { TYPE_TO_DB } from "../src/lib/content";
+import { prisma } from "../src/lib/utils/prisma";
+import { TYPE_TO_DB } from "../src/lib/content/content";
 
 const POSTS_DIR = path.join(process.cwd(), "content", "posts");
 

@@ -9,7 +9,7 @@ vi.mock("@/lib/instagram/queue", () => ({
 }));
 
 const deleteExpiredBankDataAccessLogsMock = vi.fn();
-vi.mock("@/lib/bank-access-log", () => ({
+vi.mock("@/lib/members/bank-access-log", () => ({
   deleteExpiredBankDataAccessLogs: (...args: unknown[]) =>
     deleteExpiredBankDataAccessLogsMock(...args),
 }));

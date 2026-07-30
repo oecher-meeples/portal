@@ -1,11 +1,14 @@
 "use server";
 
 import { GameInventoryStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
+import { requirePermission } from "@/lib/auth/permissions";
 
-export async function confirmGameCondition(boardGameId: string, condition: string) {
+export async function confirmGameCondition(
+  boardGameId: string,
+  condition: string,
+) {
   await requireMeeple();
 
   await prisma.boardGame.update({

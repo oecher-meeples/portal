@@ -1,4 +1,4 @@
-﻿import { requireMember } from "@/lib/session";
+﻿import { requireMember } from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Separator } from "@/components/ui/separator";
 import { MARKET_LISTINGS, SPARE_PART_LISTINGS } from "@/data/market";

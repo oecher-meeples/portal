@@ -1,10 +1,10 @@
 ﻿import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
-import { getAllContentWithCalendar } from "@/lib/calendar";
+import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermissionInCurrentView } from "@/lib/session";
+import { hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
   const [publicItems, user] = await Promise.all([

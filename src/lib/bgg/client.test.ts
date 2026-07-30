@@ -96,9 +96,7 @@ describe("fetchBggGame", () => {
 
     await fetchBggGame(1);
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("videos=1"),
-    );
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("videos=1"));
   });
 
   it("throws BggNotFoundError for an unknown BGG id", async () => {

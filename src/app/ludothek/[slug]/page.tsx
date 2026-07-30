@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { getSessionTier } from "@/lib/session";
+import { prisma } from "@/lib/utils/prisma";
+import { getSessionTier } from "@/lib/auth/session";
 import { toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
   GameDetailView,
   type HoldingHistoryEntry,
 } from "@/components/feature/ludothek/game-detail-view";
+import { formatDateTime } from "@/lib/utils/format";
 
 const ORIGIN_LABELS: Record<string, string> = {
   INITIAL: "Ersterfassung",
@@ -15,11 +16,6 @@ const ORIGIN_LABELS: Record<string, string> = {
   HANDOVER: "Weitergabe",
   RELOCATION: "Umlagern",
 };
-
-const dateTime = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
 
 export default async function GameDetailPage({
   params,
@@ -54,19 +50,19 @@ export default async function GameDetailPage({
     target: holding.meeple
       ? holding.meeple.displayName
       : (holding.unit?.label ?? holding.unit?.code ?? "—"),
-    startedAt: dateTime.format(holding.startedAt),
-    endedAt: holding.endedAt ? dateTime.format(holding.endedAt) : null,
+    startedAt: formatDateTime(holding.startedAt),
+    endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
     confirmedAt: holding.confirmedAt?.toISOString() ?? null,
     recordedByName: holding.recordedBy.displayName,
   }));
 
   const responsibleName = game.responsibleMeepleId
-    ? (
+    ? ((
         await prisma.meeple.findUnique({
           where: { id: game.responsibleMeepleId },
           select: { displayName: true },
         })
-      )?.displayName ?? null
+      )?.displayName ?? null)
     : null;
 
   return (

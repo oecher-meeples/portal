@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
@@ -35,7 +36,10 @@ describe("importFleaMarketItemsCsv", () => {
   });
 
   it("assigns the caller's own meeple as seller and status PENDING", async () => {
-    await importFleaMarketItemsCsv("event-1", "title,price,description\nAzul,22\n");
+    await importFleaMarketItemsCsv(
+      "event-1",
+      "title,price,description\nAzul,22\n",
+    );
 
     expect(prismaMock.fleaMarketItem.create).toHaveBeenCalledWith(
       expect.objectContaining({

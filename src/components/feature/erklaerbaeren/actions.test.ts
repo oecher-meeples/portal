@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
@@ -27,9 +28,9 @@ describe("without a session", () => {
   it("writes nothing", async () => {
     requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
 
-    await expect(
-      addExplainerGame("game-1", "WITH_MANUAL"),
-    ).rejects.toThrow(RedirectError);
+    await expect(addExplainerGame("game-1", "WITH_MANUAL")).rejects.toThrow(
+      RedirectError,
+    );
     await expect(
       updateExplainerGameLevel("game-1", "BY_HEART"),
     ).rejects.toThrow(RedirectError);
@@ -53,7 +54,11 @@ describe("addExplainerGame", () => {
         meepleId_boardGameId: { meepleId: "meeple-1", boardGameId: "game-1" },
       },
       update: { level: "WITHOUT_MANUAL" },
-      create: { meepleId: "meeple-1", boardGameId: "game-1", level: "WITHOUT_MANUAL" },
+      create: {
+        meepleId: "meeple-1",
+        boardGameId: "game-1",
+        level: "WITHOUT_MANUAL",
+      },
     });
   });
 
@@ -67,7 +72,11 @@ describe("addExplainerGame", () => {
     expect(prismaMock.explainerGame.upsert).toHaveBeenLastCalledWith(
       expect.objectContaining({
         update: { level: "BY_HEART" },
-        create: { meepleId: "meeple-1", boardGameId: "game-1", level: "BY_HEART" },
+        create: {
+          meepleId: "meeple-1",
+          boardGameId: "game-1",
+          level: "BY_HEART",
+        },
       }),
     );
     expect(prismaMock.explainerGame.create).not.toHaveBeenCalled();
@@ -76,7 +85,9 @@ describe("addExplainerGame", () => {
 
 describe("updateExplainerGameLevel", () => {
   it("only updates the caller's own entry", async () => {
-    prismaMock.explainerGame.updateMany.mockResolvedValue({ count: 1 } as never);
+    prismaMock.explainerGame.updateMany.mockResolvedValue({
+      count: 1,
+    } as never);
 
     const result = await updateExplainerGameLevel("game-1", "BY_HEART");
 
@@ -88,7 +99,9 @@ describe("updateExplainerGameLevel", () => {
   });
 
   it("reports an error when no own entry exists", async () => {
-    prismaMock.explainerGame.updateMany.mockResolvedValue({ count: 0 } as never);
+    prismaMock.explainerGame.updateMany.mockResolvedValue({
+      count: 0,
+    } as never);
 
     const result = await updateExplainerGameLevel("game-1", "BY_HEART");
 
@@ -100,7 +113,9 @@ describe("updateExplainerGameLevel", () => {
 
 describe("removeExplainerGame", () => {
   it("deletes exactly the caller's own entry", async () => {
-    prismaMock.explainerGame.deleteMany.mockResolvedValue({ count: 1 } as never);
+    prismaMock.explainerGame.deleteMany.mockResolvedValue({
+      count: 1,
+    } as never);
 
     const result = await removeExplainerGame("game-1");
 

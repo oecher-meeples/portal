@@ -1,19 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/permissions", () => ({
+vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
 const ensureMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
 
@@ -64,9 +65,16 @@ describe("createStorageUnit", () => {
       code: "OM-BOX-0002",
     } as never);
 
-    const result = await createStorageUnit({ kind: "BOX", label: "Zweiter Karton" });
+    const result = await createStorageUnit({
+      kind: "BOX",
+      label: "Zweiter Karton",
+    });
 
-    expect(result).toEqual({ success: true, id: "unit-2", code: "OM-BOX-0002" });
+    expect(result).toEqual({
+      success: true,
+      id: "unit-2",
+      code: "OM-BOX-0002",
+    });
   });
 
   it("rejects an empty label", async () => {
@@ -151,7 +159,9 @@ describe("setUnitParent", () => {
       } as never)
       // requireOpenUnit inside moveStorageUnit
       .mockResolvedValueOnce({ id: "unit-1", retiredAt: null } as never);
-    prismaMock.storageUnitMove.updateMany.mockResolvedValue({ count: 1 } as never);
+    prismaMock.storageUnitMove.updateMany.mockResolvedValue({
+      count: 1,
+    } as never);
     prismaMock.storageUnitMove.create.mockResolvedValue({} as never);
     prismaMock.storageUnit.update.mockResolvedValue({} as never);
 
@@ -164,7 +174,10 @@ describe("setUnitParent", () => {
     });
     expect(prismaMock.storageUnitMove.create).toHaveBeenCalledTimes(1);
     expect(prismaMock.storageUnitMove.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ unitId: "unit-1", parentUnitId: "unit-2" }),
+      data: expect.objectContaining({
+        unitId: "unit-1",
+        parentUnitId: "unit-2",
+      }),
     });
   });
 });

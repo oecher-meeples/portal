@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
 import type { ShiftType } from "@prisma/client";
+import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SHIFT_TYPE_LABELS } from "@/components/feature/admin-events/shift-dialog";
+import { SHIFT_TYPE_LABELS } from "@/lib/events/shift-labels";
 import {
   bookShift,
   cancelBooking,
@@ -24,11 +24,7 @@ import {
   markAttending,
   markNotAttending,
 } from "@/components/feature/helfer/attendance-actions";
-
-const dateTime = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
+import { formatDateTimeRange } from "@/lib/utils/format";
 
 export type HelferShiftRow = {
   id: string;
@@ -60,23 +56,10 @@ export function HelferView({
   isAttendingAsExplainer: boolean;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const { run, pending: isPending, error } = useAction();
 
   function selectEvent(eventId: string) {
     router.push(`/helfer?event=${eventId}`);
-  }
-
-  function withErrorHandling(action: () => Promise<{ error?: string; success?: true }>) {
-    startTransition(async () => {
-      setError(null);
-      const result = await action();
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    });
   }
 
   return (
@@ -114,14 +97,16 @@ export function HelferView({
             variant={isAttendingAsExplainer ? "outline" : "default"}
             disabled={isPending}
             onClick={() =>
-              withErrorHandling(() =>
+              run(() =>
                 isAttendingAsExplainer
                   ? markNotAttending(selectedEventId)
                   : markAttending(selectedEventId),
               )
             }
           >
-            {isAttendingAsExplainer ? "Abmelden" : "Ich bin heute als Erklärbär da"}
+            {isAttendingAsExplainer
+              ? "Abmelden"
+              : "Ich bin heute als Erklärbär da"}
           </Button>
         </div>
       )}
@@ -151,16 +136,19 @@ export function HelferView({
                     {SHIFT_TYPE_LABELS[shift.type]}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
-                    {dateTime.format(new Date(shift.startsAt))} –{" "}
-                    {dateTime.format(new Date(shift.endsAt))}
+                    {formatDateTimeRange(shift.startsAt, shift.endsAt)}
                   </TableCell>
                   <TableCell>
                     {shift.ownBooking ? (
                       <StatusPill
                         label={`${shift.booked}/${shift.capacity} · ${
-                          shift.ownBooking.uncertain ? "du (vorläufig)" : "du (sicher)"
+                          shift.ownBooking.uncertain
+                            ? "du (vorläufig)"
+                            : "du (sicher)"
                         }`}
-                        tone={shift.ownBooking.uncertain ? "warning" : "positive"}
+                        tone={
+                          shift.ownBooking.uncertain ? "warning" : "positive"
+                        }
                       />
                     ) : (
                       <span className="text-sm">
@@ -176,7 +164,7 @@ export function HelferView({
                           size="sm"
                           disabled={isPending}
                           onClick={() =>
-                            withErrorHandling(() =>
+                            run(() =>
                               updateBookingCertainty(
                                 shift.id,
                                 !shift.ownBooking!.uncertain,
@@ -184,15 +172,15 @@ export function HelferView({
                             )
                           }
                         >
-                          {shift.ownBooking.uncertain ? "Als sicher markieren" : "Als vorläufig markieren"}
+                          {shift.ownBooking.uncertain
+                            ? "Als sicher markieren"
+                            : "Als vorläufig markieren"}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           disabled={isPending}
-                          onClick={() =>
-                            withErrorHandling(() => cancelBooking(shift.id))
-                          }
+                          onClick={() => run(() => cancelBooking(shift.id))}
                         >
                           Abmelden
                         </Button>
@@ -203,9 +191,7 @@ export function HelferView({
                       <Button
                         size="sm"
                         disabled={isPending}
-                        onClick={() =>
-                          withErrorHandling(() => bookShift(shift.id, false))
-                        }
+                        onClick={() => run(() => bookShift(shift.id, false))}
                       >
                         Zusagen
                       </Button>

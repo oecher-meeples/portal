@@ -50,9 +50,7 @@ export function InstagramConnectionView({
           <Button
             render={
               // eslint-disable-next-line @next/next/no-html-link-for-pages -- API route redirect, not a page
-              <a href="/api/auth/instagram/connect">
-                Mit Instagram verbinden
-              </a>
+              <a href="/api/auth/instagram/connect">Mit Instagram verbinden</a>
             }
           />
         )}

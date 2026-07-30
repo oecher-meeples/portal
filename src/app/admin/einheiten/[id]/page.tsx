@@ -1,12 +1,8 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { requirePermission } from "@/lib/permissions";
+import { prisma } from "@/lib/utils/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
 import { UnitDetailView } from "@/components/feature/admin-einheiten/unit-detail-view";
-
-const dateTime = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
+import { formatDateTime } from "@/lib/utils/format";
 
 export default async function AdminEinheitDetailPage({
   params,
@@ -53,8 +49,8 @@ export default async function AdminEinheitDetailPage({
       contents={contents}
       moves={moves.map((move) => ({
         id: move.id,
-        startedAt: dateTime.format(move.startedAt),
-        endedAt: move.endedAt ? dateTime.format(move.endedAt) : null,
+        startedAt: formatDateTime(move.startedAt),
+        endedAt: move.endedAt ? formatDateTime(move.endedAt) : null,
         keeperName: move.keeper?.displayName ?? null,
         locationNote: move.locationNote,
         recordedByName: move.recordedBy.displayName,

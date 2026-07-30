@@ -1,0 +1,57 @@
+{
+  // ---------------------------------------------------------------------------
+  // Explorer aufräumen.
+  //
+  // Wichtig: fileNesting verschachtelt nur DATEIEN unter DATEIEN im selben
+  // Verzeichnis. Ordner (.github/, .husky/, …) lassen sich nicht verschachteln —
+  // für die gibt es nur files.exclude weiter unten.
+  // ---------------------------------------------------------------------------
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    // Der Schlüssel muss eine tatsächlich existierende Datei sein — ein
+    // virtueller "config"-Knoten funktioniert nicht. Daher package.json als
+    // Anker für die gesamte Werkzeug-Konfiguration im Root.
+    "package.json": "pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc, .editorconfig, .prettierrc*, .prettierignore, eslint.config.*, .eslintrc*, tsconfig*, next.config.*, postcss.config.*, vitest.config.*, components.json, vercel.json, .jscpd.json, .gitignore, .gitattributes",
+    // Umgebungsvariablen unter dem Beispiel bündeln.
+    ".env.example": ".env, .env.*",
+    // Test neben Subjekt — spiegelt die Colocation-Regel aus
+    // docs/coding-guidelines.md.
+    "*.ts": "${capture}.test.ts",
+    "*.tsx": "${capture}.test.tsx",
+    // Prisma-Schema als Anker für Migrationen/Seed.
+    "schema.prisma": "seed.ts, migrations",
+    "README.md": "CLAUDE.md, CONTEXT.md, LICENSE, Aufgabenstellung.md"
+  },
+
+  // Ordner, die nie von Hand angefasst werden, ganz ausblenden.
+  // Gilt auch für Schnellöffnen (Ctrl+P) und Suche.
+  "files.exclude": {
+    "**/.git": true,
+    "**/.next": true,
+    "**/.vercel": true,
+    "**/node_modules": true,
+    "**/*.tsbuildinfo": true,
+    "**/next-env.d.ts": true,
+
+    // Selten bearbeitet, aber gelegentlich nötig: auf true stellen, wenn sie
+    // ganz verschwinden sollen — erreichbar bleiben sie über Ctrl+P.
+    "**/.devcontainer": true,
+    "**/.github": false,
+    "**/.husky": true,
+    "**/.claude": false,
+    "**/.vscode": false
+  },
+
+  // Alternative zum Obigen: blendet alles aus, was .gitignore ignoriert.
+  // Bewusst aus, weil damit auch .env.local unsichtbar würde.
+  "explorer.excludeGitIgnore": false,
+
+  "search.useIgnoreFiles": true, // ignore files from gitignore in search.
+  "search.exclude": {
+    "**/pnpm-lock.yaml": true,
+    "**/package-lock.json": true,
+    "**/.git": true,
+    "**/*.min.js": true
+  }
+}

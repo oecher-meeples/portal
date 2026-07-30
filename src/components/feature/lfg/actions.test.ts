@@ -1,23 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
-const {
-  closeLfgPost,
-  createLfgPost,
-  joinLfgPost,
-  leaveLfgPost,
-} = await import("./actions");
+const { closeLfgPost, createLfgPost, joinLfgPost, leaveLfgPost } =
+  await import("./actions");
 
 class RedirectError extends Error {}
 
@@ -171,7 +168,9 @@ describe("leaveLfgPost", () => {
       id: "post-1",
       createdByMeepleId: CREATOR.id,
     } as never);
-    prismaMock.lfgParticipant.deleteMany.mockResolvedValue({ count: 1 } as never);
+    prismaMock.lfgParticipant.deleteMany.mockResolvedValue({
+      count: 1,
+    } as never);
 
     const result = await leaveLfgPost("post-1");
 

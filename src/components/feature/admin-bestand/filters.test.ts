@@ -13,9 +13,7 @@ describe("boardGameAdminWhere", () => {
   });
 
   it("combines the deinventarised exclusion with the ungeprüft filter", () => {
-    expect(
-      boardGameAdminWhere({ filter: "ungeprueft" }),
-    ).toEqual({
+    expect(boardGameAdminWhere({ filter: "ungeprueft" })).toEqual({
       AND: [
         { status: { not: "DEINVENTARISED" } },
         { needsCompletenessCheck: true },

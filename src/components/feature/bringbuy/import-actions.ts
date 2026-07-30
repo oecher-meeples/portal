@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
 

@@ -1,5 +1,5 @@
-import { requireMember } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { requireMember } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
 import { PageHeading } from "@/components/ui/page-heading";
 import { ErklaerbaerenView } from "@/components/feature/erklaerbaeren/erklaerbaeren-view";
 import type { ExplainerDirectoryEntry } from "@/components/feature/erklaerbaeren/explainer-directory";

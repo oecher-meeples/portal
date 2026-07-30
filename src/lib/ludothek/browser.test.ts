@@ -37,15 +37,15 @@ describe("filterLudothekGames", () => {
     const mid = game({ minPlayers: 3, maxPlayers: 4 });
     const large = game({ minPlayers: 5, maxPlayers: 8 });
 
-    expect(filterLudothekGames([small, mid, large], { players: "1-2" })).toEqual([
-      small,
-    ]);
-    expect(filterLudothekGames([small, mid, large], { players: "3-4" })).toEqual([
-      mid,
-    ]);
-    expect(filterLudothekGames([small, mid, large], { players: "5+" })).toEqual([
-      large,
-    ]);
+    expect(
+      filterLudothekGames([small, mid, large], { players: "1-2" }),
+    ).toEqual([small]);
+    expect(
+      filterLudothekGames([small, mid, large], { players: "3-4" }),
+    ).toEqual([mid]);
+    expect(filterLudothekGames([small, mid, large], { players: "5+" })).toEqual(
+      [large],
+    );
   });
 
   it("includes a game spanning a range across the filter boundary", () => {
@@ -61,15 +61,15 @@ describe("filterLudothekGames", () => {
     const mid = game({ playTimeMinutes: 90 });
     const long = game({ playTimeMinutes: 180 });
 
-    expect(filterLudothekGames([short, mid, long], { duration: "short" })).toEqual([
-      short,
-    ]);
-    expect(filterLudothekGames([short, mid, long], { duration: "mid" })).toEqual([
-      mid,
-    ]);
-    expect(filterLudothekGames([short, mid, long], { duration: "long" })).toEqual([
-      long,
-    ]);
+    expect(
+      filterLudothekGames([short, mid, long], { duration: "short" }),
+    ).toEqual([short]);
+    expect(
+      filterLudothekGames([short, mid, long], { duration: "mid" }),
+    ).toEqual([mid]);
+    expect(
+      filterLudothekGames([short, mid, long], { duration: "long" }),
+    ).toEqual([long]);
   });
 
   it("filters by maximum weight", () => {
@@ -86,10 +86,9 @@ describe("filterLudothekGames", () => {
     const tileLaying = game({ mechanics: ["Plättchenlegen"] });
     const both = game({ mechanics: ["Engine-Building", "Plättchenlegen"] });
 
-    const result = filterLudothekGames(
-      [engineBuilding, tileLaying, both],
-      { mechanics: ["Plättchenlegen"] },
-    );
+    const result = filterLudothekGames([engineBuilding, tileLaying, both], {
+      mechanics: ["Plättchenlegen"],
+    });
 
     expect(result).toEqual([tileLaying, both]);
   });
@@ -98,9 +97,9 @@ describe("filterLudothekGames", () => {
     const loaned = game({ isLoanedOut: true });
     const free = game({ isLoanedOut: false });
 
-    expect(filterLudothekGames([loaned, free], { onlyLoanedOut: true })).toEqual([
-      loaned,
-    ]);
+    expect(
+      filterLudothekGames([loaned, free], { onlyLoanedOut: true }),
+    ).toEqual([loaned]);
   });
 
   it("filters by 'bei Meeple X', including box contents resolved upstream", () => {
@@ -134,7 +133,9 @@ describe("filterLudothekGames", () => {
   });
 
   it("returns an empty result when nothing matches", () => {
-    expect(filterLudothekGames([game()], { search: "nonexistent" })).toEqual([]);
+    expect(filterLudothekGames([game()], { search: "nonexistent" })).toEqual(
+      [],
+    );
   });
 });
 
@@ -195,8 +196,10 @@ describe("parseLudothekSearchParams", () => {
 
   it("normalises a single mechanik value to an array", () => {
     expect(
-      parseLudothekSearchParams({ mechanik: "Engine-Building" }, { internal: false })
-        .mechanics,
+      parseLudothekSearchParams(
+        { mechanik: "Engine-Building" },
+        { internal: false },
+      ).mechanics,
     ).toEqual(["Engine-Building"]);
   });
 });

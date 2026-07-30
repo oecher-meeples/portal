@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { FleaMarketItemStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-import { requireMeeple } from "@/lib/meeples";
+import { prisma } from "@/lib/utils/prisma";
+import { requireMeeple } from "@/lib/members/meeples";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
 
 const EDITABLE_STATUSES: FleaMarketItemStatus[] = ["PENDING", "FOR_SALE"];
@@ -61,7 +61,8 @@ export async function updateOwnFleaMarketItem(
   }
   if (!EDITABLE_STATUSES.includes(item.status)) {
     return {
-      error: "Reservierte oder verkaufte Artikel können nicht mehr bearbeitet werden.",
+      error:
+        "Reservierte oder verkaufte Artikel können nicht mehr bearbeitet werden.",
     };
   }
   if (!input.title.trim()) {
@@ -98,7 +99,8 @@ export async function deleteOwnFleaMarketItem(itemId: string) {
   }
   if (!EDITABLE_STATUSES.includes(item.status)) {
     return {
-      error: "Reservierte oder verkaufte Artikel können nicht mehr gelöscht werden.",
+      error:
+        "Reservierte oder verkaufte Artikel können nicht mehr gelöscht werden.",
     };
   }
 

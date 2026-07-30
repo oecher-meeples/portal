@@ -8,18 +8,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusPill } from "@/components/ui/status-pill";
-import { ShiftDialog, SHIFT_TYPE_LABELS, type EditableShift } from "@/components/feature/admin-events/shift-dialog";
-import { DeleteShiftButton } from "@/components/feature/admin-events/delete-shift-button";
+import { Trash2 } from "lucide-react";
+import { ActionButton } from "@/components/ui/action-button";
+import {
+  ShiftDialog,
+  type EditableShift,
+} from "@/components/feature/admin-events/shift-dialog";
+import { SHIFT_TYPE_LABELS } from "@/lib/events/shift-labels";
+import { deleteShift } from "@/components/feature/admin-events/shift-actions";
 import {
   ShelfAssignmentSection,
   type ShelfOption,
 } from "@/components/feature/admin-events/shelf-assignment-section";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
-
-const dateTime = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
+import { formatDateTimeRange } from "@/lib/utils/format";
 
 export type ShiftRow = EditableShift & {
   bookings: { uncertain: boolean }[];
@@ -61,7 +63,10 @@ export function EventDetailView({
           <TableBody>
             {shifts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground text-center">
+                <TableCell
+                  colSpan={5}
+                  className="text-muted-foreground text-center"
+                >
                   Noch keine Schichten angelegt.
                 </TableCell>
               </TableRow>
@@ -72,8 +77,7 @@ export function EventDetailView({
                   <TableRow key={shift.id}>
                     <TableCell>{SHIFT_TYPE_LABELS[shift.type]}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {dateTime.format(new Date(shift.startsAt))} –{" "}
-                      {dateTime.format(new Date(shift.endsAt))}
+                      {formatDateTimeRange(shift.startsAt, shift.endsAt)}
                     </TableCell>
                     <TableCell>
                       {fillLevel.isFull ? (
@@ -88,7 +92,15 @@ export function EventDetailView({
                       <ShiftDialog eventId={eventId} shift={shift} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <DeleteShiftButton shiftId={shift.id} />
+                      <ActionButton
+                        variant="destructive"
+                        size="icon-sm"
+                        aria-label="Schicht löschen"
+                        confirm="Schicht wirklich löschen?"
+                        action={deleteShift.bind(null, shift.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </ActionButton>
                     </TableCell>
                   </TableRow>
                 );

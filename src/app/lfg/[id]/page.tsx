@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
-import { requireMember, hasPermissionInCurrentView } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
-import { getLfgStatus } from "@/lib/lfg";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
+import { prisma } from "@/lib/utils/prisma";
+import { getLfgStatus } from "@/lib/content/lfg";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
-
-const dateFormatter = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
+import { formatDateMedium } from "@/lib/utils/format";
 
 export default async function LfgDetailPage({
   params,
@@ -34,7 +33,7 @@ export default async function LfgDetailPage({
       gameTitle={post.gameTitle}
       dateLabel={
         post.plannedAt
-          ? dateFormatter.format(post.plannedAt)
+          ? formatDateMedium(post.plannedAt)
           : (post.dateNote ?? "Termin offen")
       }
       location={post.location}

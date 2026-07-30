@@ -1,8 +1,8 @@
 import { Logo } from "@/components/layout/logo";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { PreviewTierSwitcher } from "@/components/layout/preview-tier-switcher";
-import type { Tier } from "@/lib/nav-config";
+import { PreviewTierSwitcher } from "@/components/feature/admin-preview-tier/preview-tier-switcher";
+import type { Tier } from "@/lib/utils/nav-config";
 
 export function Header({
   user,

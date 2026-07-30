@@ -1,0 +1,115 @@
+# Projekt- & Ordnerstruktur
+
+Dieses Projekt trennt Code in **Schichten mit einer festen Import-Richtung** und gruppiert innerhalb der Schichten nach **Fachdomäne statt nach technischer Rolle**.
+
+Zur Begriffsklärung, weil hier zwei verbreitete Vokabulare aufeinandertreffen:
+
+- **Domain Layer im Sinne von DDD** (Geschäftsregeln, ohne jede UI-Kenntnis) ist bei uns **`src/lib/<domäne>/`** — nicht `src/components/`.
+- **`src/components/entities/`** ist die *Darstellungs*-Schicht für Fachobjekte. Der Name folgt [Feature-Sliced Design](https://feature-sliced.design/docs/get-started/overview) (`entities`), nicht DDD. Der frühere Name `components/domain/` war irreführend, weil er im DDD-Sinn Geschäftslogik versprach, tatsächlich aber reine Präsentation enthielt.
+
+Dies ist **kein** Feature-Driven Design (FDD) im methodischen Sinn — es gibt keine FDD-Feature-Liste, keine FDD-Rollen und keine FDD-Prozessschritte.
+
+## Schichten & Import-Richtung
+
+```text
+src/lib/<domäne>/          DDD-Domain-Layer: Geschäftsregeln, Datenzugriff, Server Actions
+        ↑ (UI darf lib benutzen — lib niemals UI)
+src/components/
+  ui/        →  entities/  →  widgets/  →  feature/  →  layout/
+  (fachfrei)    (Fachobjekt   (geteilte    (ein Use     (App-Rahmen)
+                 anzeigen)     Use Cases)   Case)
+```
+
+**Regel:** Eine Schicht darf nur aus Schichten **links von sich** importieren — niemals nach rechts und niemals seitwärts innerhalb von `feature/`.
+
+Das wird per `import/no-restricted-paths` in [eslint.config.mjs](../eslint.config.mjs) **erzwungen** (Zonen werden zur Lint-Laufzeit aus dem Dateisystem generiert, neue Ordner sind automatisch abgedeckt). Zusätzlich erzwungen:
+
+- `src/lib/**` darf nichts aus `src/components/**` importieren (Domain-Layer bleibt UI-frei).
+- `src/components/ui/**` darf nichts aus `src/lib/<domäne>/**` importieren (nur `src/lib/utils/`, das fachfrei ist).
+- Kein Feature-Ordner darf aus einem anderen Feature-Ordner importieren.
+
+Aktueller Stand: **0 Verstöße** repo-weit.
+
+## `src/lib/` — Domain Layer (DDD)
+
+```text
+src/lib/
+├── auth/       Session, Tier-Ermittlung, Auth-Client
+├── bgg/        BoardGameGeek-Integration
+├── bringbuy/   Flohmarkt-Regeln
+├── content/    News/Content, LFG
+├── events/     Events, Schichten, Kapazität, Schicht-Labels
+├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln
+├── ludothek/   Spielebestand & Aufenthalte (Holdings):
+│               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben)
+│               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
+│               └── holding-actions.ts  Server Actions über den Übergängen
+├── members/    Mitglieder, Mitgliedsstatus
+├── instagram/  Cross-Posting
+└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client
+```
+
+Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.
+
+## `src/components/ui/` — fachfreie Primitives
+
+Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit Verhalten:
+
+| Baustein | Zweck |
+| --- | --- |
+| `button`, `input`, `label`, `textarea`, `card`, `dialog`, `table`, `tabs`, `badge`, `avatar`, `tooltip`, `separator`, `dropdown-menu` | Primitives |
+| `field.tsx` | `Field` / `TextField` / `TextAreaField` — Label-über-Control-Zeile (ersetzt ~60 handkopierte Wrapper) |
+| `use-action.ts` | Hook: Server Action ausführen → pending/error/`router.refresh()` |
+| `action-button.tsx` | Button, der eine Server Action ausführt (ersetzt 8 `Delete…Button`-Wrapper) |
+| `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
+| `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
+| `page-heading`, `stat-tile`, `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
+
+## `src/components/entities/` — Fachobjekte anzeigen
+
+Reine Präsentation: kennt Fachtypen, führt **keine** Datenbeschaffung und **keine** Mutation aus. Jede Datei ist die *einzige* Stelle, die weiß, wie ein Fachobjekt aussieht:
+
+```text
+entities/
+├── content-card.tsx            News-/Termin-Kachel
+├── content-list-row.tsx        News-Listenzeile
+├── content-type-badge.tsx      Blog/Termin/Turnier
+├── game-card.tsx               Spiele-Kachel
+├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung / nicht erfasst
+├── lfg-status-pill.tsx         offen / voll / abgelaufen / geschlossen
+├── membership-state-pill.tsx   aktiv / gekündigt / ausgetreten / anonymisiert
+└── flea-market-status-pill.tsx Freigabe / Verkauf / reserviert / verkauft
+```
+
+## `src/components/widgets/` — geteilte Use Cases
+
+Ein **Widget** ist ein in sich geschlossener Funktionsblock, der einen kompletten Anwendungsfall abliefert und von **mehreren** Features eingebunden wird. Er gehört keinem davon.
+
+```text
+widgets/
+└── game-holding/game-holding-panel.tsx
+```
+
+`GameHoldingPanel` ("was mache ich mit dem Spiel in meiner Hand": ausleihen, bestätigen, weitergeben, zurückgeben, einlagern) wird vom Scan-Flow **und** von der Ludothek-Detailseite benutzt. Vorher lag er in `feature/scan/` und wurde von dort querimportiert — genau der Fehler, den die Schichtenregel verhindert.
+
+## `src/components/feature/` — je ein Anwendungsfall
+
+28 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, …). Typisches Innenleben:
+
+- `<domäne>-view.tsx` — Smart Component, verdrahtet ui/entities/widgets mit State & Actions
+- `actions.ts` — Server Actions dieses Anwendungsfalls
+- `*-dialog.tsx`, `use-*.ts` — Teilaspekte desselben Anwendungsfalls
+
+Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `entities/`, `ui/` oder `lib/`.
+
+## `src/components/layout/` — App-Rahmen
+
+`app-shell`, `header`, `sidebar`, `logo`, `theme-provider`, `theme-toggle`, `user-menu`, `brand-watermark`. Reine Struktur/Positionierung; darf als oberste Schicht aus allen anderen importieren.
+
+## Wartungsregeln
+
+1. **Import-Richtung einhalten** — `ui → entities → widgets → feature → layout`, `lib` nie in Richtung UI. Lint bricht sonst.
+2. **DRY ab der zweiten Kopie**: Wird etwas ein zweites Mal geschrieben, wandert es in die passende tiefere Schicht (`ui/` wenn fachfrei, `entities/` wenn Anzeige eines Fachobjekts, `widgets/` wenn kompletter Use Case, `lib/` wenn Regel/Format).
+3. **Max. 400 Zeilen pro Datei.** Wird es mehr, entlang der Fachlichkeit aufteilen (Beispiel: `holdings.ts` → Schreibseite + `holdings-lookup.ts` Leseseite).
+4. **Dateien unter 100 Zeilen nur, wenn sie mehrfach importiert werden.** Einmalig genutzte Kleinkomponenten gehören in ihren Aufrufer. Begründete Ausnahmen: `layout/*` (jeweils eigener Rahmen-Baustein) und `theme-provider.tsx` (technisch nötige `"use client"`-Grenze).
+5. **Colocation**: Tests (`*.test.ts(x)`) liegen neben ihrem Subjekt.

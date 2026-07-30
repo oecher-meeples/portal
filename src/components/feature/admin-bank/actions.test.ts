@@ -1,32 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/permissions", () => ({
+vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
 const ensureMeepleMock = vi.fn();
-vi.mock("@/lib/meeples", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/meeples")>("@/lib/meeples");
+vi.mock("@/lib/members/meeples", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
+    "@/lib/members/meeples",
+  );
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
 
-const { encryptSecret } = await import("@/lib/crypto");
-const { BANK_CSV_COLUMNS, exportBankDataCsv, revealIban } = await import(
-  "./actions"
-);
+const { encryptSecret } = await import("@/lib/utils/crypto");
+const { BANK_CSV_COLUMNS, exportBankDataCsv, revealIban } =
+  await import("./actions");
 
 class ForbiddenError extends Error {}
 
 const IBAN = "DE89370400440532013000";
 
 beforeEach(() => {
-  process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
+  process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString(
+    "base64",
+  );
   requirePermissionMock.mockResolvedValue({ id: "user-kassenwart" });
   ensureMeepleMock.mockResolvedValue({ id: "meeple-kassenwart" });
 });
@@ -147,9 +149,7 @@ describe("exportBankDataCsv", () => {
     const lines = result.csv.split("\r\n");
 
     expect(lines[1]).toBe(`1;Lea Beispiel;Lea Beispiel;${IBAN}`);
-    expect(lines[2]).toBe(
-      `2;"Ben; Muster";"Ben; Muster";AT611904300234573201`,
-    );
+    expect(lines[2]).toBe(`2;"Ben; Muster";"Ben; Muster";AT611904300234573201`);
     expect(result.rowCount).toBe(2);
   });
 

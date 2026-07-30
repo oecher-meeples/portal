@@ -143,7 +143,10 @@ export function EditBoardGameDialog({ game }: { game: AdminBoardGameRow }) {
         {error && <p className="text-destructive text-sm">{error}</p>}
 
         <DialogFooter>
-          <Button onClick={handleSubmit} disabled={isSubmitting || !title.trim()}>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !title.trim()}
+          >
             {isSubmitting ? "Speichere…" : "Speichern"}
           </Button>
         </DialogFooter>
