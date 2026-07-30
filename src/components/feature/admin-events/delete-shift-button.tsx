@@ -27,7 +27,7 @@ export function DeleteShiftButton({ shiftId }: { shiftId: string }) {
   return (
     <div className="flex flex-col items-end gap-1">
       <Button
-        variant="ghost"
+        variant="destructive"
         size="icon-sm"
         onClick={handleDelete}
         disabled={isDeleting}

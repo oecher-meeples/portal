@@ -19,7 +19,18 @@ export function PostDetailView({ item, canEdit }: PostDetailViewProps) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <ContentTypeBadge type={item.type} />
-          {item.instagram && (
+          {item.instagram && item.instagramPostUrl && (
+            <a
+              href={item.instagramPostUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-xs hover:underline"
+            >
+              <Share2 className="size-3.5" />
+              Auch auf Instagram
+            </a>
+          )}
+          {item.instagram && !item.instagramPostUrl && (
             <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
               <Share2 className="size-3.5" />
               Auch auf Instagram

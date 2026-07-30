@@ -15,6 +15,7 @@ export type ContentItem = {
   location?: string;
   internal?: boolean;
   instagram?: boolean;
+  instagramPostUrl?: string;
 };
 
 const TYPE_TO_DB: Record<ContentType, "BLOG" | "TERMIN" | "TURNIER"> = {
@@ -41,6 +42,7 @@ function toContentItem(post: {
   location: string | null;
   internal: boolean | null;
   instagram: boolean | null;
+  instagramPostUrl: string | null;
 }): ContentItem {
   return {
     id: post.id,
@@ -54,6 +56,7 @@ function toContentItem(post: {
     location: post.location ?? undefined,
     internal: post.internal ?? undefined,
     instagram: post.instagram ?? undefined,
+    instagramPostUrl: post.instagramPostUrl ?? undefined,
   };
 }
 

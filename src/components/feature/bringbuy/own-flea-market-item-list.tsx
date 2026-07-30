@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import type { FleaMarketItemStatus } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
@@ -156,14 +157,16 @@ function ItemRow({ item }: { item: OwnFleaMarketItem }) {
         {canEdit && (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+              <Pencil className="size-4" />
               Bearbeiten
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="destructive"
               disabled={isSubmitting}
               onClick={handleDelete}
             >
+              <Trash2 className="size-4" />
               Löschen
             </Button>
           </div>

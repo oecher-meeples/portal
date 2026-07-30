@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,10 +96,11 @@ export function BankDetailsForm({
         {storedLast4 && (
           <Button
             type="button"
-            variant="outline"
+            variant="destructive"
             disabled={isSaving}
             onClick={handleClear}
           >
+            <Trash2 className="size-4" />
             Bankdaten löschen
           </Button>
         )}

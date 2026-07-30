@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deletePost } from "@/components/feature/admin-news/actions";
 
@@ -19,11 +20,12 @@ export function DeletePostButton({ postId }: { postId: string }) {
 
   return (
     <Button
-      variant="ghost"
+      variant="destructive"
       size="sm"
       onClick={handleDelete}
       disabled={isPending}
     >
+      <Trash2 className="size-4" />
       Löschen
     </Button>
   );
