@@ -99,3 +99,33 @@ _Avoid_: Verschieben, Move, Standortkorrektur
 **Unbestätigter Standort**:
 Ein Standort, den die abgebende Person eingetragen hat und die empfangende noch nicht. Blockiert nichts und wird mit Herkunftshinweis („eingetragen von \<Person\>") angezeigt. Eine Weitergabe bestätigt der Empfänger per Klick; eine Rückgabe bestätigt er, indem er das Spiel in eine Einheit einlagert.
 _Avoid_: Pending, vorläufig, unsicher
+
+**Sammel-Umlagern**:
+Variante des Umlagerns für den Event-Abbau: die Ziel-Einheit wird einmal gescannt, danach werden mehrere Spiele nacheinander gescannt und alle auf dieses eine Ziel gebucht, bis eine neue Ziel-Einheit gescannt wird. Bleibt fachlich ein gewöhnliches Umlagern je Spiel, nur die Scan-Reihenfolge ist umgekehrt.
+_Avoid_: Batch-Umlagern, Serien-Scan als eigener Vorgang
+
+### Event-Betrieb
+
+**Event**:
+Ein Spieletag oder eine Großveranstaltung mit Datum und Ort, von einem Admin angelegt. Eigenständig und losgelöst vom öffentlichen/internen ICS-Kalender-Feed — der Feed bleibt Ankündigung, das Event ist die Grundlage für Schichten, Erklärbären und Flohmarkt-Artikel.
+_Avoid_: Termin (das ist die Kalender-Ankündigung), Veranstaltung als Kalendereintrag
+
+**Regal-Zuordnung**:
+Die Angabe, welche Regale bei einem Event aufgebaut sind. Rein informativ — sie verändert keinen Aufenthalt, sondern grenzt nur ein, welche Spiele der Gäste-Bereich als „im Raum" anzeigt.
+_Avoid_: Event-Standort, Event als Aufbewahrungseinheit
+
+**Erklärbär**:
+Ein Meeple mit einem dauerhaften Profil aus Spielen (Bezug auf echte `BoardGame`-Einträge) und je Spiel einer Erfahrungsstufe. Getrennt davon meldet er sich pro Event einfach als anwesend an; erst die Kombination aus Profil und Event-Anwesenheit ergibt „heute hier erklärbar".
+_Avoid_: Schicht, Spielelehrer, Erklärbär als reine Event-Anmeldung ohne Profil
+
+**Schicht**:
+Ein Zeitfenster mit festem Typ (Küche, Ausleihe, Flohmarkt) und fester Kapazität innerhalb eines Events, in das sich Mitglieder selbst eintragen — optional mit Kennzeichnung „unsichere Zusage". Wer eine Schicht besetzt, erhält für deren Dauer die zugehörigen Rechte (z. B. Flohmarkt-Kasse), unabhängig von einer sonst vergebenen Permission.
+_Avoid_: Erklärbär als Schicht, freie Schicht-Namen
+
+**Flohmarkt-Artikel**:
+Ein Gegenstand, den ein Mitglied für den Bring-&-Buy-Verkaufstag eines Events anmeldet (einzeln oder per Excel-Import), mit Preis und Status. Muss von einem Admin oder einem Mitglied in der Flohmarkt-Schicht dieses Events freigegeben werden, bevor er im öffentlichen Gäste-Bereich erscheint. Führt keine Provisions- oder Auszahlungsbuchhaltung — das läuft außerhalb des Portals.
+_Avoid_: Kleinanzeige (das ist der ganzjährige Phase-7-Flohmarkt), Verkaufsabwicklung, Auszahlung
+
+**Gäste-Bereich**:
+Die öffentliche, unauthentifizierte Ansicht für Event-Besucher vor Ort: Spielesuche über den bestehenden EAN-Scan (Auswahlliste nur bei mehreren Exemplaren desselben Titels), anwesende Erklärbären, Flohmarkt-Artikelliste. Jederzeit erreichbar, kein Zeitfenster-Gating.
+_Avoid_: Event-Login, Spiele-QR-Code (bewusst nicht eingeführt, EAN reicht)
