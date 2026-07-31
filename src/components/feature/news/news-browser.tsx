@@ -31,28 +31,28 @@ export function NewsBrowser({
     .filter((item) => filter === "alle" || item.type === filter);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <PillToggle options={FILTERS} value={filter} onChange={setFilter} />
-          {selectedDate && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">
-                Gefiltert auf{" "}
-                <strong className="text-foreground">
-                  {formatDate(selectedDate)}
-                </strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setSelectedDate(null)}
-                className="text-primary shrink-0 hover:underline"
-              >
-                Alle anzeigen
-              </button>
-            </div>
-          )}
-        </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PillToggle options={FILTERS} value={filter} onChange={setFilter} />
+        {selectedDate && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">
+              Gefiltert auf{" "}
+              <strong className="text-foreground">
+                {formatDate(selectedDate)}
+              </strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedDate(null)}
+              className="text-primary shrink-0 hover:underline"
+            >
+              Alle anzeigen
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-3">
           {visible.map((item) => (
             <ContentListRow key={item.slug} item={item} canEdit={canEdit} />
@@ -63,13 +63,13 @@ export function NewsBrowser({
             </p>
           )}
         </div>
+        <NewsCalendar
+          items={items}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          icsUrl={icsUrl}
+        />
       </div>
-      <NewsCalendar
-        items={items}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        icsUrl={icsUrl}
-      />
     </div>
   );
 }
