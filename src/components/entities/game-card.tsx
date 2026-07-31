@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
 function playersAndDuration(game: PublicLudothekGame) {
@@ -32,7 +33,7 @@ export function GameCard({
       className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
       {actions && (
-        <div className="absolute top-2 right-2 z-10">{actions}</div>
+        <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
       )}
       <GameCoverMedia
         imageUrl={game.imageUrl}
