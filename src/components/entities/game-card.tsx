@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PackagePlus, Layers } from "lucide-react";
+import { BoardGameKind } from "@prisma/client";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
@@ -26,6 +28,8 @@ export function GameCard({
   actions?: ReactNode;
 }) {
   const zustand = "zustand" in game ? game.zustand : undefined;
+  const isExpansion = game.kind === BoardGameKind.BOARDGAME_EXPANSION;
+  const expansionCount = game.expansions.length;
 
   return (
     <Link
@@ -34,6 +38,16 @@ export function GameCard({
     >
       {actions && (
         <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
+      )}
+      {isExpansion && (
+        <CardCornerOverlay corner="top-left">
+          <span
+            title="Erweiterung"
+            className="bg-background inline-flex size-8 items-center justify-center rounded-md border"
+          >
+            <PackagePlus className="size-4" />
+          </span>
+        </CardCornerOverlay>
       )}
       <GameCoverMedia
         imageUrl={game.imageUrl}
@@ -47,6 +61,13 @@ export function GameCard({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
+        {expansionCount > 0 && (
+          <p className="text-muted-foreground flex items-center gap-1 text-sm">
+            <Layers className="size-4" />
+            {expansionCount}{" "}
+            {expansionCount === 1 ? "Erweiterung" : "Erweiterungen"}
+          </p>
+        )}
         {zustand && (
           <GameZustandPill zustand={zustand} className="mt-auto w-fit" />
         )}
