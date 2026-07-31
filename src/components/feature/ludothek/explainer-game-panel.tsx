@@ -33,8 +33,8 @@ export function ExplainerGamePanel({
   myLevel: ExplainerExperienceLevel | null;
 }) {
   const router = useRouter();
-  const [level, setLevel] = useState<ExplainerExperienceLevel>(
-    myLevel ?? "WITH_MANUAL",
+  const [level, setLevel] = useState<ExplainerExperienceLevel | null>(
+    myLevel,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +67,7 @@ export function ExplainerGamePanel({
     setError(null);
     await removeExplainerGame(boardGameId);
     setIsSubmitting(false);
+    setLevel(null);
     router.refresh();
   }
 
