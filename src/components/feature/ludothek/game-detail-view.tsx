@@ -1,9 +1,15 @@
+import Link from "next/link";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
+import { Button } from "@/components/ui/button";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
 import { ExplainerGamePanel } from "@/components/feature/ludothek/explainer-game-panel";
+import {
+  AssignExpansionDialog,
+  type GameOption,
+} from "@/components/widgets/board-game/assign-expansion-dialog";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
@@ -23,6 +29,7 @@ export function GameDetailView({
   game,
   internal,
   explainer,
+  expansionAssignment,
 }: {
   game: PublicLudothekGame;
   internal?: {
@@ -35,6 +42,10 @@ export function GameDetailView({
   explainer?: {
     entries: ExplainerEntry[];
     myLevel: ExplainerExperienceLevel | null;
+  };
+  /** Only set for `games:manage` holders — manual base game ↔ expansion pflege (#30). */
+  expansionAssignment?: {
+    options: GameOption[];
   };
 }) {
   return (
@@ -70,6 +81,56 @@ export function GameDetailView({
             </span>
           ))}
         </div>
+
+        {game.baseGames.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground text-sm">
+              Erweiterung zu:
+            </span>
+            {game.baseGames.map((baseGame) => (
+              <Button
+                key={baseGame.slug}
+                variant="outline"
+                size="sm"
+                render={<Link href={`/ludothek/${baseGame.slug}`} />}
+              >
+                {baseGame.title}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        {game.expansions.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-muted-foreground text-sm">
+              Erweiterungen:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {game.expansions.map((expansion) => (
+                <Button
+                  key={expansion.slug}
+                  variant="outline"
+                  size="sm"
+                  render={<Link href={`/ludothek/${expansion.slug}`} />}
+                >
+                  {expansion.title}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {expansionAssignment && (
+          <AssignExpansionDialog
+            game={{ id: game.id, kind: game.kind }}
+            linked={
+              game.kind === "BOARDGAME_EXPANSION"
+                ? game.baseGames
+                : game.expansions
+            }
+            options={expansionAssignment.options}
+          />
+        )}
 
         {(game.description || game.explainerVideoUrl) && (
           <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">

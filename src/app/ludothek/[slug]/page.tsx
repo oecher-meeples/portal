@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { getSessionTier } from "@/lib/auth/session";
+import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
@@ -67,13 +69,33 @@ export default async function GameDetailPage({
       )?.displayName ?? null)
     : null;
 
-  const [explainerEntries, meeple] = await Promise.all([
+  const [explainerEntries, meeple, user] = await Promise.all([
     getExplainersForGame(game.id),
     getCurrentMeeple(),
+    getCurrentUser(),
   ]);
   const myLevel =
     explainerEntries.find((entry) => entry.meepleId === meeple?.id)?.level ??
     null;
+
+  const canManageGames =
+    !!user && (await hasPermission(user.id, "games:manage"));
+  const linkedIds = new Set([
+    ...game.baseGames.map((g) => g.id),
+    ...game.expansions.map((g) => g.id),
+    game.id,
+  ]);
+  const expansionAssignment = canManageGames
+    ? {
+        options: (
+          await prisma.boardGame.findMany({
+            where: { id: { notIn: [...linkedIds] } },
+            select: { id: true, slug: true, title: true },
+            orderBy: { title: "asc" },
+          })
+        ).map((g) => g),
+      }
+    : undefined;
 
   return (
     <GameDetailView
@@ -85,6 +107,7 @@ export default async function GameDetailPage({
         history,
       }}
       explainer={{ entries: explainerEntries, myLevel }}
+      expansionAssignment={expansionAssignment}
     />
   );
 }
