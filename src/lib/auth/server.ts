@@ -8,6 +8,13 @@ export const auth = createNeonAuth({
 });
 
 export async function getCurrentUser() {
-  const { data: session } = await auth.getSession();
+  // disableRefresh: getCurrentUser() runs during Server Component render, where
+  // Next.js forbids writing cookies. auth.getSession() otherwise tries to
+  // refresh/write the session cookie and throws "Cookies can only be modified…".
+  // If session refresh is needed, it belongs in middleware or a Route Handler,
+  // not here.
+  const { data: session } = await auth.getSession({
+    query: { disableRefresh: true },
+  });
   return session?.user ?? null;
 }
