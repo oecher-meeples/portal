@@ -1,5 +1,9 @@
 import { hashPassword } from "better-auth/crypto";
+import { HoldingOrigin, StorageUnitKind } from "@prisma/client";
 import { prisma } from "../src/lib/utils/prisma";
+import { slugify } from "../src/lib/utils/slug";
+import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
+import { DEMO_GAMES } from "./seed-data/demo-games";
 
 const ADMIN_USER = {
   email: process.env.SEED_ADMIN_EMAIL ?? "admin@jan-herwig.de",
@@ -139,11 +143,82 @@ async function assignRole(neonAuthUserId: string, roleName: string) {
   });
 }
 
+async function ensureAdminMeeple(neonAuthUserId: string) {
+  return prisma.meeple.upsert({
+    where: { neonAuthUserId },
+    update: {},
+    create: { neonAuthUserId, displayName: ADMIN_USER.name },
+  });
+}
+
+/**
+ * Steht für den BGG-Import ein, solange der aus dieser Umgebung nicht erreichbar ist
+ * (401/403 auf jede Anfrage an boardgamegeek.com). Titel, Spielerzahlen und Coverbilder
+ * sind reale, per Wikipedia verifizierte Daten — kein BGG-Import, aber echte Spiele.
+ */
+async function seedDemoGames(adminMeepleId: string) {
+  const unsortiert = await prisma.storageUnit.upsert({
+    where: { code: UNSORTIERT_CODE },
+    update: {},
+    create: {
+      code: UNSORTIERT_CODE,
+      kind: StorageUnitKind.BOX,
+      label: "Unsortiert",
+    },
+  });
+
+  const existingSlugs = await prisma.boardGame.findMany({
+    select: { slug: true },
+  });
+  const usedSlugs = new Set(existingSlugs.map((g) => g.slug));
+
+  for (const game of DEMO_GAMES) {
+    const base = slugify(game.title);
+    let slug = base;
+    let suffix = 2;
+    while (usedSlugs.has(slug)) {
+      slug = `${base}-${suffix}`;
+      suffix += 1;
+    }
+    usedSlugs.add(slug);
+
+    const created = await prisma.boardGame.create({
+      data: {
+        slug,
+        title: game.title,
+        imageUrl: game.imageUrl,
+        minPlayers: game.minPlayers,
+        maxPlayers: game.maxPlayers,
+        playTimeMinutes: game.playTimeMinutes,
+        weight: game.weight,
+        description: game.description,
+        mechanics: game.mechanics,
+      },
+    });
+
+    await prisma.gameHolding.create({
+      data: {
+        boardGameId: created.id,
+        unitId: unsortiert.id,
+        origin: HoldingOrigin.INITIAL,
+        confirmedAt: new Date(),
+        recordedByMeepleId: adminMeepleId,
+      },
+    });
+  }
+
+  console.log(`${DEMO_GAMES.length} Demo-Spiele angelegt.`);
+}
+
 async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
   await seedPermissions();
   await seedRoles();
   await assignRole(adminUserId, "admin");
+
+  const adminMeeple = await ensureAdminMeeple(adminUserId);
+  await seedDemoGames(adminMeeple.id);
+
   console.log("Seed abgeschlossen.");
 }
 
