@@ -15,16 +15,32 @@ export type LudothekGame = {
   playTimeMinutes: number | null;
   weight: number | null;
   mechanics: string[];
+  /** Only needed to seed the edit form for games:manage holders — not for display. */
+  ean: string | null;
+  condition: string | null;
+  bggId: number | null;
+  description: string | null;
+  explainerVideoUrl: string | null;
   zustand: GameZustand;
   isLoanedOut: boolean;
   responsibleMeepleId: string | null;
   locationChain: string;
 };
 
-/** What's left after stripping standort, zustand and person data for guests. */
+/**
+ * What's left after stripping standort, zustand and person data for guests.
+ * description/explainerVideoUrl stay — they're public spielbeschreibung, not
+ * inventory data.
+ */
 export type PublicLudothekGame = Omit<
   LudothekGame,
-  "zustand" | "isLoanedOut" | "responsibleMeepleId" | "locationChain"
+  | "zustand"
+  | "isLoanedOut"
+  | "responsibleMeepleId"
+  | "locationChain"
+  | "ean"
+  | "condition"
+  | "bggId"
 >;
 
 export function toPublicGame(game: LudothekGame): PublicLudothekGame {
@@ -33,6 +49,9 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     isLoanedOut: _isLoanedOut,
     responsibleMeepleId: _responsibleMeepleId,
     locationChain: _locationChain,
+    ean: _ean,
+    condition: _condition,
+    bggId: _bggId,
     ...rest
   } = game;
   return rest;

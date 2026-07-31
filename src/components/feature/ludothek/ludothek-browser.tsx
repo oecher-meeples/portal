@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { ScanLine } from "lucide-react";
+import { ChevronDown, ScanLine } from "lucide-react";
 import { GameCard } from "@/components/entities/game-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
+import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
+import { buildHref } from "@/lib/utils/query-string";
 import type {
   DurationFilter,
   LudothekFilters,
@@ -31,32 +34,6 @@ const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Nicht erfasst", value: "nicht-erfasst" },
 ];
 
-function buildHref(
-  basePath: string,
-  current: Record<string, string | string[] | undefined>,
-  patch: Record<string, string | string[] | undefined>,
-) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(current)) {
-    if (key in patch || value === undefined) continue;
-    if (Array.isArray(value)) {
-      for (const v of value) params.append(key, v);
-    } else {
-      params.set(key, value);
-    }
-  }
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) {
-      for (const v of value) params.append(key, v);
-    } else {
-      params.set(key, value);
-    }
-  }
-  const query = params.toString();
-  return query ? `${basePath}?${query}` : basePath;
-}
-
 function FilterPill({
   label,
   href,
@@ -83,6 +60,7 @@ function FilterPill({
 export function LudothekBrowser({
   games,
   internal,
+  canManageGames = false,
   basePath,
   rawSearchParams,
   filters,
@@ -91,6 +69,8 @@ export function LudothekBrowser({
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   internal: boolean;
+  /** Only meaningful when `games` are the unstripped internal shape. */
+  canManageGames?: boolean;
   basePath: string;
   rawSearchParams: Record<string, string | string[] | undefined>;
   filters: LudothekFilters;
@@ -137,120 +117,129 @@ export function LudothekBrowser({
           />
         </form>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Spieler
-          </span>
-          <FilterPill
-            label="Alle"
-            href={href({ spieler: undefined })}
-            active={!filters.players}
-          />
-          {PLAYER_OPTIONS.map((option) => (
-            <FilterPill
-              key={option.value}
-              label={option.label}
-              href={href({ spieler: option.value })}
-              active={filters.players === option.value}
-            />
-          ))}
-        </div>
+        <details className="group">
+          <summary className="text-muted-foreground hover:text-foreground flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium select-none">
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            Filter
+          </summary>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Dauer
-          </span>
-          <FilterPill
-            label="Alle"
-            href={href({ dauer: undefined })}
-            active={!filters.duration}
-          />
-          {DURATION_OPTIONS.map((option) => (
-            <FilterPill
-              key={option.value}
-              label={option.label}
-              href={href({ dauer: option.value })}
-              active={filters.duration === option.value}
-            />
-          ))}
-        </div>
-
-        {mechanicsOptions.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Mechanik
-            </span>
-            {mechanicsOptions.map((mechanic) => {
-              const selected = filters.mechanics?.includes(mechanic) ?? false;
-              const nextMechanics = selected
-                ? (filters.mechanics ?? []).filter((m) => m !== mechanic)
-                : [...(filters.mechanics ?? []), mechanic];
-              return (
-                <FilterPill
-                  key={mechanic}
-                  label={mechanic}
-                  href={href({ mechanik: nextMechanics })}
-                  active={selected}
-                />
-              );
-            })}
-          </div>
-        )}
-
-        {internal && (
-          <>
+          <div className="mt-3 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Zustand
+                Spieler
               </span>
               <FilterPill
                 label="Alle"
-                href={href({ zustand: undefined })}
-                active={!filters.zustand}
+                href={href({ spieler: undefined })}
+                active={!filters.players}
               />
-              {ZUSTAND_OPTIONS.map((option) => (
+              {PLAYER_OPTIONS.map((option) => (
                 <FilterPill
                   key={option.value}
                   label={option.label}
-                  href={href({ zustand: option.value })}
-                  active={filters.zustand === option.value}
+                  href={href({ spieler: option.value })}
+                  active={filters.players === option.value}
                 />
               ))}
-              <FilterPill
-                label="Ist ausgeliehen"
-                href={href({
-                  ausgeliehen: filters.onlyLoanedOut ? undefined : "1",
-                })}
-                active={Boolean(filters.onlyLoanedOut)}
-              />
             </div>
-            {meepleOptions && meepleOptions.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                  Bei
-                </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                Dauer
+              </span>
+              <FilterPill
+                label="Alle"
+                href={href({ dauer: undefined })}
+                active={!filters.duration}
+              />
+              {DURATION_OPTIONS.map((option) => (
                 <FilterPill
-                  label="Alle"
-                  href={href({ bei: undefined })}
-                  active={!filters.atMeepleId}
+                  key={option.value}
+                  label={option.label}
+                  href={href({ dauer: option.value })}
+                  active={filters.duration === option.value}
                 />
-                {meepleOptions.map((meeple) => (
-                  <FilterPill
-                    key={meeple.id}
-                    label={meeple.displayName}
-                    href={href({ bei: meeple.id })}
-                    active={filters.atMeepleId === meeple.id}
-                  />
-                ))}
+              ))}
+            </div>
+
+            {mechanicsOptions.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  Mechanik
+                </span>
+                <MechanicsFilter
+                  basePath={basePath}
+                  rawSearchParams={rawSearchParams}
+                  options={mechanicsOptions}
+                  selected={filters.mechanics ?? []}
+                />
               </div>
             )}
-          </>
-        )}
+
+            {internal && (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                    Zustand
+                  </span>
+                  <FilterPill
+                    label="Alle"
+                    href={href({ zustand: undefined })}
+                    active={!filters.zustand}
+                  />
+                  {ZUSTAND_OPTIONS.map((option) => (
+                    <FilterPill
+                      key={option.value}
+                      label={option.label}
+                      href={href({ zustand: option.value })}
+                      active={filters.zustand === option.value}
+                    />
+                  ))}
+                  <FilterPill
+                    label="Ist ausgeliehen"
+                    href={href({
+                      ausgeliehen: filters.onlyLoanedOut ? undefined : "1",
+                    })}
+                    active={Boolean(filters.onlyLoanedOut)}
+                  />
+                </div>
+                {meepleOptions && meepleOptions.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                      Bei
+                    </span>
+                    <FilterPill
+                      label="Alle"
+                      href={href({ bei: undefined })}
+                      active={!filters.atMeepleId}
+                    />
+                    {meepleOptions.map((meeple) => (
+                      <FilterPill
+                        key={meeple.id}
+                        label={meeple.displayName}
+                        href={href({ bei: meeple.id })}
+                        active={filters.atMeepleId === meeple.id}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </details>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {games.map((game) => (
-          <GameCard key={game.slug} game={game} />
+          <GameCard
+            key={game.slug}
+            game={game}
+            actions={
+              canManageGames && "ean" in game ? (
+                <GameCardEditOverlay game={game} />
+              ) : undefined
+            }
+          />
         ))}
         {games.length === 0 && (
           <p className="text-muted-foreground col-span-full text-sm">

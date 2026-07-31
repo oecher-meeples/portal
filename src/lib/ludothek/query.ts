@@ -69,6 +69,11 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       playTimeMinutes: game.playTimeMinutes,
       weight: game.weight,
       mechanics: game.mechanics,
+      ean: game.ean,
+      condition: game.condition,
+      bggId: game.bggId,
+      description: game.description,
+      explainerVideoUrl: game.explainerVideoUrl,
     };
 
     if (!holding) {

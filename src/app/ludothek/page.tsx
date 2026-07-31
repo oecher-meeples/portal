@@ -1,5 +1,6 @@
 import { PageHeading } from "@/components/ui/page-heading";
-import { getSessionTier } from "@/lib/auth/session";
+import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
+import { getCurrentUser } from "@/lib/auth/server";
 import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
@@ -16,6 +17,11 @@ export default async function LudothekPage({
 }) {
   const tier = await getSessionTier();
   const internal = tier !== "gast";
+
+  const user = await getCurrentUser();
+  const canManageGames = user
+    ? await hasPermissionInCurrentView(user.id, "games:manage")
+    : false;
 
   const rawSearchParams = await searchParams;
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
@@ -55,6 +61,7 @@ export default async function LudothekPage({
       <LudothekBrowser
         games={internal ? filtered : filtered.map(toPublicGame)}
         internal={internal}
+        canManageGames={internal && canManageGames}
         basePath="/ludothek"
         rawSearchParams={rawSearchParams}
         filters={filters}
