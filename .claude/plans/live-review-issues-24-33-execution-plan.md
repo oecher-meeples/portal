@@ -165,6 +165,6 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
       `pnpm run verify` und `pnpm run dup` auf dem zusammengeführten Stand. Bei neuen Klonen: extrahieren, nicht ignorieren.
       _Definition of Done:_ `verify` grün, `dup` bei 0 Klonen.
 
-- [ ] **Z2. Issues schließen und Doku prüfen**
+- [x] **Z2. Issues schließen und Doku prüfen**
       Die abgeschlossenen Issues per `gh issue close <n>` mit Verweis auf den Commit schließen. `blocked`-Label von #31/#32/#33 entfernen, sobald A1 gemergt ist. Falls A1 die Struktur verändert hat (neue Domänen-Datei, neuer geteilter Baustein aus Schritt 1): **[docs/project-structure.md](../../docs/project-structure.md) mitpflegen** — Repo-Regel, sonst driftet die Doku.
       _Definition of Done:_ Alle zehn Issues geschlossen, `docs/project-structure.md` beschreibt `CardCornerOverlay` und die `GameCollection`-Domäne korrekt.
