@@ -6,12 +6,12 @@ import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/utils/format";
+import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
 import {
   addExplainerGame,
   removeExplainerGame,
   updateExplainerGameLevel,
-} from "@/components/feature/erklaerbaeren/actions";
+} from "@/lib/explainer/actions";
 
 export type MyExplainerGame = {
   boardGameId: string;
@@ -23,11 +23,6 @@ export type SelectableGame = {
   id: string;
   title: string;
 };
-
-const LEVEL_OPTIONS = Object.entries(EXPLAINER_EXPERIENCE_LEVEL_LABELS) as [
-  ExplainerExperienceLevel,
-  string,
-][];
 
 function selectClassName() {
   return "border-input h-8 w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
@@ -128,21 +123,8 @@ export function MyExplainerGames({
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="explainer-level">Erfahrungsstufe</Label>
-            <select
-              id="explainer-level"
-              className={selectClassName()}
-              value={newLevel}
-              onChange={(event) =>
-                setNewLevel(event.target.value as ExplainerExperienceLevel)
-              }
-            >
-              {LEVEL_OPTIONS.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <Label>Erfahrungsstufe</Label>
+            <ExplainerLevelToggle value={newLevel} onChange={setNewLevel} />
           </div>
         </div>
         {error && <p className="text-destructive text-sm">{error}</p>}
@@ -168,23 +150,12 @@ export function MyExplainerGames({
           >
             <span className="font-medium">{game.boardGameTitle}</span>
             <div className="flex items-center gap-2">
-              <select
-                aria-label={`Erfahrungsstufe für ${game.boardGameTitle}`}
-                className={selectClassName()}
+              <ExplainerLevelToggle
                 value={game.level}
-                onChange={(event) =>
-                  handleLevelChange(
-                    game.boardGameId,
-                    event.target.value as ExplainerExperienceLevel,
-                  )
+                onChange={(level) =>
+                  handleLevelChange(game.boardGameId, level)
                 }
-              >
-                {LEVEL_OPTIONS.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              />
               <Button
                 variant="outline"
                 size="sm"

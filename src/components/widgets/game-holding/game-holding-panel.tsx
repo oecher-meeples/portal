@@ -36,7 +36,7 @@ export function GameHoldingPanel({
   boardGameId: string;
   /** In series mode the caller moves on instead of re-showing this game. */
   advanceAfterAction?: boolean;
-  onDone: () => void;
+  onDone?: () => void;
 }) {
   // Keyed by boardGameId so "still loading" is derived, never set in an effect.
   const [loaded, setLoaded] = useState<{
@@ -76,7 +76,7 @@ export function GameHoldingPanel({
 
     setMessage("Erledigt.");
     if (advanceAfterAction) {
-      onDone();
+      onDone?.();
       return;
     }
     setLoaded({

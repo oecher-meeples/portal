@@ -1,8 +1,12 @@
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
+import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { ExplainerVideo } from "@/components/entities/explainer-video";
+import { ExplainerGamePanel } from "@/components/feature/ludothek/explainer-game-panel";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import type { ExplainerEntry } from "@/lib/explainer/queries";
 import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
 
 export type HoldingHistoryEntry = {
@@ -18,6 +22,7 @@ export type HoldingHistoryEntry = {
 export function GameDetailView({
   game,
   internal,
+  explainer,
 }: {
   game: PublicLudothekGame;
   internal?: {
@@ -26,11 +31,16 @@ export function GameDetailView({
     responsibleName: string | null;
     history: HoldingHistoryEntry[];
   };
+  /** Nur für eingeloggte Nutzer gesetzt — Erklärbär-Selbstauskunft ist kein Gast-Feature. */
+  explainer?: {
+    entries: ExplainerEntry[];
+    myLevel: ExplainerExperienceLevel | null;
+  };
 }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
       <div className="flex flex-col gap-4">
-        <PlaceholderMedia label="COVER" aspect="aspect-[3/4]" />
+        <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
         {internal && (
           <GameZustandPill zustand={internal.zustand} className="w-fit" />
         )}
@@ -61,6 +71,29 @@ export function GameDetailView({
           ))}
         </div>
 
+        {(game.description || game.explainerVideoUrl) && (
+          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+            <h2 className="font-serif text-lg font-bold">Erklärung</h2>
+            {game.description && (
+              <p className="text-sm leading-relaxed whitespace-pre-line">
+                {game.description}
+              </p>
+            )}
+            {game.explainerVideoUrl && (
+              <ExplainerVideo url={game.explainerVideoUrl} />
+            )}
+          </div>
+        )}
+
+        {explainer && (
+          <ExplainerGamePanel
+            boardGameId={game.id}
+            boardGameTitle={game.title}
+            explainers={explainer.entries}
+            myLevel={explainer.myLevel}
+          />
+        )}
+
         {internal && (
           <div className="bg-card rounded-lg border p-5">
             <h2 className="font-serif text-lg font-bold">Standort</h2>
@@ -72,7 +105,7 @@ export function GameDetailView({
             </p>
 
             <div className="mt-4 border-t pt-4">
-              <GameHoldingPanel boardGameId={game.id} onDone={() => {}} />
+              <GameHoldingPanel boardGameId={game.id} />
             </div>
           </div>
         )}
