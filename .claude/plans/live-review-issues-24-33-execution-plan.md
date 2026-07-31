@@ -76,12 +76,12 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
 
 ### Sequenzieller Vorlauf
 
-- [ ] **0. Baseline herstellen**
+- [x] **0. Baseline herstellen**
       `git status` prüfen. Die vorbestehenden 49 Änderungen sind **nicht** Teil dieses Plans: entweder als eigener, thematisch sauberer Commit abschließen oder `git stash -u`. Erst danach mit Schritt 1 beginnen. `pnpm run verify` einmal auf der Baseline laufen lassen, damit spätere Fehlschläge eindeutig diesem Plan zuzuordnen sind.
       _Definition of Done:_ Working Tree ist bezüglich der Plan-Dateien clean, `pnpm run verify` ist grün.
       Kein Commit in diesem Schritt (bzw. der Commit der Vorarbeit, falls diese Variante gewählt wird).
 
-- [ ] **1. `CardCornerOverlay` nach `components/ui/` extrahieren** _(Voraussetzung für #27 und #32)_
+- [x] **1. `CardCornerOverlay` nach `components/ui/` extrahieren** _(Voraussetzung für #27 und #32)_
       Neue Datei `src/components/ui/card-corner-overlay.tsx`: fachfreier Positionierungs-Wrapper mit `corner`-Prop (`"top-left" | "top-right"`), rendert `children` absolut positioniert mit `z-10`. `GameCard` (`src/components/entities/game-card.tsx:34-36`) auf das Primitive umstellen, damit das bestehende Vorkommen mitgezogen wird und keine zweite Wahrheit entsteht.
       _Definition of Done:_ `GameCard` verhält sich unverändert (Edit-Overlay weiter oben rechts), `pnpm run verify` grün. Kein Unit-Test nötig (reines Layout-Primitive).
       `git commit -m "refactor(ui): extract CardCornerOverlay from GameCard"`
@@ -90,7 +90,7 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
 
 ### Track A — Datenmodell & Erweiterungen (kritischer Pfad)
 
-- [ ] **A1. #30 — `BoardGameKind`, `GameCollection` und Leseseite** _(blockiert A2–A4)_
+- [x] **A1. #30 — `BoardGameKind`, `GameCollection` und Leseseite** _(blockiert A2–A4)_
       **Schema** (`prisma/schema.prisma`): Enum `BoardGameKind { BOARDGAME BOARDGAME_EXPANSION }`; Feld `kind BoardGameKind @default(BOARDGAME)` auf `BoardGame`; Modell `GameCollection` mit `baseGameId`/`expansionId`, beide Relation auf `BoardGame` (benannte Relationen, da zwei FKs auf dieselbe Tabelle), `@@id([baseGameId, expansionId])`, `@@map("game_collections")`; die zwei Rückrelationen auf `BoardGame`. Migration fahren.
       **Seed**: neue Datei `prisma/seed-data/demo-expansions.ts` mit `DEMO_EXPANSIONS` (Titel-Paare für die vorhandenen Catan-/Wingspan-/Carcassonne-/Dixit-/Root-/Ticket-to-Ride-Erweiterungen). `prisma/seed.ts` leitet `kind` daraus ab und legt die `GameCollection`-Zeilen nach dem Anlegen der Spiele an. **`demo-games.ts` bleibt unangetastet.**
       **Leseseite**: `LudothekGame` in `src/lib/ludothek/browser.ts` um `kind`, `expansionCount` und die Basisspiel-/Erweiterungs-Referenzen (Slug + Titel) erweitern; `toPublicGame()` behält diese Felder (sind öffentliche Spielinfo, keine Inventardaten). `buildLudothekGames()` in `query.ts` lädt die `GameCollection`-Relationen im bestehenden Bulk-Query mit — **kein N+1**.
@@ -98,17 +98,17 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
       _Definition of Done:_ `prisma migrate dev` läuft fehlerfrei, Seed läuft durch und erzeugt `GameCollection`-Zeilen. Unit-Tests decken ab: `kind`-Ableitung im Seed, `expansionCount`/Basisspiel-Auflösung in der Leseseite (mit gemocktem Prisma), Permission-Verweigerung in der Zuordnungs-Action ohne DB-Änderung. `pnpm run verify` grün.
       `git commit -m "feat(ludothek): model base game to expansion relation"`
 
-- [ ] **A2. #31 — Filter „Erweiterungen ausblenden"** _(nach A1; parallel zu A3/A4)_
+- [x] **A2. #31 — Filter „Erweiterungen ausblenden"** _(nach A1; parallel zu A3/A4)_
       `src/lib/ludothek/browser.ts`: `LudothekFilters` um `hideExpansions?: boolean`, Parsing in `parseLudothekSearchParams` (neuer Query-Param, Muster analog `ausgeliehen: "1"`), Ausschluss in `filterLudothekGames` über `kind === "BOARDGAME_EXPANSION"`. `ludothek-browser.tsx`: `FilterPill` in der bestehenden Filter-Sektion ergänzen (kein neues Filter-Konstrukt).
       _Definition of Done:_ `src/lib/ludothek/browser.test.ts` erweitert: Filter aktiv → Erweiterungen fehlen, Basisspiele bleiben; Filter inaktiv/abwesend → unveränderte Liste; Round-Trip Query-Param → Filter → Query-Param. `pnpm run verify` grün.
       `git commit -m "feat(ludothek): add hide-expansions filter"`
 
-- [ ] **A3. #32 — Erweiterungs-Kennzeichnung auf Spielkarten** _(nach A1; parallel zu A2/A4)_
+- [x] **A3. #32 — Erweiterungs-Kennzeichnung auf Spielkarten** _(nach A1; parallel zu A2/A4)_
       `src/components/entities/game-card.tsx`: bei `kind === "BOARDGAME_EXPANSION"` Corner-Badge mit Icon über das Primitive aus Schritt 1 (`corner="top-left"`, damit es nicht mit dem Edit-Overlay oben rechts kollidiert); bei Basisspielen mit `expansionCount > 0` Icon + Anzahl in der Karten-Metazeile. Deutsche Labels/Fachvokabular gehören nach `src/lib/ludothek/`, nicht in die Komponente.
       _Definition of Done:_ Visuell auf `/ludothek` mit gemischtem Bestand geprüft (Erweiterung, Basisspiel mit Erweiterungen, Basisspiel ohne). Badge und Edit-Overlay überlappen bei `canManageGames` nicht. `pnpm run verify` grün. Kein Unit-Test (die Zähl-Logik ist in A1 getestet).
       `git commit -m "feat(ludothek): mark expansions and expansion count on game cards"`
 
-- [ ] **A4. #33 — Erweiterungen auf der Detailseite verlinken** _(nach A1; parallel zu A2/A3)_
+- [x] **A4. #33 — Erweiterungen auf der Detailseite verlinken** _(nach A1; parallel zu A2/A3)_
       `src/components/feature/ludothek/game-detail-view.tsx`: bei Basisspielen Liste der Erweiterungen mit Link-Buttons auf `/ludothek/<slug>`; bei Erweiterungen „Zum Basisspiel"-Button. Daten kommen aus den in A1 ergänzten Feldern — `app/ludothek/[slug]/page.tsx` braucht idealerweise **keinen** zusätzlichen Query. Wird die Datei dadurch über 400 Zeilen groß, entlang der Fachlichkeit teilen (eigene `entities/`-Komponente für die Erweiterungs-Liste), nicht mechanisch abschneiden.
       _Definition of Done:_ Auf `/ludothek/catan` (oder einem anderen Basisspiel mit geseedeten Erweiterungen) in beide Richtungen navigierbar. `pnpm run verify` grün.
       `git commit -m "feat(ludothek): link base games and expansions on detail page"`
@@ -117,17 +117,17 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
 
 ### Track B — News & Auth (sofort parallel)
 
-- [ ] **B1. #25 — Cookie-Write aus dem Render-Pfad entfernen**
+- [x] **B1. #25 — Cookie-Write aus dem Render-Pfad entfernen**
       `src/lib/auth/server.ts`: `getCurrentUser()` auf `auth.getSession({ query: { disableRefresh: true } })` umstellen (Signatur verifiziert in `node_modules/@neondatabase/auth/dist/next/index.d.mts`). Prüfen, welche weiteren Server Components `getCurrentUser()` direkt aufrufen (u. a. `app/news/[slug]/page.tsx`, `app/ludothek/page.tsx`) — der Fix muss zentral in `getCurrentUser()` sitzen, nicht pro Aufrufer. Falls der Session-Refresh fachlich weiterhin gebraucht wird, gehört er in die Middleware bzw. einen Route Handler; das dann als kurzen Kommentar an der Funktion festhalten.
       _Definition of Done:_ Regressionstest (Muster: bestehendes `src/lib/auth/session.test.ts` mit gemockten Cookies) belegt, dass `getSession` mit `disableRefresh: true` aufgerufen wird. Manuell verifiziert: `/news/kennerspiel-turnier-09-08` als Gast rendert ohne Runtime Error. `pnpm run verify` grün.
       `git commit -m "fix(auth): avoid session cookie write during server component render"`
 
-- [ ] **B2. #26 — News-Kalender unterhalb der Filterleiste ausrichten**
+- [x] **B2. #26 — News-Kalender unterhalb der Filterleiste ausrichten**
       `src/components/feature/news/news-browser.tsx`: Grid so umbauen, dass der Kalender auf `lg:` erst auf Höhe des ersten Listeneintrags beginnt (Filterreihe aus dem Grid-Fluss der rechten Spalte herausnehmen, z. B. Filterzeile über beide Spalten spannen). Mobile-Reihenfolge (einspaltig, Kalender unter der Liste) darf sich nicht ändern.
       _Definition of Done:_ Visuell auf `/news` bei `lg:` und mobil geprüft. `pnpm run verify` grün.
       `git commit -m "fix(news): align calendar below the filter row"`
 
-- [ ] **B3. #27 — Bearbeiten-Button als Overlay** _(braucht Schritt 1)_
+- [x] **B3. #27 — Bearbeiten-Button als Overlay** _(braucht Schritt 1)_
       `src/components/entities/content-list-row.tsx`: den Pencil-Link (Zeile 45-53) aus dem Flex-Fluss nehmen und über `CardCornerOverlay` (`corner="top-left"`) absolut über dem Bild platzieren. Der bestehende `absolute inset-0`-Link der Karte darf den Button nicht verdecken — Stacking-Kontext prüfen.
       _Definition of Done:_ Kartenbreite und Textfluss sind mit und ohne `canEdit` identisch; Bearbeiten-Link bleibt klickbar und führt nicht zur Detailseite. `pnpm run verify` grün.
       `git commit -m "fix(news): position edit button as card overlay"`
@@ -136,12 +136,12 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
 
 ### Track C — Bilder (sofort parallel)
 
-- [ ] **C1. #28 — Cover-Bilder einpassen statt beschneiden**
+- [x] **C1. #28 — Cover-Bilder einpassen statt beschneiden**
       `src/components/entities/game-cover-media.tsx:27`: `object-cover` durch proportionales Einpassen ersetzen (`object-contain` plus neutraler Hintergrund, damit das Seitenverhältnis der Karte erhalten bleibt und keine gestretchten Bilder entstehen). Die Komponente wird von `GameCard` (`aspect-video`) **und** `GameDetailView` (`aspect-[3/4]`) genutzt — beide Fälle prüfen.
       _Definition of Done:_ Auf `/ludothek` und einer Detailseite geprüft: Cover vollständig sichtbar, kein Verzerren, kein Layout-Sprung bei sehr breiten/hohen Bildern. `pnpm run verify` grün.
       `git commit -m "fix(ludothek): fit cover images instead of cropping them"`
 
-- [ ] **C2. #24 — Fehlende Demo-Cover ergänzen**
+- [x] **C2. #24 — Fehlende Demo-Cover ergänzen**
       `prisma/seed-data/demo-games.ts`: die 63 Einträge mit `imageUrl: null` durchgehen und frei lizenzierte Bilder ergänzen (bevorzugt Wikimedia Commons, wie im Rest der Datei; Lizenz muss kommerzielle Nutzung und Weitergabe erlauben). **Kein Link ohne geprüfte Lizenz** — Titel ohne brauchbares freies Bild bleiben `null`. Der Dateikommentar oben ist entsprechend zu aktualisieren, wenn sich die Zahl ändert.
       Darf in Batches committet werden (z. B. 3× ~20 Einträge), wenn ein einzelner Commit zu groß wird.
       _Definition of Done:_ Seed läuft fehlerfrei, Start- und Ludothek-Seite zeigen deutlich weniger Platzhalter. Im Commit-Body stehen die Titel, für die bewusst kein Bild gefunden wurde. `pnpm run verify` grün.
@@ -151,7 +151,7 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
 
 ### Track D — Erklärbären (sofort parallel)
 
-- [ ] **D1. #29 — Level-Toggle Aktiv/Inaktiv korrigieren**
+- [x] **D1. #29 — Level-Toggle Aktiv/Inaktiv korrigieren**
       `src/components/feature/ludothek/explainer-game-panel.tsx`: der lokale State wird aktuell mit `myLevel ?? "WITH_MANUAL"` initialisiert (Zeile 36-38) und im nicht-registrierten Zweig als `value` durchgereicht — dadurch erscheint „Mit Anleitung" als aktiv, obwohl keine Registrierung existiert, und ein Klick darauf tut nichts (kein `onDeselect` in diesem Zweig). State auf `ExplainerExperienceLevel | null` umstellen und `null` sauber durchreichen, statt einen Default vorzutäuschen. `ExplainerLevelToggle` unterstützt `value={null}` und `onDeselect` bereits (`explainer-level-toggle.tsx:42-44`) — dort ist voraussichtlich keine Änderung nötig; falls doch, minimal halten.
       Die Überschrift („Ich kann das erklären" / „Du kannst das erklären") laut Issue **unabhängig vom Registrierungszustand konstant** halten.
       _Definition of Done:_ Komponententest (Muster: `create-board-game-dialog.test.tsx`) deckt ab: (a) nicht registriert → kein Button aktiv; (b) registriert → genau ein Button aktiv; (c) Klick auf aktiven Button → 0 aktive Buttons und `removeExplainerGame` wird aufgerufen; (d) Klick auf inaktiven Button bei bestehender Registrierung → Wechsel, weiterhin genau ein aktiver. Manuell als Mitglied auf `/ludothek/7-wonders` verifiziert. `pnpm run verify` grün.
@@ -161,7 +161,7 @@ Schritt 0 (Baseline)  →  Schritt 1 (CardCornerOverlay extrahieren)
 
 ## Abschluss
 
-- [ ] **Z1. Gesamtverifikation**
+- [x] **Z1. Gesamtverifikation**
       `pnpm run verify` und `pnpm run dup` auf dem zusammengeführten Stand. Bei neuen Klonen: extrahieren, nicht ignorieren.
       _Definition of Done:_ `verify` grün, `dup` bei 0 Klonen.
 
