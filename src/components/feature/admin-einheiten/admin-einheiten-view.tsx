@@ -10,6 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CreateStorageUnitDialog } from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
+import {
+  AssignKeeperDialog,
+  type KeeperOption,
+} from "@/components/feature/admin-einheiten/assign-keeper-dialog";
 
 export type StorageUnitRow = {
   id: string;
@@ -17,6 +21,7 @@ export type StorageUnitRow = {
   kind: "BOX" | "SHELF";
   label: string;
   locationChain: string;
+  keeperMeepleId: string | null;
   keeperName: string | null;
   gameCount: number;
   retired: boolean;
@@ -31,9 +36,15 @@ export type ResignedHolderRow = {
 export function AdminEinheitenView({
   units,
   resignedHolders,
+  isAdmin,
+  selfMeepleId,
+  keeperOptions,
 }: {
   units: StorageUnitRow[];
   resignedHolders: ResignedHolderRow[];
+  isAdmin: boolean;
+  selfMeepleId: string;
+  keeperOptions: KeeperOption[];
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -41,10 +52,10 @@ export function AdminEinheitenView({
         eyebrow="Ludothek"
         title="Aufbewahrungseinheiten"
         description="Kartons und Regale mit QR-Etikett. Der Verein hat kein Vereinsheim — Kartons stehen bei Mitgliedern."
-        action={<CreateStorageUnitDialog />}
+        action={isAdmin ? <CreateStorageUnitDialog /> : undefined}
       />
 
-      {resignedHolders.length > 0 && (
+      {isAdmin && resignedHolders.length > 0 && (
         <div className="bg-card rounded-lg border p-5">
           <h2 className="font-serif text-lg font-bold">
             Bestände bei ausgetretenen Mitgliedern
@@ -98,16 +109,28 @@ export function AdminEinheitenView({
                 </TableCell>
                 <TableCell>{unit.gameCount}</TableCell>
                 <TableCell className="text-right">
-                  {unit.retired ? (
-                    <StatusPill label="stillgelegt" tone="neutral" />
-                  ) : (
-                    <Link
-                      href={`/admin/einheiten/${unit.id}`}
-                      className="text-primary text-sm hover:underline"
-                    >
-                      Details
-                    </Link>
-                  )}
+                  <div className="flex items-center justify-end gap-3">
+                    {unit.retired ? (
+                      <StatusPill label="stillgelegt" tone="neutral" />
+                    ) : (
+                      <>
+                        <AssignKeeperDialog
+                          unitId={unit.id}
+                          currentKeeperId={unit.keeperMeepleId}
+                          currentKeeperName={unit.keeperName}
+                          isAdmin={isAdmin}
+                          keeperOptions={keeperOptions}
+                          selfMeepleId={selfMeepleId}
+                        />
+                        <Link
+                          href={`/admin/einheiten/${unit.id}`}
+                          className="text-primary text-sm hover:underline"
+                        >
+                          Details
+                        </Link>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -115,12 +138,14 @@ export function AdminEinheitenView({
         </Table>
       </div>
 
-      <Link
-        href="/admin/einheiten/etiketten"
-        className="text-primary w-fit text-sm hover:underline"
-      >
-        Etiketten drucken →
-      </Link>
+      {isAdmin && (
+        <Link
+          href="/admin/einheiten/etiketten"
+          className="text-primary w-fit text-sm hover:underline"
+        >
+          Etiketten drucken →
+        </Link>
+      )}
     </div>
   );
 }

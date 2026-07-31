@@ -18,6 +18,10 @@ import {
   retireStorageUnit,
   updateStorageUnit,
 } from "@/components/feature/admin-einheiten/actions";
+import {
+  AssignKeeperDialog,
+  type KeeperOption,
+} from "@/components/feature/admin-einheiten/assign-keeper-dialog";
 
 export type UnitDetail = {
   id: string;
@@ -25,6 +29,7 @@ export type UnitDetail = {
   kind: "BOX" | "SHELF";
   label: string;
   locationNote: string | null;
+  keeperMeepleId: string | null;
   keeperName: string | null;
   retired: boolean;
 };
@@ -48,10 +53,16 @@ export function UnitDetailView({
   unit,
   contents,
   moves,
+  isAdmin,
+  selfMeepleId,
+  keeperOptions,
 }: {
   unit: UnitDetail;
   contents: UnitContentRow[];
   moves: UnitMoveRow[];
+  isAdmin: boolean;
+  selfMeepleId: string;
+  keeperOptions: KeeperOption[];
 }) {
   const router = useRouter();
   const [label, setLabel] = useState(unit.label);
@@ -104,7 +115,7 @@ export function UnitDetailView({
               id="unit-label"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
-              disabled={unit.retired}
+              disabled={unit.retired || !isAdmin}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -114,27 +125,41 @@ export function UnitDetailView({
               value={locationNote}
               onChange={(event) => setLocationNote(event.target.value)}
               placeholder="z. B. Keller links"
-              disabled={unit.retired}
+              disabled={unit.retired || !isAdmin}
             />
           </div>
-          <p className="text-muted-foreground text-sm">
-            Verwahrer: {unit.keeperName ?? "keiner"}
-          </p>
-          {error && <p className="text-destructive text-sm">{error}</p>}
-          <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={isSaving || unit.retired}>
-              {isSaving ? "Speichere…" : "Speichern"}
-            </Button>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-sm">
+              Verwahrer: {unit.keeperName ?? "keiner"}
+            </p>
             {!unit.retired && (
-              <Button
-                variant="outline"
-                onClick={handleRetire}
-                disabled={isSaving}
-              >
-                Stilllegen
-              </Button>
+              <AssignKeeperDialog
+                unitId={unit.id}
+                currentKeeperId={unit.keeperMeepleId}
+                currentKeeperName={unit.keeperName}
+                isAdmin={isAdmin}
+                keeperOptions={keeperOptions}
+                selfMeepleId={selfMeepleId}
+              />
             )}
           </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          {isAdmin && (
+            <div className="flex gap-2">
+              <Button onClick={handleSave} disabled={isSaving || unit.retired}>
+                {isSaving ? "Speichere…" : "Speichern"}
+              </Button>
+              {!unit.retired && (
+                <Button
+                  variant="outline"
+                  onClick={handleRetire}
+                  disabled={isSaving}
+                >
+                  Stilllegen
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="bg-card rounded-lg border p-6">

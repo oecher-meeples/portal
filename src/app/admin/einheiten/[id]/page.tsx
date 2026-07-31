@@ -1,6 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/server";
+import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
 import { UnitDetailView } from "@/components/feature/admin-einheiten/unit-detail-view";
 import { formatDateTime } from "@/lib/utils/format";
 
@@ -9,13 +11,23 @@ export default async function AdminEinheitDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermission("games:manage");
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+  const [currentMeeple, isAdmin] = await Promise.all([
+    ensureMeeple(user),
+    hasPermission(user.id, "games:manage"),
+  ]);
   const { id } = await params;
 
-  const unit = await prisma.storageUnit.findUnique({
-    where: { id },
-    include: { keeper: { select: { displayName: true } } },
-  });
+  const [unit, meeples] = await Promise.all([
+    prisma.storageUnit.findUnique({
+      where: { id },
+      include: { keeper: { select: { displayName: true } } },
+    }),
+    prisma.meeple.findMany(),
+  ]);
   if (!unit) {
     notFound();
   }
@@ -35,6 +47,10 @@ export default async function AdminEinheitDetailPage({
     }),
   ]);
 
+  const keeperOptions = meeples
+    .filter((m) => getMembershipState(m) !== "anonymisiert")
+    .map((m) => ({ id: m.id, displayName: m.displayName }));
+
   return (
     <UnitDetailView
       unit={{
@@ -43,6 +59,7 @@ export default async function AdminEinheitDetailPage({
         kind: unit.kind,
         label: unit.label,
         locationNote: unit.locationNote,
+        keeperMeepleId: unit.keeperMeepleId,
         keeperName: unit.keeper?.displayName ?? null,
         retired: unit.retiredAt !== null,
       }}
@@ -55,6 +72,9 @@ export default async function AdminEinheitDetailPage({
         locationNote: move.locationNote,
         recordedByName: move.recordedBy.displayName,
       }))}
+      isAdmin={isAdmin}
+      selfMeepleId={currentMeeple.id}
+      keeperOptions={keeperOptions}
     />
   );
 }

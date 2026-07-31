@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
-import { getMembershipState } from "@/lib/members/meeples";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/server";
+import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
 import {
   AdminEinheitenView,
   type ResignedHolderRow,
@@ -25,7 +27,14 @@ function locationChain(
 }
 
 export default async function AdminEinheitenPage() {
-  await requirePermission("games:manage");
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/login");
+  }
+  const [currentMeeple, isAdmin] = await Promise.all([
+    ensureMeeple(user),
+    hasPermission(user.id, "games:manage"),
+  ]);
 
   const [units, gameCounts, meeples] = await Promise.all([
     prisma.storageUnit.findMany({
@@ -79,10 +88,23 @@ export default async function AdminEinheitenPage() {
     kind: unit.kind,
     label: unit.label,
     locationChain: locationChain(unit, unitById),
+    keeperMeepleId: unit.keeperMeepleId,
     keeperName: unit.keeper?.displayName ?? null,
     gameCount: gameCountByUnitId.get(unit.id) ?? 0,
     retired: unit.retiredAt !== null,
   }));
 
-  return <AdminEinheitenView units={rows} resignedHolders={resignedHolders} />;
+  const keeperOptions = meeples
+    .filter((m) => getMembershipState(m) !== "anonymisiert")
+    .map((m) => ({ id: m.id, displayName: m.displayName }));
+
+  return (
+    <AdminEinheitenView
+      units={rows}
+      resignedHolders={resignedHolders}
+      isAdmin={isAdmin}
+      selfMeepleId={currentMeeple.id}
+      keeperOptions={keeperOptions}
+    />
+  );
 }

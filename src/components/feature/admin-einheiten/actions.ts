@@ -6,7 +6,8 @@ import { prisma } from "@/lib/utils/prisma";
 import { nextUnitCode } from "@/lib/inventory/codes";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePermission, hasPermission } from "@/lib/auth/permissions";
+import { getCurrentUser } from "@/lib/auth/server";
 
 async function requireGamesManage() {
   const user = await requirePermission("games:manage");
@@ -97,6 +98,43 @@ export async function retireStorageUnit(id: string) {
   });
 
   revalidatePath("/admin/einheiten");
+  return { success: true as const };
+}
+
+/**
+ * Admins can assign any Meeple as keeper; everyone else can only claim a
+ * unit for themselves — never assign it to someone else.
+ */
+export async function assignStorageUnitKeeper(
+  unitId: string,
+  keeperMeepleId: string | null,
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { error: "Bitte anmelden." };
+  }
+  const actingMeeple = await ensureMeeple(user);
+  const isAdmin = await hasPermission(user.id, "games:manage");
+
+  if (!isAdmin && keeperMeepleId !== actingMeeple.id) {
+    return { error: "Du kannst eine Einheit nur dir selbst zuweisen." };
+  }
+
+  const unit = await prisma.storageUnit.findUnique({ where: { id: unitId } });
+  if (!unit || unit.retiredAt) {
+    return { error: "Einheit nicht gefunden oder stillgelegt." };
+  }
+
+  await moveStorageUnit({
+    unitId,
+    recordedByMeepleId: actingMeeple.id,
+    keeperMeepleId,
+    parentUnitId: unit.parentUnitId,
+    locationNote: unit.locationNote,
+  });
+
+  revalidatePath("/admin/einheiten");
+  revalidatePath(`/admin/einheiten/${unitId}`);
   return { success: true as const };
 }
 
