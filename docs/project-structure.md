@@ -43,7 +43,9 @@ src/lib/
 ├── ludothek/   Spielebestand & Aufenthalte (Holdings):
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben)
 │               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
-│               └── holding-actions.ts  Server Actions über den Übergängen
+│               ├── holding-actions.ts  Server Actions über den Übergängen
+│               ├── board-games.ts      Server Actions: anlegen/bearbeiten/deinventarisieren, BGG-Vorschau
+│               └── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])
 ├── members/    Mitglieder, Mitgliedsstatus
 ├── instagram/  Cross-Posting
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client
@@ -87,10 +89,16 @@ Ein **Widget** ist ein in sich geschlossener Funktionsblock, der einen komplette
 
 ```text
 widgets/
-└── game-holding/game-holding-panel.tsx
+├── game-holding/game-holding-panel.tsx
+└── board-game/
+    ├── board-game-form-fields.tsx   Formularfelder + Form-State ↔ BoardGameInput
+    ├── edit-board-game-dialog.tsx   Spiel-Stammdaten bearbeiten
+    └── game-card-edit-overlay.tsx   Bearbeiten-Button auf der Spiele-Kachel (stoppt den Klick vor dem umschließenden Link)
 ```
 
 `GameHoldingPanel` ("was mache ich mit dem Spiel in meiner Hand": ausleihen, bestätigen, weitergeben, zurückgeben, einlagern) wird vom Scan-Flow **und** von der Ludothek-Detailseite benutzt. Vorher lag er in `feature/scan/` und wurde von dort querimportiert — genau der Fehler, den die Schichtenregel verhindert.
+
+`EditBoardGameDialog` wird von `feature/admin-bestand` (Tabellenzeile) **und** von `feature/ludothek` (Kachel-Overlay, nur mit `games:manage`-Berechtigung) eingebunden — deshalb `widgets/`, nicht `feature/admin-bestand/`. Die Server Actions dahinter (`createBoardGame`, `updateBoardGame`, …) liegen konsequent in `lib/ludothek/board-games.ts`, nicht in `components/feature/`, damit `widgets/` sie importieren darf.
 
 ## `src/components/feature/` — je ein Anwendungsfall
 
