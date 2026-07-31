@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
 
 const createBoardGameMock = vi.fn();
 const previewBggImportMock = vi.fn();
-vi.mock("@/components/feature/admin-bestand/actions", () => ({
+vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
   previewBggImport: (...args: unknown[]) => previewBggImportMock(...args),
 }));
@@ -58,11 +58,13 @@ describe("CreateBoardGameDialog — manual entry via EAN", () => {
     await user.click(submitButton(dialog));
 
     await waitFor(() => expect(createBoardGameMock).toHaveBeenCalledTimes(1));
-    expect(createBoardGameMock).toHaveBeenCalledWith({
-      title: "Arche Nova",
-      ean: "5901234123457",
-      condition: undefined,
-    });
+    expect(createBoardGameMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Arche Nova",
+        ean: "5901234123457",
+        condition: undefined,
+      }),
+    );
     await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

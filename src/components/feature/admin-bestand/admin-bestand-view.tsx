@@ -17,8 +17,8 @@ import {
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { CreateBoardGameDialog } from "@/components/feature/admin-bestand/create-board-game-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/feature/admin-bestand/deinventorise-board-game-dialog";
-import { EditBoardGameDialog } from "@/components/feature/admin-bestand/edit-board-game-dialog";
-import { requestCompletenessCheck } from "@/components/feature/admin-bestand/actions";
+import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
+import { requestCompletenessCheck } from "@/lib/ludothek/board-games";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
 export type AdminBoardGameRow = {

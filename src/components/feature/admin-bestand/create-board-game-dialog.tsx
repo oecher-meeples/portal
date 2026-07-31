@@ -15,21 +15,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TextField } from "@/components/ui/field";
 import {
   createBoardGame,
   previewBggImport,
   type BoardGameInput,
-} from "@/components/feature/admin-bestand/actions";
-import { parseBggId } from "@/components/feature/admin-bestand/bgg-id";
+} from "@/lib/ludothek/board-games";
+import { parseBggId } from "@/lib/ludothek/bgg-id";
+import {
+  BoardGameFormFields,
+  EMPTY_BOARD_GAME_FORM,
+  boardGameFormToInput,
+  type BoardGameFormValues,
+} from "@/components/widgets/board-game/board-game-form-fields";
 import type { BggGameData } from "@/lib/bgg/client";
 
 type Mode = "manual" | "bgg";
-
-const EMPTY_FORM = {
-  title: "",
-  ean: "",
-  condition: "",
-};
 
 export function CreateBoardGameDialog({
   defaultEan,
@@ -42,16 +43,23 @@ export function CreateBoardGameDialog({
   const [bggIdInput, setBggIdInput] = useState("");
   const [preview, setPreview] = useState<BggGameData | null>(null);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
-  const [form, setForm] = useState({ ...EMPTY_FORM, ean: defaultEan ?? "" });
+  const [form, setForm] = useState<BoardGameFormValues>({
+    ...EMPTY_BOARD_GAME_FORM,
+    ean: defaultEan ?? "",
+  });
   const [error, setError] = useState<string | null>(null);
   const [lastHint, setLastHint] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function patchForm(patch: Partial<BoardGameFormValues>) {
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
 
   function reset() {
     setMode("manual");
     setBggIdInput("");
     setPreview(null);
-    setForm({ ...EMPTY_FORM, ean: defaultEan ?? "" });
+    setForm({ ...EMPTY_BOARD_GAME_FORM, ean: defaultEan ?? "" });
     setError(null);
   }
 
@@ -72,7 +80,7 @@ export function CreateBoardGameDialog({
       }
 
       setPreview(result.data);
-      setForm((prev) => ({ ...prev, title: result.data.title }));
+      patchForm({ title: result.data.title });
     } catch (err) {
       setError(
         err instanceof Error
@@ -88,24 +96,27 @@ export function CreateBoardGameDialog({
     setError(null);
     setIsSubmitting(true);
 
-    const input: BoardGameInput = {
-      title: form.title,
-      ean: form.ean || undefined,
-      condition: form.condition || undefined,
-      ...(mode === "bgg" && preview
-        ? {
-            bggId: parseBggId(bggIdInput),
-            minPlayers: preview.minPlayers,
-            maxPlayers: preview.maxPlayers,
-            playTimeMinutes: preview.playTimeMinutes,
-            weight: preview.weight,
-            imageUrl: preview.imageUrl,
-            description: preview.description,
-            mechanics: preview.mechanics,
-            explainerVideoUrl: preview.explainerVideoUrl,
-          }
-        : {}),
-    };
+    const input: BoardGameInput =
+      mode === "manual"
+        ? boardGameFormToInput(form)
+        : {
+            title: form.title,
+            ean: form.ean || undefined,
+            condition: form.condition || undefined,
+            ...(preview
+              ? {
+                  bggId: parseBggId(bggIdInput),
+                  minPlayers: preview.minPlayers,
+                  maxPlayers: preview.maxPlayers,
+                  playTimeMinutes: preview.playTimeMinutes,
+                  weight: preview.weight,
+                  imageUrl: preview.imageUrl,
+                  description: preview.description,
+                  mechanics: preview.mechanics,
+                  explainerVideoUrl: preview.explainerVideoUrl,
+                }
+              : {}),
+          };
 
     try {
       const result = await createBoardGame(input);
@@ -200,6 +211,7 @@ export function CreateBoardGameDialog({
               {preview && (
                 <div className="flex gap-3 rounded-md border p-3">
                   {preview.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element -- BGG-hosted preview image, not next/image-optimizable
                     <img
                       src={preview.imageUrl}
                       alt={preview.title}
@@ -226,44 +238,37 @@ export function CreateBoardGameDialog({
 
           {(mode === "manual" || preview) && (
             <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="game-title">Titel</Label>
-                <Input
-                  id="game-title"
-                  value={form.title}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, title: event.target.value }))
-                  }
-                  required
+              <TextField
+                id="game-title"
+                label="Titel"
+                value={form.title}
+                onChange={(event) => patchForm({ title: event.target.value })}
+                required
+              />
+              <TextField
+                id="game-ean"
+                label="EAN"
+                value={form.ean}
+                onChange={(event) => patchForm({ ean: event.target.value })}
+                placeholder="optional, vom Barcode auf der Schachtel"
+                hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
+              />
+              <TextField
+                id="game-condition"
+                label="Zustand"
+                value={form.condition}
+                onChange={(event) =>
+                  patchForm({ condition: event.target.value })
+                }
+              />
+              {mode === "manual" && (
+                <BoardGameFormFields
+                  idPrefix="game"
+                  values={form}
+                  onChange={patchForm}
+                  includeTitleAndCore={false}
                 />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="game-ean">EAN</Label>
-                <Input
-                  id="game-ean"
-                  value={form.ean}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, ean: event.target.value }))
-                  }
-                  placeholder="optional, vom Barcode auf der Schachtel"
-                />
-                <p className="text-muted-foreground text-xs">
-                  Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen.
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="game-condition">Zustand</Label>
-                <Input
-                  id="game-condition"
-                  value={form.condition}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      condition: event.target.value,
-                    }))
-                  }
-                />
-              </div>
+              )}
               <p className="text-muted-foreground text-xs">
                 Das Spiel liegt zunächst in „Unsortiert“ — Standort per Scan
                 einlagern.

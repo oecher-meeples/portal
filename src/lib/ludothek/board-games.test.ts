@@ -33,7 +33,7 @@ const {
   previewBggImport,
   deinventoriseBoardGame,
   requestCompletenessCheck,
-} = await import("./actions");
+} = await import("./board-games");
 
 const VALID_INPUT = { title: "Arche Nova" };
 const VALID_EAN = "5901234123457";

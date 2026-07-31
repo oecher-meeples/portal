@@ -5,7 +5,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { deinventoriseBoardGame } from "@/components/feature/admin-bestand/actions";
+import { deinventoriseBoardGame } from "@/lib/ludothek/board-games";
 
 export function DeinventoriseBoardGameDialog({
   gameId,

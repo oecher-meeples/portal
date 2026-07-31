@@ -1,6 +1,7 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
@@ -17,17 +18,27 @@ function playersAndDuration(game: PublicLudothekGame) {
 
 export function GameCard({
   game,
+  actions,
 }: {
   game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+  /** Caller-supplied overlay, e.g. an edit button — GameCard just places it. */
+  actions?: ReactNode;
 }) {
   const zustand = "zustand" in game ? game.zustand : undefined;
 
   return (
     <Link
       href={`/ludothek/${game.slug}`}
-      className="group bg-card hover:border-primary/60 flex flex-col overflow-hidden rounded-lg border transition-colors"
+      className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
-      <PlaceholderMedia label="COVER" />
+      {actions && (
+        <div className="absolute top-2 right-2 z-10">{actions}</div>
+      )}
+      <GameCoverMedia
+        imageUrl={game.imageUrl}
+        title={game.title}
+        aspect="aspect-video"
+      />
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {game.title}
