@@ -176,6 +176,16 @@ export function LudothekBrowser({
               </div>
             )}
 
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterPill
+                label="Erweiterungen ausblenden"
+                href={href({
+                  ohneErweiterungen: filters.hideExpansions ? undefined : "1",
+                })}
+                active={Boolean(filters.hideExpansions)}
+              />
+            </div>
+
             {internal && (
               <>
                 <div className="flex flex-wrap items-center gap-2">

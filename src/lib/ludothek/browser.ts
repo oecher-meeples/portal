@@ -74,6 +74,7 @@ export type LudothekFilters = {
   duration?: DurationFilter;
   maxWeight?: number;
   mechanics?: string[];
+  hideExpansions?: boolean;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
   zustand?: GameZustand;
   onlyLoanedOut?: boolean;
@@ -133,6 +134,7 @@ export function parseLudothekSearchParams(
         ? mechanikRaw
         : [mechanikRaw]
       : undefined,
+    hideExpansions: firstString(searchParams.ohneErweiterungen) === "1",
   };
 
   if (internal) {
@@ -168,6 +170,12 @@ export function filterLudothekGames(
     if (filters.mechanics && filters.mechanics.length > 0) {
       const hasAny = filters.mechanics.some((m) => game.mechanics.includes(m));
       if (!hasAny) return false;
+    }
+    if (
+      filters.hideExpansions &&
+      game.kind === BoardGameKind.BOARDGAME_EXPANSION
+    ) {
+      return false;
     }
     if (filters.zustand && game.zustand !== filters.zustand) {
       return false;

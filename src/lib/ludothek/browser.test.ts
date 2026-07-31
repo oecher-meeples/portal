@@ -102,6 +102,18 @@ describe("filterLudothekGames", () => {
     expect(result).toEqual([tileLaying, both]);
   });
 
+  it("hides expansions when hideExpansions is set", () => {
+    const base = game({ kind: BoardGameKind.BOARDGAME });
+    const expansion = game({ kind: BoardGameKind.BOARDGAME_EXPANSION });
+
+    expect(
+      filterLudothekGames([base, expansion], { hideExpansions: true }),
+    ).toEqual([base]);
+    expect(
+      filterLudothekGames([base, expansion], { hideExpansions: false }),
+    ).toEqual([base, expansion]);
+  });
+
   it("filters by 'ist ausgeliehen'", () => {
     const loaned = game({ isLoanedOut: true });
     const free = game({ isLoanedOut: false });
@@ -167,6 +179,7 @@ describe("parseLudothekSearchParams", () => {
       duration: "mid",
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
+      hideExpansions: false,
     });
   });
 
@@ -182,6 +195,7 @@ describe("parseLudothekSearchParams", () => {
       duration: undefined,
       maxWeight: undefined,
       mechanics: undefined,
+      hideExpansions: false,
     });
   });
 
