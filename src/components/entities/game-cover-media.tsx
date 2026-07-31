@@ -20,11 +20,19 @@ export function GameCoverMedia({
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- covers come from arbitrary external BGG/user URLs, not next/image-optimizable local assets
-    <img
-      src={imageUrl}
-      alt={title}
-      className={cn("rounded-md border object-cover", aspect, className)}
-    />
+    <div
+      className={cn(
+        "bg-muted overflow-hidden rounded-md border",
+        aspect,
+        className,
+      )}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- covers come from arbitrary external BGG/user URLs, not next/image-optimizable local assets */}
+      <img
+        src={imageUrl}
+        alt={title}
+        className="size-full object-contain"
+      />
+    </div>
   );
 }
