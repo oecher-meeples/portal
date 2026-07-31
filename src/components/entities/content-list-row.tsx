@@ -4,6 +4,7 @@ import type { ContentItem } from "@/lib/content/content";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { StatusPill } from "@/components/ui/status-pill";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { formatDate } from "@/lib/utils/format";
 
 export function ContentListRow({
@@ -22,11 +23,24 @@ export function ContentListRow({
       <Link href={`/news/${item.slug}`} className="absolute inset-0 z-0">
         <span className="sr-only">{item.title} lesen</span>
       </Link>
-      <PlaceholderMedia
-        label="BILD"
-        aspect="aspect-square"
-        className="pointer-events-none w-28 shrink-0 sm:w-36"
-      />
+      <div className="relative w-28 shrink-0 sm:w-36">
+        <PlaceholderMedia
+          label="BILD"
+          aspect="aspect-square"
+          className="pointer-events-none"
+        />
+        {canEdit && item.id && (
+          <CardCornerOverlay corner="top-left">
+            <Link
+              href={`/admin/news/${item.id}/edit`}
+              className="bg-background hover:bg-accent hover:text-accent-foreground inline-flex size-8 items-center justify-center rounded-md border"
+              aria-label="Beitrag bearbeiten"
+            >
+              <Pencil className="size-4" />
+            </Link>
+          </CardCornerOverlay>
+        )}
+      </div>
       <div className="pointer-events-none flex flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -42,15 +56,6 @@ export function ContentListRow({
         </h3>
         <p className="text-muted-foreground text-sm">{item.excerpt}</p>
       </div>
-      {canEdit && item.id && (
-        <Link
-          href={`/admin/news/${item.id}/edit`}
-          className="bg-background hover:bg-accent hover:text-accent-foreground relative z-10 inline-flex size-8 shrink-0 items-center justify-center self-start rounded-md border"
-          aria-label="Beitrag bearbeiten"
-        >
-          <Pencil className="size-4" />
-        </Link>
-      )}
     </div>
   );
 }
