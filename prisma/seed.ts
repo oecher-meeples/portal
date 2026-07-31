@@ -1,9 +1,10 @@
 import { hashPassword } from "better-auth/crypto";
-import { HoldingOrigin, StorageUnitKind } from "@prisma/client";
+import { BoardGameKind, HoldingOrigin, StorageUnitKind } from "@prisma/client";
 import { prisma } from "../src/lib/utils/prisma";
 import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import { DEMO_GAMES } from "./seed-data/demo-games";
+import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 
 const ADMIN_USER = {
   email: process.env.SEED_ADMIN_EMAIL ?? "admin@jan-herwig.de",
@@ -171,6 +172,8 @@ async function seedDemoGames(adminMeepleId: string) {
     select: { slug: true },
   });
   const usedSlugs = new Set(existingSlugs.map((g) => g.slug));
+  const expansionTitles = new Set(DEMO_EXPANSIONS.map((e) => e.expansion));
+  const gameIdByTitle = new Map<string, string>();
 
   for (const game of DEMO_GAMES) {
     const base = slugify(game.title);
@@ -193,8 +196,12 @@ async function seedDemoGames(adminMeepleId: string) {
         weight: game.weight,
         description: game.description,
         mechanics: game.mechanics,
+        kind: expansionTitles.has(game.title)
+          ? BoardGameKind.BOARDGAME_EXPANSION
+          : BoardGameKind.BOARDGAME,
       },
     });
+    gameIdByTitle.set(game.title, created.id);
 
     await prisma.gameHolding.create({
       data: {
@@ -208,6 +215,24 @@ async function seedDemoGames(adminMeepleId: string) {
   }
 
   console.log(`${DEMO_GAMES.length} Demo-Spiele angelegt.`);
+
+  for (const { baseGame, expansion } of DEMO_EXPANSIONS) {
+    const baseGameId = gameIdByTitle.get(baseGame);
+    const expansionId = gameIdByTitle.get(expansion);
+    if (!baseGameId || !expansionId) {
+      console.warn(
+        `Überspringe GameCollection "${expansion}" → "${baseGame}": Titel nicht gefunden.`,
+      );
+      continue;
+    }
+    await prisma.gameCollection.upsert({
+      where: { baseGameId_expansionId: { baseGameId, expansionId } },
+      update: {},
+      create: { baseGameId, expansionId },
+    });
+  }
+
+  console.log(`${DEMO_EXPANSIONS.length} Erweiterungs-Zuordnungen angelegt.`);
 }
 
 async function main() {

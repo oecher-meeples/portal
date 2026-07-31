@@ -216,3 +216,39 @@ export async function requestCompletenessCheck(id: string) {
 
   return { success: true as const };
 }
+
+/** Manual base game ↔ expansion assignment, see #30 — BGG import is blocked by #12. */
+export async function assignExpansion(baseGameId: string, expansionId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  if (baseGameId === expansionId) {
+    return { error: "Ein Spiel kann nicht seine eigene Erweiterung sein." };
+  }
+
+  await prisma.gameCollection.upsert({
+    where: { baseGameId_expansionId: { baseGameId, expansionId } },
+    update: {},
+    create: { baseGameId, expansionId },
+  });
+
+  return { success: true as const };
+}
+
+export async function removeExpansionAssignment(
+  baseGameId: string,
+  expansionId: string,
+) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  await prisma.gameCollection.deleteMany({
+    where: { baseGameId, expansionId },
+  });
+
+  return { success: true as const };
+}

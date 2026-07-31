@@ -36,6 +36,11 @@ enum StorageUnitKind {
   SHELF
 }
 
+enum BoardGameKind {
+  BOARDGAME
+  BOARDGAME_EXPANSION
+}
+
 enum HoldingOrigin {
   INITIAL
   LOAN
@@ -246,15 +251,32 @@ model BoardGame {
   archivedReason  String?
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
   explainerVideoUrl String?
+  /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
+  kind            BoardGameKind       @default(BOARDGAME)
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   holdings GameHolding[]
   explainerGames ExplainerGame[]
+  baseGameCollections  GameCollection[] @relation("BaseGameCollections")
+  expansionCollections GameCollection[] @relation("ExpansionCollections")
 
   @@index([bggId])
   @@index([ean])
   @@map("board_games")
+}
+
+/// Links an expansion to its base game(s), see #30. m:n because BGG allows a
+/// crossover expansion to belong to more than one base game.
+model GameCollection {
+  baseGameId  String
+  expansionId String
+
+  baseGame  BoardGame @relation("BaseGameCollections", fields: [baseGameId], references: [id], onDelete: Cascade)
+  expansion BoardGame @relation("ExpansionCollections", fields: [expansionId], references: [id], onDelete: Cascade)
+
+  @@id([baseGameId, expansionId])
+  @@map("game_collections")
 }
 
 /// A QR-labelled physical container: a box that travels as a whole, or a club-owned shelf.

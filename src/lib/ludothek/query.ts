@@ -22,6 +22,16 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
           where: { endedAt: null },
           include: { unit: true, meeple: { select: { displayName: true } } },
         },
+        baseGameCollections: {
+          include: {
+            expansion: { select: { id: true, slug: true, title: true } },
+          },
+        },
+        expansionCollections: {
+          include: {
+            baseGame: { select: { id: true, slug: true, title: true } },
+          },
+        },
       },
     }),
     prisma.storageUnit.findMany({
@@ -74,6 +84,9 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       bggId: game.bggId,
       description: game.description,
       explainerVideoUrl: game.explainerVideoUrl,
+      kind: game.kind,
+      baseGames: game.expansionCollections.map((c) => c.baseGame),
+      expansions: game.baseGameCollections.map((c) => c.expansion),
     };
 
     if (!holding) {

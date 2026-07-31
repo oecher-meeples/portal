@@ -1,4 +1,7 @@
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import { BoardGameKind } from "@prisma/client";
+
+export type LudothekGameRef = { id: string; slug: string; title: string };
 
 /**
  * Richest possible shape of a game for the Ludothek browser. The internal
@@ -21,6 +24,11 @@ export type LudothekGame = {
   bggId: number | null;
   description: string | null;
   explainerVideoUrl: string | null;
+  kind: BoardGameKind;
+  /** Base game(s) this expansion belongs to — empty unless `kind` is BOARDGAME_EXPANSION. */
+  baseGames: LudothekGameRef[];
+  /** Expansions in the collection that belong to this base game. */
+  expansions: LudothekGameRef[];
   zustand: GameZustand;
   isLoanedOut: boolean;
   responsibleMeepleId: string | null;

@@ -33,6 +33,8 @@ const {
   previewBggImport,
   deinventoriseBoardGame,
   requestCompletenessCheck,
+  assignExpansion,
+  removeExpansionAssignment,
 } = await import("./board-games");
 
 const VALID_INPUT = { title: "Arche Nova" };
@@ -340,6 +342,73 @@ describe("requestCompletenessCheck", () => {
     expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
       where: { id: "game-1" },
       data: { needsCompletenessCheck: true },
+    });
+  });
+});
+
+describe("assignExpansion", () => {
+  it("rejects when the user lacks the games:manage permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    const result = await assignExpansion("base-1", "expansion-1");
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(prismaMock.gameCollection.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects assigning a game as its own expansion", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    const result = await assignExpansion("game-1", "game-1");
+
+    expect(result).toEqual({
+      error: "Ein Spiel kann nicht seine eigene Erweiterung sein.",
+    });
+    expect(prismaMock.gameCollection.upsert).not.toHaveBeenCalled();
+  });
+
+  it("upserts the GameCollection row when authorized and valid", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    const result = await assignExpansion("base-1", "expansion-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.gameCollection.upsert).toHaveBeenCalledWith({
+      where: {
+        baseGameId_expansionId: {
+          baseGameId: "base-1",
+          expansionId: "expansion-1",
+        },
+      },
+      update: {},
+      create: { baseGameId: "base-1", expansionId: "expansion-1" },
+    });
+  });
+});
+
+describe("removeExpansionAssignment", () => {
+  it("rejects when the user lacks the games:manage permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    const result = await removeExpansionAssignment("base-1", "expansion-1");
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(prismaMock.gameCollection.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("deletes the GameCollection row when authorized", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    const result = await removeExpansionAssignment("base-1", "expansion-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.gameCollection.deleteMany).toHaveBeenCalledWith({
+      where: { baseGameId: "base-1", expansionId: "expansion-1" },
     });
   });
 });

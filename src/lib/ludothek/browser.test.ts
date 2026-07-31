@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BoardGameKind } from "@prisma/client";
 import {
   filterLudothekGames,
   parseLudothekSearchParams,
@@ -22,6 +23,9 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     bggId: null,
     description: null,
     explainerVideoUrl: null,
+    kind: BoardGameKind.BOARDGAME,
+    baseGames: [],
+    expansions: [],
     zustand: "frei",
     isLoanedOut: false,
     responsibleMeepleId: "meeple-a",
