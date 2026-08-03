@@ -93,17 +93,32 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
   impressum: [
     {
       id: "angaben",
-      heading: "Angaben gemäß § 5 TMG",
+      heading: "Angaben gemäß § 5 DDG",
       paragraphs: [
-        "Oecher Meeples e. V.",
-        "Musterstraße 1, 52062 Aachen",
-        "Platzhalter – finale Angaben folgen.",
+        "Oecher Meeples (Verein befindet sich in Gründung — die Eintragung ins Vereinsregister als „e. V.“ ist noch nicht erfolgt).",
+        "TODO: Ladungsfähige Anschrift (Straße, Hausnummer, Postleitzahl, Ort) fehlt noch und muss vom Vorstand ergänzt werden.",
+      ],
+    },
+    {
+      id: "vertretungsberechtigte",
+      heading: "Vertretungsberechtigte",
+      paragraphs: [
+        "TODO: Name(n) der/des Vertretungsberechtigten (z. B. 1. Vorsitzende:r) fehlen noch.",
       ],
     },
     {
       id: "kontakt",
       heading: "Kontakt",
-      paragraphs: ["E-Mail: vorstand@oecher-meeples.de (Platzhalter)"],
+      paragraphs: [
+        "TODO: Verbindliche Kontakt-E-Mail-Adresse des Vorstands fehlt noch.",
+      ],
+    },
+    {
+      id: "registereintrag",
+      heading: "Registereintrag",
+      paragraphs: [
+        "TODO: Der Verein ist noch nicht ins Vereinsregister eingetragen. Registergericht und Registernummer werden nach erfolgter Eintragung ergänzt.",
+      ],
     },
   ],
   beitragsordnung: [
