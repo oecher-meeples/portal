@@ -10,6 +10,11 @@ vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
+const deleteBlobsMock = vi.fn();
+vi.mock("@/lib/utils/blob-delete", () => ({
+  deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
+}));
+
 const {
   anonymiseMeeple,
   getOpenHoldingsSummary,
@@ -21,14 +26,28 @@ class ForbiddenError extends Error {}
 
 const RESIGNED_AND_GONE = {
   id: "meeple-1",
+  displayName: "Lea Beispiel",
   neonAuthUserId: "11111111-1111-1111-1111-111111111111",
   resignedAt: new Date("2024-07-01T00:00:00Z"),
   membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
   anonymizedAt: null,
 };
 
+/** Sets up the happy path for anonymiseMeeple: resigned, nothing held, no images. */
+function givenAnonymisableMeeple(
+  listings: { id: string; imageUrls: string[] }[] = [],
+) {
+  prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+  prismaMock.gameHolding.count.mockResolvedValue(0);
+  prismaMock.storageUnit.count.mockResolvedValue(0);
+  prismaMock.marketListing.findMany.mockResolvedValue(listings as never);
+}
+
 beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
+  deleteBlobsMock.mockReset();
+  deleteBlobsMock.mockResolvedValue(undefined);
+  prismaMock.marketListing.findMany.mockResolvedValue([] as never);
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -145,9 +164,7 @@ describe("anonymiseMeeple", () => {
   });
 
   it("clears exactly the defined fields, keeps the meeple row and runs transactionally", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-    prismaMock.gameHolding.count.mockResolvedValue(0);
-    prismaMock.storageUnit.count.mockResolvedValue(0);
+    givenAnonymisableMeeple();
 
     const result = await anonymiseMeeple("meeple-1");
 
@@ -174,9 +191,7 @@ describe("anonymiseMeeple", () => {
   });
 
   it("does not delete the meeple row itself", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-    prismaMock.gameHolding.count.mockResolvedValue(0);
-    prismaMock.storageUnit.count.mockResolvedValue(0);
+    givenAnonymisableMeeple();
 
     await anonymiseMeeple("meeple-1");
 
@@ -184,12 +199,54 @@ describe("anonymiseMeeple", () => {
   });
 
   it("rolls back the meeple update when the raw sql fails", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-    prismaMock.gameHolding.count.mockResolvedValue(0);
-    prismaMock.storageUnit.count.mockResolvedValue(0);
+    givenAnonymisableMeeple();
     prismaMock.$executeRaw.mockRejectedValueOnce(new Error("db boom"));
 
     await expect(anonymiseMeeple("meeple-1")).rejects.toThrow("db boom");
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+  });
+
+  it("deletes the member's market listing images from blob storage", async () => {
+    givenAnonymisableMeeple([
+      {
+        id: "listing-1",
+        imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"],
+      },
+      { id: "listing-2", imageUrls: ["https://blob/c.jpg"] },
+    ]);
+
+    await anonymiseMeeple("meeple-1");
+
+    expect(deleteBlobsMock).toHaveBeenCalledWith([
+      "https://blob/a.jpg",
+      "https://blob/b.jpg",
+      "https://blob/c.jpg",
+    ]);
+    expect(prismaMock.marketListing.updateMany).toHaveBeenCalledWith({
+      where: { sellerMeepleId: "meeple-1" },
+      data: { imageUrls: [] },
+    });
+  });
+
+  it("leaves the meeple un-anonymised when blob deletion fails, so a retry can fix it", async () => {
+    givenAnonymisableMeeple([
+      { id: "listing-1", imageUrls: ["https://blob/a.jpg"] },
+    ]);
+    deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
+
+    await expect(anonymiseMeeple("meeple-1")).rejects.toThrow("blob boom");
+    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("clears the free-text author name on the member's posts", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeeple("meeple-1");
+
+    expect(prismaMock.post.updateMany).toHaveBeenCalledWith({
+      where: { author: "Lea Beispiel" },
+      data: { author: null },
+    });
   });
 });

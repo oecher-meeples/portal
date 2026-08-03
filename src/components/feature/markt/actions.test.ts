@@ -19,6 +19,11 @@ vi.mock("@vercel/blob/client", () => ({
     generateClientTokenMock(...args),
 }));
 
+const deleteBlobsMock = vi.fn();
+vi.mock("@/lib/utils/blob-delete", () => ({
+  deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
+}));
+
 const {
   createMarketListing,
   updateOwnMarketListing,
@@ -53,6 +58,8 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   requireMeepleMock.mockResolvedValue(OWNER);
+  deleteBlobsMock.mockReset();
+  deleteBlobsMock.mockResolvedValue(undefined);
   prismaMock.marketListing.create.mockResolvedValue(marketListing() as never);
 });
 
@@ -181,6 +188,33 @@ describe("deleteOwnMarketListing", () => {
     expect(prismaMock.marketListing.delete).toHaveBeenCalledWith({
       where: { id: "listing-1" },
     });
+  });
+
+  it("deletes the listing's uploaded images, not just the row referencing them", async () => {
+    prismaMock.marketListing.findUnique.mockResolvedValue(
+      marketListing({
+        imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"],
+      }) as never,
+    );
+
+    await deleteOwnMarketListing("listing-1");
+
+    expect(deleteBlobsMock).toHaveBeenCalledWith([
+      "https://blob/a.jpg",
+      "https://blob/b.jpg",
+    ]);
+  });
+
+  it("keeps the row when blob deletion fails, so the images do not silently leak", async () => {
+    prismaMock.marketListing.findUnique.mockResolvedValue(
+      marketListing({ imageUrls: ["https://blob/a.jpg"] }) as never,
+    );
+    deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
+
+    await expect(deleteOwnMarketListing("listing-1")).rejects.toThrow(
+      "blob boom",
+    );
+    expect(prismaMock.marketListing.delete).not.toHaveBeenCalled();
   });
 
   it("rejects deleting someone else's listing", async () => {

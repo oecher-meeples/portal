@@ -5,6 +5,7 @@ import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
@@ -95,6 +96,7 @@ export async function deleteOwnMarketListing(id: string) {
     return { error: "Nur die eigene Anzeige kann gelöscht werden." };
   }
 
+  await deleteBlobs(listing.imageUrls);
   await prisma.marketListing.delete({ where: { id } });
 
   revalidatePath("/markt");
