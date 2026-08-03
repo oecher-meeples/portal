@@ -66,6 +66,8 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 `pnpm run verify` (= format:check + typecheck + lint + test) — läuft auch als `pre-push`-Hook und in der CI. `next build` und Test-Coverage laufen bewusst nur in der CI, nicht im Hook.
 `pnpm run test` schließt `*.live.test.ts` aus (echte Fremd-APIs); die laufen nur via `pnpm run test:live`.
 
+**Coverage-Scope (`vitest.config.ts`):** nur `src/lib/**` und `src/components/**/actions.ts` — die Geschäftsregeln und Server Actions. UI-Komponenten und Routen sind bewusst ausgenommen, das ist eine Scope-Entscheidung, keine Lücke. Schwellenwert 80 % (Statements/Branches/Functions/Lines), abgeleitet aus der gemessenen Baseline (siehe Issue #38), nicht geraten.
+
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.
 
 ## Lizenz-Audit

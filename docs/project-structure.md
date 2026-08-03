@@ -133,3 +133,4 @@ Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `en
 3. **Max. 400 Zeilen pro Datei.** Wird es mehr, entlang der Fachlichkeit aufteilen (Beispiel: `holdings.ts` → Schreibseite + `holdings-lookup.ts` Leseseite).
 4. **Dateien unter 100 Zeilen nur, wenn sie mehrfach importiert werden.** Einmalig genutzte Kleinkomponenten gehören in ihren Aufrufer. Begründete Ausnahmen: `layout/*` (jeweils eigener Rahmen-Baustein) und `theme-provider.tsx` (technisch nötige `"use client"`-Grenze).
 5. **Colocation**: Tests (`*.test.ts(x)`) liegen neben ihrem Subjekt.
+6. **Coverage-Pflicht nur für `lib/` und `actions.ts`**: Die Geschäftsregeln (`src/lib/**`) und Server Actions (`src/components/**/actions.ts`) tragen eine Coverage-Schwelle (`vitest.config.ts`, aktuell 80 %). UI-Komponenten und Routen haben bewusst keine — das ist eine Entscheidung (siehe Issue #38), keine Lücke.

@@ -42,8 +42,11 @@ jobs:
       - name: Lint & Architekturregeln
         run: pnpm run lint
 
-      - name: Tests
-        run: pnpm run test
+      # Ersetzt einen separaten `test`-Schritt statt daneben zu laufen — die
+      # Suite zweimal auszuführen wäre reine Verschwendung. Schwelle in
+      # vitest.config.ts, abgeleitet aus der gemessenen Baseline (#38).
+      - name: Tests mit Coverage-Schwelle
+        run: pnpm run test:coverage
 
       # Nur Information: macht neue Duplikate sichtbar, bricht den Build nicht.
       - name: Duplikate (DRY-Hinweis, nicht blockierend)

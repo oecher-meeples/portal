@@ -22,6 +22,15 @@ export default defineConfig({
         "src/lib/utils/nav-config.ts",
         "src/lib/utils/cn.ts",
       ],
+      // Derived from the measured baseline (see #38): Statements 86.71,
+      // Branches 83.39, Functions 88.33, Lines 87.02 — rounded down to the
+      // nearest ten, so today's suite passes and a real regression trips it.
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
   resolve: {
