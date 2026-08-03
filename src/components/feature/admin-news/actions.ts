@@ -1,12 +1,13 @@
 "use server";
 
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
-import { InstagramStatus } from "@prisma/client";
+import { InstagramStatus, type NewsletterCategory } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
 import { processPost } from "@/lib/instagram/queue";
+import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
@@ -22,6 +23,8 @@ export type PostInput = {
   internal?: boolean;
   instagram?: boolean;
   status: "DRAFT" | "PUBLISHED";
+  sendAsNewsletter?: boolean;
+  newsletterCategory?: NewsletterCategory | null;
   coverImageUrl?: string;
 };
 
@@ -60,8 +63,18 @@ function toPostData(input: PostInput) {
     internal: input.internal ?? null,
     instagram: input.instagram ?? null,
     status: input.status,
+    sendAsNewsletter: input.sendAsNewsletter ?? false,
+    newsletterCategory: input.newsletterCategory ?? null,
     coverImageUrl: input.coverImageUrl || null,
   };
+}
+
+function shouldQueueNewsletter(input: PostInput) {
+  return Boolean(
+    input.sendAsNewsletter &&
+    input.status === "PUBLISHED" &&
+    input.newsletterCategory,
+  );
 }
 
 export async function createPost(input: PostInput) {
@@ -87,6 +100,10 @@ export async function createPost(input: PostInput) {
     },
   });
 
+  if (shouldQueueNewsletter(input)) {
+    await queueNewsletterForPost(post.id);
+  }
+
   return { success: true as const, id: post.id };
 }
 
@@ -101,19 +118,24 @@ export async function updatePost(id: string, input: PostInput) {
     return { error: validationError };
   }
 
+  const wantsNewsletter = shouldQueueNewsletter(input);
+  const needsExisting =
+    (!input.internal && input.status === "PUBLISHED" && input.instagram) ||
+    wantsNewsletter;
+  const existing = needsExisting
+    ? await prisma.post.findUnique({
+        where: { id },
+        select: { instagramStatus: true, newsletterStatus: true },
+      })
+    : null;
+
   let instagramStatus: InstagramStatus | null | undefined;
   if (input.internal || input.status !== "PUBLISHED") {
     // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue
     // eingereiht, auch wenn sie es vorher schon waren.
     instagramStatus = null;
-  } else if (input.instagram) {
-    const existing = await prisma.post.findUnique({
-      where: { id },
-      select: { instagramStatus: true },
-    });
-    if (!existing?.instagramStatus) {
-      instagramStatus = InstagramStatus.PENDING;
-    }
+  } else if (input.instagram && !existing?.instagramStatus) {
+    instagramStatus = InstagramStatus.PENDING;
   }
 
   await prisma.post.update({
@@ -123,6 +145,13 @@ export async function updatePost(id: string, input: PostInput) {
       ...(instagramStatus !== undefined ? { instagramStatus } : {}),
     },
   });
+
+  // Ein Entwurf mit gesetzter Checkbox, der jetzt veröffentlicht wird, löst
+  // den Versand aus. Bereits queued/gesendete Beiträge werden nicht erneut
+  // eingereiht, auch wenn die Checkbox weiterhin aktiv ist.
+  if (wantsNewsletter && !existing?.newsletterStatus) {
+    await queueNewsletterForPost(id);
+  }
 
   return { success: true as const };
 }

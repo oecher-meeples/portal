@@ -35,6 +35,8 @@ export default async function EditPostPage({
           author: post.author ?? undefined,
           instagram: post.instagram ?? undefined,
           status: post.status,
+          sendAsNewsletter: post.sendAsNewsletter,
+          newsletterCategory: post.newsletterCategory,
           coverImageUrl: post.coverImageUrl ?? undefined,
           instagramStatus: post.instagramStatus,
         }}

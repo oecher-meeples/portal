@@ -128,4 +128,39 @@ describe("PostForm", () => {
     expect(createPostMock).toHaveBeenCalledTimes(1);
     expect(updatePostMock).not.toHaveBeenCalled();
   });
+
+  it("defaults the newsletter category from the post type and sends it along when checked", async () => {
+    const user = userEvent.setup();
+    createPostMock.mockResolvedValue({ success: true, id: "post-1" });
+
+    render(<PostForm />);
+    await fillRequiredFields(user);
+    await user.click(
+      screen.getByRole("checkbox", { name: "Als Newsletter versenden in" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Absenden" }));
+
+    expect(createPostMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sendAsNewsletter: true,
+        newsletterCategory: "NEWS",
+      }),
+    );
+  });
+
+  it("sends newsletterCategory as null when the newsletter checkbox is unchecked", async () => {
+    const user = userEvent.setup();
+    createPostMock.mockResolvedValue({ success: true, id: "post-1" });
+
+    render(<PostForm />);
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole("button", { name: "Absenden" }));
+
+    expect(createPostMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sendAsNewsletter: false,
+        newsletterCategory: null,
+      }),
+    );
+  });
 });

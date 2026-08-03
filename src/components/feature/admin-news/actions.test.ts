@@ -11,6 +11,10 @@ vi.mock("@/lib/instagram/queue", () => ({
   processPost: (...args: unknown[]) => processPostMock(...args),
 }));
 
+vi.mock("@/lib/newsletter/dispatch", () => ({
+  queueNewsletterForPost: vi.fn(),
+}));
+
 const generateClientTokenMock = vi.fn();
 vi.mock("@vercel/blob/client", () => ({
   generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
@@ -211,6 +215,8 @@ describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
         internal: false,
         instagram: false,
         status: "PUBLISHED",
+        sendAsNewsletter: false,
+        newsletterCategory: null,
         coverImageUrl: null,
         instagramStatus: null,
       },

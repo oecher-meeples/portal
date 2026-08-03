@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import type { NewsletterCategory } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import type { ContentType } from "@/lib/content/content";
 import {
+  NEWSLETTER_CATEGORIES,
+  NEWSLETTER_CATEGORY_LABELS,
+} from "@/lib/newsletter/labels";
+import {
   createPost,
   getUploadToken,
   retryInstagramPost,
   updatePost,
   type PostInput,
 } from "@/components/feature/admin-news/actions";
+
+/** Default-Kategorie je Post-Typ — im Formular weiter überschreibbar. */
+const DEFAULT_NEWSLETTER_CATEGORY_BY_TYPE: Record<
+  ContentType,
+  NewsletterCategory
+> = {
+  blog: "NEWS",
+  termin: "TERMINE",
+  turnier: "TURNIERE",
+};
 
 const INSTAGRAM_STATUS_LABELS: Record<string, string> = {
   PENDING: "Ausstehend",
@@ -67,6 +82,14 @@ export function PostForm({
     "DRAFT" | "PUBLISHED" | null
   >(null);
   const [copyDraft, setCopyDraft] = useState(false);
+  const [sendAsNewsletter, setSendAsNewsletter] = useState(
+    initialValues?.sendAsNewsletter ?? false,
+  );
+  const [newsletterCategory, setNewsletterCategory] =
+    useState<NewsletterCategory>(
+      initialValues?.newsletterCategory ??
+        DEFAULT_NEWSLETTER_CATEGORY_BY_TYPE[type],
+    );
 
   async function handleRetry() {
     if (!postId) return;
@@ -112,6 +135,8 @@ export function PostForm({
       instagram,
       internal,
       status,
+      sendAsNewsletter,
+      newsletterCategory: sendAsNewsletter ? newsletterCategory : null,
       coverImageUrl: coverImageUrl || undefined,
     };
 
@@ -282,6 +307,29 @@ export function PostForm({
             </span>
           )}
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={sendAsNewsletter}
+            onChange={(event) => setSendAsNewsletter(event.target.checked)}
+          />
+          Als Newsletter versenden in
+        </label>
+        {sendAsNewsletter && (
+          <select
+            value={newsletterCategory}
+            onChange={(event) =>
+              setNewsletterCategory(event.target.value as NewsletterCategory)
+            }
+            className="border-input h-9 w-fit rounded-md border bg-transparent px-3 text-sm"
+          >
+            {NEWSLETTER_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {NEWSLETTER_CATEGORY_LABELS[category]}
+              </option>
+            ))}
+          </select>
+        )}
         {isExistingDraft && (
           <label className="flex items-center gap-2 text-sm">
             <input
