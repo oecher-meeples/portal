@@ -25,6 +25,19 @@ describe("GET /api/cron/instagram-queue", () => {
     process.env.CRON_SECRET = "test-secret";
   });
 
+  it("fails closed with 500 when CRON_SECRET is not configured", async () => {
+    delete process.env.CRON_SECRET;
+    const request = new Request(
+      "https://example.com/api/cron/instagram-queue",
+      { headers: { authorization: "Bearer undefined" } },
+    );
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    expect(processQueueMock).not.toHaveBeenCalled();
+  });
+
   it("rejects requests without a valid bearer token", async () => {
     const request = new Request("https://example.com/api/cron/instagram-queue");
 
