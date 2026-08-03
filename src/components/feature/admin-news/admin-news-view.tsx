@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -38,6 +39,7 @@ export type AdminNewsPostRow = {
   date: string;
   internal: boolean | null;
   instagram: boolean | null;
+  status: string;
 };
 
 export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
@@ -78,6 +80,9 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
                       >
                         {post.title}
                       </Link>
+                      {post.status === "DRAFT" && (
+                        <Badge variant="secondary">Entwurf</Badge>
+                      )}
                       {post.internal && (
                         <Tooltip content="Nur intern sichtbar">
                           <Image

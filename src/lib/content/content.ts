@@ -84,6 +84,7 @@ const POST_WITHOUT_BODY_SELECT = {
 
 export async function getAllContent(): Promise<Omit<ContentItem, "body">[]> {
   const posts = await prisma.post.findMany({
+    where: { status: "PUBLISHED" },
     select: POST_WITHOUT_BODY_SELECT,
   });
   return posts.map(toContentItemBase);
@@ -94,7 +95,7 @@ export async function getInternalContent(
   limit?: number,
 ): Promise<Omit<ContentItem, "body">[]> {
   const posts = await prisma.post.findMany({
-    where: { internal: true },
+    where: { internal: true, status: "PUBLISHED" },
     orderBy: { date: "desc" },
     take: limit,
     select: POST_WITHOUT_BODY_SELECT,
@@ -104,7 +105,7 @@ export async function getInternalContent(
 
 export async function getContentBySlug(slug: string) {
   const post = await prisma.post.findUnique({ where: { slug } });
-  return post ? toContentItem(post) : undefined;
+  return post && post.status === "PUBLISHED" ? toContentItem(post) : undefined;
 }
 
 /** Public-facing by default — never surfaces internal posts (homepage preview, public calendar). */
@@ -113,6 +114,7 @@ export async function getUpcomingEvents(limit = 3) {
     where: {
       type: { not: "BLOG" },
       OR: [{ internal: null }, { internal: false }],
+      status: "PUBLISHED",
     },
     orderBy: { date: "asc" },
     take: limit,
@@ -123,7 +125,7 @@ export async function getUpcomingEvents(limit = 3) {
 /** Public-facing by default — never surfaces internal posts (homepage preview). */
 export async function getLatestPosts(limit = 3) {
   const posts = await prisma.post.findMany({
-    where: { OR: [{ internal: null }, { internal: false }] },
+    where: { OR: [{ internal: null }, { internal: false }], status: "PUBLISHED" },
     orderBy: { date: "desc" },
     take: limit,
   });
@@ -133,7 +135,7 @@ export async function getLatestPosts(limit = 3) {
 /** Same as `getUpcomingEvents`, but includes internal Termine — for the internal calendar. */
 export async function getUpcomingEventsIncludingInternal(limit = 3) {
   const posts = await prisma.post.findMany({
-    where: { type: { not: "BLOG" } },
+    where: { type: { not: "BLOG" }, status: "PUBLISHED" },
     orderBy: { date: "asc" },
     take: limit,
   });

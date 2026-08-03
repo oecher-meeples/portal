@@ -25,6 +25,7 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     location: null,
     internal: null,
     instagram: true,
+    status: "PUBLISHED" as const,
     coverImageUrl: null,
     instagramStatus: null,
     instagramPostUrl: null,
@@ -75,7 +76,7 @@ describe("getInternalContent", () => {
 
     expect(prismaMock.post.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { internal: true },
+        where: { internal: true, status: "PUBLISHED" },
         orderBy: { date: "desc" },
         take: 5,
       }),
@@ -111,6 +112,14 @@ describe("getContentBySlug", () => {
     prismaMock.post.findUnique.mockResolvedValue(null);
 
     expect(await getContentBySlug("does-not-exist")).toBeUndefined();
+  });
+
+  it("returns undefined for a draft post", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(
+      makePost({ status: "DRAFT" }),
+    );
+
+    expect(await getContentBySlug("sommerfest-der-meeples")).toBeUndefined();
   });
 });
 
@@ -156,6 +165,7 @@ describe("getUpcomingEvents", () => {
       where: {
         type: { not: "BLOG" },
         OR: [{ internal: null }, { internal: false }],
+        status: "PUBLISHED",
       },
       orderBy: { date: "asc" },
       take: 10,
@@ -202,7 +212,10 @@ describe("getLatestPosts", () => {
     await getLatestPosts(3);
 
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
-      where: { OR: [{ internal: null }, { internal: false }] },
+      where: {
+        OR: [{ internal: null }, { internal: false }],
+        status: "PUBLISHED",
+      },
       orderBy: { date: "desc" },
       take: 3,
     });

@@ -38,6 +38,7 @@ export function PostForm({
   postId?: string;
   initialValues?: Partial<PostInput> & { instagramStatus?: string | null };
 }) {
+  const isExistingDraft = Boolean(postId) && initialValues?.status === "DRAFT";
   const router = useRouter();
   const [type, setType] = useState<ContentType>(initialValues?.type ?? "blog");
   const [title, setTitle] = useState(initialValues?.title ?? "");
@@ -62,6 +63,10 @@ export function PostForm({
     initialValues?.instagramStatus,
   );
   const [isRetrying, setIsRetrying] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<
+    "DRAFT" | "PUBLISHED" | null
+  >(null);
+  const [copyDraft, setCopyDraft] = useState(false);
 
   async function handleRetry() {
     if (!postId) return;
@@ -87,11 +92,16 @@ export function PostForm({
     if (url) setCoverImageUrl(url);
   }
 
-  async function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
 
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLButtonElement | null;
+    const status =
+      submitter?.value === "DRAFT" ? "DRAFT" : ("PUBLISHED" as const);
+    setPendingStatus(status);
     const input: PostInput = {
       type,
       title,
@@ -101,13 +111,16 @@ export function PostForm({
       body,
       instagram,
       internal,
+      status,
       coverImageUrl: coverImageUrl || undefined,
     };
 
     try {
-      const result = postId
-        ? await updatePost(postId, input)
-        : await createPost(input);
+      const saveAsCopy = isExistingDraft && copyDraft;
+      const result =
+        postId && !saveAsCopy
+          ? await updatePost(postId, input)
+          : await createPost(input);
 
       if (result.error) {
         setError(result.error);
@@ -269,6 +282,20 @@ export function PostForm({
             </span>
           )}
         </label>
+        {isExistingDraft && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={copyDraft}
+              onChange={(event) => setCopyDraft(event.target.checked)}
+            />
+            Entwurf kopieren?
+            <span className="text-muted-foreground text-xs">
+              (legt beim Speichern einen neuen Beitrag an, der bestehende
+              Entwurf bleibt unverändert)
+            </span>
+          </label>
+        )}
         {instagramStatus && (
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="self-start">
@@ -290,13 +317,25 @@ export function PostForm({
       </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
-      <Button type="submit" disabled={isSubmitting} className="self-start">
-        {isSubmitting
-          ? "Speichere…"
-          : postId
-            ? "Änderungen speichern"
-            : "Beitrag erstellen"}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          variant="outline"
+          value="DRAFT"
+          disabled={isSubmitting}
+        >
+          {isSubmitting && pendingStatus === "DRAFT"
+            ? "Speichere…"
+            : "Als Entwurf speichern"}
+        </Button>
+        <Button type="submit" value="PUBLISHED" disabled={isSubmitting}>
+          {isSubmitting && pendingStatus === "PUBLISHED"
+            ? "Speichere…"
+            : postId
+              ? "Änderungen speichern"
+              : "Absenden"}
+        </Button>
+      </div>
     </form>
   );
 }

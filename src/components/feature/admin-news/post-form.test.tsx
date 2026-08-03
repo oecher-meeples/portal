@@ -37,9 +37,12 @@ describe("PostForm", () => {
 
     render(<PostForm />);
     await fillRequiredFields(user);
-    await user.click(screen.getByRole("button", { name: "Beitrag erstellen" }));
+    await user.click(screen.getByRole("button", { name: "Absenden" }));
 
     expect(createPostMock).toHaveBeenCalledTimes(1);
+    expect(createPostMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "PUBLISHED" }),
+    );
     expect(routerPushMock).toHaveBeenCalledWith("/admin/news");
   });
 
@@ -53,7 +56,7 @@ describe("PostForm", () => {
 
     render(<PostForm />);
     await fillRequiredFields(user);
-    await user.click(screen.getByRole("button", { name: "Beitrag erstellen" }));
+    await user.click(screen.getByRole("button", { name: "Absenden" }));
 
     expect(
       await screen.findByText(
@@ -61,5 +64,68 @@ describe("PostForm", () => {
       ),
     ).toBeInTheDocument();
     expect(routerPushMock).not.toHaveBeenCalled();
+  });
+
+  it("saves as draft with status DRAFT when the draft button is clicked", async () => {
+    const user = userEvent.setup();
+    createPostMock.mockResolvedValue({ success: true, id: "post-1" });
+
+    render(<PostForm />);
+    await fillRequiredFields(user);
+    await user.click(
+      screen.getByRole("button", { name: "Als Entwurf speichern" }),
+    );
+
+    expect(createPostMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "DRAFT" }),
+    );
+  });
+
+  it("shows the draft-copy checkbox only when editing an existing draft", async () => {
+    render(
+      <PostForm
+        postId="post-1"
+        initialValues={{ title: "Entwurf", status: "DRAFT" }}
+      />,
+    );
+
+    expect(screen.getByText("Entwurf kopieren?")).toBeInTheDocument();
+  });
+
+  it("does not show the draft-copy checkbox for an already published post", async () => {
+    render(
+      <PostForm
+        postId="post-1"
+        initialValues={{ title: "Veröffentlicht", status: "PUBLISHED" }}
+      />,
+    );
+
+    expect(screen.queryByText("Entwurf kopieren?")).not.toBeInTheDocument();
+  });
+
+  it("creates a copy via createPost instead of updating when 'Entwurf kopieren?' is checked", async () => {
+    const user = userEvent.setup();
+    createPostMock.mockResolvedValue({ success: true, id: "post-2" });
+
+    render(
+      <PostForm
+        postId="post-1"
+        initialValues={{
+          title: "Entwurf",
+          date: "2026-08-01",
+          body: "Es war toll.",
+          status: "DRAFT",
+        }}
+      />,
+    );
+    await user.click(
+      screen.getByRole("checkbox", { name: /Entwurf kopieren/ }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Als Entwurf speichern" }),
+    );
+
+    expect(createPostMock).toHaveBeenCalledTimes(1);
+    expect(updatePostMock).not.toHaveBeenCalled();
   });
 });

@@ -31,6 +31,7 @@ const VALID_INPUT = {
   excerpt: "Kurzbeschreibung",
   body: "Inhalt des Beitrags",
   date: "2026-08-01",
+  status: "PUBLISHED" as const,
 };
 
 describe("createPost", () => {
@@ -148,6 +149,18 @@ describe("createPost", () => {
     });
   });
 
+  it("never queues a draft for instagram, even with the flag set", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
+
+    await createPost({ ...VALID_INPUT, status: "DRAFT", instagram: true });
+
+    expect(prismaMock.post.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ instagramStatus: null, status: "DRAFT" }),
+    });
+  });
+
   it("never queues an internal post for instagram, even with the flag set", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
@@ -178,6 +191,7 @@ describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
       body: "Unser Sommerfest war ein voller Erfolg. Danke an alle Helfer:innen!",
       instagram: false,
       internal: false,
+      status: "PUBLISHED" as const,
       coverImageUrl: undefined,
     };
 
@@ -196,6 +210,7 @@ describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
         location: null,
         internal: false,
         instagram: false,
+        status: "PUBLISHED",
         coverImageUrl: null,
         instagramStatus: null,
       },
@@ -264,6 +279,42 @@ describe("updatePost", () => {
     expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
     expect(call?.data).not.toHaveProperty("instagramStatus");
+  });
+
+  it("clears an existing instagramStatus when a post stays a draft", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await updatePost("post-1", {
+      ...VALID_INPUT,
+      status: "DRAFT",
+      instagram: true,
+    });
+
+    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.post.update).toHaveBeenCalledWith({
+      where: { id: "post-1" },
+      data: expect.objectContaining({ instagramStatus: null, status: "DRAFT" }),
+    });
+  });
+
+  it("sets instagramStatus to PENDING when a formerly draft post is published with instagram enabled", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.findUnique.mockResolvedValue({
+      instagramStatus: null,
+    } as never);
+
+    await updatePost("post-1", {
+      ...VALID_INPUT,
+      status: "PUBLISHED",
+      instagram: true,
+    });
+
+    expect(prismaMock.post.update).toHaveBeenCalledWith({
+      where: { id: "post-1" },
+      data: expect.objectContaining({ instagramStatus: "PENDING" }),
+    });
   });
 
   it("clears an existing instagramStatus when a post becomes internal", async () => {

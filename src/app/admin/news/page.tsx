@@ -18,6 +18,7 @@ export default async function AdminNewsPage() {
     date: post.date.toISOString().slice(0, 10),
     internal: post.internal,
     instagram: post.instagram,
+    status: post.status,
   }));
 
   return <AdminNewsView posts={rows} />;

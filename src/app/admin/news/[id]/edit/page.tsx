@@ -34,6 +34,7 @@ export default async function EditPostPage({
           date: post.date.toISOString().slice(0, 10),
           author: post.author ?? undefined,
           instagram: post.instagram ?? undefined,
+          status: post.status,
           coverImageUrl: post.coverImageUrl ?? undefined,
           instagramStatus: post.instagramStatus,
         }}
