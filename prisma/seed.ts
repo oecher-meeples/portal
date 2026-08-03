@@ -5,11 +5,24 @@ import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
+import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
 
 const ADMIN_USER = {
   email: process.env.SEED_ADMIN_EMAIL ?? "admin@jan-herwig.de",
   password: process.env.SEED_ADMIN_PASSWORD ?? "admin",
   name: "Admin",
+};
+
+const DEMO_MEEPLE_1 = {
+  email: process.env.SEED_DEMO_MEEPLE_1_EMAIL ?? "demo1@jan-herwig.de",
+  password: process.env.SEED_DEMO_MEEPLE_1_PASSWORD ?? "demo1234",
+  name: "Lea Demo",
+};
+
+const DEMO_MEEPLE_2 = {
+  email: process.env.SEED_DEMO_MEEPLE_2_EMAIL ?? "demo2@jan-herwig.de",
+  password: process.env.SEED_DEMO_MEEPLE_2_PASSWORD ?? "demo1234",
+  name: "Tobias Demo",
 };
 
 const PERMISSIONS = [
@@ -152,6 +165,14 @@ async function ensureAdminMeeple(neonAuthUserId: string) {
   });
 }
 
+async function ensureMeeple(neonAuthUserId: string, displayName: string) {
+  return prisma.meeple.upsert({
+    where: { neonAuthUserId },
+    update: {},
+    create: { neonAuthUserId, displayName },
+  });
+}
+
 /**
  * Steht für den BGG-Import ein, solange der aus dieser Umgebung nicht erreichbar ist
  * (401/403 auf jede Anfrage an boardgamegeek.com). Titel, Spielerzahlen und Coverbilder
@@ -235,6 +256,65 @@ async function seedDemoGames(adminMeepleId: string) {
   console.log(`${DEMO_EXPANSIONS.length} Erweiterungs-Zuordnungen angelegt.`);
 }
 
+/**
+ * Seeds two demo meeples with 30 entries each from `DEMO_PRIVATE_COLLECTION_POOL`,
+ * standing in for a real BGG collection sync (blocked in this environment, see
+ * the comment above `seedDemoGames`). Upserts on `[meepleId, bggId]`, so re-running
+ * the seed is idempotent.
+ */
+async function seedPrivateGameCollection(meepleId: string, pool: typeof DEMO_PRIVATE_COLLECTION_POOL) {
+  for (const game of pool) {
+    await prisma.privateGameCollectionEntry.upsert({
+      where: { meepleId_bggId: { meepleId, bggId: game.bggId } },
+      update: {
+        title: game.title,
+        imageUrl: game.imageUrl,
+        minPlayers: game.minPlayers,
+        maxPlayers: game.maxPlayers,
+        playTimeMinutes: game.playTimeMinutes,
+        syncedAt: new Date(),
+      },
+      create: {
+        meepleId,
+        bggId: game.bggId,
+        title: game.title,
+        imageUrl: game.imageUrl,
+        minPlayers: game.minPlayers,
+        maxPlayers: game.maxPlayers,
+        playTimeMinutes: game.playTimeMinutes,
+        syncedAt: new Date(),
+      },
+    });
+  }
+
+  console.log(`${pool.length} private Sammlungseinträge für Meeple ${meepleId} angelegt.`);
+}
+
+async function seedDemoMeeples() {
+  const [user1Id, user2Id] = await Promise.all([
+    upsertNeonAuthUser(DEMO_MEEPLE_1),
+    upsertNeonAuthUser(DEMO_MEEPLE_2),
+  ]);
+  await Promise.all([
+    assignRole(user1Id, "mitglied"),
+    assignRole(user2Id, "mitglied"),
+  ]);
+
+  const [meeple1, meeple2] = await Promise.all([
+    ensureMeeple(user1Id, DEMO_MEEPLE_1.name),
+    ensureMeeple(user2Id, DEMO_MEEPLE_2.name),
+  ]);
+
+  await seedPrivateGameCollection(
+    meeple1.id,
+    DEMO_PRIVATE_COLLECTION_POOL.slice(0, 30),
+  );
+  await seedPrivateGameCollection(
+    meeple2.id,
+    DEMO_PRIVATE_COLLECTION_POOL.slice(30, 60),
+  );
+}
+
 async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
   await seedPermissions();
@@ -243,6 +323,7 @@ async function main() {
 
   const adminMeeple = await ensureAdminMeeple(adminUserId);
   await seedDemoGames(adminMeeple.id);
+  await seedDemoMeeples();
 
   console.log("Seed abgeschlossen.");
 }
