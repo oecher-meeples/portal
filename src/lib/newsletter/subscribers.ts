@@ -83,6 +83,13 @@ export async function createPublicSubscription(
   return { success: true };
 }
 
+export async function findSubscriptionByToken(token: string) {
+  return prisma.newsletterSubscriber.findUnique({
+    where: { manageToken: token },
+    select: { email: true, categories: true },
+  });
+}
+
 export async function confirmSubscription(
   token: string,
 ): Promise<{ success: true } | { error: string }> {
