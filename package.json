@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:live": "vitest run --exclude '' --include '**/*.live.test.ts'",
     "dup": "jscpd src",
+    "licenses": "pnpm licenses list --prod",
     "verify": "npm run format:check && npm run typecheck && npm run lint && npm run test",
     "prepare": "husky",
     "db:seed": "cross-env DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config prisma/seed.ts",

@@ -67,3 +67,7 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 `pnpm run test` schließt `*.live.test.ts` aus (echte Fremd-APIs); die laufen nur via `pnpm run test:live`.
 
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.
+
+## Lizenz-Audit
+
+`pnpm run licenses` (= `pnpm licenses list --prod`) für den Production-Dependency-Baum. **`license-checker` ist bei pnpm unbrauchbar** — es erfasst nur einen Bruchteil der tatsächlichen Pakete (im Audit vom 2026-08-03: 21 von 734) und übersieht dabei die kritischen Funde (AGPL-Pakete). Immer `pnpm licenses`, nie `license-checker`, in diesem Repo.
