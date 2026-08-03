@@ -12,3 +12,23 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
+# Bewusst offene Funde, kein generell akzeptiertes Risiko:
+#   - better-auth-Kette (8 Advisories, davon GHSA-pw9m-5jxm-xr6h critical) und die
+#     transitiv über @neondatabase/auth->...->ajv gezogene fast-uri hängen an
+#     Issue #10 (Neon-Auth-/better-auth-Upgrade-Klärung).
+#   - brace-expansion (2 Advisories) nur über eslint/@typescript-eslint im
+#     Dev-Tooling, nicht im Production-Bundle.
+# Jede neue Advisory außerhalb dieser Liste lässt `pnpm audit` in der CI fehlschlagen.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-9h47-pqcx-hjr4
+    - GHSA-86j7-9j95-vpqj
+    - GHSA-7w99-5wm4-3g79
+    - GHSA-392p-2q2v-4372
+    - GHSA-g38m-r43w-p2q7
+    - GHSA-fmh4-wcc4-5jm3
+    - GHSA-pw9m-5jxm-xr6h
+    - GHSA-qq9h-g4jm-xgf3
+    - GHSA-7p8r-x3mc-p8w7
+    - GHSA-mh99-v99m-4gvg
+    - GHSA-rgw5-rvv9-x895

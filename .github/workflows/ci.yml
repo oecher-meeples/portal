@@ -48,6 +48,13 @@ jobs:
       - name: Tests mit Coverage-Schwelle
         run: pnpm run test:coverage
 
+      # Blockierend. Die Allowlist bewusst offener Funde (better-auth-Kette,
+      # Issue #10; brace-expansion, nur Dev-Tooling) steht in
+      # pnpm-workspace.yaml (auditConfig.ignoreGhsas) statt hier als Flags —
+      # eine Quelle der Wahrheit für lokale Läufe und CI gleichermaßen.
+      - name: Dependency-Vulnerability-Scan
+        run: pnpm audit --audit-level high
+
       # Nur Information: macht neue Duplikate sichtbar, bricht den Build nicht.
       - name: Duplikate (DRY-Hinweis, nicht blockierend)
         run: pnpm run dup

@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+  # Actions sind ebenfalls Supply Chain — eine gepinnte Action-Version kann
+  # ein Sicherheitsupdate genauso brauchen wie eine npm-Dependency.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
