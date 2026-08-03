@@ -7,3 +7,8 @@ mockups/
 # Blogtexten und Plänen nicht umschreiben.
 content/
 .claude/
+# Tabellarische Demo-Seed-Daten: ein Objekt pro Zeile ist lesbarer als
+# Prettiers Umbruch bei printWidth 80 und bläht die Dateien sonst über die
+# max-lines-Grenze (siehe eslint.config.mjs).
+prisma/seed-data/demo-games.ts
+prisma/seed-data/demo-private-collection.ts
