@@ -14,6 +14,12 @@ vi.mock("@/lib/members/bank-access-log", () => ({
     deleteExpiredBankDataAccessLogsMock(...args),
 }));
 
+const anonymiseExpiredMeeplesMock = vi.fn();
+vi.mock("@/lib/members/retention", () => ({
+  anonymiseExpiredMeeples: (...args: unknown[]) =>
+    anonymiseExpiredMeeplesMock(...args),
+}));
+
 const { GET } = await import("./route");
 
 describe("GET /api/cron/instagram-queue", () => {
@@ -22,6 +28,12 @@ describe("GET /api/cron/instagram-queue", () => {
     refreshConnectionIfNeededMock.mockReset();
     deleteExpiredBankDataAccessLogsMock.mockReset();
     deleteExpiredBankDataAccessLogsMock.mockResolvedValue({ deleted: 0 });
+    anonymiseExpiredMeeplesMock.mockReset();
+    anonymiseExpiredMeeplesMock.mockResolvedValue({
+      skipped: true,
+      anonymised: 0,
+      failed: [],
+    });
     process.env.CRON_SECRET = "test-secret";
   });
 
@@ -81,6 +93,7 @@ describe("GET /api/cron/instagram-queue", () => {
       succeeded: 1,
       failed: 1,
       bankLogCleanup: { deleted: 0 },
+      retention: { skipped: true, anonymised: 0, failed: [] },
     });
   });
 
@@ -104,5 +117,23 @@ describe("GET /api/cron/instagram-queue", () => {
     await GET(request);
 
     expect(deleteExpiredBankDataAccessLogsMock).not.toHaveBeenCalled();
+    expect(anonymiseExpiredMeeplesMock).not.toHaveBeenCalled();
+  });
+
+  it("runs the retention job and reports it as skipped while unconfigured", async () => {
+    processQueueMock.mockResolvedValue({ posted: 0 });
+    const request = new Request(
+      "https://example.com/api/cron/instagram-queue",
+      { headers: { authorization: "Bearer test-secret" } },
+    );
+
+    const body = await (await GET(request)).json();
+
+    expect(anonymiseExpiredMeeplesMock).toHaveBeenCalledTimes(1);
+    expect(body.retention).toEqual({
+      skipped: true,
+      anonymised: 0,
+      failed: [],
+    });
   });
 });

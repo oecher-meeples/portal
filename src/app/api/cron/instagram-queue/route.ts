@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
 import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
+import { anonymiseExpiredMeeples } from "@/lib/members/retention";
 
 function isAuthorized(authHeader: string | null, cronSecret: string) {
   if (!authHeader) return false;
@@ -28,5 +29,7 @@ export async function GET(request: Request) {
   await refreshConnectionIfNeeded();
   const summary = await processQueue();
   const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
-  return NextResponse.json({ ...summary, bankLogCleanup });
+  // Reports `skipped: true` until the retention period is decided (see #49).
+  const retention = await anonymiseExpiredMeeples();
+  return NextResponse.json({ ...summary, bankLogCleanup, retention });
 }

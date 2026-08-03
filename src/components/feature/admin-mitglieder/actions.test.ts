@@ -10,9 +10,12 @@ vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
-const deleteBlobsMock = vi.fn();
-vi.mock("@/lib/utils/blob-delete", () => ({
-  deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
+// The anonymisation rules themselves live in the lib layer and are tested in
+// src/lib/members/anonymisation.test.ts — here only the action wrapper matters.
+const anonymiseMeepleRecordMock = vi.fn();
+vi.mock("@/lib/members/anonymisation", () => ({
+  anonymiseMeepleRecord: (...args: unknown[]) =>
+    anonymiseMeepleRecordMock(...args),
 }));
 
 const {
@@ -24,30 +27,10 @@ const {
 
 class ForbiddenError extends Error {}
 
-const RESIGNED_AND_GONE = {
-  id: "meeple-1",
-  displayName: "Lea Beispiel",
-  neonAuthUserId: "11111111-1111-1111-1111-111111111111",
-  resignedAt: new Date("2024-07-01T00:00:00Z"),
-  membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
-  anonymizedAt: null,
-};
-
-/** Sets up the happy path for anonymiseMeeple: resigned, nothing held, no images. */
-function givenAnonymisableMeeple(
-  listings: { id: string; imageUrls: string[] }[] = [],
-) {
-  prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-  prismaMock.gameHolding.count.mockResolvedValue(0);
-  prismaMock.storageUnit.count.mockResolvedValue(0);
-  prismaMock.marketListing.findMany.mockResolvedValue(listings as never);
-}
-
 beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
-  deleteBlobsMock.mockReset();
-  deleteBlobsMock.mockResolvedValue(undefined);
-  prismaMock.marketListing.findMany.mockResolvedValue([] as never);
+  anonymiseMeepleRecordMock.mockReset();
+  anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -67,6 +50,7 @@ describe("without the members:manage permission", () => {
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
   });
 });
 
@@ -109,155 +93,20 @@ describe("revokeResignation", () => {
 });
 
 describe("anonymiseMeeple", () => {
-  it("rejects a meeple that still has open holdings", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-    prismaMock.gameHolding.count.mockResolvedValue(2);
-    prismaMock.storageUnit.count.mockResolvedValue(0);
+  it("delegates to the shared anonymisation rules and revalidates on success", async () => {
+    anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
 
-    const result = await anonymiseMeeple("meeple-1");
-
-    expect(result).toEqual({
-      error:
-        "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten. Erst zurückholen, dann anonymisieren.",
-    });
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(await anonymiseMeeple("meeple-1")).toEqual({ success: true });
+    expect(anonymiseMeepleRecordMock).toHaveBeenCalledWith("meeple-1");
   });
 
-  it("rejects a meeple that still keeps an open storage unit", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-    prismaMock.gameHolding.count.mockResolvedValue(0);
-    prismaMock.storageUnit.count.mockResolvedValue(1);
-
-    const result = await anonymiseMeeple("meeple-1");
-
-    expect(result.error).toMatch(/Erst zurückholen/);
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("rejects a meeple that is not yet ausgetreten", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
-      neonAuthUserId: "x",
-      resignedAt: null,
-      membershipEndsAt: null,
-      anonymizedAt: null,
-    } as never);
-
-    const result = await anonymiseMeeple("meeple-1");
-
-    expect(result).toEqual({
+  it("passes a rule violation straight back without revalidating", async () => {
+    anonymiseMeepleRecordMock.mockResolvedValue({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
-  });
 
-  it("rejects an already anonymised meeple", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      ...RESIGNED_AND_GONE,
-      anonymizedAt: new Date(),
-    } as never);
-
-    const result = await anonymiseMeeple("meeple-1");
-
-    expect(result).toEqual({
-      error: "Dieses Mitglied ist bereits anonymisiert.",
-    });
-  });
-
-  it("clears exactly the defined fields, keeps the meeple row and runs transactionally", async () => {
-    givenAnonymisableMeeple();
-
-    const result = await anonymiseMeeple("meeple-1");
-
-    expect(result).toEqual({ success: true });
-    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
-    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(3);
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
-      data: {
-        displayName: "(anonymisiert)",
-        neonAuthUserId: null,
-        email: null,
-        accountHolder: null,
-        ibanEncrypted: null,
-        ibanLast4: null,
-        bggUsername: null,
-        bgaUsername: null,
-        telegramHandle: null,
-        signalHandle: null,
-        discordHandle: null,
-        anonymizedAt: expect.any(Date),
-      },
-    });
-  });
-
-  it("does not delete the meeple row itself", async () => {
-    givenAnonymisableMeeple();
-
-    await anonymiseMeeple("meeple-1");
-
-    expect(prismaMock.meeple.delete).not.toHaveBeenCalled();
-  });
-
-  it("rolls back the meeple update when the raw sql fails", async () => {
-    givenAnonymisableMeeple();
-    prismaMock.$executeRaw.mockRejectedValueOnce(new Error("db boom"));
-
-    await expect(anonymiseMeeple("meeple-1")).rejects.toThrow("db boom");
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
-  });
-
-  it("deletes the member's market listing images from blob storage", async () => {
-    givenAnonymisableMeeple([
-      {
-        id: "listing-1",
-        imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"],
-      },
-      { id: "listing-2", imageUrls: ["https://blob/c.jpg"] },
-    ]);
-
-    await anonymiseMeeple("meeple-1");
-
-    expect(deleteBlobsMock).toHaveBeenCalledWith([
-      "https://blob/a.jpg",
-      "https://blob/b.jpg",
-      "https://blob/c.jpg",
-    ]);
-    expect(prismaMock.marketListing.updateMany).toHaveBeenCalledWith({
-      where: { sellerMeepleId: "meeple-1" },
-      data: { imageUrls: [] },
-    });
-  });
-
-  it("leaves the meeple un-anonymised when blob deletion fails, so a retry can fix it", async () => {
-    givenAnonymisableMeeple([
-      { id: "listing-1", imageUrls: ["https://blob/a.jpg"] },
-    ]);
-    deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
-
-    await expect(anonymiseMeeple("meeple-1")).rejects.toThrow("blob boom");
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("closes the member's open deletion request in the same transaction", async () => {
-    givenAnonymisableMeeple();
-
-    await anonymiseMeeple("meeple-1");
-
-    expect(prismaMock.deletionRequest.updateMany).toHaveBeenCalledWith({
-      where: { meepleId: "meeple-1", handledAt: null },
-      data: { handledAt: expect.any(Date) },
-    });
-  });
-
-  it("clears the free-text author name on the member's posts", async () => {
-    givenAnonymisableMeeple();
-
-    await anonymiseMeeple("meeple-1");
-
-    expect(prismaMock.post.updateMany).toHaveBeenCalledWith({
-      where: { author: "Lea Beispiel" },
-      data: { author: null },
+    expect(await anonymiseMeeple("meeple-1")).toEqual({
+      error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
   });
 });

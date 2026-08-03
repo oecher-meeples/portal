@@ -2,13 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
-import { getMembershipState } from "@/lib/members/meeples";
 import { requirePermission } from "@/lib/auth/permissions";
-import { deleteBlobs } from "@/lib/utils/blob-delete";
-import {
-  countOpenHoldings,
-  hasOpenHoldings,
-} from "@/lib/members/open-holdings";
+import { anonymiseMeepleRecord } from "@/lib/members/anonymisation";
+import { countOpenHoldings } from "@/lib/members/open-holdings";
 
 async function requireMembersManage() {
   return requirePermission("members:manage");
@@ -57,81 +53,8 @@ export async function revokeResignation(meepleId: string) {
 export async function anonymiseMeeple(meepleId: string) {
   await requireMembersManage();
 
-  const meeple = await prisma.meeple.findUnique({ where: { id: meepleId } });
-  if (!meeple) {
-    return { error: "Mitglied nicht gefunden." };
-  }
-  if (meeple.anonymizedAt) {
-    return { error: "Dieses Mitglied ist bereits anonymisiert." };
-  }
-  if (getMembershipState(meeple) !== "ausgetreten") {
-    return { error: "Nur ausgetretene Mitglieder können anonymisiert werden." };
-  }
-
-  if (hasOpenHoldings(await countOpenHoldings(meepleId))) {
-    return {
-      error:
-        "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten. Erst zurückholen, dann anonymisieren.",
-    };
-  }
-
-  const neonAuthUserId = meeple.neonAuthUserId;
-  const previousDisplayName = meeple.displayName;
-
-  // Blob URLs stay publicly reachable after the database row is cleared, so the
-  // files go first: if this fails the member is left un-anonymised and the admin
-  // can retry, which is the safer failure than "anonymised, photos still online".
-  const listingsWithImages = await prisma.marketListing.findMany({
-    where: { sellerMeepleId: meepleId, imageUrls: { isEmpty: false } },
-    select: { id: true, imageUrls: true },
-  });
-  await deleteBlobs(listingsWithImages.flatMap((listing) => listing.imageUrls));
-
-  await prisma.$transaction(async (tx) => {
-    if (neonAuthUserId) {
-      await tx.$executeRaw`DELETE FROM neon_auth."session" WHERE "userId" = ${neonAuthUserId}::uuid`;
-      await tx.$executeRaw`DELETE FROM neon_auth."account" WHERE "userId" = ${neonAuthUserId}::uuid`;
-      await tx.$executeRaw`DELETE FROM neon_auth."user" WHERE id = ${neonAuthUserId}::uuid`;
-    }
-
-    await tx.marketListing.updateMany({
-      where: { sellerMeepleId: meepleId },
-      data: { imageUrls: [] },
-    });
-
-    // `Post.author` is free text with no relation to Meeple, so the display name
-    // is the only available link — posts written under a different spelling stay
-    // untouched and need a manual check.
-    await tx.post.updateMany({
-      where: { author: previousDisplayName },
-      data: { author: null },
-    });
-
-    // Anonymising *is* how a deletion request gets fulfilled, so closing it here
-    // keeps the Art.-12-Abs.-3 queue honest without a second admin click.
-    await tx.deletionRequest.updateMany({
-      where: { meepleId, handledAt: null },
-      data: { handledAt: new Date() },
-    });
-
-    await tx.meeple.update({
-      where: { id: meepleId },
-      data: {
-        displayName: "(anonymisiert)",
-        neonAuthUserId: null,
-        email: null,
-        accountHolder: null,
-        ibanEncrypted: null,
-        ibanLast4: null,
-        bggUsername: null,
-        bgaUsername: null,
-        telegramHandle: null,
-        signalHandle: null,
-        discordHandle: null,
-        anonymizedAt: new Date(),
-      },
-    });
-  });
+  const result = await anonymiseMeepleRecord(meepleId);
+  if ("error" in result) return result;
 
   revalidatePath("/admin/mitglieder");
   revalidatePath("/markt");
