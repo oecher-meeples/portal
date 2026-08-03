@@ -26,6 +26,7 @@ vi.mock("@/lib/instagram/graph-client", () => ({
 
 const { GET } = await import("./route");
 const { buildStateCookie } = await import("@/lib/instagram/oauth-state");
+const { decryptSecret } = await import("@/lib/utils/crypto");
 
 const CALLBACK_URL = "https://example.com/api/auth/instagram/callback";
 const USER = { id: "user-1" };
@@ -57,6 +58,9 @@ function cookiePair(setCookieHeader: string) {
 describe("GET /api/auth/instagram/callback", () => {
   beforeEach(() => {
     process.env.NEON_AUTH_COOKIE_SECRET = "test-cookie-secret";
+    process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString(
+      "base64",
+    );
     getCurrentUserMock.mockReset();
     hasPermissionMock.mockReset();
     exchangeCodeForShortLivedTokenMock.mockReset();
@@ -151,13 +155,11 @@ describe("GET /api/auth/instagram/callback", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(307);
-    expect(prismaMock.instagramConnection.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        accessToken: "long-lived",
-        pageId: "page-1",
-        igBusinessAccountId: "ig-1",
-      }),
-    });
+    const createCall = prismaMock.instagramConnection.create.mock.calls[0][0];
+    expect(createCall.data.pageId).toBe("page-1");
+    expect(createCall.data.igBusinessAccountId).toBe("ig-1");
+    expect(createCall.data.accessToken).not.toBe("long-lived");
+    expect(decryptSecret(createCall.data.accessToken)).toBe("long-lived");
   });
 
   it("updates an existing instagram connection instead of creating a new one", async () => {
@@ -184,10 +186,11 @@ describe("GET /api/auth/instagram/callback", () => {
 
     await GET(request);
 
-    expect(prismaMock.instagramConnection.update).toHaveBeenCalledWith({
-      where: { id: "connection-1" },
-      data: expect.objectContaining({ accessToken: "long-lived" }),
-    });
+    const updateCall = prismaMock.instagramConnection.update.mock.calls[0][0];
+    expect(updateCall.where).toEqual({ id: "connection-1" });
+    expect(decryptSecret(updateCall.data.accessToken as string)).toBe(
+      "long-lived",
+    );
     expect(prismaMock.instagramConnection.create).not.toHaveBeenCalled();
   });
 });

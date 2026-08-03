@@ -22,10 +22,14 @@ vi.mock("@/lib/instagram/graph-client", () => ({
 
 const { findDuePosts, processPost, processQueue, refreshConnectionIfNeeded } =
   await import("./queue");
+const { encryptSecret, decryptSecret } = await import("@/lib/utils/crypto");
 
+process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+
+const PLAINTEXT_TOKEN = "long-lived-token";
 const CONNECTION = {
   id: "connection-1",
-  accessToken: "token",
+  accessToken: encryptSecret(PLAINTEXT_TOKEN),
   igBusinessAccountId: "17841400000000000",
   pageId: "page-1",
   expiresAt: new Date("2027-01-01"),
@@ -88,6 +92,12 @@ describe("processPost", () => {
     const success = await processPost(makePost());
 
     expect(success).toBe(true);
+    expect(createMediaContainerMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: PLAINTEXT_TOKEN }),
+    );
+    expect(publishMediaMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: PLAINTEXT_TOKEN }),
+    );
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: "post-1" },
       data: expect.objectContaining({
@@ -201,11 +211,12 @@ describe("refreshConnectionIfNeeded", () => {
 
     await refreshConnectionIfNeeded();
 
-    expect(refreshLongLivedTokenMock).toHaveBeenCalledWith("token");
-    expect(prismaMock.instagramConnection.update).toHaveBeenCalledWith({
-      where: { id: "connection-1" },
-      data: expect.objectContaining({ accessToken: "refreshed-token" }),
-    });
+    expect(refreshLongLivedTokenMock).toHaveBeenCalledWith(PLAINTEXT_TOKEN);
+    const updateCall = prismaMock.instagramConnection.update.mock.calls[0][0];
+    expect(updateCall.where).toEqual({ id: "connection-1" });
+    expect(decryptSecret(updateCall.data.accessToken as string)).toBe(
+      "refreshed-token",
+    );
   });
 
   it("does not throw and leaves the connection untouched when the refresh fails", async () => {

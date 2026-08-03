@@ -1,5 +1,6 @@
 import { InstagramStatus, type Post } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { decryptSecret, encryptSecret } from "@/lib/utils/crypto";
 import { resolveCoverImageUrl } from "@/lib/instagram/cover-image";
 import {
   createMediaContainer,
@@ -37,17 +38,18 @@ export async function processPost(post: Post): Promise<boolean> {
 
     const imageUrl = await resolveCoverImageUrl(post);
     const caption = buildCaption(post);
+    const accessToken = decryptSecret(connection.accessToken);
 
     const { creationId } = await createMediaContainer({
       igBusinessAccountId: connection.igBusinessAccountId,
       imageUrl,
       caption,
-      accessToken: connection.accessToken,
+      accessToken,
     });
     const { mediaId } = await publishMedia({
       igBusinessAccountId: connection.igBusinessAccountId,
       creationId,
-      accessToken: connection.accessToken,
+      accessToken,
     });
 
     await prisma.post.update({
@@ -86,12 +88,12 @@ export async function refreshConnectionIfNeeded(): Promise<void> {
 
   try {
     const { accessToken, expiresInSeconds } = await refreshLongLivedToken(
-      connection.accessToken,
+      decryptSecret(connection.accessToken),
     );
     await prisma.instagramConnection.update({
       where: { id: connection.id },
       data: {
-        accessToken,
+        accessToken: encryptSecret(accessToken),
         expiresAt: new Date(
           Date.now() + (expiresInSeconds ?? DEFAULT_EXPIRES_IN_SECONDS) * 1000,
         ),

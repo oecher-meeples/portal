@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/utils/prisma";
+import { encryptSecret } from "@/lib/utils/crypto";
 import {
   exchangeCodeForShortLivedToken,
   getInstagramBusinessAccount,
@@ -39,15 +40,27 @@ export async function GET(request: Request) {
     Date.now() + (expiresInSeconds ?? DEFAULT_EXPIRES_IN_SECONDS) * 1000,
   );
 
+  const encryptedAccessToken = encryptSecret(accessToken);
+
   const existing = await prisma.instagramConnection.findFirst();
   if (existing) {
     await prisma.instagramConnection.update({
       where: { id: existing.id },
-      data: { accessToken, igBusinessAccountId, pageId, expiresAt },
+      data: {
+        accessToken: encryptedAccessToken,
+        igBusinessAccountId,
+        pageId,
+        expiresAt,
+      },
     });
   } else {
     await prisma.instagramConnection.create({
-      data: { accessToken, igBusinessAccountId, pageId, expiresAt },
+      data: {
+        accessToken: encryptedAccessToken,
+        igBusinessAccountId,
+        pageId,
+        expiresAt,
+      },
     });
   }
 
