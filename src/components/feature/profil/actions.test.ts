@@ -13,9 +13,15 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
+const collectMeeplePersonalDataMock = vi.fn();
+vi.mock("@/lib/members/data-export", () => ({
+  collectMeeplePersonalData: collectMeeplePersonalDataMock,
+}));
+
 const { decryptSecret } = await import("@/lib/utils/crypto");
 const {
   clearOwnBankDetails,
+  exportOwnPersonalData,
   resignOwnMembership,
   updateOwnBankDetails,
   updateOwnProfile,
@@ -45,7 +51,33 @@ describe("without a session", () => {
     ).rejects.toThrow(RedirectError);
     await expect(clearOwnBankDetails()).rejects.toThrow(RedirectError);
     await expect(resignOwnMembership()).rejects.toThrow(RedirectError);
+    await expect(exportOwnPersonalData()).rejects.toThrow(RedirectError);
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(collectMeeplePersonalDataMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("exportOwnPersonalData", () => {
+  it("collects data for the own meeple only, never an id from the caller", async () => {
+    collectMeeplePersonalDataMock.mockResolvedValue({
+      exportedAt: "2026-08-03T12:00:00.000Z",
+      meepleId: "meeple-1",
+      hinweise: [],
+      daten: {},
+    });
+
+    const result = await exportOwnPersonalData();
+
+    expect(collectMeeplePersonalDataMock).toHaveBeenCalledWith("meeple-1");
+    expect(result).toMatchObject({ success: true });
+  });
+
+  it("reports a missing meeple as an error instead of an empty export", async () => {
+    collectMeeplePersonalDataMock.mockResolvedValue(null);
+
+    expect(await exportOwnPersonalData()).toEqual({
+      error: "Zu diesem Konto wurden keine Daten gefunden.",
+    });
   });
 });
 

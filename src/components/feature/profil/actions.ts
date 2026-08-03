@@ -9,6 +9,10 @@ import {
   normaliseIban,
 } from "@/lib/utils/crypto";
 import { nextTurnOfTheYear, requireMeeple } from "@/lib/members/meeples";
+import {
+  collectMeeplePersonalData,
+  type MeepleDataExport,
+} from "@/lib/members/data-export";
 
 export type OwnProfileInput = {
   displayName: string;
@@ -94,6 +98,20 @@ export async function clearOwnBankDetails() {
 
   revalidatePath("/profil");
   return { success: true as const };
+}
+
+/** Art. 15 / Art. 20 self-service: hands the caller their own data, never anyone else's. */
+export async function exportOwnPersonalData(): Promise<
+  { error: string } | { success: true; data: MeepleDataExport }
+> {
+  const meeple = await requireMeeple();
+
+  const data = await collectMeeplePersonalData(meeple.id);
+  if (!data) {
+    return { error: "Zu diesem Konto wurden keine Daten gefunden." };
+  }
+
+  return { success: true, data };
 }
 
 /** Records the resignation; the membership itself runs until the turn of the year. */

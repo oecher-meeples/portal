@@ -6,6 +6,7 @@ import type { MembershipState } from "@/lib/members/meeples";
 import { BankDetailsForm } from "@/components/feature/profil/bank-details-form";
 import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-form";
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
+import { DataExportPanel } from "@/components/feature/profil/data-export-panel";
 import { formatDatePlain } from "@/lib/utils/format";
 
 function initials(displayName: string) {
@@ -120,6 +121,9 @@ export function ProfilView({
               </li>
               <li>Zugriffsprotokolle werden 24 Monate aufbewahrt.</li>
             </ul>
+            <div className="mt-4 border-t pt-4">
+              <DataExportPanel />
+            </div>
           </div>
 
           <div className="border-destructive/30 bg-card rounded-lg border p-6">
