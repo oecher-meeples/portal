@@ -70,6 +70,10 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.
 
+## Branch-Schutz
+
+`develop` ist per Ruleset geschützt (`.github/ruleset-protect-develop.json`, aktiv seit #36). Direkte Pushes sind blockiert. Verbindlicher Workflow: **Feature-Branch → PR → grüne CI (`verify`-Check) → Merge.** Self-Merge ist erlaubt (`required_approving_review_count: 0`, Ein-Personen-Projekt-Entscheidung). Der `release`-Branch ist bewusst ungeschützt.
+
 ## Lizenz-Audit
 
 `pnpm run licenses` (= `pnpm licenses list --prod`) für den Production-Dependency-Baum. **`license-checker` ist bei pnpm unbrauchbar** — es erfasst nur einen Bruchteil der tatsächlichen Pakete (im Audit vom 2026-08-03: 21 von 734) und übersieht dabei die kritischen Funde (AGPL-Pakete). Immer `pnpm licenses`, nie `license-checker`, in diesem Repo.
