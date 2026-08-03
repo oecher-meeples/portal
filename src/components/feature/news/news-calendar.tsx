@@ -36,7 +36,7 @@ export function NewsCalendar({
   onSelectDate,
   icsUrl,
 }: {
-  items: ContentItem[];
+  items: Omit<ContentItem, "body">[];
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
   icsUrl?: string;

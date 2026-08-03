@@ -11,7 +11,7 @@ export function ContentListRow({
   item,
   canEdit,
 }: {
-  item: ContentItem;
+  item: Omit<ContentItem, "body">;
   canEdit?: boolean;
 }) {
   return (

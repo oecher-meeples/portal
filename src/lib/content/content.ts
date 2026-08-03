@@ -31,13 +31,12 @@ const DB_TO_TYPE: Record<"BLOG" | "TERMIN" | "TURNIER", ContentType> = {
   TURNIER: "turnier",
 };
 
-function toContentItem(post: {
+type PostWithoutBody = {
   id: string;
   slug: string;
   type: "BLOG" | "TERMIN" | "TURNIER";
   title: string;
   excerpt: string;
-  body: string;
   date: Date;
   author: string | null;
   location: string | null;
@@ -45,14 +44,15 @@ function toContentItem(post: {
   instagram: boolean | null;
   instagramPostUrl: string | null;
   coverImageUrl: string | null;
-}): ContentItem {
+};
+
+function toContentItemBase(post: PostWithoutBody): Omit<ContentItem, "body"> {
   return {
     id: post.id,
     slug: post.slug,
     type: DB_TO_TYPE[post.type],
     title: post.title,
     excerpt: post.excerpt,
-    body: post.body,
     date: post.date.toISOString().slice(0, 10),
     author: post.author ?? undefined,
     location: post.location ?? undefined,
@@ -63,9 +63,43 @@ function toContentItem(post: {
   };
 }
 
-export async function getAllContent(): Promise<ContentItem[]> {
-  const posts = await prisma.post.findMany();
-  return posts.map(toContentItem);
+function toContentItem(post: PostWithoutBody & { body: string }): ContentItem {
+  return { ...toContentItemBase(post), body: post.body };
+}
+
+const POST_WITHOUT_BODY_SELECT = {
+  id: true,
+  slug: true,
+  type: true,
+  title: true,
+  excerpt: true,
+  date: true,
+  author: true,
+  location: true,
+  internal: true,
+  instagram: true,
+  instagramPostUrl: true,
+  coverImageUrl: true,
+} as const;
+
+export async function getAllContent(): Promise<Omit<ContentItem, "body">[]> {
+  const posts = await prisma.post.findMany({
+    select: POST_WITHOUT_BODY_SELECT,
+  });
+  return posts.map(toContentItemBase);
+}
+
+/** Interne Beiträge, neueste zuerst — für den internen Newsroom und das Dashboard. */
+export async function getInternalContent(
+  limit?: number,
+): Promise<Omit<ContentItem, "body">[]> {
+  const posts = await prisma.post.findMany({
+    where: { internal: true },
+    orderBy: { date: "desc" },
+    take: limit,
+    select: POST_WITHOUT_BODY_SELECT,
+  });
+  return posts.map(toContentItemBase);
 }
 
 export async function getContentBySlug(slug: string) {

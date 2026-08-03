@@ -4,7 +4,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { formatDateShort } from "@/lib/utils/format";
 import type { requireMember } from "@/lib/auth/session";
-import type { getAllContent } from "@/lib/content/content";
+import type { getInternalContent } from "@/lib/content/content";
 import { ActionButton } from "@/components/ui/action-button";
 import { scanConfirmHolding } from "@/lib/ludothek/holding-actions";
 
@@ -23,7 +23,7 @@ export type PendingHolding = {
 type DashboardViewProps = {
   user: Awaited<ReturnType<typeof requireMember>>["user"];
   meepleId: string;
-  internalNews: Awaited<ReturnType<typeof getAllContent>>;
+  internalNews: Awaited<ReturnType<typeof getInternalContent>>;
   ownLoansCount: number;
   ownUnitContentsCount: number;
   unconfirmedHandovers: PendingHolding[];

@@ -1,6 +1,6 @@
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
-import { getAllContent } from "@/lib/content/content";
+import { getInternalContent } from "@/lib/content/content";
 import {
   countUpcomingShiftBookings,
   summariseMemberHoldings,
@@ -10,24 +10,25 @@ import { formatDatePlain } from "@/lib/utils/format";
 
 export default async function DashboardPage() {
   const { user, meeple, membershipState } = await requireMember();
-  const internalNews = (await getAllContent()).filter((item) => item.internal);
 
-  const [holdings, units, ownOpenLfgCount, shiftBookings] = await Promise.all([
-    prisma.gameHolding.findMany({
-      where: { endedAt: null },
-      include: { boardGame: { select: { title: true } } },
-    }),
-    prisma.storageUnit.findMany({
-      select: { id: true, keeperMeepleId: true, retiredAt: true },
-    }),
-    prisma.lfgPost.count({
-      where: { createdByMeepleId: meeple.id, closedAt: null },
-    }),
-    prisma.shiftBooking.findMany({
-      where: { meepleId: meeple.id },
-      select: { meepleId: true, shift: { select: { endsAt: true } } },
-    }),
-  ]);
+  const [internalNews, holdings, units, ownOpenLfgCount, shiftBookings] =
+    await Promise.all([
+      getInternalContent(),
+      prisma.gameHolding.findMany({
+        where: { endedAt: null },
+        include: { boardGame: { select: { title: true } } },
+      }),
+      prisma.storageUnit.findMany({
+        select: { id: true, keeperMeepleId: true, retiredAt: true },
+      }),
+      prisma.lfgPost.count({
+        where: { createdByMeepleId: meeple.id, closedAt: null },
+      }),
+      prisma.shiftBooking.findMany({
+        where: { meepleId: meeple.id },
+        select: { meepleId: true, shift: { select: { endsAt: true } } },
+      }),
+    ]);
 
   const upcomingShiftCount = countUpcomingShiftBookings(
     meeple.id,

@@ -134,7 +134,9 @@ export async function getUpcomingEventsWithCalendar(
     .slice(0, limit);
 }
 
-export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
+export async function getAllContentWithCalendar(): Promise<
+  Omit<ContentItem, "body">[]
+> {
   const [dbItems, calendarEvents] = await Promise.all([
     getAllContent(),
     getUpcomingCalendarEvents(50),

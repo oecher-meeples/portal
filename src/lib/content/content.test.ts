@@ -7,6 +7,7 @@ const {
   canViewContentItem,
   getAllContent,
   getContentBySlug,
+  getInternalContent,
   getLatestPosts,
   getUpcomingEvents,
 } = await import("@/lib/content/content");
@@ -61,6 +62,38 @@ describe("getAllContent", () => {
 
     expect(items).toHaveLength(3);
     expect(items[0].date).toBe("2026-06-15");
+  });
+});
+
+describe("getInternalContent", () => {
+  it("queries internal posts descending by date", async () => {
+    prismaMock.post.findMany.mockResolvedValue(
+      ALL_POSTS.filter((post) => post.internal),
+    );
+
+    await getInternalContent(5);
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { internal: true },
+        orderBy: { date: "desc" },
+        take: 5,
+      }),
+    );
+  });
+
+  it("delivers internal posts but not public ones (real Prisma NULL semantics)", async () => {
+    prismaMock.post.findMany.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (async ({ where }: any) =>
+        INTERNAL_VARIANTS.filter((post) =>
+          evaluateWhere(post, where),
+        )) as never,
+    );
+
+    const result = await getInternalContent();
+
+    expect(result.map((item) => item.slug)).toEqual(["termin-hidden"]);
   });
 });
 

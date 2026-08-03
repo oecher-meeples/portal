@@ -19,7 +19,7 @@ export function NewsBrowser({
   icsUrl,
   canEdit,
 }: {
-  items: ContentItem[];
+  items: Omit<ContentItem, "body">[];
   icsUrl?: string;
   canEdit?: boolean;
 }) {

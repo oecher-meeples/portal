@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireMember } from "@/lib/auth/session";
-import { getAllContent } from "@/lib/content/content";
+import { getInternalContent } from "@/lib/content/content";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/format";
@@ -8,9 +8,7 @@ import { formatDate } from "@/lib/utils/format";
 export default async function InternalNewsPage() {
   await requireMember();
 
-  const internalPosts = (await getAllContent())
-    .filter((item) => item.internal)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const internalPosts = await getInternalContent();
 
   return (
     <div className="flex flex-col gap-6">
