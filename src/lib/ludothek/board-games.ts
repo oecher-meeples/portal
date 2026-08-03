@@ -7,6 +7,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
+import { toSparePartListingData } from "@/lib/inventory/spare-part-listings";
 import { uniqueSlug } from "@/lib/utils/slug";
 import {
   BggApiError,
@@ -181,7 +182,11 @@ export async function previewBggImport(bggId: number) {
   }
 }
 
-export async function deinventoriseBoardGame(id: string, reason: string) {
+export async function deinventoriseBoardGame(
+  id: string,
+  reason: string,
+  addToSpareParts = false,
+) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };
@@ -191,13 +196,28 @@ export async function deinventoriseBoardGame(id: string, reason: string) {
     return { error: "Bitte einen Grund für die Deinventarisierung angeben." };
   }
 
-  await prisma.boardGame.update({
-    where: { id },
-    data: {
-      status: GameInventoryStatus.DEINVENTARISED,
-      archivedAt: new Date(),
-      archivedReason: reason.trim(),
-    },
+  const actor = addToSpareParts ? await ensureMeeple(user) : null;
+
+  await prisma.$transaction(async (tx) => {
+    const game = await tx.boardGame.update({
+      where: { id },
+      data: {
+        status: GameInventoryStatus.DEINVENTARISED,
+        archivedAt: new Date(),
+        archivedReason: reason.trim(),
+      },
+    });
+
+    if (actor) {
+      await tx.sparePartListing.create({
+        data: toSparePartListingData({
+          title: game.title,
+          boardGameId: game.id,
+          condition: game.condition || reason.trim(),
+          keeperMeepleId: actor.id,
+        }),
+      });
+    }
   });
 
   return { success: true as const };

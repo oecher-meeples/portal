@@ -296,6 +296,11 @@ describe("deinventoriseBoardGame", () => {
   it("sets status, archivedAt and archivedReason when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.update.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+      condition: null,
+    } as never);
 
     const result = await deinventoriseBoardGame("game-1", "Verkauft 2026");
 
@@ -313,11 +318,59 @@ describe("deinventoriseBoardGame", () => {
   it("leaves the game's open holding untouched — only the inventory status changes", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.update.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+      condition: null,
+    } as never);
 
     await deinventoriseBoardGame("game-1", "Verkauft 2026");
 
     expect(prismaMock.gameHolding.update).not.toHaveBeenCalled();
     expect(prismaMock.gameHolding.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("creates exactly one spare part listing when the checkbox is set", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    ensureMeepleMock.mockResolvedValue({ id: "admin-meeple" });
+    prismaMock.boardGame.update.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+      condition: "Gebraucht",
+    } as never);
+
+    const result = await deinventoriseBoardGame(
+      "game-1",
+      "Verkauft 2026",
+      true,
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.sparePartListing.create).toHaveBeenCalledTimes(1);
+    expect(prismaMock.sparePartListing.create).toHaveBeenCalledWith({
+      data: {
+        title: "Arche Nova",
+        boardGameId: "game-1",
+        condition: "Gebraucht",
+        description: null,
+        keeperMeepleId: "admin-meeple",
+      },
+    });
+  });
+
+  it("creates no spare part listing when the checkbox is unset", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.update.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+      condition: "Gebraucht",
+    } as never);
+
+    await deinventoriseBoardGame("game-1", "Verkauft 2026");
+
+    expect(prismaMock.sparePartListing.create).not.toHaveBeenCalled();
   });
 });
 

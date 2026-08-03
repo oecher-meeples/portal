@@ -15,6 +15,7 @@ export function DeinventoriseBoardGameDialog({
   gameTitle: string;
 }) {
   const [reason, setReason] = useState("");
+  const [addToSpareParts, setAddToSpareParts] = useState(false);
 
   return (
     <ActionDialog
@@ -27,8 +28,11 @@ export function DeinventoriseBoardGameDialog({
       description="Das Spiel bleibt erhalten, wird aber als ausgemustert markiert und nicht mehr aktiv geführt."
       submitLabel="Deinventarisieren"
       canSubmit={Boolean(reason.trim())}
-      action={() => deinventoriseBoardGame(gameId, reason)}
-      onReset={() => setReason("")}
+      action={() => deinventoriseBoardGame(gameId, reason, addToSpareParts)}
+      onReset={() => {
+        setReason("");
+        setAddToSpareParts(false);
+      }}
     >
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="deinventorise-reason">Grund</Label>
@@ -40,6 +44,14 @@ export function DeinventoriseBoardGameDialog({
           required
         />
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={addToSpareParts}
+          onChange={(event) => setAddToSpareParts(event.target.checked)}
+        />
+        Teile ins Ersatzteillager aufnehmen
+      </label>
     </ActionDialog>
   );
 }
