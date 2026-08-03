@@ -63,37 +63,6 @@ export const MARKET_LISTINGS: MarketListing[] = [
   },
 ];
 
-export type SparePartListing = {
-  id: string;
-  title: string;
-  condition: string;
-  description: string;
-};
-
-export const SPARE_PART_LISTINGS: SparePartListing[] = [
-  {
-    id: "allgemeines",
-    title: "Allgemeines",
-    condition: "gemischt",
-    description:
-      "Sammelbehälter für lose Würfel, Holzteile und Karten ohne festes Spiel.",
-  },
-  {
-    id: "agricola-ausschlachtung",
-    title: "Agricola (Ausschlachtung)",
-    condition: "beschädigt",
-    description:
-      "Deinventarisiertes Exemplar, Tableaus und Holzressourcen zur Weiterverwendung.",
-  },
-  {
-    id: "root-ausschlachtung",
-    title: "Root (Ausschlachtung)",
-    condition: "Wasserschaden",
-    description:
-      "Spielplan beschädigt, Fraktionskomponenten größtenteils intakt.",
-  },
-];
-
 export function getMarketListing(id: string) {
   return MARKET_LISTINGS.find((listing) => listing.id === id);
 }

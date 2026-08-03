@@ -5,7 +5,9 @@ import Link from "next/link";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { Button } from "@/components/ui/button";
-import type { MarketListing, SparePartListing } from "@/data/market";
+import type { MarketListing } from "@/data/market";
+import type { SparePartListingView } from "@/lib/inventory/spare-parts";
+import { SparePartListingCard } from "@/components/feature/markt/spare-part-listing-view";
 
 const TABS = [
   { label: "Kleinanzeigen", value: "kleinanzeigen" },
@@ -17,7 +19,7 @@ export function MarktBrowser({
   spareParts,
 }: {
   listings: MarketListing[];
-  spareParts: SparePartListing[];
+  spareParts: SparePartListingView[];
 }) {
   const [tab, setTab] =
     useState<(typeof TABS)[number]["value"]>("kleinanzeigen");
@@ -61,17 +63,13 @@ export function MarktBrowser({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {spareParts.map((part) => (
-            <div
-              key={part.id}
-              className="bg-card flex flex-col gap-2 rounded-lg border p-4"
-            >
-              <h3 className="font-serif font-semibold">{part.title}</h3>
-              <p className="text-muted-foreground text-xs">
-                Zustand: {part.condition}
-              </p>
-              <p className="text-sm">{part.description}</p>
-            </div>
+            <SparePartListingCard key={part.id} part={part} />
           ))}
+          {spareParts.length === 0 && (
+            <p className="text-muted-foreground text-sm">
+              Aktuell keine Einträge im Ersatzteillager.
+            </p>
+          )}
         </div>
       )}
     </div>
