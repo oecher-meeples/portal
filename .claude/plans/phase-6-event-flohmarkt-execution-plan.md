@@ -186,7 +186,7 @@ Alles Folgende ist in einer Klärungsrunde mit dem Nutzer entschieden bzw. aus d
       _Definition of Done:_ Tests decken ab: eigene Schicht-Buchungen korrekt aggregiert, vergangene Events ausgeschlossen; Admin-Kennzahl zählt nur zukünftige Events. `pnpm test` grün.
       `git commit -m "feat: populate dashboards with event and shift data"`
 
-- [ ] **20. Roadmap- und Schema-Doku aktualisieren**
+- [x] **20. Roadmap- und Schema-Doku aktualisieren**
       `docs/schema.md`: Stand-Markierungen der in diesem Plan migrierten Tabellen von 🔜 Phase 6 auf ✅ migriert umstellen (`events`, `event_shelf_assignments`, `shifts`, `shift_bookings`, `explainer_games`, `explainer_attendances`, `flea_market_items`, `board_games.explainerVideoUrl`, Permission `events:manage`). `docs/roadmap.md`: Meilensteine 6.1–6.4 auf `[x]`.
       _Definition of Done:_ Roadmap und Schema-Doku spiegeln den umgesetzten Stand; `CONTEXT.md` und die ADRs bleiben unverändert gültig. Kein Code, keine Tests.
       `git commit -m "docs: mark phase 6 milestones complete"`
