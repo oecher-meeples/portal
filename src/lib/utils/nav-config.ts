@@ -12,6 +12,7 @@ import {
   Tag,
   UserCircle,
   BarChart3,
+  ChartNoAxesCombined,
   Boxes,
   Landmark,
   PackageSearch,
@@ -127,6 +128,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Markt & Ersatzteile",
         href: "/markt",
         icon: Tag,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Statistiken",
+        href: "/statistiken",
+        icon: ChartNoAxesCombined,
         section: "Mitgliederbereich",
       },
       {
