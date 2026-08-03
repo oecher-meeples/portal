@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
 import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
 import { anonymiseExpiredMeeples } from "@/lib/members/retention";
+import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
+
+// Brevo's free tier caps at 300 mails/day; this cron runs once a day (see vercel.json).
+const NEWSLETTER_DAILY_LIMIT = 300;
 
 function isAuthorized(authHeader: string | null, cronSecret: string) {
   if (!authHeader) return false;
@@ -28,8 +32,14 @@ export async function GET(request: Request) {
 
   await refreshConnectionIfNeeded();
   const summary = await processQueue();
+  const newsletter = await processNewsletterQueue(NEWSLETTER_DAILY_LIMIT);
   const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
   // Reports `skipped: true` until the retention period is decided (see #49).
   const retention = await anonymiseExpiredMeeples();
-  return NextResponse.json({ ...summary, bankLogCleanup, retention });
+  return NextResponse.json({
+    ...summary,
+    newsletter,
+    bankLogCleanup,
+    retention,
+  });
 }

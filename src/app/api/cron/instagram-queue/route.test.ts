@@ -20,6 +20,12 @@ vi.mock("@/lib/members/retention", () => ({
     anonymiseExpiredMeeplesMock(...args),
 }));
 
+const processNewsletterQueueMock = vi.fn();
+vi.mock("@/lib/newsletter/dispatch", () => ({
+  processNewsletterQueue: (...args: unknown[]) =>
+    processNewsletterQueueMock(...args),
+}));
+
 const { GET } = await import("./route");
 
 describe("GET /api/cron/instagram-queue", () => {
@@ -33,6 +39,12 @@ describe("GET /api/cron/instagram-queue", () => {
       skipped: true,
       anonymised: 0,
       failed: [],
+    });
+    processNewsletterQueueMock.mockReset();
+    processNewsletterQueueMock.mockResolvedValue({
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
     });
     process.env.CRON_SECRET = "test-secret";
   });
@@ -92,9 +104,40 @@ describe("GET /api/cron/instagram-queue", () => {
       processed: 2,
       succeeded: 1,
       failed: 1,
+      newsletter: { processed: 0, succeeded: 0, failed: 0 },
       bankLogCleanup: { deleted: 0 },
       retention: { skipped: true, anonymised: 0, failed: [] },
     });
+  });
+
+  it("processes the newsletter queue with the Brevo daily limit on every authorized run", async () => {
+    processQueueMock.mockResolvedValue({
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+    });
+    processNewsletterQueueMock.mockResolvedValue({
+      processed: 5,
+      succeeded: 4,
+      failed: 1,
+    });
+    const request = new Request(
+      "https://example.com/api/cron/instagram-queue",
+      { headers: { authorization: "Bearer test-secret" } },
+    );
+
+    const body = await (await GET(request)).json();
+
+    expect(processNewsletterQueueMock).toHaveBeenCalledWith(300);
+    expect(body.newsletter).toEqual({ processed: 5, succeeded: 4, failed: 1 });
+  });
+
+  it("does not process the newsletter queue when the request is unauthorized", async () => {
+    const request = new Request("https://example.com/api/cron/instagram-queue");
+
+    await GET(request);
+
+    expect(processNewsletterQueueMock).not.toHaveBeenCalled();
   });
 
   it("prunes expired bank data access logs on every run", async () => {
