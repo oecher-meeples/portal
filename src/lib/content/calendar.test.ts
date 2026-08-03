@@ -45,8 +45,12 @@ describe("parseCalendarEvents", () => {
   });
 });
 
-function mockFetchOnce(ok: boolean, text: string) {
-  const fetchMock = vi.fn().mockResolvedValue({ ok, text: async () => text });
+function mockFetchOnce(ok: boolean, text: string, headers?: HeadersInit) {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok,
+    text: async () => text,
+    headers: new Headers(headers),
+  });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -79,6 +83,23 @@ describe("fetchInternalEvents", () => {
       "fetch",
       vi.fn().mockRejectedValue(new Error("network down")),
     );
+
+    await expect(fetchInternalEvents()).resolves.toEqual([]);
+  });
+
+  it("returns an empty list without throwing when the feed exceeds the size cap", async () => {
+    process.env.ICS_FEED_URL_INTERNAL = "https://example.org/internal.ics";
+    mockFetchOnce(true, FIXTURE, {
+      "content-length": String(6 * 1024 * 1024),
+    });
+
+    await expect(fetchInternalEvents()).resolves.toEqual([]);
+  });
+
+  it("returns an empty list when the body exceeds the cap despite a missing Content-Length", async () => {
+    process.env.ICS_FEED_URL_INTERNAL = "https://example.org/internal.ics";
+    const oversizedText = "x".repeat(6 * 1024 * 1024);
+    mockFetchOnce(true, oversizedText);
 
     await expect(fetchInternalEvents()).resolves.toEqual([]);
   });

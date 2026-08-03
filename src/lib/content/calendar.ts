@@ -7,6 +7,43 @@ import {
 } from "@/lib/content/content";
 
 const REVALIDATE_SECONDS = 15 * 60;
+const FETCH_TIMEOUT_MS = 8000;
+const MAX_ICS_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Reads the response body capped at `maxBytes`, aborting the stream rather
+ * than buffering it all via `response.text()` first — an ICS feed has no
+ * natural size limit, and `ical.parseICS()` runs over whatever comes back.
+ * Returns `null` when the cap is exceeded (checked via `Content-Length` and,
+ * as a stream falls short of that header, while reading).
+ */
+async function readCappedIcsBody(
+  response: Response,
+  maxBytes: number,
+): Promise<string | null> {
+  const contentLength = Number(response.headers?.get?.("content-length") ?? 0);
+  if (contentLength > maxBytes) return null;
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const text = await response.text();
+    return Buffer.byteLength(text, "utf8") > maxBytes ? null : text;
+  }
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
 
 function toText(value: unknown): string | undefined {
   if (typeof value === "string") return value;
@@ -51,10 +88,12 @@ async function fetchIcsFeed(
   try {
     const response = await fetch(icsUrl, {
       next: { revalidate: REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return [];
 
-    const icsText = await response.text();
+    const icsText = await readCappedIcsBody(response, MAX_ICS_BYTES);
+    if (icsText === null) return [];
     return parseCalendarEvents(icsText, options);
   } catch {
     return [];

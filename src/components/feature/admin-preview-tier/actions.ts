@@ -19,6 +19,7 @@ export async function setPreviewTier(tier: Tier) {
 
   cookieStore.set(PREVIEW_TIER_COOKIE, tier, {
     httpOnly: true,
+    secure: true,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
