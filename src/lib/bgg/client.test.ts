@@ -96,7 +96,10 @@ describe("fetchBggGame", () => {
 
     await fetchBggGame(1);
 
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("videos=1"));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("videos=1"),
+      expect.anything(),
+    );
   });
 
   it("throws BggNotFoundError for an unknown BGG id", async () => {
@@ -109,5 +112,15 @@ describe("fetchBggGame", () => {
     mockFetchOnce(false, 503, "");
 
     await expect(fetchBggGame(1)).rejects.toThrow(BggApiError);
+  });
+
+  it("translates a fetch timeout into a readable BggApiError", async () => {
+    const timeoutError = new Error("The operation was aborted");
+    timeoutError.name = "TimeoutError";
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(timeoutError));
+
+    await expect(fetchBggGame(1)).rejects.toThrow(
+      "Die Anfrage an BoardGameGeek hat zu lange gedauert.",
+    );
   });
 });

@@ -217,6 +217,7 @@ model Post {
   instagramAttempts  Int              @default(0)
   instagramLastError String?
 
+  @@index([type, internal, date])
   @@map("posts")
 }
 
@@ -270,6 +271,7 @@ model BoardGame {
 
   @@index([bggId])
   @@index([ean])
+  @@index([status])
   @@map("board_games")
 }
 
@@ -412,7 +414,7 @@ model GameHolding {
   meeple     Meeple?      @relation("GameHoldingMeeple", fields: [meepleId], references: [id], onDelete: Restrict)
   recordedBy Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
 
-  @@index([boardGameId])
+  @@index([boardGameId, endedAt])
   @@index([unitId])
   @@index([meepleId])
   @@map("game_holdings")

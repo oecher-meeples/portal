@@ -40,6 +40,16 @@ describe("graph-client", () => {
     vi.unstubAllGlobals();
   });
 
+  it("translates a fetch timeout into a readable InstagramApiError", async () => {
+    const timeoutError = new Error("The operation was aborted");
+    timeoutError.name = "TimeoutError";
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(timeoutError));
+
+    await expect(exchangeCodeForShortLivedToken("code")).rejects.toThrow(
+      "Die Anfrage an die Meta Graph API hat zu lange gedauert.",
+    );
+  });
+
   describe("exchangeCodeForShortLivedToken", () => {
     it("returns the access token on success", async () => {
       mockFetchOnce(true, 200, loadFixture("oauth-token-success.json"));

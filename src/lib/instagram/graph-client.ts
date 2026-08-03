@@ -32,6 +32,24 @@ export class InstagramApiError extends Error {
   }
 }
 
+const FETCH_TIMEOUT_MS = 8000;
+
+async function graphFetch(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new InstagramApiError(
+        "Die Anfrage an die Meta Graph API hat zu lange gedauert.",
+      );
+    }
+    throw error;
+  }
+}
+
 async function parseJsonOrThrow<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & MetaErrorBody;
   if (!response.ok) {
@@ -64,7 +82,9 @@ export async function exchangeCodeForShortLivedToken(
     redirect_uri: process.env.META_REDIRECT_URI ?? "",
     code,
   });
-  const response = await fetch(graphApiUrl(`/oauth/access_token?${params}`));
+  const response = await graphFetch(
+    graphApiUrl(`/oauth/access_token?${params}`),
+  );
   const body = await parseJsonOrThrow<TokenResponse>(response);
   return { accessToken: body.access_token, expiresInSeconds: body.expires_in };
 }
@@ -78,7 +98,9 @@ export async function getLongLivedToken(
     client_secret: process.env.META_APP_SECRET ?? "",
     fb_exchange_token: shortLivedToken,
   });
-  const response = await fetch(graphApiUrl(`/oauth/access_token?${params}`));
+  const response = await graphFetch(
+    graphApiUrl(`/oauth/access_token?${params}`),
+  );
   const body = await parseJsonOrThrow<TokenResponse>(response);
   return { accessToken: body.access_token, expiresInSeconds: body.expires_in };
 }
@@ -92,7 +114,9 @@ export async function refreshLongLivedToken(
     client_secret: process.env.META_APP_SECRET ?? "",
     fb_exchange_token: currentToken,
   });
-  const response = await fetch(graphApiUrl(`/oauth/access_token?${params}`));
+  const response = await graphFetch(
+    graphApiUrl(`/oauth/access_token?${params}`),
+  );
   const body = await parseJsonOrThrow<TokenResponse>(response);
   return { accessToken: body.access_token, expiresInSeconds: body.expires_in };
 }
@@ -113,7 +137,7 @@ export async function createMediaContainer({
     caption,
     access_token: accessToken,
   });
-  const response = await fetch(
+  const response = await graphFetch(
     graphApiUrl(`/${igBusinessAccountId}/media?${params}`),
     { method: "POST" },
   );
@@ -128,7 +152,7 @@ export async function getInstagramBusinessAccount(
     fields: "instagram_business_account",
     access_token: accessToken,
   });
-  const response = await fetch(graphApiUrl(`/me/accounts?${params}`));
+  const response = await graphFetch(graphApiUrl(`/me/accounts?${params}`));
   const body = await parseJsonOrThrow<{
     data: Array<{ id: string; instagram_business_account?: { id: string } }>;
   }>(response);
@@ -159,7 +183,7 @@ export async function publishMedia({
     creation_id: creationId,
     access_token: accessToken,
   });
-  const response = await fetch(
+  const response = await graphFetch(
     graphApiUrl(`/${igBusinessAccountId}/media_publish?${params}`),
     { method: "POST" },
   );

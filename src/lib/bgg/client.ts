@@ -158,10 +158,28 @@ function mapItem(item: BggItem): BggGameData {
   };
 }
 
+const FETCH_TIMEOUT_MS = 8000;
+/** BGG-Metadaten (Titel, Spielerzahl, Beschreibung, …) ändern sich praktisch nie. */
+const REVALIDATE_SECONDS = 24 * 60 * 60;
+
 export async function fetchBggGame(bggId: number): Promise<BggGameData> {
-  const response = await fetch(
-    `${BGG_API_BASE}/thing?id=${bggId}&stats=1&videos=1`,
-  );
+  let response: Response;
+  try {
+    response = await fetch(
+      `${BGG_API_BASE}/thing?id=${bggId}&stats=1&videos=1`,
+      {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        next: { revalidate: REVALIDATE_SECONDS },
+      },
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new BggApiError(
+        "Die Anfrage an BoardGameGeek hat zu lange gedauert.",
+      );
+    }
+    throw error;
+  }
   if (!response.ok) {
     throw new BggApiError(
       `BoardGameGeek-API-Anfrage fehlgeschlagen (${response.status}).`,
