@@ -5,6 +5,7 @@ import { PillToggle } from "@/components/ui/pill-toggle";
 import { useAction } from "@/components/ui/use-action";
 import { setPreviewTier } from "@/components/feature/admin-preview-tier/actions";
 import type { Tier } from "@/lib/utils/nav-config";
+import { cn } from "@/lib/utils/cn";
 
 const OPTIONS: { label: string; value: Tier }[] = [
   { label: "Gast", value: "gast" },
@@ -23,7 +24,10 @@ export function PreviewTierSwitcher({ tier }: { tier: Tier }) {
 
   return (
     <div
-      className={`hidden items-center gap-2 md:flex ${pending ? "opacity-60" : ""}`}
+      className={cn(
+        "hidden items-center gap-2 md:flex",
+        pending && "opacity-60",
+      )}
     >
       <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
         Ansicht

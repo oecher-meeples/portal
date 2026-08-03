@@ -14,10 +14,9 @@ export function InviteForm() {
     setError(null);
 
     try {
-      const { token, expiresAt } = await createInvite();
+      const { token } = await createInvite();
       const registrationUrl = `${window.location.origin}/registrieren?token=${token}`;
       setInviteLink(registrationUrl);
-      console.log(`Einladung gültig bis ${expiresAt}`);
     } catch {
       setError("Einladung konnte nicht erzeugt werden.");
     } finally {

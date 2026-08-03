@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
+process.env.NEON_AUTH_BASE_URL = "https://example.neonauth.example/auth";
+process.env.NEON_AUTH_COOKIE_SECRET = "test-cookie-secret";
+
 const getSessionMock = vi.fn();
 vi.mock("@neondatabase/auth/next/server", () => ({
   createNeonAuth: () => ({ getSession: getSessionMock }),

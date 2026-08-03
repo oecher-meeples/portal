@@ -6,6 +6,7 @@ import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { formatDate } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 
 export function ContentListRow({
   item,
@@ -16,9 +17,10 @@ export function ContentListRow({
 }) {
   return (
     <div
-      className={`group bg-card hover:border-primary/60 relative flex gap-4 rounded-lg border p-4 transition-colors ${
-        item.internal ? "border-l-primary border-l-4" : ""
-      }`}
+      className={cn(
+        "group bg-card hover:border-primary/60 relative flex gap-4 rounded-lg border p-4 transition-colors",
+        item.internal && "border-l-primary border-l-4",
+      )}
     >
       <Link href={`/news/${item.slug}`} className="absolute inset-0 z-0">
         <span className="sr-only">{item.title} lesen</span>

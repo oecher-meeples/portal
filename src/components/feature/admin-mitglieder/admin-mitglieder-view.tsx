@@ -16,6 +16,7 @@ import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
+import { cn } from "@/lib/utils/cn";
 
 export type MeepleRow = {
   id: string;
@@ -77,7 +78,10 @@ export function AdminMitgliederView({
 
       {withOpenHoldings.length > 0 && (
         <div
-          className={`bg-card rounded-lg border p-5 ${isDecemberOrLater ? "border-amber-500/50" : ""}`}
+          className={cn(
+            "bg-card rounded-lg border p-5",
+            isDecemberOrLater && "border-amber-500/50",
+          )}
         >
           <h2 className="font-serif text-lg font-bold">
             Kündigungen mit offenen Beständen

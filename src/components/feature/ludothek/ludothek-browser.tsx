@@ -16,6 +16,7 @@ import type {
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { PrivateCollectionResult } from "@/lib/ludothek/private-collection";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { cn } from "@/lib/utils/cn";
 
 const PLAYER_OPTIONS: { label: string; value: PlayerCountFilter }[] = [
   { label: "1–2", value: "1-2" },
@@ -48,11 +49,12 @@ function FilterPill({
   return (
     <Link
       href={href}
-      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+      className={cn(
+        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         active
           ? "border-primary bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
+          : "text-muted-foreground hover:text-foreground",
+      )}
     >
       {label}
     </Link>
