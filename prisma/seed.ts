@@ -189,14 +189,24 @@ async function seedDemoGames(adminMeepleId: string) {
     },
   });
 
-  const existingSlugs = await prisma.boardGame.findMany({
-    select: { slug: true },
+  const existingGames = await prisma.boardGame.findMany({
+    where: { title: { in: DEMO_GAMES.map((g) => g.title) } },
+    select: { id: true, slug: true, title: true },
   });
-  const usedSlugs = new Set(existingSlugs.map((g) => g.slug));
+  const existingIdByTitle = new Map(existingGames.map((g) => [g.title, g.id]));
+  const usedSlugs = new Set(
+    (await prisma.boardGame.findMany({ select: { slug: true } })).map(
+      (g) => g.slug,
+    ),
+  );
   const expansionTitles = new Set(DEMO_EXPANSIONS.map((e) => e.expansion));
-  const gameIdByTitle = new Map<string, string>();
+  const gameIdByTitle = new Map<string, string>(existingIdByTitle);
+
+  let createdCount = 0;
 
   for (const game of DEMO_GAMES) {
+    if (existingIdByTitle.has(game.title)) continue;
+
     const base = slugify(game.title);
     let slug = base;
     let suffix = 2;
@@ -223,6 +233,7 @@ async function seedDemoGames(adminMeepleId: string) {
       },
     });
     gameIdByTitle.set(game.title, created.id);
+    createdCount += 1;
 
     await prisma.gameHolding.create({
       data: {
@@ -235,7 +246,9 @@ async function seedDemoGames(adminMeepleId: string) {
     });
   }
 
-  console.log(`${DEMO_GAMES.length} Demo-Spiele angelegt.`);
+  console.log(
+    `${createdCount} Demo-Spiele angelegt, ${DEMO_GAMES.length - createdCount} bereits vorhanden übersprungen.`,
+  );
 
   for (const { baseGame, expansion } of DEMO_EXPANSIONS) {
     const baseGameId = gameIdByTitle.get(baseGame);
