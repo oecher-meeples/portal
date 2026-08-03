@@ -144,6 +144,7 @@ model Meeple {
   fleaMarketItems           FleaMarketItem[]      @relation("FleaMarketItemSeller")
   sparePartListingsKept     SparePartListing[]    @relation("SparePartListingKeeper")
   marketListings            MarketListing[]       @relation("MarketListingSeller")
+  privateGameCollection     PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
 
   @@map("meeples")
 }
@@ -309,6 +310,26 @@ model MarketListing {
 
   @@index([sellerMeepleId])
   @@map("market_listings")
+}
+
+/// A privately owned game a member has, seeded for the crowdsourced search
+/// demo (step 12) — not a real BGG sync, see the plan's BGG-blocked note.
+model PrivateGameCollectionEntry {
+  id              String   @id @default(cuid())
+  meepleId        String
+  bggId           Int
+  title           String
+  imageUrl        String?
+  minPlayers      Int?
+  maxPlayers      Int?
+  playTimeMinutes Int?
+  syncedAt        DateTime
+
+  meeple Meeple @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@unique([meepleId, bggId])
+  @@index([meepleId])
+  @@map("private_game_collection_entries")
 }
 
 /// Links an expansion to its base game(s), see #30. m:n because BGG allows a
