@@ -19,13 +19,13 @@ Summe Ist-Stand: **0 €/Monat**.
 
 Zwei Bausteine, die getrennt zu betrachten sind: **Abonnenten-Verwaltung** (wer bekommt den Newsletter) und **Versand** (E-Mails tatsächlich zustellen).
 
-### Empfehlung: eigene Abonnenten-Tabelle + Resend (transaktional)
+### Umsetzung: eigene Abonnenten-Tabelle + Brevo (transaktional)
 
-- Abonnenten-Verwaltung **selbst bauen**: eine `NewsletterSubscriber`-Tabelle in der bestehenden Neon-DB (E-Mail, Opt-in-Status, Datum) — kein neues System, keine neuen Kosten, passt ins bestehende Permission-Modell (Admin sieht Abonnenten-Zahl im Dashboard, `Aufgabenstellung.md` verlangt genau das).
-- Versand über **Resend**, Free-Tier: 3.000 E-Mails/Monat, 100/Tag. Reicht bei realistischer Vereinsgröße (z. B. 150 Abonnenten × mehrere Newsletter/Monat) deutlich.
-- **Wichtig**: Resends *Broadcast/Audiences*-Produkt (fertige Marketing-Oberfläche mit Listenverwaltung) ist **kostenpflichtig ab 40 $/Monat** — das würde das Budget sprengen. Genutzt wird deshalb nur die reine Transactional-Send-API (`resend.emails.send`), die Listen-Logik bleibt in eigener Hand. Fachlich deckt sich das gut mit dem bestehenden CMS/Admin-Muster (Server Action, wie beim News-CRUD).
+- Abonnenten-Verwaltung **selbst gebaut**: eine `NewsletterSubscriber`-Tabelle in der bestehenden Neon-DB (E-Mail, Opt-in-Status, Kategorien, Datum) — kein neues System, keine neuen Kosten, passt ins bestehende Permission-Modell (Admin sieht Abonnenten-Zahl im Dashboard, `Aufgabenstellung.md` verlangt genau das).
+- Versand über **Brevo**, Free-Tier: 300 E-Mails/Tag, unbegrenzte Kontakte. Reicht bei realistischer Vereinsgröße (z. B. 150 Abonnenten × mehrere Newsletter/Monat) deutlich — und die Kontaktzahl-Deckelung entfällt komplett, anders als bei den meisten Alternativen.
+- Genutzt wird nur die reine Transactional-Send-API (`sendTransactionalEmail`, siehe `src/lib/newsletter/mailer.ts`), die Listen-/Kategorie-Logik bleibt in eigener Hand. Fachlich deckt sich das gut mit dem bestehenden CMS/Admin-Muster (Server Action, wie beim News-CRUD) und mit der bestehenden Instagram-Queue (gleicher Cron-Endpoint, siehe `src/lib/newsletter/dispatch.ts`).
 
-Kosten: **0 €/Monat** (innerhalb 3.000 Mails/Monat).
+Kosten: **0 €/Monat** (innerhalb 300 Mails/Tag).
 
 ### Alternative: Mailchimp (im Aufgabentext explizit genannt)
 
@@ -33,7 +33,7 @@ Kosten: **0 €/Monat** (innerhalb 3.000 Mails/Monat).
 - Für einen Verein mit wachsendem Mitglieder-/Interessentenkreis ist das Kontingent knapp; bei Überschreitung beginnt Mailchimp ab ca. 13 $/Monat.
 - Vorteil: fertige Anmeldeformulare, DSGVO-Double-Opt-in eingebaut — spart Implementierungsaufwand, kostet aber Abhängigkeit von einem zweiten System außerhalb der eigenen DB (Abonnenten-Zahl im Admin-Dashboard müsste dann per Mailchimp-API abgefragt werden statt aus eigener DB).
 
-**Empfehlung bleibt Resend + eigene Tabelle** — 0 €, kein Zweitsystem, Abonnentenzahl bleibt eine normale DB-Query.
+**Umsetzung bleibt Brevo + eigene Tabelle** — 0 €, kein Zweitsystem, unbegrenzte Kontakte, Abonnentenzahl bleibt eine normale DB-Query.
 
 ## Domain
 
@@ -47,7 +47,7 @@ Einzige laut Aufgabenstellung erlaubte Dauerkosten (außerhalb des 2-€-Limits)
 | Position | €/Monat |
 | --- | --- |
 | Hosting, DB, Auth, Blob, Instagram, Kalender | 0 |
-| Newsletter (Resend, eigene Abonnenten-Tabelle) | 0 |
+| Newsletter (Brevo, eigene Abonnenten-Tabelle) | 0 |
 | Domain (separat vom Limit) | ~0,70–1,25 (≈8–15 €/Jahr) |
 | **Gesamt gegen das 2-€-Limit** | **0 €** |
 
@@ -68,5 +68,4 @@ Das Projekt bleibt bei der empfohlenen Newsletter-Umsetzung komfortabel innerhal
 - [Neon Pricing 2026: CU-Hours, Storage & Real Costs](https://swyftstack.com/blog/neon-pricing-explained)
 - [Neon Free Tier 2026: Limits, Pricing & What Changed](https://agentdeals.dev/vendor/neon)
 - [Navigating Mailchimp's New Free Limits](https://www.beehiiv.com/blog/navigating-mailchimp-s-new-free-limits-essential-updates-for-newsletter-owners)
-- [Resend New Free Tier](https://resend.com/blog/new-free-tier)
-- [Resend Pricing 2026: Free 3K, Pro $20, Scale $90](https://automationatlas.io/answers/resend-pricing-explained-2026/)
+- Brevo-Free-Tier-Limit (300 Mails/Tag, unbegrenzte Kontakte): siehe Brevo-Dashboard/Pricing-Seite zum Zeitpunkt der Kontoerstellung, nicht separat verlinkt.

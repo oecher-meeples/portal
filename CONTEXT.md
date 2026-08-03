@@ -147,3 +147,17 @@ _Avoid_: Kontaktdaten (das meint E-Mail, ist kein neues Feld), Social-Media-Prof
 **Privatbesitz-Eintrag**:
 Ein Spiel, das ein Mitglied privat besitzt und nicht im Vereinsbestand geführt wird — Grundlage der Crowdsourced-Suche in der internen Ludothek. Aktuell ausschließlich per Seed befüllt (zwei Demo-Mitglieder), da ein echter BGG-Sammlungs-Sync an der aus dieser Umgebung blockierten BoardGameGeek-API scheitert (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`). Erscheint in der internen Ludothek-Suche nur nach explizitem Toggle „Auch Privatbesitz anzeigen" (Default aus) und **nie** in der öffentlichen Projektion.
 _Avoid_: Spiel (das ist ausschließlich Vereinsbesitz), BGG-Sammlung (impliziert einen echten Sync, den es hier noch nicht gibt)
+
+### Newsletter
+
+**Entwurf**:
+Ein Beitrag mit `status: DRAFT` — sichtbar nur im Redaktionsbereich, nie öffentlich oder intern, löst kein Instagram-Cross-Posting und keinen Newsletter-Versand aus. Erst „Absenden" (Status `PUBLISHED`) macht ihn sichtbar und löst beides ggf. aus.
+_Avoid_: unveröffentlichter Beitrag, Vorschau
+
+**Newsletter-Abonnent**:
+Ein Eintrag mit E-Mail-Adresse, Kategorien und Bestätigungsstatus — entweder anonym über das öffentliche Formular (braucht Double-Opt-in) oder über den Profil-Toggle eines Meeples (bereits authentifiziert, kein Double-Opt-in nötig). Eine gemeinsame Tabelle für beide Quellen, verknüpft über ein optionales `meepleId`-Feld.
+_Avoid_: Newsletter-Kontakt (kein Fremdsystem, reine Portal-Tabelle), Mitglied (ein Abonnent muss kein Meeple sein)
+
+**Newsletter-Kategorie**:
+Termine, News, Turniere oder Berichte zu vergangenen Events — das Abonnenten-Interesse, entkoppelt vom `PostType` eines Beitrags (Inhalts-Klassifikation). Ein Beitrag bekommt beim Anlegen eine Default-Kategorie aus seinem Typ, bleibt aber überschreibbar.
+_Avoid_: PostType (das ist die Inhalts-Klassifikation, nicht das Abonnenten-Interesse)
