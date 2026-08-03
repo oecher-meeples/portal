@@ -12,10 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  exportBankDataCsv,
-  revealIban,
-} from "@/components/feature/admin-bank/actions";
+import { revealIban } from "@/components/feature/admin-bank/actions";
+import { BankCsvExportDialog } from "@/components/feature/admin-bank/bank-csv-export-dialog";
 
 export type BankDataRow = {
   id: string;
@@ -39,18 +37,6 @@ const KIND_LABELS: Record<string, string> = {
   CSV_EXPORT: "CSV-Export",
 };
 
-function downloadCsv(filename: string, csv: string) {
-  const blob = new Blob([`﻿${csv}`], {
-    type: "text/csv;charset=utf-8",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export function AdminBankView({
   rows,
   logs,
@@ -61,7 +47,6 @@ export function AdminBankView({
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
   async function handleReveal(id: string) {
     setBusyId(id);
@@ -75,16 +60,6 @@ export function AdminBankView({
       return;
     }
     setRevealed((current) => ({ ...current, [id]: result.iban! }));
-  }
-
-  async function handleExport() {
-    setIsExporting(true);
-    setError(null);
-
-    const result = await exportBankDataCsv();
-    setIsExporting(false);
-
-    downloadCsv(result.filename, result.csv);
   }
 
   const withIban = rows.filter((row) => row.hasIban).length;
@@ -108,9 +83,7 @@ export function AdminBankView({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={handleExport} disabled={isExporting || withIban === 0}>
-          {isExporting ? "Erzeuge CSV…" : "CSV für die Banking-Software"}
-        </Button>
+        <BankCsvExportDialog ibanCount={withIban} />
         <p className="text-muted-foreground text-sm">
           Spalten: Mitgliedsnummer, Name, Kontoinhaber, IBAN. Kein SEPA-XML.
         </p>
