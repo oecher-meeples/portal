@@ -14,6 +14,8 @@ import type {
   PublicLudothekGame,
 } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import type { PrivateCollectionResult } from "@/lib/ludothek/private-collection";
+import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 
 const PLAYER_OPTIONS: { label: string; value: PlayerCountFilter }[] = [
   { label: "1–2", value: "1-2" },
@@ -66,6 +68,7 @@ export function LudothekBrowser({
   filters,
   mechanicsOptions,
   meepleOptions,
+  privateCollectionResults,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   internal: boolean;
@@ -76,6 +79,8 @@ export function LudothekBrowser({
   filters: LudothekFilters;
   mechanicsOptions: string[];
   meepleOptions?: { id: string; displayName: string }[];
+  /** Internal-only, never passed for the guest area — see CONTEXT.md "kein Leak". */
+  privateCollectionResults?: PrivateCollectionResult[];
 }) {
   const href = (patch: Record<string, string | string[] | undefined>) =>
     buildHref(basePath, rawSearchParams, patch);
@@ -213,6 +218,17 @@ export function LudothekBrowser({
                     active={Boolean(filters.onlyLoanedOut)}
                   />
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <FilterPill
+                    label="Auch Privatbesitz anzeigen"
+                    href={href({
+                      privatbesitz: filters.showPrivateCollection
+                        ? undefined
+                        : "1",
+                    })}
+                    active={Boolean(filters.showPrivateCollection)}
+                  />
+                </div>
                 {meepleOptions && meepleOptions.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
@@ -257,6 +273,42 @@ export function LudothekBrowser({
           </p>
         )}
       </div>
+
+      {internal &&
+        filters.showPrivateCollection &&
+        privateCollectionResults &&
+        privateCollectionResults.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Privatbesitz von Mitgliedern
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {privateCollectionResults.map((result) => (
+                <div
+                  key={result.id}
+                  className="bg-card flex flex-col overflow-hidden rounded-lg border"
+                >
+                  {result.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- external cover url
+                    <img
+                      src={result.imageUrl}
+                      alt={result.title}
+                      className="aspect-square w-full object-cover"
+                    />
+                  ) : (
+                    <PlaceholderMedia label="FOTO" />
+                  )}
+                  <div className="flex flex-1 flex-col gap-1 p-4">
+                    <p className="font-serif font-semibold">{result.title}</p>
+                    <span className="bg-muted text-muted-foreground w-fit rounded-full px-2 py-0.5 text-xs">
+                      im Privatbesitz von {result.ownerDisplayName}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
     </div>
   );
 }

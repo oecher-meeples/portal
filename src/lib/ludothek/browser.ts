@@ -80,9 +80,17 @@ export type LudothekFilters = {
   zustand?: GameZustand;
   onlyLoanedOut?: boolean;
   atMeepleId?: string;
+  /** Default off. Internal-only — the crowdsourced private-collection search never runs for guests. */
+  showPrivateCollection?: boolean;
 };
 
-function matchesPlayerFilter(game: LudothekGame, filter: PlayerCountFilter) {
+type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
+type Timed = { playTimeMinutes: number | null };
+
+export function matchesPlayerFilter(
+  game: PlayerCounted,
+  filter: PlayerCountFilter,
+) {
   const max = game.maxPlayers ?? game.minPlayers ?? 0;
   const min = game.minPlayers ?? max;
   if (filter === "1-2") return min <= 2;
@@ -90,7 +98,7 @@ function matchesPlayerFilter(game: LudothekGame, filter: PlayerCountFilter) {
   return max >= 5;
 }
 
-function matchesDurationFilter(game: LudothekGame, filter: DurationFilter) {
+export function matchesDurationFilter(game: Timed, filter: DurationFilter) {
   const minutes = game.playTimeMinutes ?? 0;
   if (filter === "short") return minutes > 0 && minutes < 60;
   if (filter === "mid") return minutes >= 60 && minutes <= 120;
@@ -139,6 +147,8 @@ export function parseLudothekSearchParams(
       GameZustand | undefined;
     filters.onlyLoanedOut = firstString(searchParams.ausgeliehen) === "1";
     filters.atMeepleId = firstString(searchParams.bei) || undefined;
+    filters.showPrivateCollection =
+      firstString(searchParams.privatbesitz) === "1";
   }
 
   return filters;

@@ -201,20 +201,38 @@ describe("parseLudothekSearchParams", () => {
 
   it("only parses internal filters when internal is true", () => {
     const publicResult = parseLudothekSearchParams(
-      { zustand: "frei", ausgeliehen: "1", bei: "meeple-1" },
+      {
+        zustand: "frei",
+        ausgeliehen: "1",
+        bei: "meeple-1",
+        privatbesitz: "1",
+      },
       { internal: false },
     );
     expect(publicResult.zustand).toBeUndefined();
     expect(publicResult.onlyLoanedOut).toBeUndefined();
     expect(publicResult.atMeepleId).toBeUndefined();
+    expect(publicResult.showPrivateCollection).toBeUndefined();
 
     const internalResult = parseLudothekSearchParams(
-      { zustand: "frei", ausgeliehen: "1", bei: "meeple-1" },
+      {
+        zustand: "frei",
+        ausgeliehen: "1",
+        bei: "meeple-1",
+        privatbesitz: "1",
+      },
       { internal: true },
     );
     expect(internalResult.zustand).toBe("frei");
     expect(internalResult.onlyLoanedOut).toBe(true);
     expect(internalResult.atMeepleId).toBe("meeple-1");
+    expect(internalResult.showPrivateCollection).toBe(true);
+  });
+
+  it("defaults showPrivateCollection to false when internal and unset", () => {
+    expect(
+      parseLudothekSearchParams({}, { internal: true }).showPrivateCollection,
+    ).toBe(false);
   });
 
   it("normalises a single mechanik value to an array", () => {

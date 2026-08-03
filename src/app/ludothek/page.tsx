@@ -8,6 +8,7 @@ import {
   toPublicGame,
 } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
+import { buildPrivateCollectionResults } from "@/lib/ludothek/private-collection";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 
 export default async function LudothekPage({
@@ -51,6 +52,17 @@ export default async function LudothekPage({
       })()
     : undefined;
 
+  // Internal-only, and only fetched when the toggle is on — never reaches the guest path.
+  const privateCollectionResults =
+    internal && filters.showPrivateCollection
+      ? buildPrivateCollectionResults(
+          await prisma.privateGameCollectionEntry.findMany({
+            include: { meeple: { select: { displayName: true } } },
+          }),
+          filters,
+        )
+      : undefined;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -67,6 +79,7 @@ export default async function LudothekPage({
         filters={filters}
         mechanicsOptions={mechanicsOptions}
         meepleOptions={meepleOptions}
+        privateCollectionResults={privateCollectionResults}
       />
     </div>
   );
