@@ -1,26 +1,28 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/utils/prisma";
 import {
   exchangeCodeForShortLivedToken,
   getInstagramBusinessAccount,
   getLongLivedToken,
 } from "@/lib/instagram/graph-client";
-import {
-  clearStateCookie,
-  readStateFromCookieHeader,
-} from "@/lib/instagram/oauth-state";
+import { clearStateCookie, verifyState } from "@/lib/instagram/oauth-state";
 
 const DEFAULT_EXPIRES_IN_SECONDS = 60 * 24 * 60 * 60;
 
 export async function GET(request: Request) {
+  const user = await getCurrentUser();
+  if (!user || !(await hasPermission(user.id, "instagram:connect"))) {
+    return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
+  }
+
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const expectedState = readStateFromCookieHeader(
-    request.headers.get("cookie"),
-  );
+  const stateValid = verifyState(request.headers.get("cookie"), state, user.id);
 
-  if (!code || !state || !expectedState || state !== expectedState) {
+  if (!code || !stateValid) {
     return NextResponse.json(
       { error: "Ungültiger oder fehlender state-Parameter." },
       { status: 400 },

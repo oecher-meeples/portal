@@ -22,6 +22,6 @@ export async function GET() {
   const response = NextResponse.redirect(
     `https://www.facebook.com/${graphApiVersion}/dialog/oauth?${params}`,
   );
-  response.headers.append("Set-Cookie", buildStateCookie(state));
+  response.headers.append("Set-Cookie", buildStateCookie(user.id, state));
   return response;
 }
