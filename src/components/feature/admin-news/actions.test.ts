@@ -11,8 +11,19 @@ vi.mock("@/lib/instagram/queue", () => ({
   processPost: (...args: unknown[]) => processPostMock(...args),
 }));
 
-const { createPost, updatePost, deletePost, retryInstagramPost } =
-  await import("./actions");
+const generateClientTokenMock = vi.fn();
+vi.mock("@vercel/blob/client", () => ({
+  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
+    generateClientTokenMock(...args),
+}));
+
+const {
+  createPost,
+  updatePost,
+  deletePost,
+  retryInstagramPost,
+  getUploadToken,
+} = await import("./actions");
 
 const VALID_INPUT = {
   type: "blog" as const,
@@ -330,6 +341,43 @@ describe("deletePost", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.post.delete).toHaveBeenCalledWith({
       where: { id: "post-1" },
+    });
+  });
+});
+
+describe("getUploadToken", () => {
+  it("rejects when there is no logged-in user", async () => {
+    getCurrentUserMock.mockResolvedValue(null);
+
+    await expect(getUploadToken("instagram-covers/a.png")).rejects.toThrow(
+      "Keine Berechtigung.",
+    );
+    expect(generateClientTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the user lacks the posts:write permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    await expect(getUploadToken("instagram-covers/a.png")).rejects.toThrow(
+      "Keine Berechtigung.",
+    );
+    expect(generateClientTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("normalises a client-chosen prefix to the instagram-covers namespace", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    generateClientTokenMock.mockResolvedValue("token-123");
+
+    const token = await getUploadToken("posts/../../evil.png");
+
+    expect(token).toBe("token-123");
+    expect(generateClientTokenMock).toHaveBeenCalledWith({
+      pathname: "instagram-covers/evil.png",
+      allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
+      addRandomSuffix: true,
+      maximumSizeInBytes: 8 * 1024 * 1024,
     });
   });
 });

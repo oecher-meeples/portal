@@ -52,7 +52,7 @@ describe("useBlobUpload", () => {
     expect(urls).toEqual([]);
     await waitFor(() =>
       expect(result.current.error).toBe(
-        "Datei(en) konnten nicht hochgeladen werden.",
+        "Datei(en) konnten nicht hochgeladen werden: network error",
       ),
     );
   });

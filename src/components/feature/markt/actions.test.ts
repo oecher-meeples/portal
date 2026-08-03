@@ -209,6 +209,17 @@ describe("getMarketListingUploadToken", () => {
       pathname: "market-listings/a.png",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
+      maximumSizeInBytes: 8 * 1024 * 1024,
     });
+  });
+
+  it("normalises a client-chosen prefix to the market-listings namespace", async () => {
+    generateClientTokenMock.mockResolvedValue("token-123");
+
+    await getMarketListingUploadToken("posts/../../evil.png");
+
+    expect(generateClientTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: "market-listings/evil.png" }),
+    );
   });
 });

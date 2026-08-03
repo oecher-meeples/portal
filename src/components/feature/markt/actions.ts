@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
+import { normaliseBlobPath } from "@/lib/utils/blob-path";
+
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 export type MarketListingInput = {
   title: string;
@@ -102,8 +105,9 @@ export async function getMarketListingUploadToken(pathname: string) {
   await requireMeeple();
 
   return generateClientTokenFromReadWriteToken({
-    pathname,
+    pathname: normaliseBlobPath(pathname, "market-listings"),
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
+    maximumSizeInBytes: MAX_UPLOAD_BYTES,
   });
 }

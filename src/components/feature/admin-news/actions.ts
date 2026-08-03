@@ -7,6 +7,9 @@ import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
 import { processPost } from "@/lib/instagram/queue";
+import { normaliseBlobPath } from "@/lib/utils/blob-path";
+
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
 export type PostInput = {
   type: ContentType;
@@ -127,9 +130,10 @@ export async function getUploadToken(pathname: string) {
   }
 
   return generateClientTokenFromReadWriteToken({
-    pathname,
+    pathname: normaliseBlobPath(pathname, "instagram-covers"),
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
+    maximumSizeInBytes: MAX_UPLOAD_BYTES,
   });
 }
 

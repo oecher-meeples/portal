@@ -27,8 +27,13 @@ export function useBlobUpload(
         urls.push(blob.url);
       }
       return urls;
-    } catch {
-      setError("Datei(en) konnten nicht hochgeladen werden.");
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : null;
+      setError(
+        reason
+          ? `Datei(en) konnten nicht hochgeladen werden: ${reason}`
+          : "Datei(en) konnten nicht hochgeladen werden.",
+      );
       return [];
     } finally {
       setIsUploading(false);
