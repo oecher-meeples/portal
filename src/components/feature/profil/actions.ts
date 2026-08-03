@@ -14,6 +14,9 @@ export type OwnProfileInput = {
   displayName: string;
   bggUsername?: string | null;
   bgaUsername?: string | null;
+  telegramHandle?: string | null;
+  signalHandle?: string | null;
+  discordHandle?: string | null;
 };
 
 export type OwnBankDetailsInput = {
@@ -23,6 +26,11 @@ export type OwnBankDetailsInput = {
 
 function optionalText(value: string | null | undefined) {
   const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function optionalHandle(value: string | null | undefined) {
+  const trimmed = value?.trim().replace(/^@+/, "");
   return trimmed ? trimmed : null;
 }
 
@@ -40,6 +48,9 @@ export async function updateOwnProfile(input: OwnProfileInput) {
       displayName,
       bggUsername: optionalText(input.bggUsername),
       bgaUsername: optionalText(input.bgaUsername),
+      telegramHandle: optionalHandle(input.telegramHandle),
+      signalHandle: optionalHandle(input.signalHandle),
+      discordHandle: optionalHandle(input.discordHandle),
     },
   });
 

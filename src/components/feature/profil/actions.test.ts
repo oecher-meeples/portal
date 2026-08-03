@@ -55,6 +55,9 @@ describe("updateOwnProfile", () => {
       displayName: "Lea",
       bggUsername: "lea_bgg",
       bgaUsername: "  ",
+      telegramHandle: "@lea_tg",
+      signalHandle: "",
+      discordHandle: null,
     });
 
     expect(prismaMock.meeple.update).toHaveBeenCalledWith({
@@ -63,6 +66,9 @@ describe("updateOwnProfile", () => {
         displayName: "Lea",
         bggUsername: "lea_bgg",
         bgaUsername: null,
+        telegramHandle: "lea_tg",
+        signalHandle: null,
+        discordHandle: null,
       },
     });
   });

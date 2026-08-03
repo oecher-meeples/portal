@@ -103,6 +103,9 @@ export async function anonymiseMeeple(meepleId: string) {
         ibanLast4: null,
         bggUsername: null,
         bgaUsername: null,
+        telegramHandle: null,
+        signalHandle: null,
+        discordHandle: null,
         anonymizedAt: new Date(),
       },
     });

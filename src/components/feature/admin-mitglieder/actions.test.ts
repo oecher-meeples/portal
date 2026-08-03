@@ -165,6 +165,9 @@ describe("anonymiseMeeple", () => {
         ibanLast4: null,
         bggUsername: null,
         bgaUsername: null,
+        telegramHandle: null,
+        signalHandle: null,
+        discordHandle: null,
         anonymizedAt: expect.any(Date),
       },
     });

@@ -83,6 +83,9 @@ export function ProfilView({
                 displayName={meeple.displayName}
                 bggUsername={meeple.bggUsername}
                 bgaUsername={meeple.bgaUsername}
+                telegramHandle={meeple.telegramHandle}
+                signalHandle={meeple.signalHandle}
+                discordHandle={meeple.discordHandle}
               />
             </div>
           </div>
