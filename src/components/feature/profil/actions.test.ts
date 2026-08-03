@@ -23,12 +23,19 @@ vi.mock("@/lib/members/deletion-requests", () => ({
   findOpenDeletionRequest: findOpenDeletionRequestMock,
 }));
 
+const setMeepleNewsletterPreferenceMock = vi.fn();
+vi.mock("@/lib/newsletter/subscribers", () => ({
+  setMeepleNewsletterPreference: (...args: unknown[]) =>
+    setMeepleNewsletterPreferenceMock(...args),
+}));
+
 const { decryptSecret } = await import("@/lib/utils/crypto");
 const {
   clearOwnBankDetails,
   exportOwnPersonalData,
   requestOwnDeletion,
   resignOwnMembership,
+  updateNewsletterPreference,
   updateOwnBankDetails,
   updateOwnProfile,
   withdrawOwnDeletionRequest,
@@ -63,9 +70,30 @@ describe("without a session", () => {
     await expect(exportOwnPersonalData()).rejects.toThrow(RedirectError);
     await expect(requestOwnDeletion()).rejects.toThrow(RedirectError);
     await expect(withdrawOwnDeletionRequest()).rejects.toThrow(RedirectError);
+    await expect(
+      updateNewsletterPreference({ enabled: true, categories: [] }),
+    ).rejects.toThrow(RedirectError);
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(collectMeeplePersonalDataMock).not.toHaveBeenCalled();
     expect(prismaMock.deletionRequest.create).not.toHaveBeenCalled();
+    expect(setMeepleNewsletterPreferenceMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateNewsletterPreference", () => {
+  it("delegates to the newsletter domain layer for the own meeple", async () => {
+    setMeepleNewsletterPreferenceMock.mockResolvedValue({ success: true });
+
+    const result = await updateNewsletterPreference({
+      enabled: true,
+      categories: ["NEWS"],
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(setMeepleNewsletterPreferenceMock).toHaveBeenCalledWith("meeple-1", {
+      enabled: true,
+      categories: ["NEWS"],
+    });
   });
 });
 

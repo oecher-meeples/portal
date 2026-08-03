@@ -90,6 +90,19 @@ export async function findSubscriptionByToken(token: string) {
   });
 }
 
+export async function findMeepleNewsletterPreference(
+  meepleId: string,
+): Promise<{ enabled: boolean; categories: NewsletterCategory[] }> {
+  const subscriber = await prisma.newsletterSubscriber.findUnique({
+    where: { meepleId },
+    select: { categories: true },
+  });
+  return {
+    enabled: subscriber !== null,
+    categories: subscriber?.categories ?? [],
+  };
+}
+
 export async function confirmSubscription(
   token: string,
 ): Promise<{ success: true } | { error: string }> {

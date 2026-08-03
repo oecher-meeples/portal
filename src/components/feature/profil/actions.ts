@@ -14,6 +14,8 @@ import {
   type MeepleDataExport,
 } from "@/lib/members/data-export";
 import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
+import { setMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
+import type { NewsletterCategory } from "@prisma/client";
 
 export type OwnProfileInput = {
   displayName: string;
@@ -146,6 +148,18 @@ export async function withdrawOwnDeletionRequest() {
 
   revalidatePath("/profil");
   revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function updateNewsletterPreference(input: {
+  enabled: boolean;
+  categories: NewsletterCategory[];
+}) {
+  const meeple = await requireMeeple();
+
+  await setMeepleNewsletterPreference(meeple.id, input);
+
+  revalidatePath("/profil");
   return { success: true as const };
 }
 

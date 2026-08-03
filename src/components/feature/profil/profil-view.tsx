@@ -1,4 +1,4 @@
-import type { Meeple } from "@prisma/client";
+import type { Meeple, NewsletterCategory } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { maskIban } from "@/lib/utils/crypto";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
@@ -8,6 +8,7 @@ import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
 import { DataExportPanel } from "@/components/feature/profil/data-export-panel";
 import { DeletionRequestPanel } from "@/components/feature/profil/deletion-request-panel";
+import { NewsletterPreferencePanel } from "@/components/feature/profil/newsletter-preference-panel";
 import type { OpenHoldingsSummary } from "@/lib/members/open-holdings";
 import { formatDatePlain } from "@/lib/utils/format";
 
@@ -30,11 +31,13 @@ export function ProfilView({
   membershipState,
   deletionRequestedAt,
   openHoldings,
+  newsletterPreference,
 }: {
   meeple: Meeple;
   membershipState: MembershipState;
   deletionRequestedAt: Date | null;
   openHoldings: OpenHoldingsSummary;
+  newsletterPreference: { enabled: boolean; categories: NewsletterCategory[] };
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -93,6 +96,16 @@ export function ProfilView({
                 telegramHandle={meeple.telegramHandle}
                 signalHandle={meeple.signalHandle}
                 discordHandle={meeple.discordHandle}
+              />
+            </div>
+          </div>
+
+          <div className="bg-card rounded-lg border p-6">
+            <h2 className="font-serif text-lg font-bold">Newsletter</h2>
+            <div className="mt-4">
+              <NewsletterPreferencePanel
+                initialEnabled={newsletterPreference.enabled}
+                initialCategories={newsletterPreference.categories}
               />
             </div>
           </div>
