@@ -23,6 +23,66 @@ function makeRequest({
   return new NextRequest(`http://localhost${pathname}`, { method, headers });
 }
 
+describe("proxy CSP", () => {
+  it("sets a report-only CSP with a nonce on a public route", async () => {
+    const response = await proxy(makeRequest({ pathname: "/news" }));
+
+    const csp = response.headers.get("Content-Security-Policy-Report-Only");
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
+    expect(response.headers.get("Content-Security-Policy")).toBeNull();
+  });
+
+  it("forwards the nonce to the request so the layout can read it via headers()", async () => {
+    let seenRequest: NextRequest | undefined;
+    const originalNext = NextResponse.next.bind(NextResponse);
+    vi.spyOn(NextResponse, "next").mockImplementation((init) => {
+      seenRequest = init?.request as never;
+      return originalNext(init);
+    });
+
+    await proxy(makeRequest({ pathname: "/news" }));
+
+    expect(seenRequest?.headers.get("x-nonce")).toMatch(/^[A-Za-z0-9+/=]+$/);
+    vi.restoreAllMocks();
+  });
+
+  it("generates a fresh nonce for every request", async () => {
+    const first = await proxy(makeRequest({ pathname: "/news" }));
+    const second = await proxy(makeRequest({ pathname: "/news" }));
+
+    const cspFirst = first.headers.get("Content-Security-Policy-Report-Only");
+    const cspSecond = second.headers.get("Content-Security-Policy-Report-Only");
+    expect(cspFirst).not.toBe(cspSecond);
+  });
+
+  it("also sets the CSP on an authenticated protected-route response", async () => {
+    middlewareMock.mockResolvedValue(NextResponse.next());
+
+    const response = await proxy(makeRequest({ pathname: "/admin/bestand" }));
+
+    expect(
+      response.headers.get("Content-Security-Policy-Report-Only"),
+    ).toContain("default-src 'self'");
+  });
+
+  it("falls back to a placeholder origin when NEON_AUTH_BASE_URL is unset, instead of throwing", async () => {
+    // Assigning `undefined` to process.env stringifies to "undefined" and
+    // would poison every later test's URL parsing — delete instead of restore.
+    const original = process.env.NEON_AUTH_BASE_URL;
+    delete process.env.NEON_AUTH_BASE_URL;
+
+    const response = await proxy(makeRequest({ pathname: "/news" }));
+
+    expect(
+      response.headers.get("Content-Security-Policy-Report-Only"),
+    ).toContain("connect-src 'self'");
+
+    if (original !== undefined) process.env.NEON_AUTH_BASE_URL = original;
+  });
+});
+
 describe("proxy", () => {
   it("passes through a plain redirect for a normal page navigation to a protected route", async () => {
     middlewareMock.mockResolvedValue(

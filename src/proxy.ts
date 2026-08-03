@@ -8,6 +8,31 @@ const authMiddleware = auth.middleware({ loginUrl: "/login" });
 const AUTH_PROTECTED_PREFIX = "/admin";
 
 /**
+ * Report-Only for now (see docs/adr and Security-Audit Issue 4 · F5) — a strict
+ * `script-src` breaks easily under the App Router's streaming/hydration model,
+ * so this ships as a monitoring step first. Enforcing it is separate follow-up
+ * work once a deploy cycle's worth of reports is in.
+ */
+function buildCsp(nonce: string) {
+  const neonAuthOrigin = new URL(
+    process.env.NEON_AUTH_BASE_URL ?? "https://neon.tech",
+  ).origin;
+
+  return [
+    `default-src 'self'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
+    `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com`,
+    `font-src 'self'`,
+    `connect-src 'self' ${neonAuthOrigin}`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+  ].join("; ");
+}
+
+/**
  * Next.js's server-action client only recognises a redirect via the
  * `x-action-redirect` response header. A plain 3xx `Location` redirect —
  * which is what @neondatabase/auth's `redirect_login` branch returns — looks
@@ -21,11 +46,19 @@ const NEXT_ACTION_HEADER = "next-action";
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = buildCsp(nonce);
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(PATHNAME_HEADER, pathname);
+  requestHeaders.set("x-nonce", nonce);
 
   if (!pathname.startsWith(AUTH_PROTECTED_PREFIX)) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    response.headers.set("Content-Security-Policy-Report-Only", csp);
+    return response;
   }
 
   // Work around a @neondatabase/auth bug (0.4.2-beta, latest as of writing):
@@ -50,6 +83,7 @@ export default async function proxy(request: NextRequest) {
   }
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy-Report-Only", csp);
   for (const cookie of authResponse.cookies.getAll()) {
     response.cookies.set(cookie);
   }
