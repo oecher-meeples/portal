@@ -1,13 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { PillToggle } from "@/components/ui/pill-toggle";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
-import { Button } from "@/components/ui/button";
-import type { MarketListing } from "@/data/market";
+import type { MarketListingView } from "@/lib/markt/market-listings";
 import type { SparePartListingView } from "@/lib/inventory/spare-parts";
 import { SparePartListingCard } from "@/components/feature/markt/spare-part-listing-view";
+import { MarketListingCard } from "@/components/feature/markt/market-listing-card";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 
 const TABS = [
@@ -18,9 +16,11 @@ const TABS = [
 export function MarktBrowser({
   listings,
   spareParts,
+  ownMeepleId,
 }: {
-  listings: MarketListing[];
+  listings: MarketListingView[];
   spareParts: SparePartListingView[];
+  ownMeepleId: string;
 }) {
   const [tab, setTab] =
     useState<(typeof TABS)[number]["value"]>("kleinanzeigen");
@@ -35,34 +35,17 @@ export function MarktBrowser({
       {tab === "kleinanzeigen" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
-            <div
+            <MarketListingCard
               key={listing.id}
-              className="bg-card flex flex-col overflow-hidden rounded-lg border"
-            >
-              <Link href={`/markt/${listing.id}`}>
-                <PlaceholderMedia label="FOTO" />
-              </Link>
-              <div className="flex flex-1 flex-col gap-1 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <Link
-                    href={`/markt/${listing.id}`}
-                    className="hover:text-primary font-serif font-semibold"
-                  >
-                    {listing.title}
-                  </Link>
-                  <span className="text-primary shrink-0 font-serif font-bold">
-                    {listing.price} €
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-sm">
-                  Zustand: {listing.condition} · von {listing.seller}
-                </p>
-                <Button variant="outline" size="sm" className="mt-2 gap-1.5">
-                  ✉️ Verkäufer kontaktieren
-                </Button>
-              </div>
-            </div>
+              listing={listing}
+              isOwn={listing.sellerMeepleId === ownMeepleId}
+            />
           ))}
+          {listings.length === 0 && (
+            <p className="text-muted-foreground text-sm">
+              Aktuell keine Kleinanzeigen.
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

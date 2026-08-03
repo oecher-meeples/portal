@@ -1,11 +1,8 @@
 import { notFound } from "next/navigation";
 import { requireMember } from "@/lib/auth/session";
-import { MARKET_LISTINGS, getMarketListing } from "@/data/market";
-import { MarketListingMockView } from "@/components/feature/markt/market-listing-mock-view";
-
-export function generateStaticParams() {
-  return MARKET_LISTINGS.map((listing) => ({ id: listing.id }));
-}
+import { prisma } from "@/lib/utils/prisma";
+import { toMarketListingView } from "@/lib/markt/market-listings";
+import { MarketListingDetailView } from "@/components/feature/markt/market-listing-detail-view";
 
 export default async function MarketListingPage({
   params,
@@ -14,8 +11,16 @@ export default async function MarketListingPage({
 }) {
   await requireMember();
   const { id } = await params;
-  const listing = getMarketListing(id);
+
+  const listing = await prisma.marketListing.findUnique({
+    where: { id },
+    include: { seller: true },
+  });
   if (!listing) notFound();
 
-  return <MarketListingMockView listing={listing} />;
+  return (
+    <MarketListingDetailView
+      listing={toMarketListingView(listing, listing.seller)}
+    />
+  );
 }

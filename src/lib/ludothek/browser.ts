@@ -1,5 +1,6 @@
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { BoardGameKind } from "@prisma/client";
+import { firstString } from "@/lib/utils/search-params";
 
 export type LudothekGameRef = { id: string; slug: string; title: string };
 
@@ -102,10 +103,6 @@ const DURATION_FILTER_VALUES = new Set<DurationFilter>([
   "mid",
   "long",
 ]);
-
-function firstString(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 /** Turns a Next.js `searchParams` object into filters — the single source of truth for URLs. */
 export function parseLudothekSearchParams(
