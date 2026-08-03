@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { GameInventoryStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -87,6 +88,21 @@ async function duplicateEanHint(
     : undefined;
 }
 
+async function revalidateAssignmentPaths(
+  baseGameId: string,
+  expansionId: string,
+) {
+  const games = await prisma.boardGame.findMany({
+    where: { id: { in: [baseGameId, expansionId] } },
+    select: { slug: true },
+  });
+
+  revalidatePath("/ludothek");
+  for (const game of games) {
+    revalidatePath(`/ludothek/${game.slug}`);
+  }
+}
+
 async function requireGamesManagePermission() {
   const user = await getCurrentUser();
   if (!user || !(await hasPermission(user.id, "games:manage"))) {
@@ -131,6 +147,8 @@ export async function createBoardGame(input: BoardGameInput) {
     return created;
   });
 
+  revalidatePath("/ludothek");
+  revalidatePath("/admin/bestand");
   return { success: true as const, id: game.id, hint };
 }
 
@@ -155,6 +173,9 @@ export async function updateBoardGame(id: string, input: BoardGameInput) {
     data: { slug, title: input.title, ...toBoardGameData(input) },
   });
 
+  revalidatePath("/ludothek");
+  revalidatePath(`/ludothek/${slug}`);
+  revalidatePath("/admin/bestand");
   return { success: true as const, hint };
 }
 
@@ -198,7 +219,7 @@ export async function deinventoriseBoardGame(
 
   const actor = addToSpareParts ? await ensureMeeple(user) : null;
 
-  await prisma.$transaction(async (tx) => {
+  const game = await prisma.$transaction(async (tx) => {
     const game = await tx.boardGame.update({
       where: { id },
       data: {
@@ -218,8 +239,13 @@ export async function deinventoriseBoardGame(
         }),
       });
     }
+
+    return game;
   });
 
+  revalidatePath("/ludothek");
+  revalidatePath(`/ludothek/${game.slug}`);
+  revalidatePath("/admin/bestand");
   return { success: true as const };
 }
 
@@ -234,6 +260,8 @@ export async function requestCompletenessCheck(id: string) {
     data: { needsCompletenessCheck: true },
   });
 
+  revalidatePath("/ludothek");
+  revalidatePath("/admin/bestand");
   return { success: true as const };
 }
 
@@ -254,6 +282,7 @@ export async function assignExpansion(baseGameId: string, expansionId: string) {
     create: { baseGameId, expansionId },
   });
 
+  await revalidateAssignmentPaths(baseGameId, expansionId);
   return { success: true as const };
 }
 
@@ -270,5 +299,6 @@ export async function removeExpansionAssignment(
     where: { baseGameId, expansionId },
   });
 
+  await revalidateAssignmentPaths(baseGameId, expansionId);
   return { success: true as const };
 }

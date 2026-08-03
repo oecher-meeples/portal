@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
@@ -425,6 +426,7 @@ describe("assignExpansion", () => {
   it("upserts the GameCollection row when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findMany.mockResolvedValue([]);
 
     const result = await assignExpansion("base-1", "expansion-1");
 
@@ -456,6 +458,7 @@ describe("removeExpansionAssignment", () => {
   it("deletes the GameCollection row when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findMany.mockResolvedValue([]);
 
     const result = await removeExpansionAssignment("base-1", "expansion-1");
 

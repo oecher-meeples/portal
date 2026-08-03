@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { getMembershipState, requireMeeple } from "@/lib/members/meeples";
 import {
@@ -30,14 +31,36 @@ function assertCanReceive(
   }
 }
 
-async function toResult<T>(run: () => Promise<T> | T) {
+async function toResult<T>(
+  run: () => Promise<T> | T,
+  onSuccess?: (value: T) => Promise<void> | void,
+) {
   try {
-    return { success: true as const, value: await run() };
+    const value = await run();
+    if (onSuccess) await onSuccess(value);
+    return { success: true as const, value };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Unbekannter Fehler.",
     };
   }
+}
+
+/** Revalidates the list, admin overview and (if resolvable) the game's detail page — only called on success. */
+async function revalidateGamePaths(boardGameId: string) {
+  revalidatePath("/ludothek");
+  revalidatePath("/admin/bestand");
+  const game = await prisma.boardGame.findUnique({
+    where: { id: boardGameId },
+    select: { slug: true },
+  });
+  if (game) revalidatePath(`/ludothek/${game.slug}`);
+}
+
+function toResultAndRevalidate<T extends { boardGameId: string }>(
+  run: () => Promise<T> | T,
+) {
+  return toResult(run, (value) => revalidateGamePaths(value.boardGameId));
 }
 
 export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
@@ -53,7 +76,7 @@ export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
 export async function scanBorrowGame(boardGameId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
-  return toResult(() => {
+  return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return borrowGame({
       boardGameId,
@@ -67,7 +90,7 @@ export async function scanBorrowGame(boardGameId: string) {
 export async function scanAcceptHandover(boardGameId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
-  return toResult(() => {
+  return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return handOverGame({
       boardGameId,
@@ -84,7 +107,7 @@ export async function scanGiveToMeeple(
 ) {
   const { meeple } = await requireActingMeeple();
 
-  return toResult(() =>
+  return toResultAndRevalidate(() =>
     handOverGame({ boardGameId, toMeepleId, recordedByMeepleId: meeple.id }),
   );
 }
@@ -93,7 +116,7 @@ export async function scanGiveToMeeple(
 export async function scanAcceptReturn(boardGameId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
-  return toResult(() => {
+  return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return returnGame({
       boardGameId,
@@ -106,7 +129,7 @@ export async function scanAcceptReturn(boardGameId: string) {
 export async function scanReturnToUnit(boardGameId: string, toUnitId: string) {
   const { meeple } = await requireActingMeeple();
 
-  return toResult(() =>
+  return toResultAndRevalidate(() =>
     returnGame({ boardGameId, toUnitId, recordedByMeepleId: meeple.id }),
   );
 }
@@ -118,7 +141,7 @@ export async function scanReturnToMeeple(
 ) {
   const { meeple } = await requireActingMeeple();
 
-  return toResult(() =>
+  return toResultAndRevalidate(() =>
     returnGame({ boardGameId, toMeepleId, recordedByMeepleId: meeple.id }),
   );
 }
@@ -126,7 +149,7 @@ export async function scanReturnToMeeple(
 export async function scanRelocateGame(boardGameId: string, toUnitId: string) {
   const { meeple } = await requireActingMeeple();
 
-  return toResult(() =>
+  return toResultAndRevalidate(() =>
     relocateGame({ boardGameId, toUnitId, recordedByMeepleId: meeple.id }),
   );
 }
@@ -140,7 +163,7 @@ export async function scanRelocateGame(boardGameId: string, toUnitId: string) {
 export async function scanPlaceGameInUnit(boardGameId: string, unitId: string) {
   const { meeple } = await requireActingMeeple();
 
-  return toResult(async () => {
+  return toResultAndRevalidate(async () => {
     const holding = await prisma.gameHolding.findFirst({
       where: { boardGameId, endedAt: null },
     });
@@ -167,7 +190,7 @@ export async function scanPlaceGameInUnit(boardGameId: string, unitId: string) {
 export async function scanConfirmHolding(holdingId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
-  return toResult(() => {
+  return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return confirmHolding({ holdingId, confirmingMeepleId: meeple.id });
   });
@@ -242,7 +265,12 @@ export async function scanEinlagernUnit(
 ) {
   const { meeple } = await requireActingMeeple();
 
-  return toResult(() =>
+  const result = await toResult(() =>
     moveStorageUnit({ unitId, recordedByMeepleId: meeple.id, ...target }),
   );
+  if ("success" in result) {
+    revalidatePath("/ludothek");
+    revalidatePath("/admin/bestand");
+  }
+  return result;
 }
