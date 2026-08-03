@@ -36,6 +36,15 @@ export function LegalDocView({ doc, sections }: LegalDocViewProps) {
                 {section.paragraphs.map((paragraph, index) => (
                   <p key={index}>{paragraph}</p>
                 ))}
+                {section.links?.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="text-primary hover:underline"
+                  >
+                    {link.label}
+                  </a>
+                ))}
               </div>
             </section>
           ))}

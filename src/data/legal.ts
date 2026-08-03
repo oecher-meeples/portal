@@ -2,6 +2,7 @@ export type LegalSection = {
   id: string;
   heading: string;
   paragraphs: string[];
+  links?: { label: string; href: string }[];
 };
 
 export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
@@ -118,6 +119,19 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
       heading: "Registereintrag",
       paragraphs: [
         "TODO: Der Verein ist noch nicht ins Vereinsregister eingetragen. Registergericht und Registernummer werden nach erfolgter Eintragung ergänzt.",
+      ],
+    },
+    {
+      id: "verwendete-software",
+      heading: "Verwendete Software",
+      paragraphs: [
+        "Dieses Portal nutzt zahlreiche Open-Source-Bibliotheken. Ein vollständiges Verzeichnis mit Lizenzangaben steht als Download bereit.",
+      ],
+      links: [
+        {
+          label: "Third-Party-Lizenzverzeichnis",
+          href: "/THIRD-PARTY-LICENSES.md",
+        },
       ],
     },
   ],
