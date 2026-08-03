@@ -18,13 +18,20 @@ vi.mock("@/lib/members/data-export", () => ({
   collectMeeplePersonalData: collectMeeplePersonalDataMock,
 }));
 
+const findOpenDeletionRequestMock = vi.fn();
+vi.mock("@/lib/members/deletion-requests", () => ({
+  findOpenDeletionRequest: findOpenDeletionRequestMock,
+}));
+
 const { decryptSecret } = await import("@/lib/utils/crypto");
 const {
   clearOwnBankDetails,
   exportOwnPersonalData,
+  requestOwnDeletion,
   resignOwnMembership,
   updateOwnBankDetails,
   updateOwnProfile,
+  withdrawOwnDeletionRequest,
 } = await import("./actions");
 
 const OWN = { id: "meeple-1", resignedAt: null };
@@ -37,6 +44,8 @@ beforeEach(() => {
     "base64",
   );
   requireMeepleMock.mockResolvedValue(OWN);
+  findOpenDeletionRequestMock.mockReset();
+  findOpenDeletionRequestMock.mockResolvedValue(null);
 });
 
 describe("without a session", () => {
@@ -52,8 +61,53 @@ describe("without a session", () => {
     await expect(clearOwnBankDetails()).rejects.toThrow(RedirectError);
     await expect(resignOwnMembership()).rejects.toThrow(RedirectError);
     await expect(exportOwnPersonalData()).rejects.toThrow(RedirectError);
+    await expect(requestOwnDeletion()).rejects.toThrow(RedirectError);
+    await expect(withdrawOwnDeletionRequest()).rejects.toThrow(RedirectError);
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(collectMeeplePersonalDataMock).not.toHaveBeenCalled();
+    expect(prismaMock.deletionRequest.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("requestOwnDeletion", () => {
+  it("records a request for the own meeple", async () => {
+    expect(await requestOwnDeletion()).toEqual({ success: true });
+    expect(prismaMock.deletionRequest.create).toHaveBeenCalledWith({
+      data: { meepleId: "meeple-1" },
+    });
+  });
+
+  it("refuses a second request while one is still open", async () => {
+    findOpenDeletionRequestMock.mockResolvedValue({ id: "req-1" });
+
+    expect(await requestOwnDeletion()).toEqual({
+      error: "Für dich liegt bereits ein offener Löschantrag vor.",
+    });
+    expect(prismaMock.deletionRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("is not blocked by open holdings — the right to ask exists regardless", async () => {
+    prismaMock.gameHolding.count.mockResolvedValue(3);
+
+    expect(await requestOwnDeletion()).toEqual({ success: true });
+  });
+});
+
+describe("withdrawOwnDeletionRequest", () => {
+  it("deletes the own open request", async () => {
+    findOpenDeletionRequestMock.mockResolvedValue({ id: "req-1" });
+
+    expect(await withdrawOwnDeletionRequest()).toEqual({ success: true });
+    expect(prismaMock.deletionRequest.delete).toHaveBeenCalledWith({
+      where: { id: "req-1" },
+    });
+  });
+
+  it("reports when there is nothing to withdraw", async () => {
+    expect(await withdrawOwnDeletionRequest()).toEqual({
+      error: "Es liegt kein offener Löschantrag vor.",
+    });
+    expect(prismaMock.deletionRequest.delete).not.toHaveBeenCalled();
   });
 });
 

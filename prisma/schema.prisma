@@ -145,8 +145,26 @@ model Meeple {
   sparePartListingsKept     SparePartListing[]    @relation("SparePartListingKeeper")
   marketListings            MarketListing[]       @relation("MarketListingSeller")
   privateGameCollection     PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
+  deletionRequests          DeletionRequest[]     @relation("DeletionRequestMeeple")
 
   @@map("meeples")
+}
+
+/// A member's Art.-17 deletion request. Deliberately has no free-text field: the
+/// statutory deadline (Art. 12 Abs. 3, one month) needs a timestamp, not prose,
+/// and a note would add new personal data to the very record meant to remove it.
+/// Rows survive handling so "did we meet the deadline" stays answerable.
+model DeletionRequest {
+  id          String    @id @default(cuid())
+  meepleId    String
+  requestedAt DateTime  @default(now())
+  handledAt   DateTime?
+
+  meeple Meeple @relation("DeletionRequestMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@index([meepleId])
+  @@index([handledAt])
+  @@map("deletion_requests")
 }
 
 /// A player-search post. `gameTitle` is deliberately free text, not a relation to

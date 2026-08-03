@@ -9,6 +9,7 @@ import { prisma } from "@/lib/utils/prisma";
 export const MEEPLE_RELATED_MODELS = [
   "Meeple",
   "BankDataAccessLog",
+  "DeletionRequest",
   "ExplainerAttendance",
   "ExplainerGame",
   "FleaMarketItem",
@@ -77,6 +78,7 @@ export async function collectMeeplePersonalData(
 
   const [
     bankDataAccessLogs,
+    deletionRequests,
     explainerAttendances,
     explainerGames,
     fleaMarketItems,
@@ -97,6 +99,10 @@ export async function collectMeeplePersonalData(
         OR: [{ accessedByMeepleId: meepleId }, { subjectMeepleId: meepleId }],
       },
       orderBy: { at: "desc" },
+    }),
+    prisma.deletionRequest.findMany({
+      where: { meepleId },
+      orderBy: { requestedAt: "desc" },
     }),
     prisma.explainerAttendance.findMany({
       where: { meepleId },
@@ -165,6 +171,7 @@ export async function collectMeeplePersonalData(
     daten: {
       Meeple: meepleFields,
       BankDataAccessLog: bankDataAccessLogs,
+      DeletionRequest: deletionRequests,
       ExplainerAttendance: explainerAttendances,
       ExplainerGame: explainerGames,
       FleaMarketItem: fleaMarketItems,

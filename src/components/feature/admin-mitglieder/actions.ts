@@ -5,6 +5,10 @@ import { prisma } from "@/lib/utils/prisma";
 import { getMembershipState } from "@/lib/members/meeples";
 import { requirePermission } from "@/lib/auth/permissions";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import {
+  countOpenHoldings,
+  hasOpenHoldings,
+} from "@/lib/members/open-holdings";
 
 async function requireMembersManage() {
   return requirePermission("members:manage");
@@ -14,14 +18,7 @@ async function requireMembersManage() {
 export async function getOpenHoldingsSummary(meepleId: string) {
   await requireMembersManage();
 
-  const [games, units] = await Promise.all([
-    prisma.gameHolding.count({ where: { meepleId, endedAt: null } }),
-    prisma.storageUnit.count({
-      where: { keeperMeepleId: meepleId, retiredAt: null },
-    }),
-  ]);
-
-  return { games, units };
+  return countOpenHoldings(meepleId);
 }
 
 export async function recordResignation(meepleId: string, endsAt: Date) {
@@ -71,13 +68,7 @@ export async function anonymiseMeeple(meepleId: string) {
     return { error: "Nur ausgetretene Mitglieder können anonymisiert werden." };
   }
 
-  const [openGames, openUnits] = await Promise.all([
-    prisma.gameHolding.count({ where: { meepleId, endedAt: null } }),
-    prisma.storageUnit.count({
-      where: { keeperMeepleId: meepleId, retiredAt: null },
-    }),
-  ]);
-  if (openGames > 0 || openUnits > 0) {
+  if (hasOpenHoldings(await countOpenHoldings(meepleId))) {
     return {
       error:
         "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten. Erst zurückholen, dann anonymisieren.",
@@ -114,6 +105,13 @@ export async function anonymiseMeeple(meepleId: string) {
     await tx.post.updateMany({
       where: { author: previousDisplayName },
       data: { author: null },
+    });
+
+    // Anonymising *is* how a deletion request gets fulfilled, so closing it here
+    // keeps the Art.-12-Abs.-3 queue honest without a second admin click.
+    await tx.deletionRequest.updateMany({
+      where: { meepleId, handledAt: null },
+      data: { handledAt: new Date() },
     });
 
     await tx.meeple.update({

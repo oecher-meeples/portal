@@ -31,6 +31,16 @@ export type MeepleRow = {
   openUnits: number;
 };
 
+export type DeletionRequestRow = {
+  id: string;
+  meepleId: string;
+  displayName: string;
+  requestedAt: string;
+  deadlineAt: string;
+  daysRemaining: number;
+  overdue: boolean;
+};
+
 function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
 }
@@ -38,9 +48,11 @@ function germanDate(value: string | null) {
 export function AdminMitgliederView({
   meeples,
   isDecemberOrLater,
+  deletionRequests,
 }: {
   meeples: MeepleRow[];
   isDecemberOrLater: boolean;
+  deletionRequests: DeletionRequestRow[];
 }) {
   const withOpenHoldings = meeples.filter(
     (m) =>
@@ -75,6 +87,46 @@ export function AdminMitgliederView({
           hint="ausgetreten, ohne Bestand"
         />
       </div>
+
+      {deletionRequests.length > 0 && (
+        <div
+          className={cn(
+            "bg-card rounded-lg border p-5",
+            deletionRequests.some((request) => request.overdue) &&
+              "border-destructive/50",
+          )}
+        >
+          <h2 className="font-serif text-lg font-bold">
+            Löschanträge (Art. 17 DSGVO)
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Jeder Antrag muss binnen eines Monats bearbeitet sein (Art. 12 Abs.
+            3 DSGVO). Erledigt wird er durch die Anonymisierung des Mitglieds.
+          </p>
+          <ul className="mt-3 flex flex-col divide-y text-sm">
+            {deletionRequests.map((request) => (
+              <li
+                key={request.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <span>{request.displayName}</span>
+                <span
+                  className={cn(
+                    "text-muted-foreground",
+                    request.overdue && "text-destructive font-medium",
+                  )}
+                >
+                  beantragt {germanDate(request.requestedAt)} · Frist{" "}
+                  {germanDate(request.deadlineAt)} ·{" "}
+                  {request.overdue
+                    ? `${Math.abs(request.daysRemaining)} Tage überfällig`
+                    : `${request.daysRemaining} Tage verbleiben`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {withOpenHoldings.length > 0 && (
         <div

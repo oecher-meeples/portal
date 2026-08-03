@@ -13,6 +13,7 @@ import {
   collectMeeplePersonalData,
   type MeepleDataExport,
 } from "@/lib/members/data-export";
+import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
 
 export type OwnProfileInput = {
   displayName: string;
@@ -112,6 +113,40 @@ export async function exportOwnPersonalData(): Promise<
   }
 
   return { success: true, data };
+}
+
+/**
+ * Art. 17 request. Deliberately not blocked by open holdings — the right to ask
+ * exists regardless; the UI shows what still needs returning, and the admin side
+ * keeps the actual anonymisation gated on it.
+ */
+export async function requestOwnDeletion() {
+  const meeple = await requireMeeple();
+
+  if (await findOpenDeletionRequest(meeple.id)) {
+    return { error: "Für dich liegt bereits ein offener Löschantrag vor." };
+  }
+
+  await prisma.deletionRequest.create({ data: { meepleId: meeple.id } });
+
+  revalidatePath("/profil");
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function withdrawOwnDeletionRequest() {
+  const meeple = await requireMeeple();
+
+  const open = await findOpenDeletionRequest(meeple.id);
+  if (!open) {
+    return { error: "Es liegt kein offener Löschantrag vor." };
+  }
+
+  await prisma.deletionRequest.delete({ where: { id: open.id } });
+
+  revalidatePath("/profil");
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
 }
 
 /** Records the resignation; the membership itself runs until the turn of the year. */

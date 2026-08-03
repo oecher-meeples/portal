@@ -30,6 +30,7 @@ const MEEPLE = {
 /** Every findMany the export calls, so a test can point one of them at data. */
 const FIND_MANY_MOCKS = [
   "bankDataAccessLog",
+  "deletionRequest",
   "explainerAttendance",
   "explainerGame",
   "fleaMarketItem",

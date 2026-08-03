@@ -7,6 +7,8 @@ import { BankDetailsForm } from "@/components/feature/profil/bank-details-form";
 import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-form";
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
 import { DataExportPanel } from "@/components/feature/profil/data-export-panel";
+import { DeletionRequestPanel } from "@/components/feature/profil/deletion-request-panel";
+import type { OpenHoldingsSummary } from "@/lib/members/open-holdings";
 import { formatDatePlain } from "@/lib/utils/format";
 
 function initials(displayName: string) {
@@ -26,9 +28,13 @@ function germanDate(value: Date | null) {
 export function ProfilView({
   meeple,
   membershipState,
+  deletionRequestedAt,
+  openHoldings,
 }: {
   meeple: Meeple;
   membershipState: MembershipState;
+  deletionRequestedAt: Date | null;
+  openHoldings: OpenHoldingsSummary;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -123,6 +129,12 @@ export function ProfilView({
             </ul>
             <div className="mt-4 border-t pt-4">
               <DataExportPanel />
+            </div>
+            <div className="mt-4 border-t pt-4">
+              <DeletionRequestPanel
+                requestedAt={deletionRequestedAt}
+                openHoldings={openHoldings}
+              />
             </div>
           </div>
 

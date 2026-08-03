@@ -2,25 +2,34 @@ import { prisma } from "@/lib/utils/prisma";
 import { requireAdmin } from "@/lib/auth/session";
 import { getMembershipState } from "@/lib/members/meeples";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
+import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 
 export default async function AdminMitgliederPage() {
   await requireAdmin();
 
-  const [meeples, userRoles, gameHoldingCounts, storageUnitCounts] =
-    await Promise.all([
-      prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
-      prisma.userRole.findMany({ include: { role: true } }),
-      prisma.gameHolding.groupBy({
-        by: ["meepleId"],
-        where: { endedAt: null, meepleId: { not: null } },
-        _count: { _all: true },
-      }),
-      prisma.storageUnit.groupBy({
-        by: ["keeperMeepleId"],
-        where: { retiredAt: null, keeperMeepleId: { not: null } },
-        _count: { _all: true },
-      }),
-    ]);
+  const now = new Date();
+
+  const [
+    meeples,
+    userRoles,
+    gameHoldingCounts,
+    storageUnitCounts,
+    deletionRequests,
+  ] = await Promise.all([
+    prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
+    prisma.userRole.findMany({ include: { role: true } }),
+    prisma.gameHolding.groupBy({
+      by: ["meepleId"],
+      where: { endedAt: null, meepleId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.storageUnit.groupBy({
+      by: ["keeperMeepleId"],
+      where: { retiredAt: null, keeperMeepleId: { not: null } },
+      _count: { _all: true },
+    }),
+    listPendingDeletionRequests(now),
+  ]);
 
   const rolesByUserId = new Map<string, string[]>();
   for (const userRole of userRoles) {
@@ -36,11 +45,18 @@ export default async function AdminMitgliederPage() {
     storageUnitCounts.map((row) => [row.keeperMeepleId!, row._count._all]),
   );
 
-  const now = new Date();
-
   return (
     <AdminMitgliederView
       isDecemberOrLater={now.getUTCMonth() === 11}
+      deletionRequests={deletionRequests.map((request) => ({
+        id: request.id,
+        meepleId: request.meepleId,
+        displayName: request.displayName,
+        requestedAt: request.requestedAt.toISOString(),
+        deadlineAt: request.deadlineAt.toISOString(),
+        daysRemaining: request.daysRemaining,
+        overdue: request.overdue,
+      }))}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,

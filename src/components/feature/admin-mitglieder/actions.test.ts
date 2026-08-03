@@ -239,6 +239,17 @@ describe("anonymiseMeeple", () => {
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
+  it("closes the member's open deletion request in the same transaction", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeeple("meeple-1");
+
+    expect(prismaMock.deletionRequest.updateMany).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1", handledAt: null },
+      data: { handledAt: expect.any(Date) },
+    });
+  });
+
   it("clears the free-text author name on the member's posts", async () => {
     givenAnonymisableMeeple();
 
