@@ -142,6 +142,7 @@ model Meeple {
   explainerGames            ExplainerGame[]       @relation("ExplainerGameMeeple")
   explainerAttendances      ExplainerAttendance[] @relation("ExplainerAttendanceMeeple")
   fleaMarketItems           FleaMarketItem[]      @relation("FleaMarketItemSeller")
+  sparePartListingsKept     SparePartListing[]    @relation("SparePartListingKeeper")
 
   @@map("meeples")
 }
@@ -263,10 +264,31 @@ model BoardGame {
   explainerGames ExplainerGame[]
   baseGameCollections  GameCollection[] @relation("BaseGameCollections")
   expansionCollections GameCollection[] @relation("ExpansionCollections")
+  sparePartListings    SparePartListing[]
 
   @@index([bggId])
   @@index([ean])
   @@map("board_games")
+}
+
+/// A batch of spare parts kept for a game, or "Allgemeines" (`boardGameId: null`)
+/// for parts with no game reference at all. Self-service list, no sold/taken workflow.
+model SparePartListing {
+  id             String    @id @default(cuid())
+  title          String
+  boardGameId    String?
+  condition      String
+  description    String?
+  keeperMeepleId String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  boardGame BoardGame? @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
+  keeper    Meeple     @relation("SparePartListingKeeper", fields: [keeperMeepleId], references: [id], onDelete: Restrict)
+
+  @@index([boardGameId])
+  @@index([keeperMeepleId])
+  @@map("spare_part_listings")
 }
 
 /// Links an expansion to its base game(s), see #30. m:n because BGG allows a
