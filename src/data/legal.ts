@@ -49,7 +49,7 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
       id: "rechte",
       heading: "3. Betroffenenrechte",
       paragraphs: [
-        "Mitglieder können jederzeit Auskunft über die gespeicherten Daten verlangen und einen Export über den eigenen Profilbereich anfordern.",
+        "Mitglieder können jederzeit Auskunft über die zu ihrer Person gespeicherten Daten verlangen. Bitte wendet euch dazu an den Vorstand über die im Impressum genannten Kontaktdaten.",
       ],
     },
   ],
