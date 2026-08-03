@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { put } from "@vercel/blob/client";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import type { ContentType } from "@/lib/content/content";
 import {
   createPost,
@@ -50,7 +50,11 @@ export function PostForm({
   const [coverImageUrl, setCoverImageUrl] = useState(
     initialValues?.coverImageUrl ?? "",
   );
-  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const {
+    uploadFiles,
+    isUploading: isUploadingCover,
+    error: coverUploadError,
+  } = useBlobUpload("instagram-covers", getUploadToken);
   const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,18 +83,8 @@ export function PostForm({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsUploadingCover(true);
-    setError(null);
-    try {
-      const pathname = `instagram-covers/${file.name}`;
-      const token = await getUploadToken(pathname);
-      const blob = await put(pathname, file, { access: "public", token });
-      setCoverImageUrl(blob.url);
-    } catch {
-      setError("Cover-Bild konnte nicht hochgeladen werden.");
-    } finally {
-      setIsUploadingCover(false);
-    }
+    const [url] = await uploadFiles([file]);
+    if (url) setCoverImageUrl(url);
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -239,6 +233,9 @@ export function PostForm({
         />
         {isUploadingCover && (
           <p className="text-muted-foreground text-sm">Lade Bild hoch…</p>
+        )}
+        {coverUploadError && (
+          <p className="text-destructive text-sm">{coverUploadError}</p>
         )}
         {coverImageUrl && !isUploadingCover && (
           <img
