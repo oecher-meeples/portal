@@ -143,6 +143,7 @@ model Meeple {
   explainerAttendances      ExplainerAttendance[] @relation("ExplainerAttendanceMeeple")
   fleaMarketItems           FleaMarketItem[]      @relation("FleaMarketItemSeller")
   sparePartListingsKept     SparePartListing[]    @relation("SparePartListingKeeper")
+  marketListings            MarketListing[]       @relation("MarketListingSeller")
 
   @@map("meeples")
 }
@@ -289,6 +290,25 @@ model SparePartListing {
   @@index([boardGameId])
   @@index([keeperMeepleId])
   @@map("spare_part_listings")
+}
+
+/// Year-round self-service classifieds between members. No sold/taken workflow,
+/// no reservation or chat — contact happens outside the portal (see CONTEXT.md).
+model MarketListing {
+  id             String   @id @default(cuid())
+  sellerMeepleId String
+  title          String
+  description    String?
+  priceEuros     Int
+  condition      String
+  imageUrls      String[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  seller Meeple @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([sellerMeepleId])
+  @@map("market_listings")
 }
 
 /// Links an expansion to its base game(s), see #30. m:n because BGG allows a
