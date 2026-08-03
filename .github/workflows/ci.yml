@@ -49,3 +49,24 @@ jobs:
       - name: Duplikate (DRY-Hinweis, nicht blockierend)
         run: pnpm run dup
         continue-on-error: true
+
+      - name: Next-Build-Cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'prisma/**') }}
+          restore-keys: |
+            next-build-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      # Läuft nie gegen eine echte Datenbank — next build fasst keine Verbindung
+      # an, alle Routen sind dynamisch (ƒ). Die Werte müssen nur das Format
+      # erfüllen, das requireEnv()/better-auth beim Modul-Import prüfen.
+      - name: Build
+        run: pnpm run build
+        env:
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+          NEON_AUTH_BASE_URL: "https://example.neonauth.example/auth"
+          NEON_AUTH_COOKIE_SECRET: "ci-build-dummy-secret-32-characters-min"
+          MEMBER_DATA_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          CRON_SECRET: "ci-build-dummy-cron-secret"
+          PUBLIC_SITE_URL: "https://example.org"
