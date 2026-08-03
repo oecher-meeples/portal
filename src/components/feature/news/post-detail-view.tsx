@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Pencil, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils/format";
 import type { getContentBySlug } from "@/lib/content/content";
@@ -15,7 +15,12 @@ type PostDetailViewProps = {
 export function PostDetailView({ item, canEdit }: PostDetailViewProps) {
   return (
     <article className="flex max-w-3xl flex-col gap-5">
-      <PlaceholderMedia label="TITELBILD" className="aspect-[21/9]" />
+      <CoverMedia
+        imageUrl={item.coverImageUrl}
+        alt={item.title}
+        label="TITELBILD"
+        aspect="aspect-[21/9]"
+      />
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <ContentTypeBadge type={item.type} />

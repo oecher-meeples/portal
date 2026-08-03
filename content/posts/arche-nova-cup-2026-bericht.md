@@ -5,6 +5,7 @@ excerpt: Zwölf Teilnehmende, drei Runden, ein Sieger. Wir blicken zurück auf e
 date: "2026-07-24"
 author: Lea Meier
 instagram: true
+coverImageUrl: "https://picsum.photos/seed/oecher-meeples-arche-nova-cup/1200/630"
 ---
 
 Am vergangenen Samstag traten zwölf Meeples in drei Runden gegeneinander an, um die Arche-Nova-Krone des Jahres zu erringen.

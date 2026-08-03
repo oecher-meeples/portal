@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { Pencil } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
@@ -24,7 +24,9 @@ export function ContentListRow({
         <span className="sr-only">{item.title} lesen</span>
       </Link>
       <div className="relative w-28 shrink-0 sm:w-36">
-        <PlaceholderMedia
+        <CoverMedia
+          imageUrl={item.coverImageUrl}
+          alt={item.title}
           label="BILD"
           aspect="aspect-square"
           className="pointer-events-none"

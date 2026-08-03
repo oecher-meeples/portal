@@ -22,6 +22,7 @@ function loadMockPost(filename: string) {
     location: (data.location as string) ?? null,
     internal: (data.internal as boolean) ?? null,
     instagram: (data.instagram as boolean) ?? null,
+    coverImageUrl: (data.coverImageUrl as string) ?? null,
   };
 }
 

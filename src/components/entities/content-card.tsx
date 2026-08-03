@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { Share2 } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { formatDate } from "@/lib/utils/format";
 
@@ -11,7 +11,7 @@ export function ContentCard({ item }: { item: ContentItem }) {
       href={`/news/${item.slug}`}
       className="group bg-card hover:border-primary/60 flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
-      <PlaceholderMedia label="BILD" />
+      <CoverMedia imageUrl={item.coverImageUrl} alt={item.title} label="BILD" />
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-center gap-2">
           <ContentTypeBadge type={item.type} />
