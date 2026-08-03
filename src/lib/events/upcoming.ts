@@ -20,6 +20,27 @@ export function findUpcomingEvents<
 }
 
 /**
+ * True only while an event is actually happening — started, not yet ended.
+ * Stricter than `UPCOMING_EVENT_WHERE`, which also matches events that
+ * haven't started yet. Used to gate unauthenticated guest-area actions,
+ * where a caller could otherwise pass any `eventId` and pull data for an
+ * event that isn't currently open to guests (see ADR 0005).
+ */
+export async function isEventCurrentlyRunning(
+  eventId: string,
+): Promise<boolean> {
+  const event = await prisma.event.findFirst({
+    where: {
+      id: eventId,
+      startsAt: { lte: new Date() },
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    select: { id: true },
+  });
+  return event !== null;
+}
+
+/**
  * Picks the event the user asked for, falling back to the next upcoming one.
  * Returns null when there is no event at all.
  */

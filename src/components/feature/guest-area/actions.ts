@@ -6,6 +6,7 @@ import {
   getAttendingExplainers,
   isGameInEventRoom,
 } from "@/lib/events/guest-area";
+import { isEventCurrentlyRunning } from "@/lib/events/upcoming";
 
 export type GuestGameMatch = {
   id: string;
@@ -63,6 +64,8 @@ export async function getGuestGameDetail(
   eventId: string,
   boardGameId: string,
 ): Promise<GuestGameDetail | null> {
+  if (!(await isEventCurrentlyRunning(eventId))) return null;
+
   const game = await prisma.boardGame.findUnique({
     where: { id: boardGameId },
   });

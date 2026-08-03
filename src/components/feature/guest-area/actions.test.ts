@@ -16,6 +16,12 @@ vi.mock("@/lib/events/guest-area", () => ({
     getAttendingExplainersMock(...args),
 }));
 
+const isEventCurrentlyRunningMock = vi.fn();
+vi.mock("@/lib/events/upcoming", () => ({
+  isEventCurrentlyRunning: (...args: unknown[]) =>
+    isEventCurrentlyRunningMock(...args),
+}));
+
 const { lookupGuestGame, getGuestGameDetail } = await import("./actions");
 
 describe("lookupGuestGame", () => {
@@ -59,8 +65,16 @@ describe("lookupGuestGame", () => {
 
 describe("getGuestGameDetail", () => {
   beforeEach(() => {
+    isEventCurrentlyRunningMock.mockResolvedValue(true);
     isGameInEventRoomMock.mockResolvedValue(true);
     getAttendingExplainersMock.mockResolvedValue([]);
+  });
+
+  it("returns null for an event that isn't currently running", async () => {
+    isEventCurrentlyRunningMock.mockResolvedValue(false);
+
+    expect(await getGuestGameDetail("event-past", "game-1")).toBeNull();
+    expect(prismaMock.boardGame.findUnique).not.toHaveBeenCalled();
   });
 
   it("returns null for an unknown game", async () => {
