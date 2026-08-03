@@ -73,6 +73,25 @@ enum FleaMarketItemStatus {
   SOLD
 }
 
+enum NewsletterCategory {
+  TERMINE
+  NEWS
+  TURNIERE
+  BERICHTE
+}
+
+enum NewsletterSubscriberStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum NewsletterDispatchStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -134,23 +153,24 @@ model Meeple {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  bankDataAccessesMade      BankDataAccessLog[] @relation("BankDataAccessActor")
-  bankDataAccessesReceived  BankDataAccessLog[] @relation("BankDataAccessSubject")
-  keptUnits                 StorageUnit[]       @relation("StorageUnitKeeper")
-  recordedUnitMoves         StorageUnitMove[]   @relation("StorageUnitMoveRecorder")
-  movedUnitsAsKeeper        StorageUnitMove[]   @relation("StorageUnitMoveKeeper")
-  holdings                  GameHolding[]       @relation("GameHoldingMeeple")
-  recordedHoldings          GameHolding[]       @relation("GameHoldingRecorder")
-  lfgPosts                  LfgPost[]           @relation("LfgPostCreator")
-  lfgParticipations         LfgParticipant[]
-  shiftBookings             ShiftBooking[]      @relation("ShiftBookingMeeple")
-  explainerGames            ExplainerGame[]       @relation("ExplainerGameMeeple")
-  explainerAttendances      ExplainerAttendance[] @relation("ExplainerAttendanceMeeple")
-  fleaMarketItems           FleaMarketItem[]      @relation("FleaMarketItemSeller")
-  sparePartListingsKept     SparePartListing[]    @relation("SparePartListingKeeper")
-  marketListings            MarketListing[]       @relation("MarketListingSeller")
-  privateGameCollection     PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
-  deletionRequests          DeletionRequest[]     @relation("DeletionRequestMeeple")
+  bankDataAccessesMade     BankDataAccessLog[]          @relation("BankDataAccessActor")
+  bankDataAccessesReceived BankDataAccessLog[]          @relation("BankDataAccessSubject")
+  keptUnits                StorageUnit[]                @relation("StorageUnitKeeper")
+  recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
+  movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
+  holdings                 GameHolding[]                @relation("GameHoldingMeeple")
+  recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
+  lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
+  lfgParticipations        LfgParticipant[]
+  shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
+  explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
+  explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
+  fleaMarketItems          FleaMarketItem[]             @relation("FleaMarketItemSeller")
+  sparePartListingsKept    SparePartListing[]           @relation("SparePartListingKeeper")
+  marketListings           MarketListing[]              @relation("MarketListingSeller")
+  privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
+  deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
+  newsletterSubscription   NewsletterSubscriber?
 
   @@map("meeples")
 }
@@ -241,8 +261,57 @@ model Post {
   instagramAttempts  Int              @default(0)
   instagramLastError String?
 
+  sendAsNewsletter    Boolean                   @default(false)
+  newsletterCategory  NewsletterCategory?
+  newsletterStatus    NewsletterDispatchStatus?
+  newsletterAttempts  Int                       @default(0)
+  newsletterLastError String?
+  newsletterSentAt    DateTime?
+
+  dispatchJobs NewsletterDispatchJob[]
+
   @@index([type, internal, date])
   @@map("posts")
+}
+
+/// A single opt-in list combining two sources: anonymous public sign-ups (need
+/// double opt-in) and Meeples toggling it on their profile (already
+/// authenticated, no double opt-in needed) — see docs/adr for the newsletter feature.
+model NewsletterSubscriber {
+  id                 String                     @id @default(cuid())
+  email              String                     @unique
+  meepleId           String?                    @unique
+  categories         NewsletterCategory[]
+  status             NewsletterSubscriberStatus @default(PENDING)
+  manageToken        String                     @unique
+  confirmationSentAt DateTime?
+  confirmedAt        DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  meeple       Meeple?                 @relation(fields: [meepleId], references: [id], onDelete: SetNull)
+  dispatchJobs NewsletterDispatchJob[]
+
+  @@map("newsletter_subscribers")
+}
+
+/// Queue table for newsletter sending, processed by the same cron endpoint as
+/// the Instagram queue (Vercel Hobby only allows one cron job).
+model NewsletterDispatchJob {
+  id           String                   @id @default(cuid())
+  postId       String
+  subscriberId String
+  status       NewsletterDispatchStatus @default(PENDING)
+  attempts     Int                      @default(0)
+  lastError    String?
+  sentAt       DateTime?
+  createdAt    DateTime                 @default(now())
+
+  post       Post                 @relation(fields: [postId], references: [id], onDelete: Cascade)
+  subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, subscriberId])
+  @@map("newsletter_dispatch_jobs")
 }
 
 model Invite {
@@ -256,41 +325,41 @@ model Invite {
 }
 
 model BoardGame {
-  id              String              @id @default(cuid())
-  slug            String              @unique
-  title           String
+  id                     String              @id @default(cuid())
+  slug                   String              @unique
+  title                  String
   /// Indexed, deliberately NOT unique — duplicates of a title are allowed (ADR 0001).
-  bggId           Int?
+  bggId                  Int?
   /// The manufacturer barcode identifies the product, not the single game — never unique.
-  ean             String?
-  minPlayers      Int?
-  maxPlayers      Int?
-  playTimeMinutes Int?
-  weight          Float?
-  imageUrl        String?
-  description     String?
-  mechanics       String[]
+  ean                    String?
+  minPlayers             Int?
+  maxPlayers             Int?
+  playTimeMinutes        Int?
+  weight                 Float?
+  imageUrl               String?
+  description            String?
+  mechanics              String[]
   /// Removed together with `location` in step 14, once the holding migration has run.
-  quantity        Int                 @default(1)
-  location        String?
+  quantity               Int                 @default(1)
+  location               String?
   /// The single condition note — a defect is recorded here, not in a second field.
-  condition       String?
-  needsCompletenessCheck Boolean      @default(false)
-  lastCheckedAt   DateTime?
-  status          GameInventoryStatus @default(ACTIVE)
-  archivedAt      DateTime?
-  archivedReason  String?
+  condition              String?
+  needsCompletenessCheck Boolean             @default(false)
+  lastCheckedAt          DateTime?
+  status                 GameInventoryStatus @default(ACTIVE)
+  archivedAt             DateTime?
+  archivedReason         String?
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
-  explainerVideoUrl String?
+  explainerVideoUrl      String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
-  kind            BoardGameKind       @default(BOARDGAME)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  kind                   BoardGameKind       @default(BOARDGAME)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
-  holdings GameHolding[]
-  explainerGames ExplainerGame[]
-  baseGameCollections  GameCollection[] @relation("BaseGameCollections")
-  expansionCollections GameCollection[] @relation("ExpansionCollections")
+  holdings             GameHolding[]
+  explainerGames       ExplainerGame[]
+  baseGameCollections  GameCollection[]   @relation("BaseGameCollections")
+  expansionCollections GameCollection[]   @relation("ExpansionCollections")
   sparePartListings    SparePartListing[]
 
   @@index([bggId])
@@ -302,14 +371,14 @@ model BoardGame {
 /// A batch of spare parts kept for a game, or "Allgemeines" (`boardGameId: null`)
 /// for parts with no game reference at all. Self-service list, no sold/taken workflow.
 model SparePartListing {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   title          String
   boardGameId    String?
   condition      String
   description    String?
   keeperMeepleId String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   boardGame BoardGame? @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
   keeper    Meeple     @relation("SparePartListingKeeper", fields: [keeperMeepleId], references: [id], onDelete: Restrict)
@@ -386,11 +455,11 @@ model StorageUnit {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  parentUnit StorageUnit?      @relation("StorageUnitTree", fields: [parentUnitId], references: [id], onDelete: SetNull)
-  childUnits StorageUnit[]     @relation("StorageUnitTree")
-  keeper     Meeple?           @relation("StorageUnitKeeper", fields: [keeperMeepleId], references: [id], onDelete: SetNull)
-  moves      StorageUnitMove[]
-  holdings   GameHolding[]
+  parentUnit            StorageUnit?           @relation("StorageUnitTree", fields: [parentUnitId], references: [id], onDelete: SetNull)
+  childUnits            StorageUnit[]          @relation("StorageUnitTree")
+  keeper                Meeple?                @relation("StorageUnitKeeper", fields: [keeperMeepleId], references: [id], onDelete: SetNull)
+  moves                 StorageUnitMove[]
+  holdings              GameHolding[]
   eventShelfAssignments EventShelfAssignment[]
 
   @@index([parentUnitId])
@@ -456,10 +525,10 @@ model Event {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  shifts          Shift[]
-  shelfAssignments EventShelfAssignment[]
+  shifts               Shift[]
+  shelfAssignments     EventShelfAssignment[]
   explainerAttendances ExplainerAttendance[]
-  fleaMarketItems FleaMarketItem[]
+  fleaMarketItems      FleaMarketItem[]
 
   @@map("events")
 }
@@ -544,18 +613,18 @@ model ExplainerAttendance {
 /// A member's item for an event's Bring & Buy flea market. Starts PENDING and only
 /// appears in the guest area once approved (see CONTEXT.md "Flohmarkt-Artikel").
 model FleaMarketItem {
-  id                  String               @id @default(cuid())
-  code                String               @unique
-  eventId             String
-  sellerMeepleId      String
-  title               String
-  description         String?
-  priceEuros          Int
-  status              FleaMarketItemStatus @default(PENDING)
-  approvedAt          DateTime?
-  approvedByMeepleId  String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  id                 String               @id @default(cuid())
+  code               String               @unique
+  eventId            String
+  sellerMeepleId     String
+  title              String
+  description        String?
+  priceEuros         Int
+  status             FleaMarketItemStatus @default(PENDING)
+  approvedAt         DateTime?
+  approvedByMeepleId String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   seller Meeple @relation("FleaMarketItemSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)

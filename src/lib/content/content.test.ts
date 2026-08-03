@@ -31,6 +31,12 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     instagramPostUrl: null,
     instagramAttempts: 0,
     instagramLastError: null,
+    sendAsNewsletter: false,
+    newsletterCategory: null,
+    newsletterStatus: null,
+    newsletterAttempts: 0,
+    newsletterLastError: null,
+    newsletterSentAt: null,
     ...overrides,
   };
 }
