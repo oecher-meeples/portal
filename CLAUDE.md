@@ -63,7 +63,7 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 
 ## Vor dem Push
 
-`pnpm run verify` (= typecheck + lint + test) — läuft auch als `pre-push`-Hook und in der CI.
+`pnpm run verify` (= format:check + typecheck + lint + test) — läuft auch als `pre-push`-Hook und in der CI. `next build` und Test-Coverage laufen bewusst nur in der CI, nicht im Hook.
 `pnpm run test` schließt `*.live.test.ts` aus (echte Fremd-APIs); die laufen nur via `pnpm run test:live`.
 
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.

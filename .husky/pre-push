@@ -1,4 +1,6 @@
 # Architektur- und Qualitätsregeln aus docs/project-structure.md.
 # Läuft vor dem Push, damit die CI nicht die erste Instanz ist, die es merkt.
 # Mit --no-verify überspringbar — dann prüft die CI.
+# `next build` und Coverage laufen bewusst NICHT hier (nur in der CI) —
+# der Hook soll schnell bleiben, damit er nicht per --no-verify umgangen wird.
 npm run verify
