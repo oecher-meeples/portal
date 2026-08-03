@@ -72,7 +72,8 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
         "Mitglieder haben nach der DSGVO das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21) hinsichtlich ihrer personenbezogenen Daten.",
         "Eine erteilte Einwilligung kann jederzeit mit Wirkung für die Zukunft widerrufen werden (Art. 7 Abs. 3 DSGVO).",
         "Mitglieder haben zudem das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren (Art. 13 Abs. 2 lit. d DSGVO).",
-        "Für alle diese Anliegen wendet euch bitte an den Vorstand über die im Impressum genannten Kontaktdaten.",
+        "Für Auskunft und Datenübertragbarkeit gibt es einen Self-Service: eingeloggte Mitglieder können sich im eigenen Profilbereich unter „Datenschutz“ alle zu ihnen gespeicherten Daten als JSON-Datei herunterladen. Die vollständige IBAN ist darin bewusst nicht enthalten, sondern nur deren letzte vier Stellen — eine unverschlüsselte Exportdatei mit vollständiger IBAN wäre ein neues Datenschutzproblem; für die vollständige Bankverbindung wendet euch an den Kassenwart.",
+        "Für alle übrigen Anliegen wendet euch bitte an den Vorstand über die im Impressum genannten Kontaktdaten.",
       ],
     },
     {
