@@ -122,14 +122,15 @@
 - Eigener Abschnitt "Ich bin heute als Erklärbär da": Anwesenheits-Toggle für das ausgewählte Event, sichtbar für Meeples mit mindestens einem Erklärbär-Profileintrag — kein Schicht-Slot, siehe 2.10
 
 ### 2.12 Ersatzteillager
-- Grid "Ausschlacht"-Spiele/Teile (inkl. Dummy-Eintrag "Allgemeines"), Zustand, Kurzbeschreibung
-- Kontakt-/Abhol-Hinweis
+- Grid "Ausschlacht"-Spiele/Teile (`boardGameId: null` = "Allgemeines", kein Dummy-`BoardGame`-Datensatz), Zustand, Kurzbeschreibung
+- Abhol-Hinweis (Verwahrer-Anzeigename)
+- Anlage eigenständig oder per Checkbox aus der Deinventarisierung, Verwaltung durch `games:manage`
 
 ### 2.13 Kleinanzeigen-Marktplatz
 - Grid Verkaufsartikel: Bild(er), Titel, Zustand, Preis, Verkäufer
-- Filter (Preis, Zustand, Spiel)
+- Filter (Preis, Zustand)
 - Detailseite mit Bildergalerie, Beschreibung, Direktkontakt-Button (Mail/Telegram)
-- CTA "Artikel inserieren" → Formular (Bilder-Upload, Titel, Zustand, Preis, Beschreibung)
+- CTA "Anzeige inserieren" → Formular (Bilder-Upload, Titel, Zustand, Preis, Beschreibung), eigene Anzeigen bearbeitbar/löschbar
 
 ---
 

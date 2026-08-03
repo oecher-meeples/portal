@@ -39,7 +39,7 @@ src/lib/
 ├── bringbuy/   Flohmarkt-Regeln
 ├── content/    News/Content, LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
-├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln
+├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
 ├── ludothek/   Spielebestand & Aufenthalte (Holdings):
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben)
 │               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
@@ -47,10 +47,13 @@ src/lib/
 │               ├── board-games.ts      Server Actions: anlegen/bearbeiten/deinventarisieren, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (Holdings + GameCollection, kein N+1)
-│               └── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])
-├── members/    Mitglieder, Mitgliedsstatus
+│               ├── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])
+│               └── private-collection.ts  Crowdsourced-Suche über `PrivateGameCollectionEntry` — nie im öffentlichen Pfad (`toPublicGame`)
+├── markt/      Kleinanzeigen-Marktplatz: Anzeigen-Form, Preis-/Zustand-Filter über `searchParams`
+├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
+├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`)
 ├── instagram/  Cross-Posting
-└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client
+└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook), `search-params.ts`
 ```
 
 Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.

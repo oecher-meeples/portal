@@ -46,6 +46,8 @@ Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst �
 | `formatDateTime/​Medium/​Plain/​TimeRange` (`lib/utils/format.ts`)                        | eigener `new Intl.DateTimeFormat(…)`                            |
 | `findUpcomingEvents()` / `resolveSelectedEventId()` (`lib/events/upcoming.ts`)            | eigener „kommende Events"-Query                                 |
 | `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                         |
+| `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                    | eigenem `@vercel/blob/client`-Upload-State pro Formular          |
+| `getContactLinks(meeple)` (`lib/members/contact.ts`)                                      | eigenem Mail-/Telegram-Link-Aufbau                              |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 

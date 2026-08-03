@@ -134,15 +134,15 @@ Bewusst zurückgestellt bzw. nicht Teil von Phase 5 (siehe `.claude/plans/phase-
 ## 🚀 Phase 7: Nice-to-Haves, Community-Marktplatz & Feinschliff
 *Ziel: Komfort-Features, Community-Schnittstellen, Ersatzteillager, fortlaufende Kleinanzeigen und Statistiken.*
 
-* **[ ] Meilenstein 7.1: Konzeption Marktplatz & Ersatzteillager**
-    * [ ] **Konzept Ersatzteillager:** Definition der Datenbankstruktur für freigegebene Ersatzteil-Spiele. Wie mappen wir Teile ohne festes Spiel (Zuweisung zu einer Dummy-Spiele-ID für "Allgemeines")?
-    * [ ] **Konzept Interner Flohmarkt (Kleinanzeigen):** Datenmodellierung für ganzjährigen C2C-Handel (Bilder-Array, Freitext, Preis, Verknüpfung zum Verkäuferprofil für Direktkontakt via Telegram/Mail).
-* **[ ] Meilenstein 7.2: Ersatzteillager & Kleinanzeigen (Umsetzung)**
-    * [ ] **Das „Ausschlacht“-Lager:** Ansicht für Mitglieder, welche kaputten/gespendeten Spiele oder Allgemeinteile ("Allgemeines") aktuell zum Ausschlachten im Vereinsheim bereitliegen.
-    * [ ] **Interner Flohmarkt (Kleinanzeigen):** Erstellung des digitalen schwarzen Bretts. Mitglieder können unkompliziert Spiele mit Bild, Preis und Text inserieren und Käufer sehen die bevorzugte Kontaktmethode.
-* **[ ] Meilenstein 7.3: Erweiterte Community-Profile & Synchronisation**
-    * [ ] Felder für externe Kontaktdaten im Profil (Board Game Arena, BGG, Telegram, Signal, Discord).
-    * [ ] Optionale BGG-Sammlungs-Synchronisation für Mitglieder.
-* **[ ] Meilenstein 7.4: Erweiterte Suche & Auswertung**
-    * [ ] Crowdsourced Ludothek: Bei der Spielsuche optional auch Spiele anzeigen, die sich im Privatbesitz von Mitgliedern befinden und mitgebracht werden könnten.
-    * [ ] Statistiken-Dashboard: Anonymisierte Auswertungen über die beliebtesten Spiele und aktivsten Verleihtage.
+* **[x] Meilenstein 7.1: Konzeption Marktplatz & Ersatzteillager**
+    * [x] **Konzept Ersatzteillager:** `SparePartListing.boardGameId` ist nullable — `null` **ist** "Allgemeines", kein Dummy-`BoardGame`-Datensatz (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`).
+    * [x] **Konzept Interner Flohmarkt (Kleinanzeigen):** `MarketListing` mit `imageUrls String[]`, Freitext, Preis, `sellerMeepleId`; Direktkontakt via `getContactLinks()` (Mail/Telegram).
+* **[x] Meilenstein 7.2: Ersatzteillager & Kleinanzeigen (Umsetzung)**
+    * [x] **Das „Ausschlacht“-Lager:** `/markt`-Tab „Ersatzteillager", befüllt aus der Deinventarisierung (Checkbox „Teile ins Ersatzteillager aufnehmen") oder eigenständig durch `games:manage`.
+    * [x] **Interner Flohmarkt (Kleinanzeigen):** Self-Service-Formular „Anzeige inserieren" (Titel, Zustand, Preis, Beschreibung, Bilder-Upload), eigene Anzeigen bearbeitbar/löschbar.
+* **[~] Meilenstein 7.3: Erweiterte Community-Profile & Synchronisation**
+    * [x] Felder für externe Kontaktdaten im Profil (Telegram, Signal, Discord — BGA/BGG-Felder gab es bereits).
+    * [ ] Optionale BGG-Sammlungs-Synchronisation für Mitglieder — mangels erreichbarer BGG-API aus dieser Umgebung (401/403, siehe #12) übersprungen und durch Seed-Demo-Daten für zwei Mitglieder ersetzt (analog dem Instagram-Inaktivitäts-Hinweis in Phase 3); echter Sync bleibt eine spätere Ergänzung.
+* **[x] Meilenstein 7.4: Erweiterte Suche & Auswertung**
+    * [x] Crowdsourced Ludothek: Toggle „Auch Privatbesitz anzeigen" (Default aus, nur intern) zeigt Privatbesitz-Treffer aus `PrivateGameCollectionEntry` mit Besitzer-Hinweis; nie in der öffentlichen Projektion.
+    * [x] Statistiken-Dashboard: `/statistiken` mit „Beliebteste Spiele" und „Aktivste Ausleihtage", ausschließlich anonymisierte Zählwerte.

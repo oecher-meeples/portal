@@ -365,4 +365,7 @@ erDiagram
 | `flea_market_items` | ✅ migriert |
 | `board_games.explainerVideoUrl` | ✅ migriert |
 | Permission `events:manage` | ✅ migriert |
-| Ersatzteillager-Ansicht für deinventarisierte Spiele, Kleinanzeigen | 📋 Phase 7 |
+| `meeples.telegramHandle`/`signalHandle`/`discordHandle` | ✅ migriert |
+| `spare_part_listings` | ✅ migriert |
+| `market_listings` | ✅ migriert |
+| `private_game_collection_entries` | ✅ migriert (Seed-Daten, kein echter BGG-Sync — siehe `docs/roadmap.md` 7.3) |
