@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
+import { useAction } from "@/components/ui/use-action";
 import {
   addExplainerGame,
   removeExplainerGame,
@@ -35,13 +35,19 @@ export function MyExplainerGames({
   myGames: MyExplainerGame[];
   availableGames: SelectableGame[];
 }) {
-  const router = useRouter();
   const [filter, setFilter] = useState("");
   const [selectedGameId, setSelectedGameId] = useState("");
   const [newLevel, setNewLevel] =
     useState<ExplainerExperienceLevel>("WITH_MANUAL");
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const addAction = useAction({
+    onSuccess: () => {
+      setSelectedGameId("");
+      setFilter("");
+    },
+  });
+  const levelAction = useAction();
+  const removeAction = useAction();
+  const error = addAction.error ?? levelAction.error ?? removeAction.error;
 
   const ownGameIds = useMemo(
     () => new Set(myGames.map((game) => game.boardGameId)),
@@ -55,41 +61,20 @@ export function MyExplainerGames({
       .filter((game) => !query || game.title.toLowerCase().includes(query));
   }, [availableGames, ownGameIds, filter]);
 
-  async function handleAdd() {
+  function handleAdd() {
     if (!selectedGameId) return;
-    setIsSubmitting(true);
-    setError(null);
-
-    const result = await addExplainerGame(selectedGameId, newLevel);
-    setIsSubmitting(false);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-
-    setSelectedGameId("");
-    setFilter("");
-    router.refresh();
+    addAction.run(() => addExplainerGame(selectedGameId, newLevel));
   }
 
-  async function handleLevelChange(
+  function handleLevelChange(
     boardGameId: string,
     level: ExplainerExperienceLevel,
   ) {
-    setError(null);
-    const result = await updateExplainerGameLevel(boardGameId, level);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    router.refresh();
+    levelAction.run(() => updateExplainerGameLevel(boardGameId, level));
   }
 
-  async function handleRemove(boardGameId: string) {
-    setError(null);
-    await removeExplainerGame(boardGameId);
-    router.refresh();
+  function handleRemove(boardGameId: string) {
+    removeAction.run(() => removeExplainerGame(boardGameId));
   }
 
   return (
@@ -130,10 +115,10 @@ export function MyExplainerGames({
         {error && <p className="text-destructive text-sm">{error}</p>}
         <Button
           onClick={handleAdd}
-          disabled={!selectedGameId || isSubmitting}
+          disabled={!selectedGameId || addAction.pending}
           className="w-fit"
         >
-          {isSubmitting ? "Speichere…" : "Hinzufügen"}
+          {addAction.pending ? "Speichere…" : "Hinzufügen"}
         </Button>
       </div>
 

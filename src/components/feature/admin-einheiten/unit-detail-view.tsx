@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
+import { useAction } from "@/components/ui/use-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,40 +64,25 @@ export function UnitDetailView({
   selfMeepleId: string;
   keeperOptions: KeeperOption[];
 }) {
-  const router = useRouter();
   const [label, setLabel] = useState(unit.label);
   const [locationNote, setLocationNote] = useState(unit.locationNote ?? "");
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const save = useAction({ refresh: false });
+  const retire = useAction();
 
-  async function handleSave() {
-    setIsSaving(true);
-    setError(null);
-    const result = await updateStorageUnit(unit.id, {
-      label,
-      locationNote: locationNote || undefined,
-    });
-    setIsSaving(false);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    router.refresh();
+  function handleSave() {
+    save.run(() =>
+      updateStorageUnit(unit.id, {
+        label,
+        locationNote: locationNote || undefined,
+      }),
+    );
   }
 
-  async function handleRetire() {
-    setIsSaving(true);
-    setError(null);
-    const result = await retireStorageUnit(unit.id);
-    setIsSaving(false);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    router.refresh();
+  function handleRetire() {
+    retire.run(() => retireStorageUnit(unit.id));
   }
+
+  const error = save.error ?? retire.error;
 
   return (
     <div className="flex flex-col gap-6">
@@ -146,14 +131,17 @@ export function UnitDetailView({
           {error && <p className="text-destructive text-sm">{error}</p>}
           {isAdmin && (
             <div className="flex gap-2">
-              <Button onClick={handleSave} disabled={isSaving || unit.retired}>
-                {isSaving ? "Speichere…" : "Speichern"}
+              <Button
+                onClick={handleSave}
+                disabled={save.pending || unit.retired}
+              >
+                {save.pending ? "Speichere…" : "Speichern"}
               </Button>
               {!unit.retired && (
                 <Button
                   variant="outline"
                   onClick={handleRetire}
-                  disabled={isSaving}
+                  disabled={retire.pending}
                 >
                   Stilllegen
                 </Button>

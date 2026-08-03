@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScanLine } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FleaMarketStatusPill } from "@/components/entities/flea-market-status-pill";
+import { useAction } from "@/components/ui/use-action";
 import type { FleaMarketStats } from "@/lib/bringbuy/stats";
 import {
   approveFleaMarketItem,
@@ -49,24 +50,11 @@ export function AdminBringBuyView({
   items: CashierItem[];
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   function selectEvent(eventId: string) {
     router.push(`/admin/bringbuy?event=${eventId}`);
-  }
-
-  function runAction(action: () => Promise<{ error?: string }>) {
-    startTransition(async () => {
-      setMessage(null);
-      const result = await action();
-      if (result.error) {
-        setMessage(result.error);
-        return;
-      }
-      router.refresh();
-    });
   }
 
   async function handleCodeSearch() {
@@ -124,72 +112,7 @@ export function AdminBringBuyView({
             </TableHeader>
             <TableBody>
               {items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-mono text-sm">
-                    {item.code}
-                  </TableCell>
-                  <TableCell className="font-medium">{item.title}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.sellerName}
-                  </TableCell>
-                  <TableCell>{item.priceEuros} €</TableCell>
-                  <TableCell>
-                    <FleaMarketStatusPill status={item.status} />
-                  </TableCell>
-                  <TableCell className="flex justify-end gap-1.5 text-right">
-                    {item.status === "PENDING" && (
-                      <Button
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() =>
-                          runAction(() => approveFleaMarketItem(item.id))
-                        }
-                      >
-                        Freigeben
-                      </Button>
-                    )}
-                    {item.status === "FOR_SALE" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={isPending}
-                          onClick={() =>
-                            runAction(() =>
-                              setFleaMarketItemStatus(item.id, "RESERVED"),
-                            )
-                          }
-                        >
-                          Reservieren
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() =>
-                            runAction(() =>
-                              setFleaMarketItemStatus(item.id, "SOLD"),
-                            )
-                          }
-                        >
-                          Verkauft
-                        </Button>
-                      </>
-                    )}
-                    {item.status === "RESERVED" && (
-                      <Button
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() =>
-                          runAction(() =>
-                            setFleaMarketItemStatus(item.id, "SOLD"),
-                          )
-                        }
-                      >
-                        Verkauft
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
+                <CashierItemRow key={item.id} item={item} />
               ))}
             </TableBody>
           </Table>
@@ -217,5 +140,72 @@ export function AdminBringBuyView({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Owns its own action state so a pending mutation only disables its own row, not the whole table. */
+function CashierItemRow({ item }: { item: CashierItem }) {
+  const action = useAction();
+
+  return (
+    <TableRow>
+      <TableCell className="font-mono text-sm">{item.code}</TableCell>
+      <TableCell className="font-medium">{item.title}</TableCell>
+      <TableCell className="text-muted-foreground">{item.sellerName}</TableCell>
+      <TableCell>{item.priceEuros} €</TableCell>
+      <TableCell>
+        <FleaMarketStatusPill status={item.status} />
+      </TableCell>
+      <TableCell className="flex justify-end gap-1.5 text-right">
+        {item.status === "PENDING" && (
+          <Button
+            size="sm"
+            disabled={action.pending}
+            onClick={() => action.run(() => approveFleaMarketItem(item.id))}
+          >
+            Freigeben
+          </Button>
+        )}
+        {item.status === "FOR_SALE" && (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={action.pending}
+              onClick={() =>
+                action.run(() => setFleaMarketItemStatus(item.id, "RESERVED"))
+              }
+            >
+              Reservieren
+            </Button>
+            <Button
+              size="sm"
+              disabled={action.pending}
+              onClick={() =>
+                action.run(() => setFleaMarketItemStatus(item.id, "SOLD"))
+              }
+            >
+              Verkauft
+            </Button>
+          </>
+        )}
+        {item.status === "RESERVED" && (
+          <Button
+            size="sm"
+            disabled={action.pending}
+            onClick={() =>
+              action.run(() => setFleaMarketItemStatus(item.id, "SOLD"))
+            }
+          >
+            Verkauft
+          </Button>
+        )}
+        {action.error && (
+          <p className="text-destructive basis-full text-right text-xs">
+            {action.error}
+          </p>
+        )}
+      </TableCell>
+    </TableRow>
   );
 }

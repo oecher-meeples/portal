@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { PillToggle } from "@/components/ui/pill-toggle";
+import { useAction } from "@/components/ui/use-action";
 import { setPreviewTier } from "@/components/feature/admin-preview-tier/actions";
 import type { Tier } from "@/lib/utils/nav-config";
 
@@ -13,21 +13,17 @@ const OPTIONS: { label: string; value: Tier }[] = [
 ];
 
 export function PreviewTierSwitcher({ tier }: { tier: Tier }) {
-  const router = useRouter();
   const [value, setValue] = useState(tier);
-  const [isPending, startTransition] = useTransition();
+  const { run, pending } = useAction();
 
   function handleChange(next: Tier) {
     setValue(next);
-    startTransition(async () => {
-      await setPreviewTier(next);
-      router.refresh();
-    });
+    run(() => setPreviewTier(next));
   }
 
   return (
     <div
-      className={`hidden items-center gap-2 md:flex ${isPending ? "opacity-60" : ""}`}
+      className={`hidden items-center gap-2 md:flex ${pending ? "opacity-60" : ""}`}
     >
       <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
         Ansicht
