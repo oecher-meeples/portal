@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { MarketListing } from "@/data/market";
 import type { SparePartListingView } from "@/lib/inventory/spare-parts";
 import { SparePartListingCard } from "@/components/feature/markt/spare-part-listing-view";
+import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 
 const TABS = [
   { label: "Kleinanzeigen", value: "kleinanzeigen" },
@@ -26,7 +27,10 @@ export function MarktBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      <PillToggle options={[...TABS]} value={tab} onChange={setTab} />
+      <div className="flex items-center justify-between gap-3">
+        <PillToggle options={[...TABS]} value={tab} onChange={setTab} />
+        {tab === "kleinanzeigen" && <CreateMarketListingDialog />}
+      </div>
 
       {tab === "kleinanzeigen" ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
