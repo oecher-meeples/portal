@@ -123,6 +123,9 @@ model Meeple {
   accountHolder    String?
   bggUsername      String?
   bgaUsername      String?
+  telegramHandle   String?
+  signalHandle     String?
+  discordHandle    String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
