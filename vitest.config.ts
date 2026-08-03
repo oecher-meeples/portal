@@ -9,6 +9,20 @@ export default defineConfig({
     // *.live.test.ts hits real third-party APIs and needs credentials — it is
     // not part of the deterministic suite. Run it explicitly: `npm run test:live`.
     exclude: ["**/node_modules/**", "**/dist/**", "**/*.live.test.ts"],
+    coverage: {
+      provider: "v8",
+      // Scope per docs/project-structure.md: the domain layer and server
+      // actions carry the business rules worth guarding with a threshold.
+      // Everything else (UI components, routes) is deliberately excluded —
+      // that is a scope decision, not a gap.
+      include: ["src/lib/**", "src/components/**/actions.ts"],
+      exclude: [
+        "src/lib/__mocks__/**",
+        "**/*.d.ts",
+        "src/lib/utils/nav-config.ts",
+        "src/lib/utils/cn.ts",
+      ],
+    },
   },
   resolve: {
     alias: {
