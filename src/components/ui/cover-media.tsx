@@ -35,7 +35,10 @@ export function CoverMedia({
       <img
         src={imageUrl}
         alt={alt}
-        className={cn("size-full", fit === "cover" ? "object-cover" : "object-contain")}
+        className={cn(
+          "size-full",
+          fit === "cover" ? "object-cover" : "object-contain",
+        )}
       />
     </div>
   );

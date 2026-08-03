@@ -63,9 +63,9 @@ describe("ExplainerGamePanel", () => {
 
     expect(screen.getByText("Du kannst das erklären")).toBeInTheDocument();
     expect(activeButtons()).toHaveLength(1);
-    expect(
-      screen.getByRole("button", { name: "Mit Anleitung" }),
-    ).toHaveClass("bg-primary");
+    expect(screen.getByRole("button", { name: "Mit Anleitung" })).toHaveClass(
+      "bg-primary",
+    );
   });
 
   it("removes the registration and ends with no active button when clicking the active level", async () => {
@@ -107,8 +107,8 @@ describe("ExplainerGamePanel", () => {
       "WITHOUT_MANUAL",
     );
     expect(activeButtons()).toHaveLength(1);
-    expect(
-      screen.getByRole("button", { name: "Ohne Anleitung" }),
-    ).toHaveClass("bg-primary");
+    expect(screen.getByRole("button", { name: "Ohne Anleitung" })).toHaveClass(
+      "bg-primary",
+    );
   });
 });

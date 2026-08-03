@@ -28,9 +28,7 @@ describe("getContactLinks", () => {
   });
 
   it("builds a correct t.me link from an already-normalised handle", () => {
-    expect(
-      getContactLinks({ email: null, telegramHandle: "lea_tg" }),
-    ).toEqual({
+    expect(getContactLinks({ email: null, telegramHandle: "lea_tg" })).toEqual({
       mailHref: null,
       telegramHref: "https://t.me/lea_tg",
     });

@@ -35,7 +35,9 @@ describe("toMarketListingView", () => {
   });
 });
 
-function listing(overrides: Partial<MarketListingView> = {}): MarketListingView {
+function listing(
+  overrides: Partial<MarketListingView> = {},
+): MarketListingView {
   return {
     id: "listing-1",
     title: "Catan – Seefahrer",

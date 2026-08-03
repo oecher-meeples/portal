@@ -9,9 +9,8 @@ vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
-const { createSparePartListing, deleteSparePartListing } = await import(
-  "./spare-part-actions"
-);
+const { createSparePartListing, deleteSparePartListing } =
+  await import("./spare-part-actions");
 
 class ForbiddenError extends Error {}
 

@@ -27,10 +27,11 @@ export function MarketListingFields({
   imageUrls: string[];
   onImageUrlsChange: (urls: string[]) => void;
 }) {
-  const { uploadFiles, isUploading, error: uploadError } = useBlobUpload(
-    "market-listings",
-    getMarketListingUploadToken,
-  );
+  const {
+    uploadFiles,
+    isUploading,
+    error: uploadError,
+  } = useBlobUpload("market-listings", getMarketListingUploadToken);
 
   async function handleImagesChange(
     event: React.ChangeEvent<HTMLInputElement>,

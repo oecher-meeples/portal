@@ -1,10 +1,5 @@
 import { PageHeading } from "@/components/ui/page-heading";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   MostBorrowedGame,
   WeekdayCount,

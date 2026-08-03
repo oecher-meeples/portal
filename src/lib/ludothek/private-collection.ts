@@ -36,9 +36,13 @@ export function buildPrivateCollectionResults(
   filters: { players?: PlayerCountFilter; duration?: DurationFilter },
 ): PrivateCollectionResult[] {
   return entries
-    .filter((entry) => !filters.players || matchesPlayerFilter(entry, filters.players))
     .filter(
-      (entry) => !filters.duration || matchesDurationFilter(entry, filters.duration),
+      (entry) =>
+        !filters.players || matchesPlayerFilter(entry, filters.players),
+    )
+    .filter(
+      (entry) =>
+        !filters.duration || matchesDurationFilter(entry, filters.duration),
     )
     .map((entry) => ({
       id: entry.id,

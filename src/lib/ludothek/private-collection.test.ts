@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildPrivateCollectionResults } from "./private-collection";
 
-function entry(overrides: Partial<Parameters<typeof buildPrivateCollectionResults>[0][number]> = {}) {
+function entry(
+  overrides: Partial<
+    Parameters<typeof buildPrivateCollectionResults>[0][number]
+  > = {},
+) {
   return {
     id: "entry-1",
     title: "Dune: Imperium",

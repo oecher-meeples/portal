@@ -152,9 +152,7 @@ export function MyExplainerGames({
             <div className="flex items-center gap-2">
               <ExplainerLevelToggle
                 value={game.level}
-                onChange={(level) =>
-                  handleLevelChange(game.boardGameId, level)
-                }
+                onChange={(level) => handleLevelChange(game.boardGameId, level)}
               />
               <Button
                 variant="outline"

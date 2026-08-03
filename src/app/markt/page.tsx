@@ -31,7 +31,9 @@ export default async function MarktPage({
   ]);
 
   const listings = filterMarketListings(
-    marketListings.map((listing) => toMarketListingView(listing, listing.seller)),
+    marketListings.map((listing) =>
+      toMarketListingView(listing, listing.seller),
+    ),
     filters,
   );
   const spareParts = sparePartListings.map((listing) =>

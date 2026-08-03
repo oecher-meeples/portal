@@ -53,9 +53,7 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   requireMeepleMock.mockResolvedValue(OWNER);
-  prismaMock.marketListing.create.mockResolvedValue(
-    marketListing() as never,
-  );
+  prismaMock.marketListing.create.mockResolvedValue(marketListing() as never);
 });
 
 describe("without a session", () => {

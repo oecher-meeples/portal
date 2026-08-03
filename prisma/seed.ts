@@ -275,7 +275,10 @@ async function seedDemoGames(adminMeepleId: string) {
  * the comment above `seedDemoGames`). Upserts on `[meepleId, bggId]`, so re-running
  * the seed is idempotent.
  */
-async function seedPrivateGameCollection(meepleId: string, pool: typeof DEMO_PRIVATE_COLLECTION_POOL) {
+async function seedPrivateGameCollection(
+  meepleId: string,
+  pool: typeof DEMO_PRIVATE_COLLECTION_POOL,
+) {
   for (const game of pool) {
     await prisma.privateGameCollectionEntry.upsert({
       where: { meepleId_bggId: { meepleId, bggId: game.bggId } },
@@ -300,7 +303,9 @@ async function seedPrivateGameCollection(meepleId: string, pool: typeof DEMO_PRI
     });
   }
 
-  console.log(`${pool.length} private Sammlungseinträge für Meeple ${meepleId} angelegt.`);
+  console.log(
+    `${pool.length} private Sammlungseinträge für Meeple ${meepleId} angelegt.`,
+  );
 }
 
 async function seedDemoMeeples() {

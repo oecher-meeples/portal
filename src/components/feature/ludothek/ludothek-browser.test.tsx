@@ -74,6 +74,8 @@ describe("LudothekBrowser — private collection leak prevention", () => {
     );
 
     expect(screen.getByText("Dune: Imperium")).toBeInTheDocument();
-    expect(screen.getByText(/im Privatbesitz von Lea Demo/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/im Privatbesitz von Lea Demo/),
+    ).toBeInTheDocument();
   });
 });
