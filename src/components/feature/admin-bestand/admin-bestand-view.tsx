@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
+import { StatusPill } from "@/components/ui/status-pill";
+import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { CreateBoardGameDialog } from "@/components/feature/admin-bestand/create-board-game-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/feature/admin-bestand/deinventorise-board-game-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
@@ -41,20 +42,6 @@ export type AdminBoardGameRow = {
   mechanics: string[];
   condition: string | null;
   explainerVideoUrl: string | null;
-};
-
-const ZUSTAND_TONE: Record<GameZustand, StatusTone> = {
-  frei: "positive",
-  ausgeliehen: "info",
-  wartung: "warning",
-  "nicht-erfasst": "neutral",
-};
-
-const ZUSTAND_LABELS: Record<GameZustand, string> = {
-  frei: "Frei",
-  ausgeliehen: "Ausgeliehen",
-  wartung: "Wartung",
-  "nicht-erfasst": "Nicht erfasst",
 };
 
 type QuickFilter = "all" | "ungeprueft" | "mangel" | "nicht-erfasst";
@@ -195,10 +182,7 @@ export function AdminBestandView({
                     {game.locationChain || "—"}
                   </TableCell>
                   <TableCell>
-                    <StatusPill
-                      label={ZUSTAND_LABELS[game.zustand]}
-                      tone={ZUSTAND_TONE[game.zustand]}
-                    />
+                    <GameZustandPill zustand={game.zustand} />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {game.lastCheckedAt ?? "—"}
