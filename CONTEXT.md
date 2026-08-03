@@ -129,3 +129,21 @@ _Avoid_: Kleinanzeige (das ist der ganzjährige Phase-7-Flohmarkt), Verkaufsabwi
 **Gäste-Bereich**:
 Die öffentliche, unauthentifizierte Ansicht für Event-Besucher vor Ort: Spielesuche über den bestehenden EAN-Scan (Auswahlliste nur bei mehreren Exemplaren desselben Titels), anwesende Erklärbären, Flohmarkt-Artikelliste. Jederzeit erreichbar, kein Zeitfenster-Gating.
 _Avoid_: Event-Login, Spiele-QR-Code (bewusst nicht eingeführt, EAN reicht)
+
+### Marktplatz & Community
+
+**Ersatzteillager-Eintrag**:
+Ein Posten loser Teile zu einem Spiel oder — ohne Spielbezug — zum Sammelposten „Allgemeines", mit einem Verwahrer, der die Teile aktuell hat. Entsteht eigenständig oder zusammen mit einer Deinventarisierung (Checkbox „Teile ins Ersatzteillager aufnehmen"). Reine Self-Service-Liste ohne Abhol- oder Verkauft-Status; erledigt = gelöscht.
+_Avoid_: Flohmarkt-Artikel (das ist der Event-gebundene Bring-&-Buy-Posten), Ersatzteil-Lagerbestand mit Stückzahl
+
+**Kleinanzeige**:
+Ein ganzjähriger, mitgliedergeführter Verkaufsposten im Kleinanzeigen-Marktplatz (`/markt`) — eigener Titel, Preis, Zustand, Beschreibung, optional Bilder. Kontakt läuft über den Direktkontakt-Button (Mail/Telegram) außerhalb des Portals; keine Reservierung, kein Chat, keine Zahlungsabwicklung im Portal.
+_Avoid_: Flohmarkt-Artikel (Event-gebunden, mit Freigabe-Workflow), Verkaufsabwicklung
+
+**Community-Kontaktfeld**:
+Ein optionales Profilfeld (Telegram, Signal oder Discord), das ein Mitglied im eigenen Profil pflegt und für andere Mitglieder einsehbar macht. Nur `telegramHandle` fließt in den Direktkontakt-Button einer Kleinanzeige ein; Signal/Discord sind reine Profilangaben ohne eigenen Kontakt-Link.
+_Avoid_: Kontaktdaten (das meint E-Mail, ist kein neues Feld), Social-Media-Profil
+
+**Privatbesitz-Eintrag**:
+Ein Spiel, das ein Mitglied privat besitzt und nicht im Vereinsbestand geführt wird — Grundlage der Crowdsourced-Suche in der internen Ludothek. Aktuell ausschließlich per Seed befüllt (zwei Demo-Mitglieder), da ein echter BGG-Sammlungs-Sync an der aus dieser Umgebung blockierten BoardGameGeek-API scheitert (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`). Erscheint in der internen Ludothek-Suche nur nach explizitem Toggle „Auch Privatbesitz anzeigen" (Default aus) und **nie** in der öffentlichen Projektion.
+_Avoid_: Spiel (das ist ausschließlich Vereinsbesitz), BGG-Sammlung (impliziert einen echten Sync, den es hier noch nicht gibt)
