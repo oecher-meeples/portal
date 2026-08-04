@@ -92,6 +92,12 @@ enum NewsletterDispatchStatus {
   FAILED
 }
 
+enum DownloadStatus {
+  PUBLIC
+  INTERNAL
+  OFFLINE
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -643,6 +649,22 @@ model FleaMarketItem {
   @@index([eventId])
   @@index([sellerMeepleId])
   @@map("flea_market_items")
+}
+
+/// A downloadable file managed by admins (upload, visibility, delete), replacing
+/// the previously static list under public/downloads/. See CLAUDE.md plan.
+model Download {
+  id            String         @id @default(cuid())
+  title         String
+  fileUrl       String
+  fileType      String
+  fileSizeBytes Int
+  status        DownloadStatus @default(PUBLIC)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@map("downloads")
 }
 
 model InstagramConnection {
