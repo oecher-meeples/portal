@@ -2,10 +2,18 @@ import Link from "next/link";
 import { FileText, FileSpreadsheet } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
-import type { Download, LegalDoc } from "@/data/downloads";
+import type { LegalDoc } from "@/data/downloads";
+
+export type DownloadListItem = {
+  id: string;
+  title: string;
+  fileType: string;
+  fileSizeFormatted: string;
+  fileUrl: string;
+};
 
 type DownloadsViewProps = {
-  downloads: Download[];
+  downloads: DownloadListItem[];
   legalDocs: LegalDoc[];
 };
 
@@ -21,11 +29,11 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
         <div className="bg-card flex flex-col divide-y rounded-lg border">
           {downloads.map((file) => (
             <div
-              key={file.title}
+              key={file.id}
               className="flex items-center justify-between gap-4 p-4"
             >
               <div className="flex items-center gap-3">
-                {file.filetype === "XLSX" ? (
+                {file.fileType === "XLSX" ? (
                   <FileSpreadsheet className="size-5 text-emerald-600" />
                 ) : (
                   <FileText className="text-muted-foreground size-5" />
@@ -33,7 +41,7 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
                 <div>
                   <p className="font-medium">{file.title}</p>
                   <p className="text-muted-foreground text-xs">
-                    {file.filetype} · {file.size}
+                    {file.fileType} · {file.fileSizeFormatted}
                   </p>
                 </div>
               </div>
@@ -41,7 +49,7 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
                 variant="outline"
                 size="sm"
                 render={
-                  <a href={file.href} download>
+                  <a href={file.fileUrl} download>
                     Download
                   </a>
                 }
