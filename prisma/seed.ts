@@ -53,6 +53,10 @@ const PERMISSIONS = [
     description:
       "Events, Schichten und Regal-Zuordnungen verwalten, Flohmarkt-Artikel freigeben/Kasse bedienen außerhalb einer Kasse-Schicht",
   },
+  {
+    key: "downloads:manage",
+    description: "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
+  },
 ];
 
 const ROLES = [
