@@ -1,5 +1,8 @@
 import { requirePermission } from "@/lib/auth/permissions";
-import { listAllDownloadsForAdmin, formatFileSize } from "@/lib/downloads/downloads";
+import {
+  listAllDownloadsForAdmin,
+  formatFileSize,
+} from "@/lib/downloads/downloads";
 import { AdminDownloadsView } from "@/components/feature/admin-downloads/admin-downloads-view";
 
 export default async function AdminDownloadsPage() {

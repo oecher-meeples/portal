@@ -51,9 +51,7 @@ export function AdminDownloadsView({
           <TableBody>
             {downloads.map((download) => (
               <TableRow key={download.id}>
-                <TableCell className="font-medium">
-                  {download.title}
-                </TableCell>
+                <TableCell className="font-medium">{download.title}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {download.fileType}
                 </TableCell>

@@ -18,10 +18,11 @@ const FILE_TYPE_BY_MIME: Record<string, string> = {
 export function DownloadUploadForm() {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const { uploadFiles, isUploading, error: uploadError } = useBlobUpload(
-    "downloads",
-    getDownloadUploadToken,
-  );
+  const {
+    uploadFiles,
+    isUploading,
+    error: uploadError,
+  } = useBlobUpload("downloads", getDownloadUploadToken);
   const { run, pending, error } = useAction({
     onSuccess: () => {
       setTitle("");
@@ -52,7 +53,7 @@ export function DownloadUploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 max-w-sm">
+    <form onSubmit={handleSubmit} className="flex max-w-sm flex-col gap-3">
       <TextField
         id="download-upload-title"
         label="Titel"

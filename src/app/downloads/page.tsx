@@ -1,6 +1,9 @@
 import { LEGAL_DOCS } from "@/data/downloads";
 import { getSessionTier } from "@/lib/auth/session";
-import { listVisibleDownloads, formatFileSize } from "@/lib/downloads/downloads";
+import {
+  listVisibleDownloads,
+  formatFileSize,
+} from "@/lib/downloads/downloads";
 import { DownloadsView } from "@/components/feature/downloads/downloads-view";
 
 export default async function DownloadsPage() {
