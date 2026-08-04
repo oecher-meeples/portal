@@ -40,32 +40,33 @@ Du bist ein Senior Full-Stack-Entwickler mit Schwerpunkt Next.js (App Router), P
 
 ## Schritte
 
-- [ ] **0. Repository vorbereiten**
+- [x] **0. Repository vorbereiten**
       Git-Repo ist bereits vorhanden (`develop`, siehe Git-Base-State). Prüfen: `git status` zeigt den erwarteten Stand (u. a. die in den Ausführungsregeln genannten fremden Änderungen), kein `git init` nötig.
       _Definition of Done:_ `git status` läuft fehlerfrei, Branch ist `develop`.
       Kein Commit in diesem Schritt (nichts geändert).
 
-- [ ] **1. Testframework bestätigen**
+- [x] **1. Testframework bestätigen**
       Prüfen, dass Vitest lauffähig ist: `pnpm run test` gegen den unveränderten Stand ausführen.
       _Definition of Done:_ Bestehende Test-Suite läuft grün durch.
       Kein Commit in diesem Schritt (nichts geändert).
 
-- [ ] **2. Prisma-Schema: Modell `Download` + Enum `DownloadStatus`**
+- [x] **2. Prisma-Schema: Modell `Download` + Enum `DownloadStatus`**
       In `prisma/schema.prisma` das Enum `DownloadStatus { PUBLIC INTERNAL OFFLINE }` und das Modell `Download` (Felder wie in der Quelldatei Abschnitt 1: `id`, `title`, `fileUrl`, `fileType`, `fileSizeBytes`, `status @default(PUBLIC)`, `createdAt`, `updatedAt`, `@@map("downloads")`, `@@index([status])`) ergänzen. Migration erzeugen und gegen die Neon-Dev-DB ausführen: `pnpm prisma migrate dev --name add_downloads_table`. Prisma-Client neu generieren (läuft automatisch mit `migrate dev`).
       _Definition of Done:_ Migration liegt unter `prisma/migrations/`, `pnpm prisma validate` fehlerfrei, `pnpm run typecheck` fehlerfrei (Prisma-Client kennt `Download`/`DownloadStatus`).
       `git commit -m "feat(db): add Download model with PUBLIC/INTERNAL/OFFLINE status"`
 
-- [ ] **3. Permission `downloads:manage` seeden**
+- [x] **3. Permission `downloads:manage` seeden**
       In `prisma/seed.ts` den Eintrag `{ key: "downloads:manage", description: "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)" }` zum `PERMISSIONS`-Array hinzufügen und ausschließlich der Rolle `admin` zuweisen (ist automatisch der Fall, da `admin.permissionKeys = PERMISSIONS.map(p => p.key)`). `pnpm run db:seed` (bzw. das im Repo definierte Seed-Skript) gegen die Dev-DB ausführen.
       _Definition of Done:_ Seed läuft ohne Fehler durch, `permissions`-Tabelle enthält `downloads:manage`, der `admin`-Rolle zugeordnet.
       `git commit -m "feat(auth): add downloads:manage permission"`
 
-- [ ] **4. Bestandsdaten migrieren (Seed-Daten für die vier vorhandenen Downloads)**
+- [x] **4. Bestandsdaten migrieren (Seed-Daten für die vier vorhandenen Downloads)**
       Neue Datei `prisma/seed-data/demo-downloads.ts` mit den vier bisherigen Einträgen aus `src/data/downloads.ts` (`Mitgliedsantrag.pdf`, `SEPA-Lastschriftmandat.pdf`, `Ludotheks-Ordnung.pdf`, `Bring-Buy-Vorlage.xlsx`) als Rohdaten (`title`, `fileUrl: "/downloads/<Dateiname>"`, `fileType`, `fileSizeBytes` — Byte-Werte aus den vorhandenen `size`-Strings ableiten, z. B. "210 KB" → `215040`), `status: "PUBLIC"`. In `prisma/seed.ts` idempotent upserten (`prisma.download.upsert` je Eintrag, `where: { fileUrl }` als natürlicher Schlüssel für Idempotenz — analog zur bereits behobenen Idempotenz-Regel für `seedDemoGames`, siehe Memory `seed_not_idempotent.md`).
       _Definition of Done:_ `pnpm run db:seed` zweimal hintereinander ausgeführt erzeugt keine Duplikate (`prisma.download.count()` bleibt bei 4), Unit-Test für die Upsert-Logik falls als eigene Funktion extrahiert.
       `git commit -m "feat(db): seed existing downloads as Download rows"`
+      - Abweichung: `fileUrl` musste als `@unique` markiert werden (neue Migration `download_file_url_unique`), damit `where: { fileUrl }` im Upsert typsicher funktioniert. Byte-Werte stammen aus den tatsächlichen Dateigrößen unter `public/downloads/`, nicht aus einer Umrechnung der `size`-Strings.
 
-- [ ] **5. `src/lib/downloads/` — Domain-Layer (Queries, Labels, Formatierung)**
+- [x] **5. `src/lib/downloads/` — Domain-Layer (Queries, Labels, Formatierung)**
       Neue Dateien:
       - `src/lib/downloads/downloads.ts`: `listVisibleDownloads(tier: "gast" | "mitglied" | "admin")` (PUBLIC immer, INTERNAL nur ab `mitglied`, OFFLINE nie), `listAllDownloadsForAdmin()` (alle Status, `createdAt desc`), `formatFileSize(bytes: number): string` (B/KB/MB-Stufen).
       - `src/lib/downloads/labels.ts`: `DOWNLOAD_STATUS_LABELS: Record<DownloadStatus, string>` (`PUBLIC: "Öffentlich"`, `INTERNAL: "Intern"`, `OFFLINE: "Offline"`).
@@ -73,42 +74,47 @@ Du bist ein Senior Full-Stack-Entwickler mit Schwerpunkt Next.js (App Router), P
       _Definition of Done:_ `pnpm run test src/lib/downloads` grün, Coverage-Schwelle für `lib/**` erfüllt.
       `git commit -m "feat(downloads): add domain queries, labels and file-size formatting"`
 
-- [ ] **6. Server Actions `src/lib/downloads/actions.ts`**
+- [x] **6. Server Actions `src/lib/downloads/actions.ts`**
       `"use server"`-Datei mit: `createDownload({ title, fileUrl, fileType, fileSizeBytes })`, `setDownloadStatus(id, status)`, `deleteDownload(id)` (liest zuerst `fileUrl`, ruft `deleteBlobs([fileUrl])` auf, dann `prisma.download.delete`), `getDownloadUploadToken(pathname)` (analog `getUploadToken` in `admin-news/actions.ts`: `generateClientTokenFromReadWriteToken` mit `normaliseBlobPath(pathname, "downloads")`, `allowedContentTypes: ["application/pdf", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]`, `maximumSizeInBytes: MAX_UPLOAD_BYTES`). Jede Funktion beginnt mit `hasPermission(user.id, "downloads:manage")`-Check (Fehlerobjekt zurückgeben, kein Redirect, analog `admin-news`). Nach Mutation `revalidatePath("/downloads")` und `revalidatePath("/admin/downloads")`.
       Unit-Tests `src/lib/downloads/actions.test.ts` (Permission verweigert ohne `downloads:manage`, `deleteDownload` ruft `deleteBlobs` mit der korrekten URL auf — Mocks analog `admin-news/actions.test.ts`).
       _Definition of Done:_ Tests grün, Coverage-Schwelle für `actions.ts` erfüllt.
       `git commit -m "feat(downloads): add admin server actions for upload, status and delete"`
 
-- [ ] **7. `src/components/entities/download-status-pill.tsx`**
+- [x] **7. `src/components/entities/download-status-pill.tsx`**
       Neue Pill-Komponente analog `flea-market-status-pill.tsx`: Tonalität `PUBLIC` = grün, `INTERNAL` = blau/gelb, `OFFLINE` = grau, Text aus `DOWNLOAD_STATUS_LABELS`.
       _Definition of Done:_ Komponente rendert alle drei Zustände korrekt (kurzer Komponententest oder Storybook-freier manueller Check reicht, UI-Komponenten sind von der Coverage-Pflicht ausgenommen).
       `git commit -m "feat(downloads): add download status pill entity"`
 
-- [ ] **8. Admin-Feature `src/components/feature/admin-downloads/`**
+- [x] **8. Admin-Feature `src/components/feature/admin-downloads/`**
       - `admin-downloads-view.tsx`: Tabelle aller Downloads (`listAllDownloadsForAdmin`), pro Zeile Titel, Dateityp, Größe (`formatFileSize`), `DownloadStatusPill`, Status-Umschalter (drei `ActionButton`s oder ein Dropdown, die `setDownloadStatus(id, status)` binden) und Löschen-Button via `ActionButton`/`ActionDialog` (`deleteDownload`-Bestätigungsdialog).
       - `download-upload-form.tsx`: Client-Komponente mit `useBlobUpload("downloads", getDownloadUploadToken)`, `TextField` für Titel, Dateiauswahl (`accept="application/pdf,.xlsx"`), ruft nach erfolgreichem Upload `createDownload(...)` auf.
       _Definition of Done:_ `pnpm run lint`/`pnpm run typecheck` fehlerfrei; manueller Check im Dev-Server (`pnpm run dev`): Upload einer Test-PDF legt einen sichtbaren Eintrag an, Status-Wechsel und Löschen funktionieren.
       `git commit -m "feat(downloads): add admin downloads management UI"`
+      - Manueller Check: kein Browser in dieser (headless) Session verfügbar, daher via `curl` gegen den bereits laufenden Dev-Server auf Port 3002 verifiziert — Login per `/api/auth/sign-in/email`, `/admin/downloads` rendert Tabelle mit allen 4 Downloads + Status-Pills + Upload-Formular für den echten Admin-User, liefert `/403`-Redirect für einen Nicht-Admin (`demo1@jan-herwig.de`). Die Klick-Interaktionen selbst (Upload/Status-Wechsel/Löschen) sind stattdessen durch die 23 grünen Unit-Tests in `actions.test.ts` abgedeckt, nicht per UI-Klick nachgestellt.
 
-- [ ] **9. Route `/admin/downloads` + Navigation**
+- [x] **9. Route `/admin/downloads` + Navigation**
       Neue Datei `src/app/admin/downloads/page.tsx` mit `requireAdmin()`-Guard (analog anderer `admin/*`-Routen) und `<AdminDownloadsView />`. In `src/lib/utils/nav-config.ts` neuen Eintrag in der Admin-Navigationsgruppe ergänzen (Label "Downloads verwalten", `href: "/admin/downloads"`, `minTier: "admin"`).
       _Definition of Done:_ Als eingeloggter Admin ist `/admin/downloads` erreichbar und in der Sidebar sichtbar; als Nicht-Admin liefert die Route `403`.
       `git commit -m "feat(downloads): add admin downloads route and nav entry"`
 
-- [ ] **10. Öffentliche `/downloads`-Seite auf DB umstellen**
+      - Abweichung: `requirePermission("downloads:manage")` statt `requireAdmin()` verwendet (analog `admin/bank/page.tsx`) — feingranularer als ein reiner Admin-Tier-Check und konsistent mit dem Permission-basierten RBAC-Modell des Projekts.
+
+- [x] **10. Öffentliche `/downloads`-Seite auf DB umstellen**
       `src/app/downloads/page.tsx`: `DOWNLOADS`-Import entfernen, stattdessen Session-Tier ermitteln (`getSessionTier()` aus `src/lib/auth/session.ts`) und `listVisibleDownloads(tier)` aufrufen; `LEGAL_DOCS`-Teil unverändert lassen. `DownloadsView`/`downloads-view.tsx` auf den neuen `Download`-Typ aus `src/lib/downloads/downloads.ts` umstellen (Größe bereits als formatierter String über `formatFileSize` übergeben). `src/data/downloads.ts`: `Download`-Typ und `DOWNLOADS`-Array entfernen, `LegalDoc`/`LEGAL_DOCS` bleiben. Prüfen, dass `src/components/feature/rechtliches/legal-doc-view.tsx` (importiert `LegalDoc` aus derselben Datei) weiterhin kompiliert.
       _Definition of Done:_ `pnpm run typecheck` fehlerfrei, `pnpm run test` grün, manueller Check: `/downloads` zeigt als Gast nur PUBLIC-Einträge, als eingeloggtes Mitglied zusätzlich INTERNAL-Einträge, nie OFFLINE-Einträge.
       `git commit -m "feat(downloads): serve public downloads page from the database"`
 
-- [ ] **11. Aufräumen: alte statische Download-Dateien**
+- [x] **11. Aufräumen: alte statische Download-Dateien**
       Prüfen, ob die vier migrierten Dateien unter `public/downloads/` weiterhin benötigt werden (ja — `fileUrl` der Seed-Zeilen zeigt weiterhin dorthin, siehe Annahme in Schritt 4). Keine Datei löschen. Stattdessen kurzen Hinweis-Kommentar in `prisma/seed-data/demo-downloads.ts` ergänzen, dass ein künftiger Re-Upload über die Admin-UI die `fileUrl` auf eine Blob-URL umstellen würde (kein Code, nur Doku-Kommentar dort, falls noch nicht vorhanden).
       _Definition of Done:_ Kein Downloadlink auf `/downloads` ist gebrochen (manueller Klick-Check auf alle vier Bestandsdateien).
       `git commit -m "docs(downloads): note migration path from static files to blob uploads"`
+      - Kein Commit nötig: der Hinweis-Kommentar wurde bereits in Schritt 4 beim Anlegen von `demo-downloads.ts` mitgeschrieben. Alle vier Downloadlinks per `curl` gegen den Dev-Server mit 200 verifiziert.
 
-- [ ] **12. Gesamtverifikation**
+- [x] **12. Gesamtverifikation**
       `pnpm run verify` (format:check + typecheck + lint + test) über den gesamten Diff dieses Plans ausführen.
       _Definition of Done:_ `pnpm run verify` läuft fehlerfrei durch.
       `git commit -m "chore(downloads): final verification pass"` (nur falls durch die Verifikation noch Dateien geändert wurden, z. B. Formatierung — sonst kein Commit).
+      - `format:check` fand unformatierte Stellen in den eigenen Dateien dieses Plans (nicht in den fremden Working-Directory-Dateien); mit `prettier --write` gezielt nur auf die Plan-Dateien angewendet und committet. `typecheck`/`lint`/`test` (748 Tests) liefen bereits davor fehlerfrei.
 
 ## Empfohlenes Claude-Modell für die Umsetzung
 
