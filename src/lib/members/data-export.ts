@@ -125,7 +125,9 @@ export async function collectMeeplePersonalData(
         OR: [{ meepleId }, { recordedByMeepleId: meepleId }],
       },
       orderBy: { startedAt: "desc" },
-      include: { gameCopy: { include: { boardGame: { select: { title: true } } } } },
+      include: {
+        gameCopy: { include: { boardGame: { select: { title: true } } } },
+      },
     }),
     neonAuthUserId
       ? prisma.invite.findMany({ where: { createdByUserId: neonAuthUserId } })

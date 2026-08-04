@@ -16,7 +16,9 @@ export default async function DashboardPage() {
       getInternalContent(),
       prisma.gameHolding.findMany({
         where: { endedAt: null },
-        include: { gameCopy: { include: { boardGame: { select: { title: true } } } } },
+        include: {
+          gameCopy: { include: { boardGame: { select: { title: true } } } },
+        },
       }),
       prisma.storageUnit.findMany({
         select: { id: true, keeperMeepleId: true, retiredAt: true },

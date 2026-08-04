@@ -185,11 +185,7 @@ describe("deinventoriseGameCopy", () => {
       boardGame: { id: "game-1", title: "Arche Nova" },
     } as never);
 
-    const result = await deinventoriseGameCopy(
-      "copy-1",
-      "Verkauft 2026",
-      true,
-    );
+    const result = await deinventoriseGameCopy("copy-1", "Verkauft 2026", true);
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.sparePartListing.create).toHaveBeenCalledTimes(1);

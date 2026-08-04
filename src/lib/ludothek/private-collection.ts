@@ -40,7 +40,8 @@ export function buildPrivateCollectionResults(
   return entries
     .filter(
       (entry) =>
-        !filters.players || matchesPlayerFilter(entry.boardGame, filters.players),
+        !filters.players ||
+        matchesPlayerFilter(entry.boardGame, filters.players),
     )
     .filter(
       (entry) =>

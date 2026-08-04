@@ -101,10 +101,7 @@ export async function scanAcceptHandover(gameCopyId: string) {
 }
 
 /** Die abgebende Person trägt die Weitergabe ein — bleibt bis zum Klick der Empfängerin unbestätigt. */
-export async function scanGiveToMeeple(
-  gameCopyId: string,
-  toMeepleId: string,
-) {
+export async function scanGiveToMeeple(gameCopyId: string, toMeepleId: string) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(() =>
@@ -219,7 +216,11 @@ export async function scanGetGameContext(
   const [copy, holding] = await Promise.all([
     prisma.gameCopy.findUnique({
       where: { id: gameCopyId },
-      select: { id: true, status: true, boardGame: { select: { title: true } } },
+      select: {
+        id: true,
+        status: true,
+        boardGame: { select: { title: true } },
+      },
     }),
     prisma.gameHolding.findFirst({
       where: { gameCopyId, endedAt: null },

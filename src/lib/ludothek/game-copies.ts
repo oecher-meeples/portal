@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { GameInventoryStatus, type Prisma, type PrismaClient } from "@prisma/client";
+import {
+  GameInventoryStatus,
+  type Prisma,
+  type PrismaClient,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
@@ -63,7 +67,10 @@ export async function createGameCopyTx(
 }
 
 /** Adds another physical copy to an existing title — the "weiteres Exemplar" flow. */
-export async function createGameCopy(boardGameId: string, input: GameCopyInput = {}) {
+export async function createGameCopy(
+  boardGameId: string,
+  input: GameCopyInput = {},
+) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };

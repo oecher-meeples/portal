@@ -82,7 +82,11 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
       const game = resolved.games[0];
       setState(
         seriesMode?.type === "pruefen"
-          ? { kind: "pruefen", gameCopyId: game.id, title: game.boardGame.title }
+          ? {
+              kind: "pruefen",
+              gameCopyId: game.id,
+              title: game.boardGame.title,
+            }
           : { kind: "game", gameCopyId: game.id },
       );
       return;
@@ -91,7 +95,9 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
       kind: "select-game",
       games: resolved.games.map((g) => ({
         id: g.id,
-        title: g.condition ? `${g.boardGame.title} (${g.condition})` : g.boardGame.title,
+        title: g.condition
+          ? `${g.boardGame.title} (${g.condition})`
+          : g.boardGame.title,
       })),
     });
   }
