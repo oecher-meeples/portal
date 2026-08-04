@@ -19,11 +19,15 @@ import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { CreateBoardGameDialog } from "@/components/feature/admin-bestand/create-board-game-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/feature/admin-bestand/deinventorise-board-game-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
-import { requestCompletenessCheck } from "@/lib/ludothek/board-games";
+import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
+import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
 export type AdminBoardGameRow = {
+  /** GameCopy id. */
   id: string;
+  /** BoardGame (title) id. */
+  boardGameId: string;
   title: string;
   ean: string | null;
   status: "ACTIVE" | "MAINTENANCE" | "DEINVENTARISED";
@@ -207,6 +211,10 @@ export function AdminBestandView({
                           </Button>
                         )}
                         <EditBoardGameDialog game={game} />
+                        <AddGameCopyDialog
+                          boardGameId={game.boardGameId}
+                          boardGameTitle={game.title}
+                        />
                         <DeinventoriseBoardGameDialog
                           gameId={game.id}
                           gameTitle={game.title}

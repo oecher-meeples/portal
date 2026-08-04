@@ -74,6 +74,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     const holding = copy.holdings[0] ?? null;
     const base = {
       id: copy.id,
+      boardGameId: boardGame.id,
       slug: copy.slug,
       title: boardGame.title,
       imageUrl: boardGame.imageUrl,

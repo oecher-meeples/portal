@@ -14,15 +14,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { updateBoardGame } from "@/lib/ludothek/board-games";
+import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import {
   BoardGameFormFields,
-  boardGameFormToInput,
+  boardGameFormToTitleInput,
   boardGameToFormValues,
   type BoardGameFormValues,
   type BoardGameRecord,
 } from "@/components/widgets/board-game/board-game-form-fields";
 
-export type EditableBoardGame = { id: string } & BoardGameRecord;
+/** `id` is the copy being edited, `boardGameId` its title — both get updated. */
+export type EditableBoardGame = {
+  id: string;
+  boardGameId: string;
+} & BoardGameRecord;
 
 export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
   const router = useRouter();
@@ -46,9 +51,13 @@ export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
     setError(null);
     setIsSubmitting(true);
 
-    const result = await updateBoardGame(game.id, boardGameFormToInput(form));
+    const [titleResult, copyResult] = await Promise.all([
+      updateBoardGame(game.boardGameId, boardGameFormToTitleInput(form)),
+      updateGameCopy(game.id, { condition: form.condition || undefined }),
+    ]);
     setIsSubmitting(false);
 
+    const result = titleResult.error ? titleResult : copyResult;
     if (result.error) {
       setError(result.error);
       return;

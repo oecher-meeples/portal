@@ -12,7 +12,10 @@ export type LudothekGameRef = { id: string; title: string };
  * `toPublicGame` before anything reaches the client.
  */
 export type LudothekGame = {
+  /** GameCopy id — one row per physical copy. */
   id: string;
+  /** BoardGame (title) id — shared by every copy of this title. */
+  boardGameId: string;
   slug: string;
   title: string;
   imageUrl: string | null;

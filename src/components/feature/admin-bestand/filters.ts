@@ -4,14 +4,14 @@ import { UNSORTIERT_CODE } from "@/lib/inventory/codes";
 export type AdminBestandFilter =
   "ungeprueft" | "mangel" | "nicht-erfasst" | null;
 
-export function boardGameAdminWhere({
+export function gameCopyAdminWhere({
   showDeinventarised = false,
   filter = null,
 }: {
   showDeinventarised?: boolean;
   filter?: AdminBestandFilter;
-} = {}): Prisma.BoardGameWhereInput {
-  const conditions: Prisma.BoardGameWhereInput[] = [];
+} = {}): Prisma.GameCopyWhereInput {
+  const conditions: Prisma.GameCopyWhereInput[] = [];
 
   if (!showDeinventarised) {
     conditions.push({ status: { not: "DEINVENTARISED" } });

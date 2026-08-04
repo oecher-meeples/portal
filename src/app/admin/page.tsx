@@ -27,7 +27,7 @@ export default async function AdminDashboardPage() {
     prisma.invite.count({
       where: { redeemedAt: null, expiresAt: { gt: new Date() } },
     }),
-    prisma.boardGame.findMany({
+    prisma.gameCopy.findMany({
       where: { status: { not: "DEINVENTARISED" } },
       select: {
         id: true,
@@ -38,7 +38,7 @@ export default async function AdminDashboardPage() {
         },
       },
     }),
-    prisma.boardGame.count({
+    prisma.gameCopy.count({
       where: {
         status: { not: "DEINVENTARISED" },
         needsCompletenessCheck: true,

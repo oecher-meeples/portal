@@ -33,9 +33,9 @@ export default async function AdminEinheitDetailPage({
   }
 
   const [contents, moves] = await Promise.all([
-    prisma.boardGame.findMany({
+    prisma.gameCopy.findMany({
       where: { holdings: { some: { unitId: unit.id, endedAt: null } } },
-      select: { id: true, title: true, slug: true },
+      select: { id: true, slug: true, boardGame: { select: { title: true } } },
     }),
     prisma.storageUnitMove.findMany({
       where: { unitId: unit.id },
@@ -63,7 +63,11 @@ export default async function AdminEinheitDetailPage({
         keeperName: unit.keeper?.displayName ?? null,
         retired: unit.retiredAt !== null,
       }}
-      contents={contents}
+      contents={contents.map((copy) => ({
+        id: copy.id,
+        title: copy.boardGame.title,
+        slug: copy.slug,
+      }))}
       moves={moves.map((move) => ({
         id: move.id,
         startedAt: formatDateTime(move.startedAt),
