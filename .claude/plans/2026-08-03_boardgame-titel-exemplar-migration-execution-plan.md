@@ -1,0 +1,110 @@
+# Ausführungsplan: BoardGame-Datenmodell in Titel und Exemplar aufteilen
+
+- **Erstellt/Aktualisiert:** 2026-08-03 20:00
+- **Ziel:** `BoardGame` (aktuell ein Datensatz pro physischem Spiel, mischt BGG-Titel-Metadaten mit Bestandsdaten) in zwei Ebenen aufteilen: `BoardGame` bleibt der **Titel** (reine BGG-/Produkt-Daten, ein Datensatz pro Titel), neu hinzu kommt `GameCopy` (**Exemplar** — Zustand, Inventarstatus, Standort-Kette). Löst damit ADR 0001 in dem Teil ab, der eine Titel-/Exemplar-Trennung noch verwirft, weil die dort genannte Bedingung ("nicht wieder vorschlagen, ohne dass es echte Duplikate gibt") jetzt erfüllt ist: mehrere Exemplare desselben Titels in der Vereinsbibliothek und private BGG-Sammlungen sind real.
+- **Quelle:** Diese Konversation (Ist-Analyse + BGG-Thing-Abgleich + Nutzerentscheidungen), `docs/adr/0001-ludothek-aufenthalte-statt-exemplare.md` (wird per neuem ADR abgelöst, **nicht** gelöscht), `docs/schema.md` Abschnitt 4, `CONTEXT.md` (Begriffe Spiel/EAN/Ersatzteillager/Privatbesitz-Eintrag).
+- **Git-Base-State:** Branch `develop`, HEAD `7f3a00e2b2b88f791ca7edb63b29be578b336ae9`
+
+> Details, Begründung und Feld-für-Feld-Zuordnung stehen in dieser Konversation — hier nicht duplizieren.
+
+## Persona
+
+Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 15 (App Router), Prisma/PostgreSQL. Du arbeitest inkrementell, testgetrieben, hältst dich an die Schichtregeln aus `CLAUDE.md` und an bestehende Code-Konventionen (flache `src/lib/`-Module mit co-lokalisierten `.test.ts`-Dateien, dünne Server-Actions mit zentralem Permission-Check).
+
+## Getroffene Annahmen (per Nutzerentscheidung)
+
+- **Namensgebung:** Neues Modell heißt `GameCopy`, Fachbegriff in `CONTEXT.md` „Exemplar". Der bisherige `_Avoid_`-Eintrag zu „Exemplar" bei der `Spiel`-Definition entfällt — der Grund dafür (kein Duplikat-Fall) ist nicht mehr gegeben.
+- **`PrivateGameCollectionEntry` wird in dieser Migration mit angefasst:** referenziert künftig `BoardGame` (Titel) statt eigene Titel-Metadaten (`title`, `imageUrl`, `minPlayers`, `maxPlayers`, `playTimeMinutes`) zu duplizieren. Bleibt aber ein eigenständiges Modell (Meeple ↔ Titel ↔ `syncedAt`) — es entsteht **kein** `GameCopy` für Privatbesitz, private Sammlungen kennen keine Exemplare.
+- **Feld-Zuordnung** (siehe Konversation für vollständige Tabelle): `BoardGame` (Titel) behält `bggId` (wird `@unique`, nullable), `title`, `ean`, `minPlayers`, `maxPlayers`, `playTimeMinutes`, `weight`, `imageUrl`, `description`, `mechanics`, `explainerVideoUrl`, `kind`. `GameCopy` (Exemplar) bekommt `slug` (unique), `boardGameId`, `condition`, `needsCompletenessCheck`, `lastCheckedAt`, `status`, `archivedAt`, `archivedReason`. `quantity`/`location` werden endgültig entfernt (waren bereits als "step 14"-Cleanup vorgemerkt, schema.prisma:249f.).
+- **Bleiben auf Titel-Ebene (unverändert, nur FK-Ziel bleibt `BoardGame`):** `GameCollection` (Grundspiel↔Erweiterung), `ExplainerGame`, `SparePartListing`.
+- **Wechselt auf Exemplar-Ebene:** ausschließlich `GameHolding.boardGameId` → `GameHolding.gameCopyId`.
+- **`onDelete`-Richtung Exemplar→Titel:** `Restrict` (nicht `Cascade`) — ein Titel mit noch existierenden Exemplaren darf nicht durch versehentliches Löschen seine Exemplare mitreißen.
+- **Deduplizierungs-Schlüssel für die Datenmigration bestehender `board_games`-Zeilen:** Gruppierung nach `bggId`, sofern gesetzt (das ist die einzige verlässliche Produkt-Identität). Zeilen ohne `bggId` bleiben je ein eigener Titel — Freitext-`title`-Gleichheit ist **kein** Dedupe-Kriterium (zwei unterschiedliche manuell angelegte Spiele könnten zufällig gleich benannt sein). Weichen Metadaten (Beschreibung, Bild, …) innerhalb einer `bggId`-Gruppe voneinander ab, gewinnt die zuletzt aktualisierte Zeile (`updatedAt` DESC) — mit Log-Ausgabe, welche Gruppen das betraf, zur manuellen Nachkontrolle.
+- **Migrationsweg:** `prisma migrate dev --create-only`, danach die generierte SQL-Datei von Hand um Rename/Dedupe/Backfill-Statements ergänzen (reines additives Schema-Diffing reicht hier nicht, siehe Schritt 2). Kein Expand/Contract über mehrere Deploys nötig — Datenbestand ist klein (Vereinsbibliothek), Migration läuft in einer Transaktion.
+- **Seed-Skript ist eigener Schritt (4):** `prisma/seed-data/demo-games.ts` und `prisma/seed-data/demo-expansions.ts` enthalten schon jetzt ausschließlich Titel-Felder (kein `condition`/`status`/`slug`) — die Datentypen dort bleiben unverändert. Angepasst wird `prisma/seed.ts`: `seedDemoGames()` muss pro Eintrag Titel **und** Exemplar anlegen und `GameHolding` auf das Exemplar zeigen lassen; `seedPrivateGameCollection()` muss auf dieselbe Titel-Find-or-Create-Funktion wie die Vereins-Ludothek umgestellt werden. Zusätzlich bekommt mindestens ein Demo-Titel testweise ein zweites Exemplar, damit der neue Mehrfach-Exemplar-Flow (Schritt 7, Auswahlliste beim EAN-Scan) mit Seed-Daten manuell durchspielbar ist.
+
+## Regeln für die Ausführung
+
+- Code auf Englisch, Benutzerausgaben auf Deutsch.
+- Schichtregeln aus `CLAUDE.md` einhalten (`src/lib/<domäne>/` importiert nie aus `src/components/**`, Layer-Reihenfolge in `components/`).
+- Vor dem Wiedererfinden prüfen, ob ein Baustein aus der `CLAUDE.md`-Tabelle passt (`useAction`, `ActionButton`, `ActionDialog`, Field-Komponenten).
+- Dateien über 400 Zeilen aufteilen; neue Einzeldateien unter 100 Zeilen nur, wenn mehrfach importiert.
+- **Unit-Tests:** Für neue/geänderte Logik Tests schreiben bzw. anpassen. Definition of Done gilt erst bei grünen Tests. `pnpm run dup` nach größeren Umbauten prüfen (DRY-Ziel: 0 Klone).
+- **Committe nur Dateien, die du selbst geschrieben/geändert hast** — gezieltes `git add <datei>`, kein `git add -A`/`git add .`. Vorbestehende, unrelated Änderungen (`next.config.ts`, `src/lib/utils/cn.ts`, Stand vom Git-Base-State) nicht anfassen oder mit committen.
+- **Ein Schritt = ein abgeschlossener Commit** (Richtwert < 1 h Arbeit), außer explizit anders vermerkt.
+- **Bei Fehlschlag eines Schritts:** nicht mit dem nächsten Schritt fortfahren, nichts committen, Fehler auf Deutsch melden.
+- Markiere jeden erledigten Schritt mit `[x]`, sobald er abgeschlossen und committet ist.
+- `docs/project-structure.md` und `docs/schema.md` bei Strukturänderungen mitpflegen (siehe `CLAUDE.md`).
+
+## Schritte
+
+- [ ] **0. Repository-Zustand prüfen**
+      `git status` ausführen, Git-Base-State bestätigen. Vorbestehende unrelated Änderungen (`next.config.ts`, `src/lib/utils/cn.ts`) zur Kenntnis nehmen und **nicht** anfassen.
+      _Definition of Done:_ `git status` läuft fehlerfrei, unrelated Änderungen bleiben unangetastet.
+      Kein Commit in diesem Schritt (rein informativ).
+
+- [ ] **1. ADR 0007 schreiben (löst ADR 0001 teilweise ab)**
+      Neue Datei `docs/adr/0007-boardgame-titel-exemplar-trennung.md`: Status `accepted`, verweist auf ADR 0001 als teilweise abgelöst (ADR 0001 bleibt erhalten, bekommt oben einen Verweis `superseded by ADR 0007` ergänzt, wird nicht gelöscht). Dokumentiert die jetzt erfüllte Bedingung (echte Exemplar-Duplikate, private BGG-Sammlungen), die Feld-Zuordnung Titel/Exemplar und die Entscheidung, `ExplainerGame`/`GameCollection`/`SparePartListing` auf Titel-Ebene zu belassen.
+      _Definition of Done:_ ADR liest sich analog zu den bestehenden (`docs/adr/0001..0006`), keine Widersprüche zu Schritt-2-Annahmen. Kein Code, daher keine Tests.
+      `git commit -m "docs: add ADR 0007 for boardgame title/copy split"`
+
+- [ ] **2. Prisma-Schema ändern**
+      `prisma/schema.prisma`: `BoardGame` auf Titel-Felder trimmen (`bggId` wird `@unique`), neues Modell `GameCopy` (Felder siehe Annahmen), `GameHolding.boardGameId` → `gameCopyId` (Relation auf `GameCopy`, `onDelete: Cascade` wie bisher), `PrivateGameCollectionEntry` auf `boardGameId`-FK umstellen (Felder `title`/`imageUrl`/`minPlayers`/`maxPlayers`/`playTimeMinutes` entfernen), `quantity`/`location` von `BoardGame` entfernen. Neue Relationen: `BoardGame.copies GameCopy[]`, `BoardGame.privateCollectionEntries PrivateGameCollectionEntry[]`.
+      `prisma migrate dev --create-only --name split_boardgame_title_copy` ausführen, die generierte SQL-Datei von Hand ergänzen:
+      1. `game_copies`-Tabelle anlegen (Exemplar-Felder + `board_game_id`, vorerst nullable).
+      2. Pro bestehender `board_games`-Zeile: passenden Titel-Datensatz ermitteln/erzeugen (Gruppierung nach `bgg_id`, siehe Annahmen; Zeilen ohne `bgg_id` = eigener Titel), dabei `id`-Mapping alt→neu (Titel) und alt→neu (Exemplar) in temporären Mapping-Tabellen festhalten.
+      3. Für jede alte `board_games`-Zeile eine `game_copies`-Zeile mit den Exemplar-Feldern erzeugen, `board_game_id` auf den gemappten Titel setzen.
+      4. `game_holdings.board_game_id` auf `game_copies.id` (nicht Titel!) umbiegen, Spalte in `game_copy_id` umbenennen.
+      5. `explainer_games.board_game_id`, `game_collections.base_game_id`/`expansion_id`, `spare_part_listings.board_game_id` auf die neuen Titel-`id`s umbiegen (Mapping alt-BoardGame-Zeile → neuer Titel).
+      6. `private_game_collection_entries`: pro Zeile per `bgg_id` einen Titel finden oder neu anlegen (bestehende `title`/`imageUrl`/… nur zum Anlegen verwenden, falls kein Titel mit dieser `bgg_id` existiert), dann `board_game_id`-FK setzen, alte Spalten droppen.
+      7. Alte `board_games`-Tabelle auf reine Titel-Spalten reduzieren (Spalten der Exemplar-Felder droppen), `bgg_id` `UNIQUE` setzen (vorher Duplikate durch Schritt 2 bereits aufgelöst).
+      8. `game_copy_id` in `game_holdings` `NOT NULL` setzen, Indizes analog zu den bisherigen auf `board_game_id`.
+      Migration gegen die lokale/Dev-Neon-DB laufen lassen. Log-Ausgabe der Dedupe-Fälle aus den Annahmen als `RAISE NOTICE` oder Kommentar in der Migration festhalten.
+      _Definition of Done:_ `prisma migrate dev` läuft fehlerfrei durch, `pnpm prisma generate` aktualisiert den Client, Zeilenzahlen stimmen (Anzahl `game_holdings` unverändert, jede zeigt auf eine gültige `game_copies`-Zeile, jede alte `board_games`-Zeile hat genau eine `game_copies`-Zeile). `prisma/seed.ts` läuft fehlerfrei durch (ggf. anpassen, falls es `BoardGame`/`PrivateGameCollectionEntry` direkt befüllt).
+      `git commit -m "feat(schema): split BoardGame into title and GameCopy"`
+
+- [ ] **3. Domain-Layer: Ludothek-Bestand**
+      `src/lib/ludothek/board-games.ts` aufteilen: Titel-CRUD (Anlegen/Finden eines Titels per `bggId`, BGG-Import-Vorschau bleibt unverändert titelbezogen) bleibt hier; neue Datei `src/lib/ludothek/game-copies.ts` für Exemplar-CRUD (`createGameCopy` — legt Exemplar zu bestehendem oder neu angelegtem Titel an inkl. initialer `GameHolding` in „Unsortiert", `updateGameCopy`, `deinventoriseGameCopy`, `requestCompletenessCheck`). `createBoardGame` deckt künftig den Fall „neuer Titel + erstes Exemplar" ab (Titel finden-oder-anlegen per `bggId`, dann `createGameCopy` aufrufen) — **und** einen neuen Fall „weiteres Exemplar zu bestehendem Titel" (kein neuer Titel, nur `createGameCopy`). `holdings.ts`, `holdings-lookup.ts`, `holding-actions.ts`, `errors.ts`: Referenzen von `boardGameId` auf `gameCopyId` umstellen, `ensureUnsortiertUnit` unverändert.
+      _Definition of Done:_ bestehende Tests (`board-games.test.ts`, `holdings.test.ts`, `holdings-lookup.test.ts`, `holding-actions.test.ts`) angepasst und grün, neue Tests für „weiteres Exemplar anlegen" und die Titel-Find-or-Create-Logik. `pnpm test` grün.
+      `git commit -m "refactor(ludothek): split board game CRUD into title and copy operations"`
+
+- [ ] **4. Seed-Skript auf Titel/Exemplar umstellen**
+      `prisma/seed.ts` — `seedDemoGames()`: pro `DEMO_GAMES`-Eintrag zuerst einen Titel (`BoardGame`) finden-oder-anlegen (Dedupe weiterhin über `title`, wie bisher — `demo-games.ts` führt bewusst keine `bggId`, siehe Kommentar dort zur in dieser Umgebung blockierten BGG-API), danach ein `GameCopy` mit generiertem `slug` anlegen und `GameHolding` auf dessen `id` (nicht mehr die Titel-`id`) zeigen lassen. `gameIdByTitle` bleibt eine Titel-`id`-Map (für die `GameCollection`-Zuordnung aus `demo-expansions.ts`, die unverändert Titel-zu-Titel über `title`-Strings matcht — keine Strukturänderung an `demo-expansions.ts` nötig, nur die Konsum-Logik in `seed.ts` folgt den neuen Titel-`id`s). Zusätzlich: mind. ein Demo-Titel (Vorschlag: „Catan", bereits Vereins-Klassiker) bekommt testweise ein zweites `GameCopy`, damit sich der neue Mehrfach-Exemplar-Flow (Auswahlliste beim EAN-Scan, Schritt 7) mit Seed-Daten manuell durchspielen lässt — dafür in `seed.ts` eine kleine Konstante (z. B. `DEMO_SECOND_COPY_TITLES`) ergänzen, `demo-games.ts` selbst bleibt strukturell unverändert (reine Titel-Felder).
+      `seedPrivateGameCollection()`: auf dieselbe Titel-Find-or-Create-Funktion (per `bggId`) wie die Vereins-Ludothek umstellen, danach nur noch `boardGameId` + `syncedAt` in `PrivateGameCollectionEntry` schreiben; Upsert-Schlüssel wechselt von `[meepleId, bggId]` auf `[meepleId, boardGameId]` (Schema-Änderung aus Schritt 2, `bggId` liegt jetzt auf dem Titel). `prisma/seed-data/demo-private-collection.ts` (reine Rohdaten-Pool, `bggId`+Titel-Felder) bleibt strukturell unverändert — nur sein Verbraucher ändert sich. `demo-private-collection.test.ts` (Disjoint-Check gegen `DEMO_GAMES` per Titel) bleibt unverändert lauffähig, da rein auf den Datenarrays operierend.
+      _Definition of Done:_ `pnpm run db:seed` läuft gegen eine frische Dev-DB fehlerfrei durch und bleibt bei erneutem Lauf idempotent (keine Duplikate) — pro `DEMO_GAMES`-Titel genau ein Titel-Datensatz, „Catan" hat zwei `GameCopy`-Zeilen, `GameCollection`-Zuordnungen aus `demo-expansions.ts` unverändert korrekt, private Sammlungen zeigen auf dieselben Titel-Datensätze wie die Vereins-Ludothek (sofern `bggId` übereinstimmt). Bestehende Seed-bezogene Tests (`demo-private-collection.test.ts`) weiterhin grün.
+      `git commit -m "chore(seed): adapt demo seed data for title/copy split"`
+
+- [ ] **5. Domain-Layer: Erklärbären, Ersatzteillager, Statistiken, Mitglieder, Events**
+      `src/lib/explainer/queries.ts`, `src/lib/explainer/actions.ts`: unverändert auf Titel (`BoardGame`) — nur Typen/Imports nachziehen, keine fachliche Änderung. `src/lib/inventory/spare-part-listings.ts`: `boardGameId` bleibt Titel-Referenz; `deinventoriseGameCopy` (Schritt 3) übergibt beim Anlegen des `SparePartListing` den Titel (`gameCopy.boardGameId`), nicht die Exemplar-`id`. `src/lib/statistics/loan-stats.ts`, `src/lib/members/dashboard.ts`, `src/lib/events/guest-area.ts`: Prisma-Queries auf `gameCopyId`/neue Relationen nachziehen, fachliche Aggregation (z. B. „meine Ausleihen") bleibt gleich, da sie über `GameHolding` läuft.
+      _Definition of Done:_ zugehörige `.test.ts`-Dateien angepasst und grün, `pnpm test` grün.
+      `git commit -m "refactor: update explainer, spare-part, statistics and events modules for GameCopy"`
+
+- [ ] **6. Private BGG-Sammlungen auf Titel-Referenz umstellen (Anzeige-Code)**
+      Anzeige-Stellen, die bisher `entry.title`/`entry.imageUrl`/… direkt von `PrivateGameCollectionEntry` lasen, auf `entry.boardGame.title`/`entry.boardGame.imageUrl`/… umstellen (die Schreib-/Sync-Seite wurde bereits in Schritt 4 auf die Find-or-Create-Funktion umgestellt).
+      _Definition of Done:_ betroffene Tests grün, crowdsourcte Ludothek-Suche (Toggle „Auch Privatbesitz anzeigen") zeigt weiterhin dieselben Daten, jetzt über die gemeinsame Titel-Tabelle.
+      `git commit -m "refactor: read shared BoardGame title for private collection entries"`
+
+- [ ] **7. Components: Bestandsverwaltung**
+      `board-game-form-fields.tsx`, `edit-board-game-dialog.tsx`, `create-board-game-dialog.tsx`, `game-card-edit-overlay.tsx`, `deinventorise-board-game-dialog.tsx`: an die neue Titel-/Exemplar-Trennung anpassen, inkl. neuer Aktion „Weiteres Exemplar anlegen" für einen bestehenden Titel (nutzt `ActionDialog`/`ActionButton` aus der Bausteine-Tabelle, keine eigene Dialog-Logik). `game-detail-view.tsx`, `game-holding-panel.tsx`: zeigen jetzt ggf. mehrere Exemplare eines Titels mit je eigenem Standort/Zustand.
+      _Definition of Done:_ manueller Test im Dev-Server (Titel anlegen, weiteres Exemplar zu bestehendem Titel anlegen, Exemplar deinventarisieren) — golden path und Edge Case „zweites Exemplar" bestätigt funktionsfähig, inkl. der beiden Seed-Exemplare von „Catan" aus Schritt 4. Component-Tests, sofern vorhanden, angepasst.
+      `git commit -m "feat(ui): support multiple copies per board game title"`
+
+- [ ] **8. Components: Scan & Gäste-Bereich**
+      `scan-view.tsx`, `inventory-actions.ts`, `guest-area-view.tsx`, `pruefbogen-panel.tsx`: EAN-Scan kann jetzt mehrere Exemplare desselben Titels treffen — Auswahlliste ergänzen (in CONTEXT.md bereits als Zielbild beschrieben, `Gäste-Bereich`-Eintrag). Keine QR-Codes pro Exemplar (bewusst nicht eingeführt, siehe ADR 0005) — Auswahl erfolgt über Titel+Standort/Zustand-Anzeige der Treffer.
+      _Definition of Done:_ manueller Test: EAN mit einem Treffer bucht wie bisher direkt, EAN mit mehreren Treffern (z. B. „Catan" aus den Seed-Daten) zeigt Auswahlliste. Tests für `inventory-actions.ts` angepasst, `pnpm test` grün.
+      `git commit -m "feat(scan): disambiguate EAN scans across multiple copies of a title"`
+
+- [ ] **9. Dokumentation aktualisieren**
+      `docs/schema.md` Abschnitt 4 (ER-Diagramm + Tabellen-Status-Tabelle) auf `BoardGame`+`GameCopy` umstellen, `PrivateGameCollectionEntry`-Abschnitt (5) auf die Titel-Referenz anpassen. `CONTEXT.md`: Begriff „Exemplar" neu aufnehmen (ersetzt den bisherigen `_Avoid_`-Hinweis bei „Spiel"), „Spiel"-Definition auf Titel-Ebene präzisieren, `_Avoid_`-Listen dort nachziehen, wo „Exemplar" jetzt der richtige Begriff ist. `docs/project-structure.md` nur falls sich Ordnerstruktur geändert hat (voraussichtlich nicht, da nur neue Dateien innerhalb bestehender Ordner).
+      _Definition of Done:_ Doku widerspricht sich nicht mit dem tatsächlich umgesetzten Schema. Kein Code, daher keine Tests.
+      `git commit -m "docs: update schema and context docs for title/copy split"`
+
+- [ ] **10. Gesamtprüfung**
+      `pnpm run verify` (format:check + typecheck + lint + test), `pnpm run dup` (DRY-Check), Dev-Server starten und Golden Path end-to-end testen (Titel per BGG-ID anlegen → zweites Exemplar anlegen → Exemplar ausleihen/zurückgeben → deinventarisieren mit Ersatzteillager-Übernahme → Gäste-Bereich-EAN-Scan mit zwei Treffern).
+      _Definition of Done:_ `pnpm run verify` grün, keine neuen Klone laut `pnpm run dup`, manueller End-to-End-Test bestätigt.
+      Kein eigener Commit (Abschluss-Verifikation über die vorherigen Commits).
+
+## Empfohlenes Claude-Modell für die Umsetzung
+
+- **Empfehlung:** `claude-sonnet-5` als Standard, mit hohem Reasoning-Effort speziell für Schritt 2 (handgeschriebene SQL-Datenmigration mit Dedupe-Logik — größtes Risiko für stille Datenfehler) und Schritt 3 (Titel-Find-or-Create-Logik, neuer „weiteres Exemplar"-Flow). Mittlerer Effort für Schritte 4-8 (mechanischeres Nachziehen von Referenzen, aber mit Fachlogik-Berührungspunkten wie dem Ersatzteillager-Titel-Bezug und dem Seed-Skript-Umbau). Niedriger Effort ausreichend für Schritte 0, 1, 9, 10 (informativ/Doku/Verifikation).
+- **Begründung:** Das Risiko liegt fast ausschließlich in Schritt 2 — eine fehlerhafte Dedupe- oder Backfill-Logik verliert oder verknüpft Bestandsdaten falsch, und das fällt ggf. erst später auf. Schritt 4 (Seed-Skript) trägt ein kleineres, aber ähnliches Risiko (falsche Find-or-Create-Reihenfolge könnte beim wiederholten Seeden Titel duplizieren). Alle Folgeschritte sind mechanisches Nachziehen einer bereits im Schema festgelegten Struktur.
