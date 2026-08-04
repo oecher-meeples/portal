@@ -1,5 +1,10 @@
 import { hashPassword } from "better-auth/crypto";
-import { BoardGameKind, HoldingOrigin, StorageUnitKind } from "@prisma/client";
+import {
+  BoardGameKind,
+  HoldingOrigin,
+  InstagramStatus,
+  StorageUnitKind,
+} from "@prisma/client";
 import { prisma } from "../src/lib/utils/prisma";
 import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
@@ -8,6 +13,7 @@ import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
 import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
+import { DEMO_POSTS } from "./seed-data/demo-posts";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
  * manually testable without a real second purchase. */
@@ -364,6 +370,32 @@ async function seedDemoMeeples() {
   );
 }
 
+/** Upsertet auf `slug`, damit ein Re-Seed die Demo-Beiträge nicht dupliziert. */
+async function seedDemoPosts() {
+  for (const post of DEMO_POSTS) {
+    await prisma.post.upsert({
+      where: { slug: post.slug },
+      update: {},
+      create: {
+        slug: post.slug,
+        type: post.type,
+        title: post.title,
+        excerpt: post.excerpt,
+        body: post.body,
+        date: new Date(post.date),
+        author: post.author,
+        location: post.location,
+        internal: post.internal,
+        instagram: post.instagram,
+        coverImageUrl: post.coverImageUrl,
+        instagramStatus: post.instagram ? InstagramStatus.PENDING : null,
+      },
+    });
+  }
+
+  console.log(`${DEMO_POSTS.length} Demo-Beiträge angelegt/übersprungen.`);
+}
+
 /** Upsertet auf `fileUrl`, damit ein Re-Seed die migrierten Bestandsdateien nicht dupliziert. */
 async function seedDemoDownloads() {
   for (const download of DEMO_DOWNLOADS) {
@@ -386,6 +418,7 @@ async function main() {
   const adminMeeple = await ensureAdminMeeple(adminUserId);
   await seedDemoGames(adminMeeple.id);
   await seedDemoMeeples();
+  await seedDemoPosts();
   await seedDemoDownloads();
 
   console.log("Seed abgeschlossen.");
