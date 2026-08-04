@@ -324,24 +324,46 @@ model Invite {
   @@map("invites")
 }
 
+/// A game title — BGG/product metadata, one row per title regardless of how many
+/// physical copies the club owns (see ADR 0008, supersedes the relevant part of ADR 0001).
 model BoardGame {
+  id                String        @id @default(cuid())
+  title             String
+  /// The single reliable product identity; unique now that copies live in GameCopy.
+  bggId             Int?          @unique
+  /// The manufacturer barcode identifies the product, not the single copy — never unique.
+  ean               String?
+  minPlayers        Int?
+  maxPlayers        Int?
+  playTimeMinutes   Int?
+  weight            Float?
+  imageUrl          String?
+  description       String?
+  mechanics         String[]
+  /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
+  explainerVideoUrl String?
+  /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
+  kind              BoardGameKind @default(BOARDGAME)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  copies                   GameCopy[]
+  explainerGames           ExplainerGame[]
+  baseGameCollections      GameCollection[]             @relation("BaseGameCollections")
+  expansionCollections     GameCollection[]             @relation("ExpansionCollections")
+  sparePartListings        SparePartListing[]
+  privateCollectionEntries PrivateGameCollectionEntry[]
+
+  @@index([ean])
+  @@map("board_games")
+}
+
+/// A single physical copy of a title — condition, inventory status and (via
+/// GameHolding) the location chain. See ADR 0008.
+model GameCopy {
   id                     String              @id @default(cuid())
   slug                   String              @unique
-  title                  String
-  /// Indexed, deliberately NOT unique — duplicates of a title are allowed (ADR 0001).
-  bggId                  Int?
-  /// The manufacturer barcode identifies the product, not the single game — never unique.
-  ean                    String?
-  minPlayers             Int?
-  maxPlayers             Int?
-  playTimeMinutes        Int?
-  weight                 Float?
-  imageUrl               String?
-  description            String?
-  mechanics              String[]
-  /// Removed together with `location` in step 14, once the holding migration has run.
-  quantity               Int                 @default(1)
-  location               String?
+  boardGameId            String
   /// The single condition note — a defect is recorded here, not in a second field.
   condition              String?
   needsCompletenessCheck Boolean             @default(false)
@@ -349,23 +371,15 @@ model BoardGame {
   status                 GameInventoryStatus @default(ACTIVE)
   archivedAt             DateTime?
   archivedReason         String?
-  /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
-  explainerVideoUrl      String?
-  /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
-  kind                   BoardGameKind       @default(BOARDGAME)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
-  holdings             GameHolding[]
-  explainerGames       ExplainerGame[]
-  baseGameCollections  GameCollection[]   @relation("BaseGameCollections")
-  expansionCollections GameCollection[]   @relation("ExpansionCollections")
-  sparePartListings    SparePartListing[]
+  boardGame BoardGame     @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  holdings  GameHolding[]
 
-  @@index([bggId])
-  @@index([ean])
+  @@index([boardGameId])
   @@index([status])
-  @@map("board_games")
+  @@map("game_copies")
 }
 
 /// A batch of spare parts kept for a game, or "Allgemeines" (`boardGameId: null`)
@@ -409,20 +423,17 @@ model MarketListing {
 
 /// A privately owned game a member has, seeded for the crowdsourced search
 /// demo (step 12) — not a real BGG sync, see the plan's BGG-blocked note.
+/// References the shared title (BoardGame); no GameCopy exists for private ownership.
 model PrivateGameCollectionEntry {
-  id              String   @id @default(cuid())
-  meepleId        String
-  bggId           Int
-  title           String
-  imageUrl        String?
-  minPlayers      Int?
-  maxPlayers      Int?
-  playTimeMinutes Int?
-  syncedAt        DateTime
+  id          String   @id @default(cuid())
+  meepleId    String
+  boardGameId String
+  syncedAt    DateTime
 
-  meeple Meeple @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  meeple    Meeple    @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
 
-  @@unique([meepleId, bggId])
+  @@unique([meepleId, boardGameId])
   @@index([meepleId])
   @@map("private_game_collection_entries")
 }
@@ -491,7 +502,7 @@ model StorageUnitMove {
 /// one open holding per game — both enforced by hand-written constraints, see ADR 0001.
 model GameHolding {
   id                 String        @id @default(cuid())
-  boardGameId        String
+  gameCopyId         String
   unitId             String?
   meepleId           String?
   origin             HoldingOrigin
@@ -502,12 +513,12 @@ model GameHolding {
   recordedByMeepleId String
   note               String?
 
-  boardGame  BoardGame    @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  gameCopy   GameCopy     @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
   unit       StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
   meeple     Meeple?      @relation("GameHoldingMeeple", fields: [meepleId], references: [id], onDelete: Restrict)
   recordedBy Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
 
-  @@index([boardGameId, endedAt])
+  @@index([gameCopyId, endedAt])
   @@index([unitId])
   @@index([meepleId])
   @@map("game_holdings")
