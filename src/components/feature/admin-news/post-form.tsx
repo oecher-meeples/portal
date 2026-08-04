@@ -314,22 +314,22 @@ export function PostForm({
             onChange={(event) => setSendAsNewsletter(event.target.checked)}
           />
           Als Newsletter versenden in
+          {sendAsNewsletter && (
+            <select
+              value={newsletterCategory}
+              onChange={(event) =>
+                setNewsletterCategory(event.target.value as NewsletterCategory)
+              }
+              className="border-primary bg-background h-9 w-fit rounded-md border-2 px-3 text-sm"
+            >
+              {NEWSLETTER_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {NEWSLETTER_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
-        {sendAsNewsletter && (
-          <select
-            value={newsletterCategory}
-            onChange={(event) =>
-              setNewsletterCategory(event.target.value as NewsletterCategory)
-            }
-            className="border-input h-9 w-fit rounded-md border bg-transparent px-3 text-sm"
-          >
-            {NEWSLETTER_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {NEWSLETTER_CATEGORY_LABELS[category]}
-              </option>
-            ))}
-          </select>
-        )}
         {isExistingDraft && (
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -379,9 +379,11 @@ export function PostForm({
         <Button type="submit" value="PUBLISHED" disabled={isSubmitting}>
           {isSubmitting && pendingStatus === "PUBLISHED"
             ? "Speichere…"
-            : postId
-              ? "Änderungen speichern"
-              : "Absenden"}
+            : isExistingDraft
+              ? "Entwurf veröffentlichen"
+              : postId
+                ? "Änderungen speichern"
+                : "Absenden"}
         </Button>
       </div>
     </form>
