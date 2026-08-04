@@ -38,15 +38,17 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
 
 ## Schritte
 
-- [ ] **0. Repository-Zustand prüfen**
+- [x] **0. Repository-Zustand prüfen**
       `git status` ausführen, Git-Base-State bestätigen. Vorbestehende unrelated Änderungen (`next.config.ts`, `src/lib/utils/cn.ts`) zur Kenntnis nehmen und **nicht** anfassen.
       _Definition of Done:_ `git status` läuft fehlerfrei, unrelated Änderungen bleiben unangetastet.
       Kein Commit in diesem Schritt (rein informativ).
+      **Ausführungsnotiz (2026-08-04):** `git status` sauber, `develop` bei `f5de1f8` (4 Commits vor origin), keine unrelated Änderungen vorhanden. Nutzer hat bestätigt: DB enthält keine Live-Daten, darf komplett neu geseedet werden — Schritt 2 wird dadurch vereinfacht (kein Dedupe/Backfill-SQL nötig, siehe Notiz dort).
 
-- [ ] **1. ADR 0007 schreiben (löst ADR 0001 teilweise ab)**
+- [x] **1. ADR 0008 schreiben (löst ADR 0001 teilweise ab)**
       Neue Datei `docs/adr/0007-boardgame-titel-exemplar-trennung.md`: Status `accepted`, verweist auf ADR 0001 als teilweise abgelöst (ADR 0001 bleibt erhalten, bekommt oben einen Verweis `superseded by ADR 0007` ergänzt, wird nicht gelöscht). Dokumentiert die jetzt erfüllte Bedingung (echte Exemplar-Duplikate, private BGG-Sammlungen), die Feld-Zuordnung Titel/Exemplar und die Entscheidung, `ExplainerGame`/`GameCollection`/`SparePartListing` auf Titel-Ebene zu belassen.
       _Definition of Done:_ ADR liest sich analog zu den bestehenden (`docs/adr/0001..0006`), keine Widersprüche zu Schritt-2-Annahmen. Kein Code, daher keine Tests.
       `git commit -m "docs: add ADR 0007 for boardgame title/copy split"`
+      **Ausführungsnotiz (2026-08-04):** ADR-Nummer 0007 war zwischenzeitlich bereits vergeben (`0007-neondatabase-auth-agpl-huelle-dokumentiert.md`) — neue ADR heißt stattdessen `docs/adr/0008-boardgame-titel-exemplar-trennung.md`. ADR 0001 um `superseded-by`-Frontmatter + Verweis-Absatz ergänzt.
 
 - [ ] **2. Prisma-Schema ändern**
       `prisma/schema.prisma`: `BoardGame` auf Titel-Felder trimmen (`bggId` wird `@unique`), neues Modell `GameCopy` (Felder siehe Annahmen), `GameHolding.boardGameId` → `gameCopyId` (Relation auf `GameCopy`, `onDelete: Cascade` wie bisher), `PrivateGameCollectionEntry` auf `boardGameId`-FK umstellen (Felder `title`/`imageUrl`/`minPlayers`/`maxPlayers`/`playTimeMinutes` entfernen), `quantity`/`location` von `BoardGame` entfernen. Neue Relationen: `BoardGame.copies GameCopy[]`, `BoardGame.privateCollectionEntries PrivateGameCollectionEntry[]`.
