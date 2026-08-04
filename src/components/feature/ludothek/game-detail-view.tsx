@@ -1,6 +1,5 @@
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
-import { Button } from "@/components/ui/button";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
