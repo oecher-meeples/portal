@@ -3,9 +3,14 @@ import { BoardGameKind, HoldingOrigin, StorageUnitKind } from "@prisma/client";
 import { prisma } from "../src/lib/utils/prisma";
 import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
+import { findOrCreateBoardGameTitle } from "../src/lib/ludothek/board-games";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
+
+/** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
+ * manually testable without a real second purchase. */
+const DEMO_SECOND_COPY_TITLES = ["Catan"];
 
 const ADMIN_USER = {
   email: process.env.SEED_ADMIN_EMAIL ?? "admin@jan-herwig.de",
@@ -178,6 +183,37 @@ async function ensureMeeple(neonAuthUserId: string, displayName: string) {
  * (401/403 auf jede Anfrage an boardgamegeek.com). Titel, Spielerzahlen und Coverbilder
  * sind reale, per Wikipedia verifizierte Daten — kein BGG-Import, aber echte Spiele.
  */
+async function createDemoGameCopy(
+  boardGameId: string,
+  title: string,
+  unitId: string,
+  adminMeepleId: string,
+  usedSlugs: Set<string>,
+) {
+  const base = slugify(title);
+  let slug = base;
+  let suffix = 2;
+  while (usedSlugs.has(slug)) {
+    slug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  usedSlugs.add(slug);
+
+  const copy = await prisma.gameCopy.create({ data: { slug, boardGameId } });
+
+  await prisma.gameHolding.create({
+    data: {
+      gameCopyId: copy.id,
+      unitId,
+      origin: HoldingOrigin.INITIAL,
+      confirmedAt: new Date(),
+      recordedByMeepleId: adminMeepleId,
+    },
+  });
+
+  return copy;
+}
+
 async function seedDemoGames(adminMeepleId: string) {
   const unsortiert = await prisma.storageUnit.upsert({
     where: { code: UNSORTIERT_CODE },
@@ -189,36 +225,27 @@ async function seedDemoGames(adminMeepleId: string) {
     },
   });
 
-  const existingGames = await prisma.boardGame.findMany({
+  const existingTitles = await prisma.boardGame.findMany({
     where: { title: { in: DEMO_GAMES.map((g) => g.title) } },
-    select: { id: true, slug: true, title: true },
+    select: { id: true, title: true },
   });
-  const existingIdByTitle = new Map(existingGames.map((g) => [g.title, g.id]));
+  const existingIdByTitle = new Map(existingTitles.map((g) => [g.title, g.id]));
   const usedSlugs = new Set(
-    (await prisma.boardGame.findMany({ select: { slug: true } })).map(
-      (g) => g.slug,
+    (await prisma.gameCopy.findMany({ select: { slug: true } })).map(
+      (c) => c.slug,
     ),
   );
   const expansionTitles = new Set(DEMO_EXPANSIONS.map((e) => e.expansion));
   const gameIdByTitle = new Map<string, string>(existingIdByTitle);
 
-  let createdCount = 0;
+  let createdTitleCount = 0;
+  let createdCopyCount = 0;
 
   for (const game of DEMO_GAMES) {
     if (existingIdByTitle.has(game.title)) continue;
 
-    const base = slugify(game.title);
-    let slug = base;
-    let suffix = 2;
-    while (usedSlugs.has(slug)) {
-      slug = `${base}-${suffix}`;
-      suffix += 1;
-    }
-    usedSlugs.add(slug);
-
     const created = await prisma.boardGame.create({
       data: {
-        slug,
         title: game.title,
         imageUrl: game.imageUrl,
         minPlayers: game.minPlayers,
@@ -233,21 +260,23 @@ async function seedDemoGames(adminMeepleId: string) {
       },
     });
     gameIdByTitle.set(game.title, created.id);
-    createdCount += 1;
+    createdTitleCount += 1;
 
-    await prisma.gameHolding.create({
-      data: {
-        boardGameId: created.id,
-        unitId: unsortiert.id,
-        origin: HoldingOrigin.INITIAL,
-        confirmedAt: new Date(),
-        recordedByMeepleId: adminMeepleId,
-      },
-    });
+    const copiesToCreate = DEMO_SECOND_COPY_TITLES.includes(game.title) ? 2 : 1;
+    for (let i = 0; i < copiesToCreate; i += 1) {
+      await createDemoGameCopy(
+        created.id,
+        game.title,
+        unsortiert.id,
+        adminMeepleId,
+        usedSlugs,
+      );
+      createdCopyCount += 1;
+    }
   }
 
   console.log(
-    `${createdCount} Demo-Spiele angelegt, ${DEMO_GAMES.length - createdCount} bereits vorhanden übersprungen.`,
+    `${createdTitleCount} Demo-Titel angelegt (${createdCopyCount} Exemplare), ${DEMO_GAMES.length - createdTitleCount} Titel bereits vorhanden übersprungen.`,
   );
 
   for (const { baseGame, expansion } of DEMO_EXPANSIONS) {
@@ -280,26 +309,23 @@ async function seedPrivateGameCollection(
   pool: typeof DEMO_PRIVATE_COLLECTION_POOL,
 ) {
   for (const game of pool) {
+    // Same title find-or-create (by bggId) as the club Ludothek — a private
+    // entry and a club copy of the same BGG title share one BoardGame row.
+    const title = await findOrCreateBoardGameTitle({
+      title: game.title,
+      bggId: game.bggId,
+      imageUrl: game.imageUrl,
+      minPlayers: game.minPlayers,
+      maxPlayers: game.maxPlayers,
+      playTimeMinutes: game.playTimeMinutes,
+    });
+
     await prisma.privateGameCollectionEntry.upsert({
-      where: { meepleId_bggId: { meepleId, bggId: game.bggId } },
-      update: {
-        title: game.title,
-        imageUrl: game.imageUrl,
-        minPlayers: game.minPlayers,
-        maxPlayers: game.maxPlayers,
-        playTimeMinutes: game.playTimeMinutes,
-        syncedAt: new Date(),
+      where: {
+        meepleId_boardGameId: { meepleId, boardGameId: title.id },
       },
-      create: {
-        meepleId,
-        bggId: game.bggId,
-        title: game.title,
-        imageUrl: game.imageUrl,
-        minPlayers: game.minPlayers,
-        maxPlayers: game.maxPlayers,
-        playTimeMinutes: game.playTimeMinutes,
-        syncedAt: new Date(),
-      },
+      update: { syncedAt: new Date() },
+      create: { meepleId, boardGameId: title.id, syncedAt: new Date() },
     });
   }
 
