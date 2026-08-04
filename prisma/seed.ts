@@ -7,6 +7,7 @@ import { findOrCreateBoardGameTitle } from "../src/lib/ludothek/board-games";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
+import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
  * manually testable without a real second purchase. */
@@ -363,6 +364,19 @@ async function seedDemoMeeples() {
   );
 }
 
+/** Upsertet auf `fileUrl`, damit ein Re-Seed die migrierten Bestandsdateien nicht dupliziert. */
+async function seedDemoDownloads() {
+  for (const download of DEMO_DOWNLOADS) {
+    await prisma.download.upsert({
+      where: { fileUrl: download.fileUrl },
+      update: {},
+      create: download,
+    });
+  }
+
+  console.log(`${DEMO_DOWNLOADS.length} Downloads angelegt/übersprungen.`);
+}
+
 async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
   await seedPermissions();
@@ -372,6 +386,7 @@ async function main() {
   const adminMeeple = await ensureAdminMeeple(adminUserId);
   await seedDemoGames(adminMeeple.id);
   await seedDemoMeeples();
+  await seedDemoDownloads();
 
   console.log("Seed abgeschlossen.");
 }
