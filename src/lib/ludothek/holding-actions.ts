@@ -46,21 +46,21 @@ async function toResult<T>(
   }
 }
 
-/** Revalidates the list, admin overview and (if resolvable) the game's detail page — only called on success. */
-async function revalidateGamePaths(boardGameId: string) {
+/** Revalidates the list, admin overview and (if resolvable) the copy's detail page — only called on success. */
+async function revalidateGamePaths(gameCopyId: string) {
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  const game = await prisma.boardGame.findUnique({
-    where: { id: boardGameId },
+  const copy = await prisma.gameCopy.findUnique({
+    where: { id: gameCopyId },
     select: { slug: true },
   });
-  if (game) revalidatePath(`/ludothek/${game.slug}`);
+  if (copy) revalidatePath(`/ludothek/${copy.slug}`);
 }
 
-function toResultAndRevalidate<T extends { boardGameId: string }>(
+function toResultAndRevalidate<T extends { gameCopyId: string }>(
   run: () => Promise<T> | T,
 ) {
-  return toResult(run, (value) => revalidateGamePaths(value.boardGameId));
+  return toResult(run, (value) => revalidateGamePaths(value.gameCopyId));
 }
 
 export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
@@ -73,13 +73,13 @@ export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
 }
 
 /** Ausleihen — der Scannende bucht immer auf den eigenen Meeple aus. */
-export async function scanBorrowGame(boardGameId: string) {
+export async function scanBorrowGame(gameCopyId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return borrowGame({
-      boardGameId,
+      gameCopyId,
       meepleId: meeple.id,
       recordedByMeepleId: meeple.id,
     });
@@ -87,13 +87,13 @@ export async function scanBorrowGame(boardGameId: string) {
 }
 
 /** "Ich habe es erhalten" — die empfangende Person bestätigt die Weitergabe selbst. */
-export async function scanAcceptHandover(boardGameId: string) {
+export async function scanAcceptHandover(gameCopyId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return handOverGame({
-      boardGameId,
+      gameCopyId,
       toMeepleId: meeple.id,
       recordedByMeepleId: meeple.id,
     });
@@ -102,85 +102,85 @@ export async function scanAcceptHandover(boardGameId: string) {
 
 /** Die abgebende Person trägt die Weitergabe ein — bleibt bis zum Klick der Empfängerin unbestätigt. */
 export async function scanGiveToMeeple(
-  boardGameId: string,
+  gameCopyId: string,
   toMeepleId: string,
 ) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(() =>
-    handOverGame({ boardGameId, toMeepleId, recordedByMeepleId: meeple.id }),
+    handOverGame({ gameCopyId, toMeepleId, recordedByMeepleId: meeple.id }),
   );
 }
 
 /** "Ich nehme es zur Rückgabe an" — abgeschlossen ist die Rückgabe erst durchs Einlagern. */
-export async function scanAcceptReturn(boardGameId: string) {
+export async function scanAcceptReturn(gameCopyId: string) {
   const { meeple, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
     return returnGame({
-      boardGameId,
+      gameCopyId,
       toMeepleId: meeple.id,
       recordedByMeepleId: meeple.id,
     });
   });
 }
 
-export async function scanReturnToUnit(boardGameId: string, toUnitId: string) {
+export async function scanReturnToUnit(gameCopyId: string, toUnitId: string) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(() =>
-    returnGame({ boardGameId, toUnitId, recordedByMeepleId: meeple.id }),
+    returnGame({ gameCopyId, toUnitId, recordedByMeepleId: meeple.id }),
   );
 }
 
 /** Rückgabe an eine Person, die das Spiel einlagern soll — keine Weitergabe. */
 export async function scanReturnToMeeple(
-  boardGameId: string,
+  gameCopyId: string,
   toMeepleId: string,
 ) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(() =>
-    returnGame({ boardGameId, toMeepleId, recordedByMeepleId: meeple.id }),
+    returnGame({ gameCopyId, toMeepleId, recordedByMeepleId: meeple.id }),
   );
 }
 
-export async function scanRelocateGame(boardGameId: string, toUnitId: string) {
+export async function scanRelocateGame(gameCopyId: string, toUnitId: string) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(() =>
-    relocateGame({ boardGameId, toUnitId, recordedByMeepleId: meeple.id }),
+    relocateGame({ gameCopyId, toUnitId, recordedByMeepleId: meeple.id }),
   );
 }
 
 /**
- * Places a scanned game into a unit, regardless of where it currently is —
+ * Places a scanned copy into a unit, regardless of where it currently is —
  * Umlagern if it was already in a unit, Rückgabe if it was with a person.
  * Used by the scan view's manual "in Einheit legen" action and by the
  * "Einlagern in <Einheit>" series mode.
  */
-export async function scanPlaceGameInUnit(boardGameId: string, unitId: string) {
+export async function scanPlaceGameInUnit(gameCopyId: string, unitId: string) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(async () => {
     const holding = await prisma.gameHolding.findFirst({
-      where: { boardGameId, endedAt: null },
+      where: { gameCopyId, endedAt: null },
     });
     if (!holding) {
       throw new HoldingConflictError(
-        `Spiel ${boardGameId} hat keinen offenen Aufenthalt.`,
+        `Exemplar ${gameCopyId} hat keinen offenen Aufenthalt.`,
       );
     }
 
     return holding.unitId
       ? relocateGame({
-          boardGameId,
+          gameCopyId,
           toUnitId: unitId,
           recordedByMeepleId: meeple.id,
         })
       : returnGame({
-          boardGameId,
+          gameCopyId,
           toUnitId: unitId,
           recordedByMeepleId: meeple.id,
         });
@@ -210,27 +210,27 @@ export type ScannedGameContext = {
   isSelf: boolean;
 };
 
-/** Enriches a resolved game with its current holding, for the scan view's action menu. */
+/** Enriches a resolved copy with its current holding, for the scan view's action menu. */
 export async function scanGetGameContext(
-  boardGameId: string,
+  gameCopyId: string,
 ): Promise<ScannedGameContext | null> {
   const { meeple } = await requireActingMeeple();
 
-  const [game, holding] = await Promise.all([
-    prisma.boardGame.findUnique({
-      where: { id: boardGameId },
-      select: { id: true, title: true, status: true },
+  const [copy, holding] = await Promise.all([
+    prisma.gameCopy.findUnique({
+      where: { id: gameCopyId },
+      select: { id: true, status: true, boardGame: { select: { title: true } } },
     }),
     prisma.gameHolding.findFirst({
-      where: { boardGameId, endedAt: null },
+      where: { gameCopyId, endedAt: null },
       include: { unit: true, meeple: { select: { displayName: true } } },
     }),
   ]);
 
-  if (!game) return null;
+  if (!copy) return null;
 
   return {
-    game,
+    game: { id: copy.id, title: copy.boardGame.title, status: copy.status },
     holding: holding
       ? {
           id: holding.id,

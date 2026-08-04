@@ -2,7 +2,9 @@ import type { GameZustand } from "@/lib/ludothek/holdings";
 import { BoardGameKind } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 
-export type LudothekGameRef = { id: string; slug: string; title: string };
+/** A title referenced from a copy (e.g. base game/expansion) — titles have no
+ * route of their own, only their copies do (see ADR 0008). */
+export type LudothekGameRef = { id: string; title: string };
 
 /**
  * Richest possible shape of a game for the Ludothek browser. The internal
