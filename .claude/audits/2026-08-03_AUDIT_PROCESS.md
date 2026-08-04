@@ -17,6 +17,23 @@ Kurz: **Die Instrumente sind gebaut, aber nicht angeschlossen.**
 
 ---
 
+## Stand der Umsetzung (2026-08-04)
+
+Alle sechs Issues sind umgesetzt und geschlossen — die Instrumente sind jetzt angeschlossen.
+
+| Issue | Finding | Umsetzung |
+| --- | --- | --- |
+| [#35](https://github.com/oecher-meeples/portal/issues/35) (P1) | CI seit 42 Commits nicht gelaufen | Formatierung korrigiert, CI läuft wieder grün auf `develop` |
+| [#39](https://github.com/oecher-meeples/portal/issues/39) (P5) | `pre-push`-Hook und CI prüfen nicht denselben Umfang | `format:check` als erster Schritt in `verify` aufgenommen |
+| [#37](https://github.com/oecher-meeples/portal/issues/37) (P4) | `next build` läuft nicht in der CI | Build-Schritt mit Dummy-Env-Variablen und `.next/cache`-Caching ergänzt |
+| [#38](https://github.com/oecher-meeples/portal/issues/38) (P3) | Keine Coverage-Messung | `@vitest/coverage-v8`, Scope `lib/**` + `actions.ts`, Schwelle 80 % aus gemessener Baseline (86.71/83.39/88.33/87.02), blockierend in der CI |
+| [#40](https://github.com/oecher-meeples/portal/issues/40) (P6) | Geteilte Bausteine ohne Tests | `upcoming.ts`, `slug.ts`, `search-params.ts`, `youtube.ts`, `explainer/queries.ts`, `spare-part-listings.ts` — sechs neue Testdateien |
+| [#36](https://github.com/oecher-meeples/portal/issues/36) (P2) | Kein aktiver Branch-Schutz | Ruleset auf `develop` aktiv; direkter Push nachweislich abgelehnt (`GH013`); Test-PR zeigte `verify` als Required Check |
+
+**P7** (`release`-Branch hinter `develop`) war laut Nutzerentscheidung bewusst kein eigenes Issue — bleibt unverändert liegen.
+
+---
+
 ## Prioritized Findings
 
 | #      | Schwere      | Finding                                                        | Dimension |
