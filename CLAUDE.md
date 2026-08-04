@@ -48,6 +48,8 @@ Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst �
 | `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                         |
 | `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                    | eigenem `@vercel/blob/client`-Upload-State pro Formular         |
 | `getContactLinks(meeple)` (`lib/members/contact.ts`)                                      | eigenem Mail-/Telegram-Link-Aufbau                              |
+| `requireEnv(name)` (`lib/utils/require-env.ts`)                                           | `process.env.X!` mit unklarer Fehlermeldung bei fehlendem Wert  |
+| `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                          | eigenem `@vercel/blob`-Löschaufruf pro Feature                  |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 
