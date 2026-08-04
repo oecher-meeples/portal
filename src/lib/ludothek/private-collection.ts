@@ -18,13 +18,15 @@ export type PrivateCollectionResult = {
 
 export type PrivateCollectionEntryInput = {
   id: string;
-  title: string;
-  imageUrl: string | null;
-  minPlayers: number | null;
-  maxPlayers: number | null;
-  playTimeMinutes: number | null;
   meepleId: string;
   meeple: { displayName: string };
+  boardGame: {
+    title: string;
+    imageUrl: string | null;
+    minPlayers: number | null;
+    maxPlayers: number | null;
+    playTimeMinutes: number | null;
+  };
 };
 
 /**
@@ -38,19 +40,20 @@ export function buildPrivateCollectionResults(
   return entries
     .filter(
       (entry) =>
-        !filters.players || matchesPlayerFilter(entry, filters.players),
+        !filters.players || matchesPlayerFilter(entry.boardGame, filters.players),
     )
     .filter(
       (entry) =>
-        !filters.duration || matchesDurationFilter(entry, filters.duration),
+        !filters.duration ||
+        matchesDurationFilter(entry.boardGame, filters.duration),
     )
     .map((entry) => ({
       id: entry.id,
-      title: entry.title,
-      imageUrl: entry.imageUrl,
-      minPlayers: entry.minPlayers,
-      maxPlayers: entry.maxPlayers,
-      playTimeMinutes: entry.playTimeMinutes,
+      title: entry.boardGame.title,
+      imageUrl: entry.boardGame.imageUrl,
+      minPlayers: entry.boardGame.minPlayers,
+      maxPlayers: entry.boardGame.maxPlayers,
+      playTimeMinutes: entry.boardGame.playTimeMinutes,
       ownerMeepleId: entry.meepleId,
       ownerDisplayName: entry.meeple.displayName,
     }));

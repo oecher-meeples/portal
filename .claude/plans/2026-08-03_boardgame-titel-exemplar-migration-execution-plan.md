@@ -110,10 +110,11 @@ Du bist ein erfahrener Fullstack-TypeScript-Entwickler mit Schwerpunkt Next.js 1
       - **Nicht in diesem Schritt behoben (gehört zu Schritt 8):** `src/components/feature/guest-area/actions.ts` (`getGuestGameDetail`) ruft sowohl `isGameInEventRoom` (jetzt `gameCopyId`) als auch `getAttendingExplainers`/Titel-Metadaten (`boardGameId`) auf einer einzigen `boardGameId`-Variable auf — muss in Schritt 8 auf Exemplar-Lookup mit eingebundenem Titel umgestellt werden.
       - `pnpm exec tsc --noEmit` für alle Dateien dieses Schritts fehlerfrei; `pnpm vitest run src/lib/events src/lib/members src/lib/statistics src/lib/explainer src/lib/inventory` → 23 Testdateien, 164 Tests grün.
 
-- [ ] **6. Private BGG-Sammlungen auf Titel-Referenz umstellen (Anzeige-Code)**
+- [x] **6. Private BGG-Sammlungen auf Titel-Referenz umstellen (Anzeige-Code)**
       Anzeige-Stellen, die bisher `entry.title`/`entry.imageUrl`/… direkt von `PrivateGameCollectionEntry` lasen, auf `entry.boardGame.title`/`entry.boardGame.imageUrl`/… umstellen (die Schreib-/Sync-Seite wurde bereits in Schritt 4 auf die Find-or-Create-Funktion umgestellt).
       _Definition of Done:_ betroffene Tests grün, crowdsourcte Ludothek-Suche (Toggle „Auch Privatbesitz anzeigen") zeigt weiterhin dieselben Daten, jetzt über die gemeinsame Titel-Tabelle.
       `git commit -m "refactor: read shared BoardGame title for private collection entries"`
+      **Ausführungsnotiz (2026-08-04):** `src/lib/ludothek/private-collection.ts`: `PrivateCollectionEntryInput` liest Titel-Felder jetzt aus einer eingebetteten `boardGame`-Relation statt flach. `src/app/ludothek/page.tsx`: `privateGameCollectionEntry.findMany` bindet jetzt `boardGame` (Titel-Felder) zusätzlich zu `meeple` ein. `private-collection.test.ts` entsprechend umgebaut (Fixture verschachtelt `boardGame`). Typecheck + Tests grün (4/4).
 
 - [ ] **7. Components: Bestandsverwaltung**
       `board-game-form-fields.tsx`, `edit-board-game-dialog.tsx`, `create-board-game-dialog.tsx`, `game-card-edit-overlay.tsx`, `deinventorise-board-game-dialog.tsx`: an die neue Titel-/Exemplar-Trennung anpassen, inkl. neuer Aktion „Weiteres Exemplar anlegen" für einen bestehenden Titel (nutzt `ActionDialog`/`ActionButton` aus der Bausteine-Tabelle, keine eigene Dialog-Logik). `game-detail-view.tsx`, `game-holding-panel.tsx`: zeigen jetzt ggf. mehrere Exemplare eines Titels mit je eigenem Standort/Zustand.
