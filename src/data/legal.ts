@@ -97,30 +97,28 @@ export const LEGAL_CONTENT: Record<string, LegalSection[]> = {
       id: "angaben",
       heading: "Angaben gemäß § 5 DDG",
       paragraphs: [
-        "Oecher Meeples (Verein befindet sich in Gründung — die Eintragung ins Vereinsregister als „e. V.“ ist noch nicht erfolgt).",
-        "TODO: Ladungsfähige Anschrift (Straße, Hausnummer, Postleitzahl, Ort) fehlt noch und muss vom Vorstand ergänzt werden.",
+        "Oecher Meeples e. V.",
+        "Aretzstr. 57, 52070 Aachen (c/o Tanja Bell)",
       ],
     },
     {
       id: "vertretungsberechtigte",
       heading: "Vertretungsberechtigte",
       paragraphs: [
-        "TODO: Name(n) der/des Vertretungsberechtigten (z. B. 1. Vorsitzende:r) fehlen noch.",
+        "1. Vorsitzende: Tanja Bell",
+        "2. Vorsitzender: Sven Denysiuk",
+        "Kassenwart: Thomas Kösch",
       ],
     },
     {
       id: "kontakt",
       heading: "Kontakt",
-      paragraphs: [
-        "TODO: Verbindliche Kontakt-E-Mail-Adresse des Vorstands fehlt noch.",
-      ],
+      paragraphs: ["E-Mail: info@oecher-meeples.org"],
     },
     {
       id: "registereintrag",
       heading: "Registereintrag",
-      paragraphs: [
-        "TODO: Der Verein ist noch nicht ins Vereinsregister eingetragen. Registergericht und Registernummer werden nach erfolgter Eintragung ergänzt.",
-      ],
+      paragraphs: ["Amtsgericht Aachen, VR 5419"],
     },
     {
       id: "verwendete-software",
