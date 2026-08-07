@@ -62,7 +62,8 @@ const PERMISSIONS = [
   },
   {
     key: "downloads:manage",
-    description: "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
+    description:
+      "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
   },
 ];
 
