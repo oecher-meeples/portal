@@ -56,7 +56,8 @@ src/lib/
 ├── newsletter/ Brevo-Mailer (`mailer.ts`), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
-└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook), `search-params.ts`
+└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook), `search-params.ts`,
+                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `blob-delete.ts` (Vercel-Blob-Löschung, mehrfach genutzt)
 ```
 
 Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.
@@ -134,3 +135,4 @@ Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `en
 4. **Dateien unter 100 Zeilen nur, wenn sie mehrfach importiert werden.** Einmalig genutzte Kleinkomponenten gehören in ihren Aufrufer. Begründete Ausnahmen: `layout/*` (jeweils eigener Rahmen-Baustein) und `theme-provider.tsx` (technisch nötige `"use client"`-Grenze).
 5. **Colocation**: Tests (`*.test.ts(x)`) liegen neben ihrem Subjekt.
 6. **Coverage-Pflicht nur für `lib/` und `actions.ts`**: Die Geschäftsregeln (`src/lib/**`) und Server Actions (`src/components/**/actions.ts`) tragen eine Coverage-Schwelle (`vitest.config.ts`, aktuell 80 %). UI-Komponenten und Routen haben bewusst keine — das ist eine Entscheidung (siehe Issue #38), keine Lücke.
+test-pr-marker

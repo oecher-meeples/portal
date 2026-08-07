@@ -31,6 +31,26 @@
 
 ---
 
+## Stand der Umsetzung (2026-08-04)
+
+| Finding | Issue | Status |
+| --- | --- | --- |
+| C-1, C-2, H-1 (AGPL) | [#41](https://github.com/oecher-meeples/portal/issues/41) | **Bewertet, nicht behoben.** ADR 0007 dokumentiert: `@triplit/client` deklariert `AGPL-3.0-only`; `@triplit/db`/`@triplit/logger` haben keine Lizenzangabe (ungünstigster Fall). Bundle-Check nach `pnpm build` zeigt 0 Treffer für `@triplit`/`@daveyplate`/`@neondatabase/auth-ui` im ausgelieferten Code — beantwortet aber nicht, ob diese Pakete zur *Laufzeit* auf dem Server genutzt werden (AGPL §13 greift beim Betrieb). Kein Dependency-Austausch (Auth-Refactor, zu riskant für einen autonomen Lauf). Zusätzlich unabhängig ungeklärt: Repository ist public, `LICENSE` sagt „All rights reserved". **Issue bleibt offen**, braucht eine Entscheidung (Lizenzwechsel oder juristische Bewertung), kein reiner Code-Fix. |
+| C-3 (falsche Export-Zusage) | [#48](https://github.com/oecher-meeples/portal/issues/48), [#49](https://github.com/oecher-meeples/portal/issues/49) | ✅ Behoben — Zusage zunächst entfernt, dann durch den tatsächlich gebauten Self-Service-Export (Profilbereich, JSON, Art. 15/20) ersetzt |
+| H-2 (Datenarten, Rechtsgrundlagen) | [#48](https://github.com/oecher-meeples/portal/issues/48) | ✅ Behoben — vollständige Datenarten-Liste inkl. Verhaltensdaten, Rechtsgrundlagen (Art. 6 Abs. 1 lit. a/b), Speicherdauern, erweiterte Betroffenenrechte, Auftragsverarbeiter, Cookie-Abschnitt |
+| H-3 (Impressum-Platzhalter) | [#48](https://github.com/oecher-meeples/portal/issues/48) | **Strukturiert, nicht vollständig.** Nach § 5 DDG gegliedert (Vereinsname, Anschrift, Vertretungsberechtigte, Kontakt, Registereintrag), „Musterstraße" entfernt. Alle fehlenden Werte als sichtbare `TODO`s markiert — **keine erfundene Adresse.** Issue bleibt offen, bis der Vorstand die realen Daten liefert. |
+| M-1, M-2, M-3 (fehlende Attribution) | [#50](https://github.com/oecher-meeples/portal/issues/50) | ✅ Behoben — `THIRD-PARTY-LICENSES.md` reproduzierbar generiert, eigener Abschnitt für MPL/LGPL/CC-BY, im Portal verlinkt |
+| M-4 (Freitextfelder/Blob-Bilder bei Anonymisierung) | [#49](https://github.com/oecher-meeples/portal/issues/49) | **Teilweise behoben.** `Post.author` und Marktanzeigen-Bilder (inkl. tatsächlicher Blob-Löschung) sind erledigt. Die übrigen Freitextfelder (`LfgPost`, `MarketListing.description`, `GameHolding.note` etc.) sind **bewusst nicht angefasst** — Löschen zerstört Vereinshistorie, die andere Mitglieder betrifft. Konflikt mit der „namenlos lesbar"-Zusage im Profilbereich als Kommentar an #49 dokumentiert, braucht eine Vorstandsentscheidung zwischen zwei Optionen. |
+| M-5 (kein Selbstbedienungs-Löschweg) | [#49](https://github.com/oecher-meeples/portal/issues/49) | **Teilweise behoben.** Löschantrag mit Fristanzeige (Art. 12 Abs. 3) ist live. Automatische Anonymisierung nach Austritt ist als Mechanik fertig und getestet, aber **bewusst deaktiviert** (`MEMBER_DATA_RETENTION_MONTHS = null`) — die Frist selbst ist eine Vorstandsentscheidung (Datenminimierung vs. steuerliche Belegaufbewahrung), keine geratene Zahl. |
+| M-6 (Bank-CSV ohne Warnung) | [#49](https://github.com/oecher-meeples/portal/issues/49) | ✅ Behoben — Bestätigungsdialog nennt Anzahl der Klartext-IBANs und Löschpflicht. Offene Zusatzfrage (Datenminimierung: Export auf tatsächlich einzuziehende Mitglieder einschränken?) an #49 kommentiert. |
+| L-1 (falsch deklarierte Runtime-Deps) | [#50](https://github.com/oecher-meeples/portal/issues/50) | ✅ Behoben — `@prisma/client`/`better-auth` in `dependencies` |
+| L-2 (Instagram-Token im Klartext) | [#54](https://github.com/oecher-meeples/portal/issues/54) (Security-Plan) | ✅ Behoben — bewusst im Security-Teilplan statt hier, wie beide Pläne von Anfang an vorgesehen hatten |
+| L-3 (keine Cookie-Angabe) | [#48](https://github.com/oecher-meeples/portal/issues/48) | ✅ Behoben — eigener Cookie-Abschnitt in der Datenschutzerklärung |
+
+**Zusammengefasst:** 8 von 15 Findings vollständig behoben, 4 teilweise (Mechanik fertig, Aktivierung/Vervollständigung braucht eine Entscheidung des Vorstands), 3 bewusst nicht behoben und explizit dokumentiert (AGPL-Bewertung, Impressum-Platzhalter, Freitextfelder). Kein Finding wurde stillschweigend übergangen.
+
+---
+
 ## 1. Lizenz-Audit
 
 ### Methodik
