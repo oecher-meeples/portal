@@ -17,6 +17,23 @@ Das Repo ist in gutem Zustand: **keine Critical- oder High-Findings.** Die Subst
 
 ---
 
+## Stand der Umsetzung (2026-08-04)
+
+Alle sechs Findings/Issues sind umgesetzt und geschlossen — kein offener Punkt aus diesem Audit.
+
+| Issue | Finding | Umsetzung |
+| --- | --- | --- |
+| [#42](https://github.com/oecher-meeples/portal/issues/42) | `GameZustandPill` umgangen | `admin-bestand-view.tsx` nutzt den geteilten Baustein statt einer eigenen Label-/Tone-Map |
+| [#43](https://github.com/oecher-meeples/portal/issues/43) | Keine `revalidatePath` in Ludothek-Actions | Ergänzt in `board-games.ts` und `holding-actions.ts`, nur im Erfolgspfad |
+| [#44](https://github.com/oecher-meeples/portal/issues/44) | `getAllContent()` lädt `body` unnötig mit | `getInternalContent()` filtert und selektiert jetzt in der DB-Query |
+| [#45](https://github.com/oecher-meeples/portal/issues/45) | `useAction()` fünffach neu erfunden | Alle fünf Views auf den geteilten Hook umgestellt, inkl. Kassen-Tabelle mit zeilenweise isoliertem Pending-Zustand |
+| [#46](https://github.com/oecher-meeples/portal/issues/46) | Fetch-Timeouts + DB-Indizes fehlen | Timeouts für BGG-/Instagram-/ICS-Fetches, drei `@@index`-Ergänzungen in einer Migration |
+| [#47](https://github.com/oecher-meeples/portal/issues/47) | Code-Hygiene (String-Konkatenation, Debug-Log, `!`-Assertions) | `cn()` durchgängig genutzt, Debug-`console.log` entfernt, `requireEnv()`-Helper eingeführt und in `auth/server.ts` verwendet |
+
+Neue geteilte Bausteine aus diesem und dem Compliance-Durchlauf: `requireEnv()` (`src/lib/utils/require-env.ts`) und `deleteBlobs()` (`src/lib/utils/blob-delete.ts`) — beide in der CLAUDE.md-Bausteintabelle und in `docs/project-structure.md` nachgetragen.
+
+---
+
 ## Prioritized Findings
 
 | #   | Finding                                                              | Dimension    | Schwere | Aufwand | Nutzen  | Issue          |
