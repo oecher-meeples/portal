@@ -182,15 +182,19 @@ erDiagram
 
 ## 4. Ludothek: Bestand, Aufbewahrung, Verleih
 
-### Ein Datensatz pro physischem Spiel
+### Titel und Exemplar getrennt (ADR 0008)
 
-`BoardGame` beschreibt **ein physisches Spiel** zusammen mit seinen Titel-Metadaten aus BoardGameGeek — es gibt keine getrennte Titel-/Exemplar-Ebene. Der Verein besitzt von jedem Titel genau ein Spiel; mehrere Spiele desselben Titels sind erlaubt und dann zwei Zeilen mit derselben EAN, unterscheidbar über ihren Standort. Deshalb sind `ean` und `bggId` **indexiert, aber nicht eindeutig**: die EAN kennzeichnet das Produkt, nicht das Exemplar.
+`BoardGame` ist der **Titel** — reine BGG-/Produkt-Metadaten, ein Datensatz pro Titel unabhängig davon, wie viele physische Exemplare der Verein davon besitzt. `bggId` ist deshalb `@unique` (nullable). `GameCopy` ist das **Exemplar**: Zustand (`condition`), Inventarstatus, Vollständigkeitsprüfung, Deinventarisierung — alles, was sich pro physischem Spiel unterscheidet. Ein Titel kann beliebig viele Exemplare haben (`GameCopy.boardGameId`, `onDelete: Restrict` — ein Titel mit noch existierenden Exemplaren kann nicht versehentlich mitgelöscht werden). `ean` bleibt auf dem Titel und **nicht eindeutig**: die EAN kennzeichnet das Produkt, nicht das einzelne Exemplar — mehrere Exemplare desselben Titels tragen dieselbe EAN.
 
-Deinventarisierte Spiele werden nie gelöscht (`status`, `archivedAt`, `archivedReason`), damit die Verleih-Historie erhalten bleibt. Sie sind überall standardmäßig ausgefiltert.
+Diese Trennung löst den Teil von ADR 0001 ab, der sie ursprünglich verwarf ("nicht wieder vorschlagen, ohne dass es echte Duplikate gibt") — echte Mehrfach-Exemplare (Vereinsbibliothek) und private BGG-Sammlungen (`PrivateGameCollectionEntry`, referenziert ebenfalls den Titel) haben diese Bedingung erfüllt.
+
+`GameCollection` (Grundspiel↔Erweiterung), `ExplainerGame` und `SparePartListing` bleiben auf Titel-Ebene — eine Erweiterung, ein Erklärbär-Profil oder ein Ersatzteil gehört zum Titel, nicht zum einzelnen Exemplar.
+
+Deinventarisierte Exemplare werden nie gelöscht (`GameCopy.status`, `archivedAt`, `archivedReason`), damit die Verleih-Historie erhalten bleibt. Sie sind überall standardmäßig ausgefiltert.
 
 ### Standort: eine Kette von Aufenthalten
 
-Es gibt **kein Standortfeld**. Wo ein Spiel ist, steht in `GameHolding`: jeder Aufenthalt zeigt auf genau eines von Aufbewahrungseinheit oder Meeple, hat `startedAt` und optional `endedAt`. Ein partieller Unique-Index (`WHERE endedAt IS NULL`) garantiert genau einen offenen Aufenthalt pro Spiel, eine `CHECK`-Constraint genau ein Ziel. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang: einen Aufenthalt schließen, den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, steht in `origin`.
+Es gibt **kein Standortfeld**. Wo ein Exemplar ist, steht in `GameHolding`: jeder Aufenthalt zeigt auf genau eines von Aufbewahrungseinheit oder Meeple, hat `startedAt` und optional `endedAt`. Ein partieller Unique-Index (`WHERE endedAt IS NULL`) garantiert genau einen offenen Aufenthalt pro Exemplar (`gameCopyId`), eine `CHECK`-Constraint genau ein Ziel. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang: einen Aufenthalt schließen, den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, steht in `origin`.
 
 **Als Ausleihe zählt ein Aufenthalt genau dann, wenn `meepleId` gesetzt ist und `origin` `LOAN` oder `HANDOVER` ist.** Eine Rückgabe an eine Person (`origin: RETURN`) ist damit ausdrücklich keine Ausleihe — wer ein Spiel zum Einlagern annimmt, hat es nicht ausgeliehen. `confirmedAt` ist leer, solange nur die abgebende Seite den Vorgang eingetragen hat.
 
@@ -202,9 +206,8 @@ Wer ein Spiel verantwortet, wird abgeleitet und nie gespeichert: Spiel → Karto
 erDiagram
     BoardGame {
         String id PK
-        String slug UK
         String title
-        Int bggId "Index, nicht eindeutig"
+        Int bggId UK "nullable — die einzige verlässliche Produkt-Identität"
         String ean "Index, nicht eindeutig — Produkt, nicht Exemplar"
         Int minPlayers
         Int maxPlayers
@@ -213,6 +216,14 @@ erDiagram
         String imageUrl
         String description
         String_Array mechanics
+        String explainerVideoUrl
+        BoardGameKind kind "BOARDGAME, BOARDGAME_EXPANSION"
+    }
+
+    GameCopy {
+        String id PK
+        String slug UK
+        String boardGameId FK
         String condition "einzige Zustandsnotiz"
         Boolean needsCompletenessCheck
         DateTime lastCheckedAt
@@ -245,7 +256,7 @@ erDiagram
 
     GameHolding {
         String id PK
-        String boardGameId FK
+        String gameCopyId FK
         String unitId FK "entweder dies"
         String meepleId FK "oder dies"
         HoldingOrigin origin "INITIAL, LOAN, RETURN, HANDOVER, RELOCATION"
@@ -261,7 +272,8 @@ erDiagram
         String displayName
     }
 
-    BoardGame ||--o{ GameHolding : "war/ist"
+    BoardGame ||--o{ GameCopy : "hat Exemplare"
+    GameCopy ||--o{ GameHolding : "war/ist"
     StorageUnit ||--o{ GameHolding : "beherbergt"
     Meeple ||--o{ GameHolding : "hat"
     StorageUnit ||--o{ StorageUnit : "steht in"
@@ -271,10 +283,10 @@ erDiagram
 
 | Tabelle | Stand |
 |---|---|
-| `board_games` (Grundfelder, BGG-Import, Deinventarisierung) | ✅ migriert |
-| `board_games`: `ean`, `needsCompletenessCheck`, `lastCheckedAt`; `bggId` verliert die Eindeutigkeit; Status `MAINTENANCE` | ✅ migriert |
-| `board_games`: `location` und `quantity` entfernen (Felder liegen noch am Schema, ungenutzt seit der Migration in Aufenthalte) | 🔜 spätere Aufräum-Migration |
-| `storage_units`, `storage_unit_moves`, `game_holdings` | ✅ migriert |
+| `board_games` (Titel: Grundfelder, BGG-Import) | ✅ migriert |
+| `game_copies` (Exemplar: `condition`, `needsCompletenessCheck`, `lastCheckedAt`, `status`, `archivedAt`, `archivedReason`, `slug`) | ✅ migriert (ADR 0008, löst den Teil von ADR 0001 ab) |
+| `board_games.bggId` `@unique`; `board_games.slug`/`quantity`/`location`/`condition`/`status`/… entfernt | ✅ migriert |
+| `storage_units`, `storage_unit_moves`, `game_holdings` (`game_holdings.gameCopyId` statt `boardGameId`) | ✅ migriert |
 
 Spiele, deren Standort noch nie erfasst wurde, liegen in der Einheit „Unsortiert" (`OM-BOX-0000`) — sie behauptet keinen echten Ort und hat keinen Verwahrer; ihr Inhalt ist die Arbeitsliste der Ersterfassung.
 
@@ -368,4 +380,4 @@ erDiagram
 | `meeples.telegramHandle`/`signalHandle`/`discordHandle` | ✅ migriert |
 | `spare_part_listings` | ✅ migriert |
 | `market_listings` | ✅ migriert |
-| `private_game_collection_entries` | ✅ migriert (Seed-Daten, kein echter BGG-Sync — siehe `docs/roadmap.md` 7.3) |
+| `private_game_collection_entries` | ✅ migriert (Seed-Daten, kein echter BGG-Sync — siehe `docs/roadmap.md` 7.3); referenziert seit ADR 0008 den gemeinsamen Titel (`boardGameId` FK auf `BoardGame`) statt eigene Titel-Metadaten zu duplizieren — es entsteht **kein** `GameCopy` für Privatbesitz |

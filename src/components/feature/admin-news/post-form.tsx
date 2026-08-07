@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import type { ContentType } from "@/lib/content/content";
 import {
@@ -276,10 +277,11 @@ export function PostForm({
           <p className="text-destructive text-sm">{coverUploadError}</p>
         )}
         {coverImageUrl && !isUploadingCover && (
-          <img
-            src={coverImageUrl}
+          <CoverMedia
+            imageUrl={coverImageUrl}
             alt="Cover-Bild-Vorschau"
-            className="h-32 w-32 rounded-md border object-cover"
+            aspect="aspect-square"
+            className="w-32"
           />
         )}
       </div>
@@ -314,22 +316,22 @@ export function PostForm({
             onChange={(event) => setSendAsNewsletter(event.target.checked)}
           />
           Als Newsletter versenden in
+          {sendAsNewsletter && (
+            <select
+              value={newsletterCategory}
+              onChange={(event) =>
+                setNewsletterCategory(event.target.value as NewsletterCategory)
+              }
+              className="border-primary bg-background h-9 w-fit rounded-md border-2 px-3 text-sm"
+            >
+              {NEWSLETTER_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {NEWSLETTER_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
-        {sendAsNewsletter && (
-          <select
-            value={newsletterCategory}
-            onChange={(event) =>
-              setNewsletterCategory(event.target.value as NewsletterCategory)
-            }
-            className="border-input h-9 w-fit rounded-md border bg-transparent px-3 text-sm"
-          >
-            {NEWSLETTER_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {NEWSLETTER_CATEGORY_LABELS[category]}
-              </option>
-            ))}
-          </select>
-        )}
         {isExistingDraft && (
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -379,9 +381,11 @@ export function PostForm({
         <Button type="submit" value="PUBLISHED" disabled={isSubmitting}>
           {isSubmitting && pendingStatus === "PUBLISHED"
             ? "Speichere…"
-            : postId
-              ? "Änderungen speichern"
-              : "Absenden"}
+            : isExistingDraft
+              ? "Entwurf veröffentlichen"
+              : postId
+                ? "Änderungen speichern"
+                : "Absenden"}
         </Button>
       </div>
     </form>

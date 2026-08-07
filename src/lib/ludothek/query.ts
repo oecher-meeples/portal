@@ -10,27 +10,29 @@ const MAX_UNIT_CHAIN_DEPTH = 20;
 
 /**
  * Everything the Ludothek browser and detail page need, in one bulk query —
- * avoids an N+1 per game for zustand/location/responsibility.
+ * avoids an N+1 per copy for zustand/location/responsibility. One row per
+ * physical copy; title-level fields (description, mechanics, …) come from
+ * the shared `BoardGame`.
  */
 export async function buildLudothekGames(): Promise<LudothekGame[]> {
-  const [games, units] = await Promise.all([
-    prisma.boardGame.findMany({
+  const [copies, units] = await Promise.all([
+    prisma.gameCopy.findMany({
       where: { status: { not: GameInventoryStatus.DEINVENTARISED } },
-      orderBy: { title: "asc" },
+      orderBy: { boardGame: { title: "asc" } },
       include: {
+        boardGame: {
+          include: {
+            baseGameCollections: {
+              include: { expansion: { select: { id: true, title: true } } },
+            },
+            expansionCollections: {
+              include: { baseGame: { select: { id: true, title: true } } },
+            },
+          },
+        },
         holdings: {
           where: { endedAt: null },
           include: { unit: true, meeple: { select: { displayName: true } } },
-        },
-        baseGameCollections: {
-          include: {
-            expansion: { select: { id: true, slug: true, title: true } },
-          },
-        },
-        expansionCollections: {
-          include: {
-            baseGame: { select: { id: true, slug: true, title: true } },
-          },
         },
       },
     }),
@@ -67,26 +69,28 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     return { chain: chain.reverse().join(" → "), keeperMeepleId };
   }
 
-  return games.map((game) => {
-    const holding = game.holdings[0] ?? null;
+  return copies.map((copy) => {
+    const boardGame = copy.boardGame;
+    const holding = copy.holdings[0] ?? null;
     const base = {
-      id: game.id,
-      slug: game.slug,
-      title: game.title,
-      imageUrl: game.imageUrl,
-      minPlayers: game.minPlayers,
-      maxPlayers: game.maxPlayers,
-      playTimeMinutes: game.playTimeMinutes,
-      weight: game.weight,
-      mechanics: game.mechanics,
-      ean: game.ean,
-      condition: game.condition,
-      bggId: game.bggId,
-      description: game.description,
-      explainerVideoUrl: game.explainerVideoUrl,
-      kind: game.kind,
-      baseGames: game.expansionCollections.map((c) => c.baseGame),
-      expansions: game.baseGameCollections.map((c) => c.expansion),
+      id: copy.id,
+      boardGameId: boardGame.id,
+      slug: copy.slug,
+      title: boardGame.title,
+      imageUrl: boardGame.imageUrl,
+      minPlayers: boardGame.minPlayers,
+      maxPlayers: boardGame.maxPlayers,
+      playTimeMinutes: boardGame.playTimeMinutes,
+      weight: boardGame.weight,
+      mechanics: boardGame.mechanics,
+      ean: boardGame.ean,
+      condition: copy.condition,
+      bggId: boardGame.bggId,
+      description: boardGame.description,
+      explainerVideoUrl: boardGame.explainerVideoUrl,
+      kind: boardGame.kind,
+      baseGames: boardGame.expansionCollections.map((c) => c.baseGame),
+      expansions: boardGame.baseGameCollections.map((c) => c.expansion),
     };
 
     if (!holding) {
@@ -102,7 +106,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     if (holding.meepleId) {
       return {
         ...base,
-        zustand: zustandFromHoldingAndUnit(holding, null, game.status),
+        zustand: zustandFromHoldingAndUnit(holding, null, copy.status),
         isLoanedOut: isLoanHolding(holding),
         responsibleMeepleId: holding.meepleId,
         locationChain: `bei ${holding.meeple?.displayName ?? "Meeple"}`,
@@ -112,7 +116,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     const { chain, keeperMeepleId } = resolveUnitChain(holding.unitId!);
     return {
       ...base,
-      zustand: zustandFromHoldingAndUnit(holding, holding.unit, game.status),
+      zustand: zustandFromHoldingAndUnit(holding, holding.unit, copy.status),
       isLoanedOut: false,
       responsibleMeepleId: keeperMeepleId,
       locationChain: chain,

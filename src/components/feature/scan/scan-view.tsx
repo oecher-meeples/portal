@@ -23,8 +23,8 @@ type ViewState =
   | { kind: "idle" }
   | { kind: "unknown"; raw: string }
   | { kind: "select-game"; games: { id: string; title: string }[] }
-  | { kind: "game"; boardGameId: string }
-  | { kind: "pruefen"; boardGameId: string; title: string }
+  | { kind: "game"; gameCopyId: string }
+  | { kind: "pruefen"; gameCopyId: string; title: string }
   | {
       kind: "unit";
       unitId: string;
@@ -59,7 +59,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
         unitId: resolved.unit.id,
         code: resolved.unit.code,
         label: resolved.unit.label,
-        contents: resolved.contents.map((g) => g.title),
+        contents: resolved.contents.map((g) => g.boardGame.title),
       });
       return;
     }
@@ -70,8 +70,8 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
         const result = await scanPlaceGameInUnit(game.id, seriesMode.unitId);
         setSeriesLog((log) => [
           result.error
-            ? `${game.title}: ${result.error}`
-            : `${game.title} → ${seriesMode.unitCode}`,
+            ? `${game.boardGame.title}: ${result.error}`
+            : `${game.boardGame.title} → ${seriesMode.unitCode}`,
           ...log,
         ]);
       }
@@ -82,14 +82,23 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
       const game = resolved.games[0];
       setState(
         seriesMode?.type === "pruefen"
-          ? { kind: "pruefen", boardGameId: game.id, title: game.title }
-          : { kind: "game", boardGameId: game.id },
+          ? {
+              kind: "pruefen",
+              gameCopyId: game.id,
+              title: game.boardGame.title,
+            }
+          : { kind: "game", gameCopyId: game.id },
       );
       return;
     }
     setState({
       kind: "select-game",
-      games: resolved.games.map((g) => ({ id: g.id, title: g.title })),
+      games: resolved.games.map((g) => ({
+        id: g.id,
+        title: g.condition
+          ? `${g.boardGame.title} (${g.condition})`
+          : g.boardGame.title,
+      })),
     });
   }
 
@@ -205,10 +214,10 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                           seriesMode?.type === "pruefen"
                             ? {
                                 kind: "pruefen",
-                                boardGameId: game.id,
+                                gameCopyId: game.id,
                                 title: game.title,
                               }
-                            : { kind: "game", boardGameId: game.id },
+                            : { kind: "game", gameCopyId: game.id },
                         )
                       }
                     >
@@ -221,7 +230,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
 
             {state.kind === "game" && (
               <GameHoldingPanel
-                boardGameId={state.boardGameId}
+                gameCopyId={state.gameCopyId}
                 advanceAfterAction={Boolean(seriesMode)}
                 onDone={reset}
               />
@@ -229,7 +238,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
 
             {state.kind === "pruefen" && (
               <PruefbogenPanel
-                boardGameId={state.boardGameId}
+                gameCopyId={state.gameCopyId}
                 title={state.title}
                 onDone={reset}
               />

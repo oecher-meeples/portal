@@ -1,15 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { GameInventoryStatus } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
-import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
-import { toSparePartListingData } from "@/lib/inventory/spare-part-listings";
-import { uniqueSlug } from "@/lib/utils/slug";
+import { createGameCopyTx } from "@/lib/ludothek/game-copies";
+import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
   BggApiError,
   BggNotFoundError,
@@ -17,7 +14,9 @@ import {
   type BggGameData,
 } from "@/lib/bgg/client";
 
-export type BoardGameInput = {
+type Tx = PrismaClient | Prisma.TransactionClient;
+
+export type BoardGameTitleInput = {
   title: string;
   bggId?: number | null;
   ean?: string | null;
@@ -28,22 +27,14 @@ export type BoardGameInput = {
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
-  condition?: string | null;
   explainerVideoUrl?: string | null;
 };
 
-async function uniqueBoardGameSlug(title: string, excludeId?: string) {
-  return uniqueSlug(
-    title,
-    async (slug) =>
-      (await prisma.boardGame.findFirst({
-        where: { slug, ...(excludeId ? { id: { not: excludeId } } : {}) },
-        select: { id: true },
-      })) !== null,
-  );
-}
+export type CreateBoardGameInput = BoardGameTitleInput & {
+  condition?: string | null;
+};
 
-function validateBoardGameInput(input: BoardGameInput) {
+function validateBoardGameInput(input: BoardGameTitleInput) {
   if (!input.title) {
     return "Bitte einen Titel angeben.";
   }
@@ -53,7 +44,7 @@ function validateBoardGameInput(input: BoardGameInput) {
   return null;
 }
 
-function toBoardGameData(input: BoardGameInput) {
+function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
     bggId: input.bggId ?? null,
     ean: input.ean ? normaliseEan(input.ean) : null,
@@ -64,7 +55,6 @@ function toBoardGameData(input: BoardGameInput) {
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
-    condition: input.condition || null,
     explainerVideoUrl: input.explainerVideoUrl || null,
   };
 }
@@ -88,30 +78,41 @@ async function duplicateEanHint(
     : undefined;
 }
 
+/** Every title touched by an expansion assignment, revalidated via its copies' routes. */
 async function revalidateAssignmentPaths(
   baseGameId: string,
   expansionId: string,
 ) {
-  const games = await prisma.boardGame.findMany({
-    where: { id: { in: [baseGameId, expansionId] } },
+  const copies = await prisma.gameCopy.findMany({
+    where: { boardGameId: { in: [baseGameId, expansionId] } },
     select: { slug: true },
   });
 
   revalidatePath("/ludothek");
-  for (const game of games) {
-    revalidatePath(`/ludothek/${game.slug}`);
+  for (const copy of copies) {
+    revalidatePath(`/ludothek/${copy.slug}`);
   }
 }
 
-async function requireGamesManagePermission() {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "games:manage"))) {
-    return null;
+/** Finds the title by `bggId` (the one reliable product identity) or creates it. */
+export async function findOrCreateBoardGameTitle(
+  input: BoardGameTitleInput,
+  tx: Tx = prisma,
+) {
+  if (input.bggId) {
+    const existing = await tx.boardGame.findUnique({
+      where: { bggId: input.bggId },
+    });
+    if (existing) return existing;
   }
-  return user;
+
+  return tx.boardGame.create({
+    data: { title: input.title, ...toBoardGameTitleData(input) },
+  });
 }
 
-export async function createBoardGame(input: BoardGameInput) {
+/** New title + its first physical copy, in one transaction. */
+export async function createBoardGame(input: CreateBoardGameInput) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };
@@ -122,37 +123,27 @@ export async function createBoardGame(input: BoardGameInput) {
     return { error: validationError };
   }
 
-  const [slug, hint, actor] = await Promise.all([
-    uniqueBoardGameSlug(input.title),
+  const [hint, actor] = await Promise.all([
     duplicateEanHint(input.ean),
     ensureMeeple(user),
   ]);
 
-  const game = await prisma.$transaction(async (tx) => {
-    const created = await tx.boardGame.create({
-      data: { slug, title: input.title, ...toBoardGameData(input) },
+  const copy = await prisma.$transaction(async (tx) => {
+    const title = await findOrCreateBoardGameTitle(input, tx);
+    return createGameCopyTx(tx, {
+      boardGameId: title.id,
+      boardGameTitle: title.title,
+      condition: input.condition,
+      actorId: actor.id,
     });
-
-    const unsortiert = await ensureUnsortiertUnit(tx);
-    await tx.gameHolding.create({
-      data: {
-        boardGameId: created.id,
-        unitId: unsortiert.id,
-        origin: "INITIAL",
-        confirmedAt: new Date(),
-        recordedByMeepleId: actor.id,
-      },
-    });
-
-    return created;
   });
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  return { success: true as const, id: game.id, hint };
+  return { success: true as const, id: copy.id, hint };
 }
 
-export async function updateBoardGame(id: string, input: BoardGameInput) {
+export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };
@@ -163,18 +154,22 @@ export async function updateBoardGame(id: string, input: BoardGameInput) {
     return { error: validationError };
   }
 
-  const [slug, hint] = await Promise.all([
-    uniqueBoardGameSlug(input.title, id),
-    duplicateEanHint(input.ean, id),
-  ]);
+  const hint = await duplicateEanHint(input.ean, id);
 
   await prisma.boardGame.update({
     where: { id },
-    data: { slug, title: input.title, ...toBoardGameData(input) },
+    data: { title: input.title, ...toBoardGameTitleData(input) },
+  });
+
+  const copies = await prisma.gameCopy.findMany({
+    where: { boardGameId: id },
+    select: { slug: true },
   });
 
   revalidatePath("/ludothek");
-  revalidatePath(`/ludothek/${slug}`);
+  for (const copy of copies) {
+    revalidatePath(`/ludothek/${copy.slug}`);
+  }
   revalidatePath("/admin/bestand");
   return { success: true as const, hint };
 }
@@ -201,68 +196,6 @@ export async function previewBggImport(bggId: number) {
     }
     throw error;
   }
-}
-
-export async function deinventoriseBoardGame(
-  id: string,
-  reason: string,
-  addToSpareParts = false,
-) {
-  const user = await requireGamesManagePermission();
-  if (!user) {
-    return { error: "Keine Berechtigung." };
-  }
-
-  if (!reason.trim()) {
-    return { error: "Bitte einen Grund für die Deinventarisierung angeben." };
-  }
-
-  const actor = addToSpareParts ? await ensureMeeple(user) : null;
-
-  const game = await prisma.$transaction(async (tx) => {
-    const game = await tx.boardGame.update({
-      where: { id },
-      data: {
-        status: GameInventoryStatus.DEINVENTARISED,
-        archivedAt: new Date(),
-        archivedReason: reason.trim(),
-      },
-    });
-
-    if (actor) {
-      await tx.sparePartListing.create({
-        data: toSparePartListingData({
-          title: game.title,
-          boardGameId: game.id,
-          condition: game.condition || reason.trim(),
-          keeperMeepleId: actor.id,
-        }),
-      });
-    }
-
-    return game;
-  });
-
-  revalidatePath("/ludothek");
-  revalidatePath(`/ludothek/${game.slug}`);
-  revalidatePath("/admin/bestand");
-  return { success: true as const };
-}
-
-export async function requestCompletenessCheck(id: string) {
-  const user = await requireGamesManagePermission();
-  if (!user) {
-    return { error: "Keine Berechtigung." };
-  }
-
-  await prisma.boardGame.update({
-    where: { id },
-    data: { needsCompletenessCheck: true },
-  });
-
-  revalidatePath("/ludothek");
-  revalidatePath("/admin/bestand");
-  return { success: true as const };
 }
 
 /** Manual base game ↔ expansion assignment, see #30 — BGG import is blocked by #12. */

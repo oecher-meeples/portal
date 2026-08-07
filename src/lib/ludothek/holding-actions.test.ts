@@ -18,13 +18,13 @@ vi.mock("@/lib/members/meeples", async () => {
 });
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const boardGameFindUniqueMock = vi.fn();
+const gameCopyFindUniqueMock = vi.fn();
 const gameHoldingFindFirstMock = vi.fn();
 const meepleFindManyMock = vi.fn();
 vi.mock("@/lib/utils/prisma", () => ({
   prisma: {
-    boardGame: {
-      findUnique: (...args: unknown[]) => boardGameFindUniqueMock(...args),
+    gameCopy: {
+      findUnique: (...args: unknown[]) => gameCopyFindUniqueMock(...args),
     },
     gameHolding: {
       findFirst: (...args: unknown[]) => gameHoldingFindFirstMock(...args),
@@ -105,13 +105,13 @@ describe("scanBorrowGame (Ausbuchen)", () => {
   it("always books out to the acting meeple's own id, ignoring any foreign id in the call", async () => {
     await (
       scanBorrowGame as unknown as (
-        boardGameId: string,
+        gameCopyId: string,
         foreignMeepleId?: string,
       ) => Promise<unknown>
     )("game-1", "meeple-someone-else");
 
     expect(borrowGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       meepleId: "meeple-self",
       recordedByMeepleId: "meeple-self",
     });
@@ -172,7 +172,7 @@ describe("giving actions stay allowed for a resigned meeple", () => {
 
     expect(result).toEqual({ success: true, value: { id: "holding-new" } });
     expect(handOverGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       toMeepleId: "meeple-other",
       recordedByMeepleId: "meeple-self",
     });
@@ -185,7 +185,7 @@ describe("giving actions stay allowed for a resigned meeple", () => {
 
     expect(result).toEqual({ success: true, value: { id: "holding-new" } });
     expect(returnGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       toUnitId: "unit-1",
       recordedByMeepleId: "meeple-self",
     });
@@ -197,7 +197,7 @@ describe("giving actions stay allowed for a resigned meeple", () => {
     await scanRelocateGame("game-1", "unit-2");
 
     expect(relocateGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       toUnitId: "unit-2",
       recordedByMeepleId: "meeple-self",
     });
@@ -221,7 +221,7 @@ describe("scanReturnToMeeple", () => {
     await scanReturnToMeeple("game-1", "meeple-other");
 
     expect(returnGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       toMeepleId: "meeple-other",
       recordedByMeepleId: "meeple-self",
     });
@@ -236,7 +236,7 @@ describe("scanPlaceGameInUnit", () => {
     await scanPlaceGameInUnit("game-1", "unit-new");
 
     expect(relocateGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       toUnitId: "unit-new",
       recordedByMeepleId: "meeple-self",
     });
@@ -252,7 +252,7 @@ describe("scanPlaceGameInUnit", () => {
     await scanPlaceGameInUnit("game-1", "unit-new");
 
     expect(returnGameMock).toHaveBeenCalledWith({
-      boardGameId: "game-1",
+      gameCopyId: "game-1",
       toUnitId: "unit-new",
       recordedByMeepleId: "meeple-self",
     });
@@ -265,24 +265,24 @@ describe("scanPlaceGameInUnit", () => {
     const result = await scanPlaceGameInUnit("game-1", "unit-new");
 
     expect(result).toEqual({
-      error: "Spiel game-1 hat keinen offenen Aufenthalt.",
+      error: "Exemplar game-1 hat keinen offenen Aufenthalt.",
     });
   });
 });
 
 describe("scanGetGameContext", () => {
   it("returns null for an unknown game", async () => {
-    boardGameFindUniqueMock.mockResolvedValue(null);
+    gameCopyFindUniqueMock.mockResolvedValue(null);
     gameHoldingFindFirstMock.mockResolvedValue(null);
 
     expect(await scanGetGameContext("game-x")).toBeNull();
   });
 
   it("marks isSelf when the acting meeple holds the game", async () => {
-    boardGameFindUniqueMock.mockResolvedValue({
+    gameCopyFindUniqueMock.mockResolvedValue({
       id: "game-1",
-      title: "Arche Nova",
       status: "ACTIVE",
+      boardGame: { title: "Arche Nova" },
     });
     gameHoldingFindFirstMock.mockResolvedValue({
       id: "holding-1",

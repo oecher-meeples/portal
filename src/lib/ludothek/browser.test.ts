@@ -10,6 +10,7 @@ import {
 function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
   return {
     id: "game-1",
+    boardGameId: "title-1",
     slug: "arche-nova",
     title: "Arche Nova",
     imageUrl: null,

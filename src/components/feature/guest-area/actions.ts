@@ -37,8 +37,8 @@ export async function lookupGuestGame(
     games: resolved.games.map((game) => ({
       id: game.id,
       slug: game.slug,
-      title: game.title,
-      imageUrl: game.imageUrl,
+      title: game.boardGame.title,
+      imageUrl: game.boardGame.imageUrl,
     })),
   };
 }
@@ -62,29 +62,30 @@ export type GuestGameDetail = {
 
 export async function getGuestGameDetail(
   eventId: string,
-  boardGameId: string,
+  gameCopyId: string,
 ): Promise<GuestGameDetail | null> {
   if (!(await isEventCurrentlyRunning(eventId))) return null;
 
-  const game = await prisma.boardGame.findUnique({
-    where: { id: boardGameId },
+  const copy = await prisma.gameCopy.findUnique({
+    where: { id: gameCopyId },
+    include: { boardGame: true },
   });
-  if (!game) return null;
+  if (!copy) return null;
 
   const [isInRoom, attendingExplainers] = await Promise.all([
-    isGameInEventRoom(boardGameId, eventId),
-    getAttendingExplainers(boardGameId, eventId),
+    isGameInEventRoom(copy.id, eventId),
+    getAttendingExplainers(copy.boardGameId, eventId),
   ]);
 
   return {
-    id: game.id,
-    title: game.title,
-    imageUrl: game.imageUrl,
-    description: game.description,
-    minPlayers: game.minPlayers,
-    maxPlayers: game.maxPlayers,
-    playTimeMinutes: game.playTimeMinutes,
-    explainerVideoUrl: game.explainerVideoUrl,
+    id: copy.id,
+    title: copy.boardGame.title,
+    imageUrl: copy.boardGame.imageUrl,
+    description: copy.boardGame.description,
+    minPlayers: copy.boardGame.minPlayers,
+    maxPlayers: copy.boardGame.maxPlayers,
+    playTimeMinutes: copy.boardGame.playTimeMinutes,
+    explainerVideoUrl: copy.boardGame.explainerVideoUrl,
     isInRoom,
     attendingExplainers,
   };
