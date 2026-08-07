@@ -1,6 +1,12 @@
 overrides:
   sharp: ">=0.35.0"
   postcss: ">=8.5.18"
+  "@hono/node-server@<2.0.5": ^2.0.5
+  better-auth@<1.6.2: ^1.6.2
+  better-auth@>=0.3.4 <1.6.11: ^1.6.11
+  brace-expansion@<1.1.17: ^1.1.18
+  brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
+  fast-uri: ^3.1.5
 onlyBuiltDependencies:
   - sharp
   - unrs-resolver
@@ -13,11 +19,8 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 # Bewusst offene Funde, kein generell akzeptiertes Risiko:
-#   - better-auth-Kette (8 Advisories, davon GHSA-pw9m-5jxm-xr6h critical) und die
-#     transitiv über @neondatabase/auth->...->ajv gezogene fast-uri hängen an
+#   - better-auth-Kette (8 Advisories, davon GHSA-pw9m-5jxm-xr6h critical) hängt an
 #     Issue #10 (Neon-Auth-/better-auth-Upgrade-Klärung).
-#   - brace-expansion (2 Advisories) nur über eslint/@typescript-eslint im
-#     Dev-Tooling, nicht im Production-Bundle.
 # Jede neue Advisory außerhalb dieser Liste lässt `pnpm audit` in der CI fehlschlagen.
 auditConfig:
   ignoreGhsas:
@@ -29,6 +32,10 @@ auditConfig:
     - GHSA-fmh4-wcc4-5jm3
     - GHSA-pw9m-5jxm-xr6h
     - GHSA-qq9h-g4jm-xgf3
-    - GHSA-7p8r-x3mc-p8w7
-    - GHSA-mh99-v99m-4gvg
-    - GHSA-rgw5-rvv9-x895
+minimumReleaseAgeExclude:
+  - better-auth@1.6.2 || 1.6.11
+  - "@hono/node-server@2.0.5"
+  - hono@4.12.34
+  - js-yaml@3.15.1 || 4.3.1
+  - brace-expansion@1.1.18 || 5.0.9
+  - fast-uri@3.1.5

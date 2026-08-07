@@ -28,12 +28,16 @@ _Avoid_: Schatzmeister, Finanzadmin
 
 ### Ludothek
 
-**Spiel**:
-Ein einzelnes physisches Brettspiel im Vereinsbesitz, zusammen mit seinen Titel-Metadaten. Aktuell besitzt der Verein von jedem Titel genau ein Spiel; mehrere Spiele desselben Titels sind erlaubt und dann nur über ihren Standort unterscheidbar.
-_Avoid_: Exemplar, Titel, GameCopy, Kopie
+**Spiel** (Titel, `BoardGame`):
+Ein Brettspiel-Titel mit seinen BGG-/Produkt-Metadaten — ein Datensatz pro Titel, unabhängig davon, wie viele physische Exemplare der Verein davon besitzt.
+_Avoid_: Exemplar (das ist die physische Ebene, siehe unten), Kopie
+
+**Exemplar** (`GameCopy`, seit ADR 0008):
+Ein einzelnes physisches Spiel im Vereinsbesitz — Zustand, Inventarstatus und Standort (über `GameHolding`). Ein Titel kann mehrere Exemplare haben, unterscheidbar über Standort und Zustand, nicht über die EAN (die ist Produkt-, nicht Exemplar-Eigenschaft). Löst den Teil von ADR 0001 ab, der eine Titel-/Exemplar-Trennung noch verwarf, solange kein Titel mehr als ein Exemplar hatte.
+_Avoid_: Spiel als Synonym für Exemplar (Spiel meint den Titel), Kopie, GameCopy im Fließtext
 
 **EAN**:
-Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt**, nicht das einzelne Spiel — mehrere Spiele desselben Titels tragen dieselbe EAN, ein Scan kann daher mehrere Treffer liefern.
+Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt** (den Titel), nicht das einzelne Exemplar — mehrere Exemplare desselben Titels tragen dieselbe EAN, ein Scan kann daher mehrere Treffer liefern.
 _Avoid_: Barcode als Exemplar-Schlüssel, Inventarnummer
 
 **Aufbewahrungseinheit**:
@@ -145,8 +149,8 @@ Ein optionales Profilfeld (Telegram, Signal oder Discord), das ein Mitglied im e
 _Avoid_: Kontaktdaten (das meint E-Mail, ist kein neues Feld), Social-Media-Profil
 
 **Privatbesitz-Eintrag**:
-Ein Spiel, das ein Mitglied privat besitzt und nicht im Vereinsbestand geführt wird — Grundlage der Crowdsourced-Suche in der internen Ludothek. Aktuell ausschließlich per Seed befüllt (zwei Demo-Mitglieder), da ein echter BGG-Sammlungs-Sync an der aus dieser Umgebung blockierten BoardGameGeek-API scheitert (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`). Erscheint in der internen Ludothek-Suche nur nach explizitem Toggle „Auch Privatbesitz anzeigen" (Default aus) und **nie** in der öffentlichen Projektion.
-_Avoid_: Spiel (das ist ausschließlich Vereinsbesitz), BGG-Sammlung (impliziert einen echten Sync, den es hier noch nicht gibt)
+Ein Titel, den ein Mitglied privat besitzt und nicht im Vereinsbestand geführt wird — Grundlage der Crowdsourced-Suche in der internen Ludothek. Referenziert seit ADR 0008 denselben Titel-Datensatz (`BoardGame`) wie der Vereinsbestand, sofern die `bggId` übereinstimmt; es entsteht dabei **kein** Exemplar (`GameCopy`) — Privatbesitz kennt keine Exemplare, nur Vereinsbestand hat Standort/Zustand. Aktuell ausschließlich per Seed befüllt (zwei Demo-Mitglieder), da ein echter BGG-Sammlungs-Sync an der aus dieser Umgebung blockierten BoardGameGeek-API scheitert (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`). Erscheint in der internen Ludothek-Suche nur nach explizitem Toggle „Auch Privatbesitz anzeigen" (Default aus) und **nie** in der öffentlichen Projektion.
+_Avoid_: Exemplar für Privatbesitz (Privatbesitz hat kein `GameCopy`), BGG-Sammlung (impliziert einen echten Sync, den es hier noch nicht gibt)
 
 ### Newsletter
 

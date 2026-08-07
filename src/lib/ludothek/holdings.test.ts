@@ -23,7 +23,7 @@ const MEEPLE_B = "meeple-b";
 function openHolding(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "holding-1",
-    boardGameId: GAME_ID,
+    gameCopyId: GAME_ID,
     unitId: null,
     meepleId: null,
     origin: "INITIAL",
@@ -40,7 +40,7 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
-  prismaMock.boardGame.findUnique.mockResolvedValue({
+  prismaMock.gameCopy.findUnique.mockResolvedValue({
     id: GAME_ID,
     status: "ACTIVE",
   } as never);
@@ -59,7 +59,7 @@ describe("borrowGame", () => {
     );
 
     await borrowGame({
-      boardGameId: GAME_ID,
+      gameCopyId: GAME_ID,
       meepleId: MEEPLE_A,
       recordedByMeepleId: MEEPLE_A,
     });
@@ -70,7 +70,7 @@ describe("borrowGame", () => {
     });
     expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         meepleId: MEEPLE_A,
         origin: "LOAN",
         recordedByMeepleId: MEEPLE_A,
@@ -80,7 +80,7 @@ describe("borrowGame", () => {
   });
 
   it("allows borrowing a game whose completeness check is still pending", async () => {
-    prismaMock.boardGame.findUnique.mockResolvedValue({
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
       id: GAME_ID,
       status: "ACTIVE",
       needsCompletenessCheck: true,
@@ -91,7 +91,7 @@ describe("borrowGame", () => {
 
     await expect(
       borrowGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         meepleId: MEEPLE_A,
         recordedByMeepleId: MEEPLE_A,
       }),
@@ -105,7 +105,7 @@ describe("borrowGame", () => {
 
     await expect(
       borrowGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         meepleId: MEEPLE_A,
         recordedByMeepleId: MEEPLE_A,
       }),
@@ -113,7 +113,7 @@ describe("borrowGame", () => {
   });
 
   it("rejects borrowing a deinventarised game", async () => {
-    prismaMock.boardGame.findUnique.mockResolvedValue({
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
       id: GAME_ID,
       status: "DEINVENTARISED",
     } as never);
@@ -123,7 +123,7 @@ describe("borrowGame", () => {
 
     await expect(
       borrowGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         meepleId: MEEPLE_A,
         recordedByMeepleId: MEEPLE_A,
       }),
@@ -136,7 +136,7 @@ describe("borrowGame", () => {
     );
 
     await borrowGame({
-      boardGameId: GAME_ID,
+      gameCopyId: GAME_ID,
       meepleId: MEEPLE_A,
       recordedByMeepleId: MEEPLE_B,
     });
@@ -154,7 +154,7 @@ describe("handOverGame (Weitergabe)", () => {
     );
 
     await handOverGame({
-      boardGameId: GAME_ID,
+      gameCopyId: GAME_ID,
       toMeepleId: MEEPLE_B,
       recordedByMeepleId: MEEPLE_B,
     });
@@ -173,7 +173,7 @@ describe("handOverGame (Weitergabe)", () => {
 
     await expect(
       handOverGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         toMeepleId: MEEPLE_B,
         recordedByMeepleId: MEEPLE_B,
       }),
@@ -188,7 +188,7 @@ describe("returnGame (Rückgabe)", () => {
     );
 
     await returnGame({
-      boardGameId: GAME_ID,
+      gameCopyId: GAME_ID,
       toUnitId: UNIT_ID,
       recordedByMeepleId: MEEPLE_A,
     });
@@ -211,7 +211,7 @@ describe("returnGame (Rückgabe)", () => {
     );
 
     await returnGame({
-      boardGameId: GAME_ID,
+      gameCopyId: GAME_ID,
       toMeepleId: MEEPLE_B,
       recordedByMeepleId: MEEPLE_A,
     });
@@ -231,7 +231,7 @@ describe("returnGame (Rückgabe)", () => {
 
     await expect(
       returnGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         toUnitId: UNIT_ID,
         recordedByMeepleId: MEEPLE_A,
       }),
@@ -245,12 +245,12 @@ describe("returnGame (Rückgabe)", () => {
 
     await expect(
       returnGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         toUnitId: UNIT_ID,
         recordedByMeepleId: MEEPLE_A,
       }),
     ).resolves.toBeDefined();
-    expect(prismaMock.boardGame.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.findUnique).not.toHaveBeenCalled();
   });
 });
 
@@ -261,7 +261,7 @@ describe("relocateGame (Umlagern)", () => {
     );
 
     await relocateGame({
-      boardGameId: GAME_ID,
+      gameCopyId: GAME_ID,
       toUnitId: "unit-2",
       recordedByMeepleId: MEEPLE_A,
     });
@@ -281,7 +281,7 @@ describe("relocateGame (Umlagern)", () => {
 
     await expect(
       relocateGame({
-        boardGameId: GAME_ID,
+        gameCopyId: GAME_ID,
         toUnitId: "unit-2",
         recordedByMeepleId: MEEPLE_A,
       }),

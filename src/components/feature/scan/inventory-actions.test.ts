@@ -32,7 +32,7 @@ describe("confirmGameCondition", () => {
     const result = await confirmGameCondition("game-1", "Neuwertig");
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "game-1" },
       data: {
         condition: "Neuwertig",
@@ -55,14 +55,14 @@ describe("reportGameDefect", () => {
     const result = await reportGameDefect("game-1", "   ");
 
     expect(result).toEqual({ error: "Bitte eine Notiz zum Mangel angeben." });
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 
   it("records the defect note and sets the status to MAINTENANCE", async () => {
     const result = await reportGameDefect("game-1", "Karte fehlt");
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "game-1" },
       data: {
         condition: "Karte fehlt",
@@ -85,14 +85,14 @@ describe("clearGameDefect", () => {
     requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
     await expect(clearGameDefect("game-1")).rejects.toThrow(ForbiddenError);
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 
   it("resets the status to ACTIVE", async () => {
     const result = await clearGameDefect("game-1");
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "game-1" },
       data: { status: "ACTIVE" },
     });

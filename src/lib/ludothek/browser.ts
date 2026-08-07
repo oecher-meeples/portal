@@ -2,7 +2,9 @@ import type { GameZustand } from "@/lib/ludothek/holdings";
 import { BoardGameKind } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 
-export type LudothekGameRef = { id: string; slug: string; title: string };
+/** A title referenced from a copy (e.g. base game/expansion) — titles have no
+ * route of their own, only their copies do (see ADR 0008). */
+export type LudothekGameRef = { id: string; title: string };
 
 /**
  * Richest possible shape of a game for the Ludothek browser. The internal
@@ -10,7 +12,10 @@ export type LudothekGameRef = { id: string; slug: string; title: string };
  * `toPublicGame` before anything reaches the client.
  */
 export type LudothekGame = {
+  /** GameCopy id — one row per physical copy. */
   id: string;
+  /** BoardGame (title) id — shared by every copy of this title. */
+  boardGameId: string;
   slug: string;
   title: string;
   imageUrl: string | null;
@@ -53,6 +58,8 @@ export type PublicLudothekGame = Omit<
 >;
 
 export function toPublicGame(game: LudothekGame): PublicLudothekGame {
+  // Destructured only to strip these fields from the public payload.
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const {
     zustand: _zustand,
     isLoanedOut: _isLoanedOut,
@@ -63,6 +70,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     bggId: _bggId,
     ...rest
   } = game;
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   return rest;
 }
 

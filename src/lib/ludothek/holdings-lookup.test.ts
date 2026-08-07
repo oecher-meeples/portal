@@ -13,7 +13,7 @@ const MEEPLE_A = "meeple-a";
 function openHolding(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "holding-1",
-    boardGameId: GAME_ID,
+    gameCopyId: GAME_ID,
     unitId: null,
     meepleId: null,
     origin: "INITIAL",
@@ -30,7 +30,7 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
-  prismaMock.boardGame.findUnique.mockResolvedValue({
+  prismaMock.gameCopy.findUnique.mockResolvedValue({
     id: GAME_ID,
     status: "ACTIVE",
   } as never);
@@ -158,7 +158,7 @@ describe("resolveScannedCode", () => {
       id: UNIT_ID,
       code: "OM-BOX-0001",
     } as never);
-    prismaMock.boardGame.findMany.mockResolvedValue([{ id: GAME_ID }] as never);
+    prismaMock.gameCopy.findMany.mockResolvedValue([{ id: GAME_ID }] as never);
 
     const result = await resolveScannedCode("OM-BOX-0001");
 
@@ -166,7 +166,7 @@ describe("resolveScannedCode", () => {
   });
 
   it("resolves an ean with zero matches to unknown", async () => {
-    prismaMock.boardGame.findMany.mockResolvedValue([]);
+    prismaMock.gameCopy.findMany.mockResolvedValue([]);
 
     expect(await resolveScannedCode("5901234123457")).toEqual({
       kind: "unknown",
@@ -175,7 +175,7 @@ describe("resolveScannedCode", () => {
   });
 
   it("resolves an ean with one match", async () => {
-    prismaMock.boardGame.findMany.mockResolvedValue([{ id: GAME_ID }] as never);
+    prismaMock.gameCopy.findMany.mockResolvedValue([{ id: GAME_ID }] as never);
 
     const result = await resolveScannedCode("5901234123457");
 
@@ -186,7 +186,7 @@ describe("resolveScannedCode", () => {
   });
 
   it("resolves an ean with several matches", async () => {
-    prismaMock.boardGame.findMany.mockResolvedValue([
+    prismaMock.gameCopy.findMany.mockResolvedValue([
       { id: "game-1" },
       { id: "game-2" },
     ] as never);
@@ -203,6 +203,6 @@ describe("resolveScannedCode", () => {
     const result = await resolveScannedCode("hallo welt");
 
     expect(result).toEqual({ kind: "unknown", raw: "hallo welt" });
-    expect(prismaMock.boardGame.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.findMany).not.toHaveBeenCalled();
   });
 });

@@ -10,7 +10,7 @@ import {
   removeExpansionAssignment,
 } from "@/lib/ludothek/board-games";
 
-export type GameOption = { id: string; slug: string; title: string };
+export type GameOption = { id: string; title: string };
 
 /**
  * Manual base game ↔ expansion assignment for `games:manage` holders — BGG

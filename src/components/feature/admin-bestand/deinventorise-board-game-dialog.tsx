@@ -5,7 +5,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { deinventoriseBoardGame } from "@/lib/ludothek/board-games";
+import { deinventoriseGameCopy } from "@/lib/ludothek/game-copies";
 
 export function DeinventoriseBoardGameDialog({
   gameId,
@@ -28,7 +28,7 @@ export function DeinventoriseBoardGameDialog({
       description="Das Spiel bleibt erhalten, wird aber als ausgemustert markiert und nicht mehr aktiv geführt."
       submitLabel="Deinventarisieren"
       canSubmit={Boolean(reason.trim())}
-      action={() => deinventoriseBoardGame(gameId, reason, addToSpareParts)}
+      action={() => deinventoriseGameCopy(gameId, reason, addToSpareParts)}
       onReset={() => {
         setReason("");
         setAddToSpareParts(false);
