@@ -58,6 +58,8 @@ export type PublicLudothekGame = Omit<
 >;
 
 export function toPublicGame(game: LudothekGame): PublicLudothekGame {
+  // Destructured only to strip these fields from the public payload.
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const {
     zustand: _zustand,
     isLoanedOut: _isLoanedOut,
@@ -68,6 +70,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     bggId: _bggId,
     ...rest
   } = game;
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   return rest;
 }
 

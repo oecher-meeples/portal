@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import type { ContentType } from "@/lib/content/content";
 import {
@@ -276,10 +277,11 @@ export function PostForm({
           <p className="text-destructive text-sm">{coverUploadError}</p>
         )}
         {coverImageUrl && !isUploadingCover && (
-          <img
-            src={coverImageUrl}
+          <CoverMedia
+            imageUrl={coverImageUrl}
             alt="Cover-Bild-Vorschau"
-            className="h-32 w-32 rounded-md border object-cover"
+            aspect="aspect-square"
+            className="w-32"
           />
         )}
       </div>
