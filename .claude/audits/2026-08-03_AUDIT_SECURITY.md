@@ -43,6 +43,32 @@ Sortiert nach Schweregrad × Aufwand. `S` = Schweregrad, `A` = Aufwand.
 
 ---
 
+## Stand der Umsetzung (2026-08-04)
+
+13 von 15 Findings behoben. F1 und F4 bleiben laut Plan **absichtlich blockiert** — sie hängen an einer serverseitigen Neon-Auth-Konfiguration, die aus diesem Repo nicht einsehbar ist.
+
+| Finding | Issue | Status |
+| --- | --- | --- |
+| F1 (critical) | [#61](https://github.com/oecher-meeples/portal/issues/61) | **Blockiert.** Recherche ohne Dashboard-Zugang durchgeführt: better-auth-Version 1.4.18 per Neons eigener Doku bestätigt; der Auto-Linking-Mechanismus hinter `GHSA-g38m-r43w-p2q7` ist über die better-auth-Doku auf eine einzige offene Konfigurationsfrage (`trustedProviders`) eingegrenzt. Braucht Antwort von Neon-Support. |
+| F2 (high) | [#54](https://github.com/oecher-meeples/portal/issues/54) | ✅ Behoben — Instagram-Access-Token verschlüsselt |
+| F3 (high) | [#56](https://github.com/oecher-meeples/portal/issues/56) | ✅ Behoben — `sharp` gepatcht |
+| F4 (high) | [#61](https://github.com/oecher-meeples/portal/issues/61) | **Blockiert**, gleicher Grund wie F1 — kein Rate Limiting umgesetzt, da unklar ist, was Neon Auth serverseitig bereits abdeckt |
+| F5 (high) | [#55](https://github.com/oecher-meeples/portal/issues/55) | ✅ Behoben — Security-Header + CSP Report-Only mit Nonce |
+| F6 (medium) | [#52](https://github.com/oecher-meeples/portal/issues/52) | ✅ Behoben — Cron-Endpoint fail-closed, konstant-zeitiger Vergleich |
+| F7 (medium) | [#53](https://github.com/oecher-meeples/portal/issues/53) | ✅ Behoben — OAuth-State an Session gebunden |
+| F8 (medium) | [#58](https://github.com/oecher-meeples/portal/issues/58) | ✅ Behoben — Blob-Upload-Pfad normalisiert, Größenlimit |
+| F9 (medium) | [#53](https://github.com/oecher-meeples/portal/issues/53) | ✅ Behoben — Instagram-Callback-Berechtigung (zusammen mit F7) |
+| F10 (medium) | [#59](https://github.com/oecher-meeples/portal/issues/59) | ✅ Behoben — Gast-Action prüft `eventId` |
+| F11 (medium) | [#56](https://github.com/oecher-meeples/portal/issues/56) | ✅ Behoben — `shadcn` nach `devDependencies` |
+| F12 (low) | [#60](https://github.com/oecher-meeples/portal/issues/60) | ✅ Behoben — Preview-Tier-Cookie `Secure` |
+| F13 (low) | [#60](https://github.com/oecher-meeples/portal/issues/60) | ✅ Behoben — ICS-Feed-Größenlimit |
+| F14 (low) | [#57](https://github.com/oecher-meeples/portal/issues/57) | ✅ Behoben — `pnpm audit` blockierend in CI, Dependabot |
+| F15 (low) | [#56](https://github.com/oecher-meeples/portal/issues/56) | ✅ Behoben — `postcss` gepatcht |
+
+Zusätzlich seit dem Audit-Zeitpunkt neu aufgetreten (nicht im ursprünglichen Scan, siehe #57-Kommentar): 8 weitere better-auth-Advisories inkl. eines zweiten kritischen Fundes (`GHSA-pw9m-5jxm-xr6h`, Refresh-Token-Replay) und eine transitiv über `@neondatabase/auth` gezogene `fast-uri`-Schwachstelle. Alle hängen an derselben Neon-Auth-Klärung wie F1 und sind in der CI-Allowlist (`pnpm-workspace.yaml`) explizit benannt, nicht pauschal unterdrückt.
+
+---
+
 ## 2. Dependency-Vulnerability-Scan
 
 `pnpm audit` — 1157 Dependencies (782 prod / 281 dev / 137 optional).
