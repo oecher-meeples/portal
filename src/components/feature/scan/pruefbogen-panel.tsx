@@ -10,11 +10,11 @@ import {
 } from "@/components/feature/scan/inventory-actions";
 
 export function PruefbogenPanel({
-  boardGameId,
+  gameCopyId,
   title,
   onDone,
 }: {
-  boardGameId: string;
+  gameCopyId: string;
   title: string;
   onDone: () => void;
 }) {
@@ -27,7 +27,7 @@ export function PruefbogenPanel({
   async function handleConfirm() {
     setBusy(true);
     setError(null);
-    await confirmGameCondition(boardGameId, condition);
+    await confirmGameCondition(gameCopyId, condition);
     setBusy(false);
     onDone();
   }
@@ -35,7 +35,7 @@ export function PruefbogenPanel({
   async function handleReportDefect() {
     setBusy(true);
     setError(null);
-    const result = await reportGameDefect(boardGameId, note);
+    const result = await reportGameDefect(gameCopyId, note);
     setBusy(false);
 
     if (result.error) {

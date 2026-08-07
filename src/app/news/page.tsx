@@ -3,6 +3,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
+import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermissionInCurrentView } from "@/lib/auth/session";
 
@@ -31,6 +32,7 @@ export default async function NewsPage() {
           ) : undefined
         }
       />
+      <NewsletterInlineSignup />
       <NewsBrowser
         items={publicItems}
         icsUrl={process.env.PUBLIC_CALENDAR_ICS_URL}

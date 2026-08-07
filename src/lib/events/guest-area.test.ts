@@ -57,7 +57,7 @@ describe("isGameInEventRoom", () => {
       { id: "shelf-1", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { boardGameId: "game-1", unitId: "shelf-1" },
+      { gameCopyId: "game-1", unitId: "shelf-1" },
     ] as never);
 
     expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
@@ -72,7 +72,7 @@ describe("isGameInEventRoom", () => {
       { id: "box-1", parentUnitId: "shelf-1" },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { boardGameId: "game-1", unitId: "box-1" },
+      { gameCopyId: "game-1", unitId: "box-1" },
     ] as never);
 
     expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
@@ -84,7 +84,7 @@ describe("isGameInEventRoom", () => {
       { id: "shelf-2", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { boardGameId: "game-1", unitId: "shelf-2" },
+      { gameCopyId: "game-1", unitId: "shelf-2" },
     ] as never);
 
     expect(await isGameInEventRoom("game-1", "event-1")).toBe(false);
@@ -162,8 +162,8 @@ describe("getFreeGamesInRoom", () => {
       { id: "shelf-1", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { boardGameId: "game-1", unitId: "shelf-1" },
-      { boardGameId: "game-3", unitId: "shelf-1" },
+      { gameCopyId: "game-1", unitId: "shelf-1" },
+      { gameCopyId: "game-3", unitId: "shelf-1" },
     ] as never);
 
     const result = await getFreeGamesInRoom("event-1", { players: "3-4" });

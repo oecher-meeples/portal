@@ -125,7 +125,9 @@ export async function collectMeeplePersonalData(
         OR: [{ meepleId }, { recordedByMeepleId: meepleId }],
       },
       orderBy: { startedAt: "desc" },
-      include: { boardGame: { select: { title: true } } },
+      include: {
+        gameCopy: { include: { boardGame: { select: { title: true } } } },
+      },
     }),
     neonAuthUserId
       ? prisma.invite.findMany({ where: { createdByUserId: neonAuthUserId } })
@@ -137,7 +139,10 @@ export async function collectMeeplePersonalData(
     prisma.lfgPost.findMany({ where: { createdByMeepleId: meepleId } }),
     prisma.marketListing.findMany({ where: { sellerMeepleId: meepleId } }),
     prisma.newsletterSubscriber.findUnique({ where: { meepleId } }),
-    prisma.privateGameCollectionEntry.findMany({ where: { meepleId } }),
+    prisma.privateGameCollectionEntry.findMany({
+      where: { meepleId },
+      include: { boardGame: { select: { title: true } } },
+    }),
     prisma.shiftBooking.findMany({
       where: { meepleId },
       include: {

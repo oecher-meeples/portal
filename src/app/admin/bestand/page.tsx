@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { zustandFromHoldingAndUnit } from "@/lib/ludothek/holdings";
-import { boardGameAdminWhere } from "@/components/feature/admin-bestand/filters";
+import { gameCopyAdminWhere } from "@/components/feature/admin-bestand/filters";
 import {
   AdminBestandView,
   type AdminBoardGameRow,
@@ -34,11 +34,12 @@ export default async function AdminBestandPage({
   const { deinventarisiert, ean } = await searchParams;
   const showDeinventarised = deinventarisiert === "1";
 
-  const [games, units] = await Promise.all([
-    prisma.boardGame.findMany({
-      where: boardGameAdminWhere({ showDeinventarised }),
-      orderBy: { title: "asc" },
+  const [copies, units] = await Promise.all([
+    prisma.gameCopy.findMany({
+      where: gameCopyAdminWhere({ showDeinventarised }),
+      orderBy: { boardGame: { title: "asc" } },
       include: {
+        boardGame: true,
         holdings: {
           where: { endedAt: null },
           include: { unit: true, meeple: { select: { displayName: true } } },
@@ -52,33 +53,35 @@ export default async function AdminBestandPage({
 
   const unitById = new Map(units.map((u) => [u.id, u]));
 
-  const rows: AdminBoardGameRow[] = games.map((game) => {
-    const holding = game.holdings[0] ?? null;
+  const rows: AdminBoardGameRow[] = copies.map((copy) => {
+    const holding = copy.holdings[0] ?? null;
     const zustand = holding
-      ? zustandFromHoldingAndUnit(holding, holding.unit, game.status)
+      ? zustandFromHoldingAndUnit(holding, holding.unit, copy.status)
       : "nicht-erfasst";
+    const boardGame = copy.boardGame;
 
     return {
-      id: game.id,
-      title: game.title,
-      ean: game.ean,
-      status: game.status,
-      needsCompletenessCheck: game.needsCompletenessCheck,
-      lastCheckedAt: game.lastCheckedAt
-        ? formatDatePlain(game.lastCheckedAt)
+      id: copy.id,
+      boardGameId: boardGame.id,
+      title: boardGame.title,
+      ean: boardGame.ean,
+      status: copy.status,
+      needsCompletenessCheck: copy.needsCompletenessCheck,
+      lastCheckedAt: copy.lastCheckedAt
+        ? formatDatePlain(copy.lastCheckedAt)
         : null,
-      archivedReason: game.archivedReason,
+      archivedReason: copy.archivedReason,
       zustand,
-      bggId: game.bggId,
-      minPlayers: game.minPlayers,
-      maxPlayers: game.maxPlayers,
-      playTimeMinutes: game.playTimeMinutes,
-      weight: game.weight,
-      imageUrl: game.imageUrl,
-      description: game.description,
-      mechanics: game.mechanics,
-      condition: game.condition,
-      explainerVideoUrl: game.explainerVideoUrl,
+      bggId: boardGame.bggId,
+      minPlayers: boardGame.minPlayers,
+      maxPlayers: boardGame.maxPlayers,
+      playTimeMinutes: boardGame.playTimeMinutes,
+      weight: boardGame.weight,
+      imageUrl: boardGame.imageUrl,
+      description: boardGame.description,
+      mechanics: boardGame.mechanics,
+      condition: copy.condition,
+      explainerVideoUrl: boardGame.explainerVideoUrl,
       locationChain: holding?.meepleId
         ? `bei ${holding.meeple?.displayName ?? "Meeple"}`
         : holding?.unitId

@@ -3,7 +3,7 @@ import { isLoanHolding } from "@/lib/ludothek/holdings";
 
 export type DashboardHolding = {
   id: string;
-  boardGameId: string;
+  gameCopyId: string;
   meepleId: string | null;
   unitId: string | null;
   origin: HoldingOrigin;

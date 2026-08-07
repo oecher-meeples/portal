@@ -197,6 +197,12 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Administration",
       },
       {
+        label: "Downloads verwalten",
+        href: "/admin/downloads",
+        icon: FileText,
+        section: "Administration",
+      },
+      {
         label: "Einstellungen",
         href: "/admin/einstellungen",
         icon: Settings,
