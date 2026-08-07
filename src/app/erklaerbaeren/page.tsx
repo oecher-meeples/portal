@@ -17,7 +17,7 @@ export default async function ErklaerbaerenPage() {
       },
     }),
     prisma.boardGame.findMany({
-      where: { status: "ACTIVE" },
+      where: { copies: { some: { status: "ACTIVE" } } },
       orderBy: { title: "asc" },
       select: { id: true, title: true },
     }),

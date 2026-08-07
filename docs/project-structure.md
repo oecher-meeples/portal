@@ -40,13 +40,15 @@ src/lib/
 ├── content/    News/Content (inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
-├── ludothek/   Spielebestand & Aufenthalte (Holdings):
-│               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben)
+├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
+│               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
 │               ├── holding-actions.ts  Server Actions über den Übergängen
-│               ├── board-games.ts      Server Actions: anlegen/bearbeiten/deinventarisieren, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
+│               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
+│               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern
+│               ├── permissions.ts      `requireGamesManagePermission()` — geteilt von `board-games.ts` und `game-copies.ts`
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
-│               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (Holdings + GameCollection, kein N+1)
+│               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
 │               ├── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])
 │               └── private-collection.ts  Crowdsourced-Suche über `PrivateGameCollectionEntry` — nie im öffentlichen Pfad (`toPublicGame`)
 ├── markt/      Kleinanzeigen-Marktplatz: Anzeigen-Form, Preis-/Zustand-Filter über `searchParams`
@@ -103,15 +105,16 @@ Ein **Widget** ist ein in sich geschlossener Funktionsblock, der einen komplette
 widgets/
 ├── game-holding/game-holding-panel.tsx
 └── board-game/
-    ├── board-game-form-fields.tsx   Formularfelder + Form-State ↔ BoardGameInput
-    ├── edit-board-game-dialog.tsx   Spiel-Stammdaten bearbeiten
+    ├── board-game-form-fields.tsx   Formularfelder + Form-State ↔ Titel-Input (`BoardGameTitleInput`/`CreateBoardGameInput`)
+    ├── edit-board-game-dialog.tsx   Titel-Stammdaten **und** Exemplar-Zustand bearbeiten (zwei Server Actions, ein Formular)
+    ├── add-game-copy-dialog.tsx     Weiteres Exemplar zu einem bestehenden Titel anlegen (ADR 0008)
     ├── game-card-edit-overlay.tsx   Bearbeiten-Button auf der Spiele-Kachel (stoppt den Klick vor dem umschließenden Link)
-    └── assign-expansion-dialog.tsx  Erweiterung ↔ Basisspiel manuell zuordnen/entfernen (GameCollection, `games:manage`)
+    └── assign-expansion-dialog.tsx  Erweiterung ↔ Basisspiel manuell zuordnen/entfernen (GameCollection, `games:manage`, titelbezogen)
 ```
 
-`GameHoldingPanel` ("was mache ich mit dem Spiel in meiner Hand": ausleihen, bestätigen, weitergeben, zurückgeben, einlagern) wird vom Scan-Flow **und** von der Ludothek-Detailseite benutzt. Vorher lag er in `feature/scan/` und wurde von dort querimportiert — genau der Fehler, den die Schichtenregel verhindert.
+`GameHoldingPanel` ("was mache ich mit dem Exemplar in meiner Hand": ausleihen, bestätigen, weitergeben, zurückgeben, einlagern) wird vom Scan-Flow **und** von der Ludothek-Detailseite benutzt. Vorher lag er in `feature/scan/` und wurde von dort querimportiert — genau der Fehler, den die Schichtenregel verhindert.
 
-`EditBoardGameDialog` wird von `feature/admin-bestand` (Tabellenzeile) **und** von `feature/ludothek` (Kachel-Overlay, nur mit `games:manage`-Berechtigung) eingebunden — deshalb `widgets/`, nicht `feature/admin-bestand/`. Die Server Actions dahinter (`createBoardGame`, `updateBoardGame`, …) liegen konsequent in `lib/ludothek/board-games.ts`, nicht in `components/feature/`, damit `widgets/` sie importieren darf.
+`EditBoardGameDialog` wird von `feature/admin-bestand` (Tabellenzeile) **und** von `feature/ludothek` (Kachel-Overlay, nur mit `games:manage`-Berechtigung) eingebunden — deshalb `widgets/`, nicht `feature/admin-bestand/`. Die Server Actions dahinter (`createBoardGame`/`updateBoardGame` in `lib/ludothek/board-games.ts`, `createGameCopy`/`updateGameCopy`/`deinventoriseGameCopy`/`requestCompletenessCheck` in `lib/ludothek/game-copies.ts`) liegen konsequent in `lib/`, nicht in `components/feature/`, damit `widgets/` sie importieren darf.
 
 ## `src/components/feature/` — je ein Anwendungsfall
 

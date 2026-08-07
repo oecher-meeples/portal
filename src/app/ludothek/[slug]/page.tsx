@@ -39,7 +39,7 @@ export default async function GameDetailPage({
   }
 
   const holdings = await prisma.gameHolding.findMany({
-    where: { boardGameId: game.id },
+    where: { gameCopyId: game.id },
     orderBy: { startedAt: "desc" },
     include: {
       unit: { select: { label: true, code: true } },
@@ -70,7 +70,7 @@ export default async function GameDetailPage({
     : null;
 
   const [explainerEntries, meeple, user] = await Promise.all([
-    getExplainersForGame(game.id),
+    getExplainersForGame(game.boardGameId),
     getCurrentMeeple(),
     getCurrentUser(),
   ]);
@@ -83,14 +83,14 @@ export default async function GameDetailPage({
   const linkedIds = new Set([
     ...game.baseGames.map((g) => g.id),
     ...game.expansions.map((g) => g.id),
-    game.id,
+    game.boardGameId,
   ]);
   const expansionAssignment = canManageGames
     ? {
         options: (
           await prisma.boardGame.findMany({
             where: { id: { notIn: [...linkedIds] } },
-            select: { id: true, slug: true, title: true },
+            select: { id: true, title: true },
             orderBy: { title: "asc" },
           })
         ).map((g) => g),

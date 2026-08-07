@@ -1,7 +1,5 @@
-import Link from "next/link";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
-import { Button } from "@/components/ui/button";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
@@ -88,14 +86,12 @@ export function GameDetailView({
               Erweiterung zu:
             </span>
             {game.baseGames.map((baseGame) => (
-              <Button
-                key={baseGame.slug}
-                variant="outline"
-                size="sm"
-                render={<Link href={`/ludothek/${baseGame.slug}`} />}
+              <span
+                key={baseGame.id}
+                className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
               >
                 {baseGame.title}
-              </Button>
+              </span>
             ))}
           </div>
         )}
@@ -107,14 +103,12 @@ export function GameDetailView({
             </span>
             <div className="flex flex-wrap gap-2">
               {game.expansions.map((expansion) => (
-                <Button
-                  key={expansion.slug}
-                  variant="outline"
-                  size="sm"
-                  render={<Link href={`/ludothek/${expansion.slug}`} />}
+                <span
+                  key={expansion.id}
+                  className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
                 >
                   {expansion.title}
-                </Button>
+                </span>
               ))}
             </div>
           </div>
@@ -122,7 +116,7 @@ export function GameDetailView({
 
         {expansionAssignment && (
           <AssignExpansionDialog
-            game={{ id: game.id, kind: game.kind }}
+            game={{ id: game.boardGameId, kind: game.kind }}
             linked={
               game.kind === "BOARDGAME_EXPANSION"
                 ? game.baseGames
@@ -148,7 +142,7 @@ export function GameDetailView({
 
         {explainer && (
           <ExplainerGamePanel
-            boardGameId={game.id}
+            boardGameId={game.boardGameId}
             boardGameTitle={game.title}
             explainers={explainer.entries}
             myLevel={explainer.myLevel}
@@ -166,7 +160,7 @@ export function GameDetailView({
             </p>
 
             <div className="mt-4 border-t pt-4">
-              <GameHoldingPanel boardGameId={game.id} />
+              <GameHoldingPanel gameCopyId={game.id} />
             </div>
           </div>
         )}

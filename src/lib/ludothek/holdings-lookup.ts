@@ -2,6 +2,7 @@ import {
   GameInventoryStatus,
   StorageUnitKind,
   type BoardGame,
+  type GameCopy,
   type GameHolding,
   type Prisma,
   type PrismaClient,
@@ -17,6 +18,9 @@ const MAX_UNIT_CHAIN_DEPTH = 20;
 
 export type GameZustand = "frei" | "ausgeliehen" | "wartung" | "nicht-erfasst";
 
+/** A physical copy together with its title — what a scan actually resolves to. */
+export type ScannedGameCopy = GameCopy & { boardGame: BoardGame };
+
 /** The unit for games whose physical location has never been recorded (see CONTEXT.md). */
 export async function ensureUnsortiertUnit(tx: Tx = prisma) {
   return tx.storageUnit.upsert({
@@ -31,8 +35,8 @@ export async function ensureUnsortiertUnit(tx: Tx = prisma) {
 }
 
 export type ResolvedScan =
-  | { kind: "games"; games: BoardGame[] }
-  | { kind: "unit"; unit: StorageUnit; contents: BoardGame[] }
+  | { kind: "games"; games: ScannedGameCopy[] }
+  | { kind: "unit"; unit: StorageUnit; contents: ScannedGameCopy[] }
   | { kind: "unknown"; raw: string };
 
 export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
@@ -45,34 +49,38 @@ export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
     if (!unit) {
       return { kind: "unknown", raw };
     }
-    const contents = await prisma.boardGame.findMany({
+    const contents = await prisma.gameCopy.findMany({
       where: { holdings: { some: { unitId: unit.id, endedAt: null } } },
+      include: { boardGame: true },
     });
     return { kind: "unit", unit, contents };
   }
 
   if (parsed.kind === "ean") {
-    const games = await prisma.boardGame.findMany({
+    // The EAN identifies the title, not the individual copy (ADR 0001/0008) —
+    // a scan can resolve to several copies of the same title.
+    const copies = await prisma.gameCopy.findMany({
       where: {
-        ean: parsed.value,
+        boardGame: { ean: parsed.value },
         status: { not: GameInventoryStatus.DEINVENTARISED },
       },
+      include: { boardGame: true },
     });
-    if (games.length === 0) {
+    if (copies.length === 0) {
       return { kind: "unknown", raw };
     }
-    return { kind: "games", games };
+    return { kind: "games", games: copies };
   }
 
   return { kind: "unknown", raw };
 }
 
-/** Walks Spiel → Karton → Regal → Meeple, stopping at the first keeper found. */
+/** Walks Exemplar → Karton → Regal → Meeple, stopping at the first keeper found. */
 export async function getResponsibleMeeple(
-  game: Pick<BoardGame, "id">,
+  copy: Pick<GameCopy, "id">,
 ): Promise<string | null> {
   const holding = await prisma.gameHolding.findFirst({
-    where: { boardGameId: game.id, endedAt: null },
+    where: { gameCopyId: copy.id, endedAt: null },
   });
   if (!holding) return null;
   if (holding.meepleId) return holding.meepleId;
@@ -104,17 +112,17 @@ export function zustandFromHoldingAndUnit(
 }
 
 export async function getGameZustand(
-  game: Pick<BoardGame, "id" | "status">,
+  copy: Pick<GameCopy, "id" | "status">,
 ): Promise<GameZustand> {
   const holding = await prisma.gameHolding.findFirst({
-    where: { boardGameId: game.id, endedAt: null },
+    where: { gameCopyId: copy.id, endedAt: null },
     include: { unit: true },
   });
 
   if (!holding) {
     throw new HoldingConflictError(
-      `Spiel ${game.id} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
+      `Exemplar ${copy.id} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
     );
   }
-  return zustandFromHoldingAndUnit(holding, holding.unit, game.status);
+  return zustandFromHoldingAndUnit(holding, holding.unit, copy.status);
 }

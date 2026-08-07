@@ -19,7 +19,7 @@ import { TextField } from "@/components/ui/field";
 import {
   createBoardGame,
   previewBggImport,
-  type BoardGameInput,
+  type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
 import { parseBggId } from "@/lib/ludothek/bgg-id";
 import {
@@ -96,7 +96,7 @@ export function CreateBoardGameDialog({
     setError(null);
     setIsSubmitting(true);
 
-    const input: BoardGameInput =
+    const input: CreateBoardGameInput =
       mode === "manual"
         ? boardGameFormToInput(form)
         : {
