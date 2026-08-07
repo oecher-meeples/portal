@@ -1,8 +1,11 @@
 ---
 status: accepted
+superseded-by: 0008-boardgame-titel-exemplar-trennung.md (Titel-/Exemplar-Trennung)
 ---
 
 # Ludothek-Datenmodell: Aufenthalte statt Exemplare
+
+> Die hier verworfene Titel-/Exemplar-Trennung wurde in [ADR 0008](0008-boardgame-titel-exemplar-trennung.md) umgesetzt, sobald echte Duplikate real wurden. Die Aufenthalts-Modellierung (dieses Dokument im Übrigen) bleibt gültig — `GameHolding` zeigt seither auf das Exemplar (`GameCopy`) statt auf `BoardGame`.
 
 Der Verein besitzt von jedem Titel genau ein Spiel, hat kein Vereinsheim (die Kartons stehen bei den Mitgliedern) und braucht Weitergaben direkt von Person zu Person. Deshalb: **ein Datensatz pro physischem Spiel** — die EAN kennzeichnet das Produkt, nicht das Exemplar, und ist daher nicht eindeutig — sowie **eine einzige Aufenthalts-Tabelle**, in der jeder Aufenthalt entweder auf eine Aufbewahrungseinheit (Karton oder Regal) oder auf einen Meeple zeigt. Mit getrennten Standortfeldern und einer separaten Ausleih-Tabelle wären „im Karton" und „ausgeliehen" gleichzeitig speicherbar — ein physisch unmöglicher Zustand, der nur durch Anwendungslogik verhindert würde statt durch das Schema.
 

@@ -52,24 +52,24 @@ async function loadUnitParents() {
 async function loadOpenHoldingUnitByGame() {
   const holdings = await prisma.gameHolding.findMany({
     where: { endedAt: null, unitId: { not: null } },
-    select: { boardGameId: true, unitId: true },
+    select: { gameCopyId: true, unitId: true },
   });
-  return new Map(holdings.map((h) => [h.boardGameId, h.unitId as string]));
+  return new Map(holdings.map((h) => [h.gameCopyId, h.unitId as string]));
 }
 
 /**
- * "Im Raum" = the game currently sits (directly or via an ancestor unit) in a
+ * "Im Raum" = the copy currently sits (directly or via an ancestor unit) in a
  * shelf assigned to this event (see CONTEXT.md "Regal-Zuordnung", ADR 0005).
- * A game held directly by a person (loaned out) is never in the room.
+ * A copy held directly by a person (loaned out) is never in the room.
  */
-export async function isGameInEventRoom(boardGameId: string, eventId: string) {
+export async function isGameInEventRoom(gameCopyId: string, eventId: string) {
   const [assignedUnitIds, parentById, holdingUnitByGame] = await Promise.all([
     loadAssignedUnitIds(eventId),
     loadUnitParents(),
     loadOpenHoldingUnitByGame(),
   ]);
 
-  const unitId = holdingUnitByGame.get(boardGameId);
+  const unitId = holdingUnitByGame.get(gameCopyId);
   if (!unitId || assignedUnitIds.size === 0) return false;
 
   return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);

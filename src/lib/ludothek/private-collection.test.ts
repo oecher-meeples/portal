@@ -2,20 +2,32 @@ import { describe, expect, it } from "vitest";
 import { buildPrivateCollectionResults } from "./private-collection";
 
 function entry(
-  overrides: Partial<
-    Parameters<typeof buildPrivateCollectionResults>[0][number]
-  > = {},
+  overrides: Partial<{
+    id: string;
+    title: string;
+    imageUrl: string | null;
+    minPlayers: number | null;
+    maxPlayers: number | null;
+    playTimeMinutes: number | null;
+    meepleId: string;
+    meeple: { displayName: string };
+  }> = {},
 ) {
+  const {
+    title = "Dune: Imperium",
+    imageUrl = null,
+    minPlayers = 1,
+    maxPlayers = 4,
+    playTimeMinutes = 60,
+    ...rest
+  } = overrides;
+
   return {
     id: "entry-1",
-    title: "Dune: Imperium",
-    imageUrl: null,
-    minPlayers: 1,
-    maxPlayers: 4,
-    playTimeMinutes: 60,
     meepleId: "meeple-1",
     meeple: { displayName: "Lea Demo" },
-    ...overrides,
+    boardGame: { title, imageUrl, minPlayers, maxPlayers, playTimeMinutes },
+    ...rest,
   };
 }
 

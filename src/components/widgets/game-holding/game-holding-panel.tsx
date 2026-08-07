@@ -29,16 +29,16 @@ type MeeplePickerFor = "handover" | "return-to-person" | null;
  * the ludothek detail page and the dashboard, so it belongs to none of them.
  */
 export function GameHoldingPanel({
-  boardGameId,
+  gameCopyId,
   advanceAfterAction = false,
   onDone,
 }: {
-  boardGameId: string;
+  gameCopyId: string;
   /** In series mode the caller moves on instead of re-showing this game. */
   advanceAfterAction?: boolean;
   onDone?: () => void;
 }) {
-  // Keyed by boardGameId so "still loading" is derived, never set in an effect.
+  // Keyed by gameCopyId so "still loading" is derived, never set in an effect.
   const [loaded, setLoaded] = useState<{
     id: string;
     context: ScannedGameContext | null;
@@ -51,18 +51,18 @@ export function GameHoldingPanel({
   const [message, setMessage] = useState<string | null>(null);
   const { run, pending, error, setError } = useAction({ refresh: false });
 
-  const isCurrent = loaded?.id === boardGameId;
+  const isCurrent = loaded?.id === gameCopyId;
   const context = isCurrent ? loaded.context : null;
 
   useEffect(() => {
     let cancelled = false;
-    scanGetGameContext(boardGameId).then((result) => {
-      if (!cancelled) setLoaded({ id: boardGameId, context: result });
+    scanGetGameContext(gameCopyId).then((result) => {
+      if (!cancelled) setLoaded({ id: gameCopyId, context: result });
     });
     return () => {
       cancelled = true;
     };
-  }, [boardGameId]);
+  }, [gameCopyId]);
 
   async function openMeeplePicker(target: MeeplePickerFor) {
     setMeeplePicker(target);
@@ -80,8 +80,8 @@ export function GameHoldingPanel({
       return;
     }
     setLoaded({
-      id: boardGameId,
-      context: await scanGetGameContext(boardGameId),
+      id: gameCopyId,
+      context: await scanGetGameContext(gameCopyId),
     });
   }
 
@@ -94,7 +94,7 @@ export function GameHoldingPanel({
       setError("Kein Einheiten-Code erkannt.");
       return;
     }
-    await perform(() => scanPlaceGameInUnit(boardGameId, resolved.unit.id));
+    await perform(() => scanPlaceGameInUnit(gameCopyId, resolved.unit.id));
     setTargetCodeInput("");
   }
 

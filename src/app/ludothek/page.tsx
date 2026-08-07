@@ -57,7 +57,18 @@ export default async function LudothekPage({
     internal && filters.showPrivateCollection
       ? buildPrivateCollectionResults(
           await prisma.privateGameCollectionEntry.findMany({
-            include: { meeple: { select: { displayName: true } } },
+            include: {
+              meeple: { select: { displayName: true } },
+              boardGame: {
+                select: {
+                  title: true,
+                  imageUrl: true,
+                  minPlayers: true,
+                  maxPlayers: true,
+                  playTimeMinutes: true,
+                },
+              },
+            },
           }),
           filters,
         )

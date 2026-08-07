@@ -16,7 +16,9 @@ export default async function DashboardPage() {
       getInternalContent(),
       prisma.gameHolding.findMany({
         where: { endedAt: null },
-        include: { boardGame: { select: { title: true } } },
+        include: {
+          gameCopy: { include: { boardGame: { select: { title: true } } } },
+        },
       }),
       prisma.storageUnit.findMany({
         select: { id: true, keeperMeepleId: true, retiredAt: true },
@@ -36,7 +38,7 @@ export default async function DashboardPage() {
   );
 
   const gameTitleByHoldingId = new Map(
-    holdings.map((h) => [h.id, h.boardGame.title]),
+    holdings.map((h) => [h.id, h.gameCopy.boardGame.title]),
   );
   const summary = summariseMemberHoldings(meeple.id, holdings, units);
 

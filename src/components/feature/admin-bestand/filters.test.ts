@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { boardGameAdminWhere } from "./filters";
+import { gameCopyAdminWhere } from "./filters";
 
-describe("boardGameAdminWhere", () => {
+describe("gameCopyAdminWhere", () => {
   it("excludes deinventarised games by default", () => {
-    expect(boardGameAdminWhere()).toEqual({
+    expect(gameCopyAdminWhere()).toEqual({
       AND: [{ status: { not: "DEINVENTARISED" } }],
     });
   });
 
   it("includes deinventarised games when explicitly requested", () => {
-    expect(boardGameAdminWhere({ showDeinventarised: true })).toEqual({});
+    expect(gameCopyAdminWhere({ showDeinventarised: true })).toEqual({});
   });
 
   it("combines the deinventarised exclusion with the ungeprüft filter", () => {
-    expect(boardGameAdminWhere({ filter: "ungeprueft" })).toEqual({
+    expect(gameCopyAdminWhere({ filter: "ungeprueft" })).toEqual({
       AND: [
         { status: { not: "DEINVENTARISED" } },
         { needsCompletenessCheck: true },
@@ -22,13 +22,13 @@ describe("boardGameAdminWhere", () => {
   });
 
   it("filters for a maintenance defect", () => {
-    expect(boardGameAdminWhere({ filter: "mangel" })).toEqual({
+    expect(gameCopyAdminWhere({ filter: "mangel" })).toEqual({
       AND: [{ status: { not: "DEINVENTARISED" } }, { status: "MAINTENANCE" }],
     });
   });
 
   it("filters for games in Unsortiert", () => {
-    expect(boardGameAdminWhere({ filter: "nicht-erfasst" })).toEqual({
+    expect(gameCopyAdminWhere({ filter: "nicht-erfasst" })).toEqual({
       AND: [
         { status: { not: "DEINVENTARISED" } },
         {
@@ -42,7 +42,7 @@ describe("boardGameAdminWhere", () => {
 
   it("applies only the requested filter when deinventarised games are shown too", () => {
     expect(
-      boardGameAdminWhere({ showDeinventarised: true, filter: "mangel" }),
+      gameCopyAdminWhere({ showDeinventarised: true, filter: "mangel" }),
     ).toEqual({ AND: [{ status: "MAINTENANCE" }] });
   });
 });

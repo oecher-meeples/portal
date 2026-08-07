@@ -29,8 +29,16 @@ describe("lookupGuestGame", () => {
     resolveScannedCodeMock.mockResolvedValue({
       kind: "games",
       games: [
-        { id: "game-1", slug: "wingspan", title: "Wingspan", imageUrl: null },
-        { id: "game-2", slug: "wingspan-2", title: "Wingspan", imageUrl: null },
+        {
+          id: "game-1",
+          slug: "wingspan",
+          boardGame: { title: "Wingspan", imageUrl: null },
+        },
+        {
+          id: "game-2",
+          slug: "wingspan-2",
+          boardGame: { title: "Wingspan", imageUrl: null },
+        },
       ],
     });
 
@@ -74,25 +82,28 @@ describe("getGuestGameDetail", () => {
     isEventCurrentlyRunningMock.mockResolvedValue(false);
 
     expect(await getGuestGameDetail("event-past", "game-1")).toBeNull();
-    expect(prismaMock.boardGame.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.findUnique).not.toHaveBeenCalled();
   });
 
   it("returns null for an unknown game", async () => {
-    prismaMock.boardGame.findUnique.mockResolvedValue(null);
+    prismaMock.gameCopy.findUnique.mockResolvedValue(null);
 
     expect(await getGuestGameDetail("event-1", "missing")).toBeNull();
   });
 
   it("combines room status and attending explainers for the game", async () => {
-    prismaMock.boardGame.findUnique.mockResolvedValue({
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
       id: "game-1",
-      title: "Azul",
-      imageUrl: null,
-      description: null,
-      minPlayers: 2,
-      maxPlayers: 4,
-      playTimeMinutes: 45,
-      explainerVideoUrl: "https://www.youtube.com/watch?v=abc",
+      boardGameId: "title-1",
+      boardGame: {
+        title: "Azul",
+        imageUrl: null,
+        description: null,
+        minPlayers: 2,
+        maxPlayers: 4,
+        playTimeMinutes: 45,
+        explainerVideoUrl: "https://www.youtube.com/watch?v=abc",
+      },
     } as never);
 
     const result = await getGuestGameDetail("event-1", "game-1");

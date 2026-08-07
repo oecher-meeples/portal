@@ -16,24 +16,24 @@ import {
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
-async function requireOpenHolding(tx: Tx, boardGameId: string) {
+async function requireOpenHolding(tx: Tx, gameCopyId: string) {
   const holding = await tx.gameHolding.findFirst({
-    where: { boardGameId, endedAt: null },
+    where: { gameCopyId, endedAt: null },
   });
   if (!holding) {
     throw new HoldingConflictError(
-      `Spiel ${boardGameId} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
+      `Exemplar ${gameCopyId} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
     );
   }
   return holding;
 }
 
-async function requireActiveGame(tx: Tx, boardGameId: string) {
-  const game = await tx.boardGame.findUnique({ where: { id: boardGameId } });
-  if (!game) {
-    throw new GameNotFoundError(boardGameId);
+async function requireActiveCopy(tx: Tx, gameCopyId: string) {
+  const copy = await tx.gameCopy.findUnique({ where: { id: gameCopyId } });
+  if (!copy) {
+    throw new GameNotFoundError(gameCopyId);
   }
-  return game;
+  return copy;
 }
 
 async function requireOpenUnit(tx: Tx, unitId: string) {
@@ -50,7 +50,7 @@ async function requireOpenUnit(tx: Tx, unitId: string) {
 async function closeAndOpen(
   tx: Tx,
   {
-    boardGameId,
+    gameCopyId,
     previous,
     target,
     origin,
@@ -58,7 +58,7 @@ async function closeAndOpen(
     confirmedAt,
     note,
   }: {
-    boardGameId: string;
+    gameCopyId: string;
     previous: GameHolding;
     target: { unitId: string } | { meepleId: string };
     origin: HoldingOrigin;
@@ -75,7 +75,7 @@ async function closeAndOpen(
 
   return tx.gameHolding.create({
     data: {
-      boardGameId,
+      gameCopyId,
       ...target,
       origin,
       startedAt: now,
@@ -109,23 +109,23 @@ export function isLoanHolding(
 }
 
 export async function borrowGame({
-  boardGameId,
+  gameCopyId,
   meepleId,
   recordedByMeepleId,
   note,
 }: {
-  boardGameId: string;
+  gameCopyId: string;
   meepleId: string;
   recordedByMeepleId: string;
   note?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
-    const game = await requireActiveGame(tx, boardGameId);
-    if (game.status === GameInventoryStatus.DEINVENTARISED) {
-      throw new GameDeinventarisedError(boardGameId);
+    const copy = await requireActiveCopy(tx, gameCopyId);
+    if (copy.status === GameInventoryStatus.DEINVENTARISED) {
+      throw new GameDeinventarisedError(gameCopyId);
     }
 
-    const previous = await requireOpenHolding(tx, boardGameId);
+    const previous = await requireOpenHolding(tx, gameCopyId);
     if (!previous.unitId) {
       throw new HoldingConflictError(
         "Nur ein Spiel in einer Aufbewahrungseinheit kann ausgeliehen werden — dieses liegt bereits bei einer Person.",
@@ -133,7 +133,7 @@ export async function borrowGame({
     }
 
     return closeAndOpen(tx, {
-      boardGameId,
+      gameCopyId,
       previous,
       target: { meepleId },
       origin: HoldingOrigin.LOAN,
@@ -145,18 +145,18 @@ export async function borrowGame({
 }
 
 export async function handOverGame({
-  boardGameId,
+  gameCopyId,
   toMeepleId,
   recordedByMeepleId,
   note,
 }: {
-  boardGameId: string;
+  gameCopyId: string;
   toMeepleId: string;
   recordedByMeepleId: string;
   note?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
-    const previous = await requireOpenHolding(tx, boardGameId);
+    const previous = await requireOpenHolding(tx, gameCopyId);
     if (!previous.meepleId) {
       throw new HoldingConflictError(
         "Weitergeben kann nur, wer das Spiel gerade selbst bei sich hat — es liegt aktuell in einer Einheit.",
@@ -164,7 +164,7 @@ export async function handOverGame({
     }
 
     return closeAndOpen(tx, {
-      boardGameId,
+      gameCopyId,
       previous,
       target: { meepleId: toMeepleId },
       origin: HoldingOrigin.HANDOVER,
@@ -176,13 +176,13 @@ export async function handOverGame({
 }
 
 export async function returnGame({
-  boardGameId,
+  gameCopyId,
   toUnitId,
   toMeepleId,
   recordedByMeepleId,
   note,
 }: {
-  boardGameId: string;
+  gameCopyId: string;
   recordedByMeepleId: string;
   note?: string | null;
 } & (
@@ -190,7 +190,7 @@ export async function returnGame({
   | { toMeepleId: string; toUnitId?: never }
 )) {
   return prisma.$transaction(async (tx) => {
-    const previous = await requireOpenHolding(tx, boardGameId);
+    const previous = await requireOpenHolding(tx, gameCopyId);
     if (!previous.meepleId) {
       throw new HoldingConflictError(
         "Zurückgeben kann nur, was gerade bei einer Person liegt — dieses Spiel liegt bereits in einer Einheit.",
@@ -200,7 +200,7 @@ export async function returnGame({
     if (toUnitId) {
       await requireOpenUnit(tx, toUnitId);
       return closeAndOpen(tx, {
-        boardGameId,
+        gameCopyId,
         previous,
         target: { unitId: toUnitId },
         origin: HoldingOrigin.RETURN,
@@ -212,7 +212,7 @@ export async function returnGame({
     }
 
     return closeAndOpen(tx, {
-      boardGameId,
+      gameCopyId,
       previous,
       target: { meepleId: toMeepleId! },
       origin: HoldingOrigin.RETURN,
@@ -225,18 +225,18 @@ export async function returnGame({
 }
 
 export async function relocateGame({
-  boardGameId,
+  gameCopyId,
   toUnitId,
   recordedByMeepleId,
   note,
 }: {
-  boardGameId: string;
+  gameCopyId: string;
   toUnitId: string;
   recordedByMeepleId: string;
   note?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
-    const previous = await requireOpenHolding(tx, boardGameId);
+    const previous = await requireOpenHolding(tx, gameCopyId);
     if (!previous.unitId) {
       throw new HoldingConflictError(
         "Umlagern gilt nur für Spiele, die bereits in einer Einheit liegen — dieses ist ausgeliehen.",
@@ -246,7 +246,7 @@ export async function relocateGame({
     await requireOpenUnit(tx, toUnitId);
 
     return closeAndOpen(tx, {
-      boardGameId,
+      gameCopyId,
       previous,
       target: { unitId: toUnitId },
       origin: HoldingOrigin.RELOCATION,

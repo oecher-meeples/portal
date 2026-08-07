@@ -4,7 +4,10 @@ import {
   parseMechanics,
   formatMechanics,
 } from "@/lib/ludothek/bgg-id";
-import type { BoardGameInput } from "@/lib/ludothek/board-games";
+import type {
+  BoardGameTitleInput,
+  CreateBoardGameInput,
+} from "@/lib/ludothek/board-games";
 
 /** All manually editable BoardGame fields, as raw string form state. */
 export type BoardGameFormValues = {
@@ -72,13 +75,13 @@ export function boardGameToFormValues(
   };
 }
 
-export function boardGameFormToInput(
+/** Title-level fields only — for `updateBoardGame`, which never touches `condition`. */
+export function boardGameFormToTitleInput(
   form: BoardGameFormValues,
-): BoardGameInput {
+): BoardGameTitleInput {
   return {
     title: form.title,
     ean: form.ean || undefined,
-    condition: form.condition || undefined,
     bggId: form.bggId ? parseBggId(form.bggId) : undefined,
     minPlayers: form.minPlayers ? Number(form.minPlayers) : undefined,
     maxPlayers: form.maxPlayers ? Number(form.maxPlayers) : undefined,
@@ -90,6 +93,16 @@ export function boardGameFormToInput(
     description: form.description || undefined,
     mechanics: parseMechanics(form.mechanics),
     explainerVideoUrl: form.explainerVideoUrl || undefined,
+  };
+}
+
+/** Title fields plus `condition` — for `createBoardGame`, which creates the first copy too. */
+export function boardGameFormToInput(
+  form: BoardGameFormValues,
+): CreateBoardGameInput {
+  return {
+    ...boardGameFormToTitleInput(form),
+    condition: form.condition || undefined,
   };
 }
 

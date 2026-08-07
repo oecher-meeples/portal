@@ -13,7 +13,7 @@ const OTHER = "meeple-2";
 function holding(overrides: Partial<DashboardHolding> = {}): DashboardHolding {
   return {
     id: "holding-1",
-    boardGameId: "game-1",
+    gameCopyId: "copy-1",
     meepleId: null,
     unitId: null,
     origin: "LOAN",
