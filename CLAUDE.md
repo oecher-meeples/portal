@@ -48,6 +48,8 @@ Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst �
 | `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                         |
 | `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                    | eigenem `@vercel/blob/client`-Upload-State pro Formular         |
 | `getContactLinks(meeple)` (`lib/members/contact.ts`)                                      | eigenem Mail-/Telegram-Link-Aufbau                              |
+| `requireEnv(name)` (`lib/utils/require-env.ts`)                                           | `process.env.X!` mit unklarer Fehlermeldung bei fehlendem Wert  |
+| `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                          | eigenem `@vercel/blob`-Löschaufruf pro Feature                  |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 
@@ -69,6 +71,10 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 **Coverage-Scope (`vitest.config.ts`):** nur `src/lib/**` und `src/components/**/actions.ts` — die Geschäftsregeln und Server Actions. UI-Komponenten und Routen sind bewusst ausgenommen, das ist eine Scope-Entscheidung, keine Lücke. Schwellenwert 80 % (Statements/Branches/Functions/Lines), abgeleitet aus der gemessenen Baseline (siehe Issue #38), nicht geraten.
 
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.
+
+## Branch-Schutz
+
+`develop` ist per Ruleset geschützt (`.github/ruleset-protect-develop.json`, aktiv seit #36). Direkte Pushes sind blockiert. Verbindlicher Workflow: **Feature-Branch → PR → grüne CI (`verify`-Check) → Merge.** Self-Merge ist erlaubt (`required_approving_review_count: 0`, Ein-Personen-Projekt-Entscheidung). Der `release`-Branch ist bewusst ungeschützt.
 
 ## Lizenz-Audit
 
