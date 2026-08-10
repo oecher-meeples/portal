@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { NewsletterCategory } from "@prisma/client";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/components/ui/use-action";
 import {
-  NEWSLETTER_CATEGORIES,
-  NEWSLETTER_CATEGORY_LABELS,
-} from "@/lib/newsletter/labels";
+  NewsletterCategoryCheckboxes,
+  useNewsletterCategories,
+} from "@/components/feature/newsletter/newsletter-category-checkboxes";
 import {
   unsubscribeFromNewsletter,
   updateNewsletterCategories,
@@ -25,17 +24,9 @@ export function NewsletterManageForm({
   initialCategories: NewsletterCategory[];
 }) {
   const router = useRouter();
-  const [categories, setCategories] =
-    useState<NewsletterCategory[]>(initialCategories);
+  const { categories, toggleCategory } =
+    useNewsletterCategories(initialCategories);
   const { run, pending, error } = useAction({ refresh: false });
-
-  function toggleCategory(category: NewsletterCategory, checked: boolean) {
-    setCategories((current) =>
-      checked
-        ? [...current, category]
-        : current.filter((entry) => entry !== category),
-    );
-  }
 
   async function handleSave() {
     await run(() => updateNewsletterCategories(token, categories));
@@ -45,20 +36,10 @@ export function NewsletterManageForm({
     <div className="flex flex-col gap-4">
       <p className="text-muted-foreground text-sm">{email}</p>
 
-      <div className="flex flex-col gap-1.5">
-        {NEWSLETTER_CATEGORIES.map((category) => (
-          <label key={category} className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={categories.includes(category)}
-              onChange={(event) =>
-                toggleCategory(category, event.target.checked)
-              }
-            />
-            {NEWSLETTER_CATEGORY_LABELS[category]}
-          </label>
-        ))}
-      </div>
+      <NewsletterCategoryCheckboxes
+        categories={categories}
+        toggleCategory={toggleCategory}
+      />
 
       {error && <p className="text-destructive text-sm">{error}</p>}
       <div className="flex justify-between gap-2">
