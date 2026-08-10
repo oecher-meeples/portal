@@ -18,14 +18,14 @@ export async function AppShell({ children }: { children: ReactNode }) {
         user={user ? { name: user.name } : null}
         previewTier={realTier === "admin" ? tier : undefined}
       />
-      <div className="flex flex-1">
-        <Sidebar tier={tier} />
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">
-          <div className="mx-auto flex max-w-6xl flex-col gap-6">
-            {children}
-          </div>
-        </main>
-      </div>
+      <Sidebar tier={tier} />
+      {/* pt-[5.5rem]/sm:pt-24: header (h-16 = 4rem) + the block's own py-6/sm:py-8 top inset,
+          since the header is fixed and no longer pushes this block down via normal flow. */}
+      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-6 sm:ml-64 sm:px-8 sm:pt-24 sm:pb-8">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

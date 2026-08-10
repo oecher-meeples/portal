@@ -15,7 +15,7 @@ export function Sidebar({ tier }: { tier: Tier }) {
   >({});
 
   return (
-    <aside className="bg-sidebar text-sidebar-foreground hidden w-64 shrink-0 flex-col gap-2 overflow-y-auto border-r px-3 py-6 sm:flex">
+    <aside className="bg-sidebar text-sidebar-foreground fixed inset-y-0 top-16 left-0 hidden w-64 flex-col gap-2 overflow-y-auto border-r px-3 py-6 sm:flex">
       <nav className="flex flex-col gap-2">
         {groups.map((group, index) => {
           const key = group.title ?? "root";
