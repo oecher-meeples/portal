@@ -46,6 +46,18 @@ describe("createPublicSubscription", () => {
     });
   });
 
+  it("rejects a malformed email address", async () => {
+    const result = await createPublicSubscription({
+      email: "not-an-email",
+      categories: ["NEWS"],
+    });
+
+    expect(result).toEqual({
+      error: "Bitte eine gültige E-Mail-Adresse angeben.",
+    });
+    expect(prismaMock.newsletterSubscriber.upsert).not.toHaveBeenCalled();
+  });
+
   it("creates a PENDING subscriber and sends a confirmation email", async () => {
     prismaMock.newsletterSubscriber.findUnique.mockResolvedValue(null);
     prismaMock.newsletterSubscriber.upsert.mockResolvedValue({} as never);

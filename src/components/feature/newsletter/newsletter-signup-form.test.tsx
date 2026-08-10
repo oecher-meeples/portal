@@ -21,9 +21,29 @@ vi.mock("@/components/feature/newsletter/actions", () => ({
 const { NewsletterSignupForm } = await import("./newsletter-signup-form");
 
 describe("NewsletterSignupForm", () => {
-  it("disables submit until at least one category is selected", async () => {
+  it("disables submit until an email address is entered", async () => {
     render(<NewsletterSignupForm />);
 
+    expect(
+      screen.getByRole("button", { name: "Newsletter abonnieren" }),
+    ).toBeDisabled();
+  });
+
+  it("pre-selects the News category", () => {
+    render(<NewsletterSignupForm />);
+
+    expect(screen.getByLabelText("News")).toBeChecked();
+  });
+
+  it("disables submit and shows a hint for an invalid email address", async () => {
+    const user = userEvent.setup();
+    render(<NewsletterSignupForm />);
+
+    await user.type(screen.getByLabelText("E-Mail-Adresse"), "not-an-email");
+
+    expect(
+      await screen.findByText("Bitte eine gültige E-Mail-Adresse angeben."),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Newsletter abonnieren" }),
     ).toBeDisabled();
@@ -38,7 +58,6 @@ describe("NewsletterSignupForm", () => {
       screen.getByLabelText("E-Mail-Adresse"),
       "person@example.com",
     );
-    await user.click(screen.getByLabelText("News"));
     await user.click(
       screen.getByRole("button", { name: "Newsletter abonnieren" }),
     );
@@ -64,7 +83,6 @@ describe("NewsletterSignupForm", () => {
       screen.getByLabelText("E-Mail-Adresse"),
       "person@example.com",
     );
-    await user.click(screen.getByLabelText("News"));
     await user.click(
       screen.getByRole("button", { name: "Newsletter abonnieren" }),
     );
