@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NewsletterCategory, NewsletterSubscriberStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { isValidEmail } from "@/lib/utils/validate-email";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
 
 const CONFIRMATION_COOLDOWN_MS = 15 * 60 * 1000;
@@ -38,6 +39,9 @@ export async function createPublicSubscription(
     return {
       error: "Bitte E-Mail-Adresse und mindestens eine Kategorie angeben.",
     };
+  }
+  if (!isValidEmail(email)) {
+    return { error: "Bitte eine gültige E-Mail-Adresse angeben." };
   }
 
   const existing = await prisma.newsletterSubscriber.findUnique({

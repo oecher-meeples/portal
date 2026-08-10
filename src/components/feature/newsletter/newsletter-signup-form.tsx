@@ -2,19 +2,19 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAction } from "@/components/ui/use-action";
 import {
   NewsletterCategoryCheckboxes,
   useNewsletterCategories,
 } from "@/components/feature/newsletter/newsletter-category-checkboxes";
+import { NewsletterEmailField } from "@/components/feature/newsletter/newsletter-email-field";
 import { NewsletterHoneypotField } from "@/components/feature/newsletter/newsletter-honeypot-field";
 import { subscribeToNewsletter } from "@/components/feature/newsletter/actions";
+import { isValidEmail } from "@/lib/utils/validate-email";
 
 export function NewsletterSignupForm() {
   const [email, setEmail] = useState("");
-  const { categories, toggleCategory } = useNewsletterCategories();
+  const { categories, toggleCategory } = useNewsletterCategories(["NEWS"]);
   const [honeypot, setHoneypot] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const { run, pending, error } = useAction({
@@ -38,16 +38,7 @@ export function NewsletterSignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="newsletter-email">E-Mail-Adresse</Label>
-        <Input
-          id="newsletter-email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-      </div>
+      <NewsletterEmailField value={email} onChange={setEmail} />
 
       <NewsletterCategoryCheckboxes
         label="Worüber möchtest du informiert werden?"
@@ -60,7 +51,7 @@ export function NewsletterSignupForm() {
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button
         type="submit"
-        disabled={pending || categories.length === 0}
+        disabled={pending || categories.length === 0 || !isValidEmail(email)}
         className="self-start"
       >
         {pending ? "Wird angemeldet…" : "Newsletter abonnieren"}

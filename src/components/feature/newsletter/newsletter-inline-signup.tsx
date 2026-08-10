@@ -1,26 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import type { NewsletterCategory } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
 import {
   NewsletterCategoryCheckboxes,
   useNewsletterCategories,
 } from "@/components/feature/newsletter/newsletter-category-checkboxes";
+import { NewsletterEmailField } from "@/components/feature/newsletter/newsletter-email-field";
 import { NewsletterHoneypotField } from "@/components/feature/newsletter/newsletter-honeypot-field";
 import { subscribeToNewsletter } from "@/components/feature/newsletter/actions";
+import { isValidEmail } from "@/lib/utils/validate-email";
+
+const DEFAULT_CATEGORIES: NewsletterCategory[] = ["NEWS"];
 
 /** Compact variant of {@link NewsletterSignupForm}: a button that opens a dialog with the same fields, for embedding inline in other pages. */
 export function NewsletterInlineSignup() {
   const [email, setEmail] = useState("");
-  const { categories, setCategories, toggleCategory } =
-    useNewsletterCategories();
+  const { categories, setCategories, toggleCategory } = useNewsletterCategories(
+    [...DEFAULT_CATEGORIES],
+  );
   const [honeypot, setHoneypot] = useState("");
 
   function reset() {
     setEmail("");
-    setCategories([]);
+    setCategories([...DEFAULT_CATEGORIES]);
     setHoneypot("");
   }
 
@@ -36,19 +41,12 @@ export function NewsletterInlineSignup() {
         description="Wähle, worüber wir dich per E-Mail informieren sollen."
         submitLabel="Abonnieren"
         pendingLabel="Wird angemeldet…"
-        canSubmit={email !== "" && categories.length > 0}
+        canSubmit={isValidEmail(email) && categories.length > 0}
         onReset={reset}
         action={() => subscribeToNewsletter({ email, categories, honeypot })}
       >
         <div className="flex flex-col gap-4">
-          <TextField
-            id="newsletter-email"
-            label="E-Mail-Adresse"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
+          <NewsletterEmailField value={email} onChange={setEmail} />
 
           <NewsletterCategoryCheckboxes
             label="Worüber möchtest du informiert werden?"
