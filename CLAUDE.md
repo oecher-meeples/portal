@@ -43,6 +43,7 @@ Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst �
 | `<ActionDialog>`                                                                          | eigenem Dialog-Skelett mit open-State und Error-Slot            |
 | `<TextField>` / `<TextAreaField>` / `<Field>`                                             | `<div className="flex flex-col gap-1.5"><Label/><Input/></div>` |
 | `<CodeScanner onDetected={…}>`                                                            | eigener Kamera-/Scanner-Logik                                   |
+| `<CopyButton value label icon>` (`ui/copy-button.tsx`)                                    | eigenem `navigator.clipboard.writeText`-Aufruf pro Feature      |
 | `formatDateTime/​Medium/​Plain/​TimeRange` (`lib/utils/format.ts`)                        | eigener `new Intl.DateTimeFormat(…)`                            |
 | `findUpcomingEvents()` / `resolveSelectedEventId()` (`lib/events/upcoming.ts`)            | eigener „kommende Events"-Query                                 |
 | `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                         |
