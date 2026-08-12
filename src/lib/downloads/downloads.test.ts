@@ -3,7 +3,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { listVisibleDownloads, listAllDownloadsForAdmin, formatFileSize } =
+const { listVisibleDownloads, listOfflineDownloadsForAdmin, formatFileSize } =
   await import("@/lib/downloads/downloads");
 
 describe("listVisibleDownloads", () => {
@@ -12,7 +12,7 @@ describe("listVisibleDownloads", () => {
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: "PUBLIC" },
-      orderBy: { createdAt: "asc" },
+      orderBy: { order: "asc" },
     });
   });
 
@@ -21,7 +21,7 @@ describe("listVisibleDownloads", () => {
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: { in: ["PUBLIC", "INTERNAL"] } },
-      orderBy: { createdAt: "asc" },
+      orderBy: { order: "asc" },
     });
   });
 
@@ -30,7 +30,7 @@ describe("listVisibleDownloads", () => {
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: { in: ["PUBLIC", "INTERNAL"] } },
-      orderBy: { createdAt: "asc" },
+      orderBy: { order: "asc" },
     });
   });
 
@@ -43,12 +43,13 @@ describe("listVisibleDownloads", () => {
   });
 });
 
-describe("listAllDownloadsForAdmin", () => {
-  it("queries all downloads, newest first", async () => {
-    await listAllDownloadsForAdmin();
+describe("listOfflineDownloadsForAdmin", () => {
+  it("queries only OFFLINE downloads, most recently updated first", async () => {
+    await listOfflineDownloadsForAdmin();
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
-      orderBy: { createdAt: "desc" },
+      where: { status: "OFFLINE" },
+      orderBy: { updatedAt: "desc" },
     });
   });
 });
