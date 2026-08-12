@@ -4,9 +4,9 @@ import { RegisterForm } from "@/components/feature/registrieren/register-form";
 export default async function RegistrierenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; email?: string }>;
 }) {
-  const { token } = await searchParams;
+  const { token, email } = await searchParams;
 
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
@@ -15,7 +15,7 @@ export default async function RegistrierenPage({
         title="Konto einrichten"
         description="Trage deinen Einladungs-Token ein und lege ein Passwort fest, um deinen Zugang zu aktivieren."
       />
-      <RegisterForm defaultToken={token} />
+      <RegisterForm defaultToken={token} defaultEmail={email} />
     </div>
   );
 }

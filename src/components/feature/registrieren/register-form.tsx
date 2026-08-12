@@ -8,11 +8,18 @@ import { Label } from "@/components/ui/label";
 import { redeemInvite } from "@/components/feature/registrieren/actions";
 import { validatePassword } from "@/lib/auth/password";
 
-export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
+export function RegisterForm({
+  defaultToken,
+  defaultEmail,
+}: {
+  defaultToken?: string;
+  defaultEmail?: string;
+}) {
   const router = useRouter();
   const [token, setToken] = useState(defaultToken ?? "");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail ?? "");
+  const emailLocked = Boolean(defaultEmail);
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +85,7 @@ export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          readOnly={emailLocked}
           required
         />
       </div>
