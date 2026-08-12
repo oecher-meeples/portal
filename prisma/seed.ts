@@ -13,6 +13,7 @@ import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
 import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
+import { DEMO_LEGAL_DOCUMENTS } from "./seed-data/demo-legal-documents";
 import { DEMO_POSTS } from "./seed-data/demo-posts";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
@@ -418,6 +419,21 @@ async function seedDemoDownloads() {
   console.log(`${DEMO_DOWNLOADS.length} Downloads angelegt/übersprungen.`);
 }
 
+/** Upsertet auf `slug`, damit ein Re-Seed die migrierten Rechtliches-Inhalte nicht dupliziert. */
+async function seedDemoLegalDocuments() {
+  for (const doc of DEMO_LEGAL_DOCUMENTS) {
+    await prisma.legalDocument.upsert({
+      where: { slug: doc.slug },
+      update: {},
+      create: doc,
+    });
+  }
+
+  console.log(
+    `${DEMO_LEGAL_DOCUMENTS.length} Rechtliches-Dokumente angelegt/übersprungen.`,
+  );
+}
+
 async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
   await seedPermissions();
@@ -429,6 +445,7 @@ async function main() {
   await seedDemoMeeples();
   await seedDemoPosts();
   await seedDemoDownloads();
+  await seedDemoLegalDocuments();
 
   console.log("Seed abgeschlossen.");
 }
