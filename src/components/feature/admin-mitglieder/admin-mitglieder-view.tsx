@@ -93,23 +93,19 @@ export function AdminMitgliederView({
       m.openUnits === 0,
   );
 
+  const searchedMeeples = useMemo(() => {
+    if (!meepleSearch) return meeples;
+    return meeples.filter((meeple) =>
+      meeple.displayName.toLowerCase().includes(meepleSearch.toLowerCase()),
+    );
+  }, [meeples, meepleSearch]);
+
   const filteredMeeples = useMemo(() => {
-    return meeples.filter((meeple) => {
-      if (
-        meepleQuickFilter !== "alle" &&
-        meeple.membershipState !== meepleQuickFilter
-      ) {
-        return false;
-      }
-      if (
-        meepleSearch &&
-        !meeple.displayName.toLowerCase().includes(meepleSearch.toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [meeples, meepleSearch, meepleQuickFilter]);
+    if (meepleQuickFilter === "alle") return searchedMeeples;
+    return searchedMeeples.filter(
+      (meeple) => meeple.membershipState === meepleQuickFilter,
+    );
+  }, [searchedMeeples, meepleQuickFilter]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -232,6 +228,12 @@ export function AdminMitgliederView({
               key={value}
               size="sm"
               variant={meepleQuickFilter === value ? "default" : "outline"}
+              disabled={
+                value !== "alle" &&
+                !searchedMeeples.some(
+                  (meeple) => meeple.membershipState === value,
+                )
+              }
               onClick={() => setMeepleQuickFilter(value)}
             >
               {label}
