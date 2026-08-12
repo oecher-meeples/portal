@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BoardGameKind } from "@prisma/client";
+import type { BoardGameKind } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export function AssignExpansionDialog({
   options: GameOption[];
 }) {
   const [selected, setSelected] = useState("");
-  const isExpansion = game.kind === BoardGameKind.BOARDGAME_EXPANSION;
+  const isExpansion = game.kind === "BOARDGAME_EXPANSION";
 
   return (
     <div className="flex flex-col gap-2">

@@ -20,7 +20,8 @@
     "verify": "npm run format:check && npm run typecheck && npm run lint && npm run test",
     "prepare": "husky",
     "db:seed": "cross-env DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config prisma/seed.ts",
-    "migrate:posts": "cross-env DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/migrate-mock-posts.ts"
+    "migrate:posts": "cross-env DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/migrate-mock-posts.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
