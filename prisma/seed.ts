@@ -68,6 +68,11 @@ const PERMISSIONS = [
     description:
       "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
   },
+  {
+    key: "legal:manage",
+    description:
+      "Rechtliches-Dokumente verwalten (PDF hochladen, Sections bearbeiten)",
+  },
 ];
 
 const ROLES = [
