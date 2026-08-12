@@ -85,7 +85,7 @@ export function InviteForm() {
         Ungebundene Einladung (mehrfach nutzbar, keine E-Mail-Bindung)
       </label>
 
-      <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+      <div className="grid gap-4 sm:grid-cols-[2fr_1fr_auto]">
         <TextField
           id="invite-email"
           type="email"
@@ -107,12 +107,15 @@ export function InviteForm() {
             onChange={(event) => setDays(Number(event.target.value))}
           />
         </div>
+        <Button
+          onClick={handleCreateInvite}
+          disabled={isPending}
+          className="self-end"
+        >
+          <UserPlus />
+          {isPending ? "Erzeuge Einladung…" : "Einladung erzeugen"}
+        </Button>
       </div>
-
-      <Button onClick={handleCreateInvite} disabled={isPending}>
-        <UserPlus />
-        {isPending ? "Erzeuge Einladung…" : "Einladung erzeugen"}
-      </Button>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
