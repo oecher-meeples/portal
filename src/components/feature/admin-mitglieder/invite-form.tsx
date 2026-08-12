@@ -76,6 +76,8 @@ export function InviteForm() {
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
+      <h2 className="font-serif text-lg font-bold">Neues Mitglied einladen</h2>
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

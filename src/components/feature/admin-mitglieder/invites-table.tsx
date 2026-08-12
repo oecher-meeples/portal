@@ -99,8 +99,9 @@ export function InvitesTable({ invites }: { invites: InviteRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-serif text-lg font-bold">Neues Mitglied einladen</h2>
       <InviteForm />
+
+      <h2 className="font-serif text-lg font-bold">Einladungen</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatTile label="Offene Einladungen" value={openCount} />
