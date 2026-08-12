@@ -679,6 +679,20 @@ model Download {
   @@map("downloads")
 }
 
+/// Satzung/Datenschutzerklärung/Impressum/Beitragsordnung: fixe Slugs, je ein
+/// aktueller PDF-Stand + ein Section-Stand für die Anzeige auf /rechtliches/[slug].
+/// Bewusst getrennt vom generischen `Download` — siehe CLAUDE.md-Plan.
+model LegalDocument {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  title      String
+  sections   Json
+  pdfFileUrl String?
+  updatedAt  DateTime @updatedAt
+
+  @@map("legal_documents")
+}
+
 model InstagramConnection {
   id                  String   @id @default(cuid())
   accessToken         String
