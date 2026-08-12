@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { formatDateTime } from "@/lib/utils/format";
 
 export type InviteValidation =
   | { valid: true }
@@ -118,4 +119,23 @@ export function computeExpiresAt(
   now: Date = new Date(),
 ): Date {
   return new Date(now.getTime() + expiresInMinutes * 60 * 1000);
+}
+
+/** The registration URL for an invite — shared so every place that links to
+ * `/registrieren` builds it the same way (with `email` for bound invites).
+ * Plain string building, not `new URL()`, so an empty `origin` (SSR, before
+ * `window.location` is known) still yields a valid relative link. */
+export function buildRegistrationLink(
+  origin: string,
+  token: string,
+  email: string | null,
+): string {
+  const emailParam = email ? `&email=${encodeURIComponent(email)}` : "";
+  return `${origin}/registrieren?token=${encodeURIComponent(token)}${emailParam}`;
+}
+
+/** Shared by the "Per Mail versenden" and "Einladung kopieren" buttons — the
+ * text a prospective member receives to register via an invite link. */
+export function formatInviteMessage(link: string, expiresAt: Date): string {
+  return `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich über diesen Link:\n${link}\n\nDer Link ist gültig bis ${formatDateTime(expiresAt)}.`;
 }

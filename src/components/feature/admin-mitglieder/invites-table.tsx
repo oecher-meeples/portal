@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Ban, Copy, Link as LinkIcon, Mail, RotateCcw, Search } from "lucide-react";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import {
   Table,
   TableBody,
@@ -16,9 +17,16 @@ import {
 import { ActionButton } from "@/components/ui/action-button";
 import { InviteStatusPill } from "@/components/entities/invite-status-pill";
 import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
-import { revokeInvite } from "@/components/feature/admin-mitglieder/invite-actions";
+import {
+  extendInvite,
+  revokeInvite,
+} from "@/components/feature/admin-mitglieder/invite-actions";
 import { formatDatePlain } from "@/lib/utils/format";
-import type { InviteStatus } from "@/lib/members/invites";
+import {
+  buildRegistrationLink,
+  formatInviteMessage,
+  type InviteStatus,
+} from "@/lib/members/invites";
 
 export type InviteRow = {
   id: string;
@@ -49,6 +57,11 @@ export function InvitesTable({ invites }: { invites: InviteRow[] }) {
   const [activeStatuses, setActiveStatuses] = useState<Set<InviteStatus>>(
     () => new Set(DEFAULT_ACTIVE_STATUSES),
   );
+  // Empty until mounted, so server and first client render agree (relative
+  // link) and the browser's real origin only lands after hydration.
+  const [origin, setOrigin] = useState("");
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setOrigin(window.location.origin), []);
 
   function toggleStatus(status: InviteStatus) {
     setActiveStatuses((current) => {
@@ -156,17 +169,78 @@ export function InvitesTable({ invites }: { invites: InviteRow[] }) {
                     : germanDate(invite.expiresAt)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {invite.status === "offen" && (
-                    <ActionButton
-                      variant="ghost"
-                      size="sm"
-                      action={revokeInvite.bind(null, invite.id)}
-                      pendingLabel="Widerrufe…"
-                      confirm="Diese Einladung wirklich widerrufen? Der Link funktioniert danach nicht mehr."
-                    >
-                      Widerrufen
-                    </ActionButton>
-                  )}
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {invite.status === "offen" && (
+                      <>
+                        {(() => {
+                          const link = buildRegistrationLink(
+                            origin,
+                            invite.token,
+                            invite.email,
+                          );
+                          const message = formatInviteMessage(
+                            link,
+                            new Date(invite.expiresAt),
+                          );
+                          const mailtoHref = `mailto:${invite.email ?? ""}?subject=${encodeURIComponent(
+                            "Einladung zu Oecher Meeples",
+                          )}&body=${encodeURIComponent(message)}`;
+                          return (
+                            <>
+                              <CopyButton
+                                size="sm"
+                                value={invite.token}
+                                label="Token kopieren"
+                                icon={Copy}
+                              />
+                              <CopyButton
+                                size="sm"
+                                value={message}
+                                label="Einladung kopieren"
+                                icon={Mail}
+                              />
+                              <CopyButton
+                                size="sm"
+                                value={link}
+                                label="Link kopieren"
+                                icon={LinkIcon}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                render={<a href={mailtoHref} />}
+                              >
+                                <Mail />
+                                Per Mail versenden
+                              </Button>
+                            </>
+                          );
+                        })()}
+                        <ActionButton
+                          variant="destructive"
+                          size="sm"
+                          action={revokeInvite.bind(null, invite.id)}
+                          pendingLabel="Widerrufe…"
+                          confirm="Diese Einladung wirklich widerrufen? Der Link funktioniert danach nicht mehr."
+                        >
+                          <Ban />
+                          Widerrufen
+                        </ActionButton>
+                      </>
+                    )}
+                    {invite.status === "abgelaufen" && (
+                      <ActionButton
+                        variant="outline"
+                        size="sm"
+                        action={extendInvite.bind(null, invite.id)}
+                        pendingLabel="Verlängere…"
+                        confirm="Diese Einladung um ihre ursprüngliche Gültigkeitsdauer verlängern?"
+                      >
+                        <RotateCcw />
+                        Verlängern
+                      </ActionButton>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

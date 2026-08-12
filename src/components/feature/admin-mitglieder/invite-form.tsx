@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
+  buildRegistrationLink,
   DEFAULT_BOUND_DAYS,
   DEFAULT_UNBOUND_DAYS,
+  formatInviteMessage,
   MAX_INVITE_DAYS,
 } from "@/lib/members/invites";
 
@@ -20,6 +22,7 @@ export function InviteForm() {
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<{
     token: string;
+    expiresAt: string;
     extended: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +41,11 @@ export function InviteForm() {
         email: unbound ? null : email,
         days,
       });
-      setResult({ token: created.token, extended: created.extended });
+      setResult({
+        token: created.token,
+        expiresAt: created.expiresAt,
+        extended: created.extended,
+      });
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -51,18 +58,21 @@ export function InviteForm() {
   }
 
   const inviteLink = result
-    ? `${window.location.origin}/registrieren?token=${result.token}${
-        !unbound && email ? `&email=${encodeURIComponent(email)}` : ""
-      }`
+    ? buildRegistrationLink(
+        window.location.origin,
+        result.token,
+        unbound ? null : email,
+      )
     : null;
 
-  const mailtoHref = inviteLink
-    ? `mailto:${unbound ? "" : email}?subject=${encodeURIComponent(
-        "Einladung zu Oecher Meeples",
-      )}&body=${encodeURIComponent(
-        `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich über diesen Link:\n${inviteLink}\n\nDer Link ist ${days} ${days === 1 ? "Tag" : "Tage"} gültig.`,
-      )}`
-    : null;
+  const mailtoHref =
+    inviteLink && result
+      ? `mailto:${unbound ? "" : email}?subject=${encodeURIComponent(
+          "Einladung zu Oecher Meeples",
+        )}&body=${encodeURIComponent(
+          formatInviteMessage(inviteLink, new Date(result.expiresAt)),
+        )}`
+      : null;
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">

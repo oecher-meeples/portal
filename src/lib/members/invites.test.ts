@@ -3,8 +3,14 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { validateInviteToken, inviteStatus, daysToMinutes, computeExpiresAt } =
-  await import("@/lib/members/invites");
+const {
+  validateInviteToken,
+  inviteStatus,
+  daysToMinutes,
+  computeExpiresAt,
+  buildRegistrationLink,
+  formatInviteMessage,
+} = await import("@/lib/members/invites");
 
 const BASE_INVITE = {
   id: "invite-1",
@@ -146,5 +152,33 @@ describe("computeExpiresAt", () => {
     expect(computeExpiresAt(60, now)).toEqual(
       new Date("2026-08-12T01:00:00Z"),
     );
+  });
+});
+
+describe("buildRegistrationLink", () => {
+  it("includes the email param for a bound invite", () => {
+    expect(
+      buildRegistrationLink("https://example.com", "tok123", "a@b.com"),
+    ).toBe("https://example.com/registrieren?token=tok123&email=a%40b.com");
+  });
+
+  it("omits the email param for an unbound invite", () => {
+    expect(buildRegistrationLink("https://example.com", "tok123", null)).toBe(
+      "https://example.com/registrieren?token=tok123",
+    );
+  });
+});
+
+describe("formatInviteMessage", () => {
+  it("includes the link and the formatted expiry", () => {
+    const message = formatInviteMessage(
+      "https://example.com/registrieren?token=tok123",
+      new Date("2026-08-19T10:00:00Z"),
+    );
+
+    expect(message).toContain(
+      "https://example.com/registrieren?token=tok123",
+    );
+    expect(message).toContain("Der Link ist gültig bis");
   });
 });

@@ -12,10 +12,12 @@ export function CopyButton({
   value,
   label,
   icon: Icon,
+  size,
 }: {
   value: string;
   label: string;
   icon: LucideIcon;
+  size?: React.ComponentProps<typeof Button>["size"];
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -26,7 +28,7 @@ export function CopyButton({
   }
 
   return (
-    <Button variant="outline" onClick={handleCopy}>
+    <Button variant="outline" size={size} onClick={handleCopy}>
       {copied ? <CheckIcon /> : <Icon />}
       {copied ? "Kopiert!" : label}
     </Button>
