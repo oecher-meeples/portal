@@ -76,6 +76,39 @@ export async function deleteDownload(id: string) {
   return { success: true as const };
 }
 
+export type ReplaceDownloadFileInput = {
+  fileUrl: string;
+  fileType: string;
+  fileSizeBytes: number;
+  fileName: string;
+};
+
+/** Reupload for an existing download (see #115) — replaces the file while
+ * keeping id/title/status/order untouched. Deletes the old blob only after
+ * the database row points at the new one, so a failed upload never orphans
+ * the row without a file, and a failed delete never loses the new file. */
+export async function replaceDownloadFile(
+  id: string,
+  input: ReplaceDownloadFileInput,
+) {
+  const forbidden = await requireManagePermission();
+  if (forbidden) return forbidden;
+
+  const existing = await prisma.download.findUnique({
+    where: { id },
+    select: { fileUrl: true },
+  });
+  if (!existing) {
+    return { error: "Download nicht gefunden." };
+  }
+
+  await prisma.download.update({ where: { id }, data: input });
+  await deleteBlobs([existing.fileUrl]);
+
+  revalidateDownloadPaths();
+  return { success: true as const };
+}
+
 /** Manual reorder for the main list (see #113). OFFLINE downloads have no
  * manual order (they sort by `updatedAt`), so any OFFLINE id is dropped
  * rather than reordered. */

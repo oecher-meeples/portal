@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
@@ -27,6 +27,7 @@ const {
   createDownload,
   setDownloadStatus,
   deleteDownload,
+  replaceDownloadFile,
   reorderDownloads,
   getDownloadUploadToken,
 } = await import("./actions");
@@ -135,6 +136,68 @@ describe("deleteDownload", () => {
     expect(prismaMock.download.delete).toHaveBeenCalledWith({
       where: { id: "download-1" },
     });
+  });
+});
+
+describe("replaceDownloadFile", () => {
+  beforeEach(() => {
+    deleteBlobsMock.mockClear();
+  });
+
+  const NEW_FILE = {
+    fileUrl: "https://blob.example/downloads/mitgliedsantrag-v2.pdf",
+    fileType: "PDF",
+    fileSizeBytes: 4321,
+    fileName: "mitgliedsantrag-v2.pdf",
+  };
+
+  it("rejects when the user lacks the downloads:manage permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(false);
+
+    const result = await replaceDownloadFile("download-1", NEW_FILE);
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(prismaMock.download.update).not.toHaveBeenCalled();
+    expect(deleteBlobsMock).not.toHaveBeenCalled();
+  });
+
+  it("returns an error when the download does not exist", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(true);
+    prismaMock.download.findUnique.mockResolvedValue(null);
+
+    const result = await replaceDownloadFile("missing-id", NEW_FILE);
+
+    expect(result).toEqual({ error: "Download nicht gefunden." });
+    expect(prismaMock.download.update).not.toHaveBeenCalled();
+    expect(deleteBlobsMock).not.toHaveBeenCalled();
+  });
+
+  it("updates the file fields and deletes the old blob only after the update", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(true);
+    prismaMock.download.findUnique.mockResolvedValue({
+      fileUrl: VALID_INPUT.fileUrl,
+    } as never);
+    const callOrder: string[] = [];
+    prismaMock.download.update.mockImplementation((async () => {
+      callOrder.push("update");
+      return {} as never;
+    }) as never);
+    deleteBlobsMock.mockImplementation(async () => {
+      callOrder.push("delete");
+    });
+
+    const result = await replaceDownloadFile("download-1", NEW_FILE);
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.download.update).toHaveBeenCalledWith({
+      where: { id: "download-1" },
+      data: NEW_FILE,
+    });
+    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.fileUrl]);
+    expect(callOrder).toEqual(["update", "delete"]);
   });
 });
 
