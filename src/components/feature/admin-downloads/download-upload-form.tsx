@@ -45,6 +45,7 @@ export function DownloadUploadForm() {
     await run(() =>
       createDownload({
         title: title.trim(),
+        fileName: file.name,
         fileUrl,
         fileType,
         fileSizeBytes: file.size,

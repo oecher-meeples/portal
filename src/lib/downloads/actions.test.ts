@@ -32,6 +32,7 @@ const {
 
 const VALID_INPUT = {
   title: "Mitgliedsantrag",
+  fileName: "mitgliedsantrag.pdf",
   fileUrl: "https://blob.example/downloads/mitgliedsantrag.pdf",
   fileType: "PDF",
   fileSizeBytes: 1234,

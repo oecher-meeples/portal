@@ -31,6 +31,7 @@ function revalidateDownloadPaths() {
 
 export type CreateDownloadInput = {
   title: string;
+  fileName: string;
   fileUrl: string;
   fileType: string;
   fileSizeBytes: number;
