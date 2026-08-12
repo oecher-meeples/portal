@@ -9,10 +9,7 @@ import {
 import { DownloadsView } from "@/components/feature/downloads/downloads-view";
 
 export default async function DownloadsPage() {
-  const [tier, user] = await Promise.all([
-    getSessionTier(),
-    getCurrentUser(),
-  ]);
+  const [tier, user] = await Promise.all([getSessionTier(), getCurrentUser()]);
   const canManage =
     !!user && (await hasPermission(user.id, "downloads:manage"));
   const downloads = await listVisibleDownloads(tier);
