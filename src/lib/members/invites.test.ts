@@ -149,9 +149,7 @@ describe("computeExpiresAt", () => {
   it("adds the given minutes to the reference time", () => {
     const now = new Date("2026-08-12T00:00:00Z");
 
-    expect(computeExpiresAt(60, now)).toEqual(
-      new Date("2026-08-12T01:00:00Z"),
-    );
+    expect(computeExpiresAt(60, now)).toEqual(new Date("2026-08-12T01:00:00Z"));
   });
 });
 
@@ -176,9 +174,7 @@ describe("formatInviteMessage", () => {
       new Date("2026-08-19T10:00:00Z"),
     );
 
-    expect(message).toContain(
-      "https://example.com/registrieren?token=tok123",
-    );
+    expect(message).toContain("https://example.com/registrieren?token=tok123");
     expect(message).toContain("Der Link ist gültig bis");
   });
 });

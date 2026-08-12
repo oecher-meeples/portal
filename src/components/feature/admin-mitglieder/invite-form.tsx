@@ -125,17 +125,13 @@ export function InviteForm() {
             </p>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Registrierungslink ({days} {days === 1 ? "Tag" : "Tage"}{" "}
-              gültig):
+              Registrierungslink ({days} {days === 1 ? "Tag" : "Tage"} gültig):
             </p>
           )}
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">
             {inviteLink}
           </code>
-          <a
-            href={mailtoHref}
-            className="text-primary text-sm hover:underline"
-          >
+          <a href={mailtoHref} className="text-primary text-sm hover:underline">
             Per E-Mail versenden
           </a>
         </div>

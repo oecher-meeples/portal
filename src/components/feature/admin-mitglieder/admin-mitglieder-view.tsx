@@ -103,9 +103,7 @@ export function AdminMitgliederView({
       }
       if (
         meepleSearch &&
-        !meeple.displayName
-          .toLowerCase()
-          .includes(meepleSearch.toLowerCase())
+        !meeple.displayName.toLowerCase().includes(meepleSearch.toLowerCase())
       ) {
         return false;
       }

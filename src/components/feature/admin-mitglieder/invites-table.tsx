@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Ban, Copy, Link as LinkIcon, Mail, RotateCcw, Search } from "lucide-react";
+import {
+  Ban,
+  Copy,
+  Link as LinkIcon,
+  Mail,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -75,9 +82,7 @@ export function InvitesTable({ invites }: { invites: InviteRow[] }) {
   // Absolute counts, independent of search/filter — the stat card always
   // reflects the true open/expired state, not the currently filtered view.
   const openCount = invites.filter((i) => i.status === "offen").length;
-  const expiredCount = invites.filter(
-    (i) => i.status === "abgelaufen",
-  ).length;
+  const expiredCount = invites.filter((i) => i.status === "abgelaufen").length;
 
   const filteredInvites = useMemo(() => {
     return invites.filter((invite) => {
