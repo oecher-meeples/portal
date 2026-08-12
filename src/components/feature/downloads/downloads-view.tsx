@@ -1,23 +1,33 @@
 import Link from "next/link";
 import { FileText, FileSpreadsheet } from "lucide-react";
+import type { DownloadStatus } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
+import { DownloadInternalBadge } from "@/components/entities/download-internal-badge";
 import type { LegalDoc } from "@/data/downloads";
 
 export type DownloadListItem = {
   id: string;
   title: string;
+  fileName: string;
   fileType: string;
   fileSizeFormatted: string;
   fileUrl: string;
+  status: DownloadStatus;
+  order: number;
 };
 
 type DownloadsViewProps = {
   downloads: DownloadListItem[];
   legalDocs: LegalDoc[];
+  canManage: boolean;
 };
 
-export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
+export function DownloadsView({
+  downloads,
+  legalDocs,
+  canManage,
+}: DownloadsViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -39,8 +49,12 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
                   <FileText className="text-muted-foreground size-5" />
                 )}
                 <div>
-                  <p className="font-medium">{file.title}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-medium">{file.title}</p>
+                    <DownloadInternalBadge status={file.status} />
+                  </div>
                   <p className="text-muted-foreground text-xs">
+                    {canManage && <>{file.fileName} · </>}
                     {file.fileType} · {file.fileSizeFormatted}
                   </p>
                 </div>
