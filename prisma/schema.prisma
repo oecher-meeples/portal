@@ -666,6 +666,7 @@ model FleaMarketItem {
 model Download {
   id            String         @id @default(cuid())
   title         String
+  fileName      String
   fileUrl       String         @unique
   fileType      String
   fileSizeBytes Int
