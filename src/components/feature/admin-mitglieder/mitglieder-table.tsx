@@ -35,11 +35,11 @@ export type MeepleRow = {
 type MeepleQuickFilter = MembershipState | "alle";
 
 const MEEPLE_QUICK_FILTERS: { value: MeepleQuickFilter; label: string }[] = [
+  { value: "alle", label: "Alle" },
   { value: "aktiv", label: "Aktiv" },
   { value: "gekuendigt", label: "Gekündigt" },
   { value: "ausgetreten", label: "Ausgetreten" },
   { value: "anonymisiert", label: "Anonymisiert" },
-  { value: "alle", label: "Alle" },
 ];
 
 function germanDate(value: string | null) {

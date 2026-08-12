@@ -59,7 +59,7 @@ function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
 }
 
-export function InvitesTable({ invites }: { invites: InviteRow[] }) {
+export function InvitesSection({ invites }: { invites: InviteRow[] }) {
   const [search, setSearch] = useState("");
   const [activeStatuses, setActiveStatuses] = useState<Set<InviteStatus>>(
     () => new Set(DEFAULT_ACTIVE_STATUSES),
@@ -99,15 +99,13 @@ export function InvitesTable({ invites }: { invites: InviteRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <InviteForm />
-
       <h2 className="font-serif text-lg font-bold">Einladungen</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatTile label="Offene Einladungen" value={openCount} />
         <StatTile label="Abgelaufene Einladungen" value={expiredCount} />
       </div>
-
+      <InviteForm />
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full max-w-sm">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />

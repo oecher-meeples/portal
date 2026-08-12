@@ -7,9 +7,9 @@ import {
   type MeepleRow,
 } from "@/components/feature/admin-mitglieder/mitglieder-table";
 import {
-  InvitesTable,
+  InvitesSection,
   type InviteRow,
-} from "@/components/feature/admin-mitglieder/invites-table";
+} from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
@@ -160,7 +160,7 @@ export function AdminMitgliederView({
 
       <MitgliederTable meeples={meeples} />
 
-      <InvitesTable invites={invites} />
+      <InvitesSection invites={invites} />
     </div>
   );
 }
