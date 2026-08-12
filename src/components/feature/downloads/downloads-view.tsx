@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FileText, FileSpreadsheet, GripVertical } from "lucide-react";
 import type { DownloadStatus } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
-import { DownloadInternalBadge } from "@/components/entities/download-internal-badge";
 import { useAction } from "@/components/ui/use-action";
 import { reorderDownloads } from "@/lib/downloads/actions";
+import { DownloadRow } from "@/components/feature/downloads/download-row";
 import type { LegalDoc } from "@/data/downloads";
 
 export type DownloadListItem = {
@@ -75,47 +74,15 @@ export function DownloadsView({
         <div className="flex flex-col gap-2">
           <div className="bg-card flex flex-col divide-y rounded-lg border">
             {items.map((file) => (
-              <div
+              <DownloadRow
                 key={file.id}
+                file={file}
+                canManage={canManage}
                 draggable={canManage}
                 onDragStart={() => setDraggedId(file.id)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => moveAndPersist(file.id)}
-                className="flex items-center justify-between gap-4 p-4"
-              >
-                <div className="flex items-center gap-3">
-                  {canManage && (
-                    <GripVertical
-                      className="text-muted-foreground size-4 shrink-0 cursor-grab"
-                      aria-hidden
-                    />
-                  )}
-                  {file.fileType === "XLSX" ? (
-                    <FileSpreadsheet className="size-5 text-emerald-600" />
-                  ) : (
-                    <FileText className="text-muted-foreground size-5" />
-                  )}
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-medium">{file.title}</p>
-                      <DownloadInternalBadge status={file.status} />
-                    </div>
-                    <p className="text-muted-foreground text-xs">
-                      {canManage && <>{file.fileName} · </>}
-                      {file.fileType} · {file.fileSizeFormatted}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  render={
-                    <a href={file.fileUrl} download>
-                      Download
-                    </a>
-                  }
-                />
-              </div>
+              />
             ))}
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
