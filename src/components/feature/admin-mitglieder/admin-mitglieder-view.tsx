@@ -1,6 +1,11 @@
-import { RotateCcw } from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import { RotateCcw, Search } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -21,6 +26,16 @@ import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/re
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import { revokeInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import { cn } from "@/lib/utils/cn";
+
+type MeepleQuickFilter = MembershipState | "alle";
+
+const MEEPLE_QUICK_FILTERS: { value: MeepleQuickFilter; label: string }[] = [
+  { value: "aktiv", label: "Aktiv" },
+  { value: "gekuendigt", label: "Gekündigt" },
+  { value: "ausgetreten", label: "Ausgetreten" },
+  { value: "anonymisiert", label: "Anonymisiert" },
+  { value: "alle", label: "Alle" },
+];
 
 export type MeepleRow = {
   id: string;
@@ -70,6 +85,10 @@ export function AdminMitgliederView({
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
 }) {
+  const [meepleSearch, setMeepleSearch] = useState("");
+  const [meepleQuickFilter, setMeepleQuickFilter] =
+    useState<MeepleQuickFilter>("aktiv");
+
   const withOpenHoldings = meeples.filter(
     (m) =>
       m.membershipState === "gekuendigt" &&
@@ -81,6 +100,26 @@ export function AdminMitgliederView({
       m.openGames === 0 &&
       m.openUnits === 0,
   );
+
+  const filteredMeeples = useMemo(() => {
+    return meeples.filter((meeple) => {
+      if (
+        meepleQuickFilter !== "alle" &&
+        meeple.membershipState !== meepleQuickFilter
+      ) {
+        return false;
+      }
+      if (
+        meepleSearch &&
+        !meeple.displayName
+          .toLowerCase()
+          .includes(meepleSearch.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [meeples, meepleSearch, meepleQuickFilter]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,7 +226,31 @@ export function AdminMitgliederView({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-sm">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Mitglied suchen …"
+            className="pl-9"
+            value={meepleSearch}
+            onChange={(event) => setMeepleSearch(event.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 text-sm">
+          {MEEPLE_QUICK_FILTERS.map(({ value, label }) => (
+            <Button
+              key={value}
+              size="sm"
+              variant={meepleQuickFilter === value ? "default" : "outline"}
+              onClick={() => setMeepleQuickFilter(value)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-card overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
@@ -201,7 +264,17 @@ export function AdminMitgliederView({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {meeples.map((meeple) => (
+            {filteredMeeples.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-muted-foreground py-6 text-center"
+                >
+                  Keine Mitglieder gefunden.
+                </TableCell>
+              </TableRow>
+            )}
+            {filteredMeeples.map((meeple) => (
               <TableRow key={meeple.id}>
                 <TableCell className="font-mono">
                   {meeple.memberNumber}
