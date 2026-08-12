@@ -136,7 +136,12 @@ export function InviteForm() {
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">
             {inviteLink}
           </code>
-          <a href={mailtoHref} className="text-primary text-sm hover:underline">
+          <a
+            href={mailtoHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary text-sm hover:underline"
+          >
             Per E-Mail versenden
           </a>
         </div>

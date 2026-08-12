@@ -212,7 +212,13 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                render={<a href={mailtoHref} />}
+                                render={
+                                  <a
+                                    href={mailtoHref}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  />
+                                }
                               >
                                 <Mail />
                                 Per Mail versenden
