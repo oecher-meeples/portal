@@ -10,6 +10,7 @@ import { useAction } from "@/components/ui/use-action";
 import { reorderDownloads } from "@/lib/downloads/actions";
 import { DownloadRow } from "@/components/feature/downloads/download-row";
 import { DownloadUploadForm } from "@/components/feature/downloads/download-upload-form";
+import { PrivateDownloadsTable } from "@/components/feature/downloads/private-downloads-table";
 import type { LegalDoc } from "@/data/downloads";
 
 export type DownloadListItem = {
@@ -25,12 +26,14 @@ export type DownloadListItem = {
 
 type DownloadsViewProps = {
   downloads: DownloadListItem[];
+  offlineDownloads: DownloadListItem[];
   legalDocs: LegalDoc[];
   canManage: boolean;
 };
 
 export function DownloadsView({
   downloads,
+  offlineDownloads,
   legalDocs,
   canManage,
 }: DownloadsViewProps) {
@@ -126,6 +129,7 @@ export function DownloadsView({
           ))}
         </div>
       </div>
+      {canManage && <PrivateDownloadsTable downloads={offlineDownloads} />}
     </div>
   );
 }
