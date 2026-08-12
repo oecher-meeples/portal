@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { redeemInvite } from "@/components/feature/registrieren/actions";
+import { validatePassword } from "@/lib/auth/password";
 
 export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
   const router = useRouter();
@@ -13,12 +14,24 @@ export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setError("Die eingegebenen Passwörter stimmen nicht überein.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const result = await redeemInvite({ token, email, password, name });
@@ -75,6 +88,16 @@ export function RegisterForm({ defaultToken }: { defaultToken?: string }) {
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="reg-password-confirm">Passwort wiederholen</Label>
+        <Input
+          id="reg-password-confirm"
+          type="password"
+          value={passwordConfirm}
+          onChange={(event) => setPasswordConfirm(event.target.value)}
           required
         />
       </div>

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/utils/prisma";
 import { auth } from "@/lib/auth/server";
 import { validateInviteToken } from "@/lib/members/invites";
+import { translateAuthError, validatePassword } from "@/lib/auth/password";
 
 const DEFAULT_ROLE = "mitglied";
 
@@ -22,9 +23,14 @@ export async function redeemInvite({
     return { error: "Token ungültig oder abgelaufen." };
   }
 
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return { error: passwordError };
+  }
+
   const { data, error } = await auth.signUp.email({ email, password, name });
   if (error || !data?.user) {
-    return { error: error?.message ?? "Registrierung fehlgeschlagen." };
+    return { error: translateAuthError(error?.message) };
   }
 
   const role = await prisma.role.findUniqueOrThrow({

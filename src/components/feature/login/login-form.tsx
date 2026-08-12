@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
+import { translateAuthError } from "@/lib/auth/password";
 
 export function LoginForm() {
   const router = useRouter();
@@ -21,20 +22,27 @@ export function LoginForm() {
     setError(null);
     setIsSubmitting(true);
 
-    const { error: signInError } = await authClient.signIn.email({
-      email,
-      password,
-    });
+    try {
+      const { error: signInError } = await authClient.signIn.email({
+        email,
+        password,
+      });
 
-    setIsSubmitting(false);
+      if (signInError) {
+        setError(translateAuthError(signInError.message));
+        return;
+      }
 
-    if (signInError) {
-      setError(signInError.message ?? "Anmeldung fehlgeschlagen.");
-      return;
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      // Netzwerkfehler o.ä. — ohne dieses catch bliebe der Button dauerhaft
+      // im "Anmelden…"-Zustand hängen, ohne dass der Nutzer je eine
+      // Rückmeldung bekommt.
+      setError("Das hat leider nicht funktioniert. Bitte versuche es erneut.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
