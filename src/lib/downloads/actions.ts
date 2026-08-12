@@ -76,6 +76,32 @@ export async function deleteDownload(id: string) {
   return { success: true as const };
 }
 
+/** Manual reorder for the main list (see #113). OFFLINE downloads have no
+ * manual order (they sort by `updatedAt`), so any OFFLINE id is dropped
+ * rather than reordered. */
+export async function reorderDownloads(orderedIds: string[]) {
+  const forbidden = await requireManagePermission();
+  if (forbidden) return forbidden;
+
+  const downloads = await prisma.download.findMany({
+    where: { id: { in: orderedIds } },
+    select: { id: true, status: true },
+  });
+  const reorderableIds = new Set(
+    downloads.filter((d) => d.status !== "OFFLINE").map((d) => d.id),
+  );
+  const reorderedIds = orderedIds.filter((id) => reorderableIds.has(id));
+
+  await prisma.$transaction(
+    reorderedIds.map((id, index) =>
+      prisma.download.update({ where: { id }, data: { order: index } }),
+    ),
+  );
+
+  revalidateDownloadPaths();
+  return { success: true as const };
+}
+
 export async function getDownloadUploadToken(pathname: string) {
   const forbidden = await requireManagePermission();
   if (forbidden) throw new Error(forbidden.error);

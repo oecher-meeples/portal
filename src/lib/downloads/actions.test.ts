@@ -27,6 +27,7 @@ const {
   createDownload,
   setDownloadStatus,
   deleteDownload,
+  reorderDownloads,
   getDownloadUploadToken,
 } = await import("./actions");
 
@@ -133,6 +134,63 @@ describe("deleteDownload", () => {
     expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.fileUrl]);
     expect(prismaMock.download.delete).toHaveBeenCalledWith({
       where: { id: "download-1" },
+    });
+  });
+});
+
+describe("reorderDownloads", () => {
+  it("rejects when the user lacks the downloads:manage permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(false);
+
+    const result = await reorderDownloads(["download-1", "download-2"]);
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("sets order by position for the given ids when authorized", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(true);
+    prismaMock.download.findMany.mockResolvedValue([
+      { id: "download-1", status: "PUBLIC" },
+      { id: "download-2", status: "INTERNAL" },
+    ] as never);
+    prismaMock.$transaction.mockResolvedValue([]);
+
+    const result = await reorderDownloads(["download-1", "download-2"]);
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.download.update).toHaveBeenNthCalledWith(1, {
+      where: { id: "download-1" },
+      data: { order: 0 },
+    });
+    expect(prismaMock.download.update).toHaveBeenNthCalledWith(2, {
+      where: { id: "download-2" },
+      data: { order: 1 },
+    });
+  });
+
+  it("drops OFFLINE ids instead of reordering them", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(true);
+    prismaMock.download.findMany.mockResolvedValue([
+      { id: "download-1", status: "PUBLIC" },
+      { id: "download-offline", status: "OFFLINE" },
+      { id: "download-2", status: "INTERNAL" },
+    ] as never);
+    prismaMock.$transaction.mockResolvedValue([]);
+
+    await reorderDownloads(["download-1", "download-offline", "download-2"]);
+
+    expect(prismaMock.download.update).toHaveBeenCalledTimes(2);
+    expect(prismaMock.download.update).toHaveBeenNthCalledWith(1, {
+      where: { id: "download-1" },
+      data: { order: 0 },
+    });
+    expect(prismaMock.download.update).toHaveBeenNthCalledWith(2, {
+      where: { id: "download-2" },
+      data: { order: 1 },
     });
   });
 });
