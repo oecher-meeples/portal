@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.17.0",
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 next dev -p 3002",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
