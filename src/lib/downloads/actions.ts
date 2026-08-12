@@ -26,7 +26,6 @@ async function requireManagePermission() {
 
 function revalidateDownloadPaths() {
   revalidatePath("/downloads");
-  revalidatePath("/admin/downloads");
 }
 
 export type CreateDownloadInput = {

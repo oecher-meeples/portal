@@ -5,9 +5,11 @@ import { useState } from "react";
 import type { DownloadStatus } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAction } from "@/components/ui/use-action";
 import { reorderDownloads } from "@/lib/downloads/actions";
 import { DownloadRow } from "@/components/feature/downloads/download-row";
+import { DownloadUploadForm } from "@/components/feature/downloads/download-upload-form";
 import type { LegalDoc } from "@/data/downloads";
 
 export type DownloadListItem = {
@@ -35,6 +37,7 @@ export function DownloadsView({
   const [prevDownloads, setPrevDownloads] = useState(downloads);
   const [items, setItems] = useState(downloads);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const { run, error } = useAction({ refresh: false });
 
   // Keep in sync when the server payload changes (e.g. after a status
@@ -63,6 +66,10 @@ export function DownloadsView({
     if (!ok) setItems(previous);
   }
 
+  const visibleItems = items.filter((item) =>
+    item.title.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -70,10 +77,23 @@ export function DownloadsView({
         title="Downloads & Rechtliches"
         description="Anträge, Satzung und rechtliche Dokumente zum direkten Abruf."
       />
+      {canManage && (
+        <div className="bg-muted/30 rounded-lg border p-4">
+          <DownloadUploadForm />
+        </div>
+      )}
+      <Input
+        type="search"
+        placeholder="Nach Titel suchen…"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        className="max-w-sm"
+        aria-label="Downloads durchsuchen"
+      />
       <div className="grid gap-6 md:grid-cols-2">
         <div className="flex flex-col gap-2">
           <div className="bg-card flex flex-col divide-y rounded-lg border">
-            {items.map((file) => (
+            {visibleItems.map((file) => (
               <DownloadRow
                 key={file.id}
                 file={file}

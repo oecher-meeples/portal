@@ -54,31 +54,35 @@ export function DownloadUploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-sm flex-col gap-3">
-      <TextField
-        id="download-upload-title"
-        label="Titel"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        required
-      />
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium" htmlFor="download-upload-file">
-          Datei (PDF oder XLSX)
-        </label>
-        <input
-          id="download-upload-file"
-          type="file"
-          accept="application/pdf,.xlsx"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-48 flex-1">
+          <TextField
+            id="download-upload-title"
+            label="Titel"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium" htmlFor="download-upload-file">
+            Datei (PDF oder XLSX)
+          </label>
+          <input
+            id="download-upload-file"
+            type="file"
+            accept="application/pdf,.xlsx"
+            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          />
+        </div>
+        <Button type="submit" disabled={!canSubmit}>
+          {isUploading || pending ? "Lade hoch…" : "Hochladen"}
+        </Button>
       </div>
       {(uploadError || error) && (
         <p className="text-destructive text-sm">{uploadError || error}</p>
       )}
-      <Button type="submit" disabled={!canSubmit}>
-        {isUploading || pending ? "Lade hoch…" : "Hochladen"}
-      </Button>
     </form>
   );
 }
