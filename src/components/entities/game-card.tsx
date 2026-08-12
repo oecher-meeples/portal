@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PackagePlus, Layers } from "lucide-react";
-import { BoardGameKind } from "@prisma/client";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
@@ -28,7 +27,7 @@ export function GameCard({
   actions?: ReactNode;
 }) {
   const zustand = "zustand" in game ? game.zustand : undefined;
-  const isExpansion = game.kind === BoardGameKind.BOARDGAME_EXPANSION;
+  const isExpansion = game.kind === "BOARDGAME_EXPANSION";
   const expansionCount = game.expansions.length;
 
   return (
