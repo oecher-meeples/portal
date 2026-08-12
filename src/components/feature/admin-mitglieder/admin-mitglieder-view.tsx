@@ -16,15 +16,15 @@ import {
 } from "@/components/ui/table";
 import { formatDatePlain } from "@/lib/utils/format";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
-import { InviteStatusPill } from "@/components/entities/invite-status-pill";
 import type { MembershipState } from "@/lib/members/meeples";
-import type { InviteStatus } from "@/lib/members/invites";
 import { ActionButton } from "@/components/ui/action-button";
-import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
+import {
+  InvitesTable,
+  type InviteRow,
+} from "@/components/feature/admin-mitglieder/invites-table";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
-import { revokeInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import { cn } from "@/lib/utils/cn";
 
 type MeepleQuickFilter = MembershipState | "alle";
@@ -50,15 +50,7 @@ export type MeepleRow = {
   openUnits: number;
 };
 
-export type InviteRow = {
-  id: string;
-  token: string;
-  createdByDisplayName: string;
-  createdAt: string;
-  expiresAt: string;
-  redeemedAt: string | null;
-  status: InviteStatus;
-};
+export type { InviteRow };
 
 export type DeletionRequestRow = {
   id: string;
@@ -330,71 +322,7 @@ export function AdminMitgliederView({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-4">
-        <h2 className="font-serif text-lg font-bold">
-          Neues Mitglied einladen
-        </h2>
-        <div className="max-w-sm">
-          <InviteForm />
-        </div>
-
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Erzeugt von</TableHead>
-                <TableHead>Erzeugt am</TableHead>
-                <TableHead>Läuft ab / eingelöst am</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right"> </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invites.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-muted-foreground text-center"
-                  >
-                    Noch keine Einladungen erzeugt.
-                  </TableCell>
-                </TableRow>
-              )}
-              {invites.map((invite) => (
-                <TableRow key={invite.id}>
-                  <TableCell className="font-medium">
-                    {invite.createdByDisplayName}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {germanDate(invite.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {invite.redeemedAt
-                      ? germanDate(invite.redeemedAt)
-                      : germanDate(invite.expiresAt)}
-                  </TableCell>
-                  <TableCell>
-                    <InviteStatusPill status={invite.status} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {invite.status === "offen" && (
-                      <ActionButton
-                        variant="ghost"
-                        size="sm"
-                        action={revokeInvite.bind(null, invite.id)}
-                        pendingLabel="Widerrufe…"
-                        confirm="Diese Einladung wirklich widerrufen? Der Link funktioniert danach nicht mehr."
-                      >
-                        Widerrufen
-                      </ActionButton>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <InvitesTable invites={invites} />
     </div>
   );
 }
