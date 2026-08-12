@@ -3,6 +3,7 @@ import type {
   FleaMarketItemStatus,
 } from "@prisma/client";
 import type { MembershipState } from "@/lib/members/meeples";
+import type { InviteStatus } from "@/lib/members/invites";
 
 /**
  * German wording for domain enums lives here — it is domain vocabulary.
@@ -14,6 +15,13 @@ export const MEMBERSHIP_STATE_LABELS: Record<MembershipState, string> = {
   gekuendigt: "Kündigung vorliegend",
   ausgetreten: "Ausgetreten",
   anonymisiert: "Anonymisiert",
+};
+
+export const INVITE_STATUS_LABELS: Record<InviteStatus, string> = {
+  offen: "Offen",
+  eingeloest: "Eingelöst",
+  abgelaufen: "Abgelaufen",
+  widerrufen: "Widerrufen",
 };
 
 export function formatDate(iso: string) {

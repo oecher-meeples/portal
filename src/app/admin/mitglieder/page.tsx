@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth/session";
 import { getMembershipState } from "@/lib/members/meeples";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
 import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
+import { listInvites } from "@/lib/members/invites";
 
 export default async function AdminMitgliederPage() {
   await requireAdmin();
@@ -15,6 +16,7 @@ export default async function AdminMitgliederPage() {
     gameHoldingCounts,
     storageUnitCounts,
     deletionRequests,
+    invites,
   ] = await Promise.all([
     prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
     prisma.userRole.findMany({ include: { role: true } }),
@@ -29,6 +31,7 @@ export default async function AdminMitgliederPage() {
       _count: { _all: true },
     }),
     listPendingDeletionRequests(now),
+    listInvites(now),
   ]);
 
   const rolesByUserId = new Map<string, string[]>();
@@ -70,6 +73,16 @@ export default async function AdminMitgliederPage() {
         membershipEndsAt: meeple.membershipEndsAt?.toISOString() ?? null,
         openGames: openGamesByMeepleId.get(meeple.id) ?? 0,
         openUnits: openUnitsByMeepleId.get(meeple.id) ?? 0,
+      }))}
+      invites={invites.map((invite) => ({
+        id: invite.id,
+        token: invite.token,
+        email: invite.email,
+        createdByDisplayName: invite.createdByDisplayName,
+        createdAt: invite.createdAt.toISOString(),
+        expiresAt: invite.expiresAt.toISOString(),
+        redeemedAt: invite.redeemedAt?.toISOString() ?? null,
+        status: invite.status,
       }))}
     />
   );

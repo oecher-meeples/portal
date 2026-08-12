@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UserMinus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,8 @@ export function ResignMembershipDialog({
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm">
+        <Button variant="destructive" size="sm">
+          <UserMinus />
           Kündigung vermerken
         </Button>
       }

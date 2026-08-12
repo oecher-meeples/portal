@@ -1,35 +1,20 @@
+"use client";
+
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDatePlain } from "@/lib/utils/format";
-import { MembershipStatePill } from "@/components/entities/membership-state-pill";
-import type { MembershipState } from "@/lib/members/meeples";
-import { ActionButton } from "@/components/ui/action-button";
-import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
+  MitgliederTable,
+  type MeepleRow,
+} from "@/components/feature/admin-mitglieder/mitglieder-table";
+import {
+  InvitesSection,
+  type InviteRow,
+} from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
-import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
-import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
+import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
-export type MeepleRow = {
-  id: string;
-  memberNumber: number;
-  displayName: string;
-  roles: string[];
-  membershipState: MembershipState;
-  joinedAt: string;
-  resignedAt: string | null;
-  membershipEndsAt: string | null;
-  openGames: number;
-  openUnits: number;
-};
+export type { MeepleRow, InviteRow };
 
 export type DeletionRequestRow = {
   id: string;
@@ -49,10 +34,12 @@ export function AdminMitgliederView({
   meeples,
   isDecemberOrLater,
   deletionRequests,
+  invites,
 }: {
   meeples: MeepleRow[];
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
+  invites: InviteRow[];
 }) {
   const withOpenHoldings = meeples.filter(
     (m) =>
@@ -171,83 +158,9 @@ export function AdminMitgliederView({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Nr.</TableHead>
-              <TableHead>Mitglied</TableHead>
-              <TableHead>Rollen</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Beigetreten</TableHead>
-              <TableHead>Kündigung / Austritt</TableHead>
-              <TableHead className="text-right"> </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {meeples.map((meeple) => (
-              <TableRow key={meeple.id}>
-                <TableCell className="font-mono">
-                  {meeple.memberNumber}
-                </TableCell>
-                <TableCell
-                  className={
-                    meeple.membershipState === "anonymisiert"
-                      ? "text-muted-foreground"
-                      : "font-medium"
-                  }
-                >
-                  {meeple.displayName}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {meeple.roles.length > 0 ? meeple.roles.join(", ") : "—"}
-                </TableCell>
-                <TableCell>
-                  <MembershipStatePill state={meeple.membershipState} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {germanDate(meeple.joinedAt)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {meeple.resignedAt
-                    ? `${germanDate(meeple.resignedAt)} → ${germanDate(meeple.membershipEndsAt)}`
-                    : "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {meeple.membershipState === "anonymisiert" ? (
-                    <span className="text-muted-foreground text-sm">
-                      Historie erhalten
-                    </span>
-                  ) : meeple.resignedAt ? (
-                    <ActionButton
-                      variant="ghost"
-                      size="sm"
-                      action={revokeResignation.bind(null, meeple.id)}
-                      pendingLabel="Widerrufe…"
-                    >
-                      Kündigung widerrufen
-                    </ActionButton>
-                  ) : (
-                    <ResignMembershipDialog
-                      meepleId={meeple.id}
-                      displayName={meeple.displayName}
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <MitgliederTable meeples={meeples} />
 
-      <div>
-        <h2 className="font-serif text-lg font-bold">
-          Neues Mitglied einladen
-        </h2>
-        <div className="mt-3 max-w-sm">
-          <InviteForm />
-        </div>
-      </div>
+      <InvitesSection invites={invites} />
     </div>
   );
 }

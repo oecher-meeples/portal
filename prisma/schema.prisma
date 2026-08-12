@@ -322,9 +322,20 @@ model NewsletterDispatchJob {
 model Invite {
   id              String    @id @default(cuid())
   token           String    @unique
+  /// null = ungebunden: beliebig oft einlösbar, keine Protokollierung.
+  /// Gesetzt = gebunden: genau einmal einlösbar, muss beim Einlösen exakt
+  /// (case-insensitiv) übereinstimmen. Immer lowercased gespeichert.
+  email           String?
   createdByUserId String
+  createdAt       DateTime  @default(now())
+  /// Gewählte Gültigkeitsdauer in Minuten (aufgerundet) — Offset, nicht
+  /// Zeitpunkt. Wird bei "Verlängern" erneut auf `expiresAt` angewendet.
+  expiresIn       Int
   expiresAt       DateTime
   redeemedAt      DateTime?
+  /// Admin-initiated invalidation of a still-open invite — distinct from
+  /// `redeemedAt` (used) and expiry (timed out).
+  revokedAt       DateTime?
 
   @@map("invites")
 }

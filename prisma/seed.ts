@@ -40,7 +40,10 @@ const DEMO_MEEPLE_2 = {
 const PERMISSIONS = [
   { key: "posts:write", description: "Beiträge erstellen und bearbeiten" },
   { key: "posts:delete", description: "Beiträge löschen" },
-  { key: "invites:create", description: "Einladungen erzeugen" },
+  {
+    key: "invites:manage",
+    description: "Einladungen erzeugen, einsehen und widerrufen",
+  },
   { key: "members:manage", description: "Mitgliederverwaltung" },
   {
     key: "instagram:connect",

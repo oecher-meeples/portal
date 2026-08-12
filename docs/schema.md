@@ -45,9 +45,13 @@ erDiagram
     Invite {
         String id PK
         String token UK
+        String email "null = ungebunden"
         String createdByUserId
+        DateTime createdAt
+        Int expiresIn "Minuten-Offset"
         DateTime expiresAt
         DateTime redeemedAt
+        DateTime revokedAt
     }
 
     Role ||--o{ RolePermission : "hat"
@@ -61,7 +65,7 @@ erDiagram
 | `invites` | ✅ migriert |
 | Rolle `kassenwart` + Permission `bank:read` (Seed) | ✅ migriert |
 
-Eine Einladung (`Invite`) trägt **keinen** Personenbezug: sie ist ein Token mit Ablaufdatum. Wer sie einlöst, wird dadurch Mitglied — es gibt keinen Mitgliedsdatensatz vor der Registrierung.
+Eine Einladung (`Invite`) gibt es in zwei Ausprägungen, unterschieden allein über `email`: **gebunden** (`email` gesetzt, lowercased) ist genau einmal einlösbar und muss beim Einlösen case-insensitiv mit der eingegebenen E-Mail übereinstimmen; **ungebunden** (`email = null`, in der Admin-Oberfläche als „\*" angezeigt) ist beliebig oft einlösbar bis Ablauf oder Widerruf, ohne Protokollierung von `redeemedAt`. `expiresIn` speichert die vom Admin gewählte Gültigkeitsdauer als Minuten-Offset, damit „Verlängern" sie später erneut anwenden kann. Wer eine Einladung einlöst, wird dadurch Mitglied — es gibt keinen Mitgliedsdatensatz vor der Registrierung.
 
 ---
 
