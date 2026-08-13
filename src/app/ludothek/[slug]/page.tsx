@@ -10,6 +10,8 @@ import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { getContactLinks } from "@/lib/members/contact";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
+import { findCurrentEvent } from "@/lib/events/upcoming";
+import { getGuestCopyAvailability } from "@/lib/events/guest-area";
 import {
   GameDetailView,
   type HoldingHistoryEntry,
@@ -42,7 +44,12 @@ export default async function GameDetailPage({
   const copies = games.filter((g) => g.boardGameId === game.boardGameId);
 
   if (!internal) {
-    return <GameDetailView game={toPublicGame(game)} />;
+    const currentEvent = await findCurrentEvent();
+    const availability = await getGuestCopyAvailability(
+      copies.map((c) => ({ id: c.id, zustand: c.zustand })),
+      currentEvent?.id ?? null,
+    );
+    return <GameDetailView game={toPublicGame(game)} availability={availability} />;
   }
 
   const holdings = await prisma.gameHolding.findMany({

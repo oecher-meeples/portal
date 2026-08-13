@@ -181,3 +181,50 @@ describe("GameDetailView — expansion ribbon (#121/#122)", () => {
     expect(screen.queryByText("Erweiterung")).not.toBeInTheDocument();
   });
 });
+
+describe("GameDetailView — guest availability (#121)", () => {
+  it("shows a plain copy count", () => {
+    render(
+      <GameDetailView
+        game={game()}
+        availability={{ kind: "plain", total: 3 }}
+      />,
+    );
+
+    expect(screen.getByText("3 Exemplare")).toBeInTheDocument();
+  });
+
+  it("shows the singular form for exactly one copy", () => {
+    render(
+      <GameDetailView
+        game={game()}
+        availability={{ kind: "plain", total: 1 }}
+      />,
+    );
+
+    expect(screen.getByText("1 Exemplar")).toBeInTheDocument();
+  });
+
+  it("shows X von Y verfügbar with the shelf label during an event", () => {
+    render(
+      <GameDetailView
+        game={game()}
+        availability={{
+          kind: "event",
+          total: 2,
+          inRoom: 2,
+          available: 1,
+          shelfLabels: ["Regal A"],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("1 von 2 verfügbar (Regal A)")).toBeInTheDocument();
+  });
+
+  it("omits the line entirely when no availability is passed (internal viewers)", () => {
+    render(<GameDetailView game={game()} />);
+
+    expect(screen.queryByText(/Exemplar/)).not.toBeInTheDocument();
+  });
+});

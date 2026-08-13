@@ -41,6 +41,22 @@ export async function isEventCurrentlyRunning(
 }
 
 /**
+ * The event happening right now, if any — for pages that aren't already
+ * event-scoped (e.g. the public Ludothek detail page, #121) but still want
+ * to show "im Raum"-style aggregates while a Spieleabend is running.
+ */
+export async function findCurrentEvent() {
+  return prisma.event.findFirst({
+    where: {
+      startsAt: { lte: new Date() },
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true },
+  });
+}
+
+/**
  * Picks the event the user asked for, falling back to the next upcoming one.
  * Returns null when there is no event at all.
  */

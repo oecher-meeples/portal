@@ -24,6 +24,7 @@ import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
+import type { GuestCopyAvailability } from "@/lib/events/guest-area";
 import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
 import { formatDateMedium } from "@/lib/utils/format";
 
@@ -46,6 +47,7 @@ export function GameDetailView({
   copies,
   canManageGames,
   relatedLocationChains,
+  availability,
   openLfgPosts,
 }: {
   game: PublicLudothekGame;
@@ -72,6 +74,8 @@ export function GameDetailView({
   canManageGames?: boolean;
   /** Standort per linked base game/expansion id — only set internally (#121). */
   relatedLocationChains?: Record<string, string>;
+  /** Only set for guests — internal viewers get the full `copies` breakdown instead (#121). */
+  availability?: GuestCopyAvailability;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
 }) {
@@ -119,6 +123,18 @@ export function GameDetailView({
             </span>
           ))}
         </div>
+
+        {availability && (
+          <p className="text-muted-foreground text-sm">
+            {availability.kind === "event"
+              ? `${availability.available} von ${availability.inRoom} verfügbar${
+                  availability.shelfLabels.length > 0
+                    ? ` (${availability.shelfLabels.join(", ")})`
+                    : ""
+                }`
+              : `${availability.total} ${availability.total === 1 ? "Exemplar" : "Exemplare"}`}
+          </p>
+        )}
 
         {game.baseGames.length > 0 && (
           <div className="flex flex-col gap-2">
