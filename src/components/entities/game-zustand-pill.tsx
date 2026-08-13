@@ -15,7 +15,9 @@ const ZUSTAND_LABELS: Record<GameZustand, string> = {
   "nicht-erfasst": "Nicht erfasst",
 };
 
-/** The one place that knows how a game's Zustand looks. */
+/** The one place that knows how a game's Zustand looks. Renders nothing for
+ * "nicht-erfasst" — a copy with no recorded holding yet is the default for
+ * every game, not information worth a pill (see #121). */
 export function GameZustandPill({
   zustand,
   className,
@@ -23,6 +25,8 @@ export function GameZustandPill({
   zustand: GameZustand;
   className?: string;
 }) {
+  if (zustand === "nicht-erfasst") return null;
+
   return (
     <StatusPill
       label={ZUSTAND_LABELS[zustand]}
