@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { BoardGameKind, type Prisma, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
@@ -221,8 +221,37 @@ export async function assignExpansion(baseGameId: string, expansionId: string) {
     create: { baseGameId, expansionId },
   });
 
+  // The assigned title is an expansion by definition — set `kind` if the
+  // BGG import didn't already (no fallback on removal, see #30).
+  await prisma.boardGame.updateMany({
+    where: { id: expansionId, kind: { not: BoardGameKind.BOARDGAME_EXPANSION } },
+    data: { kind: BoardGameKind.BOARDGAME_EXPANSION },
+  });
+
   await revalidateAssignmentPaths(baseGameId, expansionId);
   return { success: true as const };
+}
+
+/**
+ * Candidate titles for the assignment dialog (#30): base-game candidates
+ * (`gameKind` is an expansion) must themselves be a BOARDGAME; expansion
+ * candidates (game is a base game) can be any kind — BGG import is blocked
+ * (#12), so `kind` isn't reliably set on every title yet.
+ */
+export async function findExpansionAssignmentOptions(
+  gameKind: BoardGameKind,
+  excludeIds: string[],
+) {
+  const isExpansion = gameKind === BoardGameKind.BOARDGAME_EXPANSION;
+
+  return prisma.boardGame.findMany({
+    where: {
+      id: { notIn: excludeIds },
+      ...(isExpansion ? { kind: BoardGameKind.BOARDGAME } : {}),
+    },
+    select: { id: true, title: true },
+    orderBy: { title: "asc" },
+  });
 }
 
 export async function removeExpansionAssignment(

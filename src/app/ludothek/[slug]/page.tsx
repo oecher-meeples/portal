@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
+import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import {
@@ -92,13 +93,9 @@ export default async function GameDetailPage({
   ]);
   const expansionAssignment = canManageGames
     ? {
-        options: (
-          await prisma.boardGame.findMany({
-            where: { id: { notIn: [...linkedIds] } },
-            select: { id: true, title: true },
-            orderBy: { title: "asc" },
-          })
-        ).map((g) => g),
+        options: await findExpansionAssignmentOptions(game.kind, [
+          ...linkedIds,
+        ]),
       }
     : undefined;
 
