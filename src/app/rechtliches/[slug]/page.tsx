@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { LEGAL_DOCS } from "@/data/downloads";
-import { LEGAL_CONTENT } from "@/data/legal";
+import type { LegalSection } from "@/data/legal";
+import { getLegalDocument } from "@/lib/legal/legal";
 import { LegalDocView } from "@/components/feature/rechtliches/legal-doc-view";
 
 export function generateStaticParams() {
@@ -13,9 +14,14 @@ export default async function LegalDocPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const doc = LEGAL_DOCS.find((d) => d.slug === slug);
-  const sections = LEGAL_CONTENT[slug];
-  if (!doc || !sections) notFound();
+  const legalDoc = await getLegalDocument(slug);
+  if (!legalDoc) notFound();
 
-  return <LegalDocView doc={doc} sections={sections} />;
+  return (
+    <LegalDocView
+      doc={{ slug: legalDoc.slug, title: legalDoc.title }}
+      sections={legalDoc.sections as LegalSection[]}
+      pdfFileUrl={legalDoc.pdfFileUrl ?? undefined}
+    />
+  );
 }
