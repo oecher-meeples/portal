@@ -7,6 +7,7 @@ import { TextField, TextAreaField } from "@/components/ui/field";
 import { FileField } from "@/components/ui/file-field";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/components/ui/use-action";
+import { cn } from "@/lib/utils/cn";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { slugify } from "@/lib/utils/slug";
 import {
@@ -108,7 +109,10 @@ function SelectionTargetButton({
         setIsDragOver(false);
         onActivate();
       }}
-      className={isDragOver ? "border-primary bg-primary/10" : undefined}
+      className={cn(
+        "h-auto min-h-16 w-full flex-col gap-1.5 border-2 border-dashed py-3 whitespace-normal",
+        isDragOver && "border-primary bg-primary/10",
+      )}
     >
       {icon}
       {label}
