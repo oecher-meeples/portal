@@ -251,3 +251,10 @@ export function filterLudothekGames(
     return true;
   });
 }
+
+/** Every distinct mechanic across the Bestand, sorted — Autocomplete-Vorschläge
+ * for the Mechanik-Filter and the Mechaniken-Multiselect on the title-edit
+ * dialog (#124). */
+export function listDistinctMechanics(games: { mechanics: string[] }[]) {
+  return [...new Set(games.flatMap((game) => game.mechanics))].sort();
+}

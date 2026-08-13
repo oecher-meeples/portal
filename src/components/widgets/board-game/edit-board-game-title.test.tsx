@@ -41,4 +41,38 @@ describe("EditBoardGameTitle", () => {
 
     expect(onChange).toHaveBeenCalledWith({ kind: "BOARDGAME_EXPANSION" });
   });
+
+  it("keeps the plain text field without mechanicsOptions", () => {
+    render(
+      <EditBoardGameTitle
+        idPrefix="test"
+        values={EMPTY_BOARD_GAME_FORM}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByPlaceholderText("Worker Placement, Drafting, …"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the already-selected mechanics as chips with mechanicsOptions (#124)", () => {
+    render(
+      <EditBoardGameTitle
+        idPrefix="test"
+        values={{
+          ...EMPTY_BOARD_GAME_FORM,
+          mechanics: "Drafting, Worker Placement",
+        }}
+        onChange={vi.fn()}
+        mechanicsOptions={["Drafting", "Worker Placement", "Deck Building"]}
+      />,
+    );
+
+    expect(
+      screen.queryByPlaceholderText("Worker Placement, Drafting, …"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Drafting")).toBeInTheDocument();
+    expect(screen.getByText("Worker Placement")).toBeInTheDocument();
+  });
 });

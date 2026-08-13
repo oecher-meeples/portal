@@ -4,7 +4,7 @@ import { getSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
-import { toPublicGame } from "@/lib/ludothek/browser";
+import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { getContactLinks } from "@/lib/members/contact";
@@ -155,6 +155,9 @@ export default async function GameDetailPage({
         ]),
       }
     : undefined;
+  const mechanicsOptions = canManageGames
+    ? listDistinctMechanics(games)
+    : undefined;
   const titleEdit = canManageGames
     ? {
         boardGameId: game.boardGameId,
@@ -179,6 +182,7 @@ export default async function GameDetailPage({
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
       titleEdit={titleEdit}
+      mechanicsOptions={mechanicsOptions}
       relatedLocationChains={relatedLocationChains}
       copies={copyRows}
       canManageGames={canManageGames}

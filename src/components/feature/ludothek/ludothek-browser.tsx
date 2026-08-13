@@ -324,6 +324,7 @@ export function LudothekBrowser({
         games={games}
         view={filters.view ?? "grid"}
         canManageGames={canManageGames}
+        mechanicsOptions={mechanicsOptions}
       />
 
       {internal &&

@@ -28,8 +28,12 @@ function toFormValues(game: EditableBoardGameTitle) {
  * `games:manage` holders only (see #121/#122). */
 export function EditBoardGameTitleDialog({
   game,
+  mechanicsOptions,
 }: {
   game: EditableBoardGameTitle;
+  /** Every distinct mechanic already in the Bestand — Autocomplete-Vorschläge
+   * für das Mechaniken-Multiselect (#124). */
+  mechanicsOptions?: string[];
 }) {
   const [form, setForm] = useState<BoardGameFormValues>(() =>
     toFormValues(game),
@@ -49,6 +53,7 @@ export function EditBoardGameTitleDialog({
       }
       title="Titel bearbeiten"
       description="Stammdaten korrigieren, u. a. das automatisch übernommene Erklärvideo."
+      contentClassName="sm:max-w-2xl"
       submitLabel="Speichern"
       canSubmit={form.title.trim().length > 0}
       action={() =>
@@ -61,6 +66,7 @@ export function EditBoardGameTitleDialog({
           idPrefix={`edit-title-${game.boardGameId}`}
           values={form}
           onChange={patchForm}
+          mechanicsOptions={mechanicsOptions}
         />
       </div>
     </ActionDialog>

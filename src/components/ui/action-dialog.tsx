@@ -31,6 +31,7 @@ export function ActionDialog({
   pendingLabel = "Speichere…",
   submitVariant,
   submitClassName,
+  contentClassName,
   canSubmit = true,
   action,
   onReset,
@@ -51,6 +52,9 @@ export function ActionDialog({
   pendingLabel?: string;
   submitVariant?: React.ComponentProps<typeof Button>["variant"];
   submitClassName?: string;
+  /** Overrides `DialogContent`'s default `sm:max-w-sm` — e.g. a wider layout
+   * with several fields per row (#124). */
+  contentClassName?: string;
   /** Set false while required fields are empty. */
   canSubmit?: boolean;
   action: () => Promise<ActionResult>;
@@ -82,7 +86,7 @@ export function ActionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger render={trigger} />}
-      <DialogContent>
+      <DialogContent className={contentClassName}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

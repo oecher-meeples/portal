@@ -39,6 +39,7 @@ export function GameDetailView({
   explainer,
   expansionAssignment,
   titleEdit,
+  mechanicsOptions,
   copies,
   canManageGames,
   relatedLocationChains,
@@ -57,6 +58,8 @@ export function GameDetailView({
   };
   /** Only set for `games:manage` holders — edits the shared title (#121/#122). */
   titleEdit?: EditableBoardGameTitle;
+  /** Autocomplete-Vorschläge for `titleEdit`'s Mechaniken-Multiselect (#124). */
+  mechanicsOptions?: string[];
   /** Every physical copy of this title — only set internally, guests get a
    * plain count instead (#121, guest aggregation is a later step). */
   copies?: GameCopyRow[];
@@ -85,7 +88,12 @@ export function GameDetailView({
             <h1 className="font-serif text-3xl font-bold tracking-tight">
               {game.title}
             </h1>
-            {titleEdit && <EditBoardGameTitleDialog game={titleEdit} />}
+            {titleEdit && (
+              <EditBoardGameTitleDialog
+                game={titleEdit}
+                mechanicsOptions={mechanicsOptions}
+              />
+            )}
           </div>
           <p className="text-muted-foreground mt-1">
             {game.minPlayers && game.maxPlayers

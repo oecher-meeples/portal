@@ -1,37 +1,42 @@
 import { BoardGameKind } from "@prisma/client";
-import { TextField, TextAreaField } from "@/components/ui/field";
+import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
+import { parseMechanics, formatMechanics } from "@/lib/ludothek/bgg-id";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
 /**
  * Title-level fields — everything shared by every physical copy of this
  * title (see ADR 0008). `condition` lives in `EditBoardGameExemplar`
  * instead: it's per-copy, not per-title.
+ *
+ * Row layout (#124): Titel+Art, EAN+BGG-ID, Spielerzahl+Dauer+Komplexität,
+ * Mechaniken, Bild+Erklärvideo, Beschreibung.
  */
 export function EditBoardGameTitle({
   idPrefix,
   values,
   onChange,
+  mechanicsOptions,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
   onChange: (patch: Partial<BoardGameFormValues>) => void;
+  /** Autocomplete suggestions for the Mechaniken multiselect, sourced from
+   * the existing Bestand — omit to keep the plain comma-separated text
+   * field (e.g. when creating a brand-new title with no suggestions yet
+   * worth showing) (#124). */
+  mechanicsOptions?: string[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <TextField
         id={`${idPrefix}-title`}
         label="Titel"
-        fieldClassName="sm:col-span-2"
         value={values.title}
         onChange={(event) => onChange({ title: event.target.value })}
         required
-      />
-      <EanField
-        idPrefix={idPrefix}
-        value={values.ean}
-        onChange={(ean) => onChange({ ean })}
       />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${idPrefix}-kind`}>Art</Label>
@@ -47,14 +52,20 @@ export function EditBoardGameTitle({
           <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
         </select>
       </div>
+
+      <EanField
+        idPrefix={idPrefix}
+        value={values.ean}
+        onChange={(ean) => onChange({ ean })}
+      />
       <TextField
         id={`${idPrefix}-bgg-id`}
         label="BGG-ID"
-        fieldClassName="sm:col-span-2"
         value={values.bggId}
         onChange={(event) => onChange({ bggId: event.target.value })}
         placeholder="optional, z. B. 342942"
       />
+
       <div className="flex gap-3 sm:col-span-2">
         <TextField
           id={`${idPrefix}-min-players`}
@@ -85,38 +96,54 @@ export function EditBoardGameTitle({
             onChange({ playTimeMinutes: event.target.value })
           }
         />
+        <TextField
+          id={`${idPrefix}-weight`}
+          label="Komplexität (1–5)"
+          type="number"
+          min={1}
+          max={5}
+          step={0.1}
+          fieldClassName="flex-1"
+          value={values.weight}
+          onChange={(event) => onChange({ weight: event.target.value })}
+        />
       </div>
-      <TextField
-        id={`${idPrefix}-weight`}
-        label="Komplexität (1–5)"
-        type="number"
-        min={1}
-        max={5}
-        step={0.1}
-        value={values.weight}
-        onChange={(event) => onChange({ weight: event.target.value })}
-      />
+
+      {mechanicsOptions ? (
+        <Field
+          label="Mechaniken"
+          htmlFor={`${idPrefix}-mechanics`}
+          className="sm:col-span-2"
+        >
+          <MultiSelectCombobox
+            id={`${idPrefix}-mechanics`}
+            options={mechanicsOptions}
+            value={parseMechanics(values.mechanics)}
+            onValueChange={(next) =>
+              onChange({ mechanics: formatMechanics(next) })
+            }
+            placeholder="Mechanik suchen …"
+            emptyLabel="Keine passende Mechanik"
+          />
+        </Field>
+      ) : (
+        <TextField
+          id={`${idPrefix}-mechanics`}
+          label="Mechaniken"
+          fieldClassName="sm:col-span-2"
+          value={values.mechanics}
+          onChange={(event) => onChange({ mechanics: event.target.value })}
+          placeholder="Worker Placement, Drafting, …"
+          hint="Kommagetrennt."
+        />
+      )}
+
       <TextField
         id={`${idPrefix}-image-url`}
         label="Bild-URL"
         value={values.imageUrl}
         onChange={(event) => onChange({ imageUrl: event.target.value })}
         placeholder="https://…"
-      />
-      <TextAreaField
-        id={`${idPrefix}-description`}
-        label="Beschreibung"
-        fieldClassName="sm:col-span-2"
-        value={values.description}
-        onChange={(event) => onChange({ description: event.target.value })}
-      />
-      <TextField
-        id={`${idPrefix}-mechanics`}
-        label="Mechaniken"
-        value={values.mechanics}
-        onChange={(event) => onChange({ mechanics: event.target.value })}
-        placeholder="Worker Placement, Drafting, …"
-        hint="Kommagetrennt."
       />
       <TextField
         id={`${idPrefix}-video`}
@@ -126,6 +153,14 @@ export function EditBoardGameTitle({
           onChange({ explainerVideoUrl: event.target.value })
         }
         placeholder="https://www.youtube.com/watch?v=…"
+      />
+
+      <TextAreaField
+        id={`${idPrefix}-description`}
+        label="Beschreibung"
+        fieldClassName="sm:col-span-2"
+        value={values.description}
+        onChange={(event) => onChange({ description: event.target.value })}
       />
     </div>
   );

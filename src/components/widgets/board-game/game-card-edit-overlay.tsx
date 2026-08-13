@@ -9,12 +9,17 @@ import {
  * here anymore (Plan-Schritt 10). */
 export function GameCardEditOverlay({
   game,
+  mechanicsOptions,
 }: {
   game: EditableBoardGameTitle;
+  mechanicsOptions?: string[];
 }) {
   return (
     <StopRowNavigation className="bg-background/90 rounded-md backdrop-blur-sm">
-      <EditBoardGameTitleDialog game={game} />
+      <EditBoardGameTitleDialog
+        game={game}
+        mechanicsOptions={mechanicsOptions}
+      />
     </StopRowNavigation>
   );
 }

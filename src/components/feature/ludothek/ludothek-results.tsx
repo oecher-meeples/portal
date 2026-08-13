@@ -30,11 +30,17 @@ function actionsMenuCopies(game: LudothekGame & { copies: LudothekGame[] }) {
  * "Bearbeiten" now always opens the title dialog (Plan-Schritt 10) — with
  * `copyCount > 1` there's no single exemplar left to edit here, the
  * Mängelvermerk moved into the actions menu instead. */
-function rowActions(game: PublicLudothekGame | LudothekGame) {
+function rowActions(
+  game: PublicLudothekGame | LudothekGame,
+  mechanicsOptions: string[],
+) {
   if (!("condition" in game)) return undefined;
   return (
     <>
-      <EditBoardGameTitleDialog game={game} />
+      <EditBoardGameTitleDialog
+        game={game}
+        mechanicsOptions={mechanicsOptions}
+      />
       <GameActionsMenu
         copies={actionsMenuCopies(
           game as LudothekGame & { copies: LudothekGame[] },
@@ -54,10 +60,14 @@ export function LudothekResults({
   games,
   view,
   canManageGames,
+  mechanicsOptions,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   view: LudothekViewMode;
   canManageGames: boolean;
+  /** Autocomplete-Vorschläge for the title-edit dialog's Mechaniken field
+   * (#124) — only meaningful together with `canManageGames`. */
+  mechanicsOptions?: string[];
 }) {
   // One card/row per title in all three views (Plan-Schritt 8) — a title
   // with several copies shows a single entry with the aggregated zustand.
@@ -70,7 +80,7 @@ export function LudothekResults({
           <GameCompactRow
             key={game.boardGameSlug}
             game={game as LudothekGame}
-            actions={rowActions(game)}
+            actions={rowActions(game, mechanicsOptions ?? [])}
           />
         ))}
         {rows.length === 0 && (
@@ -87,7 +97,11 @@ export function LudothekResults({
           <GameListRow
             key={game.boardGameSlug}
             game={game}
-            actions={canManageGames ? rowActions(game) : undefined}
+            actions={
+              canManageGames
+                ? rowActions(game, mechanicsOptions ?? [])
+                : undefined
+            }
           />
         ))}
         {rows.length === 0 && (
@@ -106,7 +120,10 @@ export function LudothekResults({
           actions={
             canManageGames && "ean" in game ? (
               <div className="flex items-center gap-1">
-                <GameCardEditOverlay game={game} />
+                <GameCardEditOverlay
+                  game={game}
+                  mechanicsOptions={mechanicsOptions}
+                />
                 {"condition" in game && (
                   <StopRowNavigation className="bg-background/90 rounded-md backdrop-blur-sm">
                     <GameActionsMenu
