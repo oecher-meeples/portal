@@ -46,7 +46,7 @@ export function GameActionsMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="outline" size="icon-sm">
             <MoreVertical className="size-4" />
             <span className="sr-only">Aktionen</span>
           </Button>

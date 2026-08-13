@@ -22,7 +22,7 @@ export function EditBoardGameExemplarDialog({
   return (
     <ActionDialog
       trigger={
-        <Button size="sm" variant="ghost">
+        <Button size="sm" variant="outline">
           <Pencil className="size-4" />
           Bearbeiten
         </Button>
