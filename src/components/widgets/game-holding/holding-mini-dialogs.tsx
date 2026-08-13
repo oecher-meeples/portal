@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import { cn } from "@/lib/utils/cn";
 import {
   scanAcceptReturn,
   scanBorrowGame,
@@ -11,6 +12,7 @@ import {
   scanListMeeples,
   scanListUnits,
   scanRelocateGame,
+  scanReturnToMeeple,
 } from "@/lib/ludothek/holding-actions";
 
 const TRIGGER_CLASS = "w-full justify-start";
@@ -32,28 +34,11 @@ export function BorrowGameDialog({ gameCopyId }: { gameCopyId: string }) {
   );
 }
 
-/** Rückgabe annehmen — always self; abgeschlossen ist sie erst durchs Einlagern. */
-export function AcceptReturnDialog({ gameCopyId }: { gameCopyId: string }) {
-  return (
-    <ActionDialog
-      trigger={
-        <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
-          Rückgabe
-        </Button>
-      }
-      title="Rückgabe annehmen"
-      description="Du nimmst das Exemplar zur Rückgabe an — eingelagert werden muss es noch separat."
-      submitLabel="Annehmen"
-      action={() => scanAcceptReturn(gameCopyId)}
-    />
-  );
-}
-
 type Target = { id: string; label: string; matchValue: string };
 
-/** Select-or-scan target picker, shared by Weitergeben/Umlagern — the scan
- * text is matched against `matchValue` (e.g. unit code), fachfrei per
- * `ScanSearchDialog`'s own contract. */
+/** Select-or-scan target picker, shared by Rückgabe/Weitergeben/Umlagern —
+ * the scan text is matched against `matchValue` (e.g. unit code), fachfrei
+ * per `ScanSearchDialog`'s own contract. */
 function TargetPicker({
   targets,
   selected,
@@ -87,6 +72,88 @@ function TargetPicker({
         }}
       />
     </div>
+  );
+}
+
+type ReturnMode = "self" | "person";
+
+/** Rückgabe — ein Dialog mit Umschalter statt zweier Menüpunkte (Plan-Schritt
+ * 7): "an mich" bleibt der bisherige `scanAcceptReturn` (abgeschlossen erst
+ * durchs Einlagern), "an Person" sucht die annehmende Person per
+ * `TargetPicker` und ruft `scanReturnToMeeple`. */
+export function AcceptReturnDialog({ gameCopyId }: { gameCopyId: string }) {
+  const [mode, setMode] = useState<ReturnMode>("self");
+  const [targets, setTargets] = useState<Target[]>([]);
+  const [selected, setSelected] = useState("");
+
+  async function switchToPersonMode() {
+    setMode("person");
+    if (targets.length > 0) return;
+    const meeples = await scanListMeeples();
+    setTargets(
+      meeples.map((m) => ({
+        id: m.id,
+        label: m.displayName,
+        matchValue: m.displayName,
+      })),
+    );
+  }
+
+  return (
+    <ActionDialog
+      trigger={
+        <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+          Rückgabe
+        </Button>
+      }
+      title="Rückgabe"
+      description={
+        mode === "self"
+          ? "Du nimmst das Exemplar zur Rückgabe an — eingelagert werden muss es noch separat."
+          : "Die ausgewählte Person nimmt das Exemplar zur Rückgabe an."
+      }
+      submitLabel={mode === "self" ? "Annehmen" : "An Person übergeben"}
+      canSubmit={mode === "self" || selected !== ""}
+      action={() =>
+        mode === "self"
+          ? scanAcceptReturn(gameCopyId)
+          : scanReturnToMeeple(gameCopyId, selected)
+      }
+      onReset={() => {
+        setMode("self");
+        setSelected("");
+      }}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "self" ? "default" : "outline"}
+            className={cn(mode === "self" && "pointer-events-none")}
+            onClick={() => setMode("self")}
+          >
+            An mich
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={mode === "person" ? "default" : "outline"}
+            className={cn(mode === "person" && "pointer-events-none")}
+            onClick={switchToPersonMode}
+          >
+            An Person
+          </Button>
+        </div>
+        {mode === "person" && (
+          <TargetPicker
+            targets={targets}
+            selected={selected}
+            onSelect={setSelected}
+          />
+        )}
+      </div>
+    </ActionDialog>
   );
 }
 
