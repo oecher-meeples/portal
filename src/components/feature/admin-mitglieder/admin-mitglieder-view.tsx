@@ -164,10 +164,6 @@ export function AdminMitgliederView({
       <MitgliederTable meeples={meeples} roles={roles} />
 
       <InvitesSection invites={invites} />
-
-      {/* Scroll buffer: keeps dropdown menus above (e.g. the role select in
-          MitgliederTable) from being clipped at the bottom of the page. */}
-      <div aria-hidden className="h-[20vh]" />
     </div>
   );
 }
