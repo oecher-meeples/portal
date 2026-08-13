@@ -162,15 +162,28 @@ export function parseLudothekSearchParams(
   return filters;
 }
 
+/** Title matches as a substring; EAN/BGG-ID only as an exact match — a partial
+ * EAN/BGG-ID hit has no business meaning. */
+export function matchesLudothekSearch(
+  game: Pick<LudothekGame, "title" | "ean" | "bggId">,
+  search: string,
+): boolean {
+  const term = search.trim().toLowerCase();
+  if (!term) return true;
+
+  if (game.title.toLowerCase().includes(term)) return true;
+  if (game.ean !== null && game.ean === search.trim()) return true;
+  if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
+
+  return false;
+}
+
 export function filterLudothekGames(
   games: LudothekGame[],
   filters: LudothekFilters,
 ): LudothekGame[] {
   return games.filter((game) => {
-    if (
-      filters.search &&
-      !game.title.toLowerCase().includes(filters.search.toLowerCase())
-    ) {
+    if (filters.search && !matchesLudothekSearch(game, filters.search)) {
       return false;
     }
     if (filters.players && !matchesPlayerFilter(game, filters.players)) {

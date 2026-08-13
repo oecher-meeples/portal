@@ -42,6 +42,36 @@ describe("filterLudothekGames", () => {
     expect(filterLudothekGames(games, { search: "wing" })).toHaveLength(1);
   });
 
+  it("matches an exact EAN", () => {
+    const games = [
+      game({ title: "Arche Nova", ean: "4001504311892" }),
+      game({ title: "Wingspan", ean: "0700304142529" }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "4001504311892" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Arche Nova");
+  });
+
+  it("does not match a partial EAN", () => {
+    const games = [game({ title: "Arche Nova", ean: "4001504311892" })];
+
+    expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(
+      0,
+    );
+  });
+
+  it("matches an exact BGG-ID", () => {
+    const games = [
+      game({ title: "Arche Nova", bggId: 342942 }),
+      game({ title: "Wingspan", bggId: 266192 }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "342942" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Arche Nova");
+  });
+
   it("filters by player-count range", () => {
     const small = game({ minPlayers: 1, maxPlayers: 2 });
     const mid = game({ minPlayers: 3, maxPlayers: 4 });
