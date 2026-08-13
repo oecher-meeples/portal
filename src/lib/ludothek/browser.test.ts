@@ -211,6 +211,7 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
+      view: "grid",
     });
   });
 
@@ -227,7 +228,29 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: undefined,
       mechanics: undefined,
       hideExpansions: false,
+      view: "grid",
     });
+  });
+
+  it("parses a valid view mode from ?ansicht=", () => {
+    expect(
+      parseLudothekSearchParams({ ansicht: "liste" }, { internal: false })
+        .view,
+    ).toBe("liste");
+    expect(
+      parseLudothekSearchParams({ ansicht: "compact" }, { internal: false })
+        .view,
+    ).toBe("compact");
+  });
+
+  it("falls back to grid for an invalid view mode", () => {
+    expect(
+      parseLudothekSearchParams({ ansicht: "nonsense" }, { internal: false })
+        .view,
+    ).toBe("grid");
+    expect(
+      parseLudothekSearchParams({}, { internal: false }).view,
+    ).toBe("grid");
   });
 
   it("only parses internal filters when internal is true", () => {

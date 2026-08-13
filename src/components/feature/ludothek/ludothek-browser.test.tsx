@@ -130,3 +130,33 @@ describe("LudothekBrowser — live search", () => {
     },
   );
 });
+
+describe("LudothekBrowser — view mode switch", () => {
+  it("hides the compact icon for guests and internal users without games:manage", () => {
+    render(
+      <LudothekBrowser {...baseProps()} internal canManageGames={false} />,
+    );
+
+    expect(screen.getByRole("link", { name: "Raster" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Liste" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Kompakt" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the compact icon for users with games:manage", () => {
+    render(
+      <LudothekBrowser {...baseProps()} internal canManageGames />,
+    );
+
+    expect(screen.getByRole("link", { name: "Kompakt" })).toBeInTheDocument();
+  });
+
+  it("renders the view mode switch outside the collapsible filter <details>", () => {
+    render(<LudothekBrowser {...baseProps()} internal canManageGames />);
+
+    const details = document.querySelector("details");
+    const switchLink = screen.getByRole("link", { name: "Raster" });
+    expect(details?.contains(switchLink)).toBe(false);
+  });
+});

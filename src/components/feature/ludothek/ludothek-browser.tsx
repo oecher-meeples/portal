@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LayoutGrid, List, Rows3 } from "lucide-react";
 import { GameCard } from "@/components/entities/game-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import type {
   DurationFilter,
   LudothekFilters,
   LudothekGame,
+  LudothekViewMode,
   PlayerCountFilter,
   PublicLudothekGame,
 } from "@/lib/ludothek/browser";
@@ -42,6 +43,49 @@ const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Wartung", value: "wartung" },
   { label: "Nicht erfasst", value: "nicht-erfasst" },
 ];
+
+const VIEW_MODE_OPTIONS: {
+  value: LudothekViewMode;
+  label: string;
+  icon: typeof LayoutGrid;
+}[] = [
+  { value: "grid", label: "Raster", icon: LayoutGrid },
+  { value: "liste", label: "Liste", icon: List },
+  { value: "compact", label: "Kompakt", icon: Rows3 },
+];
+
+function ViewModeSwitch({
+  view,
+  canManageGames,
+  href,
+}: {
+  view: LudothekViewMode;
+  canManageGames: boolean;
+  href: (patch: Record<string, string | string[] | undefined>) => string;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {VIEW_MODE_OPTIONS.filter(
+        (option) => option.value !== "compact" || canManageGames,
+      ).map((option) => (
+        <Link
+          key={option.value}
+          href={href({ ansicht: option.value === "grid" ? undefined : option.value })}
+          aria-label={option.label}
+          aria-current={view === option.value ? "true" : undefined}
+          className={cn(
+            "flex size-8 items-center justify-center rounded-md border transition-colors",
+            view === option.value
+              ? "border-primary bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <option.icon className="size-4" />
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 function FilterPill({
   label,
@@ -263,6 +307,14 @@ export function LudothekBrowser({
             )}
           </div>
         </details>
+      </div>
+
+      <div className="flex justify-end">
+        <ViewModeSwitch
+          view={filters.view ?? "grid"}
+          canManageGames={canManageGames}
+          href={href}
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

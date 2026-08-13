@@ -76,6 +76,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
 
 export type PlayerCountFilter = "1-2" | "3-4" | "5+";
 export type DurationFilter = "short" | "mid" | "long";
+export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
@@ -84,6 +85,8 @@ export type LudothekFilters = {
   maxWeight?: number;
   mechanics?: string[];
   hideExpansions?: boolean;
+  /** Defaults to "grid" when unset — only `parseLudothekSearchParams` sets it explicitly. */
+  view?: LudothekViewMode;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
   zustand?: GameZustand;
   onlyLoanedOut?: boolean;
@@ -119,6 +122,11 @@ const DURATION_FILTER_VALUES = new Set<DurationFilter>([
   "mid",
   "long",
 ]);
+const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
+  "grid",
+  "liste",
+  "compact",
+]);
 
 /** Turns a Next.js `searchParams` object into filters — the single source of truth for URLs. */
 export function parseLudothekSearchParams(
@@ -129,9 +137,13 @@ export function parseLudothekSearchParams(
   const duration = firstString(searchParams.dauer);
   const maxWeightRaw = firstString(searchParams.gewicht);
   const mechanikRaw = searchParams.mechanik;
+  const view = firstString(searchParams.ansicht);
 
   const filters: LudothekFilters = {
     search: firstString(searchParams.q) || undefined,
+    view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
+      ? (view as LudothekViewMode)
+      : "grid",
     players: PLAYER_FILTER_VALUES.has(players as PlayerCountFilter)
       ? (players as PlayerCountFilter)
       : undefined,
