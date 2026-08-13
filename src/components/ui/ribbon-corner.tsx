@@ -16,8 +16,8 @@ export function RibbonCorner({
   return (
     <div
       className={cn(
-        "bg-primary text-primary-foreground absolute -top-1 -left-6 z-10 flex w-28 -rotate-45 items-center justify-center",
-        size === "sm" ? "gap-0.5 py-0 text-[10px]" : "gap-1 py-0.5 text-xs",
+        "bg-primary text-primary-foreground absolute top-2 -left-8 z-10 flex -rotate-45 items-center justify-center text-center font-medium whitespace-nowrap",
+        size === "sm" ? "w-28 py-0.5 text-[10px]" : "w-36 py-1 text-xs",
       )}
     >
       {children}

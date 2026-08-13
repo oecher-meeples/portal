@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { PackagePlus, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
@@ -29,12 +29,7 @@ export function GameCard({
       {actions && (
         <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
       )}
-      {isExpansion && (
-        <RibbonCorner>
-          <PackagePlus className="size-3" />
-          Erweiterung
-        </RibbonCorner>
-      )}
+      {isExpansion && <RibbonCorner>Erweiterung</RibbonCorner>}
       <GameCoverMedia
         imageUrl={game.imageUrl}
         title={game.title}

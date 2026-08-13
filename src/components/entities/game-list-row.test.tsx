@@ -110,16 +110,12 @@ describe("GameListRow", () => {
     render(
       <GameListRow game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })} />,
     );
-    expect(
-      document.querySelector("svg.lucide-package-plus"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Erweiterung")).toBeInTheDocument();
   });
 
   it("does not show a ribbon corner for a base game", () => {
     render(<GameListRow game={game({ kind: BoardGameKind.BOARDGAME })} />);
-    expect(
-      document.querySelector("svg.lucide-package-plus"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Erweiterung")).not.toBeInTheDocument();
   });
 
   it("omits the actions overlay without a caller-supplied actions node", () => {

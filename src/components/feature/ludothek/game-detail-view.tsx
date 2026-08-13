@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { PackagePlus } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
@@ -85,10 +84,7 @@ export function GameDetailView({
         <div className="relative overflow-hidden rounded-md">
           <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
           {game.kind === "BOARDGAME_EXPANSION" && (
-            <RibbonCorner>
-              <PackagePlus className="size-3" />
-              Erweiterung
-            </RibbonCorner>
+            <RibbonCorner>Erweiterung</RibbonCorner>
           )}
         </div>
         {internal && (

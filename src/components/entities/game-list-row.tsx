@@ -7,7 +7,6 @@ import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
-import { PackagePlus } from "lucide-react";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { cn } from "@/lib/utils/cn";
@@ -57,9 +56,7 @@ export function GameListRow({
           aspect="aspect-square"
         />
         {isExpansion && (
-          <RibbonCorner size="sm">
-            <PackagePlus className="size-2.5" />
-          </RibbonCorner>
+          <RibbonCorner size="sm">Erweiterung</RibbonCorner>
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
