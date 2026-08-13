@@ -22,6 +22,7 @@ import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
 
 export type AdminBoardGameRow = {
   /** GameCopy id. */
@@ -66,7 +67,7 @@ export function AdminBestandView({
 
   const filtered = useMemo(() => {
     return games.filter((game) => {
-      if (search && !game.title.toLowerCase().includes(search.toLowerCase())) {
+      if (!matchesAdminBestandSearch(game, search)) {
         return false;
       }
       if (quickFilter === "ungeprueft" && !game.needsCompletenessCheck)
@@ -110,7 +111,7 @@ export function AdminBestandView({
         <div className="relative w-full max-w-sm">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Spiel suchen …"
+            placeholder="Spiel, EAN oder BGG-ID suchen …"
             className="pl-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
