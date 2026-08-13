@@ -123,12 +123,13 @@ export function BoardGameFormFields({
   includeTitleAndCore?: boolean;
 }) {
   return (
-    <>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {includeTitleAndCore && (
         <>
           <TextField
             id={`${idPrefix}-title`}
             label="Titel"
+            fieldClassName="sm:col-span-2"
             value={values.title}
             onChange={(event) => onChange({ title: event.target.value })}
             required
@@ -152,11 +153,12 @@ export function BoardGameFormFields({
       <TextField
         id={`${idPrefix}-bgg-id`}
         label="BGG-ID"
+        fieldClassName="sm:col-span-2"
         value={values.bggId}
         onChange={(event) => onChange({ bggId: event.target.value })}
         placeholder="optional, z. B. 342942"
       />
-      <div className="flex gap-3">
+      <div className="flex gap-3 sm:col-span-2">
         <TextField
           id={`${idPrefix}-min-players`}
           label="Spieler von"
@@ -207,6 +209,7 @@ export function BoardGameFormFields({
       <TextAreaField
         id={`${idPrefix}-description`}
         label="Beschreibung"
+        fieldClassName="sm:col-span-2"
         value={values.description}
         onChange={(event) => onChange({ description: event.target.value })}
       />
@@ -227,6 +230,6 @@ export function BoardGameFormFields({
         }
         placeholder="https://www.youtube.com/watch?v=…"
       />
-    </>
+    </div>
   );
 }

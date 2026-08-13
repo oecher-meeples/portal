@@ -161,7 +161,7 @@ export function CreateBoardGameDialog({
             </Button>
           }
         />
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Neues Spiel anlegen</DialogTitle>
             <DialogDescription>
@@ -237,30 +237,33 @@ export function CreateBoardGameDialog({
           )}
 
           {(mode === "manual" || preview) && (
-            <div className="flex flex-col gap-3">
-              <TextField
-                id="game-title"
-                label="Titel"
-                value={form.title}
-                onChange={(event) => patchForm({ title: event.target.value })}
-                required
-              />
-              <TextField
-                id="game-ean"
-                label="EAN"
-                value={form.ean}
-                onChange={(event) => patchForm({ ean: event.target.value })}
-                placeholder="optional, vom Barcode auf der Schachtel"
-                hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
-              />
-              <TextField
-                id="game-condition"
-                label="Zustand"
-                value={form.condition}
-                onChange={(event) =>
-                  patchForm({ condition: event.target.value })
-                }
-              />
+            <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <TextField
+                  id="game-title"
+                  label="Titel"
+                  fieldClassName="sm:col-span-2"
+                  value={form.title}
+                  onChange={(event) => patchForm({ title: event.target.value })}
+                  required
+                />
+                <TextField
+                  id="game-ean"
+                  label="EAN"
+                  value={form.ean}
+                  onChange={(event) => patchForm({ ean: event.target.value })}
+                  placeholder="optional, vom Barcode auf der Schachtel"
+                  hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
+                />
+                <TextField
+                  id="game-condition"
+                  label="Zustand"
+                  value={form.condition}
+                  onChange={(event) =>
+                    patchForm({ condition: event.target.value })
+                  }
+                />
+              </div>
               {mode === "manual" && (
                 <BoardGameFormFields
                   idPrefix="game"

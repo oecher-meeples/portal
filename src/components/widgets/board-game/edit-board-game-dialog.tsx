@@ -83,7 +83,7 @@ export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Spiel bearbeiten</DialogTitle>
           <DialogDescription>
