@@ -18,6 +18,9 @@ vi.mock("@/components/widgets/board-game/edit-board-game-title-dialog", () => ({
     <button type="button">Titel bearbeiten</button>
   ),
 }));
+vi.mock("@/components/feature/ludothek/game-copies-section", () => ({
+  GameCopiesSection: () => null,
+}));
 
 const { GameDetailView } =
   await import("@/components/feature/ludothek/game-detail-view");

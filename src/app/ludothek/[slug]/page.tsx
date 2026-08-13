@@ -34,10 +34,11 @@ export default async function GameDetailPage({
 
   const games = await buildLudothekGames();
   // One title can have several physical copies (same boardGameSlug) — the
-  // detail page groups them by title (#121/#122); for now it renders the
-  // first copy while the exemplar table/card (step 6) is still pending.
+  // header/description render from the first copy, `copies` below carries
+  // every one of them for the exemplar table/card (#121/#122).
   const game = games.find((g) => g.boardGameSlug === slug);
   if (!game) notFound();
+  const copies = games.filter((g) => g.boardGameId === game.boardGameId);
 
   if (!internal) {
     return <GameDetailView game={toPublicGame(game)} />;
@@ -65,14 +66,34 @@ export default async function GameDetailPage({
     recordedByName: holding.recordedBy.displayName,
   }));
 
+  const responsibleIds = [
+    ...new Set(
+      copies
+        .map((c) => c.responsibleMeepleId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const responsibleMeeples = responsibleIds.length
+    ? await prisma.meeple.findMany({
+        where: { id: { in: responsibleIds } },
+        select: { id: true, displayName: true },
+      })
+    : [];
+  const responsibleNameById = new Map(
+    responsibleMeeples.map((m) => [m.id, m.displayName]),
+  );
   const responsibleName = game.responsibleMeepleId
-    ? ((
-        await prisma.meeple.findUnique({
-          where: { id: game.responsibleMeepleId },
-          select: { displayName: true },
-        })
-      )?.displayName ?? null)
+    ? (responsibleNameById.get(game.responsibleMeepleId) ?? null)
     : null;
+  const copyRows = copies.map((copy) => ({
+    id: copy.id,
+    zustand: copy.zustand,
+    locationChain: copy.locationChain,
+    responsibleName: copy.responsibleMeepleId
+      ? (responsibleNameById.get(copy.responsibleMeepleId) ?? null)
+      : null,
+    condition: copy.condition,
+  }));
 
   const [explainerEntries, meeple, user, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
@@ -128,6 +149,8 @@ export default async function GameDetailPage({
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
       titleEdit={titleEdit}
+      copies={copyRows}
+      canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
     />
   );

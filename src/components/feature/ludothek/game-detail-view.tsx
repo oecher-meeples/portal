@@ -15,6 +15,10 @@ import {
   EditBoardGameTitleDialog,
   type EditableBoardGameTitle,
 } from "@/components/widgets/board-game/edit-board-game-title-dialog";
+import {
+  GameCopiesSection,
+  type GameCopyRow,
+} from "@/components/feature/ludothek/game-copies-section";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
@@ -38,6 +42,8 @@ export function GameDetailView({
   explainer,
   expansionAssignment,
   titleEdit,
+  copies,
+  canManageGames,
   openLfgPosts,
 }: {
   game: PublicLudothekGame;
@@ -58,6 +64,10 @@ export function GameDetailView({
   };
   /** Only set for `games:manage` holders — edits the shared title (#121/#122). */
   titleEdit?: EditableBoardGameTitle;
+  /** Every physical copy of this title — only set internally, guests get a
+   * plain count instead (#121, guest aggregation is a later step). */
+  copies?: GameCopyRow[];
+  canManageGames?: boolean;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
 }) {
@@ -149,6 +159,15 @@ export function GameDetailView({
                 : game.expansions
             }
             options={expansionAssignment.options}
+          />
+        )}
+
+        {copies && (
+          <GameCopiesSection
+            copies={copies}
+            boardGameId={game.boardGameId}
+            boardGameTitle={game.title}
+            canManageGames={Boolean(canManageGames)}
           />
         )}
 
