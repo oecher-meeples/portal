@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/table";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ContactDialog } from "@/components/entities/contact-dialog";
-import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
+import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import {
   GameCopyCard,
   GameCopyTableRow,
@@ -27,6 +27,9 @@ export type GameCopyRow = {
   responsibleName: string | null;
   responsibleContact: ContactLinks;
   condition: string | null;
+  /** Whether the current session holds this copy — gates "Weitergeben" in
+   * its actions menu (#128). */
+  isMine: boolean;
   /** This copy's own aufenthalts-history — merged into the accordion below its row (#121/#122). */
   history: HoldingHistoryEntry[];
 };
@@ -53,6 +56,18 @@ function LocationCell({ copy }: { copy: GameCopyRow }) {
       {copy.unitChain}
     </span>
   );
+}
+
+/** This section already has exactly one copy per row/card, so `GameActionsMenu`
+ * never hits its ambiguous multi-copy picker here (#128). */
+function actionsMenuCopy(copy: GameCopyRow) {
+  return {
+    id: copy.id,
+    zustand: copy.zustand,
+    locationChain: copy.unitChain,
+    condition: copy.condition,
+    isMine: copy.isMine,
+  };
 }
 
 /**
@@ -91,7 +106,7 @@ export function GameCopiesSection({
             <TableRow>
               <TableHead>Zustand</TableHead>
               <TableHead>Standort/Kontakt</TableHead>
-              {canManageGames && <TableHead className="text-right" />}
+              <TableHead className="text-right" />
               <TableHead className="text-right" />
             </TableRow>
           </TableHeader>
@@ -101,7 +116,7 @@ export function GameCopiesSection({
                 key={copy.id}
                 gameCopyId={copy.id}
                 history={copy.history}
-                colSpan={canManageGames ? 4 : 3}
+                colSpan={4}
               >
                 <TableCell>
                   <GameZustandPill zustand={copy.zustand} />
@@ -109,14 +124,14 @@ export function GameCopiesSection({
                 <TableCell>
                   <LocationCell copy={copy} />
                 </TableCell>
-                {canManageGames && (
-                  <TableCell className="text-right">
-                    <EditBoardGameExemplarDialog
-                      copyId={copy.id}
-                      condition={copy.condition}
-                    />
-                  </TableCell>
-                )}
+                <TableCell className="text-right">
+                  <GameActionsMenu
+                    copies={[actionsMenuCopy(copy)]}
+                    boardGameId={boardGameId}
+                    boardGameTitle={boardGameTitle}
+                    canManageGames={canManageGames}
+                  />
+                </TableCell>
               </GameCopyTableRow>
             ))}
           </TableBody>
@@ -132,12 +147,12 @@ export function GameCopiesSection({
               <GameZustandPill zustand={copy.zustand} className="w-fit" />
               <LocationCell copy={copy} />
             </div>
-            {canManageGames && (
-              <EditBoardGameExemplarDialog
-                copyId={copy.id}
-                condition={copy.condition}
-              />
-            )}
+            <GameActionsMenu
+              copies={[actionsMenuCopy(copy)]}
+              boardGameId={boardGameId}
+              boardGameTitle={boardGameTitle}
+              canManageGames={canManageGames}
+            />
           </GameCopyCard>
         ))
       )}

@@ -31,6 +31,10 @@ export type GameActionsCopy = {
   zustand: GameZustand;
   locationChain: string;
   condition: string | null;
+  /** Whether the current session holds this copy right now — gates
+   * "Weitergeben" for the non-ambiguous case (#128). Omitted callers keep
+   * showing it unconditionally, matching the previous behaviour. */
+  isMine?: boolean;
 };
 
 type ActionKey =
@@ -141,9 +145,11 @@ export function GameActionsMenu({
                 <div className="px-1.5 py-1">
                   <BorrowGameDialog gameCopyId={sole.id} />
                 </div>
-                <div className="px-1.5 py-1">
-                  <GiveToMeepleDialog gameCopyId={sole.id} />
-                </div>
+                {(sole.isMine ?? true) && (
+                  <div className="px-1.5 py-1">
+                    <GiveToMeepleDialog gameCopyId={sole.id} />
+                  </div>
+                )}
                 <div className="px-1.5 py-1">
                   <AcceptReturnDialog gameCopyId={sole.id} />
                 </div>

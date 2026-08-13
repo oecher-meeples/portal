@@ -104,6 +104,7 @@ export default async function GameDetailPage({
     responsibleMeeples.map((m) => [m.id, getContactLinks(m)]),
   );
   const NO_CONTACT = { mailHref: null, telegramHref: null };
+  const currentMeeple = await getCurrentMeeple();
   const copyRows = copies.map((copy) => ({
     id: copy.id,
     zustand: copy.zustand,
@@ -113,6 +114,8 @@ export default async function GameDetailPage({
       ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
       : NO_CONTACT,
     condition: copy.condition,
+    isMine:
+      currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
   }));
 
@@ -129,15 +132,14 @@ export default async function GameDetailPage({
     ]),
   );
 
-  const [explainerEntries, meeple, user, openLfgPosts] = await Promise.all([
+  const [explainerEntries, user, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
-    getCurrentMeeple(),
     getCurrentUser(),
     getOpenLfgPostsForBoardGame(game.boardGameId),
   ]);
   const myLevel =
-    explainerEntries.find((entry) => entry.meepleId === meeple?.id)?.level ??
-    null;
+    explainerEntries.find((entry) => entry.meepleId === currentMeeple?.id)
+      ?.level ?? null;
 
   const canManageGames =
     !!user && (await hasPermission(user.id, "games:manage"));

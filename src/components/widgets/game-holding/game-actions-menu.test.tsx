@@ -178,6 +178,22 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
     expect(screen.getByText("Deinventarisieren")).toBeInTheDocument();
   });
 
+  it("hides Weitergeben when the copy isn't with the current session (#128)", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy({ isMine: false })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+
+    expect(await screen.findByText("Ausleihen")).toBeInTheDocument();
+    expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
+  });
+
   it("offers Mängelvermerk bearbeiten for games:manage holders (Plan-Schritt 10)", async () => {
     render(
       <GameActionsMenu

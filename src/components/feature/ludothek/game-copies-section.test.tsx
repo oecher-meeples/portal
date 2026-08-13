@@ -4,19 +4,18 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { GameCopiesSection } from "@/components/feature/ludothek/game-copies-section";
 import type { GameCopyRow } from "@/components/feature/ludothek/game-copies-section";
 
-vi.mock(
-  "@/components/widgets/board-game/edit-board-game-exemplar-dialog",
-  () => ({
-    EditBoardGameExemplarDialog: () => (
-      <button type="button">Bearbeiten</button>
-    ),
-  }),
-);
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
   AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
 }));
 vi.mock("@/components/widgets/game-holding/game-holding-panel", () => ({
   GameHoldingPanel: () => <p>Aufenthalt-Aktionen</p>,
+}));
+vi.mock("@/components/widgets/game-holding/game-actions-menu", () => ({
+  GameActionsMenu: ({
+    copies,
+  }: {
+    copies: { id: string; isMine?: boolean }[];
+  }) => <button type="button">Aktionen ({copies[0].id})</button>,
 }));
 
 afterEach(() => {
@@ -31,6 +30,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     responsibleName: null,
     responsibleContact: { mailHref: null, telegramHref: null },
     condition: null,
+    isMine: false,
     history: [],
     ...overrides,
   };
@@ -50,6 +50,36 @@ describe("GameCopiesSection", () => {
     expect(screen.getByText("Exemplar")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByText("Regal A")).toBeInTheDocument();
+  });
+
+  it("wires the actions menu for the single-copy card (#128)", () => {
+    render(
+      <GameCopiesSection
+        copies={[copy()]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("Aktionen (copy-1)")).toBeInTheDocument();
+  });
+
+  it("wires the actions menu for every table row (#128)", () => {
+    render(
+      <GameCopiesSection
+        copies={[
+          copy({ id: "copy-1", unitChain: "Regal A" }),
+          copy({ id: "copy-2", unitChain: "Regal B" }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("Aktionen (copy-1)")).toBeInTheDocument();
+    expect(screen.getByText("Aktionen (copy-2)")).toBeInTheDocument();
   });
 
   it("leads with the responsible person before the storage chain (#121)", () => {
