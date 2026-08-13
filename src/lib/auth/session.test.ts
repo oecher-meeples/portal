@@ -216,7 +216,8 @@ describe("getSessionTier", () => {
 });
 
 describe("hasPermissionInCurrentView", () => {
-  it("defers to the real permission when no preview is active", async () => {
+  it("defers to the real permission for a non-admin (e.g. a moderator), preview cookie or not", async () => {
+    hasRoleMock.mockResolvedValue(false);
     previewCookie = undefined;
     hasPermissionMock.mockResolvedValue(true);
 
@@ -225,7 +226,8 @@ describe("hasPermissionInCurrentView", () => {
     );
   });
 
-  it("hides an admin-only affordance while a preview tier is active, even with the real permission", async () => {
+  it("hides an admin's permission while previewing a non-admin tier, even with the real permission", async () => {
+    hasRoleMock.mockResolvedValue(true);
     previewCookie = "gast";
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
@@ -236,7 +238,30 @@ describe("hasPermissionInCurrentView", () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
+  it("hides an admin's permission by default (no preview cookie) — mitglied is the default view (#126)", async () => {
+    hasRoleMock.mockResolvedValue(true);
+    previewCookie = undefined;
+    hasPermissionMock.mockClear();
+    hasPermissionMock.mockResolvedValue(true);
+
+    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+      false,
+    );
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
+  it("shows an admin's permission once they explicitly preview back to admin", async () => {
+    hasRoleMock.mockResolvedValue(true);
+    previewCookie = "admin";
+    hasPermissionMock.mockResolvedValue(true);
+
+    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+      true,
+    );
+  });
+
   it("stays false without the real permission, preview or not", async () => {
+    hasRoleMock.mockResolvedValue(false);
     previewCookie = undefined;
     hasPermissionMock.mockResolvedValue(false);
 
