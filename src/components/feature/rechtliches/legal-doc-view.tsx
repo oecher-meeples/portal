@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { Download, Pencil } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import type { LegalDoc } from "@/data/downloads";
@@ -39,6 +39,7 @@ export function LegalDocView({
               variant="outline"
               render={
                 <a href={pdfFileUrl} download>
+                  <Download className="size-4" />
                   PDF herunterladen
                 </a>
               }
