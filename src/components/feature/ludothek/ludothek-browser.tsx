@@ -10,6 +10,7 @@ import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter"
 import { LudothekResults } from "@/components/feature/ludothek/ludothek-results";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
 import type {
   DurationFilter,
@@ -310,7 +311,8 @@ export function LudothekBrowser({
         </details>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        {canManageGames ? <CreateBoardGameDialog /> : <div />}
         <ViewModeSwitch
           view={filters.view ?? "grid"}
           canManageGames={canManageGames}

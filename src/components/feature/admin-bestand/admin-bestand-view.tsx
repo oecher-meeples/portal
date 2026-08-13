@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { StatusPill } from "@/components/ui/status-pill";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
-import { CreateBoardGameDialog } from "@/components/feature/admin-bestand/create-board-game-dialog";
+import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";

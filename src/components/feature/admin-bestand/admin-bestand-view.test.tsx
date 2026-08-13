@@ -23,7 +23,7 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
   ),
 }));
 
-vi.mock("@/components/feature/admin-bestand/create-board-game-dialog", () => ({
+vi.mock("@/components/widgets/board-game/create-board-game-dialog", () => ({
   CreateBoardGameDialog: () => null,
 }));
 vi.mock(

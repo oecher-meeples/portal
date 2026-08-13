@@ -26,6 +26,9 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
     </button>
   ),
 }));
+vi.mock("@/components/widgets/board-game/create-board-game-dialog", () => ({
+  CreateBoardGameDialog: () => <button type="button">Spiel anlegen</button>,
+}));
 
 const { LudothekBrowser } = await import("./ludothek-browser");
 
@@ -199,6 +202,22 @@ describe("LudothekBrowser — view mode switch", () => {
     const details = document.querySelector("details");
     const switchLink = screen.getByRole("link", { name: "Raster" });
     expect(details?.contains(switchLink)).toBe(false);
+  });
+});
+
+describe("LudothekBrowser — create-board-game button (#121)", () => {
+  it("hides the create button without games:manage", () => {
+    render(
+      <LudothekBrowser {...baseProps()} internal canManageGames={false} />,
+    );
+
+    expect(screen.queryByText("Spiel anlegen")).not.toBeInTheDocument();
+  });
+
+  it("shows the create button for users with games:manage", () => {
+    render(<LudothekBrowser {...baseProps()} internal canManageGames />);
+
+    expect(screen.getByText("Spiel anlegen")).toBeInTheDocument();
   });
 });
 
