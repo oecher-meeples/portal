@@ -15,13 +15,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { updateBoardGame } from "@/lib/ludothek/board-games";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
+import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
+import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import {
-  BoardGameFormFields,
   boardGameFormToTitleInput,
   boardGameToFormValues,
   type BoardGameFormValues,
   type BoardGameRecord,
-} from "@/components/widgets/board-game/board-game-form-fields";
+} from "@/components/widgets/board-game/board-game-form-values";
 
 /** `id` is the copy being edited, `boardGameId` its title — both get updated. */
 export type EditableBoardGame = {
@@ -93,7 +94,12 @@ export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
         </DialogHeader>
 
         <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
-          <BoardGameFormFields
+          <EditBoardGameTitle
+            idPrefix={`edit-${game.id}`}
+            values={form}
+            onChange={patchForm}
+          />
+          <EditBoardGameExemplar
             idPrefix={`edit-${game.id}`}
             values={form}
             onChange={patchForm}

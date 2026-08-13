@@ -29,6 +29,8 @@ export type BoardGameTitleInput = {
   description?: string | null;
   mechanics?: string[];
   explainerVideoUrl?: string | null;
+  /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
+  kind?: BoardGameKind;
 };
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
@@ -57,6 +59,7 @@ function toBoardGameTitleData(input: BoardGameTitleInput) {
     description: input.description || null,
     mechanics: input.mechanics ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
+    ...(input.kind ? { kind: input.kind } : {}),
   };
 }
 

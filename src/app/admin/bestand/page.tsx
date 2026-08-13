@@ -81,6 +81,7 @@ export default async function AdminBestandPage({
       description: boardGame.description,
       mechanics: boardGame.mechanics,
       condition: copy.condition,
+      kind: boardGame.kind,
       explainerVideoUrl: boardGame.explainerVideoUrl,
       locationChain: holding?.meepleId
         ? `bei ${holding.meeple?.displayName ?? "Meeple"}`

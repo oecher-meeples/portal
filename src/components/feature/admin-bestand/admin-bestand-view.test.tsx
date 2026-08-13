@@ -63,6 +63,7 @@ const games = [
     mechanics: [],
     condition: null,
     explainerVideoUrl: null,
+    kind: "BOARDGAME" as const,
   },
   {
     id: "2",
@@ -85,6 +86,7 @@ const games = [
     mechanics: [],
     condition: null,
     explainerVideoUrl: null,
+    kind: "BOARDGAME" as const,
   },
 ];
 

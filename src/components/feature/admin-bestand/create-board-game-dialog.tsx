@@ -22,12 +22,13 @@ import {
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
 import { parseBggId } from "@/lib/ludothek/bgg-id";
+import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
+import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import {
-  BoardGameFormFields,
   EMPTY_BOARD_GAME_FORM,
   boardGameFormToInput,
   type BoardGameFormValues,
-} from "@/components/widgets/board-game/board-game-form-fields";
+} from "@/components/widgets/board-game/board-game-form-values";
 import type { BggGameData } from "@/lib/bgg/client";
 
 type Mode = "manual" | "bgg";
@@ -238,40 +239,41 @@ export function CreateBoardGameDialog({
 
           {(mode === "manual" || preview) && (
             <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <TextField
-                  id="game-title"
-                  label="Titel"
-                  fieldClassName="sm:col-span-2"
-                  value={form.title}
-                  onChange={(event) => patchForm({ title: event.target.value })}
-                  required
-                />
-                <TextField
-                  id="game-ean"
-                  label="EAN"
-                  value={form.ean}
-                  onChange={(event) => patchForm({ ean: event.target.value })}
-                  placeholder="optional, vom Barcode auf der Schachtel"
-                  hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
-                />
-                <TextField
-                  id="game-condition"
-                  label="Zustand"
-                  value={form.condition}
-                  onChange={(event) =>
-                    patchForm({ condition: event.target.value })
-                  }
-                />
-              </div>
-              {mode === "manual" && (
-                <BoardGameFormFields
+              {mode === "manual" ? (
+                <EditBoardGameTitle
                   idPrefix="game"
                   values={form}
                   onChange={patchForm}
-                  includeTitleAndCore={false}
                 />
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <TextField
+                    id="game-title"
+                    label="Titel"
+                    fieldClassName="sm:col-span-2"
+                    value={form.title}
+                    onChange={(event) =>
+                      patchForm({ title: event.target.value })
+                    }
+                    required
+                  />
+                  <TextField
+                    id="game-ean"
+                    label="EAN"
+                    value={form.ean}
+                    onChange={(event) =>
+                      patchForm({ ean: event.target.value })
+                    }
+                    placeholder="optional, vom Barcode auf der Schachtel"
+                    hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
+                  />
+                </div>
               )}
+              <EditBoardGameExemplar
+                idPrefix="game"
+                values={form}
+                onChange={patchForm}
+              />
               <p className="text-muted-foreground text-xs">
                 Das Spiel liegt zunächst in „Unsortiert“ — Standort per Scan
                 einlagern.

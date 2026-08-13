@@ -24,6 +24,7 @@ import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import type { BoardGameKind } from "@prisma/client";
 
 export type AdminBoardGameRow = {
   /** GameCopy id. */
@@ -47,6 +48,7 @@ export type AdminBoardGameRow = {
   description: string | null;
   mechanics: string[];
   condition: string | null;
+  kind: BoardGameKind;
   explainerVideoUrl: string | null;
 };
 
