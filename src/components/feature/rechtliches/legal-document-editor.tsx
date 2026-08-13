@@ -5,7 +5,6 @@ import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField, TextAreaField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip } from "@/components/ui/tooltip";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { slugify } from "@/lib/utils/slug";
@@ -173,112 +172,118 @@ export function LegalDocumentEditor({
   const error = uploadError || extractError || saveError;
 
   return (
-    <div className="bg-muted/30 flex flex-col gap-6 rounded-lg border p-4">
-      <TextField
-        id={`legal-title-${doc.slug}`}
-        label="Titel"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-      />
-
-      <div className="flex flex-col gap-2">
-        <label
-          className="text-sm font-medium"
-          htmlFor={`legal-pdf-${doc.slug}`}
-        >
-          PDF hochladen (ersetzt die aktuelle Datei)
-        </label>
-        <input
-          id={`legal-pdf-${doc.slug}`}
-          type="file"
-          accept="application/pdf"
-          onChange={(event) => {
-            void handleUpload(event.target.files?.[0] ?? null);
-            event.target.value = "";
-          }}
+    <div className="grid items-start gap-4 md:grid-cols-[1fr_15rem]">
+      <div className="bg-muted/30 flex flex-col gap-6 rounded-lg border p-4">
+        <TextField
+          id={`legal-title-${doc.slug}`}
+          label="Titel"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
         />
-        {(isUploading || extracting) && (
-          <p className="text-muted-foreground text-sm">
-            {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
-          </p>
-        )}
-        {extractedText && (
-          <div className="flex flex-col gap-1.5">
-            <p className="text-muted-foreground text-xs">
-              Extrahierter Rohtext (zum Abschreiben in die Sections unten):
-            </p>
-            <Textarea value={extractedText} readOnly rows={8} />
-          </div>
-        )}
-      </div>
 
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-medium">Sections</p>
-        {sections.map((section) => (
-          <div
-            key={section.id}
-            draggable
-            onDragStart={() => setDraggedId(section.id)}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={() => moveSection(section.id)}
-            className="bg-card flex flex-col gap-2 rounded-md border p-3"
+        <div className="flex flex-col gap-2">
+          <label
+            className="text-sm font-medium"
+            htmlFor={`legal-pdf-${doc.slug}`}
           >
-            <div className="flex items-center gap-2">
-              <GripVertical
-                className="text-muted-foreground size-4 shrink-0 cursor-grab"
-                aria-hidden
-              />
-              <div className="min-w-0 flex-1">
-                <TextField
-                  id={`legal-heading-${section.id}`}
-                  label="Überschrift"
-                  value={section.heading}
-                  onChange={(event) =>
-                    updateSection(section.id, { heading: event.target.value })
-                  }
-                />
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => removeSection(section.id)}
-                aria-label="Section entfernen"
-              >
-                <Trash2 className="size-4" />
-              </Button>
+            PDF hochladen (ersetzt die aktuelle Datei)
+          </label>
+          <input
+            id={`legal-pdf-${doc.slug}`}
+            type="file"
+            accept="application/pdf"
+            onChange={(event) => {
+              void handleUpload(event.target.files?.[0] ?? null);
+              event.target.value = "";
+            }}
+          />
+          {(isUploading || extracting) && (
+            <p className="text-muted-foreground text-sm">
+              {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
+            </p>
+          )}
+          {extractedText && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-muted-foreground text-xs">
+                Extrahierter Rohtext (zum Abschreiben in die Sections unten):
+              </p>
+              <Textarea value={extractedText} readOnly rows={8} />
             </div>
-            <TextAreaField
-              id={`legal-paragraphs-${section.id}`}
-              label="Absätze (ein Absatz pro Zeile)"
-              value={section.paragraphsText}
-              onChange={(event) =>
-                updateSection(section.id, {
-                  paragraphsText: event.target.value,
-                })
-              }
-              rows={4}
-            />
-          </div>
-        ))}
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium">Sections</p>
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              draggable
+              onDragStart={() => setDraggedId(section.id)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => moveSection(section.id)}
+              className="bg-card flex flex-col gap-2 rounded-md border p-3"
+            >
+              <div className="flex items-center gap-2">
+                <GripVertical
+                  className="text-muted-foreground size-4 shrink-0 cursor-grab"
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <TextField
+                    id={`legal-heading-${section.id}`}
+                    label="Überschrift"
+                    value={section.heading}
+                    onChange={(event) =>
+                      updateSection(section.id, {
+                        heading: event.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => removeSection(section.id)}
+                  aria-label="Section entfernen"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+              <TextAreaField
+                id={`legal-paragraphs-${section.id}`}
+                label="Absätze (ein Absatz pro Zeile)"
+                value={section.paragraphsText}
+                onChange={(event) =>
+                  updateSection(section.id, {
+                    paragraphsText: event.target.value,
+                  })
+                }
+                rows={4}
+              />
+            </div>
+          ))}
+        </div>
+
+        {error && <p className="text-destructive text-sm">{error}</p>}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Speichert…" : "Speichern"}
+          </Button>
+        </div>
       </div>
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Speichert…" : "Speichern"}
+      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4 md:sticky md:top-24">
+        <div>
+          <p className="text-sm font-medium">Sections verwalten</p>
+          <p className="text-muted-foreground text-xs">
+            Fügt eine neue, leere Section am Ende der Liste hinzu.
+          </p>
+        </div>
+        <Button variant="outline" onClick={addSection}>
+          <Plus className="size-4" />
+          Section hinzufügen
         </Button>
       </div>
-
-      <Tooltip content="Section hinzufügen">
-        <Button
-          size="icon-lg"
-          onClick={addSection}
-          aria-label="Section hinzufügen"
-          className="fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-lg"
-        >
-          <Plus className="size-5" />
-        </Button>
-      </Tooltip>
     </div>
   );
 }
