@@ -25,6 +25,7 @@ vi.mock("@vercel/blob/client", () => ({
 
 const {
   createDownload,
+  renameDownload,
   setDownloadStatus,
   deleteDownload,
   replaceDownloadFile,
@@ -69,6 +70,41 @@ describe("createDownload", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.download.create).toHaveBeenCalledWith({
       data: VALID_INPUT,
+    });
+  });
+});
+
+describe("renameDownload", () => {
+  it("rejects when the user lacks the downloads:manage permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(false);
+
+    const result = await renameDownload("download-1", "Neuer Titel");
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(prismaMock.download.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a blank title", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(true);
+
+    const result = await renameDownload("download-1", "   ");
+
+    expect(result).toEqual({ error: "Titel darf nicht leer sein." });
+    expect(prismaMock.download.update).not.toHaveBeenCalled();
+  });
+
+  it("updates the title, trimmed, when authorized", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    hasPermissionMock.mockResolvedValue(true);
+
+    const result = await renameDownload("download-1", "  Neuer Titel  ");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.download.update).toHaveBeenCalledWith({
+      where: { id: "download-1" },
+      data: { title: "Neuer Titel" },
     });
   });
 });

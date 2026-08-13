@@ -41,6 +41,21 @@ export async function createDownload(input: CreateDownloadInput) {
   return { success: true as const };
 }
 
+export async function renameDownload(id: string, title: string) {
+  const forbidden = await requireManagePermission();
+  if (forbidden) return forbidden;
+
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return { error: "Titel darf nicht leer sein." };
+  }
+
+  await prisma.download.update({ where: { id }, data: { title: trimmed } });
+
+  revalidateDownloadPaths();
+  return { success: true as const };
+}
+
 export async function setDownloadStatus(id: string, status: DownloadStatus) {
   const forbidden = await requireManagePermission();
   if (forbidden) return forbidden;

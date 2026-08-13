@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Download,
   FileText,
@@ -20,10 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
+import { Input } from "@/components/ui/input";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { DOWNLOAD_STATUS_LABELS } from "@/lib/downloads/labels";
 import {
+  renameDownload,
   setDownloadStatus,
   deleteDownload,
   replaceDownloadFile,
@@ -66,13 +68,28 @@ export function DownloadRow({
   onDrop,
 }: DownloadRowProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(file.title);
   const { run: runStatus } = useAction();
   const { run: runDelete, error: deleteError } = useAction();
   const { run: runReplace, error: replaceError } = useAction();
+  const { run: runRename, error: renameError } = useAction({
+    onSuccess: () => setIsRenaming(false),
+  });
   const { uploadFiles, error: uploadError } = useBlobUpload(
     "downloads",
     getDownloadUploadToken,
   );
+
+  function handleRenameSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    void runRename(() => renameDownload(file.id, titleDraft));
+  }
+
+  function cancelRename() {
+    setTitleDraft(file.title);
+    setIsRenaming(false);
+  }
 
   async function handleReuploadFile(selected: File | null) {
     if (!selected) return;
@@ -98,7 +115,7 @@ export function DownloadRow({
     void runDelete(() => deleteDownload(file.id));
   }
 
-  const error = deleteError || replaceError || uploadError;
+  const error = deleteError || replaceError || uploadError || renameError;
 
   return (
     <div
@@ -122,12 +139,38 @@ export function DownloadRow({
             <FileText className="text-muted-foreground size-5" />
           )}
           <div>
-            <div className="flex items-center gap-1.5">
-              <p className="font-medium">{file.title}</p>
-              {file.status === "INTERNAL" && (
-                <InternalOnlyBadge tooltip="Nur für Mitglieder" />
-              )}
-            </div>
+            {isRenaming ? (
+              <form
+                onSubmit={handleRenameSubmit}
+                className="flex items-center gap-1.5"
+              >
+                <Input
+                  autoFocus
+                  value={titleDraft}
+                  onChange={(event) => setTitleDraft(event.target.value)}
+                  className="h-7 max-w-56"
+                  aria-label="Titel"
+                />
+                <Button type="submit" size="sm">
+                  Speichern
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={cancelRename}
+                >
+                  Abbrechen
+                </Button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <p className="font-medium">{file.title}</p>
+                {file.status === "INTERNAL" && (
+                  <InternalOnlyBadge tooltip="Nur für Mitglieder" />
+                )}
+              </div>
+            )}
             <p className="text-muted-foreground text-xs">
               {canManage && <>{file.fileName} · </>}
               {file.fileType} · {file.fileSizeFormatted}
@@ -164,6 +207,14 @@ export function DownloadRow({
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTitleDraft(file.title);
+                    setIsRenaming(true);
+                  }}
+                >
+                  Umbenennen
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                   Reupload
                 </DropdownMenuItem>
