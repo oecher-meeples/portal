@@ -39,6 +39,8 @@ export default async function DownloadsPage() {
   ]);
   const canManage =
     !!user && (await hasPermission(user.id, "downloads:manage"));
+  const canManageLegal =
+    !!user && (await hasPermission(user.id, "legal:manage"));
   const [downloads, offlineDownloads] = await Promise.all([
     listVisibleDownloads(tier),
     canManage ? listOfflineDownloadsForAdmin() : Promise.resolve([]),
@@ -50,6 +52,7 @@ export default async function DownloadsPage() {
       offlineDownloads={offlineDownloads.map(toDownloadListItem)}
       legalDocs={LEGAL_DOCS}
       canManage={canManage}
+      canManageLegal={canManageLegal}
     />
   );
 }

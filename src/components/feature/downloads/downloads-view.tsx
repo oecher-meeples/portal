@@ -29,6 +29,7 @@ type DownloadsViewProps = {
   offlineDownloads: DownloadListItem[];
   legalDocs: LegalDoc[];
   canManage: boolean;
+  canManageLegal: boolean;
 };
 
 export function DownloadsView({
@@ -36,6 +37,7 @@ export function DownloadsView({
   offlineDownloads,
   legalDocs,
   canManage,
+  canManageLegal,
 }: DownloadsViewProps) {
   const [prevDownloads, setPrevDownloads] = useState(downloads);
   const [items, setItems] = useState(downloads);
@@ -118,13 +120,22 @@ export function DownloadsView({
               className="flex items-center justify-between gap-4 p-4"
             >
               <p className="font-medium">{doc.title}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                render={
-                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
-                }
-              />
+              <div className="flex items-center gap-1">
+                {canManageLegal && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={<Link href="/admin/legal">Verwalten</Link>}
+                  />
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
+                  }
+                />
+              </div>
             </div>
           ))}
         </div>
