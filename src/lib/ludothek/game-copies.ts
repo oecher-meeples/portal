@@ -108,10 +108,11 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
   const copy = await prisma.gameCopy.update({
     where: { id },
     data: { condition: input.condition || null },
+    include: { boardGame: { select: { slug: true } } },
   });
 
   revalidatePath("/ludothek");
-  revalidatePath(`/ludothek/${copy.slug}`);
+  revalidatePath(`/ludothek/${copy.boardGame.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const };
 }
@@ -140,7 +141,9 @@ export async function deinventoriseGameCopy(
         archivedAt: new Date(),
         archivedReason: reason.trim(),
       },
-      include: { boardGame: { select: { id: true, title: true } } },
+      include: {
+        boardGame: { select: { id: true, title: true, slug: true } },
+      },
     });
 
     if (actor) {
@@ -158,7 +161,7 @@ export async function deinventoriseGameCopy(
   });
 
   revalidatePath("/ludothek");
-  revalidatePath(`/ludothek/${copy.slug}`);
+  revalidatePath(`/ludothek/${copy.boardGame.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const };
 }

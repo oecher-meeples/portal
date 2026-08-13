@@ -230,7 +230,9 @@ describe("findOrCreateBoardGameTitle", () => {
 
 describe("updateBoardGame", () => {
   beforeEach(() => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.update.mockResolvedValue({
+      slug: "arche-nova",
+    } as never);
   });
 
   it("rejects when the user lacks the games:manage permission", async () => {
@@ -337,7 +339,7 @@ describe("previewBggImport", () => {
 
 describe("assignExpansion", () => {
   beforeEach(() => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.findMany.mockResolvedValue([]);
   });
 
   it("rejects when the user lacks the games:manage permission", async () => {
@@ -384,7 +386,7 @@ describe("assignExpansion", () => {
 
 describe("removeExpansionAssignment", () => {
   beforeEach(() => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.findMany.mockResolvedValue([]);
   });
 
   it("rejects when the user lacks the games:manage permission", async () => {

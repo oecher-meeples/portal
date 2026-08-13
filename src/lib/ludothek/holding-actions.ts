@@ -52,9 +52,9 @@ async function revalidateGamePaths(gameCopyId: string) {
   revalidatePath("/admin/bestand");
   const copy = await prisma.gameCopy.findUnique({
     where: { id: gameCopyId },
-    select: { slug: true },
+    select: { boardGame: { select: { slug: true } } },
   });
-  if (copy) revalidatePath(`/ludothek/${copy.slug}`);
+  if (copy) revalidatePath(`/ludothek/${copy.boardGame.slug}`);
 }
 
 function toResultAndRevalidate<T extends { gameCopyId: string }>(

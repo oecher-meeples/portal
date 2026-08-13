@@ -12,6 +12,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     id: "game-1",
     boardGameId: "title-1",
     slug: "arche-nova",
+    boardGameSlug: "arche-nova",
     title: "Arche Nova",
     imageUrl: null,
     minPlayers: 1,

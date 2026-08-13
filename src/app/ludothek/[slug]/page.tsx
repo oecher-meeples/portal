@@ -32,7 +32,10 @@ export default async function GameDetailPage({
   const internal = tier !== "gast";
 
   const games = await buildLudothekGames();
-  const game = games.find((g) => g.slug === slug);
+  // One title can have several physical copies (same boardGameSlug) — the
+  // detail page groups them by title (#121/#122); for now it renders the
+  // first copy while the exemplar table/card (step 6) is still pending.
+  const game = games.find((g) => g.boardGameSlug === slug);
   if (!game) notFound();
 
   if (!internal) {

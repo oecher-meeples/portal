@@ -16,7 +16,10 @@ export type LudothekGame = {
   id: string;
   /** BoardGame (title) id — shared by every copy of this title. */
   boardGameId: string;
+  /** GameCopy slug — kept for admin deep-links, no longer the detail page's routing basis. */
   slug: string;
+  /** BoardGame (title) slug — the detail page routes by this, see ADR on the exemplar→title slug migration. */
+  boardGameSlug: string;
   title: string;
   imageUrl: string | null;
   minPlayers: number | null;

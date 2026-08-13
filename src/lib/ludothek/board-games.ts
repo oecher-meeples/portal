@@ -79,19 +79,19 @@ async function duplicateEanHint(
     : undefined;
 }
 
-/** Every title touched by an expansion assignment, revalidated via its copies' routes. */
+/** Every title touched by an expansion assignment, revalidated via its own route. */
 async function revalidateAssignmentPaths(
   baseGameId: string,
   expansionId: string,
 ) {
-  const copies = await prisma.gameCopy.findMany({
-    where: { boardGameId: { in: [baseGameId, expansionId] } },
+  const games = await prisma.boardGame.findMany({
+    where: { id: { in: [baseGameId, expansionId] } },
     select: { slug: true },
   });
 
   revalidatePath("/ludothek");
-  for (const copy of copies) {
-    revalidatePath(`/ludothek/${copy.slug}`);
+  for (const game of games) {
+    revalidatePath(`/ludothek/${game.slug}`);
   }
 }
 
@@ -169,20 +169,13 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
 
   const hint = await duplicateEanHint(input.ean, id);
 
-  await prisma.boardGame.update({
+  const game = await prisma.boardGame.update({
     where: { id },
     data: { title: input.title, ...toBoardGameTitleData(input) },
   });
 
-  const copies = await prisma.gameCopy.findMany({
-    where: { boardGameId: id },
-    select: { slug: true },
-  });
-
   revalidatePath("/ludothek");
-  for (const copy of copies) {
-    revalidatePath(`/ludothek/${copy.slug}`);
-  }
+  revalidatePath(`/ludothek/${game.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const, hint };
 }

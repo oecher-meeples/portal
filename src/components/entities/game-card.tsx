@@ -23,7 +23,7 @@ export function GameCard({
 
   return (
     <Link
-      href={`/ludothek/${game.slug}`}
+      href={`/ludothek/${game.boardGameSlug}`}
       className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
       {actions && (

@@ -28,7 +28,7 @@ export function GameListRow({
 
   return (
     <Link
-      href={`/ludothek/${game.slug}`}
+      href={`/ludothek/${game.boardGameSlug}`}
       className="group bg-card hover:border-primary/60 relative flex items-center gap-4 rounded-lg border p-3 transition-colors"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}

@@ -10,7 +10,7 @@ import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 export function GameCompactRow({ game }: { game: LudothekGame }) {
   return (
     <Link
-      href={`/ludothek/${game.slug}`}
+      href={`/ludothek/${game.boardGameSlug}`}
       className="hover:border-primary/60 flex items-center gap-3 rounded-md border px-3 py-1.5 text-sm transition-colors"
     >
       <span className="flex-1 truncate font-medium">{game.title}</span>

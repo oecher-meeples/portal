@@ -76,6 +76,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       id: copy.id,
       boardGameId: boardGame.id,
       slug: copy.slug,
+      boardGameSlug: boardGame.slug,
       title: boardGame.title,
       imageUrl: boardGame.imageUrl,
       minPlayers: boardGame.minPlayers,
