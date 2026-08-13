@@ -30,6 +30,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Breadcrumb label for the section this item belongs to. */
   section: string;
+  /** Overrides the group's minTier for this one item (e.g. #96). */
+  minTier?: Tier;
 };
 
 export type Tier = "gast" | "mitglied" | "admin";
@@ -63,6 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/spenden",
         icon: HeartHandshake,
         section: "Öffentlich",
+        minTier: "mitglied",
       },
       {
         label: "Downloads & Rechtliches",

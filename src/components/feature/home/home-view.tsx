@@ -11,9 +11,15 @@ type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
   posts: Awaited<ReturnType<typeof getLatestPosts>>;
   gameCount: number;
+  isLoggedIn: boolean;
 };
 
-export function HomeView({ events, posts, gameCount }: HomeViewProps) {
+export function HomeView({
+  events,
+  posts,
+  gameCount,
+  isLoggedIn,
+}: HomeViewProps) {
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-2">
@@ -79,20 +85,22 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
             </ul>
           </div>
 
-          <div className="bg-primary/10 rounded-lg border p-5">
-            <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
-              <HeartHandshake className="size-4" />
-              Unterstütze uns
-            </h2>
-            <p className="text-muted-foreground mt-1.5 text-sm">
-              Deine Spende hält die Ludothek am Leben – neue Spiele, Etiketten,
-              Eventmaterial.
-            </p>
-            <Button
-              className="mt-3"
-              render={<Link href="/spenden">Jetzt spenden (PayPal)</Link>}
-            />
-          </div>
+          {isLoggedIn && (
+            <div className="bg-primary/10 rounded-lg border p-5">
+              <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
+                <HeartHandshake className="size-4" />
+                Unterstütze uns
+              </h2>
+              <p className="text-muted-foreground mt-1.5 text-sm">
+                Deine Spende hält die Ludothek am Leben – neue Spiele,
+                Etiketten, Eventmaterial.
+              </p>
+              <Button
+                className="mt-3"
+                render={<Link href="/spenden">Jetzt spenden (PayPal)</Link>}
+              />
+            </div>
+          )}
         </div>
       </section>
 
