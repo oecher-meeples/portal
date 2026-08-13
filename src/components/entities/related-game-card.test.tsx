@@ -18,10 +18,9 @@ describe("RelatedGameCard", () => {
   it("links to the title's detail page", () => {
     render(<RelatedGameCard game={GAME} />);
 
-    expect(screen.getByRole("link", { name: /Wingspan: Oceania/ })).toHaveAttribute(
-      "href",
-      "/ludothek/wingspan-oceania",
-    );
+    expect(
+      screen.getByRole("link", { name: /Wingspan: Oceania/ }),
+    ).toHaveAttribute("href", "/ludothek/wingspan-oceania");
   });
 
   it("shows the location chain when set (internal viewers)", () => {

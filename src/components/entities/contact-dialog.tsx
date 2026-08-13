@@ -60,11 +60,7 @@ export function ContactDialog({
               variant="outline"
               className="gap-1.5"
               render={
-                <a
-                  href={contact.telegramHref}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a href={contact.telegramHref} target="_blank" rel="noreferrer">
                   Telegram
                 </a>
               }

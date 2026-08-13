@@ -64,7 +64,10 @@ export function CreateBoardGameLocationField({
     });
 
     if ("error" in result) {
-      setStatus({ kind: "error", message: result.error ?? "Unbekannter Fehler." });
+      setStatus({
+        kind: "error",
+        message: result.error ?? "Unbekannter Fehler.",
+      });
       return;
     }
 

@@ -44,9 +44,7 @@ export function EditBoardGameTitle({
           className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
         >
           <option value={BoardGameKind.BOARDGAME}>Basisspiel</option>
-          <option value={BoardGameKind.BOARDGAME_EXPANSION}>
-            Erweiterung
-          </option>
+          <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
         </select>
       </div>
       <TextField

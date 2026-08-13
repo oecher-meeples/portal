@@ -281,8 +281,7 @@ export function CreateBoardGameDialog({
               <CreateBoardGameLocationField onResolved={setPlacement} />
               {!placement && (
                 <p className="text-muted-foreground text-xs">
-                  Ohne Standort-Angabe liegt das Spiel zunächst in
-                  „Unsortiert“.
+                  Ohne Standort-Angabe liegt das Spiel zunächst in „Unsortiert“.
                 </p>
               )}
             </div>

@@ -7,13 +7,13 @@ import type { GameCopyRow } from "@/components/feature/ludothek/game-copies-sect
 vi.mock(
   "@/components/widgets/board-game/edit-board-game-exemplar-dialog",
   () => ({
-    EditBoardGameExemplarDialog: () => <button type="button">Bearbeiten</button>,
+    EditBoardGameExemplarDialog: () => (
+      <button type="button">Bearbeiten</button>
+    ),
   }),
 );
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
-  AddGameCopyDialog: () => (
-    <button type="button">Weiteres Exemplar</button>
-  ),
+  AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
 }));
 
 afterEach(() => {
@@ -55,7 +55,10 @@ describe("GameCopiesSection", () => {
           copy({
             unitChain: "Regal A",
             responsibleName: "Alex",
-            responsibleContact: { mailHref: "mailto:alex@example.com", telegramHref: null },
+            responsibleContact: {
+              mailHref: "mailto:alex@example.com",
+              telegramHref: null,
+            },
           }),
         ]}
         boardGameId="game-1"

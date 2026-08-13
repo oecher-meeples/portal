@@ -49,7 +49,9 @@ export default async function GameDetailPage({
       copies.map((c) => ({ id: c.id, zustand: c.zustand })),
       currentEvent?.id ?? null,
     );
-    return <GameDetailView game={toPublicGame(game)} availability={availability} />;
+    return (
+      <GameDetailView game={toPublicGame(game)} availability={availability} />
+    );
   }
 
   const holdings = await prisma.gameHolding.findMany({

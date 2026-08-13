@@ -36,11 +36,7 @@ vi.mock("@/lib/ludothek/holding-actions", () => ({
 
 let nextScannedText = "";
 vi.mock("@/components/ui/scan-search-dialog", () => ({
-  ScanSearchDialog: ({
-    onScanned,
-  }: {
-    onScanned: (text: string) => void;
-  }) => (
+  ScanSearchDialog: ({ onScanned }: { onScanned: (text: string) => void }) => (
     <button type="button" onClick={() => onScanned(nextScannedText)}>
       simulate-scan
     </button>

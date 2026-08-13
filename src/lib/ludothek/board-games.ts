@@ -237,7 +237,10 @@ export async function assignExpansion(baseGameId: string, expansionId: string) {
   // The assigned title is an expansion by definition — set `kind` if the
   // BGG import didn't already (no fallback on removal, see #30).
   await prisma.boardGame.updateMany({
-    where: { id: expansionId, kind: { not: BoardGameKind.BOARDGAME_EXPANSION } },
+    where: {
+      id: expansionId,
+      kind: { not: BoardGameKind.BOARDGAME_EXPANSION },
+    },
     data: { kind: BoardGameKind.BOARDGAME_EXPANSION },
   });
 

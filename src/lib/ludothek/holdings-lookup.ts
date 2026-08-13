@@ -61,7 +61,9 @@ export function formatLocationChain({
   unitChain: string;
 }) {
   if (!responsibleName) return unitChain;
-  return unitChain ? `bei ${responsibleName} → ${unitChain}` : `bei ${responsibleName}`;
+  return unitChain
+    ? `bei ${responsibleName} → ${unitChain}`
+    : `bei ${responsibleName}`;
 }
 
 /** A physical copy together with its title — what a scan actually resolves to. */

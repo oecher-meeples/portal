@@ -18,9 +18,8 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
   ),
 }));
 
-const { CreateBoardGameLocationField } = await import(
-  "./create-board-game-location-field"
-);
+const { CreateBoardGameLocationField } =
+  await import("./create-board-game-location-field");
 
 afterEach(() => {
   cleanup();
@@ -66,7 +65,9 @@ describe("CreateBoardGameLocationField", () => {
       screen.getByText("Aufbewahrungseinheit neu anlegen und mir zuweisen"),
     );
 
-    expect(await screen.findByText(/Standort: OM-BOX-0001/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Standort: OM-BOX-0001/),
+    ).toBeInTheDocument();
     expect(createStorageUnitMock).toHaveBeenCalledWith(
       expect.objectContaining({ code: "OM-BOX-0001", keeperMeepleId: "self" }),
     );

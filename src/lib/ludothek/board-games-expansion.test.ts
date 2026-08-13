@@ -7,8 +7,11 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
 
-const { assignExpansion, removeExpansionAssignment, findExpansionAssignmentOptions } =
-  await import("./board-games");
+const {
+  assignExpansion,
+  removeExpansionAssignment,
+  findExpansionAssignmentOptions,
+} = await import("./board-games");
 
 beforeEach(() => {
   prismaMock.boardGame.findMany.mockResolvedValue([]);

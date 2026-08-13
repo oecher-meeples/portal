@@ -17,7 +17,10 @@ function rowActions(game: PublicLudothekGame | LudothekGame) {
   if (!("condition" in game)) return undefined;
   return (
     <>
-      <EditBoardGameExemplarDialog copyId={game.id} condition={game.condition} />
+      <EditBoardGameExemplarDialog
+        copyId={game.id}
+        condition={game.condition}
+      />
       <GameActionsMenu
         gameCopyId={game.id}
         boardGameId={game.boardGameId}

@@ -139,9 +139,10 @@ describe("GameDetailView — related-game cards (#121/#122)", () => {
   it("renders a card (not a pill) for a linked base game", () => {
     render(<GameDetailView game={game({ baseGames: [BASE_GAME_REF] })} />);
 
-    expect(
-      screen.getByRole("link", { name: /Arche Nova/ }),
-    ).toHaveAttribute("href", "/ludothek/arche-nova");
+    expect(screen.getByRole("link", { name: /Arche Nova/ })).toHaveAttribute(
+      "href",
+      "/ludothek/arche-nova",
+    );
   });
 
   it("renders a card for each linked expansion, symmetrically", () => {

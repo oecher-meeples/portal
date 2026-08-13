@@ -196,14 +196,22 @@ export async function getGuestCopyAvailability(
 
   if (inRoom.length === 0) return { kind: "plain", total };
 
-  const available = inRoom.filter((entry) => entry.copy.zustand === "frei").length;
+  const available = inRoom.filter(
+    (entry) => entry.copy.zustand === "frei",
+  ).length;
   const shelfLabels = [
     ...new Set(
       inRoom.map((entry) => shelfLabelByUnitId.get(entry.assignedShelfId!)!),
     ),
   ];
 
-  return { kind: "event", total, inRoom: inRoom.length, available, shelfLabels };
+  return {
+    kind: "event",
+    total,
+    inRoom: inRoom.length,
+    available,
+    shelfLabels,
+  };
 }
 
 export type GuestFleaMarketItem = {

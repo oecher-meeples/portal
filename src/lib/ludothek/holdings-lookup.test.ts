@@ -215,7 +215,10 @@ describe("resolveScannedCode", () => {
 describe("walkUnitChain", () => {
   it("walks up to the root when no unit has a keeper", () => {
     const unitById = new Map([
-      ["karton", { label: "Karton 3", parentUnitId: "regal", keeperMeepleId: null }],
+      [
+        "karton",
+        { label: "Karton 3", parentUnitId: "regal", keeperMeepleId: null },
+      ],
       ["regal", { label: "Regal A", parentUnitId: null, keeperMeepleId: null }],
     ]);
 
@@ -227,12 +230,22 @@ describe("walkUnitChain", () => {
 
   it("stops at the first keeper and reports it, without ancestor units", () => {
     const unitById = new Map([
-      ["karton", { label: "Karton 3", parentUnitId: "regal", keeperMeepleId: null }],
+      [
+        "karton",
+        { label: "Karton 3", parentUnitId: "regal", keeperMeepleId: null },
+      ],
       [
         "regal",
-        { label: "Regal A", parentUnitId: "dachboden", keeperMeepleId: "meeple-a" },
+        {
+          label: "Regal A",
+          parentUnitId: "dachboden",
+          keeperMeepleId: "meeple-a",
+        },
       ],
-      ["dachboden", { label: "Dachboden", parentUnitId: null, keeperMeepleId: null }],
+      [
+        "dachboden",
+        { label: "Dachboden", parentUnitId: null, keeperMeepleId: null },
+      ],
     ]);
 
     expect(walkUnitChain("karton", unitById)).toEqual({
@@ -252,14 +265,17 @@ describe("walkUnitChain", () => {
 describe("formatLocationChain", () => {
   it("leads with the responsible person, then the storage chain (#121)", () => {
     expect(
-      formatLocationChain({ responsibleName: "Alex", unitChain: "Regal A → Karton 3" }),
+      formatLocationChain({
+        responsibleName: "Alex",
+        unitChain: "Regal A → Karton 3",
+      }),
     ).toBe("bei Alex → Regal A → Karton 3");
   });
 
   it("shows just the person when there is no storage chain", () => {
-    expect(formatLocationChain({ responsibleName: "Alex", unitChain: "" })).toBe(
-      "bei Alex",
-    );
+    expect(
+      formatLocationChain({ responsibleName: "Alex", unitChain: "" }),
+    ).toBe("bei Alex");
   });
 
   it("shows just the storage chain when there is no responsible person", () => {

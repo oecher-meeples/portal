@@ -90,9 +90,7 @@ describe("CreateBoardGameDialog — manual entry via EAN", () => {
 
     await user.click(within(dialog).getByText("simulate-scan"));
 
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue(
-      "4001504311892",
-    );
+    expect(within(dialog).getByLabelText("EAN")).toHaveValue("4001504311892");
   });
 
   it("shows the server error instead of crashing when the session has expired", async () => {
