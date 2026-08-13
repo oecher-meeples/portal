@@ -46,7 +46,9 @@ describe("GameListRow", () => {
   it("sizes the cover to match the grid card format (#121)", () => {
     render(<GameListRow game={game()} />);
 
-    expect(document.querySelector(".aspect-\\[3\\/4\\].w-32")).toBeInTheDocument();
+    expect(
+      document.querySelector(".aspect-\\[3\\/4\\].w-32"),
+    ).toBeInTheDocument();
   });
 
   it("merges the hover overlay into the row — no gap, shared bottom radius", () => {
@@ -116,6 +118,24 @@ describe("GameListRow", () => {
   it("does not show a ribbon corner for a base game", () => {
     render(<GameListRow game={game({ kind: BoardGameKind.BOARDGAME })} />);
     expect(screen.queryByText("Erweiterung")).not.toBeInTheDocument();
+  });
+
+  it("shows no copy-count suffix for exactly one copy", () => {
+    render(<GameListRow game={{ ...game(), copyCount: 1 }} />);
+
+    expect(screen.queryByText(/\(x/)).not.toBeInTheDocument();
+  });
+
+  it("shows (x2) for two copies", () => {
+    render(<GameListRow game={{ ...game(), copyCount: 2 }} />);
+
+    expect(screen.getByText("(x2)")).toBeInTheDocument();
+  });
+
+  it("shows (x3) for three copies", () => {
+    render(<GameListRow game={{ ...game(), copyCount: 3 }} />);
+
+    expect(screen.getByText("(x3)")).toBeInTheDocument();
   });
 
   it("omits the actions overlay without a caller-supplied actions node", () => {

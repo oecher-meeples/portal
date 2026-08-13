@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import { playersAndDuration } from "@/lib/ludothek/format";
@@ -20,7 +21,10 @@ export function GameListRow({
   game,
   actions,
 }: {
-  game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+  game: (PublicLudothekGame | (LudothekGame & { zustand: GameZustand })) & {
+    /** Set once several copies of this title are folded into one row (#121/#122). */
+    copyCount?: number;
+  };
   /** Caller-supplied admin controls (edit/actions menu) — GameListRow just places them (#121/#122). */
   actions?: ReactNode;
 }) {
@@ -55,13 +59,12 @@ export function GameListRow({
           title={game.title}
           aspect="aspect-[3/4]"
         />
-        {isExpansion && (
-          <RibbonCorner size="sm">Erweiterung</RibbonCorner>
-        )}
+        {isExpansion && <RibbonCorner size="sm">Erweiterung</RibbonCorner>}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <h3 className="group-hover:text-primary truncate font-serif text-lg leading-snug font-semibold">
           {game.title}
+          <CopyCountSuffix copyCount={game.copyCount} />
         </h3>
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}

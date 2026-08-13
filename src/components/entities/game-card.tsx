@@ -4,6 +4,7 @@ import { Layers } from "lucide-react";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { playersAndDuration } from "@/lib/ludothek/format";
@@ -13,7 +14,10 @@ export function GameCard({
   game,
   actions,
 }: {
-  game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+  game: (PublicLudothekGame | (LudothekGame & { zustand: GameZustand })) & {
+    /** Set once several copies of this title are folded into one card (#121/#122). */
+    copyCount?: number;
+  };
   /** Caller-supplied overlay, e.g. an edit button — GameCard just places it. */
   actions?: ReactNode;
 }) {
@@ -38,6 +42,7 @@ export function GameCard({
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {game.title}
+          <CopyCountSuffix copyCount={game.copyCount} />
         </h3>
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}

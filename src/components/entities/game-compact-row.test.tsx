@@ -65,4 +65,22 @@ describe("GameCompactRow", () => {
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  it("shows no copy-count suffix for exactly one copy", () => {
+    render(<GameCompactRow game={{ ...game(), copyCount: 1 }} />);
+
+    expect(screen.queryByText(/\(x/)).not.toBeInTheDocument();
+  });
+
+  it("shows (x2) for two copies", () => {
+    render(<GameCompactRow game={{ ...game(), copyCount: 2 }} />);
+
+    expect(screen.getByText("(x2)")).toBeInTheDocument();
+  });
+
+  it("shows (x3) for three copies", () => {
+    render(<GameCompactRow game={{ ...game(), copyCount: 3 }} />);
+
+    expect(screen.getByText("(x3)")).toBeInTheDocument();
+  });
 });
