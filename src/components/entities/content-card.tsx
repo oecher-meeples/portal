@@ -16,7 +16,8 @@ export function ContentCard({ item }: { item: ContentItem }) {
         alt={item.title}
         label="BILD"
         aspect="aspect-[4/3]"
-        className="transition-all duration-300 group-hover:aspect-video group-hover:[&>img]:object-contain"
+        fit="contain"
+        className="transition-all duration-300 group-hover:aspect-video"
       />
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-center gap-2">

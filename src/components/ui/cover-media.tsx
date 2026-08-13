@@ -33,7 +33,7 @@ export function CoverMedia({
         src={imageUrl}
         alt={alt}
         className={cn(
-          "max-h-[70vh] w-auto max-w-full rounded-md border object-contain",
+          "max-h-[70vh] w-auto max-w-full self-start rounded-md border object-contain",
           className,
         )}
       />
