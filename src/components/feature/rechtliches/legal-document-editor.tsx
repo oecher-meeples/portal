@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { GripVertical, Heading, ListPlus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField, TextAreaField } from "@/components/ui/field";
 import { FileField } from "@/components/ui/file-field";
@@ -71,6 +71,48 @@ function InsertSectionButton({ onClick }: { onClick: () => void }) {
         Section hier hinzufügen
       </Button>
     </div>
+  );
+}
+
+/**
+ * Doubles as a click action (using the current textarea selection) and a
+ * native drop target (dragging that same selection out of the textarea
+ * and onto the button) — same handler either way, since both just need
+ * the selection to still be current. Highlights while something is
+ * dragged over it so the drop target reads as one.
+ */
+function SelectionTargetButton({
+  icon,
+  label,
+  disabled,
+  onActivate,
+}: {
+  icon: ReactNode;
+  label: string;
+  disabled: boolean;
+  onActivate: () => void;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={disabled}
+      onClick={onActivate}
+      onDragOver={(event) => event.preventDefault()}
+      onDragEnter={() => setIsDragOver(true)}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setIsDragOver(false);
+        onActivate();
+      }}
+      className={isDragOver ? "border-primary bg-primary/10" : undefined}
+    >
+      {icon}
+      {label}
+    </Button>
   );
 }
 
@@ -252,140 +294,144 @@ export function LegalDocumentEditor({
   const error = uploadError || extractError || saveError;
 
   return (
-    <div className="bg-muted/30 flex flex-col gap-6 rounded-lg border p-4">
-      <TextField
-        id={`legal-title-${doc.slug}`}
-        label="Titel"
-        value={title}
-        onChange={(event) => onTitleChange(event.target.value)}
-      />
-
-      <div className="flex flex-col gap-2">
-        <FileField
-          id={`legal-pdf-${doc.slug}`}
-          label="PDF hochladen (ersetzt die aktuelle Datei)"
-          accept="application/pdf"
-          disabled={isUploading || extracting}
-          onFilesSelected={(files) => void handleUpload(files[0] ?? null)}
-        />
-        {(isUploading || extracting) && (
-          <p className="text-muted-foreground text-sm">
-            {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
-          </p>
-        )}
-        {pdfFileUrl && !isUploading && (
+    <div className="grid items-start gap-4 md:grid-cols-[12rem_1fr]">
+      {extractedText && (
+        <div className="flex flex-col gap-2 md:sticky md:top-24">
+          <p className="text-sm font-medium">Textauswahl übernehmen</p>
           <p className="text-muted-foreground text-xs">
-            Aktuelle Datei:{" "}
-            <a
-              href={pdfFileUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-primary hover:underline"
-            >
-              ansehen
-            </a>
+            Im Rohtext rechts Text markieren, dann klicken oder hierher ziehen.
           </p>
-        )}
-        {extractedText && (
-          <div className="flex flex-col gap-1.5">
-            <p className="text-muted-foreground text-xs">
-              Extrahierter Rohtext — Text markieren, um ihn direkt zu
-              übernehmen:
-            </p>
-            <Textarea
-              value={extractedText}
-              readOnly
-              rows={8}
-              onSelect={handleExtractedTextSelect}
-            />
-            {textSelection && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={useSelectionAsTitle}
-                >
-                  Als Titel verwenden
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={pushSelectionToNewSection}
-                >
-                  In neue Section am Ende schieben
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+          <SelectionTargetButton
+            icon={<Heading className="size-4" />}
+            label="Als Titel verwenden"
+            disabled={!textSelection}
+            onActivate={useSelectionAsTitle}
+          />
+          <SelectionTargetButton
+            icon={<ListPlus className="size-4" />}
+            label="Als neue Section"
+            disabled={!textSelection}
+            onActivate={pushSelectionToNewSection}
+          />
+        </div>
+      )}
 
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-medium">Sections</p>
-        <InsertSectionButton onClick={() => addSectionAt(0)} />
-        {sections.map((section, index) => (
-          <div key={section.id} className="flex flex-col gap-3">
-            <div
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => moveSection(section.id)}
-              className="bg-card flex flex-col gap-2 rounded-md border p-3"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  draggable
-                  onDragStart={() => setDraggedId(section.id)}
-                  className="cursor-grab"
-                >
-                  <GripVertical
-                    className="text-muted-foreground size-4 shrink-0"
-                    aria-hidden
-                  />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <TextField
-                    id={`legal-heading-${section.id}`}
-                    label="Überschrift"
-                    value={section.heading}
-                    onChange={(event) =>
-                      updateSection(section.id, {
-                        heading: event.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => removeSection(section.id)}
-                  aria-label="Section entfernen"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
-              <TextAreaField
-                id={`legal-paragraphs-${section.id}`}
-                label="Absätze (ein Absatz pro Zeile)"
-                value={section.paragraphsText}
-                onChange={(event) =>
-                  updateSection(section.id, {
-                    paragraphsText: event.target.value,
-                  })
-                }
-                rows={4}
+      <div className="bg-muted/30 flex flex-col gap-6 rounded-lg border p-4">
+        <TextField
+          id={`legal-title-${doc.slug}`}
+          label="Titel"
+          value={title}
+          onChange={(event) => onTitleChange(event.target.value)}
+        />
+
+        <div className="flex flex-col gap-2">
+          <FileField
+            id={`legal-pdf-${doc.slug}`}
+            label="PDF hochladen (ersetzt die aktuelle Datei)"
+            accept="application/pdf"
+            disabled={isUploading || extracting}
+            onFilesSelected={(files) => void handleUpload(files[0] ?? null)}
+          />
+          {(isUploading || extracting) && (
+            <p className="text-muted-foreground text-sm">
+              {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
+            </p>
+          )}
+          {pdfFileUrl && !isUploading && (
+            <p className="text-muted-foreground text-xs">
+              Aktuelle Datei:{" "}
+              <a
+                href={pdfFileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline"
+              >
+                ansehen
+              </a>
+            </p>
+          )}
+          {extractedText && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-muted-foreground text-xs">
+                Extrahierter Rohtext — Text markieren, um ihn links zu
+                übernehmen:
+              </p>
+              <Textarea
+                value={extractedText}
+                readOnly
+                rows={8}
+                onSelect={handleExtractedTextSelect}
+                onDragStart={handleExtractedTextSelect}
               />
             </div>
-            <InsertSectionButton onClick={() => addSectionAt(index + 1)} />
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Speichert…" : "Speichern"}
-        </Button>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium">Sections</p>
+          <InsertSectionButton onClick={() => addSectionAt(0)} />
+          {sections.map((section, index) => (
+            <div key={section.id} className="flex flex-col gap-3">
+              <div
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => moveSection(section.id)}
+                className="bg-card flex flex-col gap-2 rounded-md border p-3"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    draggable
+                    onDragStart={() => setDraggedId(section.id)}
+                    className="cursor-grab"
+                  >
+                    <GripVertical
+                      className="text-muted-foreground size-4 shrink-0"
+                      aria-hidden
+                    />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <TextField
+                      id={`legal-heading-${section.id}`}
+                      label="Überschrift"
+                      value={section.heading}
+                      onChange={(event) =>
+                        updateSection(section.id, {
+                          heading: event.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => removeSection(section.id)}
+                    aria-label="Section entfernen"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+                <TextAreaField
+                  id={`legal-paragraphs-${section.id}`}
+                  label="Absätze (ein Absatz pro Zeile)"
+                  value={section.paragraphsText}
+                  onChange={(event) =>
+                    updateSection(section.id, {
+                      paragraphsText: event.target.value,
+                    })
+                  }
+                  rows={4}
+                />
+              </div>
+              <InsertSectionButton onClick={() => addSectionAt(index + 1)} />
+            </div>
+          ))}
+        </div>
+
+        {error && <p className="text-destructive text-sm">{error}</p>}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Speichert…" : "Speichern"}
+          </Button>
+        </div>
       </div>
     </div>
   );
