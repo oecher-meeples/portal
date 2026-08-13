@@ -18,6 +18,10 @@ export type LudothekTitleGroup<
   /** GameCopy ids of every copy folded into this row — needed once actions
    * (Schritt 10–12) must pick one of several exemplare. */
   copyIds: string[];
+  /** Every copy folded into this row, unabridged — `GameActionsMenu`'s
+   * Exemplar-Auswahl-Popup (Plan-Schritt 12) needs each one's own
+   * zustand/Standort/Mängelvermerk, not just its id. */
+  copies: G[];
 };
 
 /**
@@ -55,6 +59,7 @@ export function groupGamesByTitle<
       ...representative,
       copyCount: copies.length,
       copyIds: copies.map((c) => c.id),
+      copies,
     };
   });
 }

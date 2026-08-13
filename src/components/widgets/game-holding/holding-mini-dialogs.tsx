@@ -17,15 +17,31 @@ import {
 
 const TRIGGER_CLASS = "w-full justify-start";
 
+/** Every mini-dialog below can also run fully controlled (Plan-Schritt 12) —
+ * opened programmatically right after a Exemplar-Auswahl-Popup instead of by
+ * its own trigger click. Omit both for the normal, self-triggered dialog. */
+type ControlledDialogProps = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
 /** Ausleihen — always self, no target to pick (see holding-actions.ts). */
-export function BorrowGameDialog({ gameCopyId }: { gameCopyId: string }) {
+export function BorrowGameDialog({
+  gameCopyId,
+  open,
+  onOpenChange,
+}: { gameCopyId: string } & ControlledDialogProps) {
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
-          Ausleihen
-        </Button>
+        open === undefined ? (
+          <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+            Ausleihen
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title="Spiel ausleihen"
       description="Du buchst das Exemplar auf dich selbst aus."
       submitLabel="Ausleihen"
@@ -81,7 +97,11 @@ type ReturnMode = "self" | "person";
  * 7): "an mich" bleibt der bisherige `scanAcceptReturn` (abgeschlossen erst
  * durchs Einlagern), "an Person" sucht die annehmende Person per
  * `TargetPicker` und ruft `scanReturnToMeeple`. */
-export function AcceptReturnDialog({ gameCopyId }: { gameCopyId: string }) {
+export function AcceptReturnDialog({
+  gameCopyId,
+  open,
+  onOpenChange,
+}: { gameCopyId: string } & ControlledDialogProps) {
   const [mode, setMode] = useState<ReturnMode>("self");
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
@@ -102,10 +122,14 @@ export function AcceptReturnDialog({ gameCopyId }: { gameCopyId: string }) {
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
-          Rückgabe
-        </Button>
+        open === undefined ? (
+          <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+            Rückgabe
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title="Rückgabe"
       description={
         mode === "self"
@@ -159,17 +183,25 @@ export function AcceptReturnDialog({ gameCopyId }: { gameCopyId: string }) {
 
 /** Weitergeben — die abgebende Person wählt die empfangende, bestätigt ist
  * die Weitergabe erst durch deren eigenen Klick (siehe scanGiveToMeeple). */
-export function GiveToMeepleDialog({ gameCopyId }: { gameCopyId: string }) {
+export function GiveToMeepleDialog({
+  gameCopyId,
+  open,
+  onOpenChange,
+}: { gameCopyId: string } & ControlledDialogProps) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
 
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
-          Weitergeben
-        </Button>
+        open === undefined ? (
+          <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+            Weitergeben
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title="Weitergeben"
       description="Bestätigt ist die Weitergabe erst durch den Klick der empfangenden Person."
       submitLabel="Weitergeben"
@@ -197,17 +229,25 @@ export function GiveToMeepleDialog({ gameCopyId }: { gameCopyId: string }) {
 }
 
 /** Umlagern — Zieleinheit per Auswahl oder Scan des Einheiten-Codes. */
-export function RelocateGameDialog({ gameCopyId }: { gameCopyId: string }) {
+export function RelocateGameDialog({
+  gameCopyId,
+  open,
+  onOpenChange,
+}: { gameCopyId: string } & ControlledDialogProps) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
 
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
-          Umlagern
-        </Button>
+        open === undefined ? (
+          <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+            Umlagern
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title="Umlagern"
       description="Wähle die Ziel-Einheit."
       submitLabel="Umlagern"

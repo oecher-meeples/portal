@@ -12,7 +12,9 @@ vi.mock("@/components/widgets/board-game/edit-board-game-title-dialog", () => ({
   EditBoardGameTitleDialog: () => null,
 }));
 vi.mock("@/components/widgets/game-holding/game-actions-menu", () => ({
-  GameActionsMenu: () => null,
+  GameActionsMenu: ({ copies }: { copies: { id: string }[] }) => (
+    <p>Aktionen ({copies.length} Exemplare)</p>
+  ),
 }));
 
 afterEach(() => {
@@ -114,5 +116,23 @@ describe("LudothekResults — one entry per title (#121/#122)", () => {
 
     expect(screen.getAllByText("Arche Nova")).toHaveLength(1);
     expect(screen.getAllByText("Wingspan")).toHaveLength(1);
+  });
+});
+
+describe("LudothekResults — grid actions menu (Plan-Schritt 12)", () => {
+  it("shows the actions menu on the grid card for games:manage holders", () => {
+    render(
+      <LudothekResults games={TWO_COPIES} view="grid" canManageGames={true} />,
+    );
+
+    expect(screen.getByText("Aktionen (2 Exemplare)")).toBeInTheDocument();
+  });
+
+  it("omits the actions menu on the grid card without games:manage", () => {
+    render(
+      <LudothekResults games={TWO_COPIES} view="grid" canManageGames={false} />,
+    );
+
+    expect(screen.queryByText(/Aktionen \(/)).not.toBeInTheDocument();
   });
 });

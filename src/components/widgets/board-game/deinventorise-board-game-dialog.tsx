@@ -10,9 +10,13 @@ import { deinventoriseGameCopy } from "@/lib/ludothek/game-copies";
 export function DeinventoriseBoardGameDialog({
   gameId,
   gameTitle,
+  open,
+  onOpenChange,
 }: {
   gameId: string;
   gameTitle: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [reason, setReason] = useState("");
   const [addToSpareParts, setAddToSpareParts] = useState(false);
@@ -20,10 +24,14 @@ export function DeinventoriseBoardGameDialog({
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
-          Deinventarisieren
-        </Button>
+        open === undefined ? (
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            Deinventarisieren
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title={`„${gameTitle}“ deinventarisieren`}
       description="Das Spiel bleibt erhalten, wird aber als ausgemustert markiert und nicht mehr aktiv geführt."
       submitLabel="Deinventarisieren"

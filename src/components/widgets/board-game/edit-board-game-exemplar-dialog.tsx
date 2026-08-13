@@ -17,21 +17,29 @@ export function EditBoardGameExemplarDialog({
   copyId,
   condition,
   triggerLabel = "Bearbeiten",
+  open,
+  onOpenChange,
 }: {
   copyId: string;
   condition: string | null;
   triggerLabel?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [value, setValue] = useState(condition ?? "");
 
   return (
     <ActionDialog
       trigger={
-        <Button size="sm" variant="outline">
-          <Pencil className="size-4" />
-          {triggerLabel}
-        </Button>
+        open === undefined ? (
+          <Button size="sm" variant="outline">
+            <Pencil className="size-4" />
+            {triggerLabel}
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title="Exemplar bearbeiten"
       submitLabel="Speichern"
       action={() => updateGameCopy(copyId, { condition: value || undefined })}

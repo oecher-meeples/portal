@@ -4,6 +4,7 @@ import { GameCompactRow } from "@/components/entities/game-compact-row";
 import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
 import { EditBoardGameTitleDialog } from "@/components/widgets/board-game/edit-board-game-title-dialog";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
+import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import { groupGamesByTitle } from "@/lib/ludothek/title-grouping";
 import type {
   LudothekGame,
@@ -12,6 +13,18 @@ import type {
 } from "@/lib/ludothek/browser";
 
 const EMPTY_MESSAGE = "Keine Spiele gefunden.";
+
+/** Every copy folded into this title, in the shape `GameActionsMenu`'s
+ * Exemplar-Auswahl-Popup needs (Plan-Schritt 12) — only meaningful once
+ * `"condition" in game` narrowed the caller to the internal shape. */
+function actionsMenuCopies(game: LudothekGame & { copies: LudothekGame[] }) {
+  return game.copies.map((copy) => ({
+    id: copy.id,
+    zustand: copy.zustand,
+    locationChain: copy.locationChain,
+    condition: copy.condition,
+  }));
+}
 
 /** Admin controls shared by the list and compact rows (#121/#122):
  * "Bearbeiten" now always opens the title dialog (Plan-Schritt 10) — with
@@ -23,10 +36,11 @@ function rowActions(game: PublicLudothekGame | LudothekGame) {
     <>
       <EditBoardGameTitleDialog game={game} />
       <GameActionsMenu
-        gameCopyId={game.id}
+        copies={actionsMenuCopies(
+          game as LudothekGame & { copies: LudothekGame[] },
+        )}
         boardGameId={game.boardGameId}
         boardGameTitle={game.title}
-        condition={game.condition}
         canManageGames
       />
     </>
@@ -91,7 +105,21 @@ export function LudothekResults({
           game={game}
           actions={
             canManageGames && "ean" in game ? (
-              <GameCardEditOverlay game={game} />
+              <div className="flex items-center gap-1">
+                <GameCardEditOverlay game={game} />
+                {"condition" in game && (
+                  <StopRowNavigation className="bg-background/90 rounded-md backdrop-blur-sm">
+                    <GameActionsMenu
+                      copies={actionsMenuCopies(
+                        game as LudothekGame & { copies: LudothekGame[] },
+                      )}
+                      boardGameId={game.boardGameId}
+                      boardGameTitle={game.title}
+                      canManageGames
+                    />
+                  </StopRowNavigation>
+                )}
+              </div>
             ) : undefined
           }
         />
