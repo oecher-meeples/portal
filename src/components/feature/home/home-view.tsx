@@ -53,7 +53,7 @@ export function HomeView({
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="bg-card rounded-lg border p-5">
+          <div className="bg-card flex flex-1 flex-col rounded-lg border p-5">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
                 <Calendar className="text-primary size-4" />
