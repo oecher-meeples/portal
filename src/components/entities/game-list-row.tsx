@@ -11,13 +11,17 @@ import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { cn } from "@/lib/utils/cn";
+import { truncateText } from "@/lib/utils/truncate";
+
+/** Collapsed description length — full text only shows on hover/tap. */
+const DESCRIPTION_PREVIEW_LENGTH = 200;
 
 /**
  * List-view row for `/ludothek` (see Plan-Schritt 8/9): the description stays
- * inline, full-length, at its original spot under the title. Hovering (mouse)
- * or a first tap (touch) additionally expands mechanics, weight and the
- * Erklärbären count in an absolute-positioned overlay below (#143) — no
- * reflow of neighbouring rows.
+ * at its original spot under the title, capped to a short preview until
+ * hovering (mouse) or a first tap (touch) reveals it in full and additionally
+ * expands mechanics, weight and the Erklärbären count in an
+ * absolute-positioned overlay below (#143) — no reflow of neighbouring rows.
  */
 export function GameListRow({
   game,
@@ -77,7 +81,11 @@ export function GameListRow({
           {playersAndDuration(game)}
         </p>
         {game.description && (
-          <p className="text-muted-foreground text-sm">{game.description}</p>
+          <p className="text-muted-foreground text-sm">
+            {expanded
+              ? game.description
+              : truncateText(game.description, DESCRIPTION_PREVIEW_LENGTH)}
+          </p>
         )}
       </div>
       {zustand && (

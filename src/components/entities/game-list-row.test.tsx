@@ -43,6 +43,24 @@ describe("GameListRow", () => {
     expect(description).not.toHaveClass("line-clamp-3");
   });
 
+  it("caps the description to 200 chars until hovered, shows it in full on hover", () => {
+    const longDescription = Array(10)
+      .fill("Ein sehr langer Beschreibungstext.")
+      .join(" ");
+    render(<GameListRow game={game({ description: longDescription })} />);
+    const row = screen.getByRole("link");
+
+    expect(screen.queryByText(longDescription)).not.toBeInTheDocument();
+    const collapsed = screen.getByText(/…$/);
+    expect(collapsed.textContent!.length).toBeLessThanOrEqual(201);
+
+    fireEvent.mouseEnter(row);
+    expect(screen.getByText(longDescription)).toBeInTheDocument();
+
+    fireEvent.mouseLeave(row);
+    expect(screen.queryByText(longDescription)).not.toBeInTheDocument();
+  });
+
   it("sizes the cover to match the grid card format (#121)", () => {
     render(<GameListRow game={game()} />);
 
