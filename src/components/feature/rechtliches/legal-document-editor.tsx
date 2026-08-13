@@ -53,6 +53,26 @@ function toSections(sections: EditableSection[]): LegalSection[] {
   }));
 }
 
+/** Insert-here affordance placed before the first, between every pair, and
+ * after the last section — centered, not full-width, so it doesn't read as
+ * part of the section cards themselves. */
+function InsertSectionButton({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex justify-center">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={onClick}
+        className="text-muted-foreground hover:text-foreground"
+      >
+        <Plus className="size-3.5" />
+        Section hier hinzufügen
+      </Button>
+    </div>
+  );
+}
+
 /** Local id derivation from the heading, matching `uniqueSlug`'s -2/-3
  * suffixing but against the sections already in the editor, not the DB
  * (see the plan's "Getroffene Annahmen"). */
@@ -134,15 +154,20 @@ export function LegalDocumentEditor({
     );
   }
 
-  function addSection() {
+  function addSectionAt(index: number) {
     const id = uniqueLocalId(
       "neue-section",
       sections.map((s) => s.id),
     );
-    setSections((prev) => [
-      ...prev,
-      { id, heading: "Neue Section", paragraphsText: "" },
-    ]);
+    setSections((prev) => {
+      const next = [...prev];
+      next.splice(index, 0, {
+        id,
+        heading: "Neue Section",
+        paragraphsText: "",
+      });
+      return next;
+    });
   }
 
   function removeSection(id: string) {
@@ -172,51 +197,51 @@ export function LegalDocumentEditor({
   const error = uploadError || extractError || saveError;
 
   return (
-    <div className="grid items-start gap-4 md:grid-cols-[1fr_15rem]">
-      <div className="bg-muted/30 flex flex-col gap-6 rounded-lg border p-4">
-        <TextField
-          id={`legal-title-${doc.slug}`}
-          label="Titel"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
+    <div className="bg-muted/30 flex flex-col gap-6 rounded-lg border p-4">
+      <TextField
+        id={`legal-title-${doc.slug}`}
+        label="Titel"
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+      />
+
+      <div className="flex flex-col gap-2">
+        <label
+          className="text-sm font-medium"
+          htmlFor={`legal-pdf-${doc.slug}`}
+        >
+          PDF hochladen (ersetzt die aktuelle Datei)
+        </label>
+        <input
+          id={`legal-pdf-${doc.slug}`}
+          type="file"
+          accept="application/pdf"
+          onChange={(event) => {
+            void handleUpload(event.target.files?.[0] ?? null);
+            event.target.value = "";
+          }}
         />
-
-        <div className="flex flex-col gap-2">
-          <label
-            className="text-sm font-medium"
-            htmlFor={`legal-pdf-${doc.slug}`}
-          >
-            PDF hochladen (ersetzt die aktuelle Datei)
-          </label>
-          <input
-            id={`legal-pdf-${doc.slug}`}
-            type="file"
-            accept="application/pdf"
-            onChange={(event) => {
-              void handleUpload(event.target.files?.[0] ?? null);
-              event.target.value = "";
-            }}
-          />
-          {(isUploading || extracting) && (
-            <p className="text-muted-foreground text-sm">
-              {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
+        {(isUploading || extracting) && (
+          <p className="text-muted-foreground text-sm">
+            {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
+          </p>
+        )}
+        {extractedText && (
+          <div className="flex flex-col gap-1.5">
+            <p className="text-muted-foreground text-xs">
+              Extrahierter Rohtext (zum Abschreiben in die Sections unten):
             </p>
-          )}
-          {extractedText && (
-            <div className="flex flex-col gap-1.5">
-              <p className="text-muted-foreground text-xs">
-                Extrahierter Rohtext (zum Abschreiben in die Sections unten):
-              </p>
-              <Textarea value={extractedText} readOnly rows={8} />
-            </div>
-          )}
-        </div>
+            <Textarea value={extractedText} readOnly rows={8} />
+          </div>
+        )}
+      </div>
 
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium">Sections</p>
-          {sections.map((section) => (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium">Sections</p>
+        <InsertSectionButton onClick={() => addSectionAt(0)} />
+        {sections.map((section, index) => (
+          <div key={section.id} className="flex flex-col gap-3">
             <div
-              key={section.id}
               draggable
               onDragStart={() => setDraggedId(section.id)}
               onDragOver={(event) => event.preventDefault()}
@@ -261,27 +286,15 @@ export function LegalDocumentEditor({
                 rows={4}
               />
             </div>
-          ))}
-        </div>
-
-        {error && <p className="text-destructive text-sm">{error}</p>}
-        <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Speichert…" : "Speichern"}
-          </Button>
-        </div>
+            <InsertSectionButton onClick={() => addSectionAt(index + 1)} />
+          </div>
+        ))}
       </div>
 
-      <div className="bg-card flex flex-col gap-3 self-end rounded-lg border p-4">
-        <div>
-          <p className="text-sm font-medium">Sections verwalten</p>
-          <p className="text-muted-foreground text-xs">
-            Fügt eine neue, leere Section am Ende der Liste hinzu.
-          </p>
-        </div>
-        <Button variant="outline" onClick={addSection}>
-          <Plus className="size-4" />
-          Section hinzufügen
+      {error && <p className="text-destructive text-sm">{error}</p>}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? "Speichert…" : "Speichern"}
         </Button>
       </div>
     </div>
