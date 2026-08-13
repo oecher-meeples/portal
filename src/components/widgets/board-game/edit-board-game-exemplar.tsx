@@ -18,7 +18,7 @@ export function EditBoardGameExemplar({
   return (
     <TextField
       id={`${idPrefix}-condition`}
-      label="Zustand"
+      label="Mängelvermerk"
       value={values.condition}
       onChange={(event) => onChange({ condition: event.target.value })}
     />

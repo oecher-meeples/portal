@@ -18,7 +18,7 @@ describe("EditBoardGameExemplar", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Zustand")).toBeInTheDocument();
+    expect(screen.getByLabelText("Mängelvermerk")).toBeInTheDocument();
     expect(screen.queryByLabelText("Titel")).not.toBeInTheDocument();
   });
 
@@ -32,7 +32,7 @@ describe("EditBoardGameExemplar", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Zustand"), {
+    fireEvent.change(screen.getByLabelText("Mängelvermerk"), {
       target: { value: "Gebraucht, funktionstüchtig" },
     });
 

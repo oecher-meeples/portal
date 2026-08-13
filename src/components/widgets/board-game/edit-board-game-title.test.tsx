@@ -21,7 +21,7 @@ describe("EditBoardGameTitle", () => {
     expect(screen.getByLabelText("Titel")).toBeInTheDocument();
     expect(screen.getByLabelText("EAN")).toBeInTheDocument();
     expect(screen.getByLabelText("Art")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Zustand")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
   });
 
   it("reports a kind change via onChange", async () => {
