@@ -19,7 +19,7 @@ export function PostDetailView({ item, canEdit }: PostDetailViewProps) {
         imageUrl={item.coverImageUrl}
         alt={item.title}
         label="TITELBILD"
-        aspect="aspect-[21/9]"
+        sizing="natural"
       />
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
