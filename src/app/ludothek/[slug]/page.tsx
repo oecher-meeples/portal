@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
-import { getSessionTier } from "@/lib/auth/session";
+import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
@@ -142,7 +141,7 @@ export default async function GameDetailPage({
       ?.level ?? null;
 
   const canManageGames =
-    !!user && (await hasPermission(user.id, "games:manage"));
+    !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
   const linkedIds = new Set([
     ...game.baseGames.map((g) => g.id),
     ...game.expansions.map((g) => g.id),
