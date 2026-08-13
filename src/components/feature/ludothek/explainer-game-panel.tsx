@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -74,15 +77,25 @@ export function ExplainerGamePanel({
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-serif text-lg font-bold">Erklärbären</h2>
         <Dialog>
-          <DialogTrigger
-            render={
-              <Button variant="outline" size="sm">
-                {explainers.length > 0
-                  ? `Alle ansehen (${explainers.length})`
-                  : "Ansehen"}
-              </Button>
-            }
-          />
+          <Tooltip content="Alle Erklärbären ansehen">
+            <DialogTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  className="relative"
+                  aria-label="Alle Erklärbären ansehen"
+                >
+                  <Search className="size-4" />
+                  {explainers.length > 0 && (
+                    <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center px-1 text-[10px]">
+                      {explainers.length}
+                    </Badge>
+                  )}
+                </Button>
+              }
+            />
+          </Tooltip>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Erklärbären für {boardGameTitle}</DialogTitle>
