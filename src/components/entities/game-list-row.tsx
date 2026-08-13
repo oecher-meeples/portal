@@ -29,7 +29,10 @@ export function GameListRow({
   return (
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
-      className="group bg-card hover:border-primary/60 relative flex items-center gap-4 rounded-lg border p-3 transition-colors"
+      className={cn(
+        "group bg-card hover:border-primary/60 relative flex items-center gap-4 border p-4 transition-colors",
+        expanded && game.description ? "rounded-t-lg" : "rounded-lg",
+      )}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       onPointerDown={(event) => {
@@ -43,7 +46,7 @@ export function GameListRow({
         }
       }}
     >
-      <div className="relative w-16 shrink-0 overflow-hidden rounded-md">
+      <div className="relative size-24 shrink-0 overflow-hidden rounded-md">
         <GameCoverMedia
           imageUrl={game.imageUrl}
           title={game.title}
@@ -73,7 +76,7 @@ export function GameListRow({
       {expanded && game.description && (
         <div
           className={cn(
-            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 mt-1 rounded-lg border p-3 shadow-lg",
+            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 -mt-px rounded-b-lg border border-t-0 p-4 shadow-lg",
           )}
         >
           <p className="text-muted-foreground text-sm">{game.description}</p>

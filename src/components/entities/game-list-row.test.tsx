@@ -43,6 +43,25 @@ describe("GameListRow", () => {
     expect(description).toHaveClass("line-clamp-2");
   });
 
+  it("sizes the cover to match the grid card format (#121)", () => {
+    render(<GameListRow game={game()} />);
+
+    expect(document.querySelector(".size-24")).toBeInTheDocument();
+  });
+
+  it("merges the hover overlay into the row — no gap, shared bottom radius", () => {
+    render(<GameListRow game={game()} />);
+    const row = screen.getByRole("link");
+
+    fireEvent.mouseEnter(row);
+
+    expect(row).toHaveClass("rounded-t-lg");
+    const overlay = screen
+      .getAllByText("Baue den modernsten Zoo der Welt.")[1]
+      .closest("div");
+    expect(overlay).toHaveClass("rounded-b-lg", "border-t-0", "-mt-px");
+  });
+
   it("shows the expanded overlay only after mouseEnter, hides it after mouseLeave", () => {
     render(<GameListRow game={game()} />);
     const row = screen.getByRole("link");
