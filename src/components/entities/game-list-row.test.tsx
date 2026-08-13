@@ -79,4 +79,16 @@ describe("GameListRow", () => {
     const result = fireEvent.click(row);
     expect(result).toBe(true);
   });
+
+  it("shows a ribbon corner for an expansion (#103)", () => {
+    render(<GameListRow game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })} />);
+    expect(document.querySelector("svg.lucide-package-plus")).toBeInTheDocument();
+  });
+
+  it("does not show a ribbon corner for a base game", () => {
+    render(<GameListRow game={game({ kind: BoardGameKind.BOARDGAME })} />);
+    expect(
+      document.querySelector("svg.lucide-package-plus"),
+    ).not.toBeInTheDocument();
+  });
 });

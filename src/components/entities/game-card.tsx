@@ -5,6 +5,7 @@ import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
@@ -29,14 +30,10 @@ export function GameCard({
         <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
       )}
       {isExpansion && (
-        <CardCornerOverlay corner="top-left">
-          <span
-            title="Erweiterung"
-            className="bg-background inline-flex size-8 items-center justify-center rounded-md border"
-          >
-            <PackagePlus className="size-4" />
-          </span>
-        </CardCornerOverlay>
+        <RibbonCorner>
+          <PackagePlus className="size-3" />
+          Erweiterung
+        </RibbonCorner>
       )}
       <GameCoverMedia
         imageUrl={game.imageUrl}
