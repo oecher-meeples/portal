@@ -56,4 +56,27 @@ describe("GameListRow", () => {
     fireEvent.mouseLeave(row);
     expect(screen.getAllByText("Baue den modernsten Zoo der Welt.")).toHaveLength(1);
   });
+
+  it("first touch tap expands without navigating, second tap navigates", () => {
+    render(<GameListRow game={game()} />);
+    const row = screen.getByRole("link") as HTMLAnchorElement;
+
+    fireEvent.pointerDown(row, { pointerType: "touch" });
+    const firstClick = fireEvent.click(row);
+    expect(firstClick).toBe(false); // preventDefault() was called
+    expect(screen.getAllByText("Baue den modernsten Zoo der Welt.")).toHaveLength(2);
+
+    fireEvent.pointerDown(row, { pointerType: "touch" });
+    const secondClick = fireEvent.click(row);
+    expect(secondClick).toBe(true); // navigation not prevented
+  });
+
+  it("does not intercept mouse clicks", () => {
+    render(<GameListRow game={game()} />);
+    const row = screen.getByRole("link") as HTMLAnchorElement;
+
+    fireEvent.pointerDown(row, { pointerType: "mouse" });
+    const result = fireEvent.click(row);
+    expect(result).toBe(true);
+  });
 });

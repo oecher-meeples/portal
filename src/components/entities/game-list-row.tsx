@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -21,6 +21,7 @@ export function GameListRow({
 }) {
   const [expanded, setExpanded] = useState(false);
   const zustand = "zustand" in game ? game.zustand : undefined;
+  const lastPointerTypeRef = useRef<string | null>(null);
 
   return (
     <Link
@@ -28,6 +29,16 @@ export function GameListRow({
       className="group bg-card hover:border-primary/60 relative flex items-center gap-4 rounded-lg border p-3 transition-colors"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
+      onPointerDown={(event) => {
+        lastPointerTypeRef.current = event.pointerType;
+      }}
+      onClick={(event) => {
+        if (lastPointerTypeRef.current !== "touch") return;
+        if (!expanded) {
+          event.preventDefault();
+          setExpanded(true);
+        }
+      }}
     >
       <GameCoverMedia
         imageUrl={game.imageUrl}
