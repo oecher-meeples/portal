@@ -34,6 +34,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     responsibleName: "Alex",
     unitChain: "Karton 1",
     locationChain: "Karton 1",
+    explainerCount: 0,
     ...overrides,
   };
 }

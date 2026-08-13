@@ -57,6 +57,9 @@ export type LudothekGame = {
   /** Person/event first, then the storage chain — the ready-to-render
    * display string every simple consumer uses (#121 Standort-Kette). */
   locationChain: string;
+  /** Erklärbären count for this title — shown in the list-row hover overlay
+   * (#143). Public, not location/person data, so it survives `toPublicGame`. */
+  explainerCount: number;
 };
 
 /**

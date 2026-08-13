@@ -27,6 +27,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     kind: BoardGameKind.BOARDGAME,
     baseGames: [],
     expansions: [],
+    explainerCount: 0,
     ...overrides,
   };
 }
@@ -153,5 +154,41 @@ describe("GameListRow", () => {
     );
 
     expect(screen.getByText("Bearbeiten")).toBeInTheDocument();
+  });
+
+  it("shows mechanics, weight and Erklärbären count in the hover overlay (#143)", () => {
+    render(
+      <GameListRow
+        game={game({
+          mechanics: ["Engine-Building", "Tableau-Building"],
+          weight: 3.7,
+          explainerCount: 2,
+        })}
+      />,
+    );
+    const row = screen.getByRole("link");
+
+    fireEvent.mouseEnter(row);
+
+    expect(screen.getByText("Engine-Building")).toBeInTheDocument();
+    expect(screen.getByText("Tableau-Building")).toBeInTheDocument();
+    expect(screen.getByText("Gewichtung 3.7/5")).toBeInTheDocument();
+    expect(screen.getByText("2 Erklärbären")).toBeInTheDocument();
+  });
+
+  it("uses the singular for exactly one Erklärbär", () => {
+    render(<GameListRow game={game({ explainerCount: 1 })} />);
+    fireEvent.mouseEnter(screen.getByRole("link"));
+
+    expect(screen.getByText("1 Erklärbär")).toBeInTheDocument();
+  });
+
+  it("keeps playersAndDuration visible outside the overlay and never duplicated (#143)", () => {
+    render(<GameListRow game={game({ explainerCount: 2 })} />);
+    const row = screen.getByRole("link");
+
+    expect(screen.getAllByText("1–4 Spieler · 90’")).toHaveLength(1);
+    fireEvent.mouseEnter(row);
+    expect(screen.getAllByText("1–4 Spieler · 90’")).toHaveLength(1);
   });
 });

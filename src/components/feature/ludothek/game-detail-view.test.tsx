@@ -60,6 +60,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     kind: BoardGameKind.BOARDGAME,
     baseGames: [],
     expansions: [],
+    explainerCount: 0,
     ...overrides,
   };
 }

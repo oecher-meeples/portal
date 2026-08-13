@@ -34,13 +34,19 @@ export function GameListRow({
   const zustand = "zustand" in game ? game.zustand : undefined;
   const isExpansion = game.kind === "BOARDGAME_EXPANSION";
   const lastPointerTypeRef = useRef<string | null>(null);
+  const hasOverlayContent = Boolean(
+    game.description ||
+    game.mechanics.length > 0 ||
+    game.weight ||
+    game.explainerCount > 0,
+  );
 
   return (
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
       className={cn(
         "group bg-card hover:border-primary/60 relative flex items-center gap-5 border p-5 transition-colors",
-        expanded && game.description ? "rounded-t-lg" : "rounded-lg",
+        expanded && hasOverlayContent ? "rounded-t-lg" : "rounded-lg",
       )}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
@@ -92,13 +98,38 @@ export function GameListRow({
         </StopRowNavigation>
       )}
 
-      {expanded && game.description && (
+      {expanded && hasOverlayContent && (
         <div
           className={cn(
-            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 -mt-px rounded-b-lg border border-t-0 p-4 shadow-lg",
+            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
           )}
         >
-          <p className="text-muted-foreground text-sm">{game.description}</p>
+          {game.description && (
+            <p className="text-muted-foreground text-sm">{game.description}</p>
+          )}
+          {(game.mechanics.length > 0 || game.weight) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {game.mechanics.map((mechanic) => (
+                <span
+                  key={mechanic}
+                  className="bg-muted rounded-full px-2 py-0.5 text-xs font-medium"
+                >
+                  {mechanic}
+                </span>
+              ))}
+              {game.weight && (
+                <span className="text-muted-foreground text-xs">
+                  Gewichtung {game.weight.toFixed(1)}/5
+                </span>
+              )}
+            </div>
+          )}
+          {game.explainerCount > 0 && (
+            <p className="text-muted-foreground text-xs">
+              {game.explainerCount}{" "}
+              {game.explainerCount === 1 ? "Erklärbär" : "Erklärbären"}
+            </p>
+          )}
         </div>
       )}
     </Link>
