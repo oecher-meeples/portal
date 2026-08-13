@@ -349,6 +349,8 @@ model Invite {
 model BoardGame {
   id                String        @id @default(cuid())
   title             String
+  /// Routing basis for the title detail page (see ADR on the exemplar→title slug migration).
+  slug              String        @unique
   /// The single reliable product identity; unique now that copies live in GameCopy.
   bggId             Int?          @unique
   /// The manufacturer barcode identifies the product, not the single copy — never unique.

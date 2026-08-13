@@ -53,6 +53,7 @@ beforeEach(() => {
   prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
   prismaMock.boardGame.count.mockResolvedValue(0);
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
+  prismaMock.boardGame.findFirst.mockResolvedValue(null);
 });
 
 describe("createBoardGame", () => {
@@ -191,7 +192,25 @@ describe("findOrCreateBoardGameTitle", () => {
     await findOrCreateBoardGameTitle(VALID_INPUT);
 
     expect(prismaMock.boardGame.findUnique).not.toHaveBeenCalled();
-    expect(prismaMock.boardGame.create).toHaveBeenCalled();
+    expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        title: "Arche Nova",
+        slug: "arche-nova",
+      }),
+    });
+  });
+
+  it("resolves a title-slug collision with a numeric suffix", async () => {
+    prismaMock.boardGame.findFirst
+      .mockResolvedValueOnce({ id: "existing" } as never)
+      .mockResolvedValueOnce(null);
+    prismaMock.boardGame.create.mockResolvedValue({ id: "game-2" } as never);
+
+    await findOrCreateBoardGameTitle(VALID_INPUT);
+
+    expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ slug: "arche-nova-2" }),
+    });
   });
 
   it("reuses the title found by bggId", async () => {

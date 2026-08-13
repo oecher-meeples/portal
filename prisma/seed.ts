@@ -8,7 +8,10 @@ import {
 import { prisma } from "../src/lib/utils/prisma";
 import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
-import { findOrCreateBoardGameTitle } from "../src/lib/ludothek/board-games";
+import {
+  findOrCreateBoardGameTitle,
+  uniqueBoardGameSlug,
+} from "../src/lib/ludothek/board-games";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -265,9 +268,11 @@ async function seedDemoGames(adminMeepleId: string) {
   for (const game of DEMO_GAMES) {
     if (existingIdByTitle.has(game.title)) continue;
 
+    const slug = await uniqueBoardGameSlug(prisma, game.title);
     const created = await prisma.boardGame.create({
       data: {
         title: game.title,
+        slug,
         imageUrl: game.imageUrl,
         minPlayers: game.minPlayers,
         maxPlayers: game.maxPlayers,

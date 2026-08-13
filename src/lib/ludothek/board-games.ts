@@ -13,6 +13,7 @@ import {
   fetchBggGame,
   type BggGameData,
 } from "@/lib/bgg/client";
+import { uniqueSlug } from "@/lib/utils/slug";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -94,6 +95,17 @@ async function revalidateAssignmentPaths(
   }
 }
 
+export async function uniqueBoardGameSlug(tx: Tx, title: string) {
+  return uniqueSlug(
+    title,
+    async (slug) =>
+      (await tx.boardGame.findFirst({
+        where: { slug },
+        select: { id: true },
+      })) !== null,
+  );
+}
+
 /** Finds the title by `bggId` (the one reliable product identity) or creates it. */
 export async function findOrCreateBoardGameTitle(
   input: BoardGameTitleInput,
@@ -106,8 +118,9 @@ export async function findOrCreateBoardGameTitle(
     if (existing) return existing;
   }
 
+  const slug = await uniqueBoardGameSlug(tx, input.title);
   return tx.boardGame.create({
-    data: { title: input.title, ...toBoardGameTitleData(input) },
+    data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
 }
 
