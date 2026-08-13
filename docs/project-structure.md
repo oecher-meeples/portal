@@ -42,6 +42,7 @@ src/lib/
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
 ├── legal/      Rechtliches-Dokumente (Satzung/Datenschutz/Impressum/Beitragsordnung, feste Slugs): PDF-Text-Extraktion
 │               ohne Gliederungslogik (`pdf-extract.ts`, via `unpdf`), Zod-Validierung der `sections`-Json-Spalte in `actions.ts`
+├── links/      Kuratierte „Wichtige Links" fürs Dashboard (`ImportantLink`) — Reihenfolge nach `createdAt`, keine manuelle Sortierung
 ├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
@@ -81,6 +82,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `action-button.tsx` | Button, der eine Server Action ausführt (ersetzt 8 `Delete…Button`-Wrapper) |
 | `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
+| `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `page-heading`, `stat-tile`, `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
@@ -94,6 +96,7 @@ entities/
 ├── content-card.tsx            News-/Termin-Kachel
 ├── content-list-row.tsx        News-Listenzeile
 ├── content-type-badge.tsx      Blog/Termin/Turnier
+├── content-timeline-entry.tsx  News-Vollansicht-Eintrag: Cover, Metadaten, vollständiger Markdown-Body (#135)
 ├── game-card.tsx                Spiele-Kachel (Grid)
 ├── game-list-row.tsx            Spiele-Zeile (Liste)
 ├── game-compact-row.tsx         Dichte Spiele-Zeile (Kompakt, nur `games:manage`)
@@ -111,6 +114,7 @@ Ein **Widget** ist ein in sich geschlossener Funktionsblock, der einen komplette
 
 ```text
 widgets/
+├── important-links-grid.tsx  Card-Grid für Link-Kacheln, geteilt von Schnellzugriff (fest) und den admin-kuratierten Wichtige Links (#110)
 ├── game-holding/
 │   ├── game-holding-panel.tsx     Detailseiten-Panel: ausleihen, bestätigen, weitergeben, zurückgeben, einlagern
 │   ├── game-actions-menu.tsx      Rechtebasiertes Aktionen-Dropdown für Listen-/Kompakt-Zeilen (#121/#122)
