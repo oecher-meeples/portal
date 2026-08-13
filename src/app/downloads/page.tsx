@@ -1,8 +1,10 @@
 import type { DownloadStatus } from "@prisma/client";
 import { LEGAL_DOCS } from "@/data/downloads";
-import { getRealSessionTier } from "@/lib/auth/session";
+import {
+  getRealSessionTier,
+  hasPermissionInCurrentView,
+} from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import {
   listVisibleDownloads,
   listOfflineDownloadsForAdmin,
@@ -38,9 +40,9 @@ export default async function DownloadsPage() {
     getCurrentUser(),
   ]);
   const canManage =
-    !!user && (await hasPermission(user.id, "downloads:manage"));
+    !!user && (await hasPermissionInCurrentView(user.id, "downloads:manage"));
   const canManageLegal =
-    !!user && (await hasPermission(user.id, "legal:manage"));
+    !!user && (await hasPermissionInCurrentView(user.id, "legal:manage"));
   const [downloads, offlineDownloads] = await Promise.all([
     listVisibleDownloads(tier),
     canManage ? listOfflineDownloadsForAdmin() : Promise.resolve([]),
