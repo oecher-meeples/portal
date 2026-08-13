@@ -71,6 +71,25 @@ describe("createLfgPost", () => {
     expect(result).toEqual({ error: "Bitte einen Titel angeben." });
     expect(prismaMock.lfgPost.create).not.toHaveBeenCalled();
   });
+
+  it("links the post to a board game when boardGameId is set", async () => {
+    await createLfgPost({ ...VALID_INPUT, boardGameId: "board-1" });
+
+    expect(prismaMock.lfgPost.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ boardGameId: "board-1" }),
+    });
+  });
+
+  it("leaves boardGameId null and gameTitle usable without a selection", async () => {
+    await createLfgPost({ ...VALID_INPUT, gameTitle: "Arche Nova" });
+
+    expect(prismaMock.lfgPost.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        boardGameId: null,
+        gameTitle: "Arche Nova",
+      }),
+    });
+  });
 });
 
 describe("joinLfgPost", () => {

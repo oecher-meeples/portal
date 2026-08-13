@@ -9,6 +9,8 @@ import { getLfgStatus } from "@/lib/content/lfg";
 export type LfgPostInput = {
   title: string;
   gameTitle?: string | null;
+  /** Optional link to an inventory title (#34) — never required, gameTitle stays independent. */
+  boardGameId?: string | null;
   description: string;
   plannedAt?: Date | null;
   dateNote?: string | null;
@@ -31,6 +33,7 @@ export async function createLfgPost(input: LfgPostInput) {
       data: {
         title: input.title.trim(),
         gameTitle: input.gameTitle || null,
+        boardGameId: input.boardGameId || null,
         description: input.description,
         plannedAt: input.plannedAt ?? null,
         dateNote: input.dateNote || null,
