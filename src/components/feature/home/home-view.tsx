@@ -11,14 +11,15 @@ type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
   posts: Awaited<ReturnType<typeof getLatestPosts>>;
   gameCount: number;
-  isLoggedIn: boolean;
+  /** Mitglied-Tier, nicht nur eingeloggt — ein Gast bleibt Gast, auch mit Account (#96). */
+  isMember: boolean;
 };
 
 export function HomeView({
   events,
   posts,
   gameCount,
-  isLoggedIn,
+  isMember,
 }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-10">
@@ -85,7 +86,7 @@ export function HomeView({
             </ul>
           </div>
 
-          {isLoggedIn && (
+          {isMember && (
             <div className="bg-primary/10 rounded-lg border p-5">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
                 <HeartHandshake className="size-4" />
