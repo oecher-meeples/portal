@@ -1,6 +1,6 @@
 import type { DownloadStatus } from "@prisma/client";
 import { LEGAL_DOCS } from "@/data/downloads";
-import { getSessionTier } from "@/lib/auth/session";
+import { getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import {
@@ -33,7 +33,10 @@ function toDownloadListItem(download: {
 }
 
 export default async function DownloadsPage() {
-  const [tier, user] = await Promise.all([getSessionTier(), getCurrentUser()]);
+  const [tier, user] = await Promise.all([
+    getRealSessionTier(),
+    getCurrentUser(),
+  ]);
   const canManage =
     !!user && (await hasPermission(user.id, "downloads:manage"));
   const [downloads, offlineDownloads] = await Promise.all([
