@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, ScanLine } from "lucide-react";
 import { GameCard } from "@/components/entities/game-card";
@@ -5,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
+import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { buildHref } from "@/lib/utils/query-string";
 import type {
   DurationFilter,
@@ -84,8 +89,18 @@ export function LudothekBrowser({
   /** Internal-only, never passed for the guest area — see CONTEXT.md "kein Leak". */
   privateCollectionResults?: PrivateCollectionResult[];
 }) {
+  const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
     buildHref(basePath, rawSearchParams, patch);
+
+  const [search, setSearch] = useState(filters.search ?? "");
+  const debouncedSearch = useDebouncedValue(search);
+
+  useEffect(() => {
+    if (debouncedSearch === (filters.search ?? "")) return;
+    router.replace(href({ q: debouncedSearch || undefined }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
+  }, [debouncedSearch]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -108,8 +123,9 @@ export function LudothekBrowser({
             )}
           <Input
             name="q"
-            defaultValue={filters.search ?? ""}
-            placeholder="Spiel suchen …"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Spiel, EAN oder BGG-ID suchen …"
           />
           <Button type="submit">Suchen</Button>
           <Button

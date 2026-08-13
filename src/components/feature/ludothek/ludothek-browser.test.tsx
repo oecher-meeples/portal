@@ -1,11 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: vi.fn(),
   hasPermission: vi.fn(),
+}));
+const routerReplaceMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: routerReplaceMock, push: vi.fn() }),
 }));
 
 const { LudothekBrowser } = await import("./ludothek-browser");
@@ -77,5 +81,26 @@ describe("LudothekBrowser — private collection leak prevention", () => {
     expect(
       screen.getByText(/im Privatbesitz von Lea Demo/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("LudothekBrowser — live search", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("updates the q search param after the debounce delay while typing", () => {
+    vi.useFakeTimers();
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    const input = screen.getByPlaceholderText("Spiel, EAN oder BGG-ID suchen …");
+    fireEvent.change(input, { target: { value: "arche" } });
+    expect(routerReplaceMock).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?q=arche");
   });
 });
