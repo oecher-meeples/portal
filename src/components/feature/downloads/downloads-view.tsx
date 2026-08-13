@@ -30,6 +30,7 @@ type DownloadsViewProps = {
   legalDocs: LegalDoc[];
   canManage: boolean;
   canManageLegal: boolean;
+  isMember: boolean;
 };
 
 export function DownloadsView({
@@ -38,6 +39,7 @@ export function DownloadsView({
   legalDocs,
   canManage,
   canManageLegal,
+  isMember,
 }: DownloadsViewProps) {
   const [prevDownloads, setPrevDownloads] = useState(downloads);
   const [items, setItems] = useState(downloads);
@@ -87,14 +89,16 @@ export function DownloadsView({
           <DownloadUploadForm />
         </div>
       )}
-      <Input
-        type="search"
-        placeholder="Nach Titel suchen…"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="max-w-sm"
-        aria-label="Downloads durchsuchen"
-      />
+      {isMember && (
+        <Input
+          type="search"
+          placeholder="Nach Titel suchen…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="max-w-sm"
+          aria-label="Downloads durchsuchen"
+        />
+      )}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="flex flex-col gap-2">
           <div className="bg-card flex flex-col divide-y rounded-lg border">
