@@ -8,12 +8,9 @@ import { LudothekResults } from "@/components/feature/ludothek/ludothek-results"
 vi.mock("@/components/widgets/board-game/game-card-edit-overlay", () => ({
   GameCardEditOverlay: () => null,
 }));
-vi.mock(
-  "@/components/widgets/board-game/edit-board-game-exemplar-dialog",
-  () => ({
-    EditBoardGameExemplarDialog: () => null,
-  }),
-);
+vi.mock("@/components/widgets/board-game/edit-board-game-title-dialog", () => ({
+  EditBoardGameTitleDialog: () => null,
+}));
 vi.mock("@/components/widgets/game-holding/game-actions-menu", () => ({
   GameActionsMenu: () => null,
 }));

@@ -8,14 +8,19 @@ import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
 
-/** Edits one physical copy's condition — the counterpart to
- * `EditBoardGameTitleDialog`, scoped to a single `GameCopy` (see ADR 0008). */
+/** Edits one physical copy's condition (Mängelvermerk) — the counterpart to
+ * `EditBoardGameTitleDialog`, scoped to a single `GameCopy` (see ADR 0008).
+ * `triggerLabel` defaults to the exemplar-table's own "Bearbeiten" but is
+ * overridden to "Mängelvermerk bearbeiten" where it sits in `GameActionsMenu`
+ * next to the title-level "Bearbeiten" (Plan-Schritt 10). */
 export function EditBoardGameExemplarDialog({
   copyId,
   condition,
+  triggerLabel = "Bearbeiten",
 }: {
   copyId: string;
   condition: string | null;
+  triggerLabel?: string;
 }) {
   const [value, setValue] = useState(condition ?? "");
 
@@ -24,7 +29,7 @@ export function EditBoardGameExemplarDialog({
       trigger={
         <Button size="sm" variant="outline">
           <Pencil className="size-4" />
-          Bearbeiten
+          {triggerLabel}
         </Button>
       }
       title="Exemplar bearbeiten"

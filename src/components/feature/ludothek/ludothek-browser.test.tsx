@@ -293,3 +293,59 @@ describe("LudothekBrowser — three render modes", () => {
     expect(grids.length).toBeGreaterThan(0);
   });
 });
+
+describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10)", () => {
+  it.each(["liste", "compact"] as const)(
+    "opens the title dialog, not an exemplar dialog, from the %s row",
+    async (view) => {
+      render(
+        <LudothekBrowser
+          {...baseProps()}
+          games={[game()]}
+          filters={{ view }}
+          internal
+          canManageGames
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Titel bearbeiten/ }));
+
+      expect(await screen.findByLabelText("Titel")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
+    },
+  );
+
+  it("opens the title dialog from the grid card's edit overlay", async () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        internal
+        canManageGames
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Titel bearbeiten/ }));
+
+    expect(await screen.findByLabelText("Titel")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
+  });
+
+  it("offers Mängelvermerk bearbeiten in the actions menu instead", async () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        filters={{ view: "liste" }}
+        internal
+        canManageGames
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+
+    expect(
+      await screen.findByText("Mängelvermerk bearbeiten"),
+    ).toBeInTheDocument();
+  });
+});

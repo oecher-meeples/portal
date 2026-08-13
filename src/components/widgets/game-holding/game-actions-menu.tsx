@@ -15,6 +15,7 @@ import { useAction } from "@/components/ui/use-action";
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
+import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
 import {
   AcceptReturnDialog,
   BorrowGameDialog,
@@ -33,11 +34,15 @@ export function GameActionsMenu({
   gameCopyId,
   boardGameId,
   boardGameTitle,
+  condition,
   canManageGames,
 }: {
   gameCopyId: string;
   boardGameId: string;
   boardGameTitle: string;
+  /** This copy's Mängelvermerk — only needed for the "Mängelvermerk
+   * bearbeiten" entry below, `null` when unset. */
+  condition?: string | null;
   canManageGames: boolean;
 }) {
   const { run, pending } = useAction();
@@ -81,6 +86,13 @@ export function GameActionsMenu({
               >
                 Prüfung anfordern
               </DropdownMenuItem>
+              <div className="px-1.5 py-1">
+                <EditBoardGameExemplarDialog
+                  copyId={gameCopyId}
+                  condition={condition ?? null}
+                  triggerLabel="Mängelvermerk bearbeiten"
+                />
+              </div>
               <div className="px-1.5 py-1">
                 <AddGameCopyDialog
                   boardGameId={boardGameId}

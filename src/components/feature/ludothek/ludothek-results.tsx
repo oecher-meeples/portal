@@ -2,7 +2,7 @@ import { GameCard } from "@/components/entities/game-card";
 import { GameListRow } from "@/components/entities/game-list-row";
 import { GameCompactRow } from "@/components/entities/game-compact-row";
 import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
-import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
+import { EditBoardGameTitleDialog } from "@/components/widgets/board-game/edit-board-game-title-dialog";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import { groupGamesByTitle } from "@/lib/ludothek/title-grouping";
 import type {
@@ -13,19 +13,20 @@ import type {
 
 const EMPTY_MESSAGE = "Keine Spiele gefunden.";
 
-/** Admin controls for one copy — shared by the list and compact rows (#121/#122). */
+/** Admin controls shared by the list and compact rows (#121/#122):
+ * "Bearbeiten" now always opens the title dialog (Plan-Schritt 10) — with
+ * `copyCount > 1` there's no single exemplar left to edit here, the
+ * Mängelvermerk moved into the actions menu instead. */
 function rowActions(game: PublicLudothekGame | LudothekGame) {
   if (!("condition" in game)) return undefined;
   return (
     <>
-      <EditBoardGameExemplarDialog
-        copyId={game.id}
-        condition={game.condition}
-      />
+      <EditBoardGameTitleDialog game={game} />
       <GameActionsMenu
         gameCopyId={game.id}
         boardGameId={game.boardGameId}
         boardGameTitle={game.title}
+        condition={game.condition}
         canManageGames
       />
     </>
