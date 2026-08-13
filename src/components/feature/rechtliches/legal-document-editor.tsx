@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField, TextAreaField } from "@/components/ui/field";
@@ -26,14 +26,14 @@ export type LegalDocumentRow = {
 /** Section shape while it's being edited — `paragraphs` stays one string
  * (one paragraph per line) so a single Textarea can hold it, and only
  * splits back into `string[]` on save. */
-type EditableSection = {
+export type EditableSection = {
   id: string;
   heading: string;
   paragraphsText: string;
   links?: { label: string; href: string }[];
 };
 
-function toEditable(sections: LegalDocumentRow["sections"]) {
+export function toEditable(sections: LegalDocumentRow["sections"]) {
   return sections.map((section) => ({
     id: section.id,
     heading: section.heading,
@@ -42,7 +42,7 @@ function toEditable(sections: LegalDocumentRow["sections"]) {
   }));
 }
 
-function toSections(sections: EditableSection[]): LegalSection[] {
+export function toSections(sections: EditableSection[]): LegalSection[] {
   return sections.map((section) => ({
     id: section.id,
     heading: section.heading,
@@ -90,30 +90,27 @@ function uniqueLocalId(heading: string, existingIds: string[]) {
 
 export function LegalDocumentEditor({
   doc,
+  title,
+  onTitleChange,
+  sections,
+  onSectionsChange,
+  pdfFileUrl,
+  onPdfFileUrlChange,
   onSaved,
-  onDraftChange,
 }: {
   doc: LegalDocumentRow;
+  title: string;
+  onTitleChange: (title: string) => void;
+  sections: EditableSection[];
+  onSectionsChange: (
+    updater: (prev: EditableSection[]) => EditableSection[],
+  ) => void;
+  pdfFileUrl?: string;
+  onPdfFileUrlChange: (url?: string) => void;
   onSaved: () => void;
-  /** Reports the live, unsaved draft on every change — drives the preview
-   * tab in `LegalDocEditView` without round-tripping through the server. */
-  onDraftChange?: (draft: {
-    title: string;
-    sections: LegalSection[];
-    pdfFileUrl?: string;
-  }) => void;
 }) {
-  const [title, setTitle] = useState(doc.title);
-  const [pdfFileUrl, setPdfFileUrl] = useState(doc.pdfFileUrl ?? undefined);
   const [extractedText, setExtractedText] = useState<string | null>(null);
-  const [sections, setSections] = useState<EditableSection[]>(
-    toEditable(doc.sections),
-  );
   const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    onDraftChange?.({ title, sections: toSections(sections), pdfFileUrl });
-  }, [title, sections, pdfFileUrl, onDraftChange]);
 
   const {
     uploadFiles,
@@ -139,7 +136,7 @@ export function LegalDocumentEditor({
     const [fileUrl] = await uploadFiles([file]);
     if (!fileUrl) return;
 
-    setPdfFileUrl(fileUrl);
+    onPdfFileUrlChange(fileUrl);
     await runExtract(async () => {
       const result = await extractLegalPdfText(fileUrl);
       if (result && "text" in result) setExtractedText(result.text);
@@ -148,7 +145,7 @@ export function LegalDocumentEditor({
   }
 
   function updateSection(id: string, patch: Partial<EditableSection>) {
-    setSections((prev) =>
+    onSectionsChange((prev) =>
       prev.map((section) =>
         section.id === id ? { ...section, ...patch } : section,
       ),
@@ -160,7 +157,7 @@ export function LegalDocumentEditor({
       "neue-section",
       sections.map((s) => s.id),
     );
-    setSections((prev) => {
+    onSectionsChange((prev) => {
       const next = [...prev];
       next.splice(index, 0, {
         id,
@@ -172,12 +169,12 @@ export function LegalDocumentEditor({
   }
 
   function removeSection(id: string) {
-    setSections((prev) => prev.filter((section) => section.id !== id));
+    onSectionsChange((prev) => prev.filter((section) => section.id !== id));
   }
 
   function moveSection(targetId: string) {
     if (!draggedId || draggedId === targetId) return;
-    setSections((prev) => {
+    onSectionsChange((prev) => {
       const next = [...prev];
       const fromIndex = next.findIndex((s) => s.id === draggedId);
       const toIndex = next.findIndex((s) => s.id === targetId);
@@ -203,7 +200,7 @@ export function LegalDocumentEditor({
         id={`legal-title-${doc.slug}`}
         label="Titel"
         value={title}
-        onChange={(event) => setTitle(event.target.value)}
+        onChange={(event) => onTitleChange(event.target.value)}
       />
 
       <div className="flex flex-col gap-2">
@@ -235,17 +232,21 @@ export function LegalDocumentEditor({
         {sections.map((section, index) => (
           <div key={section.id} className="flex flex-col gap-3">
             <div
-              draggable
-              onDragStart={() => setDraggedId(section.id)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => moveSection(section.id)}
               className="bg-card flex flex-col gap-2 rounded-md border p-3"
             >
               <div className="flex items-center gap-2">
-                <GripVertical
-                  className="text-muted-foreground size-4 shrink-0 cursor-grab"
-                  aria-hidden
-                />
+                <span
+                  draggable
+                  onDragStart={() => setDraggedId(section.id)}
+                  className="cursor-grab"
+                >
+                  <GripVertical
+                    className="text-muted-foreground size-4 shrink-0"
+                    aria-hidden
+                  />
+                </span>
                 <div className="min-w-0 flex-1">
                   <TextField
                     id={`legal-heading-${section.id}`}

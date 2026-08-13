@@ -4,28 +4,29 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { LegalSection } from "@/data/legal";
 import {
   LegalDocumentEditor,
+  toEditable,
+  toSections,
+  type EditableSection,
   type LegalDocumentRow,
 } from "@/components/feature/rechtliches/legal-document-editor";
 import { LegalDocView } from "@/components/feature/rechtliches/legal-doc-view";
 
-/** Edit page for a single Rechtliches document. Two tabs share one draft:
- * "Vorschau" renders the exact same `LegalDocView` the public page uses,
- * fed with the live, unsaved edits instead of what's stored — so it always
- * matches what publishing would look like. */
+/** Edit page for a single Rechtliches document. Two tabs share one draft —
+ * title/sections/pdfFileUrl live here, not inside `LegalDocumentEditor`,
+ * because the Tabs component unmounts the inactive panel: state owned by
+ * the editor itself would reset to `doc` every time you switch back from
+ * "Vorschau". "Vorschau" renders the exact same `LegalDocView` the public
+ * page uses, fed with this live, unsaved draft instead of what's stored —
+ * so it always matches what publishing would look like. */
 export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<{
-    title: string;
-    sections: LegalSection[];
-    pdfFileUrl?: string;
-  }>({
-    title: doc.title,
-    sections: doc.sections,
-    pdfFileUrl: doc.pdfFileUrl ?? undefined,
-  });
+  const [title, setTitle] = useState(doc.title);
+  const [pdfFileUrl, setPdfFileUrl] = useState(doc.pdfFileUrl ?? undefined);
+  const [sections, setSections] = useState<EditableSection[]>(
+    toEditable(doc.sections),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,15 +39,20 @@ export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
         <TabsContent value="edit">
           <LegalDocumentEditor
             doc={doc}
-            onDraftChange={setDraft}
+            title={title}
+            onTitleChange={setTitle}
+            sections={sections}
+            onSectionsChange={setSections}
+            pdfFileUrl={pdfFileUrl}
+            onPdfFileUrlChange={setPdfFileUrl}
             onSaved={() => router.push(`/rechtliches/${doc.slug}`)}
           />
         </TabsContent>
         <TabsContent value="preview">
           <LegalDocView
-            doc={{ slug: doc.slug, title: draft.title }}
-            sections={draft.sections}
-            pdfFileUrl={draft.pdfFileUrl}
+            doc={{ slug: doc.slug, title }}
+            sections={toSections(sections)}
+            pdfFileUrl={pdfFileUrl}
           />
         </TabsContent>
       </Tabs>
