@@ -30,6 +30,8 @@ type DashboardViewProps = {
   unconfirmedReturns: PendingHolding[];
   ownOpenLfgCount: number;
   upcomingShiftCount: number;
+  totalOpenLfgCount: number;
+  activeMarketListingCount: number;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
 };
 
@@ -43,6 +45,8 @@ export function DashboardView({
   unconfirmedReturns,
   ownOpenLfgCount,
   upcomingShiftCount,
+  totalOpenLfgCount,
+  activeMarketListingCount,
   resignationNotice,
 }: DashboardViewProps) {
   return (
@@ -93,6 +97,23 @@ export function DashboardView({
             label="Anstehende Schichten"
             value={upcomingShiftCount}
             hint="eigene Zusagen"
+          />
+        </Link>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link href="/lfg">
+          <StatTile
+            label="Offene Gesuche"
+            value={totalOpenLfgCount}
+            hint="im Verein"
+          />
+        </Link>
+        <Link href="/markt">
+          <StatTile
+            label="Marktplatz-Angebote"
+            value={activeMarketListingCount}
+            hint="aktiv"
           />
         </Link>
       </div>
