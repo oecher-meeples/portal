@@ -209,13 +209,17 @@ model LfgPost {
   location          String?
   maxParticipants   Int
   createdByMeepleId String
+  /// Optional link to an inventory title (#34) — gameTitle free text stays the default, this is never required.
+  boardGameId       String?
   closedAt          DateTime?
   createdAt         DateTime  @default(now())
 
   createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
+  boardGame    BoardGame?       @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
   participants LfgParticipant[]
 
   @@index([createdByMeepleId])
+  @@index([boardGameId])
   @@map("lfg_posts")
 }
 
@@ -369,6 +373,7 @@ model BoardGame {
   expansionCollections     GameCollection[]             @relation("ExpansionCollections")
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
+  lfgPosts                 LfgPost[]
 
   @@index([ean])
   @@map("board_games")
