@@ -4,6 +4,7 @@ import { GameCompactRow } from "@/components/entities/game-compact-row";
 import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
 import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
+import { groupGamesByTitle } from "@/lib/ludothek/title-grouping";
 import type {
   LudothekGame,
   LudothekViewMode,
@@ -43,17 +44,21 @@ export function LudothekResults({
   view: LudothekViewMode;
   canManageGames: boolean;
 }) {
+  // One card/row per title in all three views (Plan-Schritt 8) — a title
+  // with several copies shows a single entry with the aggregated zustand.
+  const rows = groupGamesByTitle(games);
+
   if (view === "compact" && canManageGames) {
     return (
       <div className="flex flex-col gap-1.5">
-        {games.map((game) => (
+        {rows.map((game) => (
           <GameCompactRow
-            key={game.slug}
+            key={game.boardGameSlug}
             game={game as LudothekGame}
             actions={rowActions(game)}
           />
         ))}
-        {games.length === 0 && (
+        {rows.length === 0 && (
           <p className="text-muted-foreground text-sm">{EMPTY_MESSAGE}</p>
         )}
       </div>
@@ -63,14 +68,14 @@ export function LudothekResults({
   if (view === "liste") {
     return (
       <div className="flex flex-col gap-3">
-        {games.map((game) => (
+        {rows.map((game) => (
           <GameListRow
-            key={game.slug}
+            key={game.boardGameSlug}
             game={game}
             actions={canManageGames ? rowActions(game) : undefined}
           />
         ))}
-        {games.length === 0 && (
+        {rows.length === 0 && (
           <p className="text-muted-foreground text-sm">{EMPTY_MESSAGE}</p>
         )}
       </div>
@@ -79,9 +84,9 @@ export function LudothekResults({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {games.map((game) => (
+      {rows.map((game) => (
         <GameCard
-          key={game.slug}
+          key={game.boardGameSlug}
           game={game}
           actions={
             canManageGames && "ean" in game ? (
@@ -90,7 +95,7 @@ export function LudothekResults({
           }
         />
       ))}
-      {games.length === 0 && (
+      {rows.length === 0 && (
         <p className="text-muted-foreground col-span-full text-sm">
           {EMPTY_MESSAGE}
         </p>
