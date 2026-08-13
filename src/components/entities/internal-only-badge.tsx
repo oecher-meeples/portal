@@ -11,7 +11,7 @@ export function InternalOnlyBadge({
   return (
     <Tooltip content={tooltip}>
       <Image
-        src="/meeple-150x150.png"
+        src="/icons/meeple-150x150.png"
         alt={tooltip}
         width={16}
         height={16}

@@ -8,7 +8,7 @@ export function Logo() {
   const mark = (
     <Link href="/" className="flex shrink-0 items-center gap-2.5">
       <Image
-        src="/meeple.png"
+        src="/icons/meeple.png"
         alt="Oecher Meeples Logo"
         width={32}
         height={32}
