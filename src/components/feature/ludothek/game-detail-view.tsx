@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { PackagePlus } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
+import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
@@ -9,6 +11,10 @@ import {
   AssignExpansionDialog,
   type GameOption,
 } from "@/components/widgets/board-game/assign-expansion-dialog";
+import {
+  EditBoardGameTitleDialog,
+  type EditableBoardGameTitle,
+} from "@/components/widgets/board-game/edit-board-game-title-dialog";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
@@ -31,6 +37,7 @@ export function GameDetailView({
   internal,
   explainer,
   expansionAssignment,
+  titleEdit,
   openLfgPosts,
 }: {
   game: PublicLudothekGame;
@@ -49,13 +56,23 @@ export function GameDetailView({
   expansionAssignment?: {
     options: GameOption[];
   };
+  /** Only set for `games:manage` holders — edits the shared title (#121/#122). */
+  titleEdit?: EditableBoardGameTitle;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
 }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
       <div className="flex flex-col gap-4">
-        <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
+        <div className="relative overflow-hidden rounded-md">
+          <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
+          {game.kind === "BOARDGAME_EXPANSION" && (
+            <RibbonCorner>
+              <PackagePlus className="size-3" />
+              Erweiterung
+            </RibbonCorner>
+          )}
+        </div>
         {internal && (
           <GameZustandPill zustand={internal.zustand} className="w-fit" />
         )}
@@ -63,9 +80,12 @@ export function GameDetailView({
 
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight">
-            {game.title}
-          </h1>
+          <div className="flex items-start justify-between gap-2">
+            <h1 className="font-serif text-3xl font-bold tracking-tight">
+              {game.title}
+            </h1>
+            {titleEdit && <EditBoardGameTitleDialog game={titleEdit} />}
+          </div>
           <p className="text-muted-foreground mt-1">
             {game.minPlayers && game.maxPlayers
               ? `${game.minPlayers}–${game.maxPlayers} Spieler`

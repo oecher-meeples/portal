@@ -98,6 +98,23 @@ export default async function GameDetailPage({
         ]),
       }
     : undefined;
+  const titleEdit = canManageGames
+    ? {
+        boardGameId: game.boardGameId,
+        title: game.title,
+        ean: game.ean,
+        kind: game.kind,
+        bggId: game.bggId,
+        minPlayers: game.minPlayers,
+        maxPlayers: game.maxPlayers,
+        playTimeMinutes: game.playTimeMinutes,
+        weight: game.weight,
+        imageUrl: game.imageUrl,
+        description: game.description,
+        mechanics: game.mechanics,
+        explainerVideoUrl: game.explainerVideoUrl,
+      }
+    : undefined;
 
   return (
     <GameDetailView
@@ -110,6 +127,7 @@ export default async function GameDetailPage({
       }}
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
+      titleEdit={titleEdit}
       openLfgPosts={openLfgPosts}
     />
   );

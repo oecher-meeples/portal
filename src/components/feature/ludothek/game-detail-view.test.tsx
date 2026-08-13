@@ -13,6 +13,11 @@ vi.mock("@/components/feature/ludothek/explainer-game-panel", () => ({
 vi.mock("@/components/widgets/board-game/assign-expansion-dialog", () => ({
   AssignExpansionDialog: () => null,
 }));
+vi.mock("@/components/widgets/board-game/edit-board-game-title-dialog", () => ({
+  EditBoardGameTitleDialog: () => (
+    <button type="button">Titel bearbeiten</button>
+  ),
+}));
 
 const { GameDetailView } =
   await import("@/components/feature/ludothek/game-detail-view");
@@ -81,5 +86,53 @@ describe("GameDetailView — offene Gesuche (#34)", () => {
     render(<GameDetailView game={game()} />);
 
     expect(screen.queryByText("Offene Gesuche")).not.toBeInTheDocument();
+  });
+});
+
+const TITLE_EDIT_FIXTURE = {
+  boardGameId: "title-1",
+  title: "Arche Nova",
+  ean: null,
+  kind: BoardGameKind.BOARDGAME,
+  bggId: null,
+  minPlayers: 1,
+  maxPlayers: 4,
+  playTimeMinutes: 90,
+  weight: 3.7,
+  imageUrl: null,
+  description: null,
+  mechanics: [],
+  explainerVideoUrl: null,
+};
+
+describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {
+  it("shows the edit button when titleEdit is set (games:manage)", () => {
+    render(<GameDetailView game={game()} titleEdit={TITLE_EDIT_FIXTURE} />);
+
+    expect(screen.getByText("Titel bearbeiten")).toBeInTheDocument();
+  });
+
+  it("hides the edit button when titleEdit is not set (no permission)", () => {
+    render(<GameDetailView game={game()} />);
+
+    expect(screen.queryByText("Titel bearbeiten")).not.toBeInTheDocument();
+  });
+});
+
+describe("GameDetailView — expansion ribbon (#121/#122)", () => {
+  it("shows the ribbon corner for an expansion", () => {
+    render(
+      <GameDetailView
+        game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })}
+      />,
+    );
+
+    expect(screen.getByText("Erweiterung")).toBeInTheDocument();
+  });
+
+  it("hides the ribbon corner for a base game", () => {
+    render(<GameDetailView game={game({ kind: BoardGameKind.BOARDGAME })} />);
+
+    expect(screen.queryByText("Erweiterung")).not.toBeInTheDocument();
   });
 });
