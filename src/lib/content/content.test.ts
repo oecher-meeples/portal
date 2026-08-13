@@ -5,6 +5,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const {
   canViewContentItem,
+  computeVisibleItems,
   getAllContent,
   getContentBySlug,
   getInternalContent,
@@ -62,13 +63,14 @@ const ALL_POSTS = [
 ];
 
 describe("getAllContent", () => {
-  it("loads all posts from the database", async () => {
+  it("loads all posts from the database, including the body (#135)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
     const items = await getAllContent();
 
     expect(items).toHaveLength(3);
     expect(items[0].date).toBe("2026-06-15");
+    expect(items[0].body).toBe("Unser Sommerfest war ein voller Erfolg.");
   });
 });
 
@@ -193,6 +195,21 @@ describe("getUpcomingEvents", () => {
       "termin-public-null",
       "termin-public-false",
     ]);
+  });
+});
+
+describe("computeVisibleItems", () => {
+  it("slices down to the visible count", () => {
+    expect(computeVisibleItems([1, 2, 3, 4, 5], 3)).toEqual([1, 2, 3]);
+  });
+
+  it("returns all items when the count exceeds the list length", () => {
+    expect(computeVisibleItems([1, 2], 10)).toEqual([1, 2]);
+  });
+
+  it("returns an empty array for a zero or negative count", () => {
+    expect(computeVisibleItems([1, 2, 3], 0)).toEqual([]);
+    expect(computeVisibleItems([1, 2, 3], -5)).toEqual([]);
   });
 });
 

@@ -17,7 +17,7 @@ export function NewsBrowser({
   canEdit,
   canSeeInternal,
 }: {
-  items: Omit<ContentItem, "body">[];
+  items: ContentItem[];
   icsUrl?: string;
   canEdit?: boolean;
   canSeeInternal?: boolean;

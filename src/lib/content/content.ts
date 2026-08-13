@@ -89,12 +89,12 @@ const POST_WITHOUT_BODY_SELECT = {
   coverImageUrl: true,
 } as const;
 
-export async function getAllContent(): Promise<Omit<ContentItem, "body">[]> {
+/** Includes `body` — `/news` renders it eagerly for the preview/full-view toggle (#135), no lazy per-post fetch. */
+export async function getAllContent(): Promise<ContentItem[]> {
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
-    select: POST_WITHOUT_BODY_SELECT,
   });
-  return posts.map(toContentItemBase);
+  return posts.map(toContentItem);
 }
 
 /** Interne Beiträge, neueste zuerst — für den internen Newsroom und das Dashboard. */
@@ -158,3 +158,8 @@ export function canViewContentItem(
 }
 
 export { TYPE_TO_DB };
+
+/** Slices the (already filtered/sorted) list down to the currently visible count — for infinite scroll (#135). Never returns more items than exist. */
+export function computeVisibleItems<T>(items: T[], visibleCount: number): T[] {
+  return items.slice(0, Math.max(0, visibleCount));
+}
