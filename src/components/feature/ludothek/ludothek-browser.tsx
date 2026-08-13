@@ -4,11 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, LayoutGrid, List, Rows3 } from "lucide-react";
-import { GameCard } from "@/components/entities/game-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
+import { LudothekResults } from "@/components/feature/ludothek/ludothek-results";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { buildHref } from "@/lib/utils/query-string";
@@ -317,24 +316,11 @@ export function LudothekBrowser({
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {games.map((game) => (
-          <GameCard
-            key={game.slug}
-            game={game}
-            actions={
-              canManageGames && "ean" in game ? (
-                <GameCardEditOverlay game={game} />
-              ) : undefined
-            }
-          />
-        ))}
-        {games.length === 0 && (
-          <p className="text-muted-foreground col-span-full text-sm">
-            Keine Spiele gefunden.
-          </p>
-        )}
-      </div>
+      <LudothekResults
+        games={games}
+        view={filters.view ?? "grid"}
+        canManageGames={canManageGames}
+      />
 
       {internal &&
         filters.showPrivateCollection &&

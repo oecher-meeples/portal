@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { BoardGameKind } from "@prisma/client";
+import type { LudothekGame } from "@/lib/ludothek/browser";
 
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/lib/auth/permissions", () => ({
@@ -44,6 +46,34 @@ function baseProps() {
     rawSearchParams: {},
     filters: {},
     mechanicsOptions: [],
+  };
+}
+
+function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
+  return {
+    id: "game-1",
+    boardGameId: "title-1",
+    slug: "arche-nova",
+    title: "Arche Nova",
+    imageUrl: null,
+    minPlayers: 1,
+    maxPlayers: 4,
+    playTimeMinutes: 90,
+    weight: 3.7,
+    mechanics: [],
+    ean: null,
+    condition: null,
+    bggId: null,
+    description: null,
+    explainerVideoUrl: null,
+    kind: BoardGameKind.BOARDGAME,
+    baseGames: [],
+    expansions: [],
+    zustand: "frei",
+    isLoanedOut: false,
+    responsibleMeepleId: null,
+    locationChain: "Regal A",
+    ...overrides,
   };
 }
 
@@ -158,5 +188,78 @@ describe("LudothekBrowser — view mode switch", () => {
     const details = document.querySelector("details");
     const switchLink = screen.getByRole("link", { name: "Raster" });
     expect(details?.contains(switchLink)).toBe(false);
+  });
+});
+
+describe("LudothekBrowser — three render modes", () => {
+  it("renders a grid by default", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        internal
+        canManageGames
+      />,
+    );
+
+    expect(document.querySelector(".grid")).toBeInTheDocument();
+    expect(screen.getByText("Arche Nova")).toBeInTheDocument();
+  });
+
+  it("renders GameListRow-style rows for ?ansicht=liste", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        filters={{ view: "liste" }}
+        internal
+        canManageGames
+      />,
+    );
+
+    expect(document.querySelector(".grid")).not.toBeInTheDocument();
+    expect(screen.getByText("Arche Nova")).toBeInTheDocument();
+  });
+
+  it("renders GameCompactRow-style rows for ?ansicht=compact when canManageGames", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        filters={{ view: "compact" }}
+        internal
+        canManageGames
+      />,
+    );
+
+    expect(screen.getByText("Regal A")).toBeInTheDocument();
+  });
+
+  it("keeps the 'Privatbesitz'-section a grid regardless of the chosen mode", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        filters={{ view: "liste", showPrivateCollection: true }}
+        internal
+        canManageGames
+        privateCollectionResults={[
+          {
+            id: "entry-1",
+            title: "Dune: Imperium",
+            imageUrl: null,
+            minPlayers: 1,
+            maxPlayers: 4,
+            playTimeMinutes: 60,
+            ownerMeepleId: "meeple-1",
+            ownerDisplayName: "Lea Demo",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Dune: Imperium")).toBeInTheDocument();
+    const grids = document.querySelectorAll(".grid");
+    expect(grids.length).toBeGreaterThan(0);
   });
 });
