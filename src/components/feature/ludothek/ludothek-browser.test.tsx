@@ -11,6 +11,13 @@ const routerReplaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: routerReplaceMock, push: vi.fn() }),
 }));
+vi.mock("@/components/ui/scan-search-dialog", () => ({
+  ScanSearchDialog: ({ onScanned }: { onScanned: (text: string) => void }) => (
+    <button type="button" onClick={() => onScanned("4001504311892")}>
+      simulate-scan
+    </button>
+  ),
+}));
 
 const { LudothekBrowser } = await import("./ludothek-browser");
 
@@ -103,4 +110,23 @@ describe("LudothekBrowser — live search", () => {
 
     expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?q=arche");
   });
+
+  it.each([false, true])(
+    "has no link to /scan and a scan sets q instead (internal=%s)",
+    (internal) => {
+      vi.useFakeTimers();
+      render(<LudothekBrowser {...baseProps()} internal={internal} />);
+
+      expect(screen.queryByRole("link", { name: /Scannen/ })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("simulate-scan"));
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      expect(routerReplaceMock).toHaveBeenCalledWith(
+        "/ludothek?q=4001504311892",
+      );
+    },
+  );
 });

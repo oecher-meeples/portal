@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, ScanLine } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { GameCard } from "@/components/entities/game-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
+import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { buildHref } from "@/lib/utils/query-string";
 import type {
   DurationFilter,
@@ -128,16 +129,7 @@ export function LudothekBrowser({
             placeholder="Spiel, EAN oder BGG-ID suchen …"
           />
           <Button type="submit">Suchen</Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            render={
-              <Link href="/scan">
-                <ScanLine className="size-4" />
-                Scannen
-              </Link>
-            }
-          />
+          <ScanSearchDialog onScanned={setSearch} />
         </form>
 
         <details className="group">
