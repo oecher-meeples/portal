@@ -1,6 +1,7 @@
 import { BoardGameKind } from "@prisma/client";
 import { TextField, TextAreaField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
+import { EanField } from "@/components/widgets/board-game/ean-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
 /**
@@ -27,13 +28,10 @@ export function EditBoardGameTitle({
         onChange={(event) => onChange({ title: event.target.value })}
         required
       />
-      <TextField
-        id={`${idPrefix}-ean`}
-        label="EAN"
+      <EanField
+        idPrefix={idPrefix}
         value={values.ean}
-        onChange={(event) => onChange({ ean: event.target.value })}
-        placeholder="optional, vom Barcode auf der Schachtel"
-        hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
+        onChange={(ean) => onChange({ ean })}
       />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${idPrefix}-kind`}>Art</Label>

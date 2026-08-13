@@ -26,6 +26,14 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   previewBggImport: (...args: unknown[]) => previewBggImportMock(...args),
 }));
 
+vi.mock("@/components/ui/scan-search-dialog", () => ({
+  ScanSearchDialog: ({ onScanned }: { onScanned: (text: string) => void }) => (
+    <button type="button" onClick={() => onScanned("4001504311892")}>
+      simulate-scan
+    </button>
+  ),
+}));
+
 const { CreateBoardGameDialog } = await import("./create-board-game-dialog");
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
@@ -67,6 +75,18 @@ describe("CreateBoardGameDialog — manual entry via EAN", () => {
     );
     await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("sets the EAN field from a simulated scan (#121/#122)", async () => {
+    const user = userEvent.setup();
+    render(<CreateBoardGameDialog />);
+    const dialog = await openDialog(user);
+
+    await user.click(within(dialog).getByText("simulate-scan"));
+
+    expect(within(dialog).getByLabelText("EAN")).toHaveValue(
+      "4001504311892",
+    );
   });
 
   it("shows the server error instead of crashing when the session has expired", async () => {

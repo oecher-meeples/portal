@@ -24,6 +24,7 @@ import {
 import { parseBggId } from "@/lib/ludothek/bgg-id";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
+import { EanField } from "@/components/widgets/board-game/ean-field";
 import {
   EMPTY_BOARD_GAME_FORM,
   boardGameFormToInput,
@@ -257,15 +258,10 @@ export function CreateBoardGameDialog({
                     }
                     required
                   />
-                  <TextField
-                    id="game-ean"
-                    label="EAN"
+                  <EanField
+                    idPrefix="game"
                     value={form.ean}
-                    onChange={(event) =>
-                      patchForm({ ean: event.target.value })
-                    }
-                    placeholder="optional, vom Barcode auf der Schachtel"
-                    hint="Mehrere Spiele desselben Titels dürfen dieselbe EAN tragen."
+                    onChange={(ean) => patchForm({ ean })}
                   />
                 </div>
               )}
