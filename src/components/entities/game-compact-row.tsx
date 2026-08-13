@@ -17,6 +17,8 @@ export function GameCompactRow({
   game: LudothekGame & {
     /** Set once several copies of this title are folded into one row (#121/#122). */
     copyCount?: number;
+    /** How many copies share the shown zustand (#125) — only meaningful with copyCount. */
+    zustandCount?: number;
   };
   /** Caller-supplied admin controls (edit/actions menu) — GameCompactRow just places them. */
   actions?: ReactNode;
@@ -33,7 +35,12 @@ export function GameCompactRow({
       <span className="text-muted-foreground truncate">
         {game.locationChain || "—"}
       </span>
-      <GameZustandPill zustand={game.zustand} className="shrink-0" />
+      <GameZustandPill
+        zustand={game.zustand}
+        count={game.zustandCount}
+        total={game.copyCount}
+        className="shrink-0"
+      />
       {actions && (
         <StopRowNavigation className="flex shrink-0 items-center gap-1">
           {actions}

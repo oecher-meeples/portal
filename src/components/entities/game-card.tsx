@@ -17,6 +17,8 @@ export function GameCard({
   game: (PublicLudothekGame | (LudothekGame & { zustand: GameZustand })) & {
     /** Set once several copies of this title are folded into one card (#121/#122). */
     copyCount?: number;
+    /** How many copies share the shown zustand (#125) — only meaningful with copyCount. */
+    zustandCount?: number;
   };
   /** Caller-supplied overlay, e.g. an edit button — GameCard just places it. */
   actions?: ReactNode;
@@ -55,7 +57,12 @@ export function GameCard({
           </p>
         )}
         {zustand && (
-          <GameZustandPill zustand={zustand} className="mt-auto w-fit" />
+          <GameZustandPill
+            zustand={zustand}
+            count={game.zustandCount}
+            total={game.copyCount}
+            className="mt-auto w-fit"
+          />
         )}
       </div>
     </Link>

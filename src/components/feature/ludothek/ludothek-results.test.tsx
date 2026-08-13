@@ -99,7 +99,7 @@ describe("LudothekResults — one entry per title (#121/#122)", () => {
       />,
     );
 
-    expect(screen.getByText("Frei")).toBeInTheDocument();
+    expect(screen.getByText("1/2 Frei")).toBeInTheDocument();
   });
 
   it("still shows one card per distinct title", () => {

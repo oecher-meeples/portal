@@ -22,6 +22,10 @@ export type LudothekTitleGroup<
    * Exemplar-Auswahl-Popup (Plan-Schritt 12) needs each one's own
    * zustand/Standort/Mängelvermerk, not just its id. */
   copies: G[];
+  /** How many of `copies` share this row's own (representative) zustand —
+   * lets `GameZustandPill` show an "X/Y" ratio for mixed-condition titles
+   * (#125) instead of hiding that some copies are in a different state. */
+  zustandCount: number;
 };
 
 /**
@@ -60,6 +64,8 @@ export function groupGamesByTitle<
       copyCount: copies.length,
       copyIds: copies.map((c) => c.id),
       copies,
+      zustandCount: copies.filter((c) => c.zustand === representative.zustand)
+        .length,
     };
   });
 }

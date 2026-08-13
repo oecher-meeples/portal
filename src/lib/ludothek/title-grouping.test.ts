@@ -33,6 +33,18 @@ describe("groupGamesByTitle", () => {
     expect(rows[0].copyIds).toEqual(["copy-1", "copy-2", "copy-3"]);
   });
 
+  it("counts how many copies share the representative's zustand (#125)", () => {
+    const rows = groupGamesByTitle([
+      copy({ id: "copy-1", zustand: "frei" }),
+      copy({ id: "copy-2", zustand: "ausgeliehen" }),
+      copy({ id: "copy-3", zustand: "frei" }),
+    ]);
+
+    expect(rows[0].zustand).toBe("frei");
+    expect(rows[0].zustandCount).toBe(2);
+    expect(rows[0].copyCount).toBe(3);
+  });
+
   it("keeps titles separate", () => {
     const rows = groupGamesByTitle([
       copy({ id: "copy-1", boardGameId: "title-1" }),
