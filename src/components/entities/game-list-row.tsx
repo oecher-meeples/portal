@@ -33,7 +33,7 @@ export function GameListRow({
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
       className={cn(
-        "group bg-card hover:border-primary/60 relative flex items-center gap-4 border p-4 transition-colors",
+        "group bg-card hover:border-primary/60 relative flex items-center gap-5 border p-5 transition-colors",
         expanded && game.description ? "rounded-t-lg" : "rounded-lg",
       )}
       onMouseEnter={() => setExpanded(true)}
@@ -49,25 +49,25 @@ export function GameListRow({
         }
       }}
     >
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-md">
+      <div className="relative aspect-[3/4] w-32 shrink-0 overflow-hidden rounded-md">
         <GameCoverMedia
           imageUrl={game.imageUrl}
           title={game.title}
-          aspect="aspect-square"
+          aspect="aspect-[3/4]"
         />
         {isExpansion && (
           <RibbonCorner size="sm">Erweiterung</RibbonCorner>
         )}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h3 className="group-hover:text-primary truncate font-serif text-base leading-snug font-semibold">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <h3 className="group-hover:text-primary truncate font-serif text-lg leading-snug font-semibold">
           {game.title}
         </h3>
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
         {game.description && (
-          <p className="text-muted-foreground line-clamp-2 text-sm">
+          <p className="text-muted-foreground line-clamp-3 text-sm">
             {game.description}
           </p>
         )}

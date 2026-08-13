@@ -40,13 +40,13 @@ describe("GameListRow", () => {
     const [description] = screen.getAllByText(
       "Baue den modernsten Zoo der Welt.",
     );
-    expect(description).toHaveClass("line-clamp-2");
+    expect(description).toHaveClass("line-clamp-3");
   });
 
   it("sizes the cover to match the grid card format (#121)", () => {
     render(<GameListRow game={game()} />);
 
-    expect(document.querySelector(".size-24")).toBeInTheDocument();
+    expect(document.querySelector(".aspect-\\[3\\/4\\].w-32")).toBeInTheDocument();
   });
 
   it("merges the hover overlay into the row — no gap, shared bottom radius", () => {
