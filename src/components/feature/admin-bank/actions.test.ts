@@ -46,18 +46,9 @@ describe("without the bank:read permission", () => {
 });
 
 describe("revealIban", () => {
-  it("checks the bank:read permission", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
-      ibanEncrypted: encryptSecret(IBAN),
-    } as never);
-
-    await revealIban("meeple-1");
-
-    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
-  });
-
-  it("returns the decrypted iban and writes exactly one log entry", async () => {
+  // The decrypt/log rules themselves live in the lib layer and are tested in
+  // src/lib/members/bank-access-log.test.ts — here only the permission gate matters.
+  it("checks the bank:read permission and delegates to the shared reveal logic", async () => {
     prismaMock.meeple.findUnique.mockResolvedValue({
       id: "meeple-1",
       ibanEncrypted: encryptSecret(IBAN),
@@ -65,8 +56,8 @@ describe("revealIban", () => {
 
     const result = await revealIban("meeple-1");
 
+    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
     expect(result).toEqual({ success: true, iban: IBAN });
-    expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledTimes(1);
     expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
       data: {
         accessedByMeepleId: "meeple-kassenwart",
@@ -74,31 +65,6 @@ describe("revealIban", () => {
         kind: "SINGLE_REVEAL",
       },
     });
-  });
-
-  it("reports a missing iban without writing a log entry", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
-      ibanEncrypted: null,
-    } as never);
-
-    const result = await revealIban("meeple-1");
-
-    expect(result).toEqual({
-      error: "Für dieses Mitglied ist keine IBAN gespeichert.",
-    });
-    expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
-  });
-
-  it("reports an unknown meeple without writing a log entry", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(null);
-
-    const result = await revealIban("nope");
-
-    expect(result).toEqual({
-      error: "Für dieses Mitglied ist keine IBAN gespeichert.",
-    });
-    expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
   });
 });
 

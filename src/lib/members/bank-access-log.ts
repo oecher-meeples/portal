@@ -1,5 +1,8 @@
 import { BankDataAccessKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { requirePermission } from "@/lib/auth/permissions";
+import { ensureMeeple } from "@/lib/members/meeples";
+import { decryptSecret } from "@/lib/utils/crypto";
 
 /** Retention agreed in docs/adr/0003. */
 export const BANK_LOG_RETENTION_MONTHS = 24;
@@ -33,4 +36,43 @@ export async function deleteExpiredBankDataAccessLogs(now: Date = new Date()) {
     where: { at: { lt: bankLogCutoff(now) } },
   });
   return { deleted: count };
+}
+
+/**
+ * Gate for every place that decrypts a Meeple's bank data — `bank:read` is
+ * deliberately separate from `members:manage` (see PERMISSIONS in
+ * seed-roles.ts), so an admin dialog that edits other Meeple fields must not
+ * fall back on its own permission to also unlock this.
+ */
+export async function requireBankReader() {
+  const user = await requirePermission("bank:read");
+  return ensureMeeple(user);
+}
+
+/**
+ * Decrypts one Meeple's IBAN and logs the access. Shared by the dedicated
+ * Bankdaten admin page and the Bankdaten section of the Mitglieder-edit
+ * dialog — one implementation so both log identically.
+ */
+export async function revealMeepleIban(
+  meepleId: string,
+  actorMeepleId: string,
+): Promise<{ error: string } | { success: true; iban: string }> {
+  const subject = await prisma.meeple.findUnique({
+    where: { id: meepleId },
+    select: { id: true, ibanEncrypted: true },
+  });
+
+  if (!subject?.ibanEncrypted) {
+    return { error: "Für dieses Mitglied ist keine IBAN gespeichert." };
+  }
+
+  const iban = decryptSecret(subject.ibanEncrypted);
+  await logBankDataAccess({
+    accessedByMeepleId: actorMeepleId,
+    subjectMeepleId: subject.id,
+    kind: BankDataAccessKind.SINGLE_REVEAL,
+  });
+
+  return { success: true as const, iban };
 }
