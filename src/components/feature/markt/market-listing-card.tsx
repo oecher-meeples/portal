@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
-import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-listing-dialog";
 import { deleteOwnMarketListing } from "@/components/feature/markt/actions";
 import type { MarketListingView } from "@/lib/markt/market-listings";
@@ -33,9 +33,13 @@ export function MarketListingCard({
           </span>
         </div>
         <p className="text-muted-foreground text-sm">
-          Zustand: {listing.condition} · von {listing.sellerDisplayName}
+          Zustand: {listing.condition} · von{" "}
+          <ContactDialog
+            name={listing.sellerDisplayName}
+            contact={listing.sellerContact}
+          />
         </p>
-        {isOwn ? (
+        {isOwn && (
           <div className="mt-2 flex gap-2">
             <EditMarketListingDialog listing={listing} />
             <ActionButton
@@ -47,19 +51,6 @@ export function MarketListingCard({
               Löschen
             </ActionButton>
           </div>
-        ) : (
-          listing.sellerContact.mailHref && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 gap-1.5"
-              render={
-                <a href={listing.sellerContact.mailHref}>
-                  ✉️ Verkäufer kontaktieren
-                </a>
-              }
-            />
-          )
         )}
       </div>
     </div>

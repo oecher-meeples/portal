@@ -1,5 +1,5 @@
 import { PlaceholderMedia } from "@/components/ui/placeholder-media";
-import { Button } from "@/components/ui/button";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
 export function MarketListingDetailView({
@@ -44,35 +44,14 @@ export function MarketListingDetailView({
           </span>
         </div>
         <p className="text-muted-foreground text-sm">
-          Zustand: {listing.condition} · von {listing.sellerDisplayName}
+          Zustand: {listing.condition} · von{" "}
+          <ContactDialog
+            name={listing.sellerDisplayName}
+            contact={listing.sellerContact}
+          />
         </p>
         {listing.description && (
           <p className="leading-relaxed">{listing.description}</p>
-        )}
-        {listing.sellerContact.mailHref && (
-          <Button
-            className="mt-2 gap-1.5"
-            render={
-              <a href={listing.sellerContact.mailHref}>
-                ✉️ Verkäufer kontaktieren
-              </a>
-            }
-          />
-        )}
-        {listing.sellerContact.telegramHref && (
-          <Button
-            variant="outline"
-            className="gap-1.5"
-            render={
-              <a
-                href={listing.sellerContact.telegramHref}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Telegram
-              </a>
-            }
-          />
         )}
       </div>
     </div>
