@@ -710,3 +710,15 @@ model InstagramConnection {
 
   @@map("instagram_connections")
 }
+
+/// Kuratierte externe/interne Links fürs Dashboard — Reihenfolge nach createdAt, keine manuelle Sortierung.
+model ImportantLink {
+  id        String   @id @default(cuid())
+  title     String
+  targetUrl String
+  iconUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("important_links")
+}

@@ -77,6 +77,10 @@ const PERMISSIONS = [
     description:
       "Rechtliches-Dokumente verwalten (PDF hochladen, Sections bearbeiten)",
   },
+  {
+    key: "links:manage",
+    description: "Wichtige Links verwalten (anlegen, bearbeiten, löschen)",
+  },
 ];
 
 const ROLES = [
