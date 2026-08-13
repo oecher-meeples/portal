@@ -20,22 +20,12 @@ import {
   MeepleRoleSelect,
   type RoleOption,
 } from "@/components/feature/admin-mitglieder/meeple-role-select";
+import { MeepleEditDialog } from "@/components/feature/admin-mitglieder/meeple-edit-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
+import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
 
-export type MeepleRow = {
-  id: string;
-  memberNumber: number;
-  displayName: string;
-  roleId: string | null;
-  hasAccount: boolean;
-  membershipState: MembershipState;
-  joinedAt: string;
-  resignedAt: string | null;
-  membershipEndsAt: string | null;
-  openGames: number;
-  openUnits: number;
-};
+export type { MeepleRow };
 
 type MeepleQuickFilter = MembershipState | "alle";
 
@@ -54,9 +44,11 @@ function germanDate(value: string | null) {
 export function MitgliederTable({
   meeples,
   roles,
+  canReadBankData,
 }: {
   meeples: MeepleRow[];
   roles: RoleOption[];
+  canReadBankData: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<MeepleQuickFilter>("aktiv");
@@ -111,6 +103,7 @@ export function MitgliederTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
+              <TableHead />
               <TableHead>Nr.</TableHead>
               <TableHead>Mitglied</TableHead>
               <TableHead>Rollen</TableHead>
@@ -124,7 +117,7 @@ export function MitgliederTable({
             {filteredMeeples.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-muted-foreground py-6 text-center"
                 >
                   Keine Mitglieder gefunden.
@@ -133,6 +126,13 @@ export function MitgliederTable({
             )}
             {filteredMeeples.map((meeple) => (
               <TableRow key={meeple.id}>
+                <TableCell>
+                  <MeepleEditDialog
+                    meeple={meeple}
+                    roles={roles}
+                    canReadBankData={canReadBankData}
+                  />
+                </TableCell>
                 <TableCell className="font-mono">
                   {meeple.memberNumber}
                 </TableCell>

@@ -34,12 +34,14 @@ function germanDate(value: string | null) {
 export function AdminMitgliederView({
   meeples,
   roles,
+  canReadBankData,
   isDecemberOrLater,
   deletionRequests,
   invites,
 }: {
   meeples: MeepleRow[];
   roles: RoleOption[];
+  canReadBankData: boolean;
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
@@ -161,7 +163,11 @@ export function AdminMitgliederView({
         </div>
       )}
 
-      <MitgliederTable meeples={meeples} roles={roles} />
+      <MitgliederTable
+        meeples={meeples}
+        roles={roles}
+        canReadBankData={canReadBankData}
+      />
 
       <InvitesSection invites={invites} />
     </div>

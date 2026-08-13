@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/utils/prisma";
 import { requireAdmin } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getMembershipState } from "@/lib/members/meeples";
+import { maskIban } from "@/lib/utils/crypto";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
 import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 import { listInvites } from "@/lib/members/invites";
 
 export default async function AdminMitgliederPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const now = new Date();
 
@@ -18,6 +20,7 @@ export default async function AdminMitgliederPage() {
     storageUnitCounts,
     deletionRequests,
     invites,
+    canReadBankData,
   ] = await Promise.all([
     prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
     prisma.userRole.findMany({ include: { role: true } }),
@@ -34,6 +37,7 @@ export default async function AdminMitgliederPage() {
     }),
     listPendingDeletionRequests(now),
     listInvites(now),
+    hasPermission(session.user.id, "bank:read"),
   ]);
 
   // A Meeple holds exactly one role (see redeemInvite's DEFAULT_ROLE) — the
@@ -65,10 +69,12 @@ export default async function AdminMitgliederPage() {
         overdue: request.overdue,
       }))}
       roles={roles.map((role) => ({ id: role.id, name: role.name }))}
+      canReadBankData={canReadBankData}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,
         displayName: meeple.displayName,
+        email: meeple.email,
         hasAccount: meeple.neonAuthUserId !== null,
         roleId: meeple.neonAuthUserId
           ? (roleIdByUserId.get(meeple.neonAuthUserId) ?? null)
@@ -79,6 +85,9 @@ export default async function AdminMitgliederPage() {
         membershipEndsAt: meeple.membershipEndsAt?.toISOString() ?? null,
         openGames: openGamesByMeepleId.get(meeple.id) ?? 0,
         openUnits: openUnitsByMeepleId.get(meeple.id) ?? 0,
+        accountHolder: meeple.accountHolder,
+        maskedIban: maskIban(meeple.ibanLast4),
+        hasIban: meeple.ibanEncrypted !== null,
       }))}
       invites={invites.map((invite) => ({
         id: invite.id,

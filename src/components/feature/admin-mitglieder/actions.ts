@@ -5,6 +5,12 @@ import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 import { anonymiseMeepleRecord } from "@/lib/members/anonymisation";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
+import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
+import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
+import {
+  requireBankReader,
+  revealMeepleIban,
+} from "@/lib/members/bank-access-log";
 
 async function requireMembersManage() {
   return requirePermission("members:manage");
@@ -59,6 +65,50 @@ export async function anonymiseMeeple(meepleId: string) {
   revalidatePath("/admin/mitglieder");
   revalidatePath("/markt");
   return { success: true as const };
+}
+
+export async function setMemberNumber(meepleId: string, newNumber: number) {
+  await requireMembersManage();
+
+  const result = await setMemberNumberRecord(meepleId, newNumber);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function renameMeeple(meepleId: string, displayName: string) {
+  await requireMembersManage();
+
+  const trimmed = displayName.trim();
+  if (!trimmed) {
+    return { error: "Bitte einen Anzeigenamen angeben." };
+  }
+
+  await prisma.meeple.update({
+    where: { id: meepleId },
+    data: { displayName: trimmed },
+  });
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+/**
+ * Reveals a Meeple's IBAN inside the Mitglieder-edit dialog. Gated on
+ * `bank:read` specifically, not `members:manage` — an admin without the
+ * Kassenwart-Recht only ever sees the masked value passed down from the page.
+ */
+export async function revealMemberIban(meepleId: string) {
+  const actor = await requireBankReader();
+  return revealMeepleIban(meepleId, actor.id);
+}
+
+/** Art. 15/20 self-disclosure, sent to the Meeple's stored email on an admin's request. */
+export async function sendSelbstauskunft(meepleId: string) {
+  await requireMembersManage();
+
+  return sendSelbstauskunftMail(meepleId);
 }
 
 /**
