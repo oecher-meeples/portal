@@ -4,6 +4,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { BoardGameKind } from "@prisma/client";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
 vi.mock("@/components/widgets/game-holding/game-holding-panel", () => ({
   GameHoldingPanel: () => null,
 }));
@@ -11,8 +14,18 @@ vi.mock("@/components/feature/ludothek/explainer-game-panel", () => ({
   ExplainerGamePanel: () => null,
 }));
 vi.mock("@/components/widgets/board-game/assign-expansion-dialog", () => ({
-  AssignExpansionDialog: () => null,
+  AssignExpansionDialog: ({ game }: { game: { kind: string } }) => (
+    <button type="button">
+      {game.kind === "BOARDGAME_EXPANSION"
+        ? "Basisspiel zuordnen"
+        : "Erweiterung hinzufügen"}
+    </button>
+  ),
 }));
+const { removeExpansionAssignment } = vi.hoisted(() => ({
+  removeExpansionAssignment: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/ludothek/board-games", () => ({ removeExpansionAssignment }));
 vi.mock("@/components/widgets/board-game/edit-board-game-title-dialog", () => ({
   EditBoardGameTitleDialog: () => (
     <button type="button">Titel bearbeiten</button>
@@ -162,6 +175,90 @@ describe("GameDetailView — related-game cards (#121/#122)", () => {
     );
 
     expect(screen.getByText("Regal B")).toBeInTheDocument();
+  });
+
+  it("shows the add-expansion trigger for a base game without base games of its own", () => {
+    render(
+      <GameDetailView
+        game={game()}
+        expansionAssignment={{ options: [] }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Erweiterung hinzufügen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the add-expansion trigger once the title has base games (kind not yet corrected)", () => {
+    render(
+      <GameDetailView
+        game={game({ baseGames: [BASE_GAME_REF] })}
+        expansionAssignment={{ options: [] }}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Erweiterung hinzufügen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the add-expansion trigger on an expansion's own page", () => {
+    render(
+      <GameDetailView
+        game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })}
+        expansionAssignment={{ options: [] }}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Erweiterung hinzufügen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Basisspiel zuordnen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("wires the base-game card's remove button to removeExpansionAssignment", () => {
+    render(
+      <GameDetailView
+        game={game({ baseGames: [BASE_GAME_REF] })}
+        expansionAssignment={{ options: [] }}
+      />,
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    screen.getByRole("button", { name: /Entfernen/ }).click();
+
+    expect(removeExpansionAssignment).toHaveBeenCalledWith(
+      "base-1",
+      "title-1",
+    );
+  });
+
+  it("wires the expansion card's remove button to removeExpansionAssignment", () => {
+    render(
+      <GameDetailView
+        game={game({ expansions: [EXPANSION_REF] })}
+        expansionAssignment={{ options: [] }}
+      />,
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    screen.getByRole("button", { name: /Entfernen/ }).click();
+
+    expect(removeExpansionAssignment).toHaveBeenCalledWith(
+      "title-1",
+      "expansion-1",
+    );
+  });
+
+  it("omits the remove button when the viewer cannot manage games", () => {
+    render(<GameDetailView game={game({ baseGames: [BASE_GAME_REF] })} />);
+
+    expect(
+      screen.queryByRole("button", { name: /Entfernen/ }),
+    ).not.toBeInTheDocument();
   });
 });
 

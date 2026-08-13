@@ -11,6 +11,7 @@ import {
   AssignExpansionDialog,
   type GameOption,
 } from "@/components/widgets/board-game/assign-expansion-dialog";
+import { removeExpansionAssignment } from "@/lib/ludothek/board-games";
 import {
   EditBoardGameTitleDialog,
   type EditableBoardGameTitle,
@@ -132,6 +133,12 @@ export function GameDetailView({
           </p>
         )}
 
+        {game.kind === "BOARDGAME_EXPANSION" && expansionAssignment && (
+          <AssignExpansionDialog
+            game={{ id: game.boardGameId, kind: game.kind }}
+            options={expansionAssignment.options}
+          />
+        )}
         {game.baseGames.length > 0 && (
           <div className="flex flex-col gap-2">
             <span className="text-muted-foreground text-sm">
@@ -143,12 +150,32 @@ export function GameDetailView({
                   key={baseGame.id}
                   game={baseGame}
                   locationChain={relatedLocationChains?.[baseGame.id]}
+                  removeAction={
+                    expansionAssignment
+                      ? removeExpansionAssignment.bind(
+                          null,
+                          baseGame.id,
+                          game.boardGameId,
+                        )
+                      : undefined
+                  }
                 />
               ))}
             </div>
           </div>
         )}
 
+        {/* Nur auf echten Basisspielen anbieten (kein `kind`-Mismatch durch
+            fehlenden BGG-Abgleich, siehe Plan-Schritt 5) — eine Erweiterung
+            bekommt ihren "Basisspiel zuordnen"-Trigger oben stattdessen. */}
+        {game.kind !== "BOARDGAME_EXPANSION" &&
+          game.baseGames.length === 0 &&
+          expansionAssignment && (
+            <AssignExpansionDialog
+              game={{ id: game.boardGameId, kind: game.kind }}
+              options={expansionAssignment.options}
+            />
+          )}
         {game.expansions.length > 0 && (
           <div className="flex flex-col gap-2">
             <span className="text-muted-foreground text-sm">
@@ -160,22 +187,19 @@ export function GameDetailView({
                   key={expansion.id}
                   game={expansion}
                   locationChain={relatedLocationChains?.[expansion.id]}
+                  removeAction={
+                    expansionAssignment
+                      ? removeExpansionAssignment.bind(
+                          null,
+                          game.boardGameId,
+                          expansion.id,
+                        )
+                      : undefined
+                  }
                 />
               ))}
             </div>
           </div>
-        )}
-
-        {expansionAssignment && (
-          <AssignExpansionDialog
-            game={{ id: game.boardGameId, kind: game.kind }}
-            linked={
-              game.kind === "BOARDGAME_EXPANSION"
-                ? game.baseGames
-                : game.expansions
-            }
-            options={expansionAssignment.options}
-          />
         )}
 
         {copies && (
