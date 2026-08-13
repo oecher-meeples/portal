@@ -32,10 +32,12 @@ export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
     <div className="flex flex-col gap-6">
       <PageHeading eyebrow="Rechtliches" title={`${doc.title} bearbeiten`} />
       <Tabs defaultValue="edit">
-        <TabsList>
-          <TabsTrigger value="edit">Bearbeiten</TabsTrigger>
-          <TabsTrigger value="preview">Vorschau</TabsTrigger>
-        </TabsList>
+        <div className="bg-background sticky top-16 z-20 border-b py-3">
+          <TabsList>
+            <TabsTrigger value="edit">Bearbeiten</TabsTrigger>
+            <TabsTrigger value="preview">Vorschau</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="edit">
           <LegalDocumentEditor
             doc={doc}

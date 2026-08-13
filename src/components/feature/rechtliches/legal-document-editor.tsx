@@ -216,6 +216,19 @@ export function LegalDocumentEditor({
             {isUploading ? "Lade hoch…" : "Extrahiere Text…"}
           </p>
         )}
+        {pdfFileUrl && !isUploading && (
+          <p className="text-muted-foreground text-xs">
+            Aktuelle Datei:{" "}
+            <a
+              href={pdfFileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:underline"
+            >
+              ansehen
+            </a>
+          </p>
+        )}
         {extractedText && (
           <div className="flex flex-col gap-1.5">
             <p className="text-muted-foreground text-xs">
