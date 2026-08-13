@@ -190,10 +190,18 @@ describe("getSessionTier", () => {
     expect(await getSessionTier()).toBe("mitglied");
   });
 
-  it("returns admin for a real admin without a preview cookie", async () => {
+  it("defaults to mitglied for a real admin without a preview cookie", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
     hasRoleMock.mockResolvedValue(true);
     previewCookie = undefined;
+
+    expect(await getSessionTier()).toBe("mitglied");
+  });
+
+  it("lets a real admin explicitly switch back up to admin", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
+    hasRoleMock.mockResolvedValue(true);
+    previewCookie = "admin";
 
     expect(await getSessionTier()).toBe("admin");
   });

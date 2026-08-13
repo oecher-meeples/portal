@@ -58,11 +58,16 @@ export async function getPreviewTier(): Promise<Tier | null> {
   return isTier(value) ? value : null;
 }
 
-/** Effective tier for display purposes — real role, overridden by an admin's preview choice. */
+/**
+ * Effective tier for display purposes — real role, overridden by an admin's
+ * preview choice. Admins default to "mitglied" until they explicitly pick a
+ * tier via the switcher (including picking "admin" itself, which stores that
+ * choice rather than falling back to it).
+ */
 export async function getSessionTier(): Promise<Tier> {
   const realTier = await getRealSessionTier();
   if (realTier !== "admin") return realTier;
-  return (await getPreviewTier()) ?? "admin";
+  return (await getPreviewTier()) ?? "mitglied";
 }
 
 /**
