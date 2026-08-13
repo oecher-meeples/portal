@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { StatusPill } from "@/components/ui/status-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -11,7 +12,9 @@ import {
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
+import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
 import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
+import { formatDateMedium } from "@/lib/utils/format";
 
 export type HoldingHistoryEntry = {
   id: string;
@@ -28,6 +31,7 @@ export function GameDetailView({
   internal,
   explainer,
   expansionAssignment,
+  openLfgPosts,
 }: {
   game: PublicLudothekGame;
   internal?: {
@@ -45,6 +49,8 @@ export function GameDetailView({
   expansionAssignment?: {
     options: GameOption[];
   };
+  /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
+  openLfgPosts?: OpenLfgPostForBoardGame[];
 }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
@@ -137,6 +143,32 @@ export function GameDetailView({
             {game.explainerVideoUrl && (
               <ExplainerVideo url={game.explainerVideoUrl} />
             )}
+          </div>
+        )}
+
+        {openLfgPosts && openLfgPosts.length > 0 && (
+          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+            <h2 className="font-serif text-lg font-bold">Offene Gesuche</h2>
+            <ul className="flex flex-col divide-y">
+              {openLfgPosts.map((post) => (
+                <li key={post.id} className="flex flex-col gap-0.5 py-2.5">
+                  <Link
+                    href={`/lfg/${post.id}`}
+                    className="hover:text-primary font-medium"
+                  >
+                    {post.title}
+                  </Link>
+                  <span className="text-muted-foreground text-xs">
+                    {post.dateNote ??
+                      (post.plannedAt
+                        ? formatDateMedium(post.plannedAt)
+                        : "Termin offen")}
+                    {post.location ? ` · ${post.location}` : ""} ·{" "}
+                    {post.participantCount}/{post.maxParticipants}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

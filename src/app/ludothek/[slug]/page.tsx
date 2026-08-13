@@ -7,6 +7,7 @@ import { getCurrentMeeple } from "@/lib/members/meeples";
 import { toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { getExplainersForGame } from "@/lib/explainer/queries";
+import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import {
   GameDetailView,
   type HoldingHistoryEntry,
@@ -69,10 +70,11 @@ export default async function GameDetailPage({
       )?.displayName ?? null)
     : null;
 
-  const [explainerEntries, meeple, user] = await Promise.all([
+  const [explainerEntries, meeple, user, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
     getCurrentMeeple(),
     getCurrentUser(),
+    getOpenLfgPostsForBoardGame(game.boardGameId),
   ]);
   const myLevel =
     explainerEntries.find((entry) => entry.meepleId === meeple?.id)?.level ??
@@ -108,6 +110,7 @@ export default async function GameDetailPage({
       }}
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
+      openLfgPosts={openLfgPosts}
     />
   );
 }
