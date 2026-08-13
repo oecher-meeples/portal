@@ -15,6 +15,14 @@ const FILE_TYPE_BY_MIME: Record<string, string> = {
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
 };
 
+function resolveFileType(file: File) {
+  return (
+    FILE_TYPE_BY_MIME[file.type] ??
+    file.name.split(".").pop()?.toUpperCase() ??
+    "DATEI"
+  );
+}
+
 export function DownloadUploadForm() {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -36,8 +44,7 @@ export function DownloadUploadForm() {
     event.preventDefault();
     if (!file) return;
 
-    const fileType = FILE_TYPE_BY_MIME[file.type];
-    if (!fileType) return;
+    const fileType = resolveFileType(file);
 
     const [fileUrl] = await uploadFiles([file]);
     if (!fileUrl) return;
@@ -67,16 +74,15 @@ export function DownloadUploadForm() {
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium" htmlFor="download-upload-file">
-            Datei (PDF oder XLSX)
+            Datei
           </label>
           <input
             id="download-upload-file"
             type="file"
-            accept="application/pdf,.xlsx"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
         </div>
-        <Button type="submit" disabled={!canSubmit}>
+        <Button type="submit" variant="outline" disabled={!canSubmit}>
           {isUploading || pending ? "Lade hoch…" : "Hochladen"}
         </Button>
       </div>

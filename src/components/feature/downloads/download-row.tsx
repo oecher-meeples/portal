@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import {
+  Download,
   FileText,
   FileSpreadsheet,
   GripVertical,
@@ -18,7 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DownloadInternalBadge } from "@/components/entities/download-internal-badge";
+import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { DOWNLOAD_STATUS_LABELS } from "@/lib/downloads/labels";
@@ -36,6 +37,14 @@ const FILE_TYPE_BY_MIME: Record<string, string> = {
   "application/pdf": "PDF",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
 };
+
+function resolveFileType(file: File) {
+  return (
+    FILE_TYPE_BY_MIME[file.type] ??
+    file.name.split(".").pop()?.toUpperCase() ??
+    "DATEI"
+  );
+}
 
 type DownloadRowProps = {
   file: DownloadListItem;
@@ -67,8 +76,7 @@ export function DownloadRow({
 
   async function handleReuploadFile(selected: File | null) {
     if (!selected) return;
-    const fileType = FILE_TYPE_BY_MIME[selected.type];
-    if (!fileType) return;
+    const fileType = resolveFileType(selected);
 
     const [fileUrl] = await uploadFiles([selected]);
     if (!fileUrl) return;
@@ -116,7 +124,9 @@ export function DownloadRow({
           <div>
             <div className="flex items-center gap-1.5">
               <p className="font-medium">{file.title}</p>
-              <DownloadInternalBadge status={file.status} />
+              {file.status === "INTERNAL" && (
+                <InternalOnlyBadge tooltip="Nur für Mitglieder" />
+              )}
             </div>
             <p className="text-muted-foreground text-xs">
               {canManage && <>{file.fileName} · </>}
@@ -169,6 +179,7 @@ export function DownloadRow({
             size="sm"
             render={
               <a href={file.fileUrl} download>
+                <Download className="size-4" />
                 Download
               </a>
             }
@@ -179,7 +190,6 @@ export function DownloadRow({
       <input
         ref={fileInputRef}
         type="file"
-        accept="application/pdf,.xlsx"
         className="hidden"
         onChange={(event) => {
           void handleReuploadFile(event.target.files?.[0] ?? null);

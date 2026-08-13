@@ -11,11 +11,6 @@ import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
-const ALLOWED_CONTENT_TYPES = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-];
-
 async function requireManagePermission() {
   const user = await getCurrentUser();
   if (!user || !(await hasPermission(user.id, "downloads:manage"))) {
@@ -140,7 +135,6 @@ export async function getDownloadUploadToken(pathname: string) {
 
   return generateClientTokenFromReadWriteToken({
     pathname: normaliseBlobPath(pathname, "downloads"),
-    allowedContentTypes: ALLOWED_CONTENT_TYPES,
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,
   });

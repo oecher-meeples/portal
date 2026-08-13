@@ -278,7 +278,7 @@ describe("getDownloadUploadToken", () => {
     expect(generateClientTokenMock).not.toHaveBeenCalled();
   });
 
-  it("normalises the pathname to the downloads namespace with the correct content-type whitelist", async () => {
+  it("normalises the pathname to the downloads namespace without a content-type restriction", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     generateClientTokenMock.mockResolvedValue("token-123");
@@ -288,10 +288,6 @@ describe("getDownloadUploadToken", () => {
     expect(token).toBe("token-123");
     expect(generateClientTokenMock).toHaveBeenCalledWith({
       pathname: "downloads/evil.pdf",
-      allowedContentTypes: [
-        "application/pdf",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      ],
       addRandomSuffix: true,
       maximumSizeInBytes: 20 * 1024 * 1024,
     });
