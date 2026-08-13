@@ -11,10 +11,12 @@ import { requireGamesManage } from "@/lib/ludothek/storage-units";
 // Re-exported so `/admin/einheiten` components keep importing from "./actions" —
 // the implementation moved to lib/ludothek (shared with the Ludothek
 // create-dialog's Standort-Feld, see #121/#122).
+// Only functions may be re-exported here — a "use server" file cannot also
+// export types (see #147). Import `CreateStorageUnitInput` directly from
+// `@/lib/ludothek/storage-units` where needed.
 export {
   createStorageUnit,
   findStorageUnitByCode,
-  type CreateStorageUnitInput,
 } from "@/lib/ludothek/storage-units";
 
 export type UpdateStorageUnitInput = {
