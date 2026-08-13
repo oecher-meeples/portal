@@ -17,6 +17,9 @@ async function requireGamesManage() {
 export type CreateStorageUnitInput = {
   kind: StorageUnitKind;
   label: string;
+  /** Explicit code (e.g. from a pre-printed label) — auto-generated via
+   * `nextUnitCode` when omitted, see #121/#122. */
+  code?: string;
   keeperMeepleId?: string | null;
   parentUnitId?: string | null;
   locationNote?: string | null;
@@ -30,16 +33,30 @@ export async function createStorageUnit(input: CreateStorageUnitInput) {
     return { error: "Bitte ein Label angeben." };
   }
 
-  const existingCodes = (
-    await prisma.storageUnit.findMany({
-      where: { kind: input.kind },
-      select: { code: true },
-    })
-  ).map((u) => u.code);
+  const explicitCode = input.code?.trim();
+  let code: string;
+  if (explicitCode) {
+    const existing = await prisma.storageUnit.findUnique({
+      where: { code: explicitCode },
+      select: { id: true },
+    });
+    if (existing) {
+      return { error: `Der Code „${explicitCode}“ ist bereits vergeben.` };
+    }
+    code = explicitCode;
+  } else {
+    const existingCodes = (
+      await prisma.storageUnit.findMany({
+        where: { kind: input.kind },
+        select: { code: true },
+      })
+    ).map((u) => u.code);
+    code = nextUnitCode(input.kind, existingCodes);
+  }
 
   const unit = await prisma.storageUnit.create({
     data: {
-      code: nextUnitCode(input.kind, existingCodes),
+      code,
       kind: input.kind,
       label,
       keeperMeepleId: input.keeperMeepleId ?? null,
