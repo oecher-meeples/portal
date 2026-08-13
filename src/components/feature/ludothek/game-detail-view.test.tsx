@@ -122,6 +122,48 @@ describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {
   });
 });
 
+describe("GameDetailView — related-game cards (#121/#122)", () => {
+  const BASE_GAME_REF = {
+    id: "base-1",
+    title: "Arche Nova",
+    slug: "arche-nova",
+    imageUrl: null,
+  };
+  const EXPANSION_REF = {
+    id: "expansion-1",
+    title: "Arche Nova: Erweiterung",
+    slug: "arche-nova-erweiterung",
+    imageUrl: null,
+  };
+
+  it("renders a card (not a pill) for a linked base game", () => {
+    render(<GameDetailView game={game({ baseGames: [BASE_GAME_REF] })} />);
+
+    expect(
+      screen.getByRole("link", { name: /Arche Nova/ }),
+    ).toHaveAttribute("href", "/ludothek/arche-nova");
+  });
+
+  it("renders a card for each linked expansion, symmetrically", () => {
+    render(<GameDetailView game={game({ expansions: [EXPANSION_REF] })} />);
+
+    expect(
+      screen.getByRole("link", { name: /Arche Nova: Erweiterung/ }),
+    ).toHaveAttribute("href", "/ludothek/arche-nova-erweiterung");
+  });
+
+  it("shows the related title's standort only for internal viewers", () => {
+    render(
+      <GameDetailView
+        game={game({ baseGames: [BASE_GAME_REF] })}
+        relatedLocationChains={{ "base-1": "Regal B" }}
+      />,
+    );
+
+    expect(screen.getByText("Regal B")).toBeInTheDocument();
+  });
+});
+
 describe("GameDetailView — expansion ribbon (#121/#122)", () => {
   it("shows the ribbon corner for an expansion", () => {
     render(

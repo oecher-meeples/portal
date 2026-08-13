@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
 import { ExplainerGamePanel } from "@/components/feature/ludothek/explainer-game-panel";
 import {
@@ -44,6 +45,7 @@ export function GameDetailView({
   titleEdit,
   copies,
   canManageGames,
+  relatedLocationChains,
   openLfgPosts,
 }: {
   game: PublicLudothekGame;
@@ -68,6 +70,8 @@ export function GameDetailView({
    * plain count instead (#121, guest aggregation is a later step). */
   copies?: GameCopyRow[];
   canManageGames?: boolean;
+  /** Standort per linked base game/expansion id — only set internally (#121). */
+  relatedLocationChains?: Record<string, string>;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
 }) {
@@ -117,18 +121,19 @@ export function GameDetailView({
         </div>
 
         {game.baseGames.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2">
             <span className="text-muted-foreground text-sm">
               Erweiterung zu:
             </span>
-            {game.baseGames.map((baseGame) => (
-              <span
-                key={baseGame.id}
-                className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
-              >
-                {baseGame.title}
-              </span>
-            ))}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {game.baseGames.map((baseGame) => (
+                <RelatedGameCard
+                  key={baseGame.id}
+                  game={baseGame}
+                  locationChain={relatedLocationChains?.[baseGame.id]}
+                />
+              ))}
+            </div>
           </div>
         )}
 
@@ -137,14 +142,13 @@ export function GameDetailView({
             <span className="text-muted-foreground text-sm">
               Erweiterungen:
             </span>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {game.expansions.map((expansion) => (
-                <span
+                <RelatedGameCard
                   key={expansion.id}
-                  className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
-                >
-                  {expansion.title}
-                </span>
+                  game={expansion}
+                  locationChain={relatedLocationChains?.[expansion.id]}
+                />
               ))}
             </div>
           </div>

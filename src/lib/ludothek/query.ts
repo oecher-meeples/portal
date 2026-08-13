@@ -25,10 +25,18 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         boardGame: {
           include: {
             baseGameCollections: {
-              include: { expansion: { select: { id: true, title: true } } },
+              include: {
+                expansion: {
+                  select: { id: true, title: true, slug: true, imageUrl: true },
+                },
+              },
             },
             expansionCollections: {
-              include: { baseGame: { select: { id: true, title: true } } },
+              include: {
+                baseGame: {
+                  select: { id: true, title: true, slug: true, imageUrl: true },
+                },
+              },
             },
           },
         },

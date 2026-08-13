@@ -3,8 +3,15 @@ import { BoardGameKind } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 
 /** A title referenced from a copy (e.g. base game/expansion) — titles have no
- * route of their own, only their copies do (see ADR 0008). */
-export type LudothekGameRef = { id: string; title: string };
+ * route of their own, only their copies do (see ADR 0008). Guest-safe: no
+ * location/person data (that's added separately for internal viewers, see
+ * `RelatedGameCard`). */
+export type LudothekGameRef = {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string | null;
+};
 
 /**
  * Richest possible shape of a game for the Ludothek browser. The internal

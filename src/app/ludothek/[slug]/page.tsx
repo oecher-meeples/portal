@@ -98,6 +98,19 @@ export default async function GameDetailPage({
     condition: copy.condition,
   }));
 
+  // Representative location for each linked base game/expansion (#121) —
+  // best-effort: a linked title with several copies shows its first one.
+  const linkedRefIds = [
+    ...game.baseGames.map((g) => g.id),
+    ...game.expansions.map((g) => g.id),
+  ];
+  const relatedLocationChains = Object.fromEntries(
+    linkedRefIds.map((id) => [
+      id,
+      games.find((g) => g.boardGameId === id)?.locationChain ?? "",
+    ]),
+  );
+
   const [explainerEntries, meeple, user, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
     getCurrentMeeple(),
@@ -152,6 +165,7 @@ export default async function GameDetailPage({
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
       titleEdit={titleEdit}
+      relatedLocationChains={relatedLocationChains}
       copies={copyRows}
       canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
