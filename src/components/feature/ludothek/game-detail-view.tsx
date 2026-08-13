@@ -1,9 +1,7 @@
 import Link from "next/link";
 import type { ExplainerExperienceLevel } from "@prisma/client";
-import { StatusPill } from "@/components/ui/status-pill";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
-import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
 import { ExplainerGamePanel } from "@/components/feature/ludothek/explainer-game-panel";
@@ -21,11 +19,9 @@ import {
   type GameCopyRow,
 } from "@/components/feature/ludothek/game-copies-section";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
-import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
 import type { GuestCopyAvailability } from "@/lib/events/guest-area";
-import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
 import { formatDateMedium } from "@/lib/utils/format";
 
 export type HoldingHistoryEntry = {
@@ -40,7 +36,6 @@ export type HoldingHistoryEntry = {
 
 export function GameDetailView({
   game,
-  internal,
   explainer,
   expansionAssignment,
   titleEdit,
@@ -51,12 +46,6 @@ export function GameDetailView({
   openLfgPosts,
 }: {
   game: PublicLudothekGame;
-  internal?: {
-    zustand: GameZustand;
-    locationChain: string;
-    responsibleName: string | null;
-    history: HoldingHistoryEntry[];
-  };
   /** Nur für eingeloggte Nutzer gesetzt — Erklärbär-Selbstauskunft ist kein Gast-Feature. */
   explainer?: {
     entries: ExplainerEntry[];
@@ -88,9 +77,6 @@ export function GameDetailView({
             <RibbonCorner>Erweiterung</RibbonCorner>
           )}
         </div>
-        {internal && (
-          <GameZustandPill zustand={internal.zustand} className="w-fit" />
-        )}
       </div>
 
       <div className="flex flex-col gap-6">
@@ -202,15 +188,6 @@ export function GameDetailView({
           </div>
         )}
 
-        {copies && (
-          <GameCopiesSection
-            copies={copies}
-            boardGameId={game.boardGameId}
-            boardGameTitle={game.title}
-            canManageGames={Boolean(canManageGames)}
-          />
-        )}
-
         {(game.description || game.explainerVideoUrl) && (
           <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
             <h2 className="font-serif text-lg font-bold">Erklärung</h2>
@@ -260,49 +237,16 @@ export function GameDetailView({
           />
         )}
 
-        {internal && (
-          <div className="bg-card rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Standort</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {internal.locationChain || "—"}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Verantwortlich: {internal.responsibleName ?? "—"}
-            </p>
-
-            <div className="mt-4 border-t pt-4">
-              <GameHoldingPanel gameCopyId={game.id} />
-            </div>
-          </div>
-        )}
-
-        {internal && internal.history.length > 0 && (
-          <div className="bg-card rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">
-              Aufenthalts-Historie
-            </h2>
-            <ul className="mt-3 flex flex-col divide-y text-sm">
-              {internal.history.map((entry) => (
-                <li key={entry.id} className="flex flex-col gap-0.5 py-2.5">
-                  <span className="font-medium">
-                    {entry.origin} → {entry.target}
-                    {!entry.confirmedAt && (
-                      <StatusPill
-                        label="unbestätigt"
-                        tone="warning"
-                        className="ml-2"
-                      />
-                    )}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {entry.startedAt}
-                    {entry.endedAt ? ` – ${entry.endedAt}` : " – aktuell"} ·
-                    erfasst von {entry.recordedByName}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Zuletzt platziert (Plan-Schritt 6) — bündelt Zustand/Standort,
+            Aufenthalts-Aktionen und die Historie je Exemplar in einem
+            Bereich statt der früher verstreuten Einzel-Cards. */}
+        {copies && (
+          <GameCopiesSection
+            copies={copies}
+            boardGameId={game.boardGameId}
+            boardGameTitle={game.title}
+            canManageGames={Boolean(canManageGames)}
+          />
         )}
       </div>
     </div>

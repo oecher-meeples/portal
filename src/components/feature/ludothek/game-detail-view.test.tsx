@@ -179,10 +179,7 @@ describe("GameDetailView — related-game cards (#121/#122)", () => {
 
   it("shows the add-expansion trigger for a base game without base games of its own", () => {
     render(
-      <GameDetailView
-        game={game()}
-        expansionAssignment={{ options: [] }}
-      />,
+      <GameDetailView game={game()} expansionAssignment={{ options: [] }} />,
     );
 
     expect(
@@ -230,10 +227,7 @@ describe("GameDetailView — related-game cards (#121/#122)", () => {
 
     screen.getByRole("button", { name: /Entfernen/ }).click();
 
-    expect(removeExpansionAssignment).toHaveBeenCalledWith(
-      "base-1",
-      "title-1",
-    );
+    expect(removeExpansionAssignment).toHaveBeenCalledWith("base-1", "title-1");
   });
 
   it("wires the expansion card's remove button to removeExpansionAssignment", () => {

@@ -10,6 +10,11 @@ import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
+import {
+  GameCopyCard,
+  GameCopyTableRow,
+} from "@/components/feature/ludothek/game-copy-accordion";
+import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ContactLinks } from "@/lib/members/contact";
 
@@ -22,6 +27,8 @@ export type GameCopyRow = {
   responsibleName: string | null;
   responsibleContact: ContactLinks;
   condition: string | null;
+  /** This copy's own aufenthalts-history — merged into the accordion below its row (#121/#122). */
+  history: HoldingHistoryEntry[];
 };
 
 /** Person (clickable via `ContactDialog`) leads, then the storage chain —
@@ -85,11 +92,17 @@ export function GameCopiesSection({
               <TableHead>Zustand</TableHead>
               <TableHead>Standort/Kontakt</TableHead>
               {canManageGames && <TableHead className="text-right" />}
+              <TableHead className="text-right" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {copies.map((copy) => (
-              <TableRow key={copy.id}>
+              <GameCopyTableRow
+                key={copy.id}
+                gameCopyId={copy.id}
+                history={copy.history}
+                colSpan={canManageGames ? 4 : 3}
+              >
                 <TableCell>
                   <GameZustandPill zustand={copy.zustand} />
                 </TableCell>
@@ -104,15 +117,16 @@ export function GameCopiesSection({
                     />
                   </TableCell>
                 )}
-              </TableRow>
+              </GameCopyTableRow>
             ))}
           </TableBody>
         </Table>
       ) : (
         copies.map((copy) => (
-          <div
+          <GameCopyCard
             key={copy.id}
-            className="flex items-center justify-between gap-3"
+            gameCopyId={copy.id}
+            history={copy.history}
           >
             <div className="flex flex-col gap-1">
               <GameZustandPill zustand={copy.zustand} className="w-fit" />
@@ -124,7 +138,7 @@ export function GameCopiesSection({
                 condition={copy.condition}
               />
             )}
-          </div>
+          </GameCopyCard>
         ))
       )}
     </div>

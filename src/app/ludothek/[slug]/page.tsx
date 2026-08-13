@@ -54,8 +54,10 @@ export default async function GameDetailPage({
     );
   }
 
+  // Merged Exemplare-Bereich (Plan-Schritt 6): history is fetched for every
+  // copy of the title, not just `game.id`, then grouped per copy below.
   const holdings = await prisma.gameHolding.findMany({
-    where: { gameCopyId: game.id },
+    where: { gameCopyId: { in: copies.map((c) => c.id) } },
     orderBy: { startedAt: "desc" },
     include: {
       unit: { select: { label: true, code: true } },
@@ -64,17 +66,23 @@ export default async function GameDetailPage({
     },
   });
 
-  const history: HoldingHistoryEntry[] = holdings.map((holding) => ({
-    id: holding.id,
-    origin: ORIGIN_LABELS[holding.origin] ?? holding.origin,
-    target: holding.meeple
-      ? holding.meeple.displayName
-      : (holding.unit?.label ?? holding.unit?.code ?? "—"),
-    startedAt: formatDateTime(holding.startedAt),
-    endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
-    confirmedAt: holding.confirmedAt?.toISOString() ?? null,
-    recordedByName: holding.recordedBy.displayName,
-  }));
+  const historyByCopyId = new Map<string, HoldingHistoryEntry[]>();
+  for (const holding of holdings) {
+    const entry: HoldingHistoryEntry = {
+      id: holding.id,
+      origin: ORIGIN_LABELS[holding.origin] ?? holding.origin,
+      target: holding.meeple
+        ? holding.meeple.displayName
+        : (holding.unit?.label ?? holding.unit?.code ?? "—"),
+      startedAt: formatDateTime(holding.startedAt),
+      endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
+      confirmedAt: holding.confirmedAt?.toISOString() ?? null,
+      recordedByName: holding.recordedBy.displayName,
+    };
+    const existing = historyByCopyId.get(holding.gameCopyId) ?? [];
+    existing.push(entry);
+    historyByCopyId.set(holding.gameCopyId, existing);
+  }
 
   // Names come straight from `buildLudothekGames()` — only the contact links
   // (mail/telegram) for the responsible person's `ContactDialog` need their
@@ -105,6 +113,7 @@ export default async function GameDetailPage({
       ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
       : NO_CONTACT,
     condition: copy.condition,
+    history: historyByCopyId.get(copy.id) ?? [],
   }));
 
   // Representative location for each linked base game/expansion (#121) —
@@ -165,12 +174,6 @@ export default async function GameDetailPage({
   return (
     <GameDetailView
       game={toPublicGame(game)}
-      internal={{
-        zustand: game.zustand,
-        locationChain: game.locationChain,
-        responsibleName: game.responsibleName,
-        history,
-      }}
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
       titleEdit={titleEdit}
