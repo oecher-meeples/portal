@@ -1,0 +1,64 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
+import { GameCoverMedia } from "@/components/entities/game-cover-media";
+import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { playersAndDuration } from "@/lib/ludothek/format";
+import type { GameZustand } from "@/lib/ludothek/holdings";
+import { cn } from "@/lib/utils/cn";
+
+/**
+ * List-view row for `/ludothek` (see Plan-Schritt 8/9): hovering (mouse) or a
+ * first tap (touch) expands the description in an absolute-positioned overlay
+ * — no reflow of neighbouring rows.
+ */
+export function GameListRow({
+  game,
+}: {
+  game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const zustand = "zustand" in game ? game.zustand : undefined;
+
+  return (
+    <Link
+      href={`/ludothek/${game.slug}`}
+      className="group bg-card hover:border-primary/60 relative flex items-center gap-4 rounded-lg border p-3 transition-colors"
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <GameCoverMedia
+        imageUrl={game.imageUrl}
+        title={game.title}
+        aspect="aspect-square"
+        className="w-16 shrink-0"
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 className="group-hover:text-primary truncate font-serif text-base leading-snug font-semibold">
+          {game.title}
+        </h3>
+        <p className="text-muted-foreground text-sm">
+          {playersAndDuration(game)}
+        </p>
+        {game.description && (
+          <p className="text-muted-foreground line-clamp-2 text-sm">
+            {game.description}
+          </p>
+        )}
+      </div>
+      {zustand && <GameZustandPill zustand={zustand} className="shrink-0" />}
+
+      {expanded && game.description && (
+        <div
+          className={cn(
+            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 mt-1 rounded-lg border p-3 shadow-lg",
+          )}
+        >
+          <p className="text-muted-foreground text-sm">{game.description}</p>
+        </div>
+      )}
+    </Link>
+  );
+}

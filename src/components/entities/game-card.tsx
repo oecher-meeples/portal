@@ -5,18 +5,8 @@ import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
-
-function playersAndDuration(game: PublicLudothekGame) {
-  const players =
-    game.minPlayers && game.maxPlayers
-      ? `${game.minPlayers}–${game.maxPlayers}`
-      : (game.minPlayers ?? game.maxPlayers ?? "?");
-  const duration = game.playTimeMinutes ? `${game.playTimeMinutes}’` : "";
-  return [players ? `${players} Spieler` : null, duration]
-    .filter(Boolean)
-    .join(" · ");
-}
 
 export function GameCard({
   game,
