@@ -272,7 +272,7 @@ export function LegalDocumentEditor({
         </div>
       </div>
 
-      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4 md:sticky md:top-24">
+      <div className="bg-card flex flex-col gap-3 self-end rounded-lg border p-4">
         <div>
           <p className="text-sm font-medium">Sections verwalten</p>
           <p className="text-muted-foreground text-xs">
