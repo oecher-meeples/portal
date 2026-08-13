@@ -92,12 +92,6 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Mitgliederbereich",
       },
       {
-        label: "Interner Newsroom",
-        href: "/dashboard/news",
-        icon: Newspaper,
-        section: "Mitgliederbereich",
-      },
-      {
         label: "Vereinskalender",
         href: "/dashboard/kalender",
         icon: CalendarDays,
