@@ -142,17 +142,19 @@ export function GameCopiesSection({
             key={copy.id}
             gameCopyId={copy.id}
             history={copy.history}
+            actions={
+              <GameActionsMenu
+                copies={[actionsMenuCopy(copy)]}
+                boardGameId={boardGameId}
+                boardGameTitle={boardGameTitle}
+                canManageGames={canManageGames}
+              />
+            }
           >
             <div className="flex flex-col gap-1">
               <GameZustandPill zustand={copy.zustand} className="w-fit" />
               <LocationCell copy={copy} />
             </div>
-            <GameActionsMenu
-              copies={[actionsMenuCopy(copy)]}
-              boardGameId={boardGameId}
-              boardGameTitle={boardGameTitle}
-              canManageGames={canManageGames}
-            />
           </GameCopyCard>
         ))
       )}
