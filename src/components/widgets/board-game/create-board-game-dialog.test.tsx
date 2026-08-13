@@ -33,6 +33,12 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
     </button>
   ),
 }));
+vi.mock(
+  "@/components/widgets/board-game/create-board-game-location-field",
+  () => ({
+    CreateBoardGameLocationField: () => null,
+  }),
+);
 
 const { CreateBoardGameDialog } = await import("./create-board-game-dialog");
 

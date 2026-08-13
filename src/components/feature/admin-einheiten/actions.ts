@@ -1,73 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { StorageUnitKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { nextUnitCode } from "@/lib/inventory/codes";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
-import { requirePermission, hasPermission } from "@/lib/auth/permissions";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/server";
+import { requireGamesManage } from "@/lib/ludothek/storage-units";
 
-async function requireGamesManage() {
-  const user = await requirePermission("games:manage");
-  return ensureMeeple(user);
-}
-
-export type CreateStorageUnitInput = {
-  kind: StorageUnitKind;
-  label: string;
-  /** Explicit code (e.g. from a pre-printed label) — auto-generated via
-   * `nextUnitCode` when omitted, see #121/#122. */
-  code?: string;
-  keeperMeepleId?: string | null;
-  parentUnitId?: string | null;
-  locationNote?: string | null;
-};
-
-export async function createStorageUnit(input: CreateStorageUnitInput) {
-  await requireGamesManage();
-
-  const label = input.label.trim();
-  if (!label) {
-    return { error: "Bitte ein Label angeben." };
-  }
-
-  const explicitCode = input.code?.trim();
-  let code: string;
-  if (explicitCode) {
-    const existing = await prisma.storageUnit.findUnique({
-      where: { code: explicitCode },
-      select: { id: true },
-    });
-    if (existing) {
-      return { error: `Der Code „${explicitCode}“ ist bereits vergeben.` };
-    }
-    code = explicitCode;
-  } else {
-    const existingCodes = (
-      await prisma.storageUnit.findMany({
-        where: { kind: input.kind },
-        select: { code: true },
-      })
-    ).map((u) => u.code);
-    code = nextUnitCode(input.kind, existingCodes);
-  }
-
-  const unit = await prisma.storageUnit.create({
-    data: {
-      code,
-      kind: input.kind,
-      label,
-      keeperMeepleId: input.keeperMeepleId ?? null,
-      parentUnitId: input.parentUnitId ?? null,
-      locationNote: input.locationNote ?? null,
-    },
-  });
-
-  revalidatePath("/admin/einheiten");
-  return { success: true as const, id: unit.id, code: unit.code };
-}
+// Re-exported so `/admin/einheiten` components keep importing from "./actions" —
+// the implementation moved to lib/ludothek (shared with the Ludothek
+// create-dialog's Standort-Feld, see #121/#122).
+export {
+  createStorageUnit,
+  findStorageUnitByCode,
+  type CreateStorageUnitInput,
+} from "@/lib/ludothek/storage-units";
 
 export type UpdateStorageUnitInput = {
   label: string;

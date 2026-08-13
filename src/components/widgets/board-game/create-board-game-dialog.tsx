@@ -26,6 +26,10 @@ import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-g
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import { EanField } from "@/components/widgets/board-game/ean-field";
 import {
+  CreateBoardGameLocationField,
+  type LocationPlacement,
+} from "@/components/widgets/board-game/create-board-game-location-field";
+import {
   EMPTY_BOARD_GAME_FORM,
   boardGameFormToInput,
   type BoardGameFormValues,
@@ -52,6 +56,7 @@ export function CreateBoardGameDialog({
   const [error, setError] = useState<string | null>(null);
   const [lastHint, setLastHint] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [placement, setPlacement] = useState<LocationPlacement | null>(null);
 
   function patchForm(patch: Partial<BoardGameFormValues>) {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -63,6 +68,7 @@ export function CreateBoardGameDialog({
     setPreview(null);
     setForm({ ...EMPTY_BOARD_GAME_FORM, ean: defaultEan ?? "" });
     setError(null);
+    setPlacement(null);
   }
 
   async function handleFetchPreview() {
@@ -98,8 +104,8 @@ export function CreateBoardGameDialog({
     setError(null);
     setIsSubmitting(true);
 
-    const input: CreateBoardGameInput =
-      mode === "manual"
+    const input: CreateBoardGameInput = {
+      ...(mode === "manual"
         ? boardGameFormToInput(form)
         : {
             title: form.title,
@@ -118,7 +124,9 @@ export function CreateBoardGameDialog({
                   explainerVideoUrl: preview.explainerVideoUrl,
                 }
               : {}),
-          };
+          }),
+      ...(placement ? { placement } : {}),
+    };
 
     try {
       const result = await createBoardGame(input);
@@ -270,10 +278,13 @@ export function CreateBoardGameDialog({
                 values={form}
                 onChange={patchForm}
               />
-              <p className="text-muted-foreground text-xs">
-                Das Spiel liegt zunächst in „Unsortiert“ — Standort per Scan
-                einlagern.
-              </p>
+              <CreateBoardGameLocationField onResolved={setPlacement} />
+              {!placement && (
+                <p className="text-muted-foreground text-xs">
+                  Ohne Standort-Angabe liegt das Spiel zunächst in
+                  „Unsortiert“.
+                </p>
+              )}
             </div>
           )}
 

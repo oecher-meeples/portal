@@ -35,6 +35,9 @@ export type BoardGameTitleInput = {
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
   condition?: string | null;
+  /** Initial standort for the first copy — defaults to "Unsortiert" when
+   * omitted (#121/#122). `self` places it directly with the creator. */
+  placement?: { unitId: string } | { self: true };
 };
 
 function validateBoardGameInput(input: BoardGameTitleInput) {
@@ -144,6 +147,12 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     ensureMeeple(user),
   ]);
 
+  const placement = input.placement
+    ? "self" in input.placement
+      ? { meepleId: actor.id }
+      : { unitId: input.placement.unitId }
+    : undefined;
+
   const copy = await prisma.$transaction(async (tx) => {
     const title = await findOrCreateBoardGameTitle(input, tx);
     return createGameCopyTx(tx, {
@@ -151,6 +160,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
       boardGameTitle: title.title,
       condition: input.condition,
       actorId: actor.id,
+      placement,
     });
   });
 

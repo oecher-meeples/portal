@@ -30,9 +30,10 @@ async function uniqueGameCopySlug(tx: Tx, title: string, excludeId?: string) {
   );
 }
 
-/** Creates the copy row plus its initial holding into "Unsortiert" — reused by
- * `createBoardGame` (new title + first copy, single transaction) and by
- * `createGameCopy` (further copy of an existing title). */
+/** Creates the copy row plus its initial holding — reused by `createBoardGame`
+ * (new title + first copy, single transaction) and by `createGameCopy`
+ * (further copy of an existing title). Defaults to "Unsortiert" when no
+ * `placement` is given (#121/#122). */
 export async function createGameCopyTx(
   tx: Tx,
   {
@@ -40,11 +41,13 @@ export async function createGameCopyTx(
     boardGameTitle,
     condition,
     actorId,
+    placement,
   }: {
     boardGameId: string;
     boardGameTitle: string;
     condition?: string | null;
     actorId: string;
+    placement?: { unitId?: string; meepleId?: string };
   },
 ) {
   const slug = await uniqueGameCopySlug(tx, boardGameTitle);
@@ -52,11 +55,16 @@ export async function createGameCopyTx(
     data: { slug, boardGameId, condition: condition || null },
   });
 
-  const unsortiert = await ensureUnsortiertUnit(tx);
+  const target =
+    placement?.unitId || placement?.meepleId
+      ? placement
+      : { unitId: (await ensureUnsortiertUnit(tx)).id };
+
   await tx.gameHolding.create({
     data: {
       gameCopyId: created.id,
-      unitId: unsortiert.id,
+      unitId: target.unitId ?? null,
+      meepleId: target.meepleId ?? null,
       origin: "INITIAL",
       confirmedAt: new Date(),
       recordedByMeepleId: actorId,
