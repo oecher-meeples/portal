@@ -21,6 +21,7 @@ import {
   Settings,
   GraduationCap,
   CalendarClock,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -191,6 +192,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Bring & Buy Kasse",
         href: "/admin/bringbuy",
         icon: ShoppingBasket,
+        section: "Administration",
+      },
+      {
+        label: "Wichtige Links",
+        href: "/admin/wichtige-links",
+        icon: Link2,
         section: "Administration",
       },
       {

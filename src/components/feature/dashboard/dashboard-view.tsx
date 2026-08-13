@@ -5,8 +5,10 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { formatDateShort } from "@/lib/utils/format";
 import type { requireMember } from "@/lib/auth/session";
 import type { getInternalContent } from "@/lib/content/content";
+import type { listImportantLinks } from "@/lib/links/links";
 import { ActionButton } from "@/components/ui/action-button";
 import { scanConfirmHolding } from "@/lib/ludothek/holding-actions";
+import { ImportantLinksGrid } from "@/components/widgets/important-links-grid";
 
 const QUICK_LINKS = [
   { href: "/ludothek", label: "Ludothek", icon: Dice5 },
@@ -32,6 +34,7 @@ type DashboardViewProps = {
   upcomingShiftCount: number;
   totalOpenLfgCount: number;
   activeMarketListingCount: number;
+  importantLinks: Awaited<ReturnType<typeof listImportantLinks>>;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
 };
 
@@ -47,6 +50,7 @@ export function DashboardView({
   upcomingShiftCount,
   totalOpenLfgCount,
   activeMarketListingCount,
+  importantLinks,
   resignationNotice,
 }: DashboardViewProps) {
   return (
@@ -198,19 +202,22 @@ export function DashboardView({
 
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-lg font-bold">Schnellzugriff</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {QUICK_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="bg-card hover:border-primary/60 flex flex-col items-center gap-2 rounded-lg border p-6 text-center transition-colors"
-            >
-              <link.icon className="text-primary size-6" />
-              <span className="font-serif font-semibold">{link.label}</span>
-            </Link>
-          ))}
-        </div>
+        <ImportantLinksGrid items={QUICK_LINKS} />
       </div>
+
+      {importantLinks.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">Wichtige Links</h2>
+          <ImportantLinksGrid
+            items={importantLinks.map((link) => ({
+              href: link.targetUrl,
+              label: link.title,
+              iconUrl: link.iconUrl ?? undefined,
+              external: true,
+            }))}
+          />
+        </div>
+      )}
     </div>
   );
 }

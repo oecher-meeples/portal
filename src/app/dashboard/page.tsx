@@ -1,6 +1,7 @@
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { getInternalContent } from "@/lib/content/content";
+import { listImportantLinks } from "@/lib/links/links";
 import {
   countUpcomingShiftBookings,
   summariseMemberHoldings,
@@ -19,6 +20,7 @@ export default async function DashboardPage() {
     shiftBookings,
     totalOpenLfgCount,
     activeMarketListingCount,
+    importantLinks,
   ] = await Promise.all([
     getInternalContent(),
     prisma.gameHolding.findMany({
@@ -39,6 +41,7 @@ export default async function DashboardPage() {
     }),
     prisma.lfgPost.count({ where: { closedAt: null } }),
     prisma.marketListing.count(),
+    listImportantLinks(),
   ]);
 
   const upcomingShiftCount = countUpcomingShiftBookings(
@@ -79,6 +82,7 @@ export default async function DashboardPage() {
       upcomingShiftCount={upcomingShiftCount}
       totalOpenLfgCount={totalOpenLfgCount}
       activeMarketListingCount={activeMarketListingCount}
+      importantLinks={importantLinks}
       resignationNotice={resignationNotice}
     />
   );
