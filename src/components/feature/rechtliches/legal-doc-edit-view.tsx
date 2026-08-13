@@ -27,6 +27,7 @@ export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
   const [sections, setSections] = useState<EditableSection[]>(
     toEditable(doc.sections),
   );
+  const [extractedText, setExtractedText] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,6 +48,8 @@ export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
             onSectionsChange={setSections}
             pdfFileUrl={pdfFileUrl}
             onPdfFileUrlChange={setPdfFileUrl}
+            extractedText={extractedText}
+            onExtractedTextChange={setExtractedText}
             onSaved={() => router.push(`/rechtliches/${doc.slug}`)}
           />
         </TabsContent>

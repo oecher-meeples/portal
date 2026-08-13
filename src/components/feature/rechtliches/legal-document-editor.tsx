@@ -96,6 +96,8 @@ export function LegalDocumentEditor({
   onSectionsChange,
   pdfFileUrl,
   onPdfFileUrlChange,
+  extractedText,
+  onExtractedTextChange,
   onSaved,
 }: {
   doc: LegalDocumentRow;
@@ -107,10 +109,16 @@ export function LegalDocumentEditor({
   ) => void;
   pdfFileUrl?: string;
   onPdfFileUrlChange: (url?: string) => void;
+  extractedText: string | null;
+  onExtractedTextChange: (text: string | null) => void;
   onSaved: () => void;
 }) {
-  const [extractedText, setExtractedText] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [textSelection, setTextSelection] = useState<{
+    text: string;
+    start: number;
+    end: number;
+  } | null>(null);
 
   const {
     uploadFiles,
@@ -139,9 +147,58 @@ export function LegalDocumentEditor({
     onPdfFileUrlChange(fileUrl);
     await runExtract(async () => {
       const result = await extractLegalPdfText(fileUrl);
-      if (result && "text" in result) setExtractedText(result.text);
+      if (result && "text" in result) onExtractedTextChange(result.text);
       return result;
     });
+  }
+
+  function handleExtractedTextSelect(
+    event: React.SyntheticEvent<HTMLTextAreaElement>,
+  ) {
+    const el = event.currentTarget;
+    if (el.selectionStart === el.selectionEnd) {
+      setTextSelection(null);
+      return;
+    }
+    setTextSelection({
+      text: el.value.slice(el.selectionStart, el.selectionEnd),
+      start: el.selectionStart,
+      end: el.selectionEnd,
+    });
+  }
+
+  /** Removes the just-used selection from the extracted-text scratchpad, so
+   * working through a PDF top-to-bottom consumes it as you go. */
+  function consumeTextSelection() {
+    if (!textSelection || extractedText === null) return;
+    onExtractedTextChange(
+      extractedText.slice(0, textSelection.start) +
+        extractedText.slice(textSelection.end),
+    );
+    setTextSelection(null);
+  }
+
+  function useSelectionAsTitle() {
+    if (!textSelection) return;
+    onTitleChange(textSelection.text.trim().replace(/\s+/g, " "));
+    consumeTextSelection();
+  }
+
+  function pushSelectionToNewSection() {
+    if (!textSelection) return;
+    const lines = textSelection.text.split("\n");
+    const heading = lines[0]?.trim() || "Neue Section";
+    const paragraphsText = lines
+      .slice(1)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .join("\n");
+    const id = uniqueLocalId(
+      heading,
+      sections.map((s) => s.id),
+    );
+    onSectionsChange((prev) => [...prev, { id, heading, paragraphsText }]);
+    consumeTextSelection();
   }
 
   function updateSection(id: string, patch: Partial<EditableSection>) {
@@ -232,9 +289,35 @@ export function LegalDocumentEditor({
         {extractedText && (
           <div className="flex flex-col gap-1.5">
             <p className="text-muted-foreground text-xs">
-              Extrahierter Rohtext (zum Abschreiben in die Sections unten):
+              Extrahierter Rohtext — Text markieren, um ihn direkt zu
+              übernehmen:
             </p>
-            <Textarea value={extractedText} readOnly rows={8} />
+            <Textarea
+              value={extractedText}
+              readOnly
+              rows={8}
+              onSelect={handleExtractedTextSelect}
+            />
+            {textSelection && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={useSelectionAsTitle}
+                >
+                  Als Titel verwenden
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={pushSelectionToNewSection}
+                >
+                  In neue Section am Ende schieben
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
