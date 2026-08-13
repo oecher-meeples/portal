@@ -1,23 +1,88 @@
+"use client";
+
 import Link from "next/link";
-import { FileText, FileSpreadsheet } from "lucide-react";
+import { useState } from "react";
+import { Download } from "lucide-react";
+import type { DownloadStatus } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
-import type { LegalDoc } from "@/data/downloads";
+import { Input } from "@/components/ui/input";
+import { useAction } from "@/components/ui/use-action";
+import { reorderDownloads } from "@/lib/downloads/actions";
+import { DownloadRow } from "@/components/feature/downloads/download-row";
+import { DownloadUploadForm } from "@/components/feature/downloads/download-upload-form";
+import { PrivateDownloadsTable } from "@/components/feature/downloads/private-downloads-table";
 
 export type DownloadListItem = {
   id: string;
   title: string;
+  fileName: string;
   fileType: string;
   fileSizeFormatted: string;
   fileUrl: string;
+  status: DownloadStatus;
+  order: number;
+};
+
+export type LegalDocListItem = {
+  slug: string;
+  title: string;
+  pdfFileUrl: string | null;
 };
 
 type DownloadsViewProps = {
   downloads: DownloadListItem[];
-  legalDocs: LegalDoc[];
+  offlineDownloads: DownloadListItem[];
+  legalDocs: LegalDocListItem[];
+  canManage: boolean;
+  canManageLegal: boolean;
+  isMember: boolean;
 };
 
-export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
+export function DownloadsView({
+  downloads,
+  offlineDownloads,
+  legalDocs,
+  canManage,
+  canManageLegal,
+  isMember,
+}: DownloadsViewProps) {
+  const [prevDownloads, setPrevDownloads] = useState(downloads);
+  const [items, setItems] = useState(downloads);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const { run, error } = useAction({ refresh: false });
+
+  // Keep in sync when the server payload changes (e.g. after a status
+  // change or upload elsewhere on the page triggers a refresh) — adjusting
+  // state during render instead of an effect avoids the extra commit.
+  if (downloads !== prevDownloads) {
+    setPrevDownloads(downloads);
+    setItems(downloads);
+  }
+
+  async function moveAndPersist(targetId: string) {
+    if (!draggedId || draggedId === targetId) return;
+    const previous = items;
+
+    const next = [...items];
+    const fromIndex = next.findIndex((item) => item.id === draggedId);
+    const toIndex = next.findIndex((item) => item.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+
+    setItems(next);
+    setDraggedId(null);
+
+    const ok = await run(() => reorderDownloads(next.map((item) => item.id)));
+    if (!ok) setItems(previous);
+  }
+
+  const visibleItems = items.filter((item) =>
+    item.title.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -25,37 +90,37 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
         title="Downloads & Rechtliches"
         description="Anträge, Satzung und rechtliche Dokumente zum direkten Abruf."
       />
+      {canManage && (
+        <div className="bg-muted/30 rounded-lg border p-4">
+          <DownloadUploadForm />
+        </div>
+      )}
+      {isMember && (
+        <Input
+          type="search"
+          placeholder="Nach Titel suchen…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          className="max-w-sm"
+          aria-label="Downloads durchsuchen"
+        />
+      )}
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-card flex flex-col divide-y rounded-lg border">
-          {downloads.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center justify-between gap-4 p-4"
-            >
-              <div className="flex items-center gap-3">
-                {file.fileType === "XLSX" ? (
-                  <FileSpreadsheet className="size-5 text-emerald-600" />
-                ) : (
-                  <FileText className="text-muted-foreground size-5" />
-                )}
-                <div>
-                  <p className="font-medium">{file.title}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {file.fileType} · {file.fileSizeFormatted}
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                render={
-                  <a href={file.fileUrl} download>
-                    Download
-                  </a>
-                }
+        <div className="flex flex-col gap-2">
+          <div className="bg-card flex flex-col divide-y rounded-lg border">
+            {visibleItems.map((file) => (
+              <DownloadRow
+                key={file.id}
+                file={file}
+                canManage={canManage}
+                draggable={canManage}
+                onDragStart={() => setDraggedId(file.id)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => moveAndPersist(file.id)}
               />
-            </div>
-          ))}
+            ))}
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
         </div>
 
         <div className="bg-card flex flex-col divide-y rounded-lg border">
@@ -65,17 +130,43 @@ export function DownloadsView({ downloads, legalDocs }: DownloadsViewProps) {
               className="flex items-center justify-between gap-4 p-4"
             >
               <p className="font-medium">{doc.title}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                render={
-                  <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
-                }
-              />
+              <div className="flex items-center gap-1">
+                {canManageLegal && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={
+                      <Link href={`/rechtliches/${doc.slug}/edit`}>
+                        Verwalten
+                      </Link>
+                    }
+                  />
+                )}
+                {doc.pdfFileUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={
+                      <a href={doc.pdfFileUrl} download>
+                        <Download className="size-4" />
+                        Download
+                      </a>
+                    }
+                  />
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <Link href={`/rechtliches/${doc.slug}`}>Ansehen →</Link>
+                  }
+                />
+              </div>
             </div>
           ))}
         </div>
       </div>
+      {canManage && <PrivateDownloadsTable downloads={offlineDownloads} />}
     </div>
   );
 }

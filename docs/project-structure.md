@@ -40,6 +40,8 @@ src/lib/
 ├── content/    News/Content (inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
+├── legal/      Rechtliches-Dokumente (Satzung/Datenschutz/Impressum/Beitragsordnung, feste Slugs): PDF-Text-Extraktion
+│               ohne Gliederungslogik (`pdf-extract.ts`, via `unpdf`), Zod-Validierung der `sections`-Json-Spalte in `actions.ts`
 ├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)

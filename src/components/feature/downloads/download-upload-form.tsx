@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TextField } from "@/components/ui/field";
+import { FileField } from "@/components/ui/file-field";
 import { Button } from "@/components/ui/button";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { useAction } from "@/components/ui/use-action";
@@ -15,9 +16,18 @@ const FILE_TYPE_BY_MIME: Record<string, string> = {
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
 };
 
+function resolveFileType(file: File) {
+  return (
+    FILE_TYPE_BY_MIME[file.type] ??
+    file.name.split(".").pop()?.toUpperCase() ??
+    "DATEI"
+  );
+}
+
 export function DownloadUploadForm() {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [resetKey, setResetKey] = useState(0);
   const {
     uploadFiles,
     isUploading,
@@ -27,6 +37,7 @@ export function DownloadUploadForm() {
     onSuccess: () => {
       setTitle("");
       setFile(null);
+      setResetKey((key) => key + 1);
     },
   });
 
@@ -36,8 +47,7 @@ export function DownloadUploadForm() {
     event.preventDefault();
     if (!file) return;
 
-    const fileType = FILE_TYPE_BY_MIME[file.type];
-    if (!fileType) return;
+    const fileType = resolveFileType(file);
 
     const [fileUrl] = await uploadFiles([file]);
     if (!fileUrl) return;
@@ -45,6 +55,7 @@ export function DownloadUploadForm() {
     await run(() =>
       createDownload({
         title: title.trim(),
+        fileName: file.name,
         fileUrl,
         fileType,
         fileSizeBytes: file.size,
@@ -53,31 +64,30 @@ export function DownloadUploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-sm flex-col gap-3">
-      <TextField
-        id="download-upload-title"
-        label="Titel"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        required
-      />
-      <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium" htmlFor="download-upload-file">
-          Datei (PDF oder XLSX)
-        </label>
-        <input
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-48 flex-1">
+          <TextField
+            id="download-upload-title"
+            label="Titel"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            required
+          />
+        </div>
+        <FileField
+          key={resetKey}
           id="download-upload-file"
-          type="file"
-          accept="application/pdf,.xlsx"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+          label="Datei"
+          onFilesSelected={(files) => setFile(files[0] ?? null)}
         />
+        <Button type="submit" variant="outline" disabled={!canSubmit}>
+          {isUploading || pending ? "Lade hoch…" : "Hochladen"}
+        </Button>
       </div>
       {(uploadError || error) && (
         <p className="text-destructive text-sm">{uploadError || error}</p>
       )}
-      <Button type="submit" disabled={!canSubmit}>
-        {isUploading || pending ? "Lade hoch…" : "Hochladen"}
-      </Button>
     </form>
   );
 }

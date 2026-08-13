@@ -1,6 +1,7 @@
 "use client";
 
 import { TextField, TextAreaField } from "@/components/ui/field";
+import { FileField } from "@/components/ui/file-field";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { getMarketListingUploadToken } from "@/components/feature/markt/actions";
 
@@ -33,11 +34,7 @@ export function MarketListingFields({
     error: uploadError,
   } = useBlobUpload("market-listings", getMarketListingUploadToken);
 
-  async function handleImagesChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
+  async function handleImagesChange(files: File[]) {
     const urls = await uploadFiles(files);
     onImageUrlsChange([...imageUrls, ...urls]);
   }
@@ -76,16 +73,13 @@ export function MarketListingFields({
         onChange={(event) => onDescriptionChange(event.target.value)}
       />
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium" htmlFor="market-listing-images">
-          Bilder
-        </label>
-        <input
+        <FileField
           id="market-listing-images"
-          type="file"
+          label="Bilder"
           accept="image/png,image/jpeg,image/webp"
           multiple
           disabled={isUploading}
-          onChange={handleImagesChange}
+          onFilesSelected={(files) => void handleImagesChange(files)}
         />
         {isUploading && (
           <p className="text-muted-foreground text-sm">Lade Bilder hoch…</p>

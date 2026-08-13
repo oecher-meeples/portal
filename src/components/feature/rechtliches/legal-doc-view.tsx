@@ -1,16 +1,52 @@
+import Link from "next/link";
+import { Download, Pencil } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Button } from "@/components/ui/button";
 import type { LegalDoc } from "@/data/downloads";
 import type { LegalSection } from "@/data/legal";
 
 type LegalDocViewProps = {
   doc: LegalDoc;
   sections: LegalSection[];
+  pdfFileUrl?: string;
+  canManage?: boolean;
 };
 
-export function LegalDocView({ doc, sections }: LegalDocViewProps) {
+export function LegalDocView({
+  doc,
+  sections,
+  pdfFileUrl,
+  canManage = false,
+}: LegalDocViewProps) {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading eyebrow="Rechtliches" title={doc.title} />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <PageHeading eyebrow="Rechtliches" title={doc.title} />
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/rechtliches/${doc.slug}/edit`}>
+                  <Pencil className="size-4" />
+                  Bearbeiten
+                </Link>
+              }
+            />
+          )}
+          {pdfFileUrl && (
+            <Button
+              variant="outline"
+              render={
+                <a href={pdfFileUrl} download>
+                  <Download className="size-4" />
+                  PDF herunterladen
+                </a>
+              }
+            />
+          )}
+        </div>
+      </div>
       <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
         <nav className="flex flex-col gap-1 text-sm lg:sticky lg:top-24 lg:self-start">
           <p className="text-muted-foreground mb-1 text-xs font-semibold tracking-wider uppercase">
@@ -50,6 +86,9 @@ export function LegalDocView({ doc, sections }: LegalDocViewProps) {
           ))}
         </div>
       </div>
+      {/* Lets the last section scroll further up past the fold instead of
+       * stopping flush with the viewport bottom. */}
+      <div className="h-[20vh]" aria-hidden />
     </div>
   );
 }

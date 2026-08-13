@@ -666,15 +666,31 @@ model FleaMarketItem {
 model Download {
   id            String         @id @default(cuid())
   title         String
+  fileName      String
   fileUrl       String         @unique
   fileType      String
   fileSizeBytes Int
   status        DownloadStatus @default(PUBLIC)
+  order         Int            @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
   @@index([status])
   @@map("downloads")
+}
+
+/// Satzung/Datenschutzerklärung/Impressum/Beitragsordnung: fixe Slugs, je ein
+/// aktueller PDF-Stand + ein Section-Stand für die Anzeige auf /rechtliches/[slug].
+/// Bewusst getrennt vom generischen `Download` — siehe CLAUDE.md-Plan.
+model LegalDocument {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  title      String
+  sections   Json
+  pdfFileUrl String?
+  updatedAt  DateTime @updatedAt
+
+  @@map("legal_documents")
 }
 
 model InstagramConnection {

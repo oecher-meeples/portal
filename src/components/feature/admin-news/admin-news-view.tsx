@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
   CalendarDays,
   Newspaper,
@@ -20,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateShort } from "@/lib/utils/format";
+import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { InstagramIcon } from "@/components/ui/instagram-icon";
 import { ActionButton } from "@/components/ui/action-button";
@@ -83,17 +83,7 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
                       {post.status === "DRAFT" && (
                         <Badge variant="secondary">Entwurf</Badge>
                       )}
-                      {post.internal && (
-                        <Tooltip content="Nur intern sichtbar">
-                          <Image
-                            src="/meeple-150x150.png"
-                            alt="Nur intern sichtbar"
-                            width={16}
-                            height={16}
-                            className="size-4 shrink-0"
-                          />
-                        </Tooltip>
-                      )}
+                      {post.internal && <InternalOnlyBadge />}
                       {post.instagram && (
                         <Tooltip content="Für Instagram markiert">
                           <InstagramIcon
