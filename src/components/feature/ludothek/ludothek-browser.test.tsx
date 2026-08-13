@@ -79,6 +79,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     zustand: "frei",
     isLoanedOut: false,
     responsibleMeepleId: null,
+    responsibleName: null,
+    unitChain: "Regal A",
     locationChain: "Regal A",
     ...overrides,
   };

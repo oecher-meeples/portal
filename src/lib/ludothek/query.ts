@@ -4,9 +4,11 @@ import {
   isLoanHolding,
   zustandFromHoldingAndUnit,
 } from "@/lib/ludothek/holdings";
+import {
+  formatLocationChain,
+  walkUnitChain,
+} from "@/lib/ludothek/holdings-lookup";
 import type { LudothekGame } from "@/lib/ludothek/browser";
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
 
 /**
  * Everything the Ludothek browser and detail page need, in one bulk query —
@@ -47,27 +49,20 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
   ]);
 
   const unitById = new Map(units.map((u) => [u.id, u]));
-
-  function resolveUnitChain(unitId: string) {
-    const chain: string[] = [];
-    let keeperMeepleId: string | null = null;
-    let currentId: string | null = unitId;
-    let depth = 0;
-
-    while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-      const unit = unitById.get(currentId);
-      if (!unit) break;
-      chain.push(unit.label);
-      if (unit.keeperMeepleId) {
-        keeperMeepleId = unit.keeperMeepleId;
-        break;
-      }
-      currentId = unit.parentUnitId;
-      depth += 1;
-    }
-
-    return { chain: chain.reverse().join(" → "), keeperMeepleId };
-  }
+  const keeperIds = [
+    ...new Set(
+      units
+        .map((u) => u.keeperMeepleId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const keepers = keeperIds.length
+    ? await prisma.meeple.findMany({
+        where: { id: { in: keeperIds } },
+        select: { id: true, displayName: true },
+      })
+    : [];
+  const keeperNameById = new Map(keepers.map((k) => [k.id, k.displayName]));
 
   return copies.map((copy) => {
     const boardGame = copy.boardGame;
@@ -100,27 +95,40 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         zustand: "nicht-erfasst" as const,
         isLoanedOut: false,
         responsibleMeepleId: null,
+        responsibleName: null,
+        unitChain: "",
         locationChain: "",
       };
     }
 
     if (holding.meepleId) {
+      const responsibleName = holding.meeple?.displayName ?? "Meeple";
       return {
         ...base,
         zustand: zustandFromHoldingAndUnit(holding, null, copy.status),
         isLoanedOut: isLoanHolding(holding),
         responsibleMeepleId: holding.meepleId,
-        locationChain: `bei ${holding.meeple?.displayName ?? "Meeple"}`,
+        responsibleName,
+        unitChain: "",
+        locationChain: formatLocationChain({ responsibleName, unitChain: "" }),
       };
     }
 
-    const { chain, keeperMeepleId } = resolveUnitChain(holding.unitId!);
+    const { unitChain, keeperMeepleId } = walkUnitChain(
+      holding.unitId!,
+      unitById,
+    );
+    const responsibleName = keeperMeepleId
+      ? (keeperNameById.get(keeperMeepleId) ?? null)
+      : null;
     return {
       ...base,
       zustand: zustandFromHoldingAndUnit(holding, holding.unit, copy.status),
       isLoanedOut: false,
       responsibleMeepleId: keeperMeepleId,
-      locationChain: chain,
+      responsibleName,
+      unitChain,
+      locationChain: formatLocationChain({ responsibleName, unitChain }),
     };
   });
 }

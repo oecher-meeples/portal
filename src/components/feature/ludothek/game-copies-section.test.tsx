@@ -24,8 +24,9 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
   return {
     id: "copy-1",
     zustand: "frei",
-    locationChain: "Regal A",
+    unitChain: "Regal A",
     responsibleName: null,
+    responsibleContact: { mailHref: null, telegramHref: null },
     condition: null,
     ...overrides,
   };
@@ -47,12 +48,32 @@ describe("GameCopiesSection", () => {
     expect(screen.getByText("Regal A")).toBeInTheDocument();
   });
 
+  it("leads with the responsible person before the storage chain (#121)", () => {
+    render(
+      <GameCopiesSection
+        copies={[
+          copy({
+            unitChain: "Regal A",
+            responsibleName: "Alex",
+            responsibleContact: { mailHref: "mailto:alex@example.com", telegramHref: null },
+          }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    const cell = screen.getByText(/Regal A/);
+    expect(cell.textContent).toBe("bei Alex → Regal A");
+  });
+
   it("renders a table for more than one copy", () => {
     render(
       <GameCopiesSection
         copies={[
-          copy({ id: "copy-1", locationChain: "Regal A" }),
-          copy({ id: "copy-2", locationChain: "Regal B" }),
+          copy({ id: "copy-1", unitChain: "Regal A" }),
+          copy({ id: "copy-2", unitChain: "Regal B" }),
         ]}
         boardGameId="game-1"
         boardGameTitle="Arche Nova"

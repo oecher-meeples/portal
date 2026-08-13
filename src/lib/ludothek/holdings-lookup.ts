@@ -18,6 +18,52 @@ const MAX_UNIT_CHAIN_DEPTH = 20;
 
 export type GameZustand = "frei" | "ausgeliehen" | "wartung" | "nicht-erfasst";
 
+export type UnitChainNode = {
+  label: string;
+  parentUnitId: string | null;
+  keeperMeepleId: string | null;
+};
+
+/** Walks a unit chain from a leaf up towards the root, stopping at the first
+ * keeper found — that person is the pickup orientation point, further
+ * ancestor units aren't shown (see #121 Standort-Kette). */
+export function walkUnitChain(
+  unitId: string,
+  unitById: Map<string, UnitChainNode>,
+) {
+  const labels: string[] = [];
+  let keeperMeepleId: string | null = null;
+  let currentId: string | null = unitId;
+  let depth = 0;
+
+  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
+    const unit = unitById.get(currentId);
+    if (!unit) break;
+    labels.push(unit.label);
+    if (unit.keeperMeepleId) {
+      keeperMeepleId = unit.keeperMeepleId;
+      break;
+    }
+    currentId = unit.parentUnitId;
+    depth += 1;
+  }
+
+  return { unitChain: labels.reverse().join(" → "), keeperMeepleId };
+}
+
+/** The one place that decides the display order: person/event first (the
+ * pickup orientation point), then the storage units (see #121). */
+export function formatLocationChain({
+  responsibleName,
+  unitChain,
+}: {
+  responsibleName: string | null;
+  unitChain: string;
+}) {
+  if (!responsibleName) return unitChain;
+  return unitChain ? `bei ${responsibleName} → ${unitChain}` : `bei ${responsibleName}`;
+}
+
 /** A physical copy together with its title — what a scan actually resolves to. */
 export type ScannedGameCopy = GameCopy & { boardGame: BoardGame };
 

@@ -3,8 +3,13 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getGameZustand, getResponsibleMeeple, resolveScannedCode } =
-  await import("./holdings");
+const {
+  getGameZustand,
+  getResponsibleMeeple,
+  resolveScannedCode,
+  walkUnitChain,
+  formatLocationChain,
+} = await import("./holdings");
 
 const GAME_ID = "game-1";
 const UNIT_ID = "unit-1";
@@ -204,5 +209,68 @@ describe("resolveScannedCode", () => {
 
     expect(result).toEqual({ kind: "unknown", raw: "hallo welt" });
     expect(prismaMock.gameCopy.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("walkUnitChain", () => {
+  it("walks up to the root when no unit has a keeper", () => {
+    const unitById = new Map([
+      ["karton", { label: "Karton 3", parentUnitId: "regal", keeperMeepleId: null }],
+      ["regal", { label: "Regal A", parentUnitId: null, keeperMeepleId: null }],
+    ]);
+
+    expect(walkUnitChain("karton", unitById)).toEqual({
+      unitChain: "Regal A → Karton 3",
+      keeperMeepleId: null,
+    });
+  });
+
+  it("stops at the first keeper and reports it, without ancestor units", () => {
+    const unitById = new Map([
+      ["karton", { label: "Karton 3", parentUnitId: "regal", keeperMeepleId: null }],
+      [
+        "regal",
+        { label: "Regal A", parentUnitId: "dachboden", keeperMeepleId: "meeple-a" },
+      ],
+      ["dachboden", { label: "Dachboden", parentUnitId: null, keeperMeepleId: null }],
+    ]);
+
+    expect(walkUnitChain("karton", unitById)).toEqual({
+      unitChain: "Regal A → Karton 3",
+      keeperMeepleId: "meeple-a",
+    });
+  });
+
+  it("returns an empty chain and no keeper for an unknown unit id", () => {
+    expect(walkUnitChain("missing", new Map())).toEqual({
+      unitChain: "",
+      keeperMeepleId: null,
+    });
+  });
+});
+
+describe("formatLocationChain", () => {
+  it("leads with the responsible person, then the storage chain (#121)", () => {
+    expect(
+      formatLocationChain({ responsibleName: "Alex", unitChain: "Regal A → Karton 3" }),
+    ).toBe("bei Alex → Regal A → Karton 3");
+  });
+
+  it("shows just the person when there is no storage chain", () => {
+    expect(formatLocationChain({ responsibleName: "Alex", unitChain: "" })).toBe(
+      "bei Alex",
+    );
+  });
+
+  it("shows just the storage chain when there is no responsible person", () => {
+    expect(
+      formatLocationChain({ responsibleName: null, unitChain: "Regal A" }),
+    ).toBe("Regal A");
+  });
+
+  it("returns an empty string when there is neither", () => {
+    expect(formatLocationChain({ responsibleName: null, unitChain: "" })).toBe(
+      "",
+    );
   });
 });

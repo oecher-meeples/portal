@@ -7,6 +7,7 @@ import { getCurrentMeeple } from "@/lib/members/meeples";
 import { toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
+import { getContactLinks } from "@/lib/members/contact";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import {
@@ -66,6 +67,9 @@ export default async function GameDetailPage({
     recordedByName: holding.recordedBy.displayName,
   }));
 
+  // Names come straight from `buildLudothekGames()` — only the contact links
+  // (mail/telegram) for the responsible person's `ContactDialog` need their
+  // own lookup here.
   const responsibleIds = [
     ...new Set(
       copies
@@ -76,22 +80,21 @@ export default async function GameDetailPage({
   const responsibleMeeples = responsibleIds.length
     ? await prisma.meeple.findMany({
         where: { id: { in: responsibleIds } },
-        select: { id: true, displayName: true },
+        select: { id: true, email: true, telegramHandle: true },
       })
     : [];
-  const responsibleNameById = new Map(
-    responsibleMeeples.map((m) => [m.id, m.displayName]),
+  const contactById = new Map(
+    responsibleMeeples.map((m) => [m.id, getContactLinks(m)]),
   );
-  const responsibleName = game.responsibleMeepleId
-    ? (responsibleNameById.get(game.responsibleMeepleId) ?? null)
-    : null;
+  const NO_CONTACT = { mailHref: null, telegramHref: null };
   const copyRows = copies.map((copy) => ({
     id: copy.id,
     zustand: copy.zustand,
-    locationChain: copy.locationChain,
-    responsibleName: copy.responsibleMeepleId
-      ? (responsibleNameById.get(copy.responsibleMeepleId) ?? null)
-      : null,
+    unitChain: copy.unitChain,
+    responsibleName: copy.responsibleName,
+    responsibleContact: copy.responsibleMeepleId
+      ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
+      : NO_CONTACT,
     condition: copy.condition,
   }));
 
@@ -143,7 +146,7 @@ export default async function GameDetailPage({
       internal={{
         zustand: game.zustand,
         locationChain: game.locationChain,
-        responsibleName,
+        responsibleName: game.responsibleName,
         history,
       }}
       explainer={{ entries: explainerEntries, myLevel }}

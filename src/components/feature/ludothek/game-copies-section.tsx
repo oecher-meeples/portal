@@ -7,25 +7,43 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import type { ContactLinks } from "@/lib/members/contact";
 
 export type GameCopyRow = {
   /** GameCopy id. */
   id: string;
   zustand: GameZustand;
-  locationChain: string;
+  /** Storage units only, outermost → innermost — the person leads separately (below). */
+  unitChain: string;
   responsibleName: string | null;
+  responsibleContact: ContactLinks;
   condition: string | null;
 };
 
+/** Person (clickable via `ContactDialog`) leads, then the storage chain —
+ * the pickup orientation point comes first (#121 Standort-Kette). */
 function LocationCell({ copy }: { copy: GameCopyRow }) {
+  if (!copy.responsibleName && !copy.unitChain) {
+    return <span className="text-muted-foreground text-sm">—</span>;
+  }
+
   return (
     <span className="text-muted-foreground text-sm">
-      {copy.responsibleName
-        ? `bei ${copy.responsibleName}`
-        : copy.locationChain || "—"}
+      {copy.responsibleName && (
+        <>
+          bei{" "}
+          <ContactDialog
+            name={copy.responsibleName}
+            contact={copy.responsibleContact}
+          />
+        </>
+      )}
+      {copy.responsibleName && copy.unitChain && " → "}
+      {copy.unitChain}
     </span>
   );
 }

@@ -31,6 +31,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     zustand: "frei",
     isLoanedOut: false,
     responsibleMeepleId: "meeple-a",
+    responsibleName: "Alex",
+    unitChain: "Karton 1",
     locationChain: "Karton 1",
     ...overrides,
   };
