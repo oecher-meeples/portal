@@ -23,6 +23,7 @@ import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
+import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 
 export type AdminBoardGameRow = {
   /** GameCopy id. */
@@ -107,7 +108,7 @@ export function AdminBestandView({
         action={<CreateBoardGameDialog defaultEan={defaultEan} />}
       />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="bg-background sticky top-24 z-10 flex flex-wrap items-center gap-3 py-2">
         <div className="relative w-full max-w-sm">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
@@ -117,6 +118,7 @@ export function AdminBestandView({
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+        <ScanSearchDialog onScanned={setSearch} />
         <div className="flex flex-wrap gap-2 text-sm">
           {(
             [
