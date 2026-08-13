@@ -74,7 +74,7 @@ export function ExplainerGamePanel({
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
         <h2 className="font-serif text-lg font-bold">Erklärbären</h2>
         <Dialog>
           <Tooltip content="Alle Erklärbären ansehen">
