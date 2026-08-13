@@ -22,6 +22,8 @@ import { useAction, type ActionResult } from "@/components/ui/use-action";
  */
 export function ActionDialog({
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   title,
   description,
   children,
@@ -29,13 +31,20 @@ export function ActionDialog({
   pendingLabel = "Speichere…",
   submitVariant,
   submitClassName,
+  contentClassName,
   canSubmit = true,
   action,
   onReset,
   onOpen,
 }: {
-  /** Complete trigger element, including its label. */
-  trigger: ReactElement;
+  /** Complete trigger element, including its label. Omit for a fully
+   * controlled dialog (see `open`/`onOpenChange`) — e.g. one opened
+   * programmatically after a Exemplar-Auswahl-Popup (#121/#122). */
+  trigger?: ReactElement;
+  /** Controls open state externally instead of the dialog's own — both or
+   * neither, `trigger` is then typically omitted too. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: ReactNode;
   description?: ReactNode;
   children?: ReactNode;
@@ -43,6 +52,9 @@ export function ActionDialog({
   pendingLabel?: string;
   submitVariant?: React.ComponentProps<typeof Button>["variant"];
   submitClassName?: string;
+  /** Overrides `DialogContent`'s default `sm:max-w-sm` — e.g. a wider layout
+   * with several fields per row (#124). */
+  contentClassName?: string;
   /** Set false while required fields are empty. */
   canSubmit?: boolean;
   action: () => Promise<ActionResult>;
@@ -51,7 +63,9 @@ export function ActionDialog({
   /** Load data the dialog needs when it opens. */
   onOpen?: () => void | Promise<void>;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const { run, pending, error, setError } = useAction({
     onSuccess: () => {
       setOpen(false);
@@ -71,8 +85,8 @@ export function ActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
-      <DialogContent>
+      {trigger && <DialogTrigger render={trigger} />}
+      <DialogContent className={contentClassName}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}

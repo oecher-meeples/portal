@@ -18,11 +18,31 @@ vi.mock("@/lib/members/anonymisation", () => ({
     anonymiseMeepleRecordMock(...args),
 }));
 
+// Ditto for the bank-reveal and Selbstauskunft-mail rules — those are tested in
+// src/lib/members/bank-access-log.test.ts and selbstauskunft-mail.test.ts.
+const requireBankReaderMock = vi.fn();
+const revealMeepleIbanMock = vi.fn();
+vi.mock("@/lib/members/bank-access-log", () => ({
+  requireBankReader: (...args: unknown[]) => requireBankReaderMock(...args),
+  revealMeepleIban: (...args: unknown[]) => revealMeepleIbanMock(...args),
+}));
+
+const sendSelbstauskunftMailMock = vi.fn();
+vi.mock("@/lib/members/selbstauskunft-mail", () => ({
+  sendSelbstauskunftMail: (...args: unknown[]) =>
+    sendSelbstauskunftMailMock(...args),
+}));
+
 const {
   anonymiseMeeple,
   getOpenHoldingsSummary,
   recordResignation,
+  renameMeeple,
+  revealMemberIban,
   revokeResignation,
+  sendSelbstauskunft,
+  setMeepleRole,
+  setMemberNumber,
 } = await import("./actions");
 
 class ForbiddenError extends Error {}
@@ -31,6 +51,9 @@ beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
   anonymiseMeepleRecordMock.mockReset();
   anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
+  requireBankReaderMock.mockReset().mockResolvedValue({ id: "meeple-admin" });
+  revealMeepleIbanMock.mockReset();
+  sendSelbstauskunftMailMock.mockReset().mockResolvedValue({ success: true });
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -46,6 +69,18 @@ describe("without the members:manage permission", () => {
     await expect(revokeResignation("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(anonymiseMeeple("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(getOpenHoldingsSummary("meeple-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(setMeepleRole("meeple-1", "role-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(setMemberNumber("meeple-1", 10)).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(renameMeeple("meeple-1", "Neuer Name")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(sendSelbstauskunft("meeple-1")).rejects.toThrow(
       ForbiddenError,
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
@@ -107,6 +142,126 @@ describe("anonymiseMeeple", () => {
 
     expect(await anonymiseMeeple("meeple-1")).toEqual({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
+    });
+  });
+});
+
+describe("setMeepleRole", () => {
+  it("swaps the meeple's UserRole row for the chosen role", async () => {
+    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+      neonAuthUserId: "user-1",
+    } as never);
+    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
+      id: "role-admin",
+    } as never);
+
+    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
+      success: true,
+    });
+
+    expect(prismaMock.userRole.deleteMany).toHaveBeenCalledWith({
+      where: { neonAuthUserId: "user-1" },
+    });
+    expect(prismaMock.userRole.create).toHaveBeenCalledWith({
+      data: { neonAuthUserId: "user-1", roleId: "role-admin" },
+    });
+  });
+
+  it("refuses to assign a role to a Meeple without a login account", async () => {
+    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+      neonAuthUserId: null,
+    } as never);
+    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
+      id: "role-admin",
+    } as never);
+
+    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
+      error: "Dieses Mitglied hat kein Login-Konto.",
+    });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("setMemberNumber", () => {
+  it("assigns the number and revalidates on success", async () => {
+    prismaMock.meeple.findUnique
+      .mockResolvedValueOnce({ id: "meeple-1", memberNumber: 5 } as never)
+      .mockResolvedValueOnce(null);
+
+    expect(await setMemberNumber("meeple-1", 10)).toEqual({ success: true });
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { memberNumber: 10 },
+    });
+  });
+
+  it("passes a rule violation straight back", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(null);
+
+    expect(await setMemberNumber("meeple-1", 10)).toEqual({
+      error: "Mitglied nicht gefunden.",
+    });
+  });
+});
+
+describe("renameMeeple", () => {
+  it("trims and saves the new display name", async () => {
+    expect(await renameMeeple("meeple-1", "  Neuer Name  ")).toEqual({
+      success: true,
+    });
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { displayName: "Neuer Name" },
+    });
+  });
+
+  it("refuses a blank name", async () => {
+    expect(await renameMeeple("meeple-1", "   ")).toEqual({
+      error: "Bitte einen Anzeigenamen angeben.",
+    });
+    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("revealMemberIban", () => {
+  it("checks bank:read separately from members:manage and delegates the reveal", async () => {
+    revealMeepleIbanMock.mockResolvedValue({ success: true, iban: "DE00" });
+
+    expect(await revealMemberIban("meeple-1")).toEqual({
+      success: true,
+      iban: "DE00",
+    });
+    expect(requireBankReaderMock).toHaveBeenCalled();
+    expect(revealMeepleIbanMock).toHaveBeenCalledWith(
+      "meeple-1",
+      "meeple-admin",
+    );
+  });
+
+  it("rejects without the bank:read permission, independent of members:manage", async () => {
+    requireBankReaderMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(revealMemberIban("meeple-1")).rejects.toThrow(ForbiddenError);
+    expect(revealMeepleIbanMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("sendSelbstauskunft", () => {
+  it("delegates to the shared mail rules", async () => {
+    sendSelbstauskunftMailMock.mockResolvedValue({ success: true });
+
+    expect(await sendSelbstauskunft("meeple-1")).toEqual({ success: true });
+    expect(sendSelbstauskunftMailMock).toHaveBeenCalledWith("meeple-1");
+  });
+
+  it("passes a rule violation straight back", async () => {
+    sendSelbstauskunftMailMock.mockResolvedValue({
+      error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
+    });
+
+    expect(await sendSelbstauskunft("meeple-1")).toEqual({
+      error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
     });
   });
 });

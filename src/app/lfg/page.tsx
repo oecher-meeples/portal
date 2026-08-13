@@ -18,13 +18,19 @@ export default async function LfgPage({
   const { vergangene } = await searchParams;
   const showExpired = vergangene === "1";
 
-  const posts = await prisma.lfgPost.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      createdBy: { select: { displayName: true } },
-      participants: { select: { meepleId: true } },
-    },
-  });
+  const [posts, boardGameOptions] = await Promise.all([
+    prisma.lfgPost.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        createdBy: { select: { displayName: true } },
+        participants: { select: { meepleId: true } },
+      },
+    }),
+    prisma.boardGame.findMany({
+      select: { id: true, title: true },
+      orderBy: { title: "asc" },
+    }),
+  ]);
 
   const now = new Date();
   const summaries: LfgPostSummary[] = posts
@@ -50,7 +56,7 @@ export default async function LfgPage({
         eyebrow="Schwarzes Brett"
         title="Spielergesuche (LFG)"
         description="Finde Mitspielende – für ein bestimmtes Spiel oder einfach spontan für einen Abend."
-        action={<CreateLfgDialog />}
+        action={<CreateLfgDialog boardGameOptions={boardGameOptions} />}
       />
       <LfgList
         posts={summaries}

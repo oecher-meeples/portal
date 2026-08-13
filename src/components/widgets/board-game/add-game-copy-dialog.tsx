@@ -39,7 +39,7 @@ export function AddGameCopyDialog({
     >
       <TextField
         id={`add-copy-${boardGameId}-condition`}
-        label="Zustand"
+        label="Mängelvermerk"
         value={condition}
         onChange={(event) => setCondition(event.target.value)}
       />

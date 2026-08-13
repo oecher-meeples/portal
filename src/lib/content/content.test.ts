@@ -62,13 +62,14 @@ const ALL_POSTS = [
 ];
 
 describe("getAllContent", () => {
-  it("loads all posts from the database", async () => {
+  it("loads all posts from the database, including the body (#135)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
     const items = await getAllContent();
 
     expect(items).toHaveLength(3);
     expect(items[0].date).toBe("2026-06-15");
+    expect(items[0].body).toBe("Unser Sommerfest war ein voller Erfolg.");
   });
 });
 

@@ -175,6 +175,8 @@ Beide Token-Ausgaben sind korrekt berechtigungsgeprüft (`requireMeeple()` bzw. 
 
 **Empfehlung:** Prefix serverseitig setzen statt vom Client übernehmen (`pathname` auf `${erwarteterPrefix}/${basename(pathname)}` normalisieren) und `maximumSizeInBytes` ergänzen.
 
+**Akzeptiertes Risiko (Entscheidung 2026-08-13, im Rahmen von Issue #102):** Der Vercel-Blob-Store läuft mit `access: "public"` — jede Blob-URL ist ohne Login abrufbar, sobald sie bekannt ist (Browser-Cache, geteilter Link, Referrer). Der Seitenzugriff ist zwar korrekt gegated (`market-listings/` nur über `requireMember()`, `downloads/` mit `status: "INTERNAL"` nur ab Tier `mitglied` — siehe `src/lib/downloads/downloads.ts:6-10`, `src/app/markt/page.tsx:19`), die URL selbst ist aber nur durch den Zufalls-Suffix (`addRandomSuffix: true`) geschützt, nicht durch eine echte Autorisierungsprüfung — gleiches Muster wie beim internen ICS-Feed (F13-Nachbarschaft: URL = Bearer-Äquivalent). Für Kleinanzeigen-Fotos und Downloads bewusst als ausreichend bewertet, da keine hochsensiblen Daten betroffen sind. Bei zukünftigen, sensibleren Blob-Inhalten (z. B. personenbezogene Dokumente) erneut prüfen — dann private Blobs + serverseitig signierte, kurzlebige Download-URLs statt public URLs verwenden.
+
 ### F9 — Instagram-Callback ohne eigene Berechtigungsprüfung (Medium)
 
 `src/app/api/auth/instagram/callback/route.ts:23` prüft ausschließlich `state`. `src/app/api/auth/instagram/connect/route.ts:8` prüft dagegen korrekt `hasPermission(user.id, "instagram:connect")`.

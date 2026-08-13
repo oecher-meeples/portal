@@ -209,13 +209,17 @@ model LfgPost {
   location          String?
   maxParticipants   Int
   createdByMeepleId String
+  /// Optional link to an inventory title (#34) — gameTitle free text stays the default, this is never required.
+  boardGameId       String?
   closedAt          DateTime?
   createdAt         DateTime  @default(now())
 
   createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
+  boardGame    BoardGame?       @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
   participants LfgParticipant[]
 
   @@index([createdByMeepleId])
+  @@index([boardGameId])
   @@map("lfg_posts")
 }
 
@@ -345,6 +349,8 @@ model Invite {
 model BoardGame {
   id                String        @id @default(cuid())
   title             String
+  /// Routing basis for the title detail page (see ADR on the exemplar→title slug migration).
+  slug              String        @unique
   /// The single reliable product identity; unique now that copies live in GameCopy.
   bggId             Int?          @unique
   /// The manufacturer barcode identifies the product, not the single copy — never unique.
@@ -369,6 +375,7 @@ model BoardGame {
   expansionCollections     GameCollection[]             @relation("ExpansionCollections")
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
+  lfgPosts                 LfgPost[]
 
   @@index([ean])
   @@map("board_games")
@@ -702,4 +709,16 @@ model InstagramConnection {
   updatedAt           DateTime @updatedAt
 
   @@map("instagram_connections")
+}
+
+/// Kuratierte externe/interne Links fürs Dashboard — Reihenfolge nach createdAt, keine manuelle Sortierung.
+model ImportantLink {
+  id        String   @id @default(cuid())
+  title     String
+  targetUrl String
+  iconUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("important_links")
 }

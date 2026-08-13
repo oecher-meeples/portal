@@ -83,6 +83,47 @@ describe("createStorageUnit", () => {
     expect(result).toEqual({ error: "Bitte ein Label angeben." });
     expect(prismaMock.storageUnit.create).not.toHaveBeenCalled();
   });
+
+  it("uses an explicit code instead of generating one", async () => {
+    prismaMock.storageUnit.findUnique.mockResolvedValue(null);
+    prismaMock.storageUnit.create.mockResolvedValue({
+      id: "unit-3",
+      code: "OM-BOX-9999",
+    } as never);
+
+    const result = await createStorageUnit({
+      kind: "BOX",
+      label: "Sonderkarton",
+      code: "OM-BOX-9999",
+    });
+
+    expect(result).toEqual({
+      success: true,
+      id: "unit-3",
+      code: "OM-BOX-9999",
+    });
+    expect(prismaMock.storageUnit.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.storageUnit.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ code: "OM-BOX-9999" }),
+    });
+  });
+
+  it("rejects an explicit code that's already taken", async () => {
+    prismaMock.storageUnit.findUnique.mockResolvedValue({
+      id: "existing",
+    } as never);
+
+    const result = await createStorageUnit({
+      kind: "BOX",
+      label: "Sonderkarton",
+      code: "OM-BOX-0001",
+    });
+
+    expect(result).toEqual({
+      error: "Der Code „OM-BOX-0001“ ist bereits vergeben.",
+    });
+    expect(prismaMock.storageUnit.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("retireStorageUnit", () => {

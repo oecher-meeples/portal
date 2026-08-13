@@ -23,6 +23,10 @@ export async function AppShell({ children }: { children: ReactNode }) {
           since the header is fixed and no longer pushes this block down via normal flow. */}
       <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-6 sm:ml-64 sm:px-8 sm:pt-24 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-6">{children}</div>
+        {/* Scroll buffer: lets page content (e.g. a dropdown menu at the
+            bottom, or the last section of a long page) scroll clear of the
+            viewport bottom instead of stopping flush with it. */}
+        <div aria-hidden className="h-[20vh]" />
       </main>
     </div>
   );

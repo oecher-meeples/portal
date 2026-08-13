@@ -58,23 +58,35 @@ export async function getPreviewTier(): Promise<Tier | null> {
   return isTier(value) ? value : null;
 }
 
-/** Effective tier for display purposes — real role, overridden by an admin's preview choice. */
+/**
+ * Effective tier for display purposes — real role, overridden by an admin's
+ * preview choice. Admins default to "mitglied" until they explicitly pick a
+ * tier via the switcher (including picking "admin" itself, which stores that
+ * choice rather than falling back to it).
+ */
 export async function getSessionTier(): Promise<Tier> {
   const realTier = await getRealSessionTier();
   if (realTier !== "admin") return realTier;
-  return (await getPreviewTier()) ?? "admin";
+  return (await getPreviewTier()) ?? "mitglied";
 }
 
 /**
  * Permission check for UI affordances shown on non-admin pages (e.g. an edit
  * button on a public post). Unlike `hasPermission` this also hides while an
- * admin is previewing a lower tier — real access control never calls this.
+ * admin is previewing a non-admin tier — real access control never calls
+ * this. Only ever adjusts the result for real admins: `getPreviewTier()`
+ * presence alone isn't the signal (the cookie can legitimately hold
+ * `"admin"` itself, see `getSessionTier`), and a moderator/kassenwart's own
+ * permissions must never be tier-gated — they have no "admin" tier at all.
  */
 export async function hasPermissionInCurrentView(
   userId: string,
   permissionKey: string,
 ) {
-  if (await getPreviewTier()) return false;
+  if (await hasRole(userId, "admin")) {
+    const previewTier = (await getPreviewTier()) ?? "mitglied";
+    if (previewTier !== "admin") return false;
+  }
   return hasPermission(userId, permissionKey);
 }
 

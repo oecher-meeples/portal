@@ -22,16 +22,26 @@ export function unitOrAncestorAssigned(
   assignedUnitIds: Set<string>,
   parentById: Map<string, string | null>,
 ): boolean {
+  return findAssignedAncestor(unitId, assignedUnitIds, parentById) !== null;
+}
+
+/** Same walk as `unitOrAncestorAssigned`, but returns which assigned unit
+ * matched — the shelf to point a guest at, not just a yes/no (#121). */
+export function findAssignedAncestor(
+  unitId: string,
+  assignedUnitIds: Set<string>,
+  parentById: Map<string, string | null>,
+): string | null {
   let currentId: string | null = unitId;
   let depth = 0;
 
   while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    if (assignedUnitIds.has(currentId)) return true;
+    if (assignedUnitIds.has(currentId)) return currentId;
     currentId = parentById.get(currentId) ?? null;
     depth += 1;
   }
 
-  return false;
+  return null;
 }
 
 async function loadAssignedUnitIds(eventId: string) {
@@ -134,6 +144,74 @@ export async function getFreeGamesInRoom(
     if (!unitId) return false;
     return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
   });
+}
+
+export type GuestCopyAvailability =
+  | { kind: "plain"; total: number }
+  | {
+      kind: "event";
+      total: number;
+      /** Present at the event ("im Raum", via Regal-Zuordnung). */
+      inRoom: number;
+      /** Of those, not currently loaned out. */
+      available: number;
+      shelfLabels: string[];
+    };
+
+/**
+ * A title's copy count for guests (2.10) — plain by default, or "X von Y
+ * verfügbar (Regal …)" once an event is running and at least one copy is
+ * assigned to a shelf there (#121). No per-copy zustand/standort leaks to
+ * guests, only this aggregate.
+ */
+export async function getGuestCopyAvailability(
+  copies: Pick<LudothekGame, "id" | "zustand">[],
+  eventId: string | null,
+): Promise<GuestCopyAvailability> {
+  const total = copies.length;
+  if (!eventId || total === 0) return { kind: "plain", total };
+
+  const [assignments, parentById, holdingUnitByGame] = await Promise.all([
+    prisma.eventShelfAssignment.findMany({
+      where: { eventId },
+      include: { unit: { select: { label: true } } },
+    }),
+    loadUnitParents(),
+    loadOpenHoldingUnitByGame(),
+  ]);
+  const assignedUnitIds = new Set(assignments.map((a) => a.unitId));
+  const shelfLabelByUnitId = new Map(
+    assignments.map((a) => [a.unitId, a.unit.label]),
+  );
+
+  const inRoom = copies
+    .map((copy) => {
+      const unitId = holdingUnitByGame.get(copy.id);
+      const assignedShelfId = unitId
+        ? findAssignedAncestor(unitId, assignedUnitIds, parentById)
+        : null;
+      return { copy, assignedShelfId };
+    })
+    .filter((entry) => entry.assignedShelfId !== null);
+
+  if (inRoom.length === 0) return { kind: "plain", total };
+
+  const available = inRoom.filter(
+    (entry) => entry.copy.zustand === "frei",
+  ).length;
+  const shelfLabels = [
+    ...new Set(
+      inRoom.map((entry) => shelfLabelByUnitId.get(entry.assignedShelfId!)!),
+    ),
+  ];
+
+  return {
+    kind: "event",
+    total,
+    inRoom: inRoom.length,
+    available,
+    shelfLabels,
+  };
 }
 
 export type GuestFleaMarketItem = {

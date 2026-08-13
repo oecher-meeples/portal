@@ -3,7 +3,7 @@ import { Pencil } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
-import { StatusPill } from "@/components/ui/status-pill";
+import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { formatDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
@@ -49,7 +49,7 @@ export function ContentListRow({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <ContentTypeBadge type={item.type} />
-            {item.internal && <StatusPill label="intern" tone="info" />}
+            {item.internal && <InternalOnlyBadge />}
           </div>
           <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
             {formatDate(item.date)}

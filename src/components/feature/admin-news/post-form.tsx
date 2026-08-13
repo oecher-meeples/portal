@@ -12,6 +12,7 @@ import { FileField } from "@/components/ui/file-field";
 import { Textarea } from "@/components/ui/textarea";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
+import { compressImage } from "@/lib/utils/compress-image";
 import type { ContentType } from "@/lib/content/content";
 import {
   NEWSLETTER_CATEGORIES,
@@ -111,7 +112,8 @@ export function PostForm({
     const file = files[0];
     if (!file) return;
 
-    const [url] = await uploadFiles([file]);
+    const compressed = await compressImage(file);
+    const [url] = await uploadFiles([compressed]);
     if (url) setCoverImageUrl(url);
   }
 

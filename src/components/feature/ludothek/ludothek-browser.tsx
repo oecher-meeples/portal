@@ -1,15 +1,22 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, ScanLine } from "lucide-react";
-import { GameCard } from "@/components/entities/game-card";
+import { ChevronDown, LayoutGrid, List, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GameCardEditOverlay } from "@/components/widgets/board-game/game-card-edit-overlay";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
+import { LudothekResults } from "@/components/feature/ludothek/ludothek-results";
+import { useDebouncedValue } from "@/components/ui/use-debounced-value";
+import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
 import type {
   DurationFilter,
   LudothekFilters,
   LudothekGame,
+  LudothekViewMode,
   PlayerCountFilter,
   PublicLudothekGame,
 } from "@/lib/ludothek/browser";
@@ -36,6 +43,51 @@ const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Wartung", value: "wartung" },
   { label: "Nicht erfasst", value: "nicht-erfasst" },
 ];
+
+const VIEW_MODE_OPTIONS: {
+  value: LudothekViewMode;
+  label: string;
+  icon: typeof LayoutGrid;
+}[] = [
+  { value: "grid", label: "Raster", icon: LayoutGrid },
+  { value: "liste", label: "Liste", icon: List },
+  { value: "compact", label: "Kompakt", icon: Rows3 },
+];
+
+function ViewModeSwitch({
+  view,
+  canManageGames,
+  href,
+}: {
+  view: LudothekViewMode;
+  canManageGames: boolean;
+  href: (patch: Record<string, string | string[] | undefined>) => string;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {VIEW_MODE_OPTIONS.filter(
+        (option) => option.value !== "compact" || canManageGames,
+      ).map((option) => (
+        <Link
+          key={option.value}
+          href={href({
+            ansicht: option.value === "grid" ? undefined : option.value,
+          })}
+          aria-label={option.label}
+          aria-current={view === option.value ? "true" : undefined}
+          className={cn(
+            "flex size-8 items-center justify-center rounded-md border transition-colors",
+            view === option.value
+              ? "border-primary bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <option.icon className="size-4" />
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 function FilterPill({
   label,
@@ -84,8 +136,18 @@ export function LudothekBrowser({
   /** Internal-only, never passed for the guest area — see CONTEXT.md "kein Leak". */
   privateCollectionResults?: PrivateCollectionResult[];
 }) {
+  const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
     buildHref(basePath, rawSearchParams, patch);
+
+  const [search, setSearch] = useState(filters.search ?? "");
+  const debouncedSearch = useDebouncedValue(search);
+
+  useEffect(() => {
+    if (debouncedSearch === (filters.search ?? "")) return;
+    router.replace(href({ q: debouncedSearch || undefined }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
+  }, [debouncedSearch]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -108,20 +170,12 @@ export function LudothekBrowser({
             )}
           <Input
             name="q"
-            defaultValue={filters.search ?? ""}
-            placeholder="Spiel suchen …"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Spiel, EAN oder BGG-ID suchen …"
           />
           <Button type="submit">Suchen</Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            render={
-              <Link href="/scan">
-                <ScanLine className="size-4" />
-                Scannen
-              </Link>
-            }
-          />
+          <ScanSearchDialog onScanned={setSearch} />
         </form>
 
         <details className="group">
@@ -257,24 +311,21 @@ export function LudothekBrowser({
         </details>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {games.map((game) => (
-          <GameCard
-            key={game.slug}
-            game={game}
-            actions={
-              canManageGames && "ean" in game ? (
-                <GameCardEditOverlay game={game} />
-              ) : undefined
-            }
-          />
-        ))}
-        {games.length === 0 && (
-          <p className="text-muted-foreground col-span-full text-sm">
-            Keine Spiele gefunden.
-          </p>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        {canManageGames ? <CreateBoardGameDialog /> : <div />}
+        <ViewModeSwitch
+          view={filters.view ?? "grid"}
+          canManageGames={canManageGames}
+          href={href}
+        />
       </div>
+
+      <LudothekResults
+        games={games}
+        view={filters.view ?? "grid"}
+        canManageGames={canManageGames}
+        mechanicsOptions={mechanicsOptions}
+      />
 
       {internal &&
         filters.showPrivateCollection &&

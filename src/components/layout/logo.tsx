@@ -1,11 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function Logo() {
-  return (
+  const environment = process.env.ENVIRONMENT ?? "development";
+
+  const mark = (
     <Link href="/" className="flex shrink-0 items-center gap-2.5">
       <Image
-        src="/meeple.png"
+        src="/icons/meeple.png"
         alt="Oecher Meeples Logo"
         width={32}
         height={32}
@@ -20,5 +23,15 @@ export function Logo() {
         </span>
       </span>
     </Link>
+  );
+
+  if (environment === "production") return mark;
+
+  return (
+    <Tooltip
+      content={`Du befindest dich gerade in der ${environment}-Umgebung.`}
+    >
+      {mark}
+    </Tooltip>
   );
 }

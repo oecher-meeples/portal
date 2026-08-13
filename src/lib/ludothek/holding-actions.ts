@@ -52,9 +52,9 @@ async function revalidateGamePaths(gameCopyId: string) {
   revalidatePath("/admin/bestand");
   const copy = await prisma.gameCopy.findUnique({
     where: { id: gameCopyId },
-    select: { slug: true },
+    select: { boardGame: { select: { slug: true } } },
   });
-  if (copy) revalidatePath(`/ludothek/${copy.slug}`);
+  if (copy) revalidatePath(`/ludothek/${copy.boardGame.slug}`);
 }
 
 function toResultAndRevalidate<T extends { gameCopyId: string }>(
@@ -253,6 +253,16 @@ export async function scanListMeeples() {
     where: { anonymizedAt: null },
     orderBy: { displayName: "asc" },
     select: { id: true, displayName: true },
+  });
+}
+
+/** Target list for the Umlagern mini-dialog (#121/#122) — active units only. */
+export async function scanListUnits() {
+  await requireActingMeeple();
+  return prisma.storageUnit.findMany({
+    where: { retiredAt: null },
+    orderBy: { label: "asc" },
+    select: { id: true, code: true, label: true },
   });
 }
 

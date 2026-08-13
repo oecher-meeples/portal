@@ -55,11 +55,11 @@ export function AdminBankView({
     const result = await revealIban(id);
     setBusyId(null);
 
-    if (result.error) {
+    if ("error" in result) {
       setError(result.error);
       return;
     }
-    setRevealed((current) => ({ ...current, [id]: result.iban! }));
+    setRevealed((current) => ({ ...current, [id]: result.iban }));
   }
 
   const withIban = rows.filter((row) => row.hasIban).length;

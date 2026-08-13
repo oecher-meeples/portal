@@ -337,12 +337,15 @@ export async function moveStorageUnit({
 
 export {
   ensureUnsortiertUnit,
+  formatLocationChain,
   getGameZustand,
   getResponsibleMeeple,
   resolveScannedCode,
+  walkUnitChain,
   zustandFromHoldingAndUnit,
   type GameZustand,
   type ResolvedScan,
+  type UnitChainNode,
 } from "@/lib/ludothek/holdings-lookup";
 
 export {

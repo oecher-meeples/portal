@@ -12,6 +12,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     id: "game-1",
     boardGameId: "title-1",
     slug: "arche-nova",
+    boardGameSlug: "arche-nova",
     title: "Arche Nova",
     imageUrl: null,
     minPlayers: 1,
@@ -30,6 +31,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     zustand: "frei",
     isLoanedOut: false,
     responsibleMeepleId: "meeple-a",
+    responsibleName: "Alex",
+    unitChain: "Karton 1",
     locationChain: "Karton 1",
     ...overrides,
   };
@@ -40,6 +43,34 @@ describe("filterLudothekGames", () => {
     const games = [game({ title: "Arche Nova" }), game({ title: "Wingspan" })];
 
     expect(filterLudothekGames(games, { search: "wing" })).toHaveLength(1);
+  });
+
+  it("matches an exact EAN", () => {
+    const games = [
+      game({ title: "Arche Nova", ean: "4001504311892" }),
+      game({ title: "Wingspan", ean: "0700304142529" }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "4001504311892" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Arche Nova");
+  });
+
+  it("does not match a partial EAN", () => {
+    const games = [game({ title: "Arche Nova", ean: "4001504311892" })];
+
+    expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(0);
+  });
+
+  it("matches an exact BGG-ID", () => {
+    const games = [
+      game({ title: "Arche Nova", bggId: 342942 }),
+      game({ title: "Wingspan", bggId: 266192 }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "342942" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Arche Nova");
   });
 
   it("filters by player-count range", () => {
@@ -181,6 +212,7 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
+      view: "grid",
     });
   });
 
@@ -197,7 +229,28 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: undefined,
       mechanics: undefined,
       hideExpansions: false,
+      view: "grid",
     });
+  });
+
+  it("parses a valid view mode from ?ansicht=", () => {
+    expect(
+      parseLudothekSearchParams({ ansicht: "liste" }, { internal: false }).view,
+    ).toBe("liste");
+    expect(
+      parseLudothekSearchParams({ ansicht: "compact" }, { internal: false })
+        .view,
+    ).toBe("compact");
+  });
+
+  it("falls back to grid for an invalid view mode", () => {
+    expect(
+      parseLudothekSearchParams({ ansicht: "nonsense" }, { internal: false })
+        .view,
+    ).toBe("grid");
+    expect(parseLudothekSearchParams({}, { internal: false }).view).toBe(
+      "grid",
+    );
   });
 
   it("only parses internal filters when internal is true", () => {

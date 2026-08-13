@@ -21,6 +21,7 @@ import {
   Settings,
   GraduationCap,
   CalendarClock,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,6 +31,8 @@ export type NavItem = {
   icon: LucideIcon;
   /** Breadcrumb label for the section this item belongs to. */
   section: string;
+  /** Overrides the group's minTier for this one item (e.g. #96). */
+  minTier?: Tier;
 };
 
 export type Tier = "gast" | "mitglied" | "admin";
@@ -63,6 +66,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/spenden",
         icon: HeartHandshake,
         section: "Öffentlich",
+        minTier: "mitglied",
       },
       {
         label: "Downloads & Rechtliches",
@@ -86,12 +90,6 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Mein Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
-        section: "Mitgliederbereich",
-      },
-      {
-        label: "Interner Newsroom",
-        href: "/dashboard/news",
-        icon: Newspaper,
         section: "Mitgliederbereich",
       },
       {
@@ -194,6 +192,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Bring & Buy Kasse",
         href: "/admin/bringbuy",
         icon: ShoppingBasket,
+        section: "Administration",
+      },
+      {
+        label: "Wichtige Links",
+        href: "/admin/wichtige-links",
+        icon: Link2,
         section: "Administration",
       },
       {

@@ -2,10 +2,12 @@
 
 import { BankDataAccessKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { logBankDataAccess } from "@/lib/members/bank-access-log";
+import {
+  logBankDataAccess,
+  requireBankReader,
+  revealMeepleIban,
+} from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
-import { ensureMeeple } from "@/lib/members/meeples";
-import { requirePermission } from "@/lib/auth/permissions";
 
 /** The only columns the export ever contains. */
 export const BANK_CSV_COLUMNS = [
@@ -15,11 +17,6 @@ export const BANK_CSV_COLUMNS = [
   "IBAN",
 ] as const;
 
-async function requireBankReader() {
-  const user = await requirePermission("bank:read");
-  return ensureMeeple(user);
-}
-
 function csvCell(value: string | number) {
   const text = String(value);
   return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -27,24 +24,7 @@ function csvCell(value: string | number) {
 
 export async function revealIban(meepleId: string) {
   const actor = await requireBankReader();
-
-  const subject = await prisma.meeple.findUnique({
-    where: { id: meepleId },
-    select: { id: true, ibanEncrypted: true },
-  });
-
-  if (!subject?.ibanEncrypted) {
-    return { error: "Für dieses Mitglied ist keine IBAN gespeichert." };
-  }
-
-  const iban = decryptSecret(subject.ibanEncrypted);
-  await logBankDataAccess({
-    accessedByMeepleId: actor.id,
-    subjectMeepleId: subject.id,
-    kind: BankDataAccessKind.SINGLE_REVEAL,
-  });
-
-  return { success: true as const, iban };
+  return revealMeepleIban(meepleId, actor.id);
 }
 
 export async function exportBankDataCsv() {

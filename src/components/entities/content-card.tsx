@@ -11,7 +11,14 @@ export function ContentCard({ item }: { item: ContentItem }) {
       href={`/news/${item.slug}`}
       className="group bg-card hover:border-primary/60 flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
-      <CoverMedia imageUrl={item.coverImageUrl} alt={item.title} label="BILD" />
+      <CoverMedia
+        imageUrl={item.coverImageUrl}
+        alt={item.title}
+        label="BILD"
+        aspect="aspect-[4/3]"
+        fit="contain"
+        className="transition-all duration-300 group-hover:aspect-video"
+      />
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-center gap-2">
           <ContentTypeBadge type={item.type} />
@@ -25,7 +32,7 @@ export function ContentCard({ item }: { item: ContentItem }) {
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {item.title}
         </h3>
-        <p className="text-muted-foreground line-clamp-2 text-sm">
+        <p className="text-muted-foreground line-clamp-2 hidden text-sm group-hover:block">
           {item.excerpt}
         </p>
         <p className="text-muted-foreground mt-auto pt-2 text-xs">

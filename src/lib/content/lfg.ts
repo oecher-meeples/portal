@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/utils/prisma";
+
 export type LfgStatus = "offen" | "voll" | "abgelaufen" | "geschlossen";
 
 export function isLfgExpired(
@@ -20,4 +22,38 @@ export function getLfgStatus(
   if (isLfgExpired(post, now)) return "abgelaufen";
   if (participantCount >= post.maxParticipants) return "voll";
   return "offen";
+}
+
+export type OpenLfgPostForBoardGame = {
+  id: string;
+  title: string;
+  dateNote: string | null;
+  plannedAt: Date | null;
+  location: string | null;
+  maxParticipants: number;
+  participantCount: number;
+};
+
+/** Open (see {@link getLfgStatus}) Gesuche linked to a board game — for the
+ * "Offene Gesuche" section on the game detail page (#34). */
+export async function getOpenLfgPostsForBoardGame(
+  boardGameId: string,
+): Promise<OpenLfgPostForBoardGame[]> {
+  const posts = await prisma.lfgPost.findMany({
+    where: { boardGameId, closedAt: null },
+    include: { _count: { select: { participants: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return posts
+    .filter((post) => getLfgStatus(post, post._count.participants) === "offen")
+    .map((post) => ({
+      id: post.id,
+      title: post.title,
+      dateNote: post.dateNote,
+      plannedAt: post.plannedAt,
+      location: post.location,
+      maxParticipants: post.maxParticipants,
+      participantCount: post._count.participants,
+    }));
 }

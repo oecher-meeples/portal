@@ -6,6 +6,7 @@ import {
   MitgliederTable,
   type MeepleRow,
 } from "@/components/feature/admin-mitglieder/mitglieder-table";
+import type { RoleOption } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import {
   InvitesSection,
   type InviteRow,
@@ -32,11 +33,15 @@ function germanDate(value: string | null) {
 
 export function AdminMitgliederView({
   meeples,
+  roles,
+  canReadBankData,
   isDecemberOrLater,
   deletionRequests,
   invites,
 }: {
   meeples: MeepleRow[];
+  roles: RoleOption[];
+  canReadBankData: boolean;
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
@@ -158,7 +163,11 @@ export function AdminMitgliederView({
         </div>
       )}
 
-      <MitgliederTable meeples={meeples} />
+      <MitgliederTable
+        meeples={meeples}
+        roles={roles}
+        canReadBankData={canReadBankData}
+      />
 
       <InvitesSection invites={invites} />
     </div>
