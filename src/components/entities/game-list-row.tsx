@@ -69,7 +69,7 @@ export function GameListRow({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
-        {game.description && (
+        {game.description && !expanded && (
           <p className="text-muted-foreground line-clamp-3 text-sm">
             {game.description}
           </p>

@@ -59,12 +59,12 @@ describe("GameListRow", () => {
 
     expect(row).toHaveClass("rounded-t-lg");
     const overlay = screen
-      .getAllByText("Baue den modernsten Zoo der Welt.")[1]
+      .getByText("Baue den modernsten Zoo der Welt.")
       .closest("div");
     expect(overlay).toHaveClass("rounded-b-lg", "border-t-0", "-mt-px");
   });
 
-  it("shows the expanded overlay only after mouseEnter, hides it after mouseLeave", () => {
+  it("shows the full description exactly once, never doubled (Plan-Schritt 11)", () => {
     render(<GameListRow game={game()} />);
     const row = screen.getByRole("link");
 
@@ -75,7 +75,7 @@ describe("GameListRow", () => {
     fireEvent.mouseEnter(row);
     expect(
       screen.getAllByText("Baue den modernsten Zoo der Welt."),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
 
     fireEvent.mouseLeave(row);
     expect(
@@ -92,7 +92,7 @@ describe("GameListRow", () => {
     expect(firstClick).toBe(false); // preventDefault() was called
     expect(
       screen.getAllByText("Baue den modernsten Zoo der Welt."),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
 
     fireEvent.pointerDown(row, { pointerType: "touch" });
     const secondClick = fireEvent.click(row);
