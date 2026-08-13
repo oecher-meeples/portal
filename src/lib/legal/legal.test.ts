@@ -3,7 +3,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getLegalDocument, listAllLegalDocumentsForAdmin } =
+const { getLegalDocument, listAllLegalDocuments } =
   await import("@/lib/legal/legal");
 
 describe("getLegalDocument", () => {
@@ -35,7 +35,7 @@ describe("getLegalDocument", () => {
   });
 });
 
-describe("listAllLegalDocumentsForAdmin", () => {
+describe("listAllLegalDocuments", () => {
   it("returns all four documents in the fixed LEGAL_DOCS order", async () => {
     prismaMock.legalDocument.findMany.mockResolvedValue([
       { slug: "beitragsordnung" },
@@ -44,7 +44,7 @@ describe("listAllLegalDocumentsForAdmin", () => {
       { slug: "datenschutz" },
     ] as never);
 
-    const result = await listAllLegalDocumentsForAdmin();
+    const result = await listAllLegalDocuments();
 
     expect(result.map((doc) => doc.slug)).toEqual([
       "satzung",
@@ -59,7 +59,7 @@ describe("listAllLegalDocumentsForAdmin", () => {
       { slug: "satzung" },
     ] as never);
 
-    const result = await listAllLegalDocumentsForAdmin();
+    const result = await listAllLegalDocuments();
 
     expect(result.map((doc) => doc.slug)).toEqual(["satzung"]);
   });

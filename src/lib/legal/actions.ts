@@ -35,7 +35,8 @@ async function requireManagePermission() {
 
 function revalidateLegalPaths(slug: string) {
   revalidatePath(`/rechtliches/${slug}`);
-  revalidatePath("/admin/legal");
+  revalidatePath(`/rechtliches/${slug}/edit`);
+  revalidatePath("/downloads");
 }
 
 export async function getLegalUploadToken(pathname: string) {

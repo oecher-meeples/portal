@@ -7,12 +7,12 @@ export async function getLegalDocument(slug: string) {
 }
 
 /**
- * All four Rechtliches documents for the admin overview, in the fixed
- * `LEGAL_DOCS` order rather than DB insertion order — the four slugs are
- * fixed (see the plan's Abgrenzung), so the presentation order should be
- * fixed too, not depend on when each row was seeded/upserted.
+ * All four Rechtliches documents (e.g. for the Downloads page's Legal
+ * table), in the fixed `LEGAL_DOCS` order rather than DB insertion order —
+ * the four slugs are fixed (see the plan's Abgrenzung), so the presentation
+ * order should be fixed too, not depend on when each row was seeded/upserted.
  */
-export async function listAllLegalDocumentsForAdmin() {
+export async function listAllLegalDocuments() {
   const documents = await prisma.legalDocument.findMany();
   const bySlug = new Map(documents.map((doc) => [doc.slug, doc]));
 

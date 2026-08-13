@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Download } from "lucide-react";
 import type { DownloadStatus } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,6 @@ import { reorderDownloads } from "@/lib/downloads/actions";
 import { DownloadRow } from "@/components/feature/downloads/download-row";
 import { DownloadUploadForm } from "@/components/feature/downloads/download-upload-form";
 import { PrivateDownloadsTable } from "@/components/feature/downloads/private-downloads-table";
-import type { LegalDoc } from "@/data/downloads";
 
 export type DownloadListItem = {
   id: string;
@@ -24,10 +24,16 @@ export type DownloadListItem = {
   order: number;
 };
 
+export type LegalDocListItem = {
+  slug: string;
+  title: string;
+  pdfFileUrl: string | null;
+};
+
 type DownloadsViewProps = {
   downloads: DownloadListItem[];
   offlineDownloads: DownloadListItem[];
-  legalDocs: LegalDoc[];
+  legalDocs: LegalDocListItem[];
   canManage: boolean;
   canManageLegal: boolean;
   isMember: boolean;
@@ -129,7 +135,23 @@ export function DownloadsView({
                   <Button
                     variant="outline"
                     size="sm"
-                    render={<Link href="/admin/legal">Verwalten</Link>}
+                    render={
+                      <Link href={`/rechtliches/${doc.slug}/edit`}>
+                        Verwalten
+                      </Link>
+                    }
+                  />
+                )}
+                {doc.pdfFileUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={
+                      <a href={doc.pdfFileUrl} download>
+                        <Download className="size-4" />
+                        Download
+                      </a>
+                    }
                   />
                 )}
                 <Button

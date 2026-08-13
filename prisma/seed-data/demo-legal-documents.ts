@@ -5,7 +5,7 @@ import type { LegalSection } from "../../src/data/legal";
  * The four Rechtliches documents previously hard-coded as `LEGAL_CONTENT` in
  * src/data/legal.ts, migrated as `LegalDocument` rows so an admin can attach
  * a PDF and edit sections from now on. `pdfFileUrl: null` until an admin
- * uploads the first PDF through /admin/legal.
+ * uploads the first PDF through /rechtliches/<slug>/edit.
  */
 export const DEMO_LEGAL_DOCUMENTS: {
   slug: string;

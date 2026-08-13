@@ -1,5 +1,4 @@
 import type { DownloadStatus } from "@prisma/client";
-import { LEGAL_DOCS } from "@/data/downloads";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import {
@@ -7,6 +6,7 @@ import {
   listOfflineDownloadsForAdmin,
   formatFileSize,
 } from "@/lib/downloads/downloads";
+import { listAllLegalDocuments } from "@/lib/legal/legal";
 import { DownloadsView } from "@/components/feature/downloads/downloads-view";
 
 function toDownloadListItem(download: {
@@ -37,16 +37,21 @@ export default async function DownloadsPage() {
     !!user && (await hasPermissionInCurrentView(user.id, "downloads:manage"));
   const canManageLegal =
     !!user && (await hasPermissionInCurrentView(user.id, "legal:manage"));
-  const [downloads, offlineDownloads] = await Promise.all([
+  const [downloads, offlineDownloads, legalDocs] = await Promise.all([
     listVisibleDownloads(tier),
     canManage ? listOfflineDownloadsForAdmin() : Promise.resolve([]),
+    listAllLegalDocuments(),
   ]);
 
   return (
     <DownloadsView
       downloads={downloads.map(toDownloadListItem)}
       offlineDownloads={offlineDownloads.map(toDownloadListItem)}
-      legalDocs={LEGAL_DOCS}
+      legalDocs={legalDocs.map((doc) => ({
+        slug: doc.slug,
+        title: doc.title,
+        pdfFileUrl: doc.pdfFileUrl,
+      }))}
       canManage={canManage}
       canManageLegal={canManageLegal}
       isMember={tier !== "gast"}

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField, TextAreaField } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { slugify } from "@/lib/utils/slug";
@@ -13,7 +14,14 @@ import {
   extractLegalPdfText,
   saveLegalDocument,
 } from "@/lib/legal/actions";
-import type { AdminLegalDocumentRow } from "@/components/feature/admin-legal/admin-legal-view";
+import type { LegalSection } from "@/data/legal";
+
+export type LegalDocumentRow = {
+  slug: string;
+  title: string;
+  sections: LegalSection[];
+  pdfFileUrl: string | null;
+};
 
 /** Section shape while it's being edited — `paragraphs` stays one string
  * (one paragraph per line) so a single Textarea can hold it, and only
@@ -25,11 +33,23 @@ type EditableSection = {
   links?: { label: string; href: string }[];
 };
 
-function toEditable(sections: AdminLegalDocumentRow["sections"]) {
+function toEditable(sections: LegalDocumentRow["sections"]) {
   return sections.map((section) => ({
     id: section.id,
     heading: section.heading,
     paragraphsText: section.paragraphs.join("\n"),
+    links: section.links,
+  }));
+}
+
+function toSections(sections: EditableSection[]): LegalSection[] {
+  return sections.map((section) => ({
+    id: section.id,
+    heading: section.heading,
+    paragraphs: section.paragraphsText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0),
     links: section.links,
   }));
 }
@@ -51,9 +71,17 @@ function uniqueLocalId(heading: string, existingIds: string[]) {
 export function LegalDocumentEditor({
   doc,
   onSaved,
+  onDraftChange,
 }: {
-  doc: AdminLegalDocumentRow;
+  doc: LegalDocumentRow;
   onSaved: () => void;
+  /** Reports the live, unsaved draft on every change — drives the preview
+   * tab in `LegalDocEditView` without round-tripping through the server. */
+  onDraftChange?: (draft: {
+    title: string;
+    sections: LegalSection[];
+    pdfFileUrl?: string;
+  }) => void;
 }) {
   const [title, setTitle] = useState(doc.title);
   const [pdfFileUrl, setPdfFileUrl] = useState(doc.pdfFileUrl ?? undefined);
@@ -62,6 +90,10 @@ export function LegalDocumentEditor({
     toEditable(doc.sections),
   );
   const [draggedId, setDraggedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onDraftChange?.({ title, sections: toSections(sections), pdfFileUrl });
+  }, [title, sections, pdfFileUrl, onDraftChange]);
 
   const {
     uploadFiles,
@@ -133,17 +165,9 @@ export function LegalDocumentEditor({
   }
 
   function handleSave() {
-    const payload = sections.map((section) => ({
-      id: section.id,
-      heading: section.heading,
-      paragraphs: section.paragraphsText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0),
-      links: section.links,
-    }));
-
-    void runSave(() => saveLegalDocument(doc.slug, title, payload, pdfFileUrl));
+    void runSave(() =>
+      saveLegalDocument(doc.slug, title, toSections(sections), pdfFileUrl),
+    );
   }
 
   const error = uploadError || extractError || saveError;
@@ -189,12 +213,7 @@ export function LegalDocumentEditor({
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Sections</p>
-          <Button variant="outline" size="sm" onClick={addSection}>
-            <Plus className="size-4" /> Section hinzufügen
-          </Button>
-        </div>
+        <p className="text-sm font-medium">Sections</p>
         {sections.map((section) => (
           <div
             key={section.id}
@@ -249,6 +268,17 @@ export function LegalDocumentEditor({
           {saving ? "Speichert…" : "Speichern"}
         </Button>
       </div>
+
+      <Tooltip content="Section hinzufügen">
+        <Button
+          size="icon-lg"
+          onClick={addSection}
+          aria-label="Section hinzufügen"
+          className="fixed right-6 bottom-6 z-40 size-12 rounded-full shadow-lg"
+        >
+          <Plus className="size-5" />
+        </Button>
+      </Tooltip>
     </div>
   );
 }

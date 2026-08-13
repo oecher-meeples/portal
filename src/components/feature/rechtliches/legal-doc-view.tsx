@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import type { LegalDoc } from "@/data/downloads";
@@ -7,23 +9,42 @@ type LegalDocViewProps = {
   doc: LegalDoc;
   sections: LegalSection[];
   pdfFileUrl?: string;
+  canManage?: boolean;
 };
 
-export function LegalDocView({ doc, sections, pdfFileUrl }: LegalDocViewProps) {
+export function LegalDocView({
+  doc,
+  sections,
+  pdfFileUrl,
+  canManage = false,
+}: LegalDocViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeading eyebrow="Rechtliches" title={doc.title} />
-        {pdfFileUrl && (
-          <Button
-            variant="outline"
-            render={
-              <a href={pdfFileUrl} download>
-                PDF herunterladen
-              </a>
-            }
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Button
+              variant="outline"
+              render={
+                <Link href={`/rechtliches/${doc.slug}/edit`}>
+                  <Pencil className="size-4" />
+                  Bearbeiten
+                </Link>
+              }
+            />
+          )}
+          {pdfFileUrl && (
+            <Button
+              variant="outline"
+              render={
+                <a href={pdfFileUrl} download>
+                  PDF herunterladen
+                </a>
+              }
+            />
+          )}
+        </div>
       </div>
       <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
         <nav className="flex flex-col gap-1 text-sm lg:sticky lg:top-24 lg:self-start">
