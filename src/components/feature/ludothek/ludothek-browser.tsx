@@ -69,7 +69,9 @@ function ViewModeSwitch({
       ).map((option) => (
         <Link
           key={option.value}
-          href={href({ ansicht: option.value === "grid" ? undefined : option.value })}
+          href={href({
+            ansicht: option.value === "grid" ? undefined : option.value,
+          })}
           aria-label={option.label}
           aria-current={view === option.value ? "true" : undefined}
           className={cn(

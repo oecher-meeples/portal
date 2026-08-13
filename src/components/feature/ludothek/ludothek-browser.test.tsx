@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { BoardGameKind } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 
@@ -130,7 +136,9 @@ describe("LudothekBrowser — live search", () => {
     vi.useFakeTimers();
     render(<LudothekBrowser {...baseProps()} internal={false} />);
 
-    const input = screen.getByPlaceholderText("Spiel, EAN oder BGG-ID suchen …");
+    const input = screen.getByPlaceholderText(
+      "Spiel, EAN oder BGG-ID suchen …",
+    );
     fireEvent.change(input, { target: { value: "arche" } });
     expect(routerReplaceMock).not.toHaveBeenCalled();
 
@@ -147,7 +155,9 @@ describe("LudothekBrowser — live search", () => {
       vi.useFakeTimers();
       render(<LudothekBrowser {...baseProps()} internal={internal} />);
 
-      expect(screen.queryByRole("link", { name: /Scannen/ })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: /Scannen/ }),
+      ).not.toBeInTheDocument();
 
       fireEvent.click(screen.getByText("simulate-scan"));
       act(() => {
@@ -175,9 +185,7 @@ describe("LudothekBrowser — view mode switch", () => {
   });
 
   it("shows the compact icon for users with games:manage", () => {
-    render(
-      <LudothekBrowser {...baseProps()} internal canManageGames />,
-    );
+    render(<LudothekBrowser {...baseProps()} internal canManageGames />);
 
     expect(screen.getByRole("link", { name: "Kompakt" })).toBeInTheDocument();
   });

@@ -26,9 +26,12 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
 vi.mock("@/components/feature/admin-bestand/create-board-game-dialog", () => ({
   CreateBoardGameDialog: () => null,
 }));
-vi.mock("@/components/feature/admin-bestand/deinventorise-board-game-dialog", () => ({
-  DeinventoriseBoardGameDialog: () => null,
-}));
+vi.mock(
+  "@/components/feature/admin-bestand/deinventorise-board-game-dialog",
+  () => ({
+    DeinventoriseBoardGameDialog: () => null,
+  }),
+);
 vi.mock("@/components/widgets/board-game/edit-board-game-dialog", () => ({
   EditBoardGameDialog: () => null,
 }));
@@ -87,9 +90,7 @@ const games = [
 
 describe("AdminBestandView search", () => {
   it("filters the table when a scan resolves to an EAN", () => {
-    render(
-      <AdminBestandView games={games} showDeinventarised={false} />,
-    );
+    render(<AdminBestandView games={games} showDeinventarised={false} />);
 
     expect(screen.getByText("Catan")).toBeInTheDocument();
     expect(screen.getByText("Carcassonne")).toBeInTheDocument();

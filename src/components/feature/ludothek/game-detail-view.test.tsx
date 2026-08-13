@@ -14,17 +14,14 @@ vi.mock("@/components/widgets/board-game/assign-expansion-dialog", () => ({
   AssignExpansionDialog: () => null,
 }));
 
-const { GameDetailView } = await import(
-  "@/components/feature/ludothek/game-detail-view"
-);
+const { GameDetailView } =
+  await import("@/components/feature/ludothek/game-detail-view");
 
 afterEach(() => {
   cleanup();
 });
 
-function game(
-  overrides: Partial<PublicLudothekGame> = {},
-): PublicLudothekGame {
+function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
   return {
     id: "game-1",
     boardGameId: "title-1",

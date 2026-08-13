@@ -40,7 +40,12 @@ export function ScanSearchDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button type="button" size="icon" variant="outline" aria-label="Scannen">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            aria-label="Scannen"
+          >
             <Camera className="size-4" />
           </Button>
         }

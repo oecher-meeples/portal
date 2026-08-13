@@ -56,9 +56,7 @@ describe("filterLudothekGames", () => {
   it("does not match a partial EAN", () => {
     const games = [game({ title: "Arche Nova", ean: "4001504311892" })];
 
-    expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(
-      0,
-    );
+    expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(0);
   });
 
   it("matches an exact BGG-ID", () => {
@@ -234,8 +232,7 @@ describe("parseLudothekSearchParams", () => {
 
   it("parses a valid view mode from ?ansicht=", () => {
     expect(
-      parseLudothekSearchParams({ ansicht: "liste" }, { internal: false })
-        .view,
+      parseLudothekSearchParams({ ansicht: "liste" }, { internal: false }).view,
     ).toBe("liste");
     expect(
       parseLudothekSearchParams({ ansicht: "compact" }, { internal: false })
@@ -248,9 +245,9 @@ describe("parseLudothekSearchParams", () => {
       parseLudothekSearchParams({ ansicht: "nonsense" }, { internal: false })
         .view,
     ).toBe("grid");
-    expect(
-      parseLudothekSearchParams({}, { internal: false }).view,
-    ).toBe("grid");
+    expect(parseLudothekSearchParams({}, { internal: false }).view).toBe(
+      "grid",
+    );
   });
 
   it("only parses internal filters when internal is true", () => {

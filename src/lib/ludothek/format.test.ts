@@ -4,7 +4,11 @@ import { playersAndDuration } from "./format";
 describe("playersAndDuration", () => {
   it("formats a player range and duration", () => {
     expect(
-      playersAndDuration({ minPlayers: 1, maxPlayers: 4, playTimeMinutes: 90 } as never),
+      playersAndDuration({
+        minPlayers: 1,
+        maxPlayers: 4,
+        playTimeMinutes: 90,
+      } as never),
     ).toBe("1–4 Spieler · 90’");
   });
 

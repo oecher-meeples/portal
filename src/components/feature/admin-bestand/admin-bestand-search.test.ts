@@ -31,7 +31,10 @@ describe("matchesAdminBestandSearch", () => {
 
   it("does not match a numeric search against a null EAN/BGG-ID", () => {
     expect(
-      matchesAdminBestandSearch({ title: "Catan", ean: null, bggId: null }, "13"),
+      matchesAdminBestandSearch(
+        { title: "Catan", ean: null, bggId: null },
+        "13",
+      ),
     ).toBe(false);
   });
 });

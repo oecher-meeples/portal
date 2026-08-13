@@ -9,9 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-function game(
-  overrides: Partial<PublicLudothekGame> = {},
-): PublicLudothekGame {
+function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
   return {
     id: "game-1",
     boardGameId: "title-1",
@@ -48,13 +46,19 @@ describe("GameListRow", () => {
     render(<GameListRow game={game()} />);
     const row = screen.getByRole("link");
 
-    expect(screen.getAllByText("Baue den modernsten Zoo der Welt.")).toHaveLength(1);
+    expect(
+      screen.getAllByText("Baue den modernsten Zoo der Welt."),
+    ).toHaveLength(1);
 
     fireEvent.mouseEnter(row);
-    expect(screen.getAllByText("Baue den modernsten Zoo der Welt.")).toHaveLength(2);
+    expect(
+      screen.getAllByText("Baue den modernsten Zoo der Welt."),
+    ).toHaveLength(2);
 
     fireEvent.mouseLeave(row);
-    expect(screen.getAllByText("Baue den modernsten Zoo der Welt.")).toHaveLength(1);
+    expect(
+      screen.getAllByText("Baue den modernsten Zoo der Welt."),
+    ).toHaveLength(1);
   });
 
   it("first touch tap expands without navigating, second tap navigates", () => {
@@ -64,7 +68,9 @@ describe("GameListRow", () => {
     fireEvent.pointerDown(row, { pointerType: "touch" });
     const firstClick = fireEvent.click(row);
     expect(firstClick).toBe(false); // preventDefault() was called
-    expect(screen.getAllByText("Baue den modernsten Zoo der Welt.")).toHaveLength(2);
+    expect(
+      screen.getAllByText("Baue den modernsten Zoo der Welt."),
+    ).toHaveLength(2);
 
     fireEvent.pointerDown(row, { pointerType: "touch" });
     const secondClick = fireEvent.click(row);
@@ -81,8 +87,12 @@ describe("GameListRow", () => {
   });
 
   it("shows a ribbon corner for an expansion (#103)", () => {
-    render(<GameListRow game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })} />);
-    expect(document.querySelector("svg.lucide-package-plus")).toBeInTheDocument();
+    render(
+      <GameListRow game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })} />,
+    );
+    expect(
+      document.querySelector("svg.lucide-package-plus"),
+    ).toBeInTheDocument();
   });
 
   it("does not show a ribbon corner for a base game", () => {

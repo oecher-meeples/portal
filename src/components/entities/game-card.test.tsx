@@ -9,9 +9,7 @@ afterEach(() => {
   cleanup();
 });
 
-function game(
-  overrides: Partial<PublicLudothekGame> = {},
-): PublicLudothekGame {
+function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
   return {
     id: "game-1",
     boardGameId: "title-1",
@@ -34,7 +32,9 @@ function game(
 
 describe("GameCard — expansion ribbon (#103)", () => {
   it("shows the ribbon corner for an expansion", () => {
-    render(<GameCard game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })} />);
+    render(
+      <GameCard game={game({ kind: BoardGameKind.BOARDGAME_EXPANSION })} />,
+    );
 
     expect(screen.getByText("Erweiterung")).toBeInTheDocument();
   });

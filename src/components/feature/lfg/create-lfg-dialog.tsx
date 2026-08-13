@@ -93,10 +93,7 @@ export function CreateLfgDialog({
                 if (selected) patch("gameTitle", selected.title);
               }}
             >
-              <ComboboxInput
-                id="lfg-board-game"
-                placeholder="Titel suchen …"
-              />
+              <ComboboxInput id="lfg-board-game" placeholder="Titel suchen …" />
               <ComboboxPopup>
                 <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
                 <ComboboxList>
