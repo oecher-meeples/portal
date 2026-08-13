@@ -6,10 +6,18 @@ import {
   type ContentItem,
   type ContentType,
 } from "@/lib/content/content";
-import { ContentListRow } from "@/components/entities/content-list-row";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { formatDate } from "@/lib/utils/format";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
+import {
+  NewsResultsList,
+  type NewsViewMode,
+} from "@/components/feature/news/news-results-list";
+
+const VIEW_MODE_OPTIONS: { label: string; value: NewsViewMode }[] = [
+  { label: "Vorschau", value: "vorschau" },
+  { label: "Vollansicht", value: "vollansicht" },
+];
 
 export function NewsBrowser({
   items,
@@ -25,6 +33,7 @@ export function NewsBrowser({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
   const [onlyInternal, setOnlyInternal] = useState(false);
+  const [viewMode, setViewMode] = useState<NewsViewMode>("vorschau");
 
   const visible = items
     .filter((item) => !selectedDate || item.date === selectedDate)
@@ -39,6 +48,11 @@ export function NewsBrowser({
             options={CONTENT_TYPE_FILTERS}
             value={filter}
             onChange={setFilter}
+          />
+          <PillToggle
+            options={VIEW_MODE_OPTIONS}
+            value={viewMode}
+            onChange={setViewMode}
           />
           {canSeeInternal && (
             <label className="flex items-center gap-2 text-sm">
@@ -70,16 +84,12 @@ export function NewsBrowser({
         )}
       </div>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col gap-3">
-          {visible.map((item) => (
-            <ContentListRow key={item.slug} item={item} canEdit={canEdit} />
-          ))}
-          {visible.length === 0 && (
-            <p className="text-muted-foreground text-sm">
-              Keine Beiträge in dieser Kategorie.
-            </p>
-          )}
-        </div>
+        <NewsResultsList
+          key={`${filter}-${onlyInternal}-${selectedDate ?? ""}`}
+          items={visible}
+          viewMode={viewMode}
+          canEdit={canEdit}
+        />
         <NewsCalendar
           items={items}
           selectedDate={selectedDate}
