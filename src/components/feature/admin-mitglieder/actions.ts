@@ -60,3 +60,32 @@ export async function anonymiseMeeple(meepleId: string) {
   revalidatePath("/markt");
   return { success: true as const };
 }
+
+/**
+ * A Meeple holds exactly one role at a time (see redeemInvite's DEFAULT_ROLE),
+ * so changing it means swapping the UserRole row, not adding to a set.
+ */
+export async function setMeepleRole(meepleId: string, roleId: string) {
+  await requireMembersManage();
+
+  const [meeple, role] = await Promise.all([
+    prisma.meeple.findUniqueOrThrow({ where: { id: meepleId } }),
+    prisma.role.findUniqueOrThrow({ where: { id: roleId } }),
+  ]);
+
+  if (!meeple.neonAuthUserId) {
+    return { error: "Dieses Mitglied hat kein Login-Konto." };
+  }
+
+  await prisma.$transaction([
+    prisma.userRole.deleteMany({
+      where: { neonAuthUserId: meeple.neonAuthUserId },
+    }),
+    prisma.userRole.create({
+      data: { neonAuthUserId: meeple.neonAuthUserId, roleId: role.id },
+    }),
+  ]);
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}

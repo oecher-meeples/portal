@@ -16,6 +16,10 @@ import { ActionButton } from "@/components/ui/action-button";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
+import {
+  MeepleRoleSelect,
+  type RoleOption,
+} from "@/components/feature/admin-mitglieder/meeple-role-select";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
 
@@ -23,7 +27,8 @@ export type MeepleRow = {
   id: string;
   memberNumber: number;
   displayName: string;
-  roles: string[];
+  roleId: string | null;
+  hasAccount: boolean;
   membershipState: MembershipState;
   joinedAt: string;
   resignedAt: string | null;
@@ -46,7 +51,13 @@ function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
 }
 
-export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
+export function MitgliederTable({
+  meeples,
+  roles,
+}: {
+  meeples: MeepleRow[];
+  roles: RoleOption[];
+}) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<MeepleQuickFilter>("aktiv");
 
@@ -135,7 +146,15 @@ export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
                   {meeple.displayName}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {meeple.roles.length > 0 ? meeple.roles.join(", ") : "—"}
+                  {meeple.hasAccount ? (
+                    <MeepleRoleSelect
+                      meepleId={meeple.id}
+                      roleId={meeple.roleId}
+                      roles={roles}
+                    />
+                  ) : (
+                    "Kein Konto"
+                  )}
                 </TableCell>
                 <TableCell>
                   <MembershipStatePill state={meeple.membershipState} />

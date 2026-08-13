@@ -23,6 +23,7 @@ const {
   getOpenHoldingsSummary,
   recordResignation,
   revokeResignation,
+  setMeepleRole,
 } = await import("./actions");
 
 class ForbiddenError extends Error {}
@@ -46,6 +47,9 @@ describe("without the members:manage permission", () => {
     await expect(revokeResignation("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(anonymiseMeeple("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(getOpenHoldingsSummary("meeple-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(setMeepleRole("meeple-1", "role-1")).rejects.toThrow(
       ForbiddenError,
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
@@ -108,5 +112,41 @@ describe("anonymiseMeeple", () => {
     expect(await anonymiseMeeple("meeple-1")).toEqual({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
+  });
+});
+
+describe("setMeepleRole", () => {
+  it("swaps the meeple's UserRole row for the chosen role", async () => {
+    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+      neonAuthUserId: "user-1",
+    } as never);
+    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
+      id: "role-admin",
+    } as never);
+
+    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
+      success: true,
+    });
+
+    expect(prismaMock.userRole.deleteMany).toHaveBeenCalledWith({
+      where: { neonAuthUserId: "user-1" },
+    });
+    expect(prismaMock.userRole.create).toHaveBeenCalledWith({
+      data: { neonAuthUserId: "user-1", roleId: "role-admin" },
+    });
+  });
+
+  it("refuses to assign a role to a Meeple without a login account", async () => {
+    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+      neonAuthUserId: null,
+    } as never);
+    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
+      id: "role-admin",
+    } as never);
+
+    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
+      error: "Dieses Mitglied hat kein Login-Konto.",
+    });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 });

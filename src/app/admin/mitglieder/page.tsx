@@ -13,6 +13,7 @@ export default async function AdminMitgliederPage() {
   const [
     meeples,
     userRoles,
+    roles,
     gameHoldingCounts,
     storageUnitCounts,
     deletionRequests,
@@ -20,6 +21,7 @@ export default async function AdminMitgliederPage() {
   ] = await Promise.all([
     prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
     prisma.userRole.findMany({ include: { role: true } }),
+    prisma.role.findMany({ orderBy: { name: "asc" } }),
     prisma.gameHolding.groupBy({
       by: ["meepleId"],
       where: { endedAt: null, meepleId: { not: null } },
@@ -34,11 +36,13 @@ export default async function AdminMitgliederPage() {
     listInvites(now),
   ]);
 
-  const rolesByUserId = new Map<string, string[]>();
+  // A Meeple holds exactly one role (see redeemInvite's DEFAULT_ROLE) — the
+  // first match is enough even if a data inconsistency left more than one.
+  const roleIdByUserId = new Map<string, string>();
   for (const userRole of userRoles) {
-    const list = rolesByUserId.get(userRole.neonAuthUserId) ?? [];
-    list.push(userRole.role.name);
-    rolesByUserId.set(userRole.neonAuthUserId, list);
+    if (!roleIdByUserId.has(userRole.neonAuthUserId)) {
+      roleIdByUserId.set(userRole.neonAuthUserId, userRole.roleId);
+    }
   }
 
   const openGamesByMeepleId = new Map(
@@ -60,13 +64,15 @@ export default async function AdminMitgliederPage() {
         daysRemaining: request.daysRemaining,
         overdue: request.overdue,
       }))}
+      roles={roles.map((role) => ({ id: role.id, name: role.name }))}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,
         displayName: meeple.displayName,
-        roles: meeple.neonAuthUserId
-          ? (rolesByUserId.get(meeple.neonAuthUserId) ?? [])
-          : [],
+        hasAccount: meeple.neonAuthUserId !== null,
+        roleId: meeple.neonAuthUserId
+          ? (roleIdByUserId.get(meeple.neonAuthUserId) ?? null)
+          : null,
         membershipState: getMembershipState(meeple, now),
         joinedAt: meeple.joinedAt.toISOString(),
         resignedAt: meeple.resignedAt?.toISOString() ?? null,
