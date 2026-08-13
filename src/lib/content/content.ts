@@ -2,6 +2,13 @@ import { prisma } from "@/lib/utils/prisma";
 
 export type ContentType = "termin" | "blog" | "turnier";
 
+export const CONTENT_TYPE_FILTERS: { label: string; value: ContentType | "alle" }[] = [
+  { label: "Alle", value: "alle" },
+  { label: "Termine", value: "termin" },
+  { label: "Blog", value: "blog" },
+  { label: "Turniere", value: "turnier" },
+];
+
 export type ContentItem = {
   /** Only set for DB-backed posts — absent for ICS-sourced calendar events. */
   id?: string;

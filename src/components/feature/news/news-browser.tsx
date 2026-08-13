@@ -1,18 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import type { ContentItem, ContentType } from "@/lib/content/content";
+import {
+  CONTENT_TYPE_FILTERS,
+  type ContentItem,
+  type ContentType,
+} from "@/lib/content/content";
 import { ContentListRow } from "@/components/entities/content-list-row";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { formatDate } from "@/lib/utils/format";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
-
-const FILTERS: { label: string; value: ContentType | "alle" }[] = [
-  { label: "Alle", value: "alle" },
-  { label: "Termine", value: "termin" },
-  { label: "Blog", value: "blog" },
-  { label: "Turniere", value: "turnier" },
-];
 
 export function NewsBrowser({
   items,
@@ -38,7 +35,11 @@ export function NewsBrowser({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4">
-          <PillToggle options={FILTERS} value={filter} onChange={setFilter} />
+          <PillToggle
+            options={CONTENT_TYPE_FILTERS}
+            value={filter}
+            onChange={setFilter}
+          />
           {canSeeInternal && (
             <label className="flex items-center gap-2 text-sm">
               <input

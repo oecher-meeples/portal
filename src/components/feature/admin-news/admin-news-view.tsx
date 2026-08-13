@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -23,6 +26,12 @@ import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { InstagramIcon } from "@/components/ui/instagram-icon";
 import { ActionButton } from "@/components/ui/action-button";
+import { PillToggle } from "@/components/ui/pill-toggle";
+import {
+  CONTENT_TYPE_FILTERS,
+  TYPE_TO_DB,
+  type ContentType,
+} from "@/lib/content/content";
 import { deletePost } from "@/components/feature/admin-news/actions";
 
 const TYPE_META: Record<string, { label: string; icon: LucideIcon }> = {
@@ -43,6 +52,12 @@ export type AdminNewsPostRow = {
 };
 
 export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
+  const [filter, setFilter] = useState<ContentType | "alle">("alle");
+
+  const visible = posts.filter(
+    (post) => filter === "alle" || TYPE_TO_DB[filter] === post.type,
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -56,6 +71,12 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
         }
       />
 
+      <PillToggle
+        options={CONTENT_TYPE_FILTERS}
+        value={filter}
+        onChange={setFilter}
+      />
+
       <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
@@ -67,7 +88,7 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {posts.map((post) => {
+            {visible.map((post) => {
               const typeMeta = TYPE_META[post.type];
               const TypeIcon = typeMeta.icon;
               return (
