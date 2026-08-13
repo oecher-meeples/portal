@@ -86,6 +86,9 @@ export function LegalDocView({
           ))}
         </div>
       </div>
+      {/* Lets the last section scroll further up past the fold instead of
+       * stopping flush with the viewport bottom. */}
+      <div className="h-[20vh]" aria-hidden />
     </div>
   );
 }
