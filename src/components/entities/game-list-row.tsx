@@ -13,9 +13,11 @@ import type { GameZustand } from "@/lib/ludothek/holdings";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * List-view row for `/ludothek` (see Plan-Schritt 8/9): hovering (mouse) or a
- * first tap (touch) expands the description in an absolute-positioned overlay
- * — no reflow of neighbouring rows.
+ * List-view row for `/ludothek` (see Plan-Schritt 8/9): the description stays
+ * inline, full-length, at its original spot under the title. Hovering (mouse)
+ * or a first tap (touch) additionally expands mechanics, weight and the
+ * Erklärbären count in an absolute-positioned overlay below (#143) — no
+ * reflow of neighbouring rows.
  */
 export function GameListRow({
   game,
@@ -35,10 +37,7 @@ export function GameListRow({
   const isExpansion = game.kind === "BOARDGAME_EXPANSION";
   const lastPointerTypeRef = useRef<string | null>(null);
   const hasOverlayContent = Boolean(
-    game.description ||
-    game.mechanics.length > 0 ||
-    game.weight ||
-    game.explainerCount > 0,
+    game.mechanics.length > 0 || game.weight || game.explainerCount > 0,
   );
 
   return (
@@ -77,10 +76,8 @@ export function GameListRow({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
-        {game.description && !expanded && (
-          <p className="text-muted-foreground line-clamp-3 text-sm">
-            {game.description}
-          </p>
+        {game.description && (
+          <p className="text-muted-foreground text-sm">{game.description}</p>
         )}
       </div>
       {zustand && (
@@ -104,9 +101,6 @@ export function GameListRow({
             "bg-card border-primary/60 absolute inset-x-0 top-full z-10 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
           )}
         >
-          {game.description && (
-            <p className="text-muted-foreground text-sm">{game.description}</p>
-          )}
           {(game.mechanics.length > 0 || game.weight) && (
             <div className="flex flex-wrap items-center gap-2">
               {game.mechanics.map((mechanic) => (

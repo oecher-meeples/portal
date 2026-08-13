@@ -34,15 +34,13 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
 }
 
 describe("GameListRow", () => {
-  it("renders the core fields, description clamped by default", () => {
+  it("renders the core fields, description shown in full at its original spot", () => {
     render(<GameListRow game={game()} />);
 
     expect(screen.getByText("Arche Nova")).toBeInTheDocument();
     expect(screen.getByText("1–4 Spieler · 90’")).toBeInTheDocument();
-    const [description] = screen.getAllByText(
-      "Baue den modernsten Zoo der Welt.",
-    );
-    expect(description).toHaveClass("line-clamp-3");
+    const description = screen.getByText("Baue den modernsten Zoo der Welt.");
+    expect(description).not.toHaveClass("line-clamp-3");
   });
 
   it("sizes the cover to match the grid card format (#121)", () => {
@@ -60,9 +58,11 @@ describe("GameListRow", () => {
     fireEvent.mouseEnter(row);
 
     expect(row).toHaveClass("rounded-t-lg");
+    // "Engine-Building" sits in the mechanics-tag wrapper, one level below
+    // the overlay itself.
     const overlay = screen
-      .getByText("Baue den modernsten Zoo der Welt.")
-      .closest("div");
+      .getByText("Engine-Building")
+      .closest("div")?.parentElement;
     expect(overlay).toHaveClass("rounded-b-lg", "border-t-0", "-mt-px");
   });
 
