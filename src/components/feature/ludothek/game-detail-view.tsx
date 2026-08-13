@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -45,6 +46,7 @@ export function GameDetailView({
   relatedLocationChains,
   availability,
   openLfgPosts,
+  createLfgTrigger,
 }: {
   game: PublicLudothekGame;
   /** Nur für eingeloggte Nutzer gesetzt — Erklärbär-Selbstauskunft ist kein Gast-Feature. */
@@ -70,6 +72,11 @@ export function GameDetailView({
   availability?: GuestCopyAvailability;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
+  /** Fully rendered "Spielergesuch eröffnen" dialog+trigger, composed by the
+   * page — only passed for logged-in Meeples. Kept as a prop instead of an
+   * import so this feature stays isolated from `components/feature/lfg`
+   * (#142, see CLAUDE.md layer rules). */
+  createLfgTrigger?: ReactNode;
 }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
@@ -88,12 +95,15 @@ export function GameDetailView({
             <h1 className="font-serif text-3xl font-bold tracking-tight">
               {game.title}
             </h1>
-            {titleEdit && (
-              <EditBoardGameTitleDialog
-                game={titleEdit}
-                mechanicsOptions={mechanicsOptions}
-              />
-            )}
+            <div className="flex items-center gap-2">
+              {createLfgTrigger}
+              {titleEdit && (
+                <EditBoardGameTitleDialog
+                  game={titleEdit}
+                  mechanicsOptions={mechanicsOptions}
+                />
+              )}
+            </div>
           </div>
           <p className="text-muted-foreground mt-1">
             {game.minPlayers && game.maxPlayers
