@@ -256,6 +256,16 @@ export async function scanListMeeples() {
   });
 }
 
+/** Target list for the Umlagern mini-dialog (#121/#122) — active units only. */
+export async function scanListUnits() {
+  await requireActingMeeple();
+  return prisma.storageUnit.findMany({
+    where: { retiredAt: null },
+    orderBy: { label: "asc" },
+    select: { id: true, code: true, label: true },
+  });
+}
+
 export async function scanEinlagernUnit(
   unitId: string,
   target: {

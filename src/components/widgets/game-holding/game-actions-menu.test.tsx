@@ -20,6 +20,12 @@ vi.mock(
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
   AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
 }));
+vi.mock("@/components/widgets/game-holding/holding-mini-dialogs", () => ({
+  BorrowGameDialog: () => <button type="button">Ausleihen</button>,
+  AcceptReturnDialog: () => <button type="button">Rückgabe</button>,
+  GiveToMeepleDialog: () => <button type="button">Weitergeben</button>,
+  RelocateGameDialog: () => <button type="button">Umlagern</button>,
+}));
 
 const { GameActionsMenu } = await import("./game-actions-menu");
 

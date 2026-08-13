@@ -15,13 +15,19 @@ import { useAction } from "@/components/ui/use-action";
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
+import {
+  AcceptReturnDialog,
+  BorrowGameDialog,
+  GiveToMeepleDialog,
+  RelocateGameDialog,
+} from "@/components/widgets/game-holding/holding-mini-dialogs";
 
 /**
  * Rights-based aufenthalt/admin actions for one physical copy, replacing the
- * scattered per-row buttons in list/compact views (#121/#122). Ausleihen/
- * Weitergeben/Rückgabe/Umlagern/Geprüft are placeholders until their
- * scan-or-select mini-dialogs land (next step) — everything else is wired to
- * the existing server actions/dialogs already used on `/admin/bestand`.
+ * scattered per-row buttons in list/compact views (#121/#122). "Geprüft"
+ * stays a placeholder — it needs its own Mängelvermerk input, out of scope
+ * here (see `PruefbogenPanel`) — everything else is wired to the existing
+ * scan-or-select mini-dialogs / server actions.
  */
 export function GameActionsMenu({
   gameCopyId,
@@ -50,10 +56,18 @@ export function GameActionsMenu({
         <DropdownMenuGroup>
           <DropdownMenuLabel>Aufenthalt</DropdownMenuLabel>
           <DropdownMenuItem disabled>Geprüft</DropdownMenuItem>
-          <DropdownMenuItem disabled>Ausleihen</DropdownMenuItem>
-          <DropdownMenuItem disabled>Weitergeben</DropdownMenuItem>
-          <DropdownMenuItem disabled>Rückgabe</DropdownMenuItem>
-          <DropdownMenuItem disabled>Umlagern</DropdownMenuItem>
+          <div className="px-1.5 py-1">
+            <BorrowGameDialog gameCopyId={gameCopyId} />
+          </div>
+          <div className="px-1.5 py-1">
+            <GiveToMeepleDialog gameCopyId={gameCopyId} />
+          </div>
+          <div className="px-1.5 py-1">
+            <AcceptReturnDialog gameCopyId={gameCopyId} />
+          </div>
+          <div className="px-1.5 py-1">
+            <RelocateGameDialog gameCopyId={gameCopyId} />
+          </div>
         </DropdownMenuGroup>
 
         {canManageGames && (
