@@ -1,13 +1,22 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 
 /**
  * Dense list row for the `compact` view mode on `/ludothek` (games:manage
- * only, see Plan-Schritt 10) — no admin actions, those stay exclusive to
- * `/admin/bestand`.
+ * only, see Plan-Schritt 10) — the one row style with inline admin actions
+ * (#121/#122).
  */
-export function GameCompactRow({ game }: { game: LudothekGame }) {
+export function GameCompactRow({
+  game,
+  actions,
+}: {
+  game: LudothekGame;
+  /** Caller-supplied admin controls (edit/actions menu) — GameCompactRow just places them. */
+  actions?: ReactNode;
+}) {
   return (
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
@@ -18,6 +27,11 @@ export function GameCompactRow({ game }: { game: LudothekGame }) {
         {game.locationChain || "—"}
       </span>
       <GameZustandPill zustand={game.zustand} className="shrink-0" />
+      {actions && (
+        <StopRowNavigation className="flex shrink-0 items-center gap-1">
+          {actions}
+        </StopRowNavigation>
+      )}
     </Link>
   );
 }

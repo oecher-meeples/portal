@@ -27,7 +27,7 @@ vi.mock("@/components/feature/admin-bestand/create-board-game-dialog", () => ({
   CreateBoardGameDialog: () => null,
 }));
 vi.mock(
-  "@/components/feature/admin-bestand/deinventorise-board-game-dialog",
+  "@/components/widgets/board-game/deinventorise-board-game-dialog",
   () => ({
     DeinventoriseBoardGameDialog: () => null,
   }),

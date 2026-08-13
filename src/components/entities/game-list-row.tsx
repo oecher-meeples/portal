@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import { PackagePlus } from "lucide-react";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
@@ -18,8 +19,11 @@ import { cn } from "@/lib/utils/cn";
  */
 export function GameListRow({
   game,
+  actions,
 }: {
   game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+  /** Caller-supplied admin controls (edit/actions menu) — GameListRow just places them (#121/#122). */
+  actions?: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
   const zustand = "zustand" in game ? game.zustand : undefined;
@@ -72,6 +76,12 @@ export function GameListRow({
         )}
       </div>
       {zustand && <GameZustandPill zustand={zustand} className="shrink-0" />}
+
+      {actions && (
+        <StopRowNavigation className="flex shrink-0 items-center gap-1">
+          {actions}
+        </StopRowNavigation>
+      )}
 
       {expanded && game.description && (
         <div

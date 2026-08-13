@@ -121,4 +121,21 @@ describe("GameListRow", () => {
       document.querySelector("svg.lucide-package-plus"),
     ).not.toBeInTheDocument();
   });
+
+  it("omits the actions overlay without a caller-supplied actions node", () => {
+    render(<GameListRow game={game()} />);
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("places caller-supplied actions in a navigation-stopping overlay (#121/#122)", () => {
+    render(
+      <GameListRow
+        game={game()}
+        actions={<button type="button">Bearbeiten</button>}
+      />,
+    );
+
+    expect(screen.getByText("Bearbeiten")).toBeInTheDocument();
+  });
 });

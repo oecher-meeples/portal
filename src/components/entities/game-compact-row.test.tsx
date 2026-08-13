@@ -1,9 +1,13 @@
 import "@testing-library/jest-dom/vitest";
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import { BoardGameKind } from "@prisma/client";
 import { GameCompactRow } from "@/components/entities/game-compact-row";
 import type { LudothekGame } from "@/lib/ludothek/browser";
+
+afterEach(() => {
+  cleanup();
+});
 
 function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
   return {
@@ -37,12 +41,28 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
 }
 
 describe("GameCompactRow", () => {
-  it("renders title, location chain and zustand pill, without action buttons", () => {
+  it("renders title, location chain and zustand pill", () => {
     render(<GameCompactRow game={game()} />);
 
     expect(screen.getByText("Arche Nova")).toBeInTheDocument();
     expect(screen.getByText("Regal A")).toBeInTheDocument();
     expect(screen.getByText("Frei")).toBeInTheDocument();
+  });
+
+  it("places caller-supplied actions in a navigation-stopping overlay (#121/#122)", () => {
+    render(
+      <GameCompactRow
+        game={game()}
+        actions={<button type="button">Bearbeiten</button>}
+      />,
+    );
+
+    expect(screen.getByText("Bearbeiten")).toBeInTheDocument();
+  });
+
+  it("omits the actions overlay without a caller-supplied actions node", () => {
+    render(<GameCompactRow game={game()} />);
+
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
