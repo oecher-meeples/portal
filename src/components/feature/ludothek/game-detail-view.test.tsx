@@ -61,6 +61,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     baseGames: [],
     expansions: [],
     explainerCount: 0,
+    hasOpenLfg: false,
     ...overrides,
   };
 }

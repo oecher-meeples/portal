@@ -3,8 +3,12 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getLfgStatus, isLfgExpired, getOpenLfgPostsForBoardGame } =
-  await import("./lfg");
+const {
+  getLfgStatus,
+  isLfgExpired,
+  getOpenLfgPostsForBoardGame,
+  getBoardGameIdsWithOpenLfgPosts,
+} = await import("./lfg");
 
 const NOW = new Date("2026-08-01T12:00:00Z");
 
@@ -119,5 +123,72 @@ describe("getOpenLfgPostsForBoardGame", () => {
     prismaMock.lfgPost.findMany.mockResolvedValue([] as never);
 
     expect(await getOpenLfgPostsForBoardGame("board-1")).toEqual([]);
+  });
+});
+
+describe("getBoardGameIdsWithOpenLfgPosts", () => {
+  function post(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "post-1",
+      boardGameId: "board-1",
+      plannedAt: null,
+      maxParticipants: 4,
+      closedAt: null,
+      _count: { participants: 1 },
+      ...overrides,
+    };
+  }
+
+  it("returns an empty set without querying for an empty input", async () => {
+    const result = await getBoardGameIdsWithOpenLfgPosts([]);
+
+    expect(result).toEqual(new Set());
+    expect(prismaMock.lfgPost.findMany).not.toHaveBeenCalled();
+  });
+
+  it("includes a game with at least one offen post", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([
+      post({ boardGameId: "board-1" }),
+    ] as never);
+
+    const result = await getBoardGameIdsWithOpenLfgPosts(["board-1"]);
+
+    expect(result.has("board-1")).toBe(true);
+  });
+
+  it("excludes a game whose only posts are voll, abgelaufen or geschlossen", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([
+      post({
+        boardGameId: "board-1",
+        maxParticipants: 1,
+        _count: { participants: 1 },
+      }),
+      post({
+        boardGameId: "board-2",
+        plannedAt: new Date("2020-01-01T00:00:00Z"),
+      }),
+    ] as never);
+
+    const result = await getBoardGameIdsWithOpenLfgPosts([
+      "board-1",
+      "board-2",
+    ]);
+
+    expect(result.size).toBe(0);
+  });
+
+  it("scopes the query to the requested board games and open posts", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([] as never);
+
+    await getBoardGameIdsWithOpenLfgPosts(["board-1", "board-2"]);
+
+    expect(prismaMock.lfgPost.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          boardGameId: { in: ["board-1", "board-2"] },
+          closedAt: null,
+        },
+      }),
+    );
   });
 });

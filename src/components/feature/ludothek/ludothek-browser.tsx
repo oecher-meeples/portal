@@ -284,6 +284,13 @@ export function LudothekBrowser({
                     })}
                     active={Boolean(filters.showPrivateCollection)}
                   />
+                  <FilterPill
+                    label="Zeige nur Spielergesuche"
+                    href={href({
+                      nurGesuche: filters.onlyWithOpenLfg ? undefined : "1",
+                    })}
+                    active={Boolean(filters.onlyWithOpenLfg)}
+                  />
                 </div>
                 {meepleOptions && meepleOptions.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2">

@@ -86,6 +86,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     unitChain: "Regal A",
     locationChain: "Regal A",
     explainerCount: 0,
+    hasOpenLfg: false,
     ...overrides,
   };
 }
@@ -219,6 +220,22 @@ describe("LudothekBrowser — create-board-game button (#121)", () => {
     render(<LudothekBrowser {...baseProps()} internal canManageGames />);
 
     expect(screen.getByText("Spiel anlegen")).toBeInTheDocument();
+  });
+});
+
+describe("LudothekBrowser — Zeige nur Spielergesuche filter (#144)", () => {
+  it("hides the toggle for guests", () => {
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    expect(
+      screen.queryByText("Zeige nur Spielergesuche"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the toggle for logged-in Meeples", () => {
+    render(<LudothekBrowser {...baseProps()} internal />);
+
+    expect(screen.getByText("Zeige nur Spielergesuche")).toBeInTheDocument();
   });
 });
 
