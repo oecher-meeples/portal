@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TextField } from "@/components/ui/field";
+import { FileField } from "@/components/ui/file-field";
 import { Button } from "@/components/ui/button";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { useAction } from "@/components/ui/use-action";
@@ -26,6 +27,7 @@ function resolveFileType(file: File) {
 export function DownloadUploadForm() {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [resetKey, setResetKey] = useState(0);
   const {
     uploadFiles,
     isUploading,
@@ -35,6 +37,7 @@ export function DownloadUploadForm() {
     onSuccess: () => {
       setTitle("");
       setFile(null);
+      setResetKey((key) => key + 1);
     },
   });
 
@@ -72,16 +75,12 @@ export function DownloadUploadForm() {
             required
           />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium" htmlFor="download-upload-file">
-            Datei
-          </label>
-          <input
-            id="download-upload-file"
-            type="file"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          />
-        </div>
+        <FileField
+          key={resetKey}
+          id="download-upload-file"
+          label="Datei"
+          onFilesSelected={(files) => setFile(files[0] ?? null)}
+        />
         <Button type="submit" variant="outline" disabled={!canSubmit}>
           {isUploading || pending ? "Lade hoch…" : "Hochladen"}
         </Button>

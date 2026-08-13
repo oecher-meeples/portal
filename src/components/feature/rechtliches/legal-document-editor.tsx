@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField, TextAreaField } from "@/components/ui/field";
+import { FileField } from "@/components/ui/file-field";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
@@ -206,20 +207,12 @@ export function LegalDocumentEditor({
       />
 
       <div className="flex flex-col gap-2">
-        <label
-          className="text-sm font-medium"
-          htmlFor={`legal-pdf-${doc.slug}`}
-        >
-          PDF hochladen (ersetzt die aktuelle Datei)
-        </label>
-        <input
+        <FileField
           id={`legal-pdf-${doc.slug}`}
-          type="file"
+          label="PDF hochladen (ersetzt die aktuelle Datei)"
           accept="application/pdf"
-          onChange={(event) => {
-            void handleUpload(event.target.files?.[0] ?? null);
-            event.target.value = "";
-          }}
+          disabled={isUploading || extracting}
+          onFilesSelected={(files) => void handleUpload(files[0] ?? null)}
         />
         {(isUploading || extracting) && (
           <p className="text-muted-foreground text-sm">

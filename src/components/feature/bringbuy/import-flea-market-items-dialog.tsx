@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { FileField } from "@/components/ui/file-field";
 import {
   Table,
   TableBody,
@@ -105,19 +106,15 @@ export function ImportFleaMarketItemsDialog({
           </select>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="import-file">CSV-Datei</Label>
-          <input
-            id="import-file"
-            type="file"
-            accept=".csv,text/csv"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) handleFile(file);
-            }}
-            className="text-sm"
-          />
-        </div>
+        <FileField
+          id="import-file"
+          label="CSV-Datei"
+          accept=".csv,text/csv"
+          onFilesSelected={(files) => {
+            const file = files[0];
+            if (file) void handleFile(file);
+          }}
+        />
 
         {preview && (
           <div className="flex flex-col gap-2">
