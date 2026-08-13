@@ -10,9 +10,10 @@ import type { getUpcomingEventsWithCalendar } from "@/lib/content/calendar";
 type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
   posts: Awaited<ReturnType<typeof getLatestPosts>>;
+  gameCount: number;
 };
 
-export function HomeView({ events, posts }: HomeViewProps) {
+export function HomeView({ events, posts, gameCount }: HomeViewProps) {
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-2">
@@ -24,7 +25,7 @@ export function HomeView({ events, posts }: HomeViewProps) {
         </h1>
         <p className="text-muted-foreground max-w-2xl">
           Spielen, leihen, treffen. Von Kennerspiel bis Familienabend – bei uns
-          findest du Runde, Regelerklärung und über 600 Spiele in der
+          findest du Runde, Regelerklärung und über {gameCount} Spiele in der
           Vereins-Ludothek.
         </p>
       </section>

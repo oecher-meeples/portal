@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
-import { GameInventoryStatus } from "@prisma/client";
+import { BoardGameKind, GameInventoryStatus } from "@prisma/client";
 import {
   isLoanHolding,
   zustandFromHoldingAndUnit,
@@ -139,4 +139,16 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       locationChain: formatLocationChain({ responsibleName, unitChain }),
     };
   });
+}
+
+/** Live count of base-game titles, for the homepage subtitle (#97). */
+export async function countBoardGameTitles(): Promise<number> {
+  return prisma.boardGame.count({
+    where: { kind: BoardGameKind.BOARDGAME },
+  });
+}
+
+/** Rounds down to the nearest hundred so the subtitle never overstates the inventory. */
+export function roundDownToHundred(count: number): number {
+  return Math.floor(count / 100) * 100;
 }
