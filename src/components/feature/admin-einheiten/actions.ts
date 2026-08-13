@@ -6,18 +6,26 @@ import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/server";
-import { requireGamesManage } from "@/lib/ludothek/storage-units";
-
-// Re-exported so `/admin/einheiten` components keep importing from "./actions" —
-// the implementation moved to lib/ludothek (shared with the Ludothek
-// create-dialog's Standort-Feld, see #121/#122).
-// Only functions may be re-exported here — a "use server" file cannot also
-// export types (see #147). Import `CreateStorageUnitInput` directly from
-// `@/lib/ludothek/storage-units` where needed.
-export {
-  createStorageUnit,
-  findStorageUnitByCode,
+import {
+  requireGamesManage,
+  createStorageUnit as libCreateStorageUnit,
+  findStorageUnitByCode as libFindStorageUnitByCode,
+  type CreateStorageUnitInput,
 } from "@/lib/ludothek/storage-units";
+
+// Thin wrappers so `/admin/einheiten` components keep importing from
+// "./actions" — the implementation moved to lib/ludothek (shared with the
+// Ludothek create-dialog's Standort-Feld, see #121/#122).
+// A "use server" file may only export async functions declared in the file
+// itself — `export { x } from "..."` re-exports are rejected by Next.js at
+// build time, hence the wrappers instead of a re-export (see #147).
+export async function createStorageUnit(input: CreateStorageUnitInput) {
+  return libCreateStorageUnit(input);
+}
+
+export async function findStorageUnitByCode(code: string) {
+  return libFindStorageUnitByCode(code);
+}
 
 export type UpdateStorageUnitInput = {
   label: string;
