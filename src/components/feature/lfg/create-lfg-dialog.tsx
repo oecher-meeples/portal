@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { Plus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
@@ -29,11 +29,28 @@ export type LfgBoardGameOption = { id: string; title: string };
 
 export function CreateLfgDialog({
   boardGameOptions = [],
+  trigger,
+  defaultGameTitle,
+  defaultBoardGameId,
+  defaultMaxParticipants,
 }: {
   /** Existing inventory titles to optionally link the post to (#34) — never required. */
   boardGameOptions?: LfgBoardGameOption[];
+  /** Custom trigger, e.g. the game detail page's "Spielergesuch eröffnen"
+   * button (#142) — defaults to the standalone "Gesuch erstellen" button. */
+  trigger?: ReactElement;
+  /** Prefills the form when opened from a specific game's detail page (#142). */
+  defaultGameTitle?: string;
+  defaultBoardGameId?: string | null;
+  defaultMaxParticipants?: number;
 } = {}) {
-  const [form, setForm] = useState(EMPTY_FORM);
+  const initialForm = {
+    ...EMPTY_FORM,
+    gameTitle: defaultGameTitle ?? EMPTY_FORM.gameTitle,
+    boardGameId: defaultBoardGameId ?? EMPTY_FORM.boardGameId,
+    maxParticipants: defaultMaxParticipants ?? EMPTY_FORM.maxParticipants,
+  };
+  const [form, setForm] = useState(initialForm);
 
   function patch<K extends keyof typeof EMPTY_FORM>(
     key: K,
@@ -45,10 +62,12 @@ export function CreateLfgDialog({
   return (
     <ActionDialog
       trigger={
-        <Button className="gap-1.5">
-          <Plus className="size-4" />
-          Gesuch erstellen
-        </Button>
+        trigger ?? (
+          <Button className="gap-1.5">
+            <Plus className="size-4" />
+            Gesuch erstellen
+          </Button>
+        )
       }
       title="Neues Spielergesuch"
       description="Finde Mitspielende für ein bestimmtes Spiel oder spontan für einen Abend."
@@ -64,7 +83,7 @@ export function CreateLfgDialog({
           maxParticipants: Number(form.maxParticipants),
         })
       }
-      onReset={() => setForm(EMPTY_FORM)}
+      onReset={() => setForm(initialForm)}
     >
       <div className="flex flex-col gap-3">
         <TextField

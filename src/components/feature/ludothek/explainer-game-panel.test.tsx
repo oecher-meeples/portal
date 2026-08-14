@@ -111,4 +111,38 @@ describe("ExplainerGamePanel", () => {
       "bg-primary",
     );
   });
+
+  it("shows the Ansehen icon button without a badge when nobody explains this game (#146)", () => {
+    render(
+      <ExplainerGamePanel
+        boardGameId="game-1"
+        boardGameTitle="Ark Nova"
+        explainers={[]}
+        myLevel={null}
+      />,
+    );
+
+    const viewButton = screen.getByRole("button", {
+      name: "Alle Erklärbären ansehen",
+    });
+    expect(viewButton).toBeInTheDocument();
+    expect(viewButton).not.toHaveTextContent(/\d/);
+  });
+
+  it("shows the count badge once at least one Erklärbär is registered (#146)", () => {
+    render(
+      <ExplainerGamePanel
+        boardGameId="game-1"
+        boardGameTitle="Ark Nova"
+        explainers={[
+          { meepleId: "m-1", displayName: "Lea", level: "BY_HEART" },
+        ]}
+        myLevel={null}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Alle Erklärbären ansehen" }),
+    ).toHaveTextContent("1");
+  });
 });

@@ -57,6 +57,12 @@ export type LudothekGame = {
   /** Person/event first, then the storage chain — the ready-to-render
    * display string every simple consumer uses (#121 Standort-Kette). */
   locationChain: string;
+  /** Erklärbären count for this title — shown in the list-row hover overlay
+   * (#143). Public, not location/person data, so it survives `toPublicGame`. */
+  explainerCount: number;
+  /** Whether this title has at least one open (see `getLfgStatus`) LfgPost —
+   * backs the members-only "Zeige nur Spielergesuche"-Filter (#144). */
+  hasOpenLfg: boolean;
 };
 
 /**
@@ -115,6 +121,8 @@ export type LudothekFilters = {
   atMeepleId?: string;
   /** Default off. Internal-only — the crowdsourced private-collection search never runs for guests. */
   showPrivateCollection?: boolean;
+  /** Default off. Members-only — matches when a title has at least one open LfgPost (#144). */
+  onlyWithOpenLfg?: boolean;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -191,6 +199,7 @@ export function parseLudothekSearchParams(
     filters.atMeepleId = firstString(searchParams.bei) || undefined;
     filters.showPrivateCollection =
       firstString(searchParams.privatbesitz) === "1";
+    filters.onlyWithOpenLfg = firstString(searchParams.nurGesuche) === "1";
   }
 
   return filters;
@@ -246,6 +255,9 @@ export function filterLudothekGames(
       return false;
     }
     if (filters.atMeepleId && game.responsibleMeepleId !== filters.atMeepleId) {
+      return false;
+    }
+    if (filters.onlyWithOpenLfg && !game.hasOpenLfg) {
       return false;
     }
     return true;

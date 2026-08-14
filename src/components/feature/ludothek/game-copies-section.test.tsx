@@ -65,6 +65,24 @@ describe("GameCopiesSection", () => {
     expect(screen.getByText("Aktionen (copy-1)")).toBeInTheDocument();
   });
 
+  it("keeps the single-copy actions menu and expand chevron in the same right-aligned cluster (#141)", () => {
+    render(
+      <GameCopiesSection
+        copies={[copy()]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    const actionsButton = screen.getByText("Aktionen (copy-1)");
+    const chevronButton = screen.getByRole("button", {
+      name: "Details ausklappen",
+    });
+
+    expect(actionsButton.parentElement).toBe(chevronButton.parentElement);
+  });
+
   it("wires the actions menu for every table row (#128)", () => {
     render(
       <GameCopiesSection

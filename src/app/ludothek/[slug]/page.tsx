@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
+import { Plus } from "lucide-react";
 import { prisma } from "@/lib/utils/prisma";
+import { Button } from "@/components/ui/button";
+import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getCurrentMeeple } from "@/lib/members/meeples";
@@ -175,6 +178,20 @@ export default async function GameDetailPage({
       }
     : undefined;
 
+  const createLfgTrigger = (
+    <CreateLfgDialog
+      trigger={
+        <Button variant="outline" size="sm" className="gap-1.5">
+          <Plus className="size-4" />
+          Spielergesuch eröffnen
+        </Button>
+      }
+      defaultGameTitle={game.title}
+      defaultBoardGameId={game.boardGameId}
+      defaultMaxParticipants={game.maxPlayers ?? undefined}
+    />
+  );
+
   return (
     <GameDetailView
       game={toPublicGame(game)}
@@ -186,6 +203,7 @@ export default async function GameDetailPage({
       copies={copyRows}
       canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
+      createLfgTrigger={createLfgTrigger}
     />
   );
 }

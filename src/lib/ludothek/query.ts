@@ -8,6 +8,8 @@ import {
   formatLocationChain,
   walkUnitChain,
 } from "@/lib/ludothek/holdings-lookup";
+import { getExplainerCountsForGames } from "@/lib/explainer/queries";
+import { getBoardGameIdsWithOpenLfgPosts } from "@/lib/content/lfg";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 
 /**
@@ -56,6 +58,12 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     }),
   ]);
 
+  const uniqueBoardGameIds = [...new Set(copies.map((c) => c.boardGame.id))];
+  const [explainerCounts, boardGameIdsWithOpenLfg] = await Promise.all([
+    getExplainerCountsForGames(uniqueBoardGameIds),
+    getBoardGameIdsWithOpenLfgPosts(uniqueBoardGameIds),
+  ]);
+
   const unitById = new Map(units.map((u) => [u.id, u]));
   const keeperIds = [
     ...new Set(
@@ -95,6 +103,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       kind: boardGame.kind,
       baseGames: boardGame.expansionCollections.map((c) => c.baseGame),
       expansions: boardGame.baseGameCollections.map((c) => c.expansion),
+      explainerCount: explainerCounts.get(boardGame.id) ?? 0,
+      hasOpenLfg: boardGameIdsWithOpenLfg.has(boardGame.id),
     };
 
     if (!holding) {

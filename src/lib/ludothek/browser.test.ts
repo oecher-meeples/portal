@@ -34,6 +34,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     responsibleName: "Alex",
     unitChain: "Karton 1",
     locationChain: "Karton 1",
+    explainerCount: 0,
+    hasOpenLfg: false,
     ...overrides,
   };
 }
@@ -165,6 +167,22 @@ describe("filterLudothekGames", () => {
     ).toEqual([atA]);
   });
 
+  it("filters by 'nur mit offenen Spielergesuchen' (#144)", () => {
+    const withOpenLfg = game({ hasOpenLfg: true });
+    const withoutOpenLfg = game({ hasOpenLfg: false });
+
+    expect(
+      filterLudothekGames([withOpenLfg, withoutOpenLfg], {
+        onlyWithOpenLfg: true,
+      }),
+    ).toEqual([withOpenLfg]);
+    expect(
+      filterLudothekGames([withOpenLfg, withoutOpenLfg], {
+        onlyWithOpenLfg: false,
+      }),
+    ).toEqual([withOpenLfg, withoutOpenLfg]);
+  });
+
   it("combines multiple filters", () => {
     const match = game({
       title: "Arche Nova",
@@ -260,6 +278,7 @@ describe("parseLudothekSearchParams", () => {
         ausgeliehen: "1",
         bei: "meeple-1",
         privatbesitz: "1",
+        nurGesuche: "1",
       },
       { internal: false },
     );
@@ -267,6 +286,7 @@ describe("parseLudothekSearchParams", () => {
     expect(publicResult.onlyLoanedOut).toBeUndefined();
     expect(publicResult.atMeepleId).toBeUndefined();
     expect(publicResult.showPrivateCollection).toBeUndefined();
+    expect(publicResult.onlyWithOpenLfg).toBeUndefined();
 
     const internalResult = parseLudothekSearchParams(
       {
@@ -274,6 +294,7 @@ describe("parseLudothekSearchParams", () => {
         ausgeliehen: "1",
         bei: "meeple-1",
         privatbesitz: "1",
+        nurGesuche: "1",
       },
       { internal: true },
     );
@@ -281,11 +302,18 @@ describe("parseLudothekSearchParams", () => {
     expect(internalResult.onlyLoanedOut).toBe(true);
     expect(internalResult.atMeepleId).toBe("meeple-1");
     expect(internalResult.showPrivateCollection).toBe(true);
+    expect(internalResult.onlyWithOpenLfg).toBe(true);
   });
 
   it("defaults showPrivateCollection to false when internal and unset", () => {
     expect(
       parseLudothekSearchParams({}, { internal: true }).showPrivateCollection,
+    ).toBe(false);
+  });
+
+  it("defaults onlyWithOpenLfg to false when internal and unset", () => {
+    expect(
+      parseLudothekSearchParams({}, { internal: true }).onlyWithOpenLfg,
     ).toBe(false);
   });
 

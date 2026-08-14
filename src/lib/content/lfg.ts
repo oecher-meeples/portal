@@ -57,3 +57,27 @@ export async function getOpenLfgPostsForBoardGame(
       participantCount: post._count.participants,
     }));
 }
+
+/** Board game ids with at least one open (see {@link getLfgStatus}) Gesuch —
+ * batched for the Ludothek "Zeige nur Spielergesuche"-Filter (#144), no new
+ * status concept, reuses `getLfgStatus` like `getOpenLfgPostsForBoardGame`. */
+export async function getBoardGameIdsWithOpenLfgPosts(
+  boardGameIds: string[],
+): Promise<Set<string>> {
+  if (boardGameIds.length === 0) return new Set();
+
+  const posts = await prisma.lfgPost.findMany({
+    where: {
+      boardGameId: { in: boardGameIds },
+      closedAt: null,
+    },
+    include: { _count: { select: { participants: true } } },
+  });
+
+  return new Set(
+    posts
+      .filter((post) => getLfgStatus(post, post._count.participants) === "offen")
+      .map((post) => post.boardGameId)
+      .filter((id): id is string => id !== null),
+  );
+}

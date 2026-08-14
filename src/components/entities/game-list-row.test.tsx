@@ -27,20 +27,38 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     kind: BoardGameKind.BOARDGAME,
     baseGames: [],
     expansions: [],
+    explainerCount: 0,
+    hasOpenLfg: false,
     ...overrides,
   };
 }
 
 describe("GameListRow", () => {
-  it("renders the core fields, description clamped by default", () => {
+  it("renders the core fields, description shown in full at its original spot", () => {
     render(<GameListRow game={game()} />);
 
     expect(screen.getByText("Arche Nova")).toBeInTheDocument();
     expect(screen.getByText("1–4 Spieler · 90’")).toBeInTheDocument();
-    const [description] = screen.getAllByText(
-      "Baue den modernsten Zoo der Welt.",
-    );
-    expect(description).toHaveClass("line-clamp-3");
+    const description = screen.getByText("Baue den modernsten Zoo der Welt.");
+    expect(description).not.toHaveClass("line-clamp-3");
+  });
+
+  it("caps the description to 200 chars until hovered, shows it in full on hover", () => {
+    const longDescription = Array(10)
+      .fill("Ein sehr langer Beschreibungstext.")
+      .join(" ");
+    render(<GameListRow game={game({ description: longDescription })} />);
+    const row = screen.getByRole("link");
+
+    expect(screen.queryByText(longDescription)).not.toBeInTheDocument();
+    const collapsed = screen.getByText(/…$/);
+    expect(collapsed.textContent!.length).toBeLessThanOrEqual(201);
+
+    fireEvent.mouseEnter(row);
+    expect(screen.getByText(longDescription)).toBeInTheDocument();
+
+    fireEvent.mouseLeave(row);
+    expect(screen.queryByText(longDescription)).not.toBeInTheDocument();
   });
 
   it("sizes the cover to match the grid card format (#121)", () => {
@@ -58,9 +76,11 @@ describe("GameListRow", () => {
     fireEvent.mouseEnter(row);
 
     expect(row).toHaveClass("rounded-t-lg");
+    // "Engine-Building" sits in the mechanics-tag wrapper, one level below
+    // the overlay itself.
     const overlay = screen
-      .getByText("Baue den modernsten Zoo der Welt.")
-      .closest("div");
+      .getByText("Engine-Building")
+      .closest("div")?.parentElement;
     expect(overlay).toHaveClass("rounded-b-lg", "border-t-0", "-mt-px");
   });
 
@@ -153,5 +173,41 @@ describe("GameListRow", () => {
     );
 
     expect(screen.getByText("Bearbeiten")).toBeInTheDocument();
+  });
+
+  it("shows mechanics, weight and Erklärbären count in the hover overlay (#143)", () => {
+    render(
+      <GameListRow
+        game={game({
+          mechanics: ["Engine-Building", "Tableau-Building"],
+          weight: 3.7,
+          explainerCount: 2,
+        })}
+      />,
+    );
+    const row = screen.getByRole("link");
+
+    fireEvent.mouseEnter(row);
+
+    expect(screen.getByText("Engine-Building")).toBeInTheDocument();
+    expect(screen.getByText("Tableau-Building")).toBeInTheDocument();
+    expect(screen.getByText("Gewichtung 3.7/5")).toBeInTheDocument();
+    expect(screen.getByText("2 Erklärbären")).toBeInTheDocument();
+  });
+
+  it("uses the singular for exactly one Erklärbär", () => {
+    render(<GameListRow game={game({ explainerCount: 1 })} />);
+    fireEvent.mouseEnter(screen.getByRole("link"));
+
+    expect(screen.getByText("1 Erklärbär")).toBeInTheDocument();
+  });
+
+  it("keeps playersAndDuration visible outside the overlay and never duplicated (#143)", () => {
+    render(<GameListRow game={game({ explainerCount: 2 })} />);
+    const row = screen.getByRole("link");
+
+    expect(screen.getAllByText("1–4 Spieler · 90’")).toHaveLength(1);
+    fireEvent.mouseEnter(row);
+    expect(screen.getAllByText("1–4 Spieler · 90’")).toHaveLength(1);
   });
 });
