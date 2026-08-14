@@ -9,6 +9,7 @@ import type { listImportantLinks } from "@/lib/links/links";
 import { ActionButton } from "@/components/ui/action-button";
 import { scanConfirmHolding } from "@/lib/ludothek/holding-actions";
 import { ImportantLinksGrid } from "@/components/widgets/important-links-grid";
+import { ImportantLinksEditor } from "@/components/feature/dashboard/important-links-editor";
 
 const QUICK_LINKS = [
   { href: "/ludothek", label: "Ludothek", icon: Dice5 },
@@ -35,6 +36,9 @@ type DashboardViewProps = {
   totalOpenLfgCount: number;
   activeMarketListingCount: number;
   importantLinks: Awaited<ReturnType<typeof listImportantLinks>>;
+  /** Admin mit `links:manage` in der aktuellen Ansicht — Abschnitt bleibt
+   * dann immer sichtbar und wird inline editierbar (Pivot #110). */
+  canManageLinks: boolean;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
 };
 
@@ -51,6 +55,7 @@ export function DashboardView({
   totalOpenLfgCount,
   activeMarketListingCount,
   importantLinks,
+  canManageLinks,
   resignationNotice,
 }: DashboardViewProps) {
   return (
@@ -205,17 +210,21 @@ export function DashboardView({
         <ImportantLinksGrid items={QUICK_LINKS} />
       </div>
 
-      {importantLinks.length > 0 && (
+      {(importantLinks.length > 0 || canManageLinks) && (
         <div className="flex flex-col gap-3">
           <h2 className="font-serif text-lg font-bold">Wichtige Links</h2>
-          <ImportantLinksGrid
-            items={importantLinks.map((link) => ({
-              href: link.targetUrl,
-              label: link.title,
-              iconUrl: link.iconUrl ?? undefined,
-              external: true,
-            }))}
-          />
+          {canManageLinks ? (
+            <ImportantLinksEditor links={importantLinks} />
+          ) : (
+            <ImportantLinksGrid
+              items={importantLinks.map((link) => ({
+                href: link.targetUrl,
+                label: link.title,
+                iconUrl: link.iconUrl ?? undefined,
+                external: true,
+              }))}
+            />
+          )}
         </div>
       )}
     </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { LinkFields } from "@/components/feature/admin-links/link-fields";
+import { LinkFields } from "@/components/feature/dashboard/link-fields";
 import { createImportantLink } from "@/lib/links/actions";
 
-export function CreateLinkDialog() {
+export function CreateLinkDialog({ trigger }: { trigger?: ReactElement } = {}) {
   const [title, setTitle] = useState("");
   const [targetUrl, setTargetUrl] = useState("");
   const [iconUrl, setIconUrl] = useState("");
@@ -19,7 +19,7 @@ export function CreateLinkDialog() {
 
   return (
     <ActionDialog
-      trigger={<Button size="sm">+ Neuer Link</Button>}
+      trigger={trigger ?? <Button size="sm">+ Neuer Link</Button>}
       title="Neuer Link"
       submitLabel="Link erstellen"
       canSubmit={Boolean(title.trim() && targetUrl.trim())}

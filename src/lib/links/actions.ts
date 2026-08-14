@@ -19,7 +19,6 @@ async function requireManagePermission() {
 }
 
 function revalidateLinkPaths() {
-  revalidatePath("/admin/wichtige-links");
   revalidatePath("/dashboard");
 }
 

@@ -4,3 +4,7 @@ import { prisma } from "@/lib/utils/prisma";
 export async function listImportantLinks() {
   return prisma.importantLink.findMany({ orderBy: { createdAt: "asc" } });
 }
+
+export type ImportantLinkRow = Awaited<
+  ReturnType<typeof listImportantLinks>
+>[number];
