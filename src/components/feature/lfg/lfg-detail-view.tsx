@@ -1,13 +1,24 @@
+import { UserPlus, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
 import { LfgStatusPill } from "@/components/entities/lfg-status-pill";
 import {
+  addLfgGuest,
   closeLfgPost,
   joinLfgPost,
   leaveLfgPost,
+  removeLfgGuest,
 } from "@/components/feature/lfg/actions";
 import type { LfgStatus } from "@/lib/content/lfg";
 
-export type LfgParticipantRow = { meepleId: string; displayName: string };
+export type LfgParticipantRow = {
+  /** Teilnehmer-Zeilen-ID, immer gesetzt — auch für Gäste. */
+  id: string;
+  /** null = anonymer Gast (#145). */
+  meepleId: string | null;
+  displayName: string;
+  /** Wer entfernen darf (wer hinzugefügt hat, plus immer der Ersteller). */
+  canRemove: boolean;
+};
 
 export function LfgDetailView({
   id,
@@ -22,6 +33,7 @@ export function LfgDetailView({
   createdByMeepleId,
   viewerMeepleId,
   canClose,
+  guestsMayBringGuests,
 }: {
   id: string;
   title: string;
@@ -35,9 +47,13 @@ export function LfgDetailView({
   createdByMeepleId: string;
   viewerMeepleId: string | null;
   canClose: boolean;
+  guestsMayBringGuests: boolean;
 }) {
   const isParticipant = participants.some((p) => p.meepleId === viewerMeepleId);
   const isCreator = viewerMeepleId === createdByMeepleId;
+  const canAddGuest =
+    status === "offen" &&
+    (isCreator || (guestsMayBringGuests && isParticipant));
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
@@ -62,7 +78,7 @@ export function LfgDetailView({
         <ul className="mt-3 flex flex-col gap-2.5">
           {participants.map((participant) => (
             <li
-              key={participant.meepleId}
+              key={participant.id}
               className="flex items-center gap-2.5 text-sm"
             >
               <span className="bg-muted flex size-8 items-center justify-center rounded-full font-semibold">
@@ -74,9 +90,32 @@ export function LfgDetailView({
                   (Ersteller)
                 </span>
               )}
+              {participant.canRemove && (
+                <ActionButton
+                  variant="destructive"
+                  size="icon-xs"
+                  className="ml-auto"
+                  action={removeLfgGuest.bind(null, participant.id)}
+                  aria-label={`"${participant.displayName}" entfernen`}
+                >
+                  <X className="size-3.5" />
+                </ActionButton>
+              )}
             </li>
           ))}
         </ul>
+        {canAddGuest && (
+          <ActionButton
+            variant="outline"
+            size="sm"
+            className="mt-3 gap-1.5"
+            action={addLfgGuest.bind(null, id)}
+            pendingLabel="Füge hinzu…"
+          >
+            <UserPlus className="size-4" />
+            Gast hinzufügen
+          </ActionButton>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3">

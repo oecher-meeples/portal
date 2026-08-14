@@ -6,6 +6,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 const {
   getLfgStatus,
   isLfgExpired,
+  getLfgParticipantDisplayName,
   getOpenLfgPostsForBoardGame,
   getBoardGameIdsWithOpenLfgPosts,
 } = await import("./lfg");
@@ -63,6 +64,28 @@ describe("getLfgStatus", () => {
         NOW,
       ),
     ).toBe("geschlossen");
+  });
+});
+
+describe("getLfgParticipantDisplayName", () => {
+  it("uses the member's own name for a real participant", () => {
+    expect(
+      getLfgParticipantDisplayName({
+        meepleId: "meeple-1",
+        meepleDisplayName: "Anna",
+        addedByDisplayName: "Ben",
+      }),
+    ).toBe("Anna");
+  });
+
+  it("generates 'Gast von {name}' for anonymous guests, never free text", () => {
+    expect(
+      getLfgParticipantDisplayName({
+        meepleId: null,
+        meepleDisplayName: null,
+        addedByDisplayName: "Ben",
+      }),
+    ).toBe("Gast von Ben");
   });
 });
 

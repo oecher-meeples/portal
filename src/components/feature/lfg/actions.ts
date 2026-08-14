@@ -16,6 +16,8 @@ export type LfgPostInput = {
   dateNote?: string | null;
   location?: string | null;
   maxParticipants: number;
+  /** Erlaubt beigetretenen Meeples, eigene Gäste hinzuzufügen (#145) — der Ersteller darf das immer. */
+  guestsMayBringGuests?: boolean;
 };
 
 export async function createLfgPost(input: LfgPostInput) {
@@ -39,11 +41,16 @@ export async function createLfgPost(input: LfgPostInput) {
         dateNote: input.dateNote || null,
         location: input.location || null,
         maxParticipants: input.maxParticipants,
+        guestsMayBringGuests: input.guestsMayBringGuests ?? false,
         createdByMeepleId: meeple.id,
       },
     });
     await tx.lfgParticipant.create({
-      data: { postId: created.id, meepleId: meeple.id },
+      data: {
+        postId: created.id,
+        meepleId: meeple.id,
+        addedByMeepleId: meeple.id,
+      },
     });
     return created;
   });
@@ -87,11 +94,83 @@ export async function joinLfgPost(postId: string) {
   }
 
   await prisma.lfgParticipant.create({
-    data: { postId, meepleId: meeple.id },
+    data: { postId, meepleId: meeple.id, addedByMeepleId: meeple.id },
   });
 
   revalidatePath("/lfg");
   revalidatePath(`/lfg/${postId}`);
+  return { success: true as const };
+}
+
+/** Ersteller darf immer Gäste hinzufügen; beigetretene Meeples nur, wenn
+ * `guestsMayBringGuests` aktiv ist (#145). Anzeigename ist immer generiert. */
+export async function addLfgGuest(postId: string) {
+  const meeple = await requireMeeple();
+
+  const post = await loadPostWithParticipantCount(postId);
+  if (!post) {
+    return { error: "Gesuch nicht gefunden." };
+  }
+
+  const status = getLfgStatus(post, post._count.participants);
+  if (status === "geschlossen") {
+    return { error: "Dieses Gesuch ist geschlossen." };
+  }
+  if (status === "abgelaufen") {
+    return { error: "Dieses Gesuch ist abgelaufen." };
+  }
+  if (status === "voll") {
+    return { error: "Dieses Gesuch ist bereits voll." };
+  }
+
+  const isCreator = post.createdByMeepleId === meeple.id;
+  if (!isCreator) {
+    if (!post.guestsMayBringGuests) {
+      return {
+        error: "Gäste mitbringen ist für dieses Gesuch nicht erlaubt.",
+      };
+    }
+    const isParticipant = await prisma.lfgParticipant.findFirst({
+      where: { postId, meepleId: meeple.id },
+    });
+    if (!isParticipant) {
+      return { error: "Nur Teilnehmende können Gäste mitbringen." };
+    }
+  }
+
+  await prisma.lfgParticipant.create({
+    data: { postId, meepleId: null, addedByMeepleId: meeple.id },
+  });
+
+  revalidatePath("/lfg");
+  revalidatePath(`/lfg/${postId}`);
+  return { success: true as const };
+}
+
+/** Entfernen darf, wer den Gast hinzugefügt hat; der Ersteller zusätzlich
+ * jeden Gast (#145). */
+export async function removeLfgGuest(participantId: string) {
+  const meeple = await requireMeeple();
+
+  const participant = await prisma.lfgParticipant.findUnique({
+    where: { id: participantId },
+    include: { post: { select: { createdByMeepleId: true } } },
+  });
+  if (!participant || participant.meepleId !== null) {
+    return { error: "Gast nicht gefunden." };
+  }
+
+  const canRemove =
+    participant.addedByMeepleId === meeple.id ||
+    participant.post.createdByMeepleId === meeple.id;
+  if (!canRemove) {
+    return { error: "Du kannst diesen Gast nicht entfernen." };
+  }
+
+  await prisma.lfgParticipant.delete({ where: { id: participantId } });
+
+  revalidatePath("/lfg");
+  revalidatePath(`/lfg/${participant.postId}`);
   return { success: true as const };
 }
 
