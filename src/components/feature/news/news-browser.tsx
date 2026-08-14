@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, Rows3 } from "lucide-react";
 import {
   CONTENT_TYPE_FILTERS,
   type ContentItem,
   type ContentType,
 } from "@/lib/content/content";
-import { PillToggle } from "@/components/ui/pill-toggle";
+import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
+import { getContentTypeIcon } from "@/components/entities/content-type-icon";
 import { formatDate } from "@/lib/utils/format";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
 import {
@@ -14,9 +16,15 @@ import {
   type NewsViewMode,
 } from "@/components/feature/news/news-results-list";
 
-const VIEW_MODE_OPTIONS: { label: string; value: NewsViewMode }[] = [
-  { label: "Vorschau", value: "vorschau" },
-  { label: "Vollansicht", value: "vollansicht" },
+const TYPE_FILTER_OPTIONS: PillOption<ContentType | "alle">[] =
+  CONTENT_TYPE_FILTERS.map((option) => ({
+    ...option,
+    icon: getContentTypeIcon(option.value),
+  }));
+
+const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
+  { label: "Vorschau", value: "vorschau", icon: Eye },
+  { label: "Vollansicht", value: "vollansicht", icon: Rows3 },
 ];
 
 export function NewsBrowser({
@@ -45,7 +53,7 @@ export function NewsBrowser({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4">
           <PillToggle
-            options={CONTENT_TYPE_FILTERS}
+            options={TYPE_FILTER_OPTIONS}
             value={filter}
             onChange={setFilter}
           />

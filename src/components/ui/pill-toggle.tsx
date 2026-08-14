@@ -1,10 +1,12 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 export type PillOption<T extends string> = {
   label: string;
   value: T;
+  icon?: LucideIcon;
 };
 
 export function PillToggle<T extends string>({
@@ -24,12 +26,13 @@ export function PillToggle<T extends string>({
           type="button"
           onClick={() => onChange(option.value)}
           className={cn(
-            "rounded-full px-3 py-1 font-medium transition-colors",
+            "flex items-center gap-1.5 rounded-full px-3 py-1 font-medium transition-colors",
             value === option.value
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
+          {option.icon && <option.icon className="size-3.5" />}
           {option.label}
         </button>
       ))}
