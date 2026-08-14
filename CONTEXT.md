@@ -138,8 +138,8 @@ Ein Meeple mit einem dauerhaften Profil aus Spielen (Bezug auf echte `BoardGame`
 _Avoid_: Schicht, Spielelehrer, Erklärbär als reine Event-Anmeldung ohne Profil
 
 **Schicht**:
-Ein Zeitfenster mit festem Typ (Küche, Ausleihe, Flohmarkt) und fester Kapazität innerhalb eines Events, in das sich Mitglieder selbst eintragen — optional mit Kennzeichnung „unsichere Zusage". Wer eine Schicht besetzt, erhält für deren Dauer die zugehörigen Rechte (z. B. Flohmarkt-Kasse), unabhängig von einer sonst vergebenen Permission.
-_Avoid_: Erklärbär als Schicht, freie Schicht-Namen
+Der Bedarf an einer bestimmten Helferrolle (z. B. Küche, Ausleihe, Flohmarkt) an einem Tag eines Events: Anzahl paralleler Stellen plus admin-definierter Ziel-Zeitraum, den diese Stellen lückenlos abdecken sollen (unabhängig vom Event-Start/-Ende, wegen Auf-/Abbau außerhalb der eigentlichen Veranstaltungszeit). Mitglieder melden pro Tag Verfügbarkeit + gewünschte Rollen; Admins weisen im Schichtplan-Editor jeder Zusage einen eigenen, individuell verschiebbaren Zeitblock zu (`ShiftBooking`). Wer gerade in einem solchen Zeitblock steckt, erhält für dessen Dauer die Rechte, die seine Rolle hinterlegt hat (z. B. Flohmarkt-Kasse), unabhängig von einer sonst vergebenen Permission — siehe [ADR-0012](adr/0012-helferrolle-generalisiert-schicht-buchung-rechte.md).
+_Avoid_: Erklärbär als Schicht, festes Schicht-Typ-Enum, ein geteiltes Zeitfenster für alle Zuweisungen einer Rolle
 
 **Flohmarkt-Artikel**:
 Ein Gegenstand, den ein Mitglied für den Bring-&-Buy-Verkaufstag eines Events anmeldet (einzeln oder per Excel-Import), mit Preis und Status. Muss von einem Admin oder einem Mitglied in der Flohmarkt-Schicht dieses Events freigegeben werden, bevor er im öffentlichen Gäste-Bereich erscheint. Führt keine Provisions- oder Auszahlungsbuchhaltung — das läuft außerhalb des Portals.
