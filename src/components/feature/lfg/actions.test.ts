@@ -13,8 +13,14 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
-const { closeLfgPost, createLfgPost, joinLfgPost, leaveLfgPost } =
-  await import("./actions");
+const {
+  addLfgGuest,
+  closeLfgPost,
+  createLfgPost,
+  joinLfgPost,
+  leaveLfgPost,
+  removeLfgGuest,
+} = await import("./actions");
 
 class RedirectError extends Error {}
 
@@ -61,7 +67,11 @@ describe("createLfgPost", () => {
       }),
     });
     expect(prismaMock.lfgParticipant.create).toHaveBeenCalledWith({
-      data: { postId: "post-1", meepleId: "meeple-creator" },
+      data: {
+        postId: "post-1",
+        meepleId: "meeple-creator",
+        addedByMeepleId: "meeple-creator",
+      },
     });
   });
 
@@ -70,6 +80,25 @@ describe("createLfgPost", () => {
 
     expect(result).toEqual({ error: "Bitte einen Titel angeben." });
     expect(prismaMock.lfgPost.create).not.toHaveBeenCalled();
+  });
+
+  it("links the post to a board game when boardGameId is set", async () => {
+    await createLfgPost({ ...VALID_INPUT, boardGameId: "board-1" });
+
+    expect(prismaMock.lfgPost.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ boardGameId: "board-1" }),
+    });
+  });
+
+  it("leaves boardGameId null and gameTitle usable without a selection", async () => {
+    await createLfgPost({ ...VALID_INPUT, gameTitle: "Arche Nova" });
+
+    expect(prismaMock.lfgPost.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        boardGameId: null,
+        gameTitle: "Arche Nova",
+      }),
+    });
   });
 });
 
@@ -99,7 +128,11 @@ describe("joinLfgPost", () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.lfgParticipant.create).toHaveBeenCalledWith({
-      data: { postId: "post-1", meepleId: "meeple-other" },
+      data: {
+        postId: "post-1",
+        meepleId: "meeple-other",
+        addedByMeepleId: "meeple-other",
+      },
     });
   });
 
@@ -222,5 +255,163 @@ describe("closeLfgPost", () => {
       error: "Nur der Ersteller oder die Mitgliederverwaltung kann schließen.",
     });
     expect(prismaMock.lfgPost.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("addLfgGuest", () => {
+  function post(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "post-1",
+      maxParticipants: 4,
+      plannedAt: null,
+      closedAt: null,
+      createdByMeepleId: CREATOR.id,
+      guestsMayBringGuests: false,
+      _count: { participants: 2 },
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    prismaMock.lfgParticipant.create.mockResolvedValue({} as never);
+  });
+
+  it("lets the creator add a guest even without guestsMayBringGuests", async () => {
+    prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
+
+    const result = await addLfgGuest("post-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.lfgParticipant.create).toHaveBeenCalledWith({
+      data: {
+        postId: "post-1",
+        meepleId: null,
+        addedByMeepleId: "meeple-creator",
+      },
+    });
+  });
+
+  it("rejects a non-creator when guestsMayBringGuests is off", async () => {
+    requireMeepleMock.mockResolvedValue(OTHER);
+    prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
+
+    const result = await addLfgGuest("post-1");
+
+    expect(result).toEqual({
+      error: "Gäste mitbringen ist für dieses Gesuch nicht erlaubt.",
+    });
+    expect(prismaMock.lfgParticipant.create).not.toHaveBeenCalled();
+  });
+
+  it("lets a joined participant add a guest when guestsMayBringGuests is on", async () => {
+    requireMeepleMock.mockResolvedValue(OTHER);
+    prismaMock.lfgPost.findUnique.mockResolvedValue(
+      post({ guestsMayBringGuests: true }) as never,
+    );
+    prismaMock.lfgParticipant.findFirst.mockResolvedValue({} as never);
+
+    const result = await addLfgGuest("post-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.lfgParticipant.create).toHaveBeenCalledWith({
+      data: {
+        postId: "post-1",
+        meepleId: null,
+        addedByMeepleId: "meeple-other",
+      },
+    });
+  });
+
+  it("rejects a non-participant even when guestsMayBringGuests is on", async () => {
+    requireMeepleMock.mockResolvedValue(OTHER);
+    prismaMock.lfgPost.findUnique.mockResolvedValue(
+      post({ guestsMayBringGuests: true }) as never,
+    );
+    prismaMock.lfgParticipant.findFirst.mockResolvedValue(null);
+
+    const result = await addLfgGuest("post-1");
+
+    expect(result).toEqual({
+      error: "Nur Teilnehmende können Gäste mitbringen.",
+    });
+    expect(prismaMock.lfgParticipant.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects adding a guest to a full post", async () => {
+    prismaMock.lfgPost.findUnique.mockResolvedValue(
+      post({ maxParticipants: 2 }) as never,
+    );
+
+    const result = await addLfgGuest("post-1");
+
+    expect(result).toEqual({ error: "Dieses Gesuch ist bereits voll." });
+    expect(prismaMock.lfgParticipant.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("removeLfgGuest", () => {
+  function guestParticipant(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "participant-guest",
+      postId: "post-1",
+      meepleId: null,
+      addedByMeepleId: "meeple-other",
+      post: { createdByMeepleId: CREATOR.id },
+      ...overrides,
+    };
+  }
+
+  it("lets whoever added the guest remove them", async () => {
+    requireMeepleMock.mockResolvedValue(OTHER);
+    prismaMock.lfgParticipant.findUnique.mockResolvedValue(
+      guestParticipant() as never,
+    );
+    prismaMock.lfgParticipant.delete.mockResolvedValue({} as never);
+
+    const result = await removeLfgGuest("participant-guest");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.lfgParticipant.delete).toHaveBeenCalledWith({
+      where: { id: "participant-guest" },
+    });
+  });
+
+  it("lets the creator remove any guest", async () => {
+    prismaMock.lfgParticipant.findUnique.mockResolvedValue(
+      guestParticipant() as never,
+    );
+    prismaMock.lfgParticipant.delete.mockResolvedValue({} as never);
+
+    const result = await removeLfgGuest("participant-guest");
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it("rejects removal by someone who neither added the guest nor created the post", async () => {
+    requireMeepleMock.mockResolvedValue({
+      id: "meeple-third",
+      neonAuthUserId: "auth-third",
+    });
+    prismaMock.lfgParticipant.findUnique.mockResolvedValue(
+      guestParticipant() as never,
+    );
+
+    const result = await removeLfgGuest("participant-guest");
+
+    expect(result).toEqual({
+      error: "Du kannst diesen Gast nicht entfernen.",
+    });
+    expect(prismaMock.lfgParticipant.delete).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the participant is not a guest", async () => {
+    prismaMock.lfgParticipant.findUnique.mockResolvedValue(
+      guestParticipant({ meepleId: "meeple-real" }) as never,
+    );
+
+    const result = await removeLfgGuest("participant-guest");
+
+    expect(result).toEqual({ error: "Gast nicht gefunden." });
+    expect(prismaMock.lfgParticipant.delete).not.toHaveBeenCalled();
   });
 });

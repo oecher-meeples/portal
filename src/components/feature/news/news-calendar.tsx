@@ -51,7 +51,7 @@ export function NewsCalendar({
   const todayKey = toDateKey(new Date());
 
   return (
-    <div className="bg-card self-start rounded-lg border p-5">
+    <div className="bg-card self-start rounded-lg border p-5 lg:sticky lg:top-24">
       <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
 
       <div className="mt-3 flex items-center justify-between">

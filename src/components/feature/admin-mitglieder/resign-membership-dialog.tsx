@@ -4,15 +4,11 @@ import { useState } from "react";
 import { UserMinus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { nextTurnOfTheYear } from "@/lib/members/meeples";
 import {
   getOpenHoldingsSummary,
   recordResignation,
 } from "@/components/feature/admin-mitglieder/actions";
-
-function nextTurnOfTheYear() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1));
-}
 
 export function ResignMembershipDialog({
   meepleId,

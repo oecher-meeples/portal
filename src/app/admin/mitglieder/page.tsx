@@ -1,25 +1,30 @@
 import { prisma } from "@/lib/utils/prisma";
 import { requireAdmin } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getMembershipState } from "@/lib/members/meeples";
+import { maskIban } from "@/lib/utils/crypto";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
 import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 import { listInvites } from "@/lib/members/invites";
 
 export default async function AdminMitgliederPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const now = new Date();
 
   const [
     meeples,
     userRoles,
+    roles,
     gameHoldingCounts,
     storageUnitCounts,
     deletionRequests,
     invites,
+    canReadBankData,
   ] = await Promise.all([
     prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
     prisma.userRole.findMany({ include: { role: true } }),
+    prisma.role.findMany({ orderBy: { name: "asc" } }),
     prisma.gameHolding.groupBy({
       by: ["meepleId"],
       where: { endedAt: null, meepleId: { not: null } },
@@ -32,13 +37,16 @@ export default async function AdminMitgliederPage() {
     }),
     listPendingDeletionRequests(now),
     listInvites(now),
+    hasPermission(session.user.id, "bank:read"),
   ]);
 
-  const rolesByUserId = new Map<string, string[]>();
+  // A Meeple holds exactly one role (see redeemInvite's DEFAULT_ROLE) — the
+  // first match is enough even if a data inconsistency left more than one.
+  const roleIdByUserId = new Map<string, string>();
   for (const userRole of userRoles) {
-    const list = rolesByUserId.get(userRole.neonAuthUserId) ?? [];
-    list.push(userRole.role.name);
-    rolesByUserId.set(userRole.neonAuthUserId, list);
+    if (!roleIdByUserId.has(userRole.neonAuthUserId)) {
+      roleIdByUserId.set(userRole.neonAuthUserId, userRole.roleId);
+    }
   }
 
   const openGamesByMeepleId = new Map(
@@ -60,19 +68,26 @@ export default async function AdminMitgliederPage() {
         daysRemaining: request.daysRemaining,
         overdue: request.overdue,
       }))}
+      roles={roles.map((role) => ({ id: role.id, name: role.name }))}
+      canReadBankData={canReadBankData}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,
         displayName: meeple.displayName,
-        roles: meeple.neonAuthUserId
-          ? (rolesByUserId.get(meeple.neonAuthUserId) ?? [])
-          : [],
+        email: meeple.email,
+        hasAccount: meeple.neonAuthUserId !== null,
+        roleId: meeple.neonAuthUserId
+          ? (roleIdByUserId.get(meeple.neonAuthUserId) ?? null)
+          : null,
         membershipState: getMembershipState(meeple, now),
         joinedAt: meeple.joinedAt.toISOString(),
         resignedAt: meeple.resignedAt?.toISOString() ?? null,
         membershipEndsAt: meeple.membershipEndsAt?.toISOString() ?? null,
         openGames: openGamesByMeepleId.get(meeple.id) ?? 0,
         openUnits: openUnitsByMeepleId.get(meeple.id) ?? 0,
+        accountHolder: meeple.accountHolder,
+        maskedIban: maskIban(meeple.ibanLast4),
+        hasIban: meeple.ibanEncrypted !== null,
       }))}
       invites={invites.map((invite) => ({
         id: invite.id,

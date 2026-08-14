@@ -8,12 +8,17 @@ import {
 import { prisma } from "../src/lib/utils/prisma";
 import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
-import { findOrCreateBoardGameTitle } from "../src/lib/ludothek/board-games";
+import {
+  findOrCreateBoardGameTitle,
+  uniqueBoardGameSlug,
+} from "../src/lib/ludothek/board-games";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
 import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
+import { DEMO_LEGAL_DOCUMENTS } from "./seed-data/demo-legal-documents";
 import { DEMO_POSTS } from "./seed-data/demo-posts";
+import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
  * manually testable without a real second purchase. */
@@ -36,63 +41,6 @@ const DEMO_MEEPLE_2 = {
   password: process.env.SEED_DEMO_MEEPLE_2_PASSWORD ?? "demo1234",
   name: "Tobias Demo",
 };
-
-const PERMISSIONS = [
-  { key: "posts:write", description: "Beiträge erstellen und bearbeiten" },
-  { key: "posts:delete", description: "Beiträge löschen" },
-  {
-    key: "invites:manage",
-    description: "Einladungen erzeugen, einsehen und widerrufen",
-  },
-  { key: "members:manage", description: "Mitgliederverwaltung" },
-  {
-    key: "instagram:connect",
-    description: "Instagram-Verbindung verwalten (OAuth verbinden/trennen)",
-  },
-  {
-    key: "games:manage",
-    description:
-      "Ludothek verwalten: Spiele und Aufbewahrungseinheiten anlegen, bearbeiten und stilllegen, EAN pflegen, Etiketten drucken, fremde Aufenthalte korrigieren, Mängel schließen, deinventarisieren",
-  },
-  {
-    key: "bank:read",
-    description: "Bankdaten entschlüsselt einsehen und exportieren",
-  },
-  {
-    key: "events:manage",
-    description:
-      "Events, Schichten und Regal-Zuordnungen verwalten, Flohmarkt-Artikel freigeben/Kasse bedienen außerhalb einer Kasse-Schicht",
-  },
-  {
-    key: "downloads:manage",
-    description:
-      "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
-  },
-];
-
-const ROLES = [
-  {
-    name: "admin",
-    description: "Vollzugriff",
-    permissionKeys: PERMISSIONS.map((p) => p.key),
-  },
-  {
-    name: "moderator",
-    description: "Redaktion",
-    permissionKeys: ["posts:write"],
-  },
-  {
-    name: "kassenwart",
-    description:
-      "Beitragseinzug — darf Bankdaten entschlüsseln, jeder Zugriff wird protokolliert",
-    permissionKeys: ["bank:read"],
-  },
-  {
-    name: "mitglied",
-    description: "Standardrolle nach Registrierung",
-    permissionKeys: [],
-  },
-];
 
 async function upsertNeonAuthUser({
   email,
@@ -126,55 +74,6 @@ async function upsertNeonAuthUser({
 
   console.log(`Neon-Auth-Test-User "${email}" angelegt (id: ${user.id}).`);
   return user.id;
-}
-
-async function seedPermissions() {
-  for (const permission of PERMISSIONS) {
-    await prisma.permission.upsert({
-      where: { key: permission.key },
-      update: { description: permission.description },
-      create: permission,
-    });
-  }
-}
-
-async function seedRoles() {
-  for (const role of ROLES) {
-    await prisma.role.upsert({
-      where: { name: role.name },
-      update: { description: role.description },
-      create: { name: role.name, description: role.description },
-    });
-
-    for (const permissionKey of role.permissionKeys) {
-      const [dbRole, dbPermission] = await Promise.all([
-        prisma.role.findUniqueOrThrow({ where: { name: role.name } }),
-        prisma.permission.findUniqueOrThrow({ where: { key: permissionKey } }),
-      ]);
-
-      await prisma.rolePermission.upsert({
-        where: {
-          roleId_permissionId: {
-            roleId: dbRole.id,
-            permissionId: dbPermission.id,
-          },
-        },
-        update: {},
-        create: { roleId: dbRole.id, permissionId: dbPermission.id },
-      });
-    }
-  }
-}
-
-async function assignRole(neonAuthUserId: string, roleName: string) {
-  const role = await prisma.role.findUniqueOrThrow({
-    where: { name: roleName },
-  });
-  await prisma.userRole.upsert({
-    where: { neonAuthUserId_roleId: { neonAuthUserId, roleId: role.id } },
-    update: {},
-    create: { neonAuthUserId, roleId: role.id },
-  });
 }
 
 async function ensureAdminMeeple(neonAuthUserId: string) {
@@ -259,9 +158,11 @@ async function seedDemoGames(adminMeepleId: string) {
   for (const game of DEMO_GAMES) {
     if (existingIdByTitle.has(game.title)) continue;
 
+    const slug = await uniqueBoardGameSlug(prisma, game.title);
     const created = await prisma.boardGame.create({
       data: {
         title: game.title,
+        slug,
         imageUrl: game.imageUrl,
         minPlayers: game.minPlayers,
         maxPlayers: game.maxPlayers,
@@ -413,6 +314,21 @@ async function seedDemoDownloads() {
   console.log(`${DEMO_DOWNLOADS.length} Downloads angelegt/übersprungen.`);
 }
 
+/** Upsertet auf `slug`, damit ein Re-Seed die migrierten Rechtliches-Inhalte nicht dupliziert. */
+async function seedDemoLegalDocuments() {
+  for (const doc of DEMO_LEGAL_DOCUMENTS) {
+    await prisma.legalDocument.upsert({
+      where: { slug: doc.slug },
+      update: {},
+      create: doc,
+    });
+  }
+
+  console.log(
+    `${DEMO_LEGAL_DOCUMENTS.length} Rechtliches-Dokumente angelegt/übersprungen.`,
+  );
+}
+
 async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
   await seedPermissions();
@@ -424,6 +340,7 @@ async function main() {
   await seedDemoMeeples();
   await seedDemoPosts();
   await seedDemoDownloads();
+  await seedDemoLegalDocuments();
 
   console.log("Seed abgeschlossen.");
 }

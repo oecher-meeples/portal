@@ -1,29 +1,16 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { zustandFromHoldingAndUnit } from "@/lib/ludothek/holdings";
+import {
+  formatLocationChain,
+  walkUnitChain,
+} from "@/lib/ludothek/holdings-lookup";
 import { gameCopyAdminWhere } from "@/components/feature/admin-bestand/filters";
 import {
   AdminBestandView,
   type AdminBoardGameRow,
 } from "@/components/feature/admin-bestand/admin-bestand-view";
 import { formatDatePlain } from "@/lib/utils/format";
-
-function locationChain(
-  unitId: string,
-  unitById: Map<string, { label: string; parentUnitId: string | null }>,
-) {
-  const chain: string[] = [];
-  let currentId: string | null = unitId;
-  let depth = 0;
-  while (currentId && depth < 20) {
-    const unit = unitById.get(currentId);
-    if (!unit) break;
-    chain.push(unit.label);
-    currentId = unit.parentUnitId;
-    depth += 1;
-  }
-  return chain.reverse().join(" → ");
-}
 
 export default async function AdminBestandPage({
   searchParams,
@@ -47,11 +34,30 @@ export default async function AdminBestandPage({
       },
     }),
     prisma.storageUnit.findMany({
-      select: { id: true, label: true, parentUnitId: true },
+      select: {
+        id: true,
+        label: true,
+        parentUnitId: true,
+        keeperMeepleId: true,
+      },
     }),
   ]);
 
   const unitById = new Map(units.map((u) => [u.id, u]));
+  const keeperIds = [
+    ...new Set(
+      units
+        .map((u) => u.keeperMeepleId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const keepers = keeperIds.length
+    ? await prisma.meeple.findMany({
+        where: { id: { in: keeperIds } },
+        select: { id: true, displayName: true },
+      })
+    : [];
+  const keeperNameById = new Map(keepers.map((k) => [k.id, k.displayName]));
 
   const rows: AdminBoardGameRow[] = copies.map((copy) => {
     const holding = copy.holdings[0] ?? null;
@@ -81,12 +87,27 @@ export default async function AdminBestandPage({
       description: boardGame.description,
       mechanics: boardGame.mechanics,
       condition: copy.condition,
+      kind: boardGame.kind,
       explainerVideoUrl: boardGame.explainerVideoUrl,
-      locationChain: holding?.meepleId
-        ? `bei ${holding.meeple?.displayName ?? "Meeple"}`
-        : holding?.unitId
-          ? locationChain(holding.unitId, unitById)
-          : "",
+      locationChain: (() => {
+        if (holding?.meepleId) {
+          return formatLocationChain({
+            responsibleName: holding.meeple?.displayName ?? "Meeple",
+            unitChain: "",
+          });
+        }
+        if (!holding?.unitId) return "";
+        const { unitChain, keeperMeepleId } = walkUnitChain(
+          holding.unitId,
+          unitById,
+        );
+        return formatLocationChain({
+          responsibleName: keeperMeepleId
+            ? (keeperNameById.get(keeperMeepleId) ?? null)
+            : null,
+          unitChain,
+        });
+      })(),
     };
   });
 

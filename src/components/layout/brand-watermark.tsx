@@ -26,7 +26,7 @@ export function BrandWatermark() {
     >
       <div className="lg:h-2.6 h-s2.5 absolute inset-x-0 bottom-0 bg-black dark:h-[8.4pt] dark:border-t-[1.1pt] dark:border-white" />
       <Image
-        src="/Logo-Oecher-Meeples.png"
+        src="/icons/Logo-Oecher-Meeples.png"
         alt=""
         width={3840}
         height={1000}
@@ -34,7 +34,7 @@ export function BrandWatermark() {
         className="relative h-40 w-auto lg:h-56 dark:hidden"
       />
       <Image
-        src="/oecher-meeples-header-dark.png"
+        src="/icons/oecher-meeples-header-dark.png"
         alt=""
         width={3840}
         height={1000}

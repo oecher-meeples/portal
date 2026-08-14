@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma, PrismaClient } from "@prisma/client";
+import { BoardGameKind, type Prisma, type PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
@@ -13,6 +13,7 @@ import {
   fetchBggGame,
   type BggGameData,
 } from "@/lib/bgg/client";
+import { uniqueSlug } from "@/lib/utils/slug";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -28,10 +29,15 @@ export type BoardGameTitleInput = {
   description?: string | null;
   mechanics?: string[];
   explainerVideoUrl?: string | null;
+  /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
+  kind?: BoardGameKind;
 };
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
   condition?: string | null;
+  /** Initial standort for the first copy — defaults to "Unsortiert" when
+   * omitted (#121/#122). `self` places it directly with the creator. */
+  placement?: { unitId: string } | { self: true };
 };
 
 function validateBoardGameInput(input: BoardGameTitleInput) {
@@ -56,6 +62,7 @@ function toBoardGameTitleData(input: BoardGameTitleInput) {
     description: input.description || null,
     mechanics: input.mechanics ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
+    ...(input.kind ? { kind: input.kind } : {}),
   };
 }
 
@@ -78,20 +85,31 @@ async function duplicateEanHint(
     : undefined;
 }
 
-/** Every title touched by an expansion assignment, revalidated via its copies' routes. */
+/** Every title touched by an expansion assignment, revalidated via its own route. */
 async function revalidateAssignmentPaths(
   baseGameId: string,
   expansionId: string,
 ) {
-  const copies = await prisma.gameCopy.findMany({
-    where: { boardGameId: { in: [baseGameId, expansionId] } },
+  const games = await prisma.boardGame.findMany({
+    where: { id: { in: [baseGameId, expansionId] } },
     select: { slug: true },
   });
 
   revalidatePath("/ludothek");
-  for (const copy of copies) {
-    revalidatePath(`/ludothek/${copy.slug}`);
+  for (const game of games) {
+    revalidatePath(`/ludothek/${game.slug}`);
   }
+}
+
+export async function uniqueBoardGameSlug(tx: Tx, title: string) {
+  return uniqueSlug(
+    title,
+    async (slug) =>
+      (await tx.boardGame.findFirst({
+        where: { slug },
+        select: { id: true },
+      })) !== null,
+  );
 }
 
 /** Finds the title by `bggId` (the one reliable product identity) or creates it. */
@@ -106,8 +124,9 @@ export async function findOrCreateBoardGameTitle(
     if (existing) return existing;
   }
 
+  const slug = await uniqueBoardGameSlug(tx, input.title);
   return tx.boardGame.create({
-    data: { title: input.title, ...toBoardGameTitleData(input) },
+    data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
 }
 
@@ -128,6 +147,12 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     ensureMeeple(user),
   ]);
 
+  const placement = input.placement
+    ? "self" in input.placement
+      ? { meepleId: actor.id }
+      : { unitId: input.placement.unitId }
+    : undefined;
+
   const copy = await prisma.$transaction(async (tx) => {
     const title = await findOrCreateBoardGameTitle(input, tx);
     return createGameCopyTx(tx, {
@@ -135,6 +160,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
       boardGameTitle: title.title,
       condition: input.condition,
       actorId: actor.id,
+      placement,
     });
   });
 
@@ -156,20 +182,13 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
 
   const hint = await duplicateEanHint(input.ean, id);
 
-  await prisma.boardGame.update({
+  const game = await prisma.boardGame.update({
     where: { id },
     data: { title: input.title, ...toBoardGameTitleData(input) },
   });
 
-  const copies = await prisma.gameCopy.findMany({
-    where: { boardGameId: id },
-    select: { slug: true },
-  });
-
   revalidatePath("/ludothek");
-  for (const copy of copies) {
-    revalidatePath(`/ludothek/${copy.slug}`);
-  }
+  revalidatePath(`/ludothek/${game.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const, hint };
 }
@@ -215,8 +234,40 @@ export async function assignExpansion(baseGameId: string, expansionId: string) {
     create: { baseGameId, expansionId },
   });
 
+  // The assigned title is an expansion by definition — set `kind` if the
+  // BGG import didn't already (no fallback on removal, see #30).
+  await prisma.boardGame.updateMany({
+    where: {
+      id: expansionId,
+      kind: { not: BoardGameKind.BOARDGAME_EXPANSION },
+    },
+    data: { kind: BoardGameKind.BOARDGAME_EXPANSION },
+  });
+
   await revalidateAssignmentPaths(baseGameId, expansionId);
   return { success: true as const };
+}
+
+/**
+ * Candidate titles for the assignment dialog (#30): base-game candidates
+ * (`gameKind` is an expansion) must themselves be a BOARDGAME; expansion
+ * candidates (game is a base game) can be any kind — BGG import is blocked
+ * (#12), so `kind` isn't reliably set on every title yet.
+ */
+export async function findExpansionAssignmentOptions(
+  gameKind: BoardGameKind,
+  excludeIds: string[],
+) {
+  const isExpansion = gameKind === BoardGameKind.BOARDGAME_EXPANSION;
+
+  return prisma.boardGame.findMany({
+    where: {
+      id: { notIn: excludeIds },
+      ...(isExpansion ? { kind: BoardGameKind.BOARDGAME } : {}),
+    },
+    select: { id: true, title: true },
+    orderBy: { title: "asc" },
+  });
 }
 
 export async function removeExpansionAssignment(

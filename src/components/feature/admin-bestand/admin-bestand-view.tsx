@@ -16,12 +16,15 @@ import {
 } from "@/components/ui/table";
 import { StatusPill } from "@/components/ui/status-pill";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
-import { CreateBoardGameDialog } from "@/components/feature/admin-bestand/create-board-game-dialog";
-import { DeinventoriseBoardGameDialog } from "@/components/feature/admin-bestand/deinventorise-board-game-dialog";
+import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
+import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
+import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import type { BoardGameKind } from "@prisma/client";
 
 export type AdminBoardGameRow = {
   /** GameCopy id. */
@@ -45,6 +48,7 @@ export type AdminBoardGameRow = {
   description: string | null;
   mechanics: string[];
   condition: string | null;
+  kind: BoardGameKind;
   explainerVideoUrl: string | null;
 };
 
@@ -66,7 +70,7 @@ export function AdminBestandView({
 
   const filtered = useMemo(() => {
     return games.filter((game) => {
-      if (search && !game.title.toLowerCase().includes(search.toLowerCase())) {
+      if (!matchesAdminBestandSearch(game, search)) {
         return false;
       }
       if (quickFilter === "ungeprueft" && !game.needsCompletenessCheck)
@@ -106,16 +110,17 @@ export function AdminBestandView({
         action={<CreateBoardGameDialog defaultEan={defaultEan} />}
       />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="bg-background sticky top-24 z-10 flex flex-wrap items-center gap-3 py-2">
         <div className="relative w-full max-w-sm">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           <Input
-            placeholder="Spiel suchen …"
+            placeholder="Spiel, EAN oder BGG-ID suchen …"
             className="pl-9"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+        <ScanSearchDialog onScanned={setSearch} />
         <div className="flex flex-wrap gap-2 text-sm">
           {(
             [

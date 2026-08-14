@@ -2,19 +2,24 @@ import { prisma } from "@/lib/utils/prisma";
 import { tierAtLeast, type Tier } from "@/lib/utils/nav-config";
 
 /** Public-facing by default — never surfaces OFFLINE downloads, and INTERNAL
- * only for signed-in members (analogous to `Post.internal`, see content.ts). */
+ * only for signed-in members (analogous to `Post.internal`, see content.ts).
+ * Sorted by the manual `order` field (see #113), not upload time. */
 export async function listVisibleDownloads(tier: Tier) {
   return prisma.download.findMany({
     where: tierAtLeast(tier, "mitglied")
       ? { status: { in: ["PUBLIC", "INTERNAL"] } }
       : { status: "PUBLIC" },
-    orderBy: { createdAt: "asc" },
+    orderBy: { order: "asc" },
   });
 }
 
-/** All downloads including OFFLINE — for the admin management view. */
-export async function listAllDownloadsForAdmin() {
-  return prisma.download.findMany({ orderBy: { createdAt: "desc" } });
+/** OFFLINE downloads only — the private table below the main list, sorted
+ * by last change since there is no manual order for hidden downloads. */
+export async function listOfflineDownloadsForAdmin() {
+  return prisma.download.findMany({
+    where: { status: "OFFLINE" },
+    orderBy: { updatedAt: "desc" },
+  });
 }
 
 const UNITS = ["B", "KB", "MB", "GB"] as const;

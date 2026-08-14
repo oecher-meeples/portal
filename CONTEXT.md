@@ -40,6 +40,17 @@ _Avoid_: Spiel als Synonym für Exemplar (Spiel meint den Titel), Kopie, GameCop
 Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt** (den Titel), nicht das einzelne Exemplar — mehrere Exemplare desselben Titels tragen dieselbe EAN, ein Scan kann daher mehrere Treffer liefern.
 _Avoid_: Barcode als Exemplar-Schlüssel, Inventarnummer
 
+**Erweiterung** (`kind = BOARDGAME_EXPANSION`):
+Ein Titel, der ohne ein Basisspiel nicht spielbar ist (bewusst ignorierte Ausnahmen). Ob ein Titel Erweiterung oder eigenständiges Spiel ist, entscheidet allein `BoardGame.kind` — das ist eine dauerhafte Eigenschaft des Titels, keine Ableitung aus der aktuellen `GameCollection`-Zuordnung. Wird ein Titel einem Basisspiel als Erweiterung zugeordnet (gleich von welcher Seite aus, siehe `GameCollection`), springt sein `kind` auf `BOARDGAME_EXPANSION` und bleibt das auch, wenn später alle Basisspiel-Zuordnungen wieder entfernt werden (die Schachtel wird dadurch nicht plötzlich eigenständig spielbar) — ein Rückfall auf `BOARDGAME` ist nur manuell über die Bearbeiten-Maske möglich. Eine Erweiterung kann nicht selbst über eigene Erweiterungen verfügen.
+_Avoid_: Sich aus `GameCollection`-Zuordnung ableiten, ob ein Titel eine Erweiterung ist; automatischer Rückfall auf `BOARDGAME` beim Entfernen der letzten Zuordnung
+
+**GameCollection**:
+Die Basisspiel↔Erweiterung-Zuordnung, unabhängig von `kind`. Many-to-many: eine Erweiterung kann zu mehreren Basisspielen kompatibel sein, ein Titel kann außerdem als Erweiterung markiert sein, bevor oder ohne dass ihm ein Basisspiel zugeordnet ist. Zuordnen ist von beiden Seiten möglich (Basisspiel fügt Erweiterung hinzu, oder Erweiterung ordnet sich einem Basisspiel zu) — fachlich derselbe Vorgang.
+_Avoid_: Als alleiniges Kriterium für „ist Erweiterung" heranziehen; 1:1-Kardinalität annehmen
+
+**BGG-Abgleich** (geplant, noch nicht umgesetzt):
+BoardGameGeek gilt als vorrangige Quelle gegenüber manuell gepflegten Werten (z. B. `kind`). Ein künftiger Abgleich soll Diskrepanzen zwischen BGG- und Portal-Daten aufzeigen. Bis dahin ignoriert.
+
 **Aufbewahrungseinheit**:
 Ein mit QR-Code etikettiertes physisches Behältnis für Spiele — entweder ein **Karton** (`OM-BOX-0001`, wandert als Ganzes) oder ein **Regal** (`OM-SHELF-C4`, vereinseigen, wird bei Events aufgebaut). Eine Einheit kann in einer anderen stehen (Karton im Regal) und steht am Ende der Kette bei einem Meeple.
 _Avoid_: Lager, Ort, Location, Box vs. Shelf als getrennte Konzepte
@@ -78,7 +89,11 @@ _Avoid_: Löschen, Archivieren, Aussortieren
 
 **Zustand**:
 Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einer Person, Abholung ggf. aufwendiger), **Wartung** (bei der Vollständigkeitsprüfung durchgefallen), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
-_Avoid_: Verfügbarkeit, Status (Status meint die Bestandszugehörigkeit: aktiv oder deinventarisiert)
+_Avoid_: Verfügbarkeit, Status (Status meint die Bestandszugehörigkeit: aktiv oder deinventarisiert), Zustand für den materiellen Zustand eines Exemplars (das ist der **Mängelvermerk**, siehe unten)
+
+**Mängelvermerk** (`GameCopy.condition`):
+Freitext-Notiz zum materiellen Zustand eines Exemplars (z. B. „Ecke eingedrückt") — unabhängig vom Ausleih-`Zustand`. Wird bei der Vollständigkeitsprüfung gesetzt oder gelöscht.
+_Avoid_: Zustand (das ist die Ausleih-Situation, siehe oben), Zustandsnotiz
 
 **Einlagerung**:
 Eine Aufbewahrungseinheit steht bei einem Meeple. Die enthaltenen Spiele sind dadurch **nicht** ausgeliehen und bleiben ausleihbar — die Einheit bleibt Standort, das Mitglied ist nur Verwahrer. Der Verein hat kein Vereinsheim, deshalb ist das der Normalfall und nicht die Ausnahme.
@@ -123,8 +138,8 @@ Ein Meeple mit einem dauerhaften Profil aus Spielen (Bezug auf echte `BoardGame`
 _Avoid_: Schicht, Spielelehrer, Erklärbär als reine Event-Anmeldung ohne Profil
 
 **Schicht**:
-Ein Zeitfenster mit festem Typ (Küche, Ausleihe, Flohmarkt) und fester Kapazität innerhalb eines Events, in das sich Mitglieder selbst eintragen — optional mit Kennzeichnung „unsichere Zusage". Wer eine Schicht besetzt, erhält für deren Dauer die zugehörigen Rechte (z. B. Flohmarkt-Kasse), unabhängig von einer sonst vergebenen Permission.
-_Avoid_: Erklärbär als Schicht, freie Schicht-Namen
+Der Bedarf an einer bestimmten Helferrolle (z. B. Küche, Ausleihe, Flohmarkt) an einem Tag eines Events: Anzahl paralleler Stellen plus admin-definierter Ziel-Zeitraum, den diese Stellen lückenlos abdecken sollen (unabhängig vom Event-Start/-Ende, wegen Auf-/Abbau außerhalb der eigentlichen Veranstaltungszeit). Mitglieder melden pro Tag Verfügbarkeit + gewünschte Rollen; Admins weisen im Schichtplan-Editor jeder Zusage einen eigenen, individuell verschiebbaren Zeitblock zu (`ShiftBooking`). Wer gerade in einem solchen Zeitblock steckt, erhält für dessen Dauer die Rechte, die seine Rolle hinterlegt hat (z. B. Flohmarkt-Kasse), unabhängig von einer sonst vergebenen Permission — siehe [ADR-0012](adr/0012-helferrolle-generalisiert-schicht-buchung-rechte.md).
+_Avoid_: Erklärbär als Schicht, festes Schicht-Typ-Enum, ein geteiltes Zeitfenster für alle Zuweisungen einer Rolle
 
 **Flohmarkt-Artikel**:
 Ein Gegenstand, den ein Mitglied für den Bring-&-Buy-Verkaufstag eines Events anmeldet (einzeln oder per Excel-Import), mit Preis und Status. Muss von einem Admin oder einem Mitglied in der Flohmarkt-Schicht dieses Events freigegeben werden, bevor er im öffentlichen Gäste-Bereich erscheint. Führt keine Provisions- oder Auszahlungsbuchhaltung — das läuft außerhalb des Portals.

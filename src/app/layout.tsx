@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     "Der Brettspielverein für Aachen und Umgebung: Termine, News, Ludothek und Vereinsleben.",
   icons: {
-    icon: "/meeple-150x150.png",
+    icon: "/icons/meeple-150x150.png",
   },
 };
 

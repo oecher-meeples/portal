@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera } from "lucide-react";
+import { Camera, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,7 @@ export function CodeScanner({
   /** Stop the camera as soon as a code is detected, instead of continuing to scan. */
   stopOnDetect?: boolean;
 }) {
-  const { videoRef, status, start, stop } = useCodeScanner({
+  const { videoRef, status, start, stop, justDetected } = useCodeScanner({
     onDetected: (text) => {
       if (stopOnDetect) stop();
       onDetected(text);
@@ -64,6 +64,11 @@ export function CodeScanner({
         )}
         {frame && (
           <div className="border-primary pointer-events-none absolute inset-12 rounded-lg border-2 sm:inset-24" />
+        )}
+        {justDetected && (
+          <div className="animate-in fade-in-0 zoom-in-75 pointer-events-none absolute inset-0 flex items-center justify-center bg-emerald-500/20 duration-150">
+            <CheckCircle2 className="size-16 text-emerald-400 drop-shadow" />
+          </div>
         )}
       </div>
       <div className="flex items-center justify-between gap-3 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100">

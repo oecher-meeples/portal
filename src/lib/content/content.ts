@@ -2,6 +2,13 @@ import { prisma } from "@/lib/utils/prisma";
 
 export type ContentType = "termin" | "blog" | "turnier";
 
+export const CONTENT_TYPE_FILTERS: { label: string; value: ContentType | "alle" }[] = [
+  { label: "Alle", value: "alle" },
+  { label: "Termine", value: "termin" },
+  { label: "Blog", value: "blog" },
+  { label: "Turniere", value: "turnier" },
+];
+
 export type ContentItem = {
   /** Only set for DB-backed posts — absent for ICS-sourced calendar events. */
   id?: string;
@@ -82,12 +89,12 @@ const POST_WITHOUT_BODY_SELECT = {
   coverImageUrl: true,
 } as const;
 
-export async function getAllContent(): Promise<Omit<ContentItem, "body">[]> {
+/** Includes `body` — `/news` renders it eagerly for the preview/full-view toggle (#135), no lazy per-post fetch. */
+export async function getAllContent(): Promise<ContentItem[]> {
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
-    select: POST_WITHOUT_BODY_SELECT,
   });
-  return posts.map(toContentItemBase);
+  return posts.map(toContentItem);
 }
 
 /** Interne Beiträge, neueste zuerst — für den internen Newsroom und das Dashboard. */
@@ -150,4 +157,4 @@ export function canViewContentItem(
   return !item.internal || hasSession;
 }
 
-export { TYPE_TO_DB };
+export { TYPE_TO_DB, DB_TO_TYPE };

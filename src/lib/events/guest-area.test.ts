@@ -14,6 +14,7 @@ const {
   getAttendingExplainers,
   getFreeGamesInRoom,
   getGuestFleaMarketItems,
+  getGuestCopyAvailability,
 } = await import("./guest-area");
 
 describe("unitOrAncestorAssigned", () => {
@@ -212,5 +213,88 @@ describe("getGuestFleaMarketItems", () => {
     };
     expect(call.where.status.in).not.toContain("SOLD");
     expect(call.where.status.in).not.toContain("PENDING");
+  });
+});
+
+describe("getGuestCopyAvailability", () => {
+  const COPIES = [
+    { id: "copy-1", zustand: "frei" as const },
+    { id: "copy-2", zustand: "ausgeliehen" as const },
+  ];
+
+  it("returns a plain count without an event", async () => {
+    const result = await getGuestCopyAvailability(COPIES, null);
+
+    expect(result).toEqual({ kind: "plain", total: 2 });
+    expect(prismaMock.eventShelfAssignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns a plain count of zero for an empty title", async () => {
+    const result = await getGuestCopyAvailability([], "event-1");
+
+    expect(result).toEqual({ kind: "plain", total: 0 });
+  });
+
+  it("computes X von Y for copies assigned to a shelf at the running event", async () => {
+    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
+      { unitId: "shelf-1", unit: { label: "Regal A" } },
+    ] as never);
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "shelf-1", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "shelf-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-1" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({
+      kind: "event",
+      total: 2,
+      inRoom: 2,
+      available: 1,
+      shelfLabels: ["Regal A"],
+    });
+  });
+
+  it("does not count copies outside the event's shelf assignment", async () => {
+    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
+      { unitId: "shelf-1", unit: { label: "Regal A" } },
+    ] as never);
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "shelf-1", parentUnitId: null },
+      { id: "shelf-2", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "shelf-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({
+      kind: "event",
+      total: 2,
+      inRoom: 1,
+      available: 1,
+      shelfLabels: ["Regal A"],
+    });
+  });
+
+  it("falls back to a plain count when no copy is assigned to the event", async () => {
+    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
+      { unitId: "shelf-1", unit: { label: "Regal A" } },
+    ] as never);
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "shelf-2", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({ kind: "plain", total: 2 });
   });
 });

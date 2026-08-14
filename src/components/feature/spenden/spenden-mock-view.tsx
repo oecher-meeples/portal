@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { DonationAmountPicker } from "@/components/feature/spenden/donation-amount-picker";
 
 export function SpendenMockView() {
+  const [paypalError, setPaypalError] = useState(false);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -20,7 +25,14 @@ export function SpendenMockView() {
             <Label htmlFor="donor-name">Name (optional)</Label>
             <Input id="donor-name" placeholder="Für die Spendenquittung" />
           </div>
-          <Button size="lg">Mit PayPal spenden</Button>
+          <Button size="lg" onClick={() => setPaypalError(true)}>
+            Mit PayPal spenden
+          </Button>
+          {paypalError && (
+            <p className="text-destructive text-xs">
+              Feature noch nicht implementiert.
+            </p>
+          )}
           <p className="text-muted-foreground text-xs">
             Sichere Weiterleitung zu PayPal. Es werden keine Zahlungsdaten in
             der App gespeichert.

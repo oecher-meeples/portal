@@ -99,7 +99,9 @@ describe("updateGameCopy", () => {
   it("updates the condition when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.gameCopy.update.mockResolvedValue({ slug: "catan" } as never);
+    prismaMock.gameCopy.update.mockResolvedValue({
+      boardGame: { slug: "catan" },
+    } as never);
 
     const result = await updateGameCopy("copy-1", { condition: "Gebraucht" });
 
@@ -107,6 +109,7 @@ describe("updateGameCopy", () => {
     expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "copy-1" },
       data: { condition: "Gebraucht" },
+      include: { boardGame: { select: { slug: true } } },
     });
   });
 });
@@ -139,9 +142,8 @@ describe("deinventoriseGameCopy", () => {
     prismaMock.rolePermission.count.mockResolvedValue(1);
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
-      slug: "arche-nova",
       condition: null,
-      boardGame: { id: "game-1", title: "Arche Nova" },
+      boardGame: { id: "game-1", title: "Arche Nova", slug: "arche-nova" },
     } as never);
 
     const result = await deinventoriseGameCopy("copy-1", "Verkauft 2026");
@@ -154,7 +156,9 @@ describe("deinventoriseGameCopy", () => {
         archivedAt: expect.any(Date),
         archivedReason: "Verkauft 2026",
       },
-      include: { boardGame: { select: { id: true, title: true } } },
+      include: {
+        boardGame: { select: { id: true, title: true, slug: true } },
+      },
     });
   });
 
@@ -163,9 +167,8 @@ describe("deinventoriseGameCopy", () => {
     prismaMock.rolePermission.count.mockResolvedValue(1);
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
-      slug: "arche-nova",
       condition: null,
-      boardGame: { id: "game-1", title: "Arche Nova" },
+      boardGame: { id: "game-1", title: "Arche Nova", slug: "arche-nova" },
     } as never);
 
     await deinventoriseGameCopy("copy-1", "Verkauft 2026");
@@ -180,9 +183,8 @@ describe("deinventoriseGameCopy", () => {
     ensureMeepleMock.mockResolvedValue({ id: "admin-meeple" });
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
-      slug: "arche-nova",
       condition: "Gebraucht",
-      boardGame: { id: "game-1", title: "Arche Nova" },
+      boardGame: { id: "game-1", title: "Arche Nova", slug: "arche-nova" },
     } as never);
 
     const result = await deinventoriseGameCopy("copy-1", "Verkauft 2026", true);
@@ -205,9 +207,8 @@ describe("deinventoriseGameCopy", () => {
     prismaMock.rolePermission.count.mockResolvedValue(1);
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
-      slug: "arche-nova",
       condition: "Gebraucht",
-      boardGame: { id: "game-1", title: "Arche Nova" },
+      boardGame: { id: "game-1", title: "Arche Nova", slug: "arche-nova" },
     } as never);
 
     await deinventoriseGameCopy("copy-1", "Verkauft 2026");

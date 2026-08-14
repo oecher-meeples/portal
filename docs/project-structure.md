@@ -40,6 +40,9 @@ src/lib/
 ├── content/    News/Content (inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
+├── legal/      Rechtliches-Dokumente (Satzung/Datenschutz/Impressum/Beitragsordnung, feste Slugs): PDF-Text-Extraktion
+│               ohne Gliederungslogik (`pdf-extract.ts`, via `unpdf`), Zod-Validierung der `sections`-Json-Spalte in `actions.ts`
+├── links/      Kuratierte „Wichtige Links" fürs Dashboard (`ImportantLink`) — Reihenfolge nach `createdAt`, keine manuelle Sortierung
 ├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
@@ -50,6 +53,7 @@ src/lib/
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
 │               ├── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])
+│               ├── storage-units.ts    Aufbewahrungseinheiten-CRUD (Code explizit oder `nextUnitCode`, Code-Lookup) — von `admin-einheiten` **und** dem Standort-Feld im Create-Dialog gebraucht, deshalb hier statt in `components/feature/`
 │               └── private-collection.ts  Crowdsourced-Suche über `PrivateGameCollectionEntry` — nie im öffentlichen Pfad (`toPublicGame`)
 ├── markt/      Kleinanzeigen-Marktplatz: Anzeigen-Form, Preis-/Zustand-Filter über `searchParams`
 ├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
@@ -78,7 +82,9 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `action-button.tsx` | Button, der eine Server Action ausführt (ersetzt 8 `Delete…Button`-Wrapper) |
 | `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
+| `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
+| `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `page-heading`, `stat-tile`, `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
 
 ## `src/components/entities/` — Fachobjekte anzeigen
@@ -90,8 +96,13 @@ entities/
 ├── content-card.tsx            News-/Termin-Kachel
 ├── content-list-row.tsx        News-Listenzeile
 ├── content-type-badge.tsx      Blog/Termin/Turnier
-├── game-card.tsx               Spiele-Kachel
-├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung / nicht erfasst
+├── content-timeline-entry.tsx  News-Vollansicht-Eintrag: Cover, Metadaten, vollständiger Markdown-Body (#135)
+├── game-card.tsx                Spiele-Kachel (Grid)
+├── game-list-row.tsx            Spiele-Zeile (Liste)
+├── game-compact-row.tsx         Dichte Spiele-Zeile (Kompakt, nur `games:manage`)
+├── related-game-card.tsx        Basisspiel-/Erweiterungs-Referenz: Cover + Titel-Link + Standort (#121/#122)
+├── contact-dialog.tsx            Name → Dialog mit allen Kontaktoptionen (Mail/Telegram) — ersetzt Icon-Zeilen pro Stelle
+├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung (nicht erfasst rendert bewusst nichts, #121)
 ├── lfg-status-pill.tsx         offen / voll / abgelaufen / geschlossen
 ├── membership-state-pill.tsx   aktiv / gekündigt / ausgetreten / anonymisiert
 └── flea-market-status-pill.tsx Freigabe / Verkauf / reserviert / verkauft
@@ -103,18 +114,30 @@ Ein **Widget** ist ein in sich geschlossener Funktionsblock, der einen komplette
 
 ```text
 widgets/
-├── game-holding/game-holding-panel.tsx
+├── important-links-grid.tsx  Card-Grid für Link-Kacheln, geteilt von Schnellzugriff (fest) und den admin-kuratierten Wichtige Links (#110)
+├── game-holding/
+│   ├── game-holding-panel.tsx     Detailseiten-Panel: ausleihen, bestätigen, weitergeben, zurückgeben, einlagern
+│   ├── game-actions-menu.tsx      Rechtebasiertes Aktionen-Dropdown für Listen-/Kompakt-Zeilen (#121/#122)
+│   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
 └── board-game/
-    ├── board-game-form-fields.tsx   Formularfelder + Form-State ↔ Titel-Input (`BoardGameTitleInput`/`CreateBoardGameInput`)
-    ├── edit-board-game-dialog.tsx   Titel-Stammdaten **und** Exemplar-Zustand bearbeiten (zwei Server Actions, ein Formular)
-    ├── add-game-copy-dialog.tsx     Weiteres Exemplar zu einem bestehenden Titel anlegen (ADR 0008)
-    ├── game-card-edit-overlay.tsx   Bearbeiten-Button auf der Spiele-Kachel (stoppt den Klick vor dem umschließenden Link)
-    └── assign-expansion-dialog.tsx  Erweiterung ↔ Basisspiel manuell zuordnen/entfernen (GameCollection, `games:manage`, titelbezogen)
+    ├── board-game-form-values.ts        Form-State ↔ Titel-/Exemplar-Input (`BoardGameFormValues`, `boardGameFormTo…`) — geteilt von allen Formularen unten
+    ├── edit-board-game-title.tsx        Titel-Stammdaten-Formularfelder (Titel, EAN, `kind`, BGG-Felder, Spieleranzahl, Beschreibung, …)
+    ├── edit-board-game-exemplar.tsx     Exemplar-Formularfeld (Mängelvermerk/`condition`) — pro `GameCopy`, nicht pro Titel
+    ├── ean-field.tsx                    EAN-Input + Scan-Icon, geteilt von jedem Formular mit EAN-Feld
+    ├── edit-board-game-title-dialog.tsx     Titel-Stammdaten bearbeiten (Detailseiten-Header, #121/#122)
+    ├── edit-board-game-exemplar-dialog.tsx  Ein Exemplar bearbeiten (Listen-/Kompakt-Zeile, Exemplar-Tabelle)
+    ├── edit-board-game-dialog.tsx       Titel **und** Exemplar in einem Formular (Admin-Bestand-Tabellenzeile, Grid-Kachel-Overlay)
+    ├── create-board-game-dialog.tsx     Neuen Titel anlegen (manuell oder per BGG-ID) — inkl. optionalem Standort-Feld
+    ├── create-board-game-location-field.tsx  Standort fürs erste Exemplar: Scan-Auflösung gegen Einheiten, Anlegen+Selbstzuweisung bei Fehltreffer, oder direkt „Mir zuweisen“
+    ├── add-game-copy-dialog.tsx         Weiteres Exemplar zu einem bestehenden Titel anlegen (ADR 0008)
+    ├── deinventorise-board-game-dialog.tsx  Exemplar deinventarisieren, optional ins Ersatzteillager
+    ├── game-card-edit-overlay.tsx       Bearbeiten-Button auf der Spiele-Kachel (nutzt `StopRowNavigation`)
+    └── assign-expansion-dialog.tsx      Erweiterung ↔ Basisspiel manuell zuordnen/entfernen (GameCollection, `games:manage`, titelbezogen)
 ```
 
-`GameHoldingPanel` ("was mache ich mit dem Exemplar in meiner Hand": ausleihen, bestätigen, weitergeben, zurückgeben, einlagern) wird vom Scan-Flow **und** von der Ludothek-Detailseite benutzt. Vorher lag er in `feature/scan/` und wurde von dort querimportiert — genau der Fehler, den die Schichtenregel verhindert.
+`GameHoldingPanel`/`GameActionsMenu`/`holding-mini-dialogs.tsx` ("was mache ich mit dem Exemplar in meiner Hand": ausleihen, bestätigen, weitergeben, zurückgeben, einlagern) werden vom Scan-Flow, der Ludothek-Detailseite **und** den Listen-/Kompakt-Zeilen benutzt. `GameHoldingPanel` lag früher in `feature/scan/` und wurde von dort querimportiert — genau der Fehler, den die Schichtenregel verhindert.
 
-`EditBoardGameDialog` wird von `feature/admin-bestand` (Tabellenzeile) **und** von `feature/ludothek` (Kachel-Overlay, nur mit `games:manage`-Berechtigung) eingebunden — deshalb `widgets/`, nicht `feature/admin-bestand/`. Die Server Actions dahinter (`createBoardGame`/`updateBoardGame` in `lib/ludothek/board-games.ts`, `createGameCopy`/`updateGameCopy`/`deinventoriseGameCopy`/`requestCompletenessCheck` in `lib/ludothek/game-copies.ts`) liegen konsequent in `lib/`, nicht in `components/feature/`, damit `widgets/` sie importieren darf.
+Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (`feature/admin-bestand`, `feature/ludothek`, teils `feature/admin-einheiten` für den Standort-Fallback) — deshalb `widgets/`, nicht in einem einzelnen `feature/`-Ordner. Die Server Actions dahinter (`createBoardGame`/`updateBoardGame` in `lib/ludothek/board-games.ts`, `createGameCopy`/`updateGameCopy`/`deinventoriseGameCopy`/`requestCompletenessCheck` in `lib/ludothek/game-copies.ts`, `createStorageUnit`/`findStorageUnitByCode` in `lib/ludothek/storage-units.ts`) liegen konsequent in `lib/`, nicht in `components/feature/`, damit `widgets/` sie importieren darf.
 
 ## `src/components/feature/` — je ein Anwendungsfall
 

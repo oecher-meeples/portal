@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/server";
 import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
+  listDistinctMechanics,
   parseLudothekSearchParams,
   toPublicGame,
 } from "@/lib/ludothek/browser";
@@ -30,9 +31,7 @@ export default async function LudothekPage({
   const allGames = await buildLudothekGames();
   const filtered = filterLudothekGames(allGames, filters);
 
-  const mechanicsOptions = [
-    ...new Set(allGames.flatMap((g) => g.mechanics)),
-  ].sort();
+  const mechanicsOptions = listDistinctMechanics(allGames);
 
   const meepleOptions = internal
     ? await (async () => {

@@ -1,55 +1,30 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { StorageUnitKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { nextUnitCode } from "@/lib/inventory/codes";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
-import { requirePermission, hasPermission } from "@/lib/auth/permissions";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentUser } from "@/lib/auth/server";
+import {
+  requireGamesManage,
+  createStorageUnit as libCreateStorageUnit,
+  findStorageUnitByCode as libFindStorageUnitByCode,
+  type CreateStorageUnitInput,
+} from "@/lib/ludothek/storage-units";
 
-async function requireGamesManage() {
-  const user = await requirePermission("games:manage");
-  return ensureMeeple(user);
+// Thin wrappers so `/admin/einheiten` components keep importing from
+// "./actions" — the implementation moved to lib/ludothek (shared with the
+// Ludothek create-dialog's Standort-Feld, see #121/#122).
+// A "use server" file may only export async functions declared in the file
+// itself — `export { x } from "..."` re-exports are rejected by Next.js at
+// build time, hence the wrappers instead of a re-export (see #147).
+export async function createStorageUnit(input: CreateStorageUnitInput) {
+  return libCreateStorageUnit(input);
 }
 
-export type CreateStorageUnitInput = {
-  kind: StorageUnitKind;
-  label: string;
-  keeperMeepleId?: string | null;
-  parentUnitId?: string | null;
-  locationNote?: string | null;
-};
-
-export async function createStorageUnit(input: CreateStorageUnitInput) {
-  await requireGamesManage();
-
-  const label = input.label.trim();
-  if (!label) {
-    return { error: "Bitte ein Label angeben." };
-  }
-
-  const existingCodes = (
-    await prisma.storageUnit.findMany({
-      where: { kind: input.kind },
-      select: { code: true },
-    })
-  ).map((u) => u.code);
-
-  const unit = await prisma.storageUnit.create({
-    data: {
-      code: nextUnitCode(input.kind, existingCodes),
-      kind: input.kind,
-      label,
-      keeperMeepleId: input.keeperMeepleId ?? null,
-      parentUnitId: input.parentUnitId ?? null,
-      locationNote: input.locationNote ?? null,
-    },
-  });
-
-  revalidatePath("/admin/einheiten");
-  return { success: true as const, id: unit.id, code: unit.code };
+export async function findStorageUnitByCode(code: string) {
+  return libFindStorageUnitByCode(code);
 }
 
 export type UpdateStorageUnitInput = {

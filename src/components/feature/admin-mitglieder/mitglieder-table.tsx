@@ -16,21 +16,16 @@ import { ActionButton } from "@/components/ui/action-button";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
+import {
+  MeepleRoleSelect,
+  type RoleOption,
+} from "@/components/feature/admin-mitglieder/meeple-role-select";
+import { MeepleEditDialog } from "@/components/feature/admin-mitglieder/meeple-edit-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
+import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
 
-export type MeepleRow = {
-  id: string;
-  memberNumber: number;
-  displayName: string;
-  roles: string[];
-  membershipState: MembershipState;
-  joinedAt: string;
-  resignedAt: string | null;
-  membershipEndsAt: string | null;
-  openGames: number;
-  openUnits: number;
-};
+export type { MeepleRow };
 
 type MeepleQuickFilter = MembershipState | "alle";
 
@@ -46,7 +41,15 @@ function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
 }
 
-export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
+export function MitgliederTable({
+  meeples,
+  roles,
+  canReadBankData,
+}: {
+  meeples: MeepleRow[];
+  roles: RoleOption[];
+  canReadBankData: boolean;
+}) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<MeepleQuickFilter>("aktiv");
 
@@ -100,6 +103,7 @@ export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
+              <TableHead />
               <TableHead>Nr.</TableHead>
               <TableHead>Mitglied</TableHead>
               <TableHead>Rollen</TableHead>
@@ -113,7 +117,7 @@ export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
             {filteredMeeples.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-muted-foreground py-6 text-center"
                 >
                   Keine Mitglieder gefunden.
@@ -122,6 +126,13 @@ export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
             )}
             {filteredMeeples.map((meeple) => (
               <TableRow key={meeple.id}>
+                <TableCell>
+                  <MeepleEditDialog
+                    meeple={meeple}
+                    roles={roles}
+                    canReadBankData={canReadBankData}
+                  />
+                </TableCell>
                 <TableCell className="font-mono">
                   {meeple.memberNumber}
                 </TableCell>
@@ -135,7 +146,15 @@ export function MitgliederTable({ meeples }: { meeples: MeepleRow[] }) {
                   {meeple.displayName}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {meeple.roles.length > 0 ? meeple.roles.join(", ") : "—"}
+                  {meeple.hasAccount ? (
+                    <MeepleRoleSelect
+                      meepleId={meeple.id}
+                      roleId={meeple.roleId}
+                      roles={roles}
+                    />
+                  ) : (
+                    "Kein Konto"
+                  )}
                 </TableCell>
                 <TableCell>
                   <MembershipStatePill state={meeple.membershipState} />

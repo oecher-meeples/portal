@@ -30,9 +30,10 @@ async function uniqueGameCopySlug(tx: Tx, title: string, excludeId?: string) {
   );
 }
 
-/** Creates the copy row plus its initial holding into "Unsortiert" — reused by
- * `createBoardGame` (new title + first copy, single transaction) and by
- * `createGameCopy` (further copy of an existing title). */
+/** Creates the copy row plus its initial holding — reused by `createBoardGame`
+ * (new title + first copy, single transaction) and by `createGameCopy`
+ * (further copy of an existing title). Defaults to "Unsortiert" when no
+ * `placement` is given (#121/#122). */
 export async function createGameCopyTx(
   tx: Tx,
   {
@@ -40,11 +41,13 @@ export async function createGameCopyTx(
     boardGameTitle,
     condition,
     actorId,
+    placement,
   }: {
     boardGameId: string;
     boardGameTitle: string;
     condition?: string | null;
     actorId: string;
+    placement?: { unitId?: string; meepleId?: string };
   },
 ) {
   const slug = await uniqueGameCopySlug(tx, boardGameTitle);
@@ -52,11 +55,16 @@ export async function createGameCopyTx(
     data: { slug, boardGameId, condition: condition || null },
   });
 
-  const unsortiert = await ensureUnsortiertUnit(tx);
+  const target =
+    placement?.unitId || placement?.meepleId
+      ? placement
+      : { unitId: (await ensureUnsortiertUnit(tx)).id };
+
   await tx.gameHolding.create({
     data: {
       gameCopyId: created.id,
-      unitId: unsortiert.id,
+      unitId: target.unitId ?? null,
+      meepleId: target.meepleId ?? null,
       origin: "INITIAL",
       confirmedAt: new Date(),
       recordedByMeepleId: actorId,
@@ -108,10 +116,11 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
   const copy = await prisma.gameCopy.update({
     where: { id },
     data: { condition: input.condition || null },
+    include: { boardGame: { select: { slug: true } } },
   });
 
   revalidatePath("/ludothek");
-  revalidatePath(`/ludothek/${copy.slug}`);
+  revalidatePath(`/ludothek/${copy.boardGame.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const };
 }
@@ -140,7 +149,9 @@ export async function deinventoriseGameCopy(
         archivedAt: new Date(),
         archivedReason: reason.trim(),
       },
-      include: { boardGame: { select: { id: true, title: true } } },
+      include: {
+        boardGame: { select: { id: true, title: true, slug: true } },
+      },
     });
 
     if (actor) {
@@ -158,7 +169,7 @@ export async function deinventoriseGameCopy(
   });
 
   revalidatePath("/ludothek");
-  revalidatePath(`/ludothek/${copy.slug}`);
+  revalidatePath(`/ludothek/${copy.boardGame.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const };
 }

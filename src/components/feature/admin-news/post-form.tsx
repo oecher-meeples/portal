@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileField } from "@/components/ui/file-field";
 import { Textarea } from "@/components/ui/textarea";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
+import { compressImage } from "@/lib/utils/compress-image";
 import type { ContentType } from "@/lib/content/content";
 import {
   NEWSLETTER_CATEGORIES,
@@ -106,13 +108,12 @@ export function PostForm({
     setInstagramStatus(result.posted ? "POSTED" : "PENDING");
   }
 
-  async function handleCoverImageChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const file = event.target.files?.[0];
+  async function handleCoverImageChange(files: File[]) {
+    const file = files[0];
     if (!file) return;
 
-    const [url] = await uploadFiles([file]);
+    const compressed = await compressImage(file);
+    const [url] = await uploadFiles([compressed]);
     if (url) setCoverImageUrl(url);
   }
 
@@ -262,13 +263,12 @@ export function PostForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="coverImage">Cover-Bild</Label>
-        <Input
+        <FileField
           id="coverImage"
-          type="file"
+          label="Cover-Bild"
           accept="image/png,image/jpeg,image/webp"
-          onChange={handleCoverImageChange}
           disabled={isUploadingCover}
+          onFilesSelected={(files) => void handleCoverImageChange(files)}
         />
         {isUploadingCover && (
           <p className="text-muted-foreground text-sm">Lade Bild hoch…</p>

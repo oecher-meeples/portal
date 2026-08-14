@@ -1,7 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { Camera } from "lucide-react";
 import { TextField, TextAreaField } from "@/components/ui/field";
+import { FileField } from "@/components/ui/file-field";
+import { Button } from "@/components/ui/button";
+import { CameraCapture } from "@/components/ui/camera-capture";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
+import { compressImage } from "@/lib/utils/compress-image";
 import { getMarketListingUploadToken } from "@/components/feature/markt/actions";
 
 export function MarketListingFields({
@@ -32,14 +38,20 @@ export function MarketListingFields({
     isUploading,
     error: uploadError,
   } = useBlobUpload("market-listings", getMarketListingUploadToken);
+  const [showCamera, setShowCamera] = useState(false);
 
-  async function handleImagesChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
+  async function handleImagesChange(files: File[]) {
     const urls = await uploadFiles(files);
     onImageUrlsChange([...imageUrls, ...urls]);
+  }
+
+  /** Direkte Kamera-Aufnahme statt Datei-Auswahl (#108) — Foto wird wie ein
+   * hochgeladenes Bild behandelt: komprimiert, zu Blob Store hochgeladen,
+   * imageUrls ergänzt. */
+  async function handleCameraCapture(file: File) {
+    setShowCamera(false);
+    const compressed = await compressImage(file);
+    await handleImagesChange([compressed]);
   }
 
   return (
@@ -76,17 +88,33 @@ export function MarketListingFields({
         onChange={(event) => onDescriptionChange(event.target.value)}
       />
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium" htmlFor="market-listing-images">
-          Bilder
-        </label>
-        <input
+        <FileField
           id="market-listing-images"
-          type="file"
+          label="Bilder"
           accept="image/png,image/jpeg,image/webp"
           multiple
           disabled={isUploading}
-          onChange={handleImagesChange}
+          onFilesSelected={(files) => void handleImagesChange(files)}
         />
+        {!showCamera && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            disabled={isUploading}
+            onClick={() => setShowCamera(true)}
+          >
+            <Camera className="size-4" />
+            Foto aufnehmen
+          </Button>
+        )}
+        {showCamera && (
+          <CameraCapture
+            onCapture={(file) => void handleCameraCapture(file)}
+            onClose={() => setShowCamera(false)}
+          />
+        )}
         {isUploading && (
           <p className="text-muted-foreground text-sm">Lade Bilder hoch…</p>
         )}

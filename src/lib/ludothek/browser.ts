@@ -3,8 +3,15 @@ import { BoardGameKind } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 
 /** A title referenced from a copy (e.g. base game/expansion) — titles have no
- * route of their own, only their copies do (see ADR 0008). */
-export type LudothekGameRef = { id: string; title: string };
+ * route of their own, only their copies do (see ADR 0008). Guest-safe: no
+ * location/person data (that's added separately for internal viewers, see
+ * `RelatedGameCard`). */
+export type LudothekGameRef = {
+  id: string;
+  title: string;
+  slug: string;
+  imageUrl: string | null;
+};
 
 /**
  * Richest possible shape of a game for the Ludothek browser. The internal
@@ -16,7 +23,10 @@ export type LudothekGame = {
   id: string;
   /** BoardGame (title) id — shared by every copy of this title. */
   boardGameId: string;
+  /** GameCopy slug — kept for admin deep-links, no longer the detail page's routing basis. */
   slug: string;
+  /** BoardGame (title) slug — the detail page routes by this, see ADR on the exemplar→title slug migration. */
+  boardGameSlug: string;
   title: string;
   imageUrl: string | null;
   minPlayers: number | null;
@@ -38,7 +48,21 @@ export type LudothekGame = {
   zustand: GameZustand;
   isLoanedOut: boolean;
   responsibleMeepleId: string | null;
+  /** Display name for `responsibleMeepleId` — a person or the keeper of the
+   * storage unit chain, whichever comes first (#121 Standort-Kette). */
+  responsibleName: string | null;
+  /** Storage units only, outermost → innermost — no person prefix (see
+   * `locationChain` for the combined, person-first display string). */
+  unitChain: string;
+  /** Person/event first, then the storage chain — the ready-to-render
+   * display string every simple consumer uses (#121 Standort-Kette). */
   locationChain: string;
+  /** Erklärbären count for this title — shown in the list-row hover overlay
+   * (#143). Public, not location/person data, so it survives `toPublicGame`. */
+  explainerCount: number;
+  /** Whether this title has at least one open (see `getLfgStatus`) LfgPost —
+   * backs the members-only "Zeige nur Spielergesuche"-Filter (#144). */
+  hasOpenLfg: boolean;
 };
 
 /**
@@ -51,6 +75,8 @@ export type PublicLudothekGame = Omit<
   | "zustand"
   | "isLoanedOut"
   | "responsibleMeepleId"
+  | "responsibleName"
+  | "unitChain"
   | "locationChain"
   | "ean"
   | "condition"
@@ -64,6 +90,8 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     zustand: _zustand,
     isLoanedOut: _isLoanedOut,
     responsibleMeepleId: _responsibleMeepleId,
+    responsibleName: _responsibleName,
+    unitChain: _unitChain,
     locationChain: _locationChain,
     ean: _ean,
     condition: _condition,
@@ -76,6 +104,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
 
 export type PlayerCountFilter = "1-2" | "3-4" | "5+";
 export type DurationFilter = "short" | "mid" | "long";
+export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
@@ -84,12 +113,16 @@ export type LudothekFilters = {
   maxWeight?: number;
   mechanics?: string[];
   hideExpansions?: boolean;
+  /** Defaults to "grid" when unset — only `parseLudothekSearchParams` sets it explicitly. */
+  view?: LudothekViewMode;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
   zustand?: GameZustand;
   onlyLoanedOut?: boolean;
   atMeepleId?: string;
   /** Default off. Internal-only — the crowdsourced private-collection search never runs for guests. */
   showPrivateCollection?: boolean;
+  /** Default off. Members-only — matches when a title has at least one open LfgPost (#144). */
+  onlyWithOpenLfg?: boolean;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -119,6 +152,11 @@ const DURATION_FILTER_VALUES = new Set<DurationFilter>([
   "mid",
   "long",
 ]);
+const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
+  "grid",
+  "liste",
+  "compact",
+]);
 
 /** Turns a Next.js `searchParams` object into filters — the single source of truth for URLs. */
 export function parseLudothekSearchParams(
@@ -129,9 +167,13 @@ export function parseLudothekSearchParams(
   const duration = firstString(searchParams.dauer);
   const maxWeightRaw = firstString(searchParams.gewicht);
   const mechanikRaw = searchParams.mechanik;
+  const view = firstString(searchParams.ansicht);
 
   const filters: LudothekFilters = {
     search: firstString(searchParams.q) || undefined,
+    view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
+      ? (view as LudothekViewMode)
+      : "grid",
     players: PLAYER_FILTER_VALUES.has(players as PlayerCountFilter)
       ? (players as PlayerCountFilter)
       : undefined,
@@ -157,9 +199,26 @@ export function parseLudothekSearchParams(
     filters.atMeepleId = firstString(searchParams.bei) || undefined;
     filters.showPrivateCollection =
       firstString(searchParams.privatbesitz) === "1";
+    filters.onlyWithOpenLfg = firstString(searchParams.nurGesuche) === "1";
   }
 
   return filters;
+}
+
+/** Title matches as a substring; EAN/BGG-ID only as an exact match — a partial
+ * EAN/BGG-ID hit has no business meaning. */
+export function matchesLudothekSearch(
+  game: Pick<LudothekGame, "title" | "ean" | "bggId">,
+  search: string,
+): boolean {
+  const term = search.trim().toLowerCase();
+  if (!term) return true;
+
+  if (game.title.toLowerCase().includes(term)) return true;
+  if (game.ean !== null && game.ean === search.trim()) return true;
+  if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
+
+  return false;
 }
 
 export function filterLudothekGames(
@@ -167,10 +226,7 @@ export function filterLudothekGames(
   filters: LudothekFilters,
 ): LudothekGame[] {
   return games.filter((game) => {
-    if (
-      filters.search &&
-      !game.title.toLowerCase().includes(filters.search.toLowerCase())
-    ) {
+    if (filters.search && !matchesLudothekSearch(game, filters.search)) {
       return false;
     }
     if (filters.players && !matchesPlayerFilter(game, filters.players)) {
@@ -201,6 +257,16 @@ export function filterLudothekGames(
     if (filters.atMeepleId && game.responsibleMeepleId !== filters.atMeepleId) {
       return false;
     }
+    if (filters.onlyWithOpenLfg && !game.hasOpenLfg) {
+      return false;
+    }
     return true;
   });
+}
+
+/** Every distinct mechanic across the Bestand, sorted — Autocomplete-Vorschläge
+ * for the Mechanik-Filter and the Mechaniken-Multiselect on the title-edit
+ * dialog (#124). */
+export function listDistinctMechanics(games: { mechanics: string[] }[]) {
+  return [...new Set(games.flatMap((game) => game.mechanics))].sort();
 }
