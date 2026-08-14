@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronDown, LayoutGrid, List, Rows3 } from "lucide-react";
+import { ChevronDown, LayoutGrid, List, Rows3, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
@@ -168,12 +168,25 @@ export function LudothekBrowser({
                   ),
               ),
             )}
-          <Input
-            name="q"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Spiel, EAN oder BGG-ID suchen …"
-          />
+          <div className="relative flex-1">
+            <Input
+              name="q"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Spiel, EAN oder BGG-ID suchen …"
+              className={search ? "pr-8" : undefined}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Suche leeren"
+                className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-2 flex items-center"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
           <Button type="submit">Suchen</Button>
           <ScanSearchDialog onScanned={setSearch} />
         </form>
