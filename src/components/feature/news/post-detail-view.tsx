@@ -4,7 +4,9 @@ import ReactMarkdown from "react-markdown";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { Button } from "@/components/ui/button";
+import { ShareButton } from "@/components/ui/share-button";
 import { formatDate } from "@/lib/utils/format";
+import { getRequestOrigin } from "@/lib/utils/request-origin";
 import type { getContentBySlug } from "@/lib/content/content";
 
 type PostDetailViewProps = {
@@ -12,7 +14,8 @@ type PostDetailViewProps = {
   canEdit?: boolean;
 };
 
-export function PostDetailView({ item, canEdit }: PostDetailViewProps) {
+export async function PostDetailView({ item, canEdit }: PostDetailViewProps) {
+  const origin = await getRequestOrigin();
   return (
     <article className="flex max-w-3xl flex-col gap-5">
       <CoverMedia
@@ -66,6 +69,7 @@ export function PostDetailView({ item, canEdit }: PostDetailViewProps) {
       <div className="[&_a]:text-primary flex flex-col gap-4 text-base leading-relaxed [&_a]:underline [&_strong]:font-semibold">
         <ReactMarkdown>{item.body}</ReactMarkdown>
       </div>
+      <ShareButton url={`${origin}/news/${item.slug}`} title={item.title} />
     </article>
   );
 }
