@@ -22,7 +22,10 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { InstagramIcon } from "@/components/ui/instagram-icon";
 import { ActionButton } from "@/components/ui/action-button";
 import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
-import { TriStateFilter, type TriState } from "@/components/ui/tri-state-filter";
+import {
+  TriStateFilter,
+  type TriState,
+} from "@/components/ui/tri-state-filter";
 import {
   CONTENT_TYPE_FILTERS,
   DB_TO_TYPE,
@@ -161,7 +164,8 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
           </TableHeader>
           <TableBody>
             {visible.map((post) => {
-              const contentType = DB_TO_TYPE[post.type as "BLOG" | "TERMIN" | "TURNIER"];
+              const contentType =
+                DB_TO_TYPE[post.type as "BLOG" | "TERMIN" | "TURNIER"];
               const typeLabel = TYPE_LABELS[contentType];
               const TypeIcon = getContentTypeIcon(contentType);
               return (
