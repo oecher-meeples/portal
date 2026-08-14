@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { getLfgParticipantDisplayName, getLfgStatus } from "@/lib/content/lfg";
+import { getContactLinks } from "@/lib/members/contact";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
 import { formatDateMedium } from "@/lib/utils/format";
 
@@ -18,7 +19,9 @@ export default async function LfgDetailPage({
     include: {
       participants: {
         include: {
-          meeple: { select: { displayName: true } },
+          meeple: {
+            select: { displayName: true, email: true, telegramHandle: true },
+          },
           addedBy: { select: { displayName: true } },
         },
       },
@@ -31,6 +34,12 @@ export default async function LfgDetailPage({
     "members:manage",
   );
   const isCreator = post.createdByMeepleId === meeple.id;
+  // Kontaktdaten (#167) nur für beigetretene Betrachter — serverseitig
+  // abgesichert, nicht nur clientseitig ausgeblendet: wer nicht beigetreten
+  // ist, bekommt für jeden Teilnehmer `contact: null` mitgegeben.
+  const viewerIsParticipant = post.participants.some(
+    (p) => p.meepleId === meeple.id,
+  );
 
   return (
     <LfgDetailView
@@ -54,6 +63,10 @@ export default async function LfgDetailPage({
           meepleDisplayName: p.meeple?.displayName,
           addedByDisplayName: p.addedBy.displayName,
         }),
+        contact:
+          p.meepleId !== null && viewerIsParticipant && p.meeple
+            ? getContactLinks(p.meeple)
+            : null,
         canRemove:
           p.meepleId === null && (p.addedByMeepleId === meeple.id || isCreator),
       }))}

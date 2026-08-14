@@ -1,6 +1,7 @@
 import { UserPlus, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
 import { LfgStatusPill } from "@/components/entities/lfg-status-pill";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import {
   addLfgGuest,
   closeLfgPost,
@@ -9,6 +10,7 @@ import {
   removeLfgGuest,
 } from "@/components/feature/lfg/actions";
 import type { LfgStatus } from "@/lib/content/lfg";
+import type { ContactLinks } from "@/lib/members/contact";
 
 export type LfgParticipantRow = {
   /** Teilnehmer-Zeilen-ID, immer gesetzt — auch für Gäste. */
@@ -16,6 +18,9 @@ export type LfgParticipantRow = {
   /** null = anonymer Gast (#145). */
   meepleId: string | null;
   displayName: string;
+  /** null für Gäste und wenn der Betrachter nicht beigetreten ist (#167) —
+   * serverseitig entschieden, hier nur gerendert. */
+  contact: ContactLinks | null;
   /** Wer entfernen darf (wer hinzugefügt hat, plus immer der Ersteller). */
   canRemove: boolean;
 };
@@ -84,7 +89,14 @@ export function LfgDetailView({
               <span className="bg-muted flex size-8 items-center justify-center rounded-full font-semibold">
                 {participant.displayName[0]?.toUpperCase()}
               </span>
-              {participant.displayName}
+              {participant.contact ? (
+                <ContactDialog
+                  name={participant.displayName}
+                  contact={participant.contact}
+                />
+              ) : (
+                participant.displayName
+              )}
               {participant.meepleId === createdByMeepleId && (
                 <span className="text-muted-foreground text-xs">
                   (Ersteller)
