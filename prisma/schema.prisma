@@ -166,7 +166,8 @@ model Meeple {
   holdings                 GameHolding[]                @relation("GameHoldingMeeple")
   recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
   lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
-  lfgParticipations        LfgParticipant[]
+  lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
+  lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
   shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
   explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
   explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
@@ -211,6 +212,8 @@ model LfgPost {
   createdByMeepleId String
   /// Optional link to an inventory title (#34) — gameTitle free text stays the default, this is never required.
   boardGameId       String?
+  /// Erlaubt beigetretenen Meeples (nicht nur dem Ersteller), eigene Gäste hinzuzufügen (#145).
+  guestsMayBringGuests Boolean @default(false)
   closedAt          DateTime?
   createdAt         DateTime  @default(now())
 
@@ -223,15 +226,23 @@ model LfgPost {
   @@map("lfg_posts")
 }
 
+/// `meepleId` ist null für anonyme Gäste (#145) — der Anzeigename wird dann
+/// immer aus `addedBy` generiert ("Gast von {Name}"), nie Freitext.
 model LfgParticipant {
-  postId   String
-  meepleId String
-  joinedAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  postId          String
+  meepleId        String?
+  addedByMeepleId String
+  joinedAt        DateTime @default(now())
 
-  post   LfgPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  meeple Meeple  @relation(fields: [meepleId], references: [id], onDelete: Cascade)
+  post    LfgPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  meeple  Meeple? @relation("LfgParticipantMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  addedBy Meeple  @relation("LfgParticipantAddedBy", fields: [addedByMeepleId], references: [id], onDelete: Cascade)
 
-  @@id([postId, meepleId])
+  @@unique([postId, meepleId])
+  @@index([postId])
+  @@index([meepleId])
+  @@index([addedByMeepleId])
   @@map("lfg_participants")
 }
 

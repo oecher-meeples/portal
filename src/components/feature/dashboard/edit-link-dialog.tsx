@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { LinkFields } from "@/components/feature/admin-links/link-fields";
+import { LinkFields } from "@/components/feature/dashboard/link-fields";
 import { updateImportantLink } from "@/lib/links/actions";
-import type { ImportantLinkRow } from "@/components/feature/admin-links/admin-links-view";
+import type { ImportantLinkRow } from "@/lib/links/links";
 
-export function EditLinkDialog({ link }: { link: ImportantLinkRow }) {
+export function EditLinkDialog({
+  link,
+  trigger,
+}: {
+  link: ImportantLinkRow;
+  trigger?: ReactElement;
+}) {
   const [title, setTitle] = useState(link.title);
   const [targetUrl, setTargetUrl] = useState(link.targetUrl);
   const [iconUrl, setIconUrl] = useState(link.iconUrl ?? "");
@@ -21,9 +27,11 @@ export function EditLinkDialog({ link }: { link: ImportantLinkRow }) {
   return (
     <ActionDialog
       trigger={
-        <Button variant="outline" size="sm">
-          Bearbeiten
-        </Button>
+        trigger ?? (
+          <Button variant="outline" size="sm">
+            Bearbeiten
+          </Button>
+        )
       }
       title="Link bearbeiten"
       submitLabel="Änderungen speichern"

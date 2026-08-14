@@ -24,6 +24,19 @@ export function getLfgStatus(
   return "offen";
 }
 
+/** Anzeigename eines Teilnehmenden — für anonyme Gäste (#145) immer generiert
+ * aus dem Namen, der sie hinzugefügt hat, nie Freitext. */
+export function getLfgParticipantDisplayName(participant: {
+  meepleId: string | null;
+  meepleDisplayName?: string | null;
+  addedByDisplayName: string;
+}): string {
+  if (participant.meepleId === null) {
+    return `Gast von ${participant.addedByDisplayName}`;
+  }
+  return participant.meepleDisplayName ?? "";
+}
+
 export type OpenLfgPostForBoardGame = {
   id: string;
   title: string;

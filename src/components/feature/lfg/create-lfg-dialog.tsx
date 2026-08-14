@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   plannedAt: "",
   maxParticipants: 4,
   description: "",
+  guestsMayBringGuests: false,
 };
 
 export type LfgBoardGameOption = { id: string; title: string };
@@ -81,6 +82,7 @@ export function CreateLfgDialog({
           description: form.description,
           plannedAt: form.plannedAt ? new Date(form.plannedAt) : undefined,
           maxParticipants: Number(form.maxParticipants),
+          guestsMayBringGuests: form.guestsMayBringGuests,
         })
       }
       onReset={() => setForm(initialForm)}
@@ -162,6 +164,16 @@ export function CreateLfgDialog({
           placeholder="Worauf freust du dich, wen suchst du?"
           required
         />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.guestsMayBringGuests}
+            onChange={(event) =>
+              patch("guestsMayBringGuests", event.target.checked)
+            }
+          />
+          Meine Gäste dürfen Gäste mitbringen
+        </label>
       </div>
     </ActionDialog>
   );

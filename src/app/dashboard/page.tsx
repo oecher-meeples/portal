@@ -1,4 +1,4 @@
-import { requireMember } from "@/lib/auth/session";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { getInternalContent } from "@/lib/content/content";
 import { listImportantLinks } from "@/lib/links/links";
@@ -44,6 +44,11 @@ export default async function DashboardPage() {
     listImportantLinks(),
   ]);
 
+  const canManageLinks = await hasPermissionInCurrentView(
+    user.id,
+    "links:manage",
+  );
+
   const upcomingShiftCount = countUpcomingShiftBookings(
     meeple.id,
     shiftBookings,
@@ -83,6 +88,7 @@ export default async function DashboardPage() {
       totalOpenLfgCount={totalOpenLfgCount}
       activeMarketListingCount={activeMarketListingCount}
       importantLinks={importantLinks}
+      canManageLinks={canManageLinks}
       resignationNotice={resignationNotice}
     />
   );

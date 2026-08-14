@@ -159,12 +159,15 @@ erDiagram
         String location
         Int maxParticipants
         String createdByMeepleId FK
+        Boolean guestsMayBringGuests "#145"
         DateTime closedAt
     }
 
     LfgParticipant {
-        String postId PK "FK"
-        String meepleId PK "FK"
+        String id PK
+        String postId FK
+        String meepleId FK "nullable, null = anonymer Gast (#145)"
+        String addedByMeepleId FK "wer hinzugefügt hat"
         DateTime joinedAt
     }
 
@@ -172,6 +175,7 @@ erDiagram
     Meeple ||--o{ LfgPost : "erstellt"
     LfgPost ||--o{ LfgParticipant : "hat"
     Meeple ||--o{ LfgParticipant : "nimmt teil"
+    Meeple ||--o{ LfgParticipant : "hat hinzugefügt"
 ```
 
 | Tabelle | Stand |
@@ -181,6 +185,8 @@ erDiagram
 | `lfg_posts`, `lfg_participants` | ✅ migriert |
 
 `LfgPost.gameTitle` ist bewusst Freitext statt einer Relation auf `BoardGame`: Gesuche sollen auch für Spiele möglich sein, die dem Verein nicht gehören. „Voll" und „abgelaufen" werden aus `maxParticipants` und `plannedAt` berechnet, nicht gespeichert.
+
+`LfgParticipant.meepleId` ist nullable — `null` markiert einen anonymen Gast (#145). Der eigene `id`-PK (statt Composite-PK) macht das möglich, da mehrere Gäste pro Gesuch sonst mit `meepleId = null` kollidieren würden. `addedByMeepleId` (immer gesetzt) ist die einzige Quelle für den Anzeigenamen eines Gasts ("Gast von {Name}") — nie Freitext.
 
 ---
 
