@@ -157,4 +157,4 @@ export function canViewContentItem(
   return !item.internal || hasSession;
 }
 
-export { TYPE_TO_DB };
+export { TYPE_TO_DB, DB_TO_TYPE };
