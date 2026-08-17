@@ -27,6 +27,12 @@ vi.mock("@/components/widgets/board-game/create-board-game-dialog", () => ({
   CreateBoardGameDialog: () => null,
 }));
 vi.mock(
+  "@/components/widgets/board-game/bulk-import-board-games-dialog",
+  () => ({
+    BulkImportBoardGamesDialog: () => null,
+  }),
+);
+vi.mock(
   "@/components/widgets/board-game/deinventorise-board-game-dialog",
   () => ({
     DeinventoriseBoardGameDialog: () => null,

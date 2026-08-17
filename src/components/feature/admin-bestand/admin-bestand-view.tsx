@@ -17,6 +17,7 @@ import {
 import { StatusPill } from "@/components/ui/status-pill";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
+import { BulkImportBoardGamesDialog } from "@/components/widgets/board-game/bulk-import-board-games-dialog";
 import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
@@ -110,7 +111,12 @@ export function AdminBestandView({
         eyebrow="Bestandsverwaltung"
         title="Bestand & Vollständigkeitsprüfung"
         description="Ein Datensatz pro physischem Spiel. Standort und Verantwortlichkeit ergeben sich aus dem Aufenthalt, nicht aus einem Feld."
-        action={<CreateBoardGameDialog defaultEan={defaultEan} />}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <BulkImportBoardGamesDialog />
+            <CreateBoardGameDialog defaultEan={defaultEan} />
+          </div>
+        }
       />
 
       <div className="bg-background sticky top-24 z-10 flex flex-wrap items-center gap-3 py-2">

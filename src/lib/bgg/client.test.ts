@@ -6,6 +6,7 @@ import {
   BggNotFoundError,
   fetchBggGame,
   searchBggGames,
+  searchBggGamesExact,
 } from "./client";
 
 function loadFixture(name: string): string {
@@ -269,5 +270,36 @@ describe("searchBggGames", () => {
     mockFetchOnce(false, 503, "");
 
     await expect(searchBggGames("Ark Nova")).rejects.toThrow(BggApiError);
+  });
+});
+
+describe("searchBggGamesExact", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("sends exact=1 (#186)", async () => {
+    const fetchMock = mockFetchOnce(true, 200, loadFixture("search-empty.xml"));
+
+    await searchBggGamesExact("Ark Nova");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("exact=1");
+  });
+
+  it("maps hits the same way as the non-exact search", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-multiple.xml"));
+
+    const result = await searchBggGamesExact("Ark Nova");
+
+    expect(result).toEqual([
+      { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      { bggId: 12345, title: "Ark Nova: Marschmoor", yearPublished: 2023 },
+    ]);
   });
 });

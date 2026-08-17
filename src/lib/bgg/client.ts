@@ -306,14 +306,16 @@ function titleMatchRank(title: string, query: string): number {
   return 2;
 }
 
-export async function searchBggGames(
+async function searchBggGamesInternal(
   query: string,
+  { exact = false }: { exact?: boolean } = {},
 ): Promise<BggSearchResult[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
+  const exactParam = exact ? "&exact=1" : "";
   const xml = await fetchBggXml(
-    `/search?query=${encodeURIComponent(trimmed)}&type=boardgame`,
+    `/search?query=${encodeURIComponent(trimmed)}&type=boardgame${exactParam}`,
     SEARCH_REVALIDATE_SECONDS,
   );
   const parsed = parser.parse(xml) as BggSearchResponse;
@@ -338,4 +340,23 @@ export async function searchBggGames(
       titleMatchRank(a.title, trimmed) - titleMatchRank(b.title, trimmed) ||
       a.title.length - b.title.length,
   );
+}
+
+export async function searchBggGames(
+  query: string,
+): Promise<BggSearchResult[]> {
+  return searchBggGamesInternal(query);
+}
+
+/**
+ * Exakte Namenssuche für den Massenimport (#186) — BGGs `exact=1`-Parameter
+ * liefert nur Titel, die dem Suchbegriff exakt entsprechen (case-insensitiv),
+ * statt jeder Fundstelle mit dem Begriff als Teilstring. Genau ein Treffer
+ * gilt als eindeutig auflösbar und wird automatisch importiert; alles andere
+ * (0 oder >1 Treffer) landet in der Review-Liste.
+ */
+export async function searchBggGamesExact(
+  query: string,
+): Promise<BggSearchResult[]> {
+  return searchBggGamesInternal(query, { exact: true });
 }
