@@ -61,7 +61,7 @@ query($owner:String!, $name:String!, $n:Int!) {
    e. **Stop.** Änderungen liegen ungecommittet vor — auf explizites Go des Nutzers warten. Kein automatischer Commit, keine automatische Weiterarbeit am nächsten Issue.
    f. Nach Go: `pnpm run verify` falls noch nicht sauber, dann committen (Conventional-Commit-Message, `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`). Board-Status → **Done**. `.claude/TODO.md`-Checkbox abhaken. Mit dem nächsten Issue im Scope fortsetzen (zurück zu 3a).
 4. **Nach dem letzten Issue: Stop.** Auf explizites Go für Push + PR + Merge warten.
-5. Nach Go: `git push -u origin <branch>`, `gh pr create` (Base = Default-Branch), PR mergen (`gh pr merge --squash` o. ä. — Repo-Konvention beachten, Self-Merge ist laut `CLAUDE.md` erlaubt), danach `git checkout <default-branch>` und `git pull`.
+5. Nach Go: `git push -u origin <branch>`, `gh pr create` (Base = Default-Branch), PR mergen mit `gh pr merge --merge` — **niemals `--squash`** (verbindlich für dieses Repo, siehe Nutzer-Feedback vom 2026-08-14: Squash zerstört die pro-Issue-Commit-Historie eines Batches). Self-Merge ist laut `CLAUDE.md` erlaubt. Danach `git checkout <default-branch>` und `git pull`.
 
 ## Wichtig
 
