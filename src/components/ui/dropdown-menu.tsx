@@ -15,7 +15,10 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+  // Kein eigenes `data-slot` — kollidiert sonst mit `data-slot="button"` bei
+  // `render={<Button/>}`-Komposition und führt zu einem Hydration-Mismatch
+  // (siehe Kommentar in `DialogTrigger`, dialog.tsx).
+  return <MenuPrimitive.Trigger {...props} />;
 }
 
 function DropdownMenuContent({
