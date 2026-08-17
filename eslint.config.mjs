@@ -5,6 +5,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import eslintConfigPrettier from "eslint-config-prettier";
+import noServerOnlyInClient from "./eslint-rules/no-server-only-in-client.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -58,7 +59,11 @@ const eslintConfig = defineConfig([
   ...nextTypescript,
   eslintConfigPrettier,
   {
+    plugins: {
+      local: { rules: { "no-server-only-in-client": noServerOnlyInClient } },
+    },
     rules: {
+      "local/no-server-only-in-client": "error",
       "import/no-restricted-paths": [
         "error",
         {
