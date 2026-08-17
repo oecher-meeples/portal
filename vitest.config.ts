@@ -7,8 +7,13 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     // *.live.test.ts hits real third-party APIs and needs credentials — it is
-    // not part of the deterministic suite. Run it explicitly: `npm run test:live`.
-    exclude: ["**/node_modules/**", "**/dist/**", "**/*.live.test.ts"],
+    // not part of the deterministic suite. Run it explicitly: `npm run test:live`
+    // (sets VITEST_LIVE=1, which lifts this exclusion below).
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      ...(process.env.VITEST_LIVE ? [] : ["**/*.live.test.ts"]),
+    ],
     coverage: {
       provider: "v8",
       // Scope per docs/project-structure.md: the domain layer and server

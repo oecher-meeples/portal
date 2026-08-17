@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:live": "vitest run --exclude '' --include '**/*.live.test.ts'",
+    "test:live": "cross-env VITEST_LIVE=1 DOTENV_CONFIG_PATH=.env.local node -r dotenv/config node_modules/vitest/vitest.mjs run live.test",
     "dup": "jscpd src",
     "licenses": "pnpm licenses list --prod",
     "licenses:generate": "tsx scripts/generate-third-party-licenses.ts",
