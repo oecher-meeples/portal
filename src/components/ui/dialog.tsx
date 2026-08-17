@@ -12,7 +12,12 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+  // Kein eigenes `data-slot` hier: wird meist mit `render={<Button/>}`
+  // komponiert, dessen eigenes `data-slot="button"` sonst mit diesem
+  // kollidiert — Base UI löst das beim SSR- und beim Hydration-Durchlauf
+  // unterschiedlich auf (Hydration-Mismatch). `data-slot="dialog-trigger"`
+  // wird nirgends als CSS-Selektor gebraucht, nur als Debug-Konvention.
+  return <DialogPrimitive.Trigger {...props} />;
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
@@ -65,8 +70,10 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
+          // Kein `data-slot="dialog-close"` hier — kollidiert sonst mit dem
+          // `data-slot="button"` des per `render` komponierten Buttons (siehe
+          // Kommentar in `DialogTrigger`).
           <DialogPrimitive.Close
-            data-slot="dialog-close"
             render={
               <Button
                 variant="ghost"
