@@ -166,4 +166,63 @@ describe("EditBoardGameTitle", () => {
       expect(onChange).not.toHaveBeenCalled();
     });
   });
+
+  describe("compareStatus — Randfarbe im BGG-Abgleich (#189)", () => {
+    it("gives a matching field a green border", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+          compareStatus={{ title: true }}
+        />,
+      );
+
+      expect(screen.getByLabelText("Titel")).toHaveClass("border-emerald-600");
+    });
+
+    it("gives a mismatching field a red border", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+          compareStatus={{ title: false }}
+        />,
+      );
+
+      expect(screen.getByLabelText("Titel")).toHaveClass("border-red-600");
+    });
+
+    it("leaves fields without a BGG correspondence unstyled", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+          compareStatus={{ title: true }}
+        />,
+      );
+
+      expect(screen.getByLabelText("EAN")).not.toHaveClass(
+        "border-emerald-600",
+      );
+      expect(screen.getByLabelText("EAN")).not.toHaveClass("border-red-600");
+    });
+
+    it("leaves every field unstyled when compareStatus is not set", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByLabelText("Titel")).not.toHaveClass(
+        "border-emerald-600",
+      );
+      expect(screen.getByLabelText("Titel")).not.toHaveClass("border-red-600");
+    });
+  });
 });

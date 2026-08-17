@@ -7,10 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
+import { cn } from "@/lib/utils/cn";
 import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
 import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
 import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
+import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
+
+/** Randfarbe je Abgleichsstatus im "Daten mit BGG abgleichen"-Modus (#189) —
+ * `undefined` (Feld nicht im `compareStatus` enthalten) lässt das Feld
+ * unverändert. */
+function diffClassName(status: boolean | undefined): string | undefined {
+  if (status === undefined) return undefined;
+  return status
+    ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/50"
+    : "border-red-600 focus-visible:border-red-600 focus-visible:ring-red-600/50";
+}
 
 /**
  * Title-level fields — everything shared by every physical copy of this
@@ -28,6 +40,7 @@ export function EditBoardGameTitle({
   titleWarning,
   onLoadExistingTitle,
   loadingExistingTitle,
+  compareStatus,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
@@ -46,6 +59,10 @@ export function EditBoardGameTitle({
   onLoadExistingTitle?: () => void;
   /** Deaktiviert den "Titel laden"-Button während der Server-Anfrage. */
   loadingExistingTitle?: boolean;
+  /** Grün/Rot-Randfarbe je Feld gegenüber frisch geladenen BGG-Daten — nur
+   * im "Daten mit BGG abgleichen"-Modus gesetzt (#189). Felder ohne
+   * BGG-Entsprechung (EAN, Art, BGG-ID, Erklärvideo) bleiben unberührt. */
+  compareStatus?: Partial<Record<BoardGameCompareField, boolean>>;
 }) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
@@ -81,11 +98,11 @@ export function EditBoardGameTitle({
           onChange={(event) => onChange({ title: event.target.value })}
           required
           warning={titleWarning}
-          className={
-            titleWarning
-              ? "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50"
-              : undefined
-          }
+          className={cn(
+            titleWarning &&
+              "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50",
+            diffClassName(compareStatus?.title),
+          )}
         />
         {titleWarning && onLoadExistingTitle && (
           <Button
@@ -135,6 +152,7 @@ export function EditBoardGameTitle({
           type="number"
           min={1}
           fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.minPlayers)}
           value={values.minPlayers}
           onChange={(event) => onChange({ minPlayers: event.target.value })}
         />
@@ -144,6 +162,7 @@ export function EditBoardGameTitle({
           type="number"
           min={1}
           fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.maxPlayers)}
           value={values.maxPlayers}
           onChange={(event) => onChange({ maxPlayers: event.target.value })}
         />
@@ -153,6 +172,7 @@ export function EditBoardGameTitle({
           type="number"
           min={1}
           fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.playTimeMinutes)}
           value={values.playTimeMinutes}
           onChange={(event) =>
             onChange({ playTimeMinutes: event.target.value })
@@ -166,6 +186,7 @@ export function EditBoardGameTitle({
           max={5}
           step={0.1}
           fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.weight)}
           value={values.weight}
           onChange={(event) => onChange({ weight: event.target.value })}
         />
@@ -186,6 +207,7 @@ export function EditBoardGameTitle({
             }
             placeholder="Mechanik suchen …"
             emptyLabel="Keine passende Mechanik"
+            className={diffClassName(compareStatus?.mechanics)}
           />
         </Field>
       ) : (
@@ -193,6 +215,7 @@ export function EditBoardGameTitle({
           id={`${idPrefix}-mechanics`}
           label="Mechaniken"
           fieldClassName="sm:col-span-2"
+          className={diffClassName(compareStatus?.mechanics)}
           value={values.mechanics}
           onChange={(event) => onChange({ mechanics: event.target.value })}
           placeholder="Worker Placement, Drafting, …"
@@ -203,6 +226,7 @@ export function EditBoardGameTitle({
       <TextField
         id={`${idPrefix}-image-url`}
         label="Bild-URL"
+        className={diffClassName(compareStatus?.imageUrl)}
         value={values.imageUrl}
         onChange={(event) => onChange({ imageUrl: event.target.value })}
         placeholder="https://…"
@@ -218,6 +242,7 @@ export function EditBoardGameTitle({
         <TextAreaField
           id={`${idPrefix}-description`}
           label="Beschreibung"
+          className={diffClassName(compareStatus?.description)}
           value={values.description}
           onChange={(event) => onChange({ description: event.target.value })}
         />
