@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { BoardGameKind } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
@@ -5,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
 import { parseMechanics, formatMechanics } from "@/lib/ludothek/bgg-id";
+import { translateDescription } from "@/lib/ludothek/board-games";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
 /**
@@ -42,6 +46,30 @@ export function EditBoardGameTitle({
   /** Deaktiviert den "Titel laden"-Button während der Server-Anfrage. */
   loadingExistingTitle?: boolean;
 }) {
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+
+  async function handleTranslateDescription() {
+    setIsTranslating(true);
+    setTranslationError(null);
+    try {
+      const result = await translateDescription(values.description);
+      if (!result.success) {
+        setTranslationError(result.error);
+        return;
+      }
+      onChange({ description: result.text });
+    } catch (err) {
+      setTranslationError(
+        err instanceof Error
+          ? err.message
+          : "Die Übersetzung ist fehlgeschlagen. Bitte erneut versuchen.",
+      );
+    } finally {
+      setIsTranslating(false);
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="flex flex-col gap-1.5">
@@ -188,13 +216,27 @@ export function EditBoardGameTitle({
         placeholder="https://www.youtube.com/watch?v=…"
       />
 
-      <TextAreaField
-        id={`${idPrefix}-description`}
-        label="Beschreibung"
-        fieldClassName="sm:col-span-2"
-        value={values.description}
-        onChange={(event) => onChange({ description: event.target.value })}
-      />
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <TextAreaField
+          id={`${idPrefix}-description`}
+          label="Beschreibung"
+          value={values.description}
+          onChange={(event) => onChange({ description: event.target.value })}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleTranslateDescription}
+          disabled={isTranslating || !values.description.trim()}
+          className="self-start"
+        >
+          {isTranslating ? "Übersetze…" : "Übersetzen"}
+        </Button>
+        {translationError && (
+          <p className="text-destructive text-xs">{translationError}</p>
+        )}
+      </div>
     </div>
   );
 }

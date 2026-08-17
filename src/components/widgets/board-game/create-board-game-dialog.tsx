@@ -160,7 +160,10 @@ export function CreateBoardGameDialog({
         mechanics: result.data.mechanics.join(", "),
         explainerVideoUrl: result.data.explainerVideoUrl ?? "",
       });
-      setError(null);
+      // `hint` steht nur bei fehlgeschlagener Übersetzung — kein Hard-
+      // Error, die Vorschau ist trotzdem nutzbar, nur ohne automatische
+      // deutsche Beschreibung (#184, nie englischen Text speichern).
+      setError(result.hint ?? null);
       await checkDuplicate(result.data.title, bggId);
       return true;
     } catch (err) {

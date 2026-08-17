@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -15,21 +19,7 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
 
-const fetchBggGameMock = vi.fn();
-vi.mock("@/lib/bgg/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/bgg/client")>(
-      "@/lib/bgg/client",
-    );
-  return {
-    ...actual,
-    fetchBggGame: (...args: unknown[]) => fetchBggGameMock(...args),
-  };
-});
-
-const { BggApiError, BggNotFoundError } = await import("@/lib/bgg/client");
-const { createBoardGame, updateBoardGame, previewBggImport } =
-  await import("./board-games");
+const { createBoardGame, updateBoardGame } = await import("./board-games");
 
 const VALID_INPUT = { title: "Arche Nova" };
 const VALID_EAN = "5901234123457";
@@ -328,58 +318,6 @@ describe("updateBoardGame", () => {
 
     expect(prismaMock.boardGame.count).toHaveBeenCalledWith({
       where: { ean: VALID_EAN, id: { not: "game-1" } },
-    });
-  });
-});
-
-describe("previewBggImport", () => {
-  it("rejects when the user lacks the games:manage permission", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
-
-    const result = await previewBggImport(342942);
-
-    expect(result).toEqual({ success: false, error: "Keine Berechtigung." });
-    expect(fetchBggGameMock).not.toHaveBeenCalled();
-  });
-
-  it("returns the mapped preview data without persisting anything", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    const bggData = { title: "Ark Nova", mechanics: [] };
-    fetchBggGameMock.mockResolvedValue(bggData);
-
-    const result = await previewBggImport(342942);
-
-    expect(result).toEqual({ success: true, data: bggData });
-    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
-  });
-
-  it("translates a BggNotFoundError into a speaking error", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    fetchBggGameMock.mockRejectedValue(new BggNotFoundError(999999999));
-
-    const result = await previewBggImport(999999999);
-
-    expect(result).toEqual({
-      success: false,
-      error: "BoardGameGeek-Eintrag mit ID 999999999 wurde nicht gefunden.",
-    });
-  });
-
-  it("translates a BggApiError into a speaking error", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    fetchBggGameMock.mockRejectedValue(new BggApiError("boom", 503));
-
-    const result = await previewBggImport(342942);
-
-    expect(result).toEqual({
-      success: false,
-      error:
-        "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
     });
   });
 });

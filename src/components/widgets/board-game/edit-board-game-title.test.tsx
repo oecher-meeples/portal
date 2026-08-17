@@ -1,11 +1,19 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
 
+const translateDescriptionMock = vi.fn();
+vi.mock("@/lib/ludothek/board-games", () => ({
+  translateDescription: (...args: unknown[]) =>
+    translateDescriptionMock(...args),
+}));
+
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 describe("EditBoardGameTitle", () => {
@@ -74,5 +82,79 @@ describe("EditBoardGameTitle", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Drafting")).toBeInTheDocument();
     expect(screen.getByText("Worker Placement")).toBeInTheDocument();
+  });
+
+  describe("Übersetzen-Button", () => {
+    it("disables the button when the description is empty", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole("button", { name: "Übersetzen" })).toBeDisabled();
+    });
+
+    it("translates the description and reports the result via onChange", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      translateDescriptionMock.mockResolvedValue({
+        success: true,
+        text: "Baue einen modernen Zoo.",
+      });
+
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={{
+            ...EMPTY_BOARD_GAME_FORM,
+            description: "Build a modern zoo.",
+          }}
+          onChange={onChange}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Übersetzen" }));
+
+      await waitFor(() =>
+        expect(translateDescriptionMock).toHaveBeenCalledWith(
+          "Build a modern zoo.",
+        ),
+      );
+      expect(onChange).toHaveBeenCalledWith({
+        description: "Baue einen modernen Zoo.",
+      });
+    });
+
+    it("shows a speaking error instead of the translation when it fails", async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      translateDescriptionMock.mockResolvedValue({
+        success: false,
+        error: "Die Übersetzung ist fehlgeschlagen. Bitte erneut versuchen.",
+      });
+
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={{
+            ...EMPTY_BOARD_GAME_FORM,
+            description: "Build a modern zoo.",
+          }}
+          onChange={onChange}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Übersetzen" }));
+
+      expect(
+        await screen.findByText(
+          "Die Übersetzung ist fehlgeschlagen. Bitte erneut versuchen.",
+        ),
+      ).toBeInTheDocument();
+      expect(onChange).not.toHaveBeenCalled();
+    });
   });
 });

@@ -19,6 +19,8 @@ import {
   type BggGameData,
   type BggSearchResult,
 } from "@/lib/bgg/client";
+import { translateToGerman } from "@/lib/bgg/translate";
+import { translateMechanics } from "@/lib/ludothek/mechanics-translations";
 import { uniqueSlug } from "@/lib/utils/slug";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
@@ -307,6 +309,79 @@ export async function searchBggGamesAction(query: string) {
   }
 }
 
+/**
+ * Übersetzt die BGG-Rohdaten ins Deutsche (#184), bevor der Titel überhaupt
+ * angelegt werden kann — ein eigener Schritt nach `fetchBggGame()`, nicht in
+ * `mapItem()` verdrahtet, damit die englischen BGG-Fixtures/-Tests
+ * unverändert bleiben. Mechaniken laufen über die feste Tabelle, die
+ * Beschreibung über die MyMemory-API. Schlägt die Übersetzung fehl, wird die
+ * Beschreibung leer gelassen statt den englischen Original-Text zu
+ * übernehmen — es soll nie englischer Text gespeichert werden, der Admin
+ * trägt dann manuell ein.
+ */
+async function translateBggGameData(
+  data: BggGameData,
+): Promise<{ data: BggGameData; descriptionTranslationFailed: boolean }> {
+  const mechanics = translateMechanics(data.mechanics);
+
+  if (!data.description) {
+    return {
+      data: { ...data, mechanics },
+      descriptionTranslationFailed: false,
+    };
+  }
+
+  try {
+    const description = await translateToGerman(data.description);
+    return {
+      data: { ...data, description, mechanics },
+      descriptionTranslationFailed: false,
+    };
+  } catch (error) {
+    console.warn(
+      "Übersetzung fehlgeschlagen — Beschreibung bleibt leer statt englischen Text zu speichern.",
+      error,
+    );
+    return {
+      data: { ...data, description: null, mechanics },
+      descriptionTranslationFailed: true,
+    };
+  }
+}
+
+/**
+ * Übersetzt einen frei editierten Beschreibungstext auf Knopfdruck — für den
+ * "Übersetzen"-Button im Titel-Editor (#184-Folgeanfrage), z. B. wenn die
+ * automatische Übersetzung beim Import fehlgeschlagen ist oder ein Titel
+ * manuell mit englischem Text angelegt wurde.
+ */
+export async function translateDescription(text: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { success: false as const, error: "Keine Berechtigung." };
+  }
+
+  if (!text.trim()) {
+    return {
+      success: false as const,
+      error: "Keine Beschreibung zum Übersetzen vorhanden.",
+    };
+  }
+
+  try {
+    const translated = await translateToGerman(text);
+    return { success: true as const, text: translated };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Die Übersetzung ist fehlgeschlagen. Bitte erneut versuchen.",
+    };
+  }
+}
+
 export async function previewBggImport(bggId: number) {
   const user = await requireGamesManagePermission();
   if (!user) {
@@ -314,8 +389,16 @@ export async function previewBggImport(bggId: number) {
   }
 
   try {
-    const data: BggGameData = await fetchBggGame(bggId);
-    return { success: true as const, data };
+    const rawData: BggGameData = await fetchBggGame(bggId);
+    const { data, descriptionTranslationFailed } =
+      await translateBggGameData(rawData);
+    return {
+      success: true as const,
+      data,
+      hint: descriptionTranslationFailed
+        ? "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — bitte manuell auf Deutsch ergänzen."
+        : undefined,
+    };
   } catch (error) {
     if (error instanceof BggNotFoundError) {
       return { success: false as const, error: error.message };
