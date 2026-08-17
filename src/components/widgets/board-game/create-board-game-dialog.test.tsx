@@ -27,16 +27,19 @@ vi.mock("next/navigation", () => ({
 }));
 
 const createBoardGameMock = vi.fn();
-const previewBggImportMock = vi.fn();
-const searchBggGamesActionMock = vi.fn();
 const findDuplicateBoardGameMock = vi.fn();
 vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
+  findDuplicateBoardGame: (...args: unknown[]) =>
+    findDuplicateBoardGameMock(...args),
+}));
+
+const previewBggImportMock = vi.fn();
+const searchBggGamesActionMock = vi.fn();
+vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
   previewBggImport: (...args: unknown[]) => previewBggImportMock(...args),
   searchBggGamesAction: (...args: unknown[]) =>
     searchBggGamesActionMock(...args),
-  findDuplicateBoardGame: (...args: unknown[]) =>
-    findDuplicateBoardGameMock(...args),
 }));
 
 const createGameCopyMock = vi.fn();
@@ -161,6 +164,8 @@ describe("CreateBoardGameDialog — Wizard-Navigation", () => {
         description: null,
         mechanics: [],
         explainerVideoUrl: null,
+        germanExplainerVideos: [],
+        englishExplainerVideos: [],
       },
     });
 

@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -15,14 +14,17 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   createBoardGame,
-  previewBggImport,
-  searchBggGamesAction,
   updateBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
+import {
+  previewBggImport,
+  searchBggGamesAction,
+} from "@/lib/ludothek/board-games-bgg-import";
 import { createGameCopy } from "@/lib/ludothek/game-copies";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
+import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
 import { BoardGameDuplicateWarning } from "@/components/widgets/board-game/board-game-duplicate-warning";
 import { useBoardGameDuplicateGuard } from "@/components/widgets/board-game/use-board-game-duplicate-guard";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
@@ -158,7 +160,13 @@ export function CreateBoardGameDialog({
         imageUrl: result.data.imageUrl ?? "",
         description: result.data.description ?? "",
         mechanics: result.data.mechanics.join(", "),
-        explainerVideoUrl: result.data.explainerVideoUrl ?? "",
+        // Bei mehreren/einzelnen deutschsprachigen Treffern entscheidet der
+        // Admin bewusst über die Auswahlliste (#185) — sonst wie bisher der
+        // erste instruktive Video-Treffer, automatisch übernommen.
+        explainerVideoUrl:
+          result.data.germanExplainerVideos.length > 0
+            ? ""
+            : (result.data.explainerVideoUrl ?? ""),
       });
       // `hint` steht nur bei fehlgeschlagener Übersetzung — kein Hard-
       // Error, die Vorschau ist trotzdem nutzbar, nur ohne automatische
@@ -343,6 +351,10 @@ export function CreateBoardGameDialog({
               searchResults={searchResults}
               onSelectResult={handleSelectResult}
               preview={preview}
+              selectedExplainerVideoUrl={form.explainerVideoUrl}
+              onSelectExplainerVideo={(url) =>
+                patchForm({ explainerVideoUrl: url })
+              }
             />
           )}
 
@@ -376,73 +388,18 @@ export function CreateBoardGameDialog({
 
           {error && <p className="text-destructive text-sm">{error}</p>}
 
-          <DialogFooter>
-            {step === 1 && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSkipImport}
-                >
-                  Ohne Import fortfahren
-                </Button>
-                {activeDuplicate ? (
-                  <Button type="button" onClick={handleUseExistingCopy}>
-                    Weiteres Exemplar anlegen
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    disabled={!preview}
-                  >
-                    Weiter
-                  </Button>
-                )}
-              </>
-            )}
-            {step === 2 && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                >
-                  Zurück
-                </Button>
-                {activeDuplicate ? (
-                  <Button type="button" onClick={handleUseExistingCopy}>
-                    Weiteres Exemplar anlegen
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    disabled={!canSubmit}
-                  >
-                    Weiter
-                  </Button>
-                )}
-              </>
-            )}
-            {step === 3 && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setStep(2)}
-                >
-                  Zurück
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !canSubmit}
-                >
-                  {isSubmitting ? "Speichere…" : "Spiel anlegen"}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
+          <CreateBoardGameDialogFooter
+            step={step}
+            hasActiveDuplicate={Boolean(activeDuplicate)}
+            hasPreview={Boolean(preview)}
+            canSubmit={canSubmit}
+            isSubmitting={isSubmitting}
+            onSkipImport={handleSkipImport}
+            onUseExistingCopy={handleUseExistingCopy}
+            onBack={() => setStep(step === 3 ? 2 : 1)}
+            onNext={() => setStep(step === 1 ? 2 : 3)}
+            onSubmit={handleSubmit}
+          />
         </DialogContent>
       </Dialog>
       {lastHint && <p className="text-sm text-amber-600">{lastHint}</p>}

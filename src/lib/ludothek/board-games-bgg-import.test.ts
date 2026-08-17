@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
@@ -33,15 +33,14 @@ vi.mock("@/lib/bgg/translate", async () => {
   };
 });
 
-const { BggApiError, BggNotFoundError } = await import("@/lib/bgg/client");
-const { previewBggImport, translateDescription } =
-  await import("./board-games");
+const searchYoutubeVideosMock = vi.fn();
+vi.mock("@/lib/youtube/client", () => ({
+  searchYoutubeVideos: (...args: unknown[]) => searchYoutubeVideosMock(...args),
+}));
 
-beforeEach(() => {
-  prismaMock.boardGame.count.mockResolvedValue(0);
-  prismaMock.boardGame.findUnique.mockResolvedValue(null);
-  prismaMock.boardGame.findFirst.mockResolvedValue(null);
-});
+const { BggApiError, BggNotFoundError } = await import("@/lib/bgg/client");
+const { previewBggImport, translateDescription, fetchExplainerVideoOptions } =
+  await import("./board-games-bgg-import");
 
 describe("translateDescription", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
@@ -182,6 +181,201 @@ describe("previewBggImport", () => {
     fetchBggGameMock.mockRejectedValue(new BggApiError("boom", 503));
 
     const result = await previewBggImport(342942);
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
+    });
+  });
+});
+
+describe("fetchExplainerVideoOptions", () => {
+  it("rejects when the user lacks the games:manage permission", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    const result = await fetchExplainerVideoOptions(342942);
+
+    expect(result).toEqual({ success: false, error: "Keine Berechtigung." });
+    expect(fetchBggGameMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the German BGG video candidates when any exist, without searching YouTube (#185)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockResolvedValue({
+      title: "Ark Nova",
+      germanExplainerVideos: [
+        {
+          title: "Regeln auf Deutsch",
+          url: "https://www.youtube.com/watch?v=german1",
+          channel: "ChannelA",
+        },
+      ],
+      englishExplainerVideos: [
+        {
+          title: "Fallback Video",
+          url: "https://www.youtube.com/watch?v=fallback",
+          channel: "SomeChannel",
+        },
+      ],
+    });
+
+    const result = await fetchExplainerVideoOptions(342942);
+
+    expect(result).toEqual({
+      success: true,
+      source: "bgg-german",
+      videos: [
+        {
+          title: "Regeln auf Deutsch",
+          url: "https://www.youtube.com/watch?v=german1",
+          channel: "ChannelA",
+        },
+      ],
+    });
+    expect(searchYoutubeVideosMock).not.toHaveBeenCalled();
+  });
+
+  it("searches YouTube for '<Titel> Regeln' when BGG has no German match, since BGG's videos window can miss older ones (#185-Folgeanfrage)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockResolvedValue({
+      title: "Revive",
+      germanExplainerVideos: [],
+      englishExplainerVideos: [
+        {
+          title: "Fallback Video",
+          url: "https://www.youtube.com/watch?v=fallback",
+          channel: "SomeChannel",
+        },
+      ],
+    });
+    searchYoutubeVideosMock.mockResolvedValue([
+      {
+        title: "Revive komplett erklärt",
+        url: "https://www.youtube.com/watch?v=yt1",
+        channel: "brettspiele_erklärt",
+      },
+    ]);
+
+    const result = await fetchExplainerVideoOptions(342942);
+
+    expect(searchYoutubeVideosMock).toHaveBeenCalledWith("Revive Regeln");
+    expect(result).toEqual({
+      success: true,
+      source: "youtube",
+      videos: [
+        {
+          title: "Revive komplett erklärt",
+          url: "https://www.youtube.com/watch?v=yt1",
+          channel: "brettspiele_erklärt",
+        },
+      ],
+    });
+  });
+
+  it("falls back to the single BGG fallback video when YouTube also finds nothing", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockResolvedValue({
+      title: "Ark Nova",
+      germanExplainerVideos: [],
+      englishExplainerVideos: [
+        {
+          title: "Ark Nova Tutorial",
+          url: "https://www.youtube.com/watch?v=fallback",
+          channel: "tutorialmaker",
+        },
+      ],
+    });
+    searchYoutubeVideosMock.mockResolvedValue([]);
+
+    const result = await fetchExplainerVideoOptions(342942);
+
+    expect(result).toEqual({
+      success: true,
+      source: "bgg-fallback",
+      videos: [
+        {
+          title: "Ark Nova Tutorial",
+          url: "https://www.youtube.com/watch?v=fallback",
+          channel: "tutorialmaker",
+        },
+      ],
+    });
+  });
+
+  it("falls back to BGG instead of failing when the YouTube search itself errors", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockResolvedValue({
+      title: "Ark Nova",
+      germanExplainerVideos: [],
+      englishExplainerVideos: [
+        {
+          title: "Ark Nova Tutorial",
+          url: "https://www.youtube.com/watch?v=fallback",
+          channel: "tutorialmaker",
+        },
+      ],
+    });
+    searchYoutubeVideosMock.mockRejectedValue(new Error("quotaExceeded"));
+
+    const result = await fetchExplainerVideoOptions(342942);
+
+    expect(result).toEqual({
+      success: true,
+      source: "bgg-fallback",
+      videos: [
+        {
+          title: "Ark Nova Tutorial",
+          url: "https://www.youtube.com/watch?v=fallback",
+          channel: "tutorialmaker",
+        },
+      ],
+    });
+  });
+
+  it("returns an empty list when nothing is found anywhere", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockResolvedValue({
+      title: "Ark Nova",
+      germanExplainerVideos: [],
+      englishExplainerVideos: [],
+    });
+    searchYoutubeVideosMock.mockResolvedValue([]);
+
+    const result = await fetchExplainerVideoOptions(342942);
+
+    expect(result).toEqual({
+      success: true,
+      source: "bgg-fallback",
+      videos: [],
+    });
+  });
+
+  it("translates a BggNotFoundError into a speaking error", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockRejectedValue(new BggNotFoundError(999999999));
+
+    const result = await fetchExplainerVideoOptions(999999999);
+
+    expect(result).toEqual({
+      success: false,
+      error: "BoardGameGeek-Eintrag mit ID 999999999 wurde nicht gefunden.",
+    });
+  });
+
+  it("translates a BggApiError into a speaking error", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    fetchBggGameMock.mockRejectedValue(new BggApiError("boom", 503));
+
+    const result = await fetchExplainerVideoOptions(342942);
 
     expect(result).toEqual({
       success: false,

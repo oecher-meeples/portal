@@ -50,6 +50,8 @@ describe("fetchBggGame", () => {
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
       explainerVideoUrl: null,
+      germanExplainerVideos: [],
+      englishExplainerVideos: [],
     });
   });
 
@@ -68,6 +70,8 @@ describe("fetchBggGame", () => {
       description: null,
       mechanics: [],
       explainerVideoUrl: null,
+      germanExplainerVideos: [],
+      englishExplainerVideos: [],
     });
   });
 
@@ -83,6 +87,18 @@ describe("fetchBggGame", () => {
     expect(result.explainerVideoUrl).toBe(
       "https://www.youtube.com/watch?v=correct123",
     );
+    expect(result.englishExplainerVideos).toEqual([
+      {
+        title: "Ark Nova Tutorial",
+        url: "https://www.youtube.com/watch?v=correct123",
+        channel: "tutorialmaker",
+      },
+      {
+        title: "Ark Nova Tutorial 2",
+        url: "https://www.youtube.com/watch?v=shouldnotbepicked",
+        channel: "other",
+      },
+    ]);
   });
 
   it("returns null when the videos block has no instructional entry", async () => {
@@ -95,6 +111,58 @@ describe("fetchBggGame", () => {
     const result = await fetchBggGame(342942);
 
     expect(result.explainerVideoUrl).toBeNull();
+  });
+
+  it("excludes non-German, non-English videos from englishExplainerVideos (#185-Folgeanfrage)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-german-videos.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    const urls = result.englishExplainerVideos.map((video) => video.url);
+    expect(urls).toContain("https://www.youtube.com/watch?v=english1");
+    expect(urls).not.toContain("https://www.youtube.com/watch?v=german1");
+  });
+
+  it("returns an empty array for germanExplainerVideos when no video has language=German (#185)", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-with-instructional-video.xml"),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.germanExplainerVideos).toEqual([]);
+  });
+
+  it("collects every instructional, German-language, YouTube video — not just the first (#185)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-german-videos.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.germanExplainerVideos).toEqual([
+      {
+        title: "Regeln auf Deutsch",
+        url: "https://www.youtube.com/watch?v=german1",
+        channel: "ChannelA",
+      },
+      {
+        title: "Ausführliche Regelerklärung",
+        url: "https://www.youtube.com/watch?v=german2",
+        channel: "ChannelB",
+      },
+    ]);
+  });
+
+  it("excludes German videos of the wrong category or hosted outside YouTube from germanExplainerVideos (#185)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-german-videos.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    const urls = result.germanExplainerVideos.map((video) => video.url);
+    expect(urls).not.toContain("https://www.youtube.com/watch?v=review-de"); // category "review"
+    expect(urls).not.toContain("https://vimeo.com/german3"); // not YouTube
+    expect(urls).not.toContain("https://www.youtube.com/watch?v=english1"); // language "English"
   });
 
   it("requests the videos block from the bgg api", async () => {

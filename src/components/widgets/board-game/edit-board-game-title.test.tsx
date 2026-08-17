@@ -6,10 +6,19 @@ import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-g
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
 
 const translateDescriptionMock = vi.fn();
-vi.mock("@/lib/ludothek/board-games", () => ({
+const fetchExplainerVideoOptionsMock = vi.fn();
+vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
   translateDescription: (...args: unknown[]) =>
     translateDescriptionMock(...args),
+  fetchExplainerVideoOptions: (...args: unknown[]) =>
+    fetchExplainerVideoOptionsMock(...args),
 }));
+
+// fetchExplainerVideoOptionsMock bleibt bewusst gemockt (sonst greift der
+// echte Server-Action-Import durch), auch wenn diese Datei die
+// Video-Button-Interaktion selbst nicht mehr testet — die zieht seit der
+// Auslagerung nach ExplainerVideoField in deren eigene Testdatei
+// (explainer-video-field.test.tsx).
 
 afterEach(() => {
   cleanup();

@@ -15,6 +15,8 @@ export function CreateBoardGameBggImportStep({
   searchResults,
   onSelectResult,
   preview,
+  selectedExplainerVideoUrl,
+  onSelectExplainerVideo,
 }: {
   bggInput: string;
   onBggInputChange: (value: string) => void;
@@ -23,6 +25,10 @@ export function CreateBoardGameBggImportStep({
   searchResults: BggSearchResult[] | null;
   onSelectResult: (bggId: number) => void;
   preview: BggGameData | null;
+  /** Aktuell im Formular stehende Erklärvideo-URL — hebt den gewählten
+   * Treffer in der Auswahlliste hervor (#185). */
+  selectedExplainerVideoUrl?: string;
+  onSelectExplainerVideo?: (url: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -85,6 +91,37 @@ export function CreateBoardGameBggImportStep({
               </p>
             )}
           </div>
+        </div>
+      )}
+      {preview && preview.germanExplainerVideos.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">
+            Deutschsprachiges Regelvideo auswählen
+          </p>
+          <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border p-1">
+            {preview.germanExplainerVideos.map((video) => {
+              const isSelected = selectedExplainerVideoUrl === video.url;
+              return (
+                <li key={video.url}>
+                  <button
+                    type="button"
+                    className={`hover:bg-accent hover:text-accent-foreground group w-full rounded px-2 py-1.5 text-left text-sm ${
+                      isSelected ? "bg-accent text-accent-foreground" : ""
+                    }`}
+                    onClick={() => onSelectExplainerVideo?.(video.url)}
+                  >
+                    {video.title || video.url}
+                    {video.channel && (
+                      <span className="text-muted-foreground group-hover:text-accent-foreground/80">
+                        {" "}
+                        ({video.channel})
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>

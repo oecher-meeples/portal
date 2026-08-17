@@ -25,16 +25,19 @@ vi.mock("next/navigation", () => ({
 }));
 
 const createBoardGameMock = vi.fn();
-const previewBggImportMock = vi.fn();
-const searchBggGamesActionMock = vi.fn();
 const findDuplicateBoardGameMock = vi.fn();
 vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
+  findDuplicateBoardGame: (...args: unknown[]) =>
+    findDuplicateBoardGameMock(...args),
+}));
+
+const previewBggImportMock = vi.fn();
+const searchBggGamesActionMock = vi.fn();
+vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
   previewBggImport: (...args: unknown[]) => previewBggImportMock(...args),
   searchBggGamesAction: (...args: unknown[]) =>
     searchBggGamesActionMock(...args),
-  findDuplicateBoardGame: (...args: unknown[]) =>
-    findDuplicateBoardGameMock(...args),
 }));
 
 vi.mock("@/lib/ludothek/game-copies", () => ({
@@ -115,6 +118,8 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
         description: "Zoo-Aufbauspiel",
         mechanics: ["Engine Building"],
         explainerVideoUrl: null,
+        germanExplainerVideos: [],
+        englishExplainerVideos: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -198,6 +203,8 @@ describe("CreateBoardGameDialog — BGG-Import: BGG-Link", () => {
         description: null,
         mechanics: [],
         explainerVideoUrl: null,
+        germanExplainerVideos: [],
+        englishExplainerVideos: [],
       },
     });
 
@@ -267,6 +274,8 @@ describe("CreateBoardGameDialog — BGG-Import: Namenssuche (Fallback)", () => {
         description: null,
         mechanics: [],
         explainerVideoUrl: null,
+        germanExplainerVideos: [],
+        englishExplainerVideos: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -327,5 +336,101 @@ describe("CreateBoardGameDialog — BGG-Import: Namenssuche (Fallback)", () => {
         "Keine Treffer auf BoardGameGeek gefunden.",
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
+  it("leaves the video field empty until the admin picks from multiple German matches", async () => {
+    const user = userEvent.setup();
+    previewBggImportMock.mockResolvedValue({
+      success: true,
+      data: {
+        title: "Ark Nova",
+        minPlayers: 1,
+        maxPlayers: 4,
+        playTimeMinutes: 150,
+        weight: 3.7,
+        imageUrl: null,
+        description: null,
+        mechanics: [],
+        explainerVideoUrl: "https://www.youtube.com/watch?v=english-fallback",
+        germanExplainerVideos: [
+          {
+            title: "Regeln auf Deutsch",
+            url: "https://www.youtube.com/watch?v=german1",
+            channel: "ChannelA",
+          },
+          {
+            title: "Ausführliche Regelerklärung",
+            url: "https://www.youtube.com/watch?v=german2",
+            channel: "ChannelB",
+          },
+        ],
+      },
+    });
+
+    render(<CreateBoardGameDialog />);
+    const dialog = await openDialog(user);
+
+    await submitBggInput(dialog, user, "342942");
+
+    expect(
+      await within(dialog).findByText("Regeln auf Deutsch", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("Ausführliche Regelerklärung", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: /Ausführliche Regelerklärung/,
+      }),
+    );
+
+    await goNext(dialog, user);
+    expect(
+      within(dialog).getByLabelText("Erklärvideo (YouTube-Link)"),
+    ).toHaveValue("https://www.youtube.com/watch?v=german2");
+  });
+
+  it("falls back to the first instructional video when no German match exists", async () => {
+    const user = userEvent.setup();
+    previewBggImportMock.mockResolvedValue({
+      success: true,
+      data: {
+        title: "Ark Nova",
+        minPlayers: 1,
+        maxPlayers: 4,
+        playTimeMinutes: 150,
+        weight: 3.7,
+        imageUrl: null,
+        description: null,
+        mechanics: [],
+        explainerVideoUrl: "https://www.youtube.com/watch?v=english-fallback",
+        germanExplainerVideos: [],
+        englishExplainerVideos: [],
+      },
+    });
+
+    render(<CreateBoardGameDialog />);
+    const dialog = await openDialog(user);
+
+    await submitBggInput(dialog, user, "342942");
+    await waitFor(() =>
+      expect(previewBggImportMock).toHaveBeenCalledWith(342942),
+    );
+
+    expect(
+      within(dialog).queryByText("Deutschsprachiges Regelvideo auswählen"),
+    ).not.toBeInTheDocument();
+
+    await goNext(dialog, user);
+    expect(
+      within(dialog).getByLabelText("Erklärvideo (YouTube-Link)"),
+    ).toHaveValue("https://www.youtube.com/watch?v=english-fallback");
   });
 });

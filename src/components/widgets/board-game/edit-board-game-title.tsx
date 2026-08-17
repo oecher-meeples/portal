@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
-import { parseMechanics, formatMechanics } from "@/lib/ludothek/bgg-id";
-import { translateDescription } from "@/lib/ludothek/board-games";
+import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
+import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
+import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
 /**
@@ -206,14 +207,11 @@ export function EditBoardGameTitle({
         onChange={(event) => onChange({ imageUrl: event.target.value })}
         placeholder="https://…"
       />
-      <TextField
-        id={`${idPrefix}-video`}
-        label="Erklärvideo (YouTube-Link)"
+      <ExplainerVideoField
+        idPrefix={idPrefix}
         value={values.explainerVideoUrl}
-        onChange={(event) =>
-          onChange({ explainerVideoUrl: event.target.value })
-        }
-        placeholder="https://www.youtube.com/watch?v=…"
+        bggIdText={values.bggId}
+        onChange={(url) => onChange({ explainerVideoUrl: url })}
       />
 
       <div className="flex flex-col gap-1.5 sm:col-span-2">

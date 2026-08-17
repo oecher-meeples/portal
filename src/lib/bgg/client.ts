@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { requireEnv } from "@/lib/utils/require-env";
+import { decodeHtmlEntities } from "@/lib/utils/decode-html-entities";
 
 const BGG_API_BASE = "https://boardgamegeek.com/xmlapi2";
 
@@ -29,7 +30,34 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** Erstes deutsches, sonst erstes englisches instruktives YouTube-Video —
+   * nur diese beiden Sprachen gelten als Fallback, alles andere wird
+   * ignoriert (#185-Folgeanfrage: "Nur Deutsche und Englische Videos"). Beim
+   * automatischen Import wird die URL direkt übernommen; im "Video
+   * aktualisieren"-Dialog stehen dieselben Kandidaten mit Titel/Kanal über
+   * `germanExplainerVideos`/`englishExplainerVideos` zur Verfügung, damit der
+   * Admin auch dort aktiv auswählt statt sie stillschweigend übernommen zu
+   * bekommen (#185-Folge). */
   explainerVideoUrl: string | null;
+  /** Alle instruktiven YouTube-Videos mit `language="German"` im (auf die
+   * ~15 aktuellsten Einträge begrenzten) BGG-Videofenster — Grundlage für
+   * die Auswahlliste im Import-Dialog, siehe `selectGermanExplainerVideos()` (#185). */
+  germanExplainerVideos: BggExplainerVideo[];
+  /** Alle instruktiven YouTube-Videos ohne Sprachangabe oder mit
+   * `language="English"` — Grundlage für die Fallback-Auswahlliste im "Video
+   * aktualisieren"-Dialog, wenn kein deutschsprachiger Treffer existiert.
+   * Andere Sprachen werden bewusst nicht angezeigt (#185-Folgeanfrage). */
+  englishExplainerVideos: BggExplainerVideo[];
+}
+
+export interface BggExplainerVideo {
+  title: string;
+  url: string;
+  channel: string;
+  /** Nur für YouTube-Suchtreffer bekannt (#185-Folgeanfrage) — BGG liefert
+   * keine Abonnentenzahlen. In der Auswahlliste zeigt ein fehlender Wert
+   * dementsprechend "–" statt einer Zahl. */
+  subscriberCount?: number;
 }
 
 interface BggNameEntry {
@@ -43,8 +71,13 @@ interface BggLinkEntry {
 }
 
 interface BggVideoEntry {
+  title?: string;
   category?: string;
   link?: string;
+  username?: string;
+  /** Ausgeschrieben, z. B. "German", "English" — trotz ursprünglicher Annahme
+   * liefert BGG das doch mit, siehe #185. */
+  language?: string;
 }
 
 interface BggItem {
@@ -98,29 +131,6 @@ const parser = new XMLParser({
     (name === "name" || name === "link" || name === "video" || name === "item"),
 });
 
-const HTML_ENTITY_MAP: Record<string, string> = {
-  "&amp;": "&",
-  "&quot;": '"',
-  "&apos;": "'",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&nbsp;": " ",
-  "&mdash;": "—",
-  "&ndash;": "–",
-  "&hellip;": "…",
-};
-
-function decodeHtmlEntities(input: string): string {
-  return input
-    .replace(
-      /&amp;|&quot;|&apos;|&lt;|&gt;|&nbsp;|&mdash;|&ndash;|&hellip;/g,
-      (match) => HTML_ENTITY_MAP[match],
-    )
-    .replace(/&#(\d+);/g, (_, code: string) =>
-      String.fromCharCode(Number(code)),
-    );
-}
-
 function toArray<T>(value: T | T[] | undefined): T[] {
   if (value === undefined) return [];
   return Array.isArray(value) ? value : [value];
@@ -142,14 +152,53 @@ function isYoutubeLink(link: string): boolean {
   }
 }
 
-function selectExplainerVideoUrl(videos: BggItem["videos"]): string | null {
-  const entry = toArray(videos?.video).find(
-    (video) =>
-      video.category === "instructional" &&
-      video.link !== undefined &&
-      isYoutubeLink(video.link),
+/**
+ * Alle instruktiven YouTube-Videos im gelieferten Videofenster, deren Sprache
+ * `predicate` erfüllt (#185). BEKANNTE GRENZE: der `thing`-Endpunkt liefert im
+ * `videos`-Block nur ein festes Fenster der ~15 aktuellsten Videos, auch wenn
+ * `<videos total>` mehr meldet — ein existierendes Video außerhalb dieses
+ * Fensters wird nicht gefunden. Das ist eine BGG-API-Einschränkung, keine
+ * Regression: die Website selbst filtert Sprache nur clientseitig/serverseitig
+ * auf einer eigenen, nicht über die XML-API erreichbaren Route.
+ */
+function selectExplainerVideosByLanguage(
+  videos: BggItem["videos"],
+  predicate: (language: string | undefined) => boolean,
+): BggExplainerVideo[] {
+  return toArray(videos?.video)
+    .filter(
+      (video): video is BggVideoEntry & { link: string } =>
+        video.category === "instructional" &&
+        predicate(video.language) &&
+        video.link !== undefined &&
+        isYoutubeLink(video.link),
+    )
+    .map((video) => ({
+      title: video.title ?? "",
+      url: video.link,
+      channel: video.username ?? "",
+    }));
+}
+
+function selectGermanExplainerVideos(
+  videos: BggItem["videos"],
+): BggExplainerVideo[] {
+  return selectExplainerVideosByLanguage(
+    videos,
+    (language) => language === "German",
   );
-  return entry?.link ?? null;
+}
+
+/** Videos ohne Sprachangabe gelten als Englisch — BGG setzt das Attribut nur
+ * für nicht-englische Videos, viele ältere/englische Einträge tragen daher
+ * gar kein `language`-Attribut (#185-Folgeanfrage). */
+function selectEnglishExplainerVideos(
+  videos: BggItem["videos"],
+): BggExplainerVideo[] {
+  return selectExplainerVideosByLanguage(
+    videos,
+    (language) => language === undefined || language === "English",
+  );
 }
 
 function mapItem(item: BggItem): BggGameData {
@@ -161,6 +210,8 @@ function mapItem(item: BggItem): BggGameData {
     .map((link) => link.value);
 
   const rawWeight = parseNumber(item.statistics?.ratings?.averageweight?.value);
+  const germanExplainerVideos = selectGermanExplainerVideos(item.videos);
+  const englishExplainerVideos = selectEnglishExplainerVideos(item.videos);
 
   return {
     title: primaryName?.value ?? "",
@@ -174,7 +225,10 @@ function mapItem(item: BggItem): BggGameData {
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
-    explainerVideoUrl: selectExplainerVideoUrl(item.videos),
+    explainerVideoUrl:
+      germanExplainerVideos[0]?.url ?? englishExplainerVideos[0]?.url ?? null,
+    germanExplainerVideos,
+    englishExplainerVideos,
   };
 }
 
