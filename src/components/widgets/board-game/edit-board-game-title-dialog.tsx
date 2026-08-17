@@ -6,6 +6,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { updateBoardGame } from "@/lib/ludothek/board-games";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
+import { AlternateNamesManager } from "@/components/widgets/board-game/alternate-names-manager";
 import {
   boardGameFormToTitleInput,
   boardGameToFormValues,
@@ -68,6 +69,7 @@ export function EditBoardGameTitleDialog({
           onChange={patchForm}
           mechanicsOptions={mechanicsOptions}
         />
+        <AlternateNamesManager boardGameId={game.boardGameId} />
       </div>
     </ActionDialog>
   );

@@ -30,6 +30,11 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** Alle `name type="alternate"`-Einträge, ungefiltert — Grundlage für die
+   * automatische Befüllung der Alternativnamen-Liste beim Import (#187).
+   * BGG liefert hier z. B. deutsche Titel neben dem meist englischen
+   * `primary`-Namen. */
+  alternateNames: string[];
   /** Erstes deutsches, sonst erstes englisches instruktives YouTube-Video —
    * nur diese beiden Sprachen gelten als Fallback, alles andere wird
    * ignoriert (#185-Folgeanfrage: "Nur Deutsche und Englische Videos"). Beim
@@ -204,6 +209,9 @@ function selectEnglishExplainerVideos(
 function mapItem(item: BggItem): BggGameData {
   const names = toArray(item.name);
   const primaryName = names.find((name) => name.type === "primary") ?? names[0];
+  const alternateNames = names
+    .filter((name) => name.type === "alternate")
+    .map((name) => decodeHtmlEntities(name.value));
 
   const mechanics = toArray(item.link)
     .filter((link) => link.type === "boardgamemechanic")
@@ -225,6 +233,7 @@ function mapItem(item: BggItem): BggGameData {
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
+    alternateNames,
     explainerVideoUrl:
       germanExplainerVideos[0]?.url ?? englishExplainerVideos[0]?.url ?? null,
     germanExplainerVideos,

@@ -113,6 +113,43 @@ describe("createBoardGame", () => {
     });
   });
 
+  it("creates BoardGameAlternateName rows from the BGG-Import-Vorschau (#187)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.create.mockResolvedValue({
+      id: "game-1",
+      title: "Ark Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
+
+    await createBoardGame({
+      ...VALID_INPUT,
+      alternateNames: ["Ark Nova (Deutsch)"],
+    });
+
+    expect(prismaMock.boardGameAlternateName.createMany).toHaveBeenCalledWith({
+      data: [{ boardGameId: "game-1", name: "Ark Nova (Deutsch)" }],
+    });
+  });
+
+  it("does not duplicate alternate names when reusing an existing title by bggId", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "existing-title",
+      title: "Ark Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
+
+    await createBoardGame({
+      ...VALID_INPUT,
+      bggId: 342942,
+      alternateNames: ["Ark Nova (Deutsch)"],
+    });
+
+    expect(prismaMock.boardGameAlternateName.createMany).not.toHaveBeenCalled();
+  });
+
   it("places the first copy in the given unit instead of Unsortiert when a placement is set (#121/#122)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);

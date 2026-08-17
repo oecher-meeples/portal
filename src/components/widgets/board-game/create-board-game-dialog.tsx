@@ -282,6 +282,7 @@ export function CreateBoardGameDialog({
         const input: CreateBoardGameInput = {
           ...boardGameFormToInput(form),
           ...(placement ? { placement } : {}),
+          alternateNames: preview?.alternateNames,
         };
         const result = await createBoardGame(input);
         if (result.error) {

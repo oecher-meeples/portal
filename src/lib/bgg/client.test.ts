@@ -49,6 +49,7 @@ describe("fetchBggGame", () => {
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
+      alternateNames: ["Ark Nova (Deutsch)"],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
@@ -69,10 +70,19 @@ describe("fetchBggGame", () => {
       imageUrl: null,
       description: null,
       mechanics: [],
+      alternateNames: [],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
     });
+  });
+
+  it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {
+    mockFetchOnce(true, 200, loadFixture("success-full.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.alternateNames).toEqual(["Ark Nova (Deutsch)"]);
   });
 
   it("picks the first instructional video with a youtube host, skipping non-matching entries", async () => {

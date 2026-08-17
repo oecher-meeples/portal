@@ -40,6 +40,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
                 },
               },
             },
+            alternateNames: { select: { name: true } },
+            secondaryAlternateName: { select: { name: true } },
           },
         },
         holdings: {
@@ -98,6 +100,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       ean: boardGame.ean,
       condition: copy.condition,
       bggId: boardGame.bggId,
+      alternateNames: boardGame.alternateNames.map((a) => a.name),
+      secondaryAlternateName: boardGame.secondaryAlternateName?.name ?? null,
       description: boardGame.description,
       explainerVideoUrl: boardGame.explainerVideoUrl,
       kind: boardGame.kind,

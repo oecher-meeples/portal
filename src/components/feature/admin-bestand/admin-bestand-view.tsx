@@ -50,6 +50,9 @@ export type AdminBoardGameRow = {
   condition: string | null;
   kind: BoardGameKind;
   explainerVideoUrl: string | null;
+  /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
+   * selbst (#187). */
+  alternateNames: string[];
 };
 
 type QuickFilter = "all" | "ungeprueft" | "mangel" | "nicht-erfasst";

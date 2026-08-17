@@ -36,6 +36,11 @@ export type CreateBoardGameInput = BoardGameTitleInput & {
   /** Initial standort for the first copy — defaults to "Unsortiert" when
    * omitted (#121/#122). `self` places it directly with the creator. */
   placement?: CopyPlacementInput;
+  /** Ungefiltert aus BGGs `name type="alternate"` (#187) — nur bei einem
+   * wirklich neuen Titel angelegt, siehe `willReuseByBggId` unten. Beim
+   * Anlegen eines weiteren Exemplars eines bereits bekannten `bggId`-Titels
+   * würden diese sonst bei jedem Mal dupliziert. */
+  alternateNames?: string[];
 };
 
 function validateBoardGameInput(input: BoardGameTitleInput) {
@@ -171,6 +176,16 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 
   const copy = await prisma.$transaction(async (tx) => {
     const title = await findOrCreateBoardGameTitle(input, tx);
+
+    if (!willReuseByBggId && input.alternateNames?.length) {
+      await tx.boardGameAlternateName.createMany({
+        data: input.alternateNames.map((name) => ({
+          boardGameId: title.id,
+          name,
+        })),
+      });
+    }
+
     return createGameCopyTx(tx, {
       boardGameId: title.id,
       boardGameTitle: title.title,

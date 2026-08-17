@@ -37,4 +37,18 @@ describe("matchesAdminBestandSearch", () => {
       ),
     ).toBe(false);
   });
+
+  it("matches on an alternate name substring, case-insensitively (#187)", () => {
+    const gameWithAlternate = {
+      ...game,
+      alternateNames: ["Die Siedler von Catan"],
+    };
+
+    expect(matchesAdminBestandSearch(gameWithAlternate, "siedler")).toBe(true);
+    expect(matchesAdminBestandSearch(gameWithAlternate, "SIEDLER")).toBe(true);
+  });
+
+  it("does not match when alternateNames is omitted entirely", () => {
+    expect(matchesAdminBestandSearch(game, "siedler")).toBe(false);
+  });
 });

@@ -82,6 +82,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     ean: null,
     condition: null,
     bggId: null,
+    alternateNames: [],
+    secondaryAlternateName: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
