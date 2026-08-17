@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { requireEnv } from "@/lib/utils/require-env";
 
 const BGG_API_BASE = "https://boardgamegeek.com/xmlapi2";
 
@@ -66,7 +67,25 @@ interface BggItem {
 
 interface BggThingResponse {
   items?: {
-    item?: BggItem;
+    item?: BggItem | BggItem[];
+  };
+}
+
+export interface BggSearchResult {
+  bggId: number;
+  title: string;
+  yearPublished: number | null;
+}
+
+interface BggSearchItem {
+  id?: string;
+  name?: BggNameEntry | BggNameEntry[];
+  yearpublished?: { value?: string };
+}
+
+interface BggSearchResponse {
+  items?: {
+    item?: BggSearchItem | BggSearchItem[];
   };
 }
 
@@ -75,7 +94,8 @@ const parser = new XMLParser({
   attributeNamePrefix: "",
   htmlEntities: true,
   isArray: (name, _jpath, _isLeafNode, isAttribute) =>
-    !isAttribute && (name === "name" || name === "link" || name === "video"),
+    !isAttribute &&
+    (name === "name" || name === "link" || name === "video" || name === "item"),
 });
 
 const HTML_ENTITY_MAP: Record<string, string> = {
@@ -162,16 +182,17 @@ const FETCH_TIMEOUT_MS = 8000;
 /** BGG-Metadaten (Titel, Spielerzahl, Beschreibung, …) ändern sich praktisch nie. */
 const REVALIDATE_SECONDS = 24 * 60 * 60;
 
-export async function fetchBggGame(bggId: number): Promise<BggGameData> {
+async function fetchBggXml(
+  path: string,
+  revalidateSeconds: number,
+): Promise<string> {
   let response: Response;
   try {
-    response = await fetch(
-      `${BGG_API_BASE}/thing?id=${bggId}&stats=1&videos=1`,
-      {
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        next: { revalidate: REVALIDATE_SECONDS },
-      },
-    );
+    response = await fetch(`${BGG_API_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${requireEnv("BGG_BEARER_TOKEN")}` },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      next: { revalidate: revalidateSeconds },
+    });
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       throw new BggApiError(
@@ -186,13 +207,72 @@ export async function fetchBggGame(bggId: number): Promise<BggGameData> {
       response.status,
     );
   }
+  return response.text();
+}
 
-  const xml = await response.text();
+export async function fetchBggGame(bggId: number): Promise<BggGameData> {
+  const xml = await fetchBggXml(
+    `/thing?id=${bggId}&stats=1&videos=1`,
+    REVALIDATE_SECONDS,
+  );
   const parsed = parser.parse(xml) as BggThingResponse;
-  const item = parsed.items?.item;
+  const item = toArray(parsed.items?.item)[0];
   if (!item) {
     throw new BggNotFoundError(bggId);
   }
 
   return mapItem(item);
+}
+
+/** Suchergebnisse ändern sich mit neuen BGG-Einträgen — kürzer cachen als Detaildaten. */
+const SEARCH_REVALIDATE_SECONDS = 60 * 60;
+
+/**
+ * BGG sortiert Suchergebnisse nicht nach Relevanz zum eingegebenen Text —
+ * ein exakter Treffer wie "Catan" kann hinter langen Titeln landen, die den
+ * Suchbegriff nur als Teilstring enthalten (z. B. Erweiterungen/Varianten).
+ * Rang 0 = exakter Treffer, 1 = beginnt damit, 2 = alles andere; je Rang
+ * gewinnt der kürzere Titel — je weniger "Rauschen" um den Treffer, desto
+ * wahrscheinlicher ist es das gesuchte Spiel.
+ */
+function titleMatchRank(title: string, query: string): number {
+  const normalisedTitle = title.trim().toLowerCase();
+  const normalisedQuery = query.trim().toLowerCase();
+  if (normalisedTitle === normalisedQuery) return 0;
+  if (normalisedTitle.startsWith(normalisedQuery)) return 1;
+  return 2;
+}
+
+export async function searchBggGames(
+  query: string,
+): Promise<BggSearchResult[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const xml = await fetchBggXml(
+    `/search?query=${encodeURIComponent(trimmed)}&type=boardgame`,
+    SEARCH_REVALIDATE_SECONDS,
+  );
+  const parsed = parser.parse(xml) as BggSearchResponse;
+
+  const results = toArray(parsed.items?.item)
+    .map((item) => {
+      const bggId = parseNumber(item.id);
+      const names = toArray(item.name);
+      const primaryName =
+        names.find((name) => name.type === "primary") ?? names[0];
+      if (bggId === null || !primaryName?.value) return null;
+      return {
+        bggId,
+        title: primaryName.value,
+        yearPublished: parseNumber(item.yearpublished?.value),
+      };
+    })
+    .filter((result): result is BggSearchResult => result !== null);
+
+  return results.sort(
+    (a, b) =>
+      titleMatchRank(a.title, trimmed) - titleMatchRank(b.title, trimmed) ||
+      a.title.length - b.title.length,
+  );
 }

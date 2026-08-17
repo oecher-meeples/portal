@@ -12,11 +12,18 @@ import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { toSparePartListingData } from "@/lib/inventory/spare-part-listings";
 import { uniqueSlug } from "@/lib/utils/slug";
+import {
+  resolveCopyPlacement,
+  type CopyPlacementInput,
+} from "@/lib/ludothek/game-copy-placement";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
+export type { CopyPlacementInput };
+
 export type GameCopyInput = {
   condition?: string | null;
+  placement?: CopyPlacementInput;
 };
 
 async function uniqueGameCopySlug(tx: Tx, title: string, excludeId?: string) {
@@ -93,12 +100,14 @@ export async function createGameCopy(
   }
 
   const actor = await ensureMeeple(user);
+  const placement = resolveCopyPlacement(input.placement, actor.id);
   const copy = await prisma.$transaction((tx) =>
     createGameCopyTx(tx, {
       boardGameId: title.id,
       boardGameTitle: title.title,
       condition: input.condition,
       actorId: actor.id,
+      placement,
     }),
   );
 

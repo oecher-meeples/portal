@@ -1,6 +1,7 @@
 import { BoardGameKind } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
 import { parseMechanics, formatMechanics } from "@/lib/ludothek/bgg-id";
@@ -19,6 +20,9 @@ export function EditBoardGameTitle({
   values,
   onChange,
   mechanicsOptions,
+  titleWarning,
+  onLoadExistingTitle,
+  loadingExistingTitle,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
@@ -28,16 +32,45 @@ export function EditBoardGameTitle({
    * field (e.g. when creating a brand-new title with no suggestions yet
    * worth showing) (#124). */
   mechanicsOptions?: string[];
+  /** Rahmt das Titel-Feld in derselben Warnfarbe wie die Duplikat-Warnung im
+   * Anlegen-Dialog — Titel existiert bereits, Eingabe wird verworfen (#183). */
+  titleWarning?: boolean;
+  /** Zeigt bei `titleWarning` einen "Titel laden"-Button unter dem Titel-Feld
+   * — übernimmt die echten Bestandsdaten statt die Eingabe zu verwerfen,
+   * damit Korrekturen möglich bleiben (#183). */
+  onLoadExistingTitle?: () => void;
+  /** Deaktiviert den "Titel laden"-Button während der Server-Anfrage. */
+  loadingExistingTitle?: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <TextField
-        id={`${idPrefix}-title`}
-        label="Titel"
-        value={values.title}
-        onChange={(event) => onChange({ title: event.target.value })}
-        required
-      />
+      <div className="flex flex-col gap-1.5">
+        <TextField
+          id={`${idPrefix}-title`}
+          label="Titel"
+          value={values.title}
+          onChange={(event) => onChange({ title: event.target.value })}
+          required
+          warning={titleWarning}
+          className={
+            titleWarning
+              ? "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50"
+              : undefined
+          }
+        />
+        {titleWarning && onLoadExistingTitle && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onLoadExistingTitle}
+            disabled={loadingExistingTitle}
+            className="self-start"
+          >
+            {loadingExistingTitle ? "Lade…" : "Titel laden"}
+          </Button>
+        )}
+      </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${idPrefix}-kind`}>Art</Label>
         <select

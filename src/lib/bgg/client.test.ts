@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { BggApiError, BggNotFoundError, fetchBggGame } from "./client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  BggApiError,
+  BggNotFoundError,
+  fetchBggGame,
+  searchBggGames,
+} from "./client";
 
 function loadFixture(name: string): string {
   return fs.readFileSync(
@@ -21,8 +26,13 @@ function mockFetchOnce(ok: boolean, status: number, xml: string) {
 }
 
 describe("fetchBggGame", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it("maps a full response with all optional fields present", async () => {
@@ -122,5 +132,64 @@ describe("fetchBggGame", () => {
     await expect(fetchBggGame(1)).rejects.toThrow(
       "Die Anfrage an BoardGameGeek hat zu lange gedauert.",
     );
+  });
+});
+
+describe("searchBggGames", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("maps multiple search hits with title and year", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-multiple.xml"));
+
+    const result = await searchBggGames("Ark Nova");
+
+    expect(result).toEqual([
+      { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      { bggId: 12345, title: "Ark Nova: Marschmoor", yearPublished: 2023 },
+    ]);
+  });
+
+  it("ranks an exact title match first, ahead of longer titles that merely contain the query (#183)", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-catan.xml"));
+
+    const result = await searchBggGames("Catan");
+
+    expect(result.map((hit) => hit.title)).toEqual([
+      "Catan",
+      "Barna fra Catan",
+      "7 Wonders: Catan",
+      "Baden-Württemberg Catan",
+      "The 7 Wonders of Catan (fan expansion for Catan)",
+    ]);
+  });
+
+  it("returns an empty array for zero hits", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-empty.xml"));
+
+    const result = await searchBggGames("kein-treffer-xyz");
+
+    expect(result).toEqual([]);
+  });
+
+  it("returns an empty array without calling fetch for a blank query", async () => {
+    const fetchMock = mockFetchOnce(true, 200, "");
+
+    const result = await searchBggGames("   ");
+
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("throws BggApiError for a non-2xx HTTP response", async () => {
+    mockFetchOnce(false, 503, "");
+
+    await expect(searchBggGames("Ark Nova")).rejects.toThrow(BggApiError);
   });
 });

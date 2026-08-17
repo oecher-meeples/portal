@@ -156,7 +156,12 @@ async function seedDemoGames(adminMeepleId: string) {
   let createdCopyCount = 0;
 
   for (const game of DEMO_GAMES) {
-    if (existingIdByTitle.has(game.title)) continue;
+    // `gameIdByTitle` (unlike `existingIdByTitle`) also picks up titles
+    // created earlier in *this* loop — guards against an accidental
+    // duplicate title within `DEMO_GAMES` itself, not just against titles
+    // already in the DB from a previous run (see #183 follow-up: two
+    // separate "Catan" entries silently created two separate titles).
+    if (gameIdByTitle.has(game.title)) continue;
 
     const slug = await uniqueBoardGameSlug(prisma, game.title);
     const created = await prisma.boardGame.create({

@@ -6,12 +6,18 @@ import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { createGameCopyTx } from "@/lib/ludothek/game-copies";
+import {
+  resolveCopyPlacement,
+  type CopyPlacementInput,
+} from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
   BggApiError,
   BggNotFoundError,
   fetchBggGame,
+  searchBggGames,
   type BggGameData,
+  type BggSearchResult,
 } from "@/lib/bgg/client";
 import { uniqueSlug } from "@/lib/utils/slug";
 
@@ -37,7 +43,7 @@ export type CreateBoardGameInput = BoardGameTitleInput & {
   condition?: string | null;
   /** Initial standort for the first copy — defaults to "Unsortiert" when
    * omitted (#121/#122). `self` places it directly with the creator. */
-  placement?: { unitId: string } | { self: true };
+  placement?: CopyPlacementInput;
 };
 
 function validateBoardGameInput(input: BoardGameTitleInput) {
@@ -142,16 +148,34 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     return { error: validationError };
   }
 
+  // Ein bekannter bggId reusest den vorhandenen Titel ohnehin (siehe
+  // `findOrCreateBoardGameTitle`) — kein Duplikat. Ohne diesen Fall würde
+  // `findOrCreateBoardGameTitle` einen neuen, gleichnamigen Titel anlegen;
+  // das verhindern wir hier hart, statt es nur im Dialog zu warnen (#183).
+  const willReuseByBggId = input.bggId
+    ? Boolean(
+        await prisma.boardGame.findUnique({
+          where: { bggId: input.bggId },
+          select: { id: true },
+        }),
+      )
+    : false;
+
+  if (!willReuseByBggId) {
+    const collision = await findTitleOnlyMatch(input.title);
+    if (collision) {
+      return {
+        error: `„${collision.title}“ existiert bereits im Bestand. Bitte über „Weiteres Exemplar anlegen“ eine weitere Kopie dieses Titels anlegen, statt einen zweiten Titel mit demselben Namen zu erzeugen.`,
+      };
+    }
+  }
+
   const [hint, actor] = await Promise.all([
     duplicateEanHint(input.ean),
     ensureMeeple(user),
   ]);
 
-  const placement = input.placement
-    ? "self" in input.placement
-      ? { meepleId: actor.id }
-      : { unitId: input.placement.unitId }
-    : undefined;
+  const placement = resolveCopyPlacement(input.placement, actor.id);
 
   const copy = await prisma.$transaction(async (tx) => {
     const title = await findOrCreateBoardGameTitle(input, tx);
@@ -191,6 +215,96 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
   revalidatePath(`/ludothek/${game.slug}`);
   revalidatePath("/admin/bestand");
   return { success: true as const, hint };
+}
+
+/**
+ * Lädt die vollen Titel-Felder eines bestehenden Titels — Grundlage für
+ * „Titel laden" im Anlegen-Dialog: statt die Eingabe bei einem erkannten
+ * Duplikat zu verwerfen, übernimmt der Admin die echten Bestandsdaten und
+ * kann sie korrigieren (#183).
+ */
+export async function getBoardGameTitleForEdit(id: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) return null;
+
+  return prisma.boardGame.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      ean: true,
+      kind: true,
+      bggId: true,
+      minPlayers: true,
+      maxPlayers: true,
+      playTimeMinutes: true,
+      weight: true,
+      imageUrl: true,
+      description: true,
+      mechanics: true,
+      explainerVideoUrl: true,
+    },
+  });
+}
+
+export type DuplicateBoardGameMatch = { id: string; title: string };
+
+/** Case-insensitive exakter Titel-Match, ohne Permission-Check — interner
+ * Baustein für `findDuplicateBoardGame` (Client-Warnung) und den
+ * Server-seitigen Hard-Block in `createBoardGame` (#183). */
+async function findTitleOnlyMatch(
+  title: string,
+): Promise<DuplicateBoardGameMatch | null> {
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) return null;
+
+  return prisma.boardGame.findFirst({
+    where: { title: { equals: trimmedTitle, mode: "insensitive" } },
+    select: { id: true, title: true },
+  });
+}
+
+/**
+ * Prüft, ob dieser Titel (per `bggId` oder exaktem Titel, case-insensitive)
+ * bereits im Bestand existiert — Grundlage für die "weiteres Exemplar
+ * anlegen"-Warnung im Anlegen-Dialog (#183).
+ */
+export async function findDuplicateBoardGame(
+  title: string,
+  bggId?: number | null,
+): Promise<DuplicateBoardGameMatch | null> {
+  const user = await requireGamesManagePermission();
+  if (!user) return null;
+
+  if (bggId) {
+    const byBggId = await prisma.boardGame.findUnique({
+      where: { bggId },
+      select: { id: true, title: true },
+    });
+    if (byBggId) return byBggId;
+  }
+
+  return findTitleOnlyMatch(title);
+}
+
+export async function searchBggGamesAction(query: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { success: false as const, error: "Keine Berechtigung." };
+  }
+
+  try {
+    const results: BggSearchResult[] = await searchBggGames(query);
+    return { success: true as const, results };
+  } catch (error) {
+    if (error instanceof BggApiError) {
+      return {
+        success: false as const,
+        error:
+          "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
+      };
+    }
+    throw error;
+  }
 }
 
 export async function previewBggImport(bggId: number) {

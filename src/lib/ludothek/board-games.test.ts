@@ -28,12 +28,8 @@ vi.mock("@/lib/bgg/client", async () => {
 });
 
 const { BggApiError, BggNotFoundError } = await import("@/lib/bgg/client");
-const {
-  createBoardGame,
-  updateBoardGame,
-  previewBggImport,
-  findOrCreateBoardGameTitle,
-} = await import("./board-games");
+const { createBoardGame, updateBoardGame, previewBggImport } =
+  await import("./board-games");
 
 const VALID_INPUT = { title: "Arche Nova" };
 const VALID_EAN = "5901234123457";
@@ -208,6 +204,58 @@ describe("createBoardGame", () => {
     });
   });
 
+  it("rejects creating a second title with the same name, even without a bggId (#183)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findFirst.mockResolvedValue({
+      id: "game-existing",
+      title: "Arche Nova",
+    } as never);
+
+    const result = await createBoardGame(VALID_INPUT);
+
+    expect(result).toEqual({
+      error:
+        "„Arche Nova“ existiert bereits im Bestand. Bitte über „Weiteres Exemplar anlegen“ eine weitere Kopie dieses Titels anlegen, statt einen zweiten Titel mit demselben Namen zu erzeugen.",
+    });
+    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a same-named title even when a (different) bggId is given", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    // No title shares this bggId, but a different title row has the same name.
+    prismaMock.boardGame.findUnique.mockResolvedValue(null);
+    prismaMock.boardGame.findFirst.mockResolvedValue({
+      id: "game-existing",
+      title: "Arche Nova",
+    } as never);
+
+    const result = await createBoardGame({ ...VALID_INPUT, bggId: 999999 });
+
+    expect(result).toEqual({
+      error:
+        "„Arche Nova“ existiert bereits im Bestand. Bitte über „Weiteres Exemplar anlegen“ eine weitere Kopie dieses Titels anlegen, statt einen zweiten Titel mit demselben Namen zu erzeugen.",
+    });
+    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
+  });
+
+  it("skips the title-collision check when the bggId already reuses an existing title", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-2" } as never);
+
+    const result = await createBoardGame({ ...VALID_INPUT, bggId: 342942 });
+
+    expect(result.success).toBe(true);
+    expect(prismaMock.boardGame.findFirst).not.toHaveBeenCalled();
+  });
+
   it("accepts a duplicate ean and reports it as a hint, not an error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
@@ -224,49 +272,6 @@ describe("createBoardGame", () => {
     expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ ean: VALID_EAN }),
     });
-  });
-});
-
-describe("findOrCreateBoardGameTitle", () => {
-  it("creates a new title when no bggId is given", async () => {
-    prismaMock.boardGame.create.mockResolvedValue({ id: "game-1" } as never);
-
-    await findOrCreateBoardGameTitle(VALID_INPUT);
-
-    expect(prismaMock.boardGame.findUnique).not.toHaveBeenCalled();
-    expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        title: "Arche Nova",
-        slug: "arche-nova",
-      }),
-    });
-  });
-
-  it("resolves a title-slug collision with a numeric suffix", async () => {
-    prismaMock.boardGame.findFirst
-      .mockResolvedValueOnce({ id: "existing" } as never)
-      .mockResolvedValueOnce(null);
-    prismaMock.boardGame.create.mockResolvedValue({ id: "game-2" } as never);
-
-    await findOrCreateBoardGameTitle(VALID_INPUT);
-
-    expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ slug: "arche-nova-2" }),
-    });
-  });
-
-  it("reuses the title found by bggId", async () => {
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "existing-title",
-    } as never);
-
-    const result = await findOrCreateBoardGameTitle({
-      ...VALID_INPUT,
-      bggId: 342942,
-    });
-
-    expect(result).toEqual({ id: "existing-title" });
-    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
   });
 });
 
