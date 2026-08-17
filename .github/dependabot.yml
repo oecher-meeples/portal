@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    # Ohne Gruppierung macht Dependabot einen PR pro Package. Ein Wildcard-
+    # Pattern bündelt alle npm-Funde eines Laufs in einen einzigen PR.
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
   # Actions sind ebenfalls Supply Chain — eine gepinnte Action-Version kann
   # ein Sicherheitsupdate genauso brauchen wie eine npm-Dependency.
   - package-ecosystem: "github-actions"
@@ -12,3 +18,7 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
