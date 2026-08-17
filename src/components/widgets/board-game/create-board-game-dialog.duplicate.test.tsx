@@ -45,6 +45,12 @@ vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
     searchBggGamesActionMock(...args),
 }));
 
+vi.mock("@/lib/ludothek/ean-search", () => ({
+  searchEanForBoardGame: vi
+    .fn()
+    .mockResolvedValue({ success: true, results: [] }),
+}));
+
 const createGameCopyMock = vi.fn();
 vi.mock("@/lib/ludothek/game-copies", () => ({
   createGameCopy: (...args: unknown[]) => createGameCopyMock(...args),

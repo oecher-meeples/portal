@@ -25,6 +25,12 @@ vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
     fetchExplainerVideoOptionsMock(...args),
 }));
 
+vi.mock("@/lib/ludothek/ean-search", () => ({
+  searchEanForBoardGame: vi
+    .fn()
+    .mockResolvedValue({ success: true, results: [] }),
+}));
+
 vi.mock("@/components/widgets/board-game/alternate-names-manager", () => ({
   AlternateNamesManager: () => null,
 }));

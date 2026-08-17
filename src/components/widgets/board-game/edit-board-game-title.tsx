@@ -41,6 +41,8 @@ export function EditBoardGameTitle({
   onLoadExistingTitle,
   loadingExistingTitle,
   compareStatus,
+  eanAutoSearch,
+  eanAlternateTitles,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
@@ -63,6 +65,12 @@ export function EditBoardGameTitle({
    * im "Daten mit BGG abgleichen"-Modus gesetzt (#189). Felder ohne
    * BGG-Entsprechung (EAN, Art, BGG-ID, Erklärvideo) bleiben unberührt. */
   compareStatus?: Partial<Record<BoardGameCompareField, boolean>>;
+  /** Löst im EAN-Feld automatisch eine EAN-Suche aus, wenn das Feld beim
+   * Mounten leer ist — nur in Schritt 2 des Anlegen-Wizards gesetzt (#197). */
+  eanAutoSearch?: boolean;
+  /** BGGs Alternativnamen (#187) — Fallback-Reihenfolge für die EAN-Suche,
+   * wenn der Haupttitel keinen Treffer liefert (#197-Folgeanfrage). */
+  eanAlternateTitles?: string[];
 }) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
@@ -136,6 +144,9 @@ export function EditBoardGameTitle({
         idPrefix={idPrefix}
         value={values.ean}
         onChange={(ean) => onChange({ ean })}
+        title={values.title}
+        autoSearchOnMount={eanAutoSearch}
+        alternateTitles={eanAlternateTitles}
       />
       <TextField
         id={`${idPrefix}-bgg-id`}

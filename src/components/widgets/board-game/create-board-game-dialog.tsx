@@ -368,6 +368,8 @@ export function CreateBoardGameDialog({
                 titleWarning={Boolean(activeDuplicate)}
                 onLoadExistingTitle={handleLoadExistingTitle}
                 loadingExistingTitle={isLoadingTitle}
+                eanAutoSearch
+                eanAlternateTitles={preview?.alternateNames}
               />
             </div>
           )}

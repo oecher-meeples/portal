@@ -14,6 +14,12 @@ vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
     fetchExplainerVideoOptionsMock(...args),
 }));
 
+vi.mock("@/lib/ludothek/ean-search", () => ({
+  searchEanForBoardGame: vi
+    .fn()
+    .mockResolvedValue({ success: true, results: [] }),
+}));
+
 // fetchExplainerVideoOptionsMock bleibt bewusst gemockt (sonst greift der
 // echte Server-Action-Import durch), auch wenn diese Datei die
 // Video-Button-Interaktion selbst nicht mehr testet — die zieht seit der

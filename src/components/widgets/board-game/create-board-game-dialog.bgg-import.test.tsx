@@ -40,6 +40,12 @@ vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
     searchBggGamesActionMock(...args),
 }));
 
+vi.mock("@/lib/ludothek/ean-search", () => ({
+  searchEanForBoardGame: vi
+    .fn()
+    .mockResolvedValue({ success: true, results: [] }),
+}));
+
 vi.mock("@/lib/ludothek/game-copies", () => ({
   createGameCopy: vi.fn(),
 }));
