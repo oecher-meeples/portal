@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { BggApiError, BggNotFoundError, fetchBggGame } from "./client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  BggApiError,
+  BggNotFoundError,
+  fetchBggGame,
+  searchBggGames,
+  searchBggGamesExact,
+} from "./client";
 
 function loadFixture(name: string): string {
   return fs.readFileSync(
@@ -21,8 +27,13 @@ function mockFetchOnce(ok: boolean, status: number, xml: string) {
 }
 
 describe("fetchBggGame", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it("maps a full response with all optional fields present", async () => {
@@ -39,7 +50,10 @@ describe("fetchBggGame", () => {
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
+      alternateNames: ["Ark Nova (Deutsch)"],
       explainerVideoUrl: null,
+      germanExplainerVideos: [],
+      englishExplainerVideos: [],
     });
   });
 
@@ -57,8 +71,19 @@ describe("fetchBggGame", () => {
       imageUrl: null,
       description: null,
       mechanics: [],
+      alternateNames: [],
       explainerVideoUrl: null,
+      germanExplainerVideos: [],
+      englishExplainerVideos: [],
     });
+  });
+
+  it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {
+    mockFetchOnce(true, 200, loadFixture("success-full.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.alternateNames).toEqual(["Ark Nova (Deutsch)"]);
   });
 
   it("picks the first instructional video with a youtube host, skipping non-matching entries", async () => {
@@ -73,6 +98,18 @@ describe("fetchBggGame", () => {
     expect(result.explainerVideoUrl).toBe(
       "https://www.youtube.com/watch?v=correct123",
     );
+    expect(result.englishExplainerVideos).toEqual([
+      {
+        title: "Ark Nova Tutorial",
+        url: "https://www.youtube.com/watch?v=correct123",
+        channel: "tutorialmaker",
+      },
+      {
+        title: "Ark Nova Tutorial 2",
+        url: "https://www.youtube.com/watch?v=shouldnotbepicked",
+        channel: "other",
+      },
+    ]);
   });
 
   it("returns null when the videos block has no instructional entry", async () => {
@@ -85,6 +122,58 @@ describe("fetchBggGame", () => {
     const result = await fetchBggGame(342942);
 
     expect(result.explainerVideoUrl).toBeNull();
+  });
+
+  it("excludes non-German, non-English videos from englishExplainerVideos (#185-Folgeanfrage)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-german-videos.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    const urls = result.englishExplainerVideos.map((video) => video.url);
+    expect(urls).toContain("https://www.youtube.com/watch?v=english1");
+    expect(urls).not.toContain("https://www.youtube.com/watch?v=german1");
+  });
+
+  it("returns an empty array for germanExplainerVideos when no video has language=German (#185)", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-with-instructional-video.xml"),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.germanExplainerVideos).toEqual([]);
+  });
+
+  it("collects every instructional, German-language, YouTube video — not just the first (#185)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-german-videos.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.germanExplainerVideos).toEqual([
+      {
+        title: "Regeln auf Deutsch",
+        url: "https://www.youtube.com/watch?v=german1",
+        channel: "ChannelA",
+      },
+      {
+        title: "Ausführliche Regelerklärung",
+        url: "https://www.youtube.com/watch?v=german2",
+        channel: "ChannelB",
+      },
+    ]);
+  });
+
+  it("excludes German videos of the wrong category or hosted outside YouTube from germanExplainerVideos (#185)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-german-videos.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    const urls = result.germanExplainerVideos.map((video) => video.url);
+    expect(urls).not.toContain("https://www.youtube.com/watch?v=review-de"); // category "review"
+    expect(urls).not.toContain("https://vimeo.com/german3"); // not YouTube
+    expect(urls).not.toContain("https://www.youtube.com/watch?v=english1"); // language "English"
   });
 
   it("requests the videos block from the bgg api", async () => {
@@ -122,5 +211,95 @@ describe("fetchBggGame", () => {
     await expect(fetchBggGame(1)).rejects.toThrow(
       "Die Anfrage an BoardGameGeek hat zu lange gedauert.",
     );
+  });
+});
+
+describe("searchBggGames", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("maps multiple search hits with title and year", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-multiple.xml"));
+
+    const result = await searchBggGames("Ark Nova");
+
+    expect(result).toEqual([
+      { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      { bggId: 12345, title: "Ark Nova: Marschmoor", yearPublished: 2023 },
+    ]);
+  });
+
+  it("ranks an exact title match first, ahead of longer titles that merely contain the query (#183)", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-catan.xml"));
+
+    const result = await searchBggGames("Catan");
+
+    expect(result.map((hit) => hit.title)).toEqual([
+      "Catan",
+      "Barna fra Catan",
+      "7 Wonders: Catan",
+      "Baden-Württemberg Catan",
+      "The 7 Wonders of Catan (fan expansion for Catan)",
+    ]);
+  });
+
+  it("returns an empty array for zero hits", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-empty.xml"));
+
+    const result = await searchBggGames("kein-treffer-xyz");
+
+    expect(result).toEqual([]);
+  });
+
+  it("returns an empty array without calling fetch for a blank query", async () => {
+    const fetchMock = mockFetchOnce(true, 200, "");
+
+    const result = await searchBggGames("   ");
+
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("throws BggApiError for a non-2xx HTTP response", async () => {
+    mockFetchOnce(false, 503, "");
+
+    await expect(searchBggGames("Ark Nova")).rejects.toThrow(BggApiError);
+  });
+});
+
+describe("searchBggGamesExact", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("sends exact=1 (#186)", async () => {
+    const fetchMock = mockFetchOnce(true, 200, loadFixture("search-empty.xml"));
+
+    await searchBggGamesExact("Ark Nova");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("exact=1");
+  });
+
+  it("maps hits the same way as the non-exact search", async () => {
+    mockFetchOnce(true, 200, loadFixture("search-multiple.xml"));
+
+    const result = await searchBggGamesExact("Ark Nova");
+
+    expect(result).toEqual([
+      { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      { bggId: 12345, title: "Ark Nova: Marschmoor", yearPublished: 2023 },
+    ]);
   });
 });

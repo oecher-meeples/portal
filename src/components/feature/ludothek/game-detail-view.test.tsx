@@ -55,6 +55,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     playTimeMinutes: 90,
     weight: 3.7,
     mechanics: [],
+    alternateNames: [],
+    secondaryAlternateName: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -134,6 +136,24 @@ describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {
     render(<GameDetailView game={game()} />);
 
     expect(screen.queryByText("Titel bearbeiten")).not.toBeInTheDocument();
+  });
+});
+
+describe("GameDetailView — Sekundärname (#187)", () => {
+  it("shows the secondary alternate name next to the title when set", () => {
+    render(
+      <GameDetailView
+        game={game({ secondaryAlternateName: "Die Siedler von Catan" })}
+      />,
+    );
+
+    expect(screen.getByText("Die Siedler von Catan")).toBeInTheDocument();
+  });
+
+  it("omits it when no secondary alternate name is set", () => {
+    render(<GameDetailView game={game({ secondaryAlternateName: null })} />);
+
+    expect(screen.queryByText("Die Siedler von Catan")).not.toBeInTheDocument();
   });
 });
 

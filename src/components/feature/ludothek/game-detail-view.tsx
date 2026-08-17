@@ -92,9 +92,16 @@ export function GameDetailView({
       <div className="flex flex-col gap-6">
         <div>
           <div className="flex items-start justify-between gap-2">
-            <h1 className="font-serif text-3xl font-bold tracking-tight">
-              {game.title}
-            </h1>
+            <div>
+              <h1 className="font-serif text-3xl font-bold tracking-tight">
+                {game.title}
+              </h1>
+              {game.secondaryAlternateName && (
+                <p className="text-muted-foreground">
+                  {game.secondaryAlternateName}
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {createLfgTrigger}
               {titleEdit && (

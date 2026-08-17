@@ -26,7 +26,7 @@ export default async function AdminBestandPage({
       where: gameCopyAdminWhere({ showDeinventarised }),
       orderBy: { boardGame: { title: "asc" } },
       include: {
-        boardGame: true,
+        boardGame: { include: { alternateNames: { select: { name: true } } } },
         holdings: {
           where: { endedAt: null },
           include: { unit: true, meeple: { select: { displayName: true } } },
@@ -89,6 +89,7 @@ export default async function AdminBestandPage({
       condition: copy.condition,
       kind: boardGame.kind,
       explainerVideoUrl: boardGame.explainerVideoUrl,
+      alternateNames: boardGame.alternateNames.map((a) => a.name),
       locationChain: (() => {
         if (holding?.meepleId) {
           return formatLocationChain({

@@ -1,0 +1,88 @@
+import "@testing-library/jest-dom/vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { BggComparePanel } from "@/components/widgets/board-game/bgg-compare-panel";
+import type { BggGameData } from "@/lib/bgg/client";
+
+afterEach(() => {
+  cleanup();
+});
+
+const BGG_DATA: BggGameData = {
+  title: "Ark Nova",
+  minPlayers: 1,
+  maxPlayers: 4,
+  playTimeMinutes: 150,
+  weight: 3.7,
+  imageUrl: "https://cf.geekdo-images.com/full.jpg",
+  description: "Baue einen modernen Zoo.",
+  mechanics: ["Kartenspiel", "Engine-Building"],
+  alternateNames: [],
+  explainerVideoUrl: null,
+  germanExplainerVideos: [],
+  englishExplainerVideos: [],
+};
+
+describe("BggComparePanel", () => {
+  it("shows every comparable BGG value", () => {
+    render(<BggComparePanel bggData={BGG_DATA} onChange={vi.fn()} />);
+
+    expect(screen.getByText("Ark Nova")).toBeInTheDocument();
+    expect(screen.getByText("Baue einen modernen Zoo.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Kartenspiel, Engine-Building"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("https://cf.geekdo-images.com/full.jpg"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a dash for fields BGG has no value for", () => {
+    render(
+      <BggComparePanel
+        bggData={{ ...BGG_DATA, minPlayers: null, description: null }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThan(0);
+  });
+
+  it("applies the title via its Übernehmen button", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
+
+    await user.click(screen.getByRole("button", { name: "Titel übernehmen" }));
+
+    expect(onChange).toHaveBeenCalledWith({ title: "Ark Nova" });
+  });
+
+  it("applies mechanics as a formatted, comma-separated string", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Mechaniken übernehmen" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({
+      mechanics: "Kartenspiel, Engine-Building",
+    });
+  });
+
+  it("applies numeric fields as strings", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Spieler von übernehmen" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({ minPlayers: "1" });
+  });
+});

@@ -38,6 +38,13 @@ export type LudothekGame = {
   ean: string | null;
   condition: string | null;
   bggId: number | null;
+  /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
+   * Titel selbst; die Anzeige zeigt nur `secondaryAlternateName` (falls
+   * gesetzt), nicht diese volle Liste. */
+  alternateNames: string[];
+  /** Der eine Alternativname, der neben `title` angezeigt wird (#187) — `null`
+   * solange kein Alternativname als Sekundärname markiert wurde. */
+  secondaryAlternateName: string | null;
   description: string | null;
   explainerVideoUrl: string | null;
   kind: BoardGameKind;
@@ -205,10 +212,10 @@ export function parseLudothekSearchParams(
   return filters;
 }
 
-/** Title matches as a substring; EAN/BGG-ID only as an exact match — a partial
- * EAN/BGG-ID hit has no business meaning. */
+/** Title/Alternativnamen match as a substring; EAN/BGG-ID only as an exact
+ * match — a partial EAN/BGG-ID hit has no business meaning (#187). */
 export function matchesLudothekSearch(
-  game: Pick<LudothekGame, "title" | "ean" | "bggId">,
+  game: Pick<LudothekGame, "title" | "ean" | "bggId" | "alternateNames">,
   search: string,
 ): boolean {
   const term = search.trim().toLowerCase();
@@ -217,6 +224,8 @@ export function matchesLudothekSearch(
   if (game.title.toLowerCase().includes(term)) return true;
   if (game.ean !== null && game.ean === search.trim()) return true;
   if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
+  if (game.alternateNames.some((name) => name.toLowerCase().includes(term)))
+    return true;
 
   return false;
 }

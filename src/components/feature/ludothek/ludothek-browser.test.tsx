@@ -27,7 +27,15 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
   ),
 }));
 vi.mock("@/components/widgets/board-game/create-board-game-dialog", () => ({
-  CreateBoardGameDialog: () => <button type="button">Spiel anlegen</button>,
+  CreateBoardGameDialog: ({
+    defaultBggQuery,
+  }: {
+    defaultBggQuery?: string;
+  }) => (
+    <button type="button" data-default-bgg-query={defaultBggQuery ?? ""}>
+      Spiel anlegen
+    </button>
+  ),
 }));
 
 const { LudothekBrowser } = await import("./ludothek-browser");
@@ -74,6 +82,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     ean: null,
     condition: null,
     bggId: null,
+    alternateNames: [],
+    secondaryAlternateName: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -220,6 +230,22 @@ describe("LudothekBrowser — create-board-game button (#121)", () => {
     render(<LudothekBrowser {...baseProps()} internal canManageGames />);
 
     expect(screen.getByText("Spiel anlegen")).toBeInTheDocument();
+  });
+
+  it("passes the current search query through as the BGG-import default (#183)", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        internal
+        canManageGames
+        filters={{ search: "Ark Nova" }}
+      />,
+    );
+
+    expect(screen.getByText("Spiel anlegen")).toHaveAttribute(
+      "data-default-bgg-query",
+      "Ark Nova",
+    );
   });
 });
 

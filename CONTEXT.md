@@ -48,8 +48,9 @@ _Avoid_: Sich aus `GameCollection`-Zuordnung ableiten, ob ein Titel eine Erweite
 Die Basisspiel↔Erweiterung-Zuordnung, unabhängig von `kind`. Many-to-many: eine Erweiterung kann zu mehreren Basisspielen kompatibel sein, ein Titel kann außerdem als Erweiterung markiert sein, bevor oder ohne dass ihm ein Basisspiel zugeordnet ist. Zuordnen ist von beiden Seiten möglich (Basisspiel fügt Erweiterung hinzu, oder Erweiterung ordnet sich einem Basisspiel zu) — fachlich derselbe Vorgang.
 _Avoid_: Als alleiniges Kriterium für „ist Erweiterung" heranziehen; 1:1-Kardinalität annehmen
 
-**BGG-Abgleich** (geplant, noch nicht umgesetzt):
-BoardGameGeek gilt als vorrangige Quelle gegenüber manuell gepflegten Werten (z. B. `kind`). Ein künftiger Abgleich soll Diskrepanzen zwischen BGG- und Portal-Daten aufzeigen. Bis dahin ignoriert.
+**BGG-Abgleich** (geplant, siehe #189):
+Eine Diff-Ansicht, die die aktuellen BGG-Daten eines Titels neben die eigenen stellt. BGG ist dabei **kein automatischer Sieger bei Abweichungen** — nur Vorschlag, feldweise und manuell durch den Admin zu übernehmen. Deckt sich mit dem Prinzip bei **Erweiterung** (siehe unten): eine manuelle Korrektur ist immer maßgeblich, eine BGG-Ableitung nie automatisch bindend.
+_Avoid_: BGG als vorrangige/automatisch gewinnende Quelle
 
 **Aufbewahrungseinheit**:
 Ein mit QR-Code etikettiertes physisches Behältnis für Spiele — entweder ein **Karton** (`OM-BOX-0001`, wandert als Ganzes) oder ein **Regal** (`OM-SHELF-C4`, vereinseigen, wird bei Events aufgebaut). Eine Einheit kann in einer anderen stehen (Karton im Regal) und steht am Ende der Kette bei einem Meeple.
@@ -90,6 +91,14 @@ _Avoid_: Löschen, Archivieren, Aussortieren
 **Zustand**:
 Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einer Person, Abholung ggf. aufwendiger), **Wartung** (bei der Vollständigkeitsprüfung durchgefallen), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
 _Avoid_: Verfügbarkeit, Status (Status meint die Bestandszugehörigkeit: aktiv oder deinventarisiert), Zustand für den materiellen Zustand eines Exemplars (das ist der **Mängelvermerk**, siehe unten)
+
+**Regelheft-Sprache(n)** (`GameCopy.ruleBookLanguages`, geplant, siehe #188):
+Die Sprache(n), in denen das Regelheft eines Exemplars beiliegt. **Kein Einzelwert** — viele Schachteln legen DE- und EN-Regelheft gemeinsam bei, ein Exemplar kann also mehrere Sprachen gleichzeitig haben. Enum-Werte `DE`/`EN`/`OTHER`, mehrfach zuweisbar. Unabhängig von **Sprachabhängigkeit** (siehe unten) — das eine ist "welche Sprache liegt bei", das andere "wie sehr braucht man überhaupt Text".
+_Avoid_: Einzelne Sprache pro Exemplar annehmen, freier ISO-Code-String (Enum reicht für den tatsächlichen Bestand)
+
+**Sprachabhängigkeit** (`BoardGame.languageDependence`, geplant, siehe #188):
+Wie unspielbar ein Titel ohne Sprachkenntnisse ist — 5 Stufen, identisch zu BGGs `language_dependence`-Poll (von „kein notwendiger Text" bis „unspielbar in anderer Sprache"). Titel-Ebene, nicht Exemplar-Ebene (Sprachabhängigkeit ist eine Eigenschaft des Spiels, nicht der Ausgabe). Wird beim BGG-Import als Vorschlag aus dem meistgewählten Poll-Level übernommen, nie automatisch bindend (siehe **BGG-Abgleich**).
+_Avoid_: Boolean "sprachneutral" (zu grob, siehe Diskussion in #188), Verwechslung mit Regelheft-Sprache(n)
 
 **Mängelvermerk** (`GameCopy.condition`):
 Freitext-Notiz zum materiellen Zustand eines Exemplars (z. B. „Ecke eingedrückt") — unabhängig vom Ausleih-`Zustand`. Wird bei der Vollständigkeitsprüfung gesetzt oder gelöscht.
@@ -163,9 +172,9 @@ _Avoid_: Flohmarkt-Artikel (Event-gebunden, mit Freigabe-Workflow), Verkaufsabwi
 Ein optionales Profilfeld (Telegram, Signal oder Discord), das ein Mitglied im eigenen Profil pflegt und für andere Mitglieder einsehbar macht. Nur `telegramHandle` fließt in den Direktkontakt-Button einer Kleinanzeige ein; Signal/Discord sind reine Profilangaben ohne eigenen Kontakt-Link.
 _Avoid_: Kontaktdaten (das meint E-Mail, ist kein neues Feld), Social-Media-Profil
 
-**Privatbesitz-Eintrag**:
-Ein Titel, den ein Mitglied privat besitzt und nicht im Vereinsbestand geführt wird — Grundlage der Crowdsourced-Suche in der internen Ludothek. Referenziert seit ADR 0008 denselben Titel-Datensatz (`BoardGame`) wie der Vereinsbestand, sofern die `bggId` übereinstimmt; es entsteht dabei **kein** Exemplar (`GameCopy`) — Privatbesitz kennt keine Exemplare, nur Vereinsbestand hat Standort/Zustand. Aktuell ausschließlich per Seed befüllt (zwei Demo-Mitglieder), da ein echter BGG-Sammlungs-Sync an der aus dieser Umgebung blockierten BoardGameGeek-API scheitert (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`). Erscheint in der internen Ludothek-Suche nur nach explizitem Toggle „Auch Privatbesitz anzeigen" (Default aus) und **nie** in der öffentlichen Projektion.
-_Avoid_: Exemplar für Privatbesitz (Privatbesitz hat kein `GameCopy`), BGG-Sammlung (impliziert einen echten Sync, den es hier noch nicht gibt)
+**Privatbesitz-Eintrag** (`PrivateGameCollectionEntry`):
+Ein Titel, den ein Mitglied privat besitzt und nicht im Vereinsbestand geführt wird — Grundlage der Crowdsourced-Suche in der internen Ludothek, sowie für Spielergesuche und informelles privates Ausleihen zwischen Mitgliedern **außerhalb** jeder Vereins-Nachverfolgung (kein `GameHolding`, keine Statistik). Referenziert seit ADR 0008 denselben Titel-Datensatz (`BoardGame`) wie der Vereinsbestand, sofern die `bggId` übereinstimmt; es entsteht dabei **kein** Exemplar (`GameCopy`) — Privatbesitz kennt keine Exemplare, nur Vereinsbestand hat Standort/Zustand. Entsteht **ausschließlich** durch echten Sync mit dem eigenen BGG-Konto des Mitglieds (`syncedAt`, Pflichtfeld) — kein manueller Eintrag ohne BGG-Konto. Aktuell ausschließlich per Seed befüllt (zwei Demo-Mitglieder); der echte Sync war an der aus dieser Umgebung zuvor blockierten BoardGameGeek-API gescheitert (siehe `.claude/plans/phase-7-marktplatz-community-execution-plan.md`) — der Blocker ist mit dem BGG-Bearer-Token (#12) inzwischen behoben, der echte Sync selbst aber noch nicht umgesetzt. Erscheint in der internen Ludothek-Suche nur nach explizitem Toggle „Auch Privatbesitz anzeigen" (Default aus) und **nie** in der öffentlichen Projektion.
+_Avoid_: Exemplar für Privatbesitz (Privatbesitz hat kein `GameCopy`), manueller Eintrag ohne BGG-Sync (bewusst nicht vorgesehen)
 
 ### Newsletter
 

@@ -201,21 +201,21 @@ model DeletionRequest {
 /// A player-search post. `gameTitle` is deliberately free text, not a relation to
 /// BoardGame — a Gesuch can be for a title the club doesn't own (see docs/schema.md).
 model LfgPost {
-  id                String    @id @default(cuid())
-  title             String
-  gameTitle         String?
-  description       String
-  plannedAt         DateTime?
-  dateNote          String?
-  location          String?
-  maxParticipants   Int
-  createdByMeepleId String
+  id                   String    @id @default(cuid())
+  title                String
+  gameTitle            String?
+  description          String
+  plannedAt            DateTime?
+  dateNote             String?
+  location             String?
+  maxParticipants      Int
+  createdByMeepleId    String
   /// Optional link to an inventory title (#34) — gameTitle free text stays the default, this is never required.
-  boardGameId       String?
+  boardGameId          String?
   /// Erlaubt beigetretenen Meeples (nicht nur dem Ersteller), eigene Gäste hinzuzufügen (#145).
-  guestsMayBringGuests Boolean @default(false)
-  closedAt          DateTime?
-  createdAt         DateTime  @default(now())
+  guestsMayBringGuests Boolean   @default(false)
+  closedAt             DateTime?
+  createdAt            DateTime  @default(now())
 
   createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
   boardGame    BoardGame?       @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
@@ -358,27 +358,30 @@ model Invite {
 /// A game title — BGG/product metadata, one row per title regardless of how many
 /// physical copies the club owns (see ADR 0008, supersedes the relevant part of ADR 0001).
 model BoardGame {
-  id                String        @id @default(cuid())
-  title             String
+  id                       String        @id @default(cuid())
+  title                    String
   /// Routing basis for the title detail page (see ADR on the exemplar→title slug migration).
-  slug              String        @unique
+  slug                     String        @unique
   /// The single reliable product identity; unique now that copies live in GameCopy.
-  bggId             Int?          @unique
+  bggId                    Int?          @unique
   /// The manufacturer barcode identifies the product, not the single copy — never unique.
-  ean               String?
-  minPlayers        Int?
-  maxPlayers        Int?
-  playTimeMinutes   Int?
-  weight            Float?
-  imageUrl          String?
-  description       String?
-  mechanics         String[]
+  ean                      String?
+  minPlayers               Int?
+  maxPlayers               Int?
+  playTimeMinutes          Int?
+  weight                   Float?
+  imageUrl                 String?
+  description              String?
+  mechanics                String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
-  explainerVideoUrl String?
+  explainerVideoUrl        String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
-  kind              BoardGameKind @default(BOARDGAME)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  kind                     BoardGameKind @default(BOARDGAME)
+  /// Points at the one `BoardGameAlternateName` row shown alongside `title` (e.g.
+  /// the German name next to an English `title`) — at most one at a time, see #187.
+  secondaryAlternateNameId String?       @unique
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
 
   copies                   GameCopy[]
   explainerGames           ExplainerGame[]
@@ -387,9 +390,30 @@ model BoardGame {
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
   lfgPosts                 LfgPost[]
+  alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
+  secondaryAlternateName   BoardGameAlternateName?      @relation("SecondaryAlternateName", fields: [secondaryAlternateNameId], references: [id], onDelete: SetNull)
 
   @@index([ean])
   @@map("board_games")
+}
+
+/// A second name for a title — populated ungefiltert aus BGG `name type="alternate"`
+/// beim Import, oder manuell ergänzt (#187). Suche/Anzeige matchen zusätzlich zu
+/// `BoardGame.title` gegen diese Liste; höchstens eine Zeile je Titel kann per
+/// `BoardGame.secondaryAlternateNameId` als anzuzeigender Sekundärname markiert sein.
+model BoardGameAlternateName {
+  id          String   @id @default(cuid())
+  boardGameId String
+  name        String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  boardGame        BoardGame  @relation("BoardGameAlternateNames", fields: [boardGameId], references: [id], onDelete: Cascade)
+  /// Reverse side of `BoardGame.secondaryAlternateName` — no own FK column.
+  secondaryForGame BoardGame? @relation("SecondaryAlternateName")
+
+  @@index([boardGameId])
+  @@map("board_game_alternate_names")
 }
 
 /// A single physical copy of a title — condition, inventory status and (via

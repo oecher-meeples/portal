@@ -23,6 +23,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     ean: null,
     condition: null,
     bggId: null,
+    alternateNames: [],
+    secondaryAlternateName: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -207,6 +209,17 @@ describe("filterLudothekGames", () => {
     expect(filterLudothekGames([game()], { search: "nonexistent" })).toEqual(
       [],
     );
+  });
+
+  it("matches on an alternate name substring, case-insensitively (#187)", () => {
+    const games = [
+      game({ title: "Catan", alternateNames: ["Die Siedler von Catan"] }),
+      game({ title: "Wingspan" }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "siedler" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Catan");
   });
 });
 

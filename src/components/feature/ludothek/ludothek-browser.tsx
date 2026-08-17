@@ -332,7 +332,11 @@ export function LudothekBrowser({
       </div>
 
       <div className="flex items-center justify-between gap-2">
-        {canManageGames ? <CreateBoardGameDialog /> : <div />}
+        {canManageGames ? (
+          <CreateBoardGameDialog defaultBggQuery={search} />
+        ) : (
+          <div />
+        )}
         <ViewModeSwitch
           view={filters.view ?? "grid"}
           canManageGames={canManageGames}
