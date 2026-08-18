@@ -44,6 +44,12 @@ vi.mock("@/components/widgets/board-game/edit-board-game-dialog", () => ({
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
   AddGameCopyDialog: () => null,
 }));
+vi.mock(
+  "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog",
+  () => ({
+    AdminBestandCsvExportDialog: () => <div>csv-export-dialog</div>,
+  }),
+);
 
 const { AdminBestandView } = await import("./admin-bestand-view");
 
@@ -112,7 +118,13 @@ const games = [
 
 describe("AdminBestandView search", () => {
   it("filters the table when a scan resolves to an EAN", () => {
-    render(<AdminBestandView games={games} showDeinventarised={false} />);
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={false}
+      />,
+    );
 
     expect(screen.getByText("Catan")).toBeInTheDocument();
     expect(screen.getByText("Carcassonne")).toBeInTheDocument();
@@ -121,5 +133,31 @@ describe("AdminBestandView search", () => {
 
     expect(screen.getByText("Catan")).toBeInTheDocument();
     expect(screen.queryByText("Carcassonne")).not.toBeInTheDocument();
+  });
+});
+
+describe("AdminBestandView CSV export gating", () => {
+  it("hides the export without games:manage", () => {
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.queryByText("csv-export-dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows the export with games:manage", () => {
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={true}
+      />,
+    );
+
+    expect(screen.getByText("csv-export-dialog")).toBeInTheDocument();
   });
 });
