@@ -119,7 +119,10 @@ export function GameListRow({
       {expanded && hasOverlayContent && (
         <div
           className={cn(
-            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
+            // z-20 statt z-10: liegt sonst unter dem CardCornerOverlay
+            // (BggRatingBadge) der nächsten Zeile, da beide DOM-Reihenfolge-
+            // abhängig um denselben z-10 konkurrieren (#214-Folge-Korrektur).
+            "bg-card border-primary/60 absolute inset-x-0 top-full z-20 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
           )}
         >
           {(game.mechanics.length > 0 || game.weight) && (
