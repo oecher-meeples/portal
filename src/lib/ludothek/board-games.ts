@@ -205,34 +205,43 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 
   const placement = resolveCopyPlacement(input.placement, actor.id);
 
-  const { copy, boardGameId } = await prisma.$transaction(async (tx) => {
-    const title = await findOrCreateBoardGameTitle(input, tx);
+  const { copy, boardGameId, boardGameSlug } = await prisma.$transaction(
+    async (tx) => {
+      const title = await findOrCreateBoardGameTitle(input, tx);
 
-    if (!willReuseByBggId && input.alternateNames?.length) {
-      await tx.boardGameAlternateName.createMany({
-        data: input.alternateNames.map((name) => ({
-          boardGameId: title.id,
-          name,
-        })),
+      if (!willReuseByBggId && input.alternateNames?.length) {
+        await tx.boardGameAlternateName.createMany({
+          data: input.alternateNames.map((name) => ({
+            boardGameId: title.id,
+            name,
+          })),
+        });
+      }
+
+      const copy = await createGameCopyTx(tx, {
+        boardGameId: title.id,
+        boardGameTitle: title.title,
+        condition: input.condition,
+        ruleBookLanguages: input.ruleBookLanguages,
+        actorId: actor.id,
+        placement,
       });
-    }
-
-    const copy = await createGameCopyTx(tx, {
-      boardGameId: title.id,
-      boardGameTitle: title.title,
-      condition: input.condition,
-      ruleBookLanguages: input.ruleBookLanguages,
-      actorId: actor.id,
-      placement,
-    });
-    return { copy, boardGameId: title.id };
-  });
+      return { copy, boardGameId: title.id, boardGameSlug: title.slug };
+    },
+  );
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  // `boardGameId` lets callers auto-select the newly created title, e.g. the
-  // nested "Spiel anlegen" flow from `AssignExpansionDialog`s Combobox (#204).
-  return { success: true as const, id: copy.id, boardGameId, hint };
+  // `boardGameId`/`boardGameSlug` let callers auto-select or deep-link the
+  // newly created title, e.g. the nested "Spiel anlegen" flow from
+  // `AssignExpansionDialog`s Combobox (#204) or the Massenimport-Ergebnisliste (#186).
+  return {
+    success: true as const,
+    id: copy.id,
+    boardGameId,
+    boardGameSlug,
+    hint,
+  };
 }
 
 export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
