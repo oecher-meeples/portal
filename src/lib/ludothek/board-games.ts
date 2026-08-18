@@ -32,6 +32,9 @@ export type BoardGameTitleInput = {
   maxPlayers?: number | null;
   playTimeMinutes?: number | null;
   weight?: number | null;
+  /** BGGs Community-Durchschnittsbewertung (0–10), analog `weight` beim
+   * BGG-Import/-Abgleich übernommen (#214). */
+  averageRating?: number | null;
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
@@ -84,6 +87,7 @@ function toBoardGameTitleData(input: BoardGameTitleInput) {
     maxPlayers: input.maxPlayers ?? null,
     playTimeMinutes: input.playTimeMinutes ?? null,
     weight: input.weight ?? null,
+    averageRating: input.averageRating ?? null,
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
@@ -278,6 +282,7 @@ export async function getBoardGameTitleForEdit(id: string) {
       maxPlayers: true,
       playTimeMinutes: true,
       weight: true,
+      averageRating: true,
       imageUrl: true,
       description: true,
       mechanics: true,

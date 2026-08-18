@@ -177,6 +177,7 @@ export default async function GameDetailPage({
         maxPlayers: game.maxPlayers,
         playTimeMinutes: game.playTimeMinutes,
         weight: game.weight,
+        averageRating: game.averageRating,
         imageUrl: game.imageUrl,
         description: game.description,
         mechanics: game.mechanics,

@@ -21,6 +21,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: [],
     ean: null,
     condition: null,

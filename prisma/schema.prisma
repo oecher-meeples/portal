@@ -391,6 +391,10 @@ model BoardGame {
   maxPlayers         Int?
   playTimeMinutes    Int?
   weight             Float?
+  /// BGGs Community-Durchschnittsbewertung (0–10), `null` ohne Bewertungen
+  /// oder bei manuell angelegten Titeln ohne BGG-ID — analog zu `weight`
+  /// beim Import/Abgleich übernommen (#214).
+  averageRating      Float?
   imageUrl           String?
   description        String?
   mechanics          String[]

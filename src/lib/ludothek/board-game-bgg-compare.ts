@@ -13,6 +13,7 @@ type ComparableFormValues = {
   maxPlayers: string;
   playTimeMinutes: string;
   weight: string;
+  averageRating: string;
   imageUrl: string;
   description: string;
   mechanics: string;
@@ -31,6 +32,7 @@ export type BoardGameCompareField =
   | "maxPlayers"
   | "playTimeMinutes"
   | "weight"
+  | "averageRating"
   | "imageUrl"
   | "description"
   | "mechanics"
@@ -65,6 +67,7 @@ export function compareBoardGameWithBgg(
     playTimeMinutes:
       parseFormNumber(form.playTimeMinutes) === bgg.playTimeMinutes,
     weight: parseFormNumber(form.weight) === bgg.weight,
+    averageRating: parseFormNumber(form.averageRating) === bgg.averageRating,
     imageUrl: (form.imageUrl.trim() || null) === bgg.imageUrl,
     description:
       (form.description.trim() || null) === (bgg.description ?? null),

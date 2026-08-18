@@ -65,6 +65,12 @@ export function BggComparePanel({
       apply: () => onChange({ weight: bggData.weight?.toString() ?? "" }),
     },
     {
+      label: "Durchschnittliche Bewertung (0–10)",
+      value: bggData.averageRating?.toString() ?? "—",
+      apply: () =>
+        onChange({ averageRating: bggData.averageRating?.toString() ?? "" }),
+    },
+    {
       label: "Bild-URL",
       value: bggData.imageUrl ?? "—",
       apply: () => onChange({ imageUrl: bggData.imageUrl ?? "" }),

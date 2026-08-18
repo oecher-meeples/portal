@@ -236,6 +236,7 @@ erDiagram
         Int maxPlayers
         Int playTimeMinutes
         Float weight
+        Float averageRating "nullable — BGGs Community-Durchschnittsbewertung 0-10 (#214)"
         String imageUrl
         String description
         String_Array mechanics

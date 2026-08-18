@@ -9,6 +9,8 @@ import { LanguageIndependentPill } from "@/components/entities/language-independ
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { cn } from "@/lib/utils/cn";
@@ -72,6 +74,9 @@ export function GameListRow({
           aspect="aspect-[3/4]"
         />
         {isExpansion && <RibbonCorner size="sm">Erweiterung</RibbonCorner>}
+        <CardCornerOverlay corner="top-left">
+          <BggRatingBadge averageRating={game.averageRating} />
+        </CardCornerOverlay>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <h3 className="group-hover:text-primary truncate font-serif text-lg leading-snug font-semibold">

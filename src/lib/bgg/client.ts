@@ -43,6 +43,11 @@ export interface BggGameData {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  /** BGGs Community-Durchschnittsbewertung (`statistics.ratings.average`,
+   * 0–10), `null` ohne Statistik-Block (#214). Kann außerhalb 1–10 liegen,
+   * z. B. `0` bei einem Titel ohne Bewertungen — das Hexagon wird dann nicht
+   * angezeigt, siehe `lib/bgg/rating-scale.ts`. */
+  averageRating: number | null;
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
@@ -149,6 +154,7 @@ interface BggItem {
   statistics?: {
     ratings?: {
       averageweight?: { value?: string };
+      average?: { value?: string };
     };
   };
   videos?: {
@@ -353,6 +359,9 @@ function mapItem(item: BggItem): BggGameData {
     .map((link) => link.value);
 
   const rawWeight = parseNumber(item.statistics?.ratings?.averageweight?.value);
+  const rawAverageRating = parseNumber(
+    item.statistics?.ratings?.average?.value,
+  );
   const germanExplainerVideos = selectGermanExplainerVideos(item.videos);
   const englishExplainerVideos = selectEnglishExplainerVideos(item.videos);
   const versions = parseVersions(item.versions);
@@ -363,6 +372,8 @@ function mapItem(item: BggItem): BggGameData {
     maxPlayers: parseNumber(item.maxplayers?.value),
     playTimeMinutes: parseNumber(item.playingtime?.value),
     weight: rawWeight === null ? null : Math.round(rawWeight * 10) / 10,
+    averageRating:
+      rawAverageRating === null ? null : Math.round(rawAverageRating * 10) / 10,
     imageUrl: item.image ?? null,
     description:
       item.description === undefined

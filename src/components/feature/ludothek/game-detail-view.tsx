@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
@@ -101,17 +102,20 @@ export function GameDetailView({
       <div className="flex flex-col gap-6">
         <div>
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <h1 className="font-serif text-3xl font-bold tracking-tight">
-                {game.title}
-              </h1>
-              {game.secondaryTitle && (
-                <p className="text-muted-foreground">{game.secondaryTitle}</p>
-              )}
-              <LanguageIndependentPill
-                languageDependence={game.languageDependence}
-                className="mt-1"
-              />
+            <div className="flex items-start gap-3">
+              <BggRatingBadge averageRating={game.averageRating} />
+              <div>
+                <h1 className="font-serif text-3xl font-bold tracking-tight">
+                  {game.title}
+                </h1>
+                {game.secondaryTitle && (
+                  <p className="text-muted-foreground">{game.secondaryTitle}</p>
+                )}
+                <LanguageIndependentPill
+                  languageDependence={game.languageDependence}
+                  className="mt-1"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {createLfgTrigger}

@@ -10,6 +10,7 @@ const EMPTY_FORM = {
   maxPlayers: "",
   playTimeMinutes: "",
   weight: "",
+  averageRating: "",
   imageUrl: "",
   description: "",
   mechanics: "",
@@ -22,6 +23,7 @@ const BGG_DATA: BggGameData = {
   maxPlayers: 4,
   playTimeMinutes: 150,
   weight: 3.7,
+  averageRating: 8.5,
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
@@ -43,6 +45,7 @@ const MATCHING_FORM = {
   maxPlayers: "4",
   playTimeMinutes: "150",
   weight: "3.7",
+  averageRating: "8.5",
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: "Kartenspiel, Engine-Building",
@@ -58,11 +61,21 @@ describe("compareBoardGameWithBgg", () => {
       maxPlayers: true,
       playTimeMinutes: true,
       weight: true,
+      averageRating: true,
       imageUrl: true,
       description: true,
       mechanics: true,
       languageDependence: true,
     });
+  });
+
+  it("marks averageRating as a mismatch when BGG's rating changed (#214)", () => {
+    const result = compareBoardGameWithBgg(MATCHING_FORM, {
+      ...BGG_DATA,
+      averageRating: 9.1,
+    });
+
+    expect(result.averageRating).toBe(false);
   });
 
   it("marks a field as a mismatch when the value differs", () => {

@@ -28,6 +28,8 @@ export type BoardGameFormValues = {
   maxPlayers: string;
   playTimeMinutes: string;
   weight: string;
+  /** BGGs Community-Durchschnittsbewertung, 0–10 (#214). */
+  averageRating: string;
   imageUrl: string;
   description: string;
   mechanics: string;
@@ -55,6 +57,7 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   maxPlayers: "",
   playTimeMinutes: "",
   weight: "",
+  averageRating: "",
   imageUrl: "",
   description: "",
   mechanics: "",
@@ -78,6 +81,7 @@ export type BoardGameRecord = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  averageRating: number | null;
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
@@ -103,6 +107,7 @@ export function boardGameToFormValues(
     maxPlayers: game.maxPlayers?.toString() ?? "",
     playTimeMinutes: game.playTimeMinutes?.toString() ?? "",
     weight: game.weight?.toString() ?? "",
+    averageRating: game.averageRating?.toString() ?? "",
     imageUrl: game.imageUrl ?? "",
     description: game.description ?? "",
     mechanics: formatMechanics(game.mechanics),
@@ -131,6 +136,7 @@ export function boardGameFormToTitleInput(
       ? Number(form.playTimeMinutes)
       : undefined,
     weight: form.weight ? Number(form.weight) : undefined,
+    averageRating: form.averageRating ? Number(form.averageRating) : undefined,
     imageUrl: form.imageUrl || undefined,
     description: form.description || undefined,
     mechanics: parseMechanics(form.mechanics),

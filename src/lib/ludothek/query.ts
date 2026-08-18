@@ -22,7 +22,11 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
   const [copies, units] = await Promise.all([
     prisma.gameCopy.findMany({
       where: { status: { not: GameInventoryStatus.DEINVENTARISED } },
-      orderBy: { boardGame: { title: "asc" } },
+      // Default sort: highest-rated first, titles without a rating last (#214).
+      orderBy: [
+        { boardGame: { averageRating: { sort: "desc", nulls: "last" } } },
+        { boardGame: { title: "asc" } },
+      ],
       include: {
         boardGame: {
           include: {
@@ -95,6 +99,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       maxPlayers: boardGame.maxPlayers,
       playTimeMinutes: boardGame.playTimeMinutes,
       weight: boardGame.weight,
+      averageRating: boardGame.averageRating,
       mechanics: boardGame.mechanics,
       ean: boardGame.ean,
       condition: copy.condition,

@@ -37,6 +37,9 @@ export type LudothekGame = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  /** BGGs Community-Durchschnittsbewertung (0–10), `null` ohne Bewertungen
+   * oder ohne BGG-ID (#214). */
+  averageRating: number | null;
   mechanics: string[];
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;

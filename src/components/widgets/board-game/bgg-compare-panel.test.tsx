@@ -16,6 +16,7 @@ const BGG_DATA: BggGameData = {
   maxPlayers: 4,
   playTimeMinutes: 150,
   weight: 3.7,
+  averageRating: 8.5,
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],

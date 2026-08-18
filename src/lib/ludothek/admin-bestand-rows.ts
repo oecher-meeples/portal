@@ -38,6 +38,9 @@ export type AdminBoardGameRow = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  /** BGGs Community-Durchschnittsbewertung (0–10), `null` ohne Bewertungen
+   * oder ohne BGG-ID (#214). */
+  averageRating: number | null;
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
@@ -130,6 +133,7 @@ export async function buildAdminBoardGameRows({
       maxPlayers: boardGame.maxPlayers,
       playTimeMinutes: boardGame.playTimeMinutes,
       weight: boardGame.weight,
+      averageRating: boardGame.averageRating,
       imageUrl: boardGame.imageUrl,
       description: boardGame.description,
       mechanics: boardGame.mechanics,

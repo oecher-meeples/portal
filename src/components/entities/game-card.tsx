@@ -8,6 +8,7 @@ import { LanguageIndependentPill } from "@/components/entities/language-independ
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
@@ -36,6 +37,9 @@ export function GameCard({
       {actions && (
         <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
       )}
+      <CardCornerOverlay corner="top-left">
+        <BggRatingBadge averageRating={game.averageRating} />
+      </CardCornerOverlay>
       {isExpansion && <RibbonCorner>Erweiterung</RibbonCorner>}
       <GameCoverMedia
         imageUrl={game.imageUrl}

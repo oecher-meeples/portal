@@ -15,6 +15,7 @@ const BASE_PREVIEW: BggGameData = {
   maxPlayers: 4,
   playTimeMinutes: 150,
   weight: 3.7,
+  averageRating: 8.5,
   imageUrl: null,
   description: null,
   mechanics: [],
