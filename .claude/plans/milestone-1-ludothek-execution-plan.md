@@ -142,7 +142,7 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       `git commit -m "feat(bgg): store and display average BGG rating"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg29cio --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#214 → In review).
 
-- [ ] **13. Abschluss-Verifikation**
+- [x] **13. Abschluss-Verifikation** — `pnpm run verify` (format:check + typecheck + lint + test) lief nach Schritt 12 komplett grün (166 Testdateien, 1367 Tests) ohne Fixes nötig — kein Fixup-Commit.
       `pnpm run verify` (format:check + typecheck + lint + test) einmal komplett laufen lassen. Bei rotem Ergebnis: Ursache im jeweiligen Schritt beheben (nicht als neuen Extra-Schritt, sondern rückwirkend im betroffenen Commit-Bereich per Fixup-Commit), bis grün.
       _Definition of Done:_ `pnpm run verify` grün.
       `git commit -m "chore: fix verify issues found in final check"` (nur falls Fixes nötig waren — sonst kein Commit, Schritt trotzdem als `[x]` markieren).
