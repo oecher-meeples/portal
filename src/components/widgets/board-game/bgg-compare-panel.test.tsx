@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BoardGameKind } from "@prisma/client";
 import { BggComparePanel } from "@/components/widgets/board-game/bgg-compare-panel";
 import type { BggGameData } from "@/lib/bgg/client";
 
@@ -18,6 +19,7 @@ const BGG_DATA: BggGameData = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
+  kind: BoardGameKind.BOARDGAME,
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],
@@ -84,5 +86,23 @@ describe("BggComparePanel", () => {
     );
 
     expect(onChange).toHaveBeenCalledWith({ minPlayers: "1" });
+  });
+
+  it("shows and applies the kind (Art) BGG reports (#202)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <BggComparePanel
+        bggData={{ ...BGG_DATA, kind: BoardGameKind.BOARDGAME_EXPANSION }}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByText("Erweiterung")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Art übernehmen" }));
+
+    expect(onChange).toHaveBeenCalledWith({
+      kind: BoardGameKind.BOARDGAME_EXPANSION,
+    });
   });
 });

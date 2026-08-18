@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { BoardGameKind } from "@prisma/client";
 import { compareBoardGameWithBgg } from "./board-game-bgg-compare";
 import type { BggGameData } from "@/lib/bgg/client";
 
 const EMPTY_FORM = {
   title: "",
+  kind: BoardGameKind.BOARDGAME,
   minPlayers: "",
   maxPlayers: "",
   playTimeMinutes: "",
@@ -22,6 +24,7 @@ const BGG_DATA: BggGameData = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
+  kind: BoardGameKind.BOARDGAME,
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],
@@ -44,6 +47,7 @@ describe("compareBoardGameWithBgg", () => {
   it("marks every comparable field as matching when values are identical", () => {
     expect(compareBoardGameWithBgg(MATCHING_FORM, BGG_DATA)).toEqual({
       title: true,
+      kind: true,
       minPlayers: true,
       maxPlayers: true,
       playTimeMinutes: true,
@@ -97,5 +101,14 @@ describe("compareBoardGameWithBgg", () => {
     );
 
     expect(result.description).toBe(true);
+  });
+
+  it("marks kind as a mismatch when the form disagrees with BGG's type attribute (#202)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, kind: BoardGameKind.BOARDGAME_EXPANSION },
+      BGG_DATA,
+    );
+
+    expect(result.kind).toBe(false);
   });
 });

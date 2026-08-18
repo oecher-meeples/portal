@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BoardGameKind } from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -50,6 +51,7 @@ describe("fetchBggGame", () => {
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
+      kind: BoardGameKind.BOARDGAME,
       alternateNames: ["Ark Nova (Deutsch)"],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
@@ -71,11 +73,28 @@ describe("fetchBggGame", () => {
       imageUrl: null,
       description: null,
       mechanics: [],
+      kind: BoardGameKind.BOARDGAME,
       alternateNames: [],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
     });
+  });
+
+  it("maps the boardgameexpansion type attribute to BOARDGAME_EXPANSION (#202)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-expansion.xml"));
+
+    const result = await fetchBggGame(999);
+
+    expect(result.kind).toBe(BoardGameKind.BOARDGAME_EXPANSION);
+  });
+
+  it("falls back to BOARDGAME when the type attribute is missing or unknown (#202)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-full.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.kind).toBe(BoardGameKind.BOARDGAME);
   });
 
   it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {

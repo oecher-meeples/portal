@@ -133,7 +133,10 @@ export function EditBoardGameTitle({
           onChange={(event) =>
             onChange({ kind: event.target.value as BoardGameKind })
           }
-          className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+          className={cn(
+            "border-input h-9 rounded-md border bg-transparent px-3 text-sm",
+            diffClassName(compareStatus?.kind),
+          )}
         >
           <option value={BoardGameKind.BOARDGAME}>Basisspiel</option>
           <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>

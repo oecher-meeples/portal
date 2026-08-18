@@ -152,6 +152,7 @@ export function CreateBoardGameDialog({
       setPreview(result.data);
       patchForm({
         title: result.data.title,
+        kind: result.data.kind,
         bggId: String(bggId),
         minPlayers: result.data.minPlayers?.toString() ?? "",
         maxPlayers: result.data.maxPlayers?.toString() ?? "",

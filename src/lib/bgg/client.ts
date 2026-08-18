@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { BoardGameKind } from "@prisma/client";
 import { requireEnv } from "@/lib/utils/require-env";
 import { decodeHtmlEntities } from "@/lib/utils/decode-html-entities";
 
@@ -30,6 +31,9 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** Aus dem `type`-Attribut des BGG-Items (`boardgame`/`boardgameexpansion`,
+   * siehe #202) — jeder andere/fehlende Wert fällt auf `BOARDGAME` zurück. */
+  kind: BoardGameKind;
   /** Alle `name type="alternate"`-Einträge, ungefiltert — Grundlage für die
    * automatische Befüllung der Alternativnamen-Liste beim Import (#187).
    * BGG liefert hier z. B. deutsche Titel neben dem meist englischen
@@ -86,6 +90,7 @@ interface BggVideoEntry {
 }
 
 interface BggItem {
+  type?: string;
   name?: BggNameEntry | BggNameEntry[];
   description?: string;
   minplayers?: { value?: string };
@@ -206,6 +211,12 @@ function selectEnglishExplainerVideos(
   );
 }
 
+function parseKind(type: string | undefined): BoardGameKind {
+  return type === "boardgameexpansion"
+    ? BoardGameKind.BOARDGAME_EXPANSION
+    : BoardGameKind.BOARDGAME;
+}
+
 function mapItem(item: BggItem): BggGameData {
   const names = toArray(item.name);
   const primaryName = names.find((name) => name.type === "primary") ?? names[0];
@@ -233,6 +244,7 @@ function mapItem(item: BggItem): BggGameData {
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
+    kind: parseKind(item.type),
     alternateNames,
     explainerVideoUrl:
       germanExplainerVideos[0]?.url ?? englishExplainerVideos[0]?.url ?? null,

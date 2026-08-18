@@ -30,6 +30,7 @@ export type BulkImportRow =
 function toCreateInput(bggId: number, data: BggGameData): CreateBoardGameInput {
   return {
     title: data.title,
+    kind: data.kind,
     bggId,
     minPlayers: data.minPlayers ?? undefined,
     maxPlayers: data.maxPlayers ?? undefined,

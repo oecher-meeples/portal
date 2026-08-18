@@ -1,17 +1,24 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import { BoardGameKind } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { formatMechanics } from "@/lib/ludothek/bgg-id";
 import type { BggGameData } from "@/lib/bgg/client";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
+const KIND_LABELS: Record<BoardGameKind, string> = {
+  [BoardGameKind.BOARDGAME]: "Basisspiel",
+  [BoardGameKind.BOARDGAME_EXPANSION]: "Erweiterung",
+};
+
 /**
  * Rechte Spalte des "Daten mit BGG abgleichen"-Modus (#189) — read-only
  * Anzeige der frisch geladenen BGG-Werte, je Feld ein "→"-Button, der den
  * Wert ins linke Formular übernimmt. Nur Felder mit 1:1-BGG-Entsprechung
- * (siehe `compareBoardGameWithBgg`); EAN/Art/BGG-ID/Erklärvideo haben keine
- * Zeile hier — Erklärvideo hat bereits seine eigene Auswahl-UI (#185).
+ * (siehe `compareBoardGameWithBgg`); EAN/BGG-ID/Erklärvideo haben keine
+ * Zeile hier — Erklärvideo hat bereits seine eigene Auswahl-UI (#185). `Art`
+ * ist seit #202 dabei, BGGs `type`-Attribut ist zuverlässig.
  */
 export function BggComparePanel({
   bggData,
@@ -25,6 +32,11 @@ export function BggComparePanel({
       label: "Titel",
       value: bggData.title,
       apply: () => onChange({ title: bggData.title }),
+    },
+    {
+      label: "Art",
+      value: KIND_LABELS[bggData.kind],
+      apply: () => onChange({ kind: bggData.kind }),
     },
     {
       label: "Spieler von",

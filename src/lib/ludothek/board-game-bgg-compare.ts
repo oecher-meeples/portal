@@ -1,3 +1,4 @@
+import type { BoardGameKind } from "@prisma/client";
 import type { BggGameData } from "@/lib/bgg/client";
 import { parseMechanics } from "@/lib/ludothek/bgg-id";
 
@@ -7,6 +8,7 @@ import { parseMechanics } from "@/lib/ludothek/bgg-id";
  * Aufruf mit dem echten Formularobjekt bleibt also typsicher. */
 type ComparableFormValues = {
   title: string;
+  kind: BoardGameKind;
   minPlayers: string;
   maxPlayers: string;
   playTimeMinutes: string;
@@ -17,10 +19,12 @@ type ComparableFormValues = {
 };
 
 /** Felder mit einer 1:1-BGG-Entsprechung — Grundlage für die Randfärbung im
- * "Daten mit BGG abgleichen"-Modus (#189). `ean`, `kind`, `bggId` und das
- * Erklärvideo (eigene Auswahl-UI seit #185) bleiben bewusst außen vor. */
+ * "Daten mit BGG abgleichen"-Modus (#189). `ean` und `bggId` und das
+ * Erklärvideo (eigene Auswahl-UI seit #185) bleiben bewusst außen vor. `kind`
+ * ist seit #202 mit dabei — BGG liefert das `type`-Attribut zuverlässig. */
 export type BoardGameCompareField =
   | "title"
+  | "kind"
   | "minPlayers"
   | "maxPlayers"
   | "playTimeMinutes"
@@ -52,6 +56,7 @@ export function compareBoardGameWithBgg(
 ): Record<BoardGameCompareField, boolean> {
   return {
     title: form.title.trim() === bgg.title.trim(),
+    kind: form.kind === bgg.kind,
     minPlayers: parseFormNumber(form.minPlayers) === bgg.minPlayers,
     maxPlayers: parseFormNumber(form.maxPlayers) === bgg.maxPlayers,
     playTimeMinutes:
