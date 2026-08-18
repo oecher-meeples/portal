@@ -17,6 +17,9 @@ type Tx = PrismaClient | Prisma.TransactionClient;
 
 export type BoardGameTitleInput = {
   title: string;
+  /** Zweiter Titel neben `title` — z. B. eine deutsche Übersetzung neben
+   * einem englischen Haupttitel (#203). */
+  secondaryTitle?: string | null;
   bggId?: number | null;
   ean?: string | null;
   minPlayers?: number | null;
@@ -55,6 +58,7 @@ function validateBoardGameInput(input: BoardGameTitleInput) {
 
 function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
+    secondaryTitle: input.secondaryTitle || null,
     bggId: input.bggId ?? null,
     ean: input.ean ? normaliseEan(input.ean) : null,
     minPlayers: input.minPlayers ?? null,
@@ -241,6 +245,7 @@ export async function getBoardGameTitleForEdit(id: string) {
     where: { id },
     select: {
       title: true,
+      secondaryTitle: true,
       ean: true,
       kind: true,
       bggId: true,

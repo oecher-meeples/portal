@@ -56,7 +56,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     weight: 3.7,
     mechanics: [],
     alternateNames: [],
-    secondaryAlternateName: null,
+    secondaryTitle: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -112,6 +112,7 @@ describe("GameDetailView — offene Gesuche (#34)", () => {
 const TITLE_EDIT_FIXTURE = {
   boardGameId: "title-1",
   title: "Arche Nova",
+  secondaryTitle: null,
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -171,19 +172,19 @@ describe("GameDetailView — externer BGG-Link (#207)", () => {
   });
 });
 
-describe("GameDetailView — Sekundärname (#187)", () => {
-  it("shows the secondary alternate name next to the title when set", () => {
+describe("GameDetailView — Sekundärtitel (#203)", () => {
+  it("shows the secondary title next to the main title when set", () => {
     render(
       <GameDetailView
-        game={game({ secondaryAlternateName: "Die Siedler von Catan" })}
+        game={game({ secondaryTitle: "Die Siedler von Catan" })}
       />,
     );
 
     expect(screen.getByText("Die Siedler von Catan")).toBeInTheDocument();
   });
 
-  it("omits it when no secondary alternate name is set", () => {
-    render(<GameDetailView game={game({ secondaryAlternateName: null })} />);
+  it("omits it when no secondary title is set", () => {
+    render(<GameDetailView game={game({ secondaryTitle: null })} />);
 
     expect(screen.queryByText("Die Siedler von Catan")).not.toBeInTheDocument();
   });

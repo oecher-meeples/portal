@@ -39,12 +39,12 @@ export type LudothekGame = {
   condition: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
-   * Titel selbst; die Anzeige zeigt nur `secondaryAlternateName` (falls
-   * gesetzt), nicht diese volle Liste. */
+   * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
+   * nicht diese volle Liste. */
   alternateNames: string[];
-  /** Der eine Alternativname, der neben `title` angezeigt wird (#187) — `null`
-   * solange kein Alternativname als Sekundärname markiert wurde. */
-  secondaryAlternateName: string | null;
+  /** Ein zweiter Titel, der neben `title` angezeigt wird (#203) — eigenes
+   * `BoardGame`-Feld, `null` solange keiner gesetzt wurde. */
+  secondaryTitle: string | null;
   description: string | null;
   explainerVideoUrl: string | null;
   kind: BoardGameKind;

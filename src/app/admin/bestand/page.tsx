@@ -70,6 +70,7 @@ export default async function AdminBestandPage({
       id: copy.id,
       boardGameId: boardGame.id,
       title: boardGame.title,
+      secondaryTitle: boardGame.secondaryTitle,
       ean: boardGame.ean,
       status: copy.status,
       needsCompletenessCheck: copy.needsCompletenessCheck,

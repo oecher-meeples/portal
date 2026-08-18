@@ -37,6 +37,18 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   updateBoardGame: (...args: unknown[]) => updateBoardGameMock(...args),
 }));
 
+// Pulled in via `EditBoardGameTitle` → `TitleOverviewDialog` →
+// `AlternateNamesManager` (#203) — never opened here, just needs to import
+// cleanly (its permission check otherwise reaches for `next/headers`).
+vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
+  addAlternateName: vi.fn(),
+  deleteAlternateName: vi.fn(),
+  promoteAlternateNameToTitle: vi.fn(),
+  listAlternateNames: vi
+    .fn()
+    .mockResolvedValue({ success: true, alternateNames: [] }),
+}));
+
 const previewBggImportMock = vi.fn();
 const searchBggGamesActionMock = vi.fn();
 vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({

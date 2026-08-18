@@ -13,6 +13,7 @@ import type {
  * by `EditBoardGameTitle` and `EditBoardGameExemplar` (see #121/#122). */
 export type BoardGameFormValues = {
   title: string;
+  secondaryTitle: string;
   ean: string;
   condition: string;
   kind: BoardGameKind;
@@ -29,6 +30,7 @@ export type BoardGameFormValues = {
 
 export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   title: "",
+  secondaryTitle: "",
   ean: "",
   condition: "",
   kind: BoardGameKind.BOARDGAME,
@@ -46,6 +48,7 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
 /** The subset of a BoardGame record needed to seed the edit form. */
 export type BoardGameRecord = {
   title: string;
+  secondaryTitle: string | null;
   ean: string | null;
   condition: string | null;
   kind: BoardGameKind;
@@ -65,6 +68,7 @@ export function boardGameToFormValues(
 ): BoardGameFormValues {
   return {
     title: game.title,
+    secondaryTitle: game.secondaryTitle ?? "",
     ean: game.ean ?? "",
     condition: game.condition ?? "",
     kind: game.kind,
@@ -86,6 +90,7 @@ export function boardGameFormToTitleInput(
 ): BoardGameTitleInput {
   return {
     title: form.title,
+    secondaryTitle: form.secondaryTitle || undefined,
     ean: form.ean || undefined,
     kind: form.kind,
     bggId: form.bggId ? parseBggId(form.bggId) : undefined,

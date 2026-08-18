@@ -1,8 +1,8 @@
 # Ausführungsplan: Milestone 1 — Ludothek (BGG-Import & Titel-Editor)
 
 - **Erstellt/Aktualisiert:** 2026-08-18 12:00
-- **Ziel:** Alle 9 `ready`-Issues aus GitHub-Milestone 1 (`Ludothek (BGG-Import & Titel-Editor)`, Repo `oecher-meeples/portal`) umsetzen.
-- **Quelle:** `.claude/TODO.md` (Abschnitt „Milestone 1"), GitHub-Issues #5, #188, #198, #202, #203, #204, #205, #206, #207.
+- **Ziel:** Alle 9 `ready`-Issues aus GitHub-Milestone 1 (`Ludothek (BGG-Import & Titel-Editor)`, Repo `oecher-meeples/portal`) umsetzen, plus #214 (nachträglich vom Nutzer ergänzt, siehe Schritt 12).
+- **Quelle:** `.claude/TODO.md` (Abschnitt „Milestone 1"), GitHub-Issues #5, #188, #198, #202, #203, #204, #205, #206, #207, #214.
 - **Git-Base-State:** `develop` @ `0ec042715aee928a1b75f45db03042041283ae2e`
 
 > Details, Akzeptanzkriterien und Kontext stehen in den jeweiligen GitHub-Issues — hier nicht dupliziert, nur referenziert. Issue #5 wurde vor Planerstellung per `issue-refine`-Skill aktualisiert (Prämisse war veraltet: `StorageUnit`/Scan-Infrastruktur existiert bereits) — der aktuelle Issue-Text ist bindend, nicht eine ältere lokale Kopie.
@@ -53,6 +53,7 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
   | #205 | `PVTI_lADOCJfCSs4BertCzg24xRo` |
   | #206 | `PVTI_lADOCJfCSs4BertCzg24xVE` |
   | #207 | `PVTI_lADOCJfCSs4BertCzg24xYQ` |
+  | #214 | `PVTI_lADOCJfCSs4BertCzg29cio` |
 
   Statuswechsel-Befehl (Muster): `gh project item-edit --id <ITEM-ID> --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id <OPTION-ID>`
 
@@ -94,7 +95,7 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       `git commit -m "feat(ludothek): replace expansion assignment dropdown with searchable combobox"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg24xN8 --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#204 → In review).
 
-- [ ] **6. #203 — Titel-Editor: Sekundärtitel-Feld + Alternativtitel-Kind-Dialog + Icon-Löschbutton**
+- [x] **6. #203 — Titel-Editor: Sekundärtitel-Feld + Alternativtitel-Kind-Dialog + Icon-Löschbutton**
       Prisma-Migration `secondaryTitle String?` an `BoardGame`. `edit-board-game-title.tsx`: neues Feld + External-Link-Icon-Button, der einen Kind-Dialog öffnet (Pattern `explainer-video-search-dialog.tsx`) mit Haupttitel + Sekundärtitel + allen Alternativtiteln. Löschbutton in `alternate-names-manager.tsx` erhält `Trash2`-Icon statt Text.
       _Definition of Done:_ Migration angewendet (`pnpm prisma migrate dev`), Dialog zeigt alle drei Titelarten, bestehende Alternativtitel-Tests weiterhin grün + neuer Test für die erweiterte Liste.
       `git commit -m "feat(ludothek): add secondary title field and unify title list in child dialog"`
@@ -129,7 +130,17 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       `git commit -m "feat(scan): resolve ambiguous copies and confirm box changes in batch put-away mode"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg0cI_M --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#5 → In review).
 
-- [ ] **12. Abschluss-Verifikation**
+- [ ] **12. #214 — Ludothek: BGG Average Rating speichern und anzeigen (Detailseite + Übersicht)**
+      Nachträglich zum Milestone hinzugefügt (im ursprünglichen Plan übersehen, vom Nutzer während der Ausführung nachgetragen und danach zweimal per Issue-Kommentar verfeinert — Status auf GitHub bereits „In progress"). Migration `BoardGame.averageRating Float?` (analog `weight`). `lib/bgg/client.ts`: `statistics.ratings.average` parsen, `BggGameData.averageRating` ergänzen. Import (`board-games-bgg-import.ts`) übernimmt den Wert; Abgleich (`board-game-bgg-compare.ts`, `bgg-compare-panel.tsx`) bezieht ihn als Diff-Feld mit ein.
+      Neue fachliche Mapping-Tabelle `lib/bgg/rating-scale.ts`: `Math.round(averageRating)` (geclamped 1–10) → BGGs 10-stufige Hex-Farbskala (`#B71C1C` … `#1B5E20`) + deutsche Bedeutungsstufe (siehe Issue-Kommentare für die vollständige Tabelle).
+      Neue fachfreie `components/ui/bgg-rating-hexagon.tsx` (Hexagon, weiße Schrift, eine Nachkommastelle, Hintergrundfarbe aus `rating-scale.ts`, zweizeiliger Tooltip über die bestehende `Tooltip`-Komponente: „Durchschnittliche BGG Bewertung" + deutsche Bedeutung der gerundeten Stufe) — kein Hexagon bei `averageRating === null`.
+      Rendering in `game-detail-view.tsx` **sowie** in `game-card.tsx` und `game-list-row.tsx` (Ludothek-Übersicht, Karten- und Listenansicht).
+      Default-Sortierung der Übersicht in `lib/ludothek/query.ts` (`buildLudothekGames()`, aktuell `orderBy: { boardGame: { title: "asc" } }`) auf `averageRating` absteigend umstellen, Titel ohne Rating ans Ende (kein Sortier-UI-Feature, nur Default-Änderung).
+      _Definition of Done:_ Unit-Test für Parsing (`average` → `averageRating`); Compare-Diff-Test für das neue Feld; Unit-Test für die Rating→Farbe/Bedeutung-Mapping-Funktion (inkl. Rundung/Clamping); Komponenten-Test für Hexagon-Rendering inkl. Farbe, zweizeiligem Tooltip und Ausblenden bei `null`; Test für die neue Default-Sortierung (inkl. Titel ohne Rating am Ende).
+      `git commit -m "feat(bgg): store and display average BGG rating"`
+      Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg29cio --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#214 → In review).
+
+- [ ] **13. Abschluss-Verifikation**
       `pnpm run verify` (format:check + typecheck + lint + test) einmal komplett laufen lassen. Bei rotem Ergebnis: Ursache im jeweiligen Schritt beheben (nicht als neuen Extra-Schritt, sondern rückwirkend im betroffenen Commit-Bereich per Fixup-Commit), bis grün.
       _Definition of Done:_ `pnpm run verify` grün.
       `git commit -m "chore: fix verify issues found in final check"` (nur falls Fixes nötig waren — sonst kein Commit, Schritt trotzdem als `[x]` markieren).

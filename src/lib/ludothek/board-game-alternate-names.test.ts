@@ -15,7 +15,6 @@ const {
   addAlternateName,
   deleteAlternateName,
   promoteAlternateNameToTitle,
-  markAsSecondaryAlternateName,
   listAlternateNames,
 } = await import("./board-game-alternate-names");
 
@@ -77,7 +76,7 @@ describe("deleteAlternateName", () => {
     expect(prismaMock.boardGameAlternateName.delete).not.toHaveBeenCalled();
   });
 
-  it("deletes the row — the DB clears a matching secondaryAlternateNameId via ON DELETE SET NULL", async () => {
+  it("deletes the row", async () => {
     prismaMock.boardGameAlternateName.delete.mockResolvedValue({
       id: "alt-1",
       boardGameId: "game-1",
@@ -143,63 +142,6 @@ describe("promoteAlternateNameToTitle", () => {
   });
 });
 
-describe("markAsSecondaryAlternateName", () => {
-  it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
-
-    const result = await markAsSecondaryAlternateName("game-1", "alt-1");
-
-    expect(result).toEqual({ error: "Keine Berechtigung." });
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
-  });
-
-  it("rejects an alternate name that belongs to a different title", async () => {
-    prismaMock.boardGameAlternateName.findUnique.mockResolvedValue({
-      id: "alt-1",
-      boardGameId: "other-game",
-      name: "Foo",
-      note: null,
-      createdAt: new Date(),
-    });
-
-    const result = await markAsSecondaryAlternateName("game-1", "alt-1");
-
-    expect(result).toEqual({
-      error: "Dieser Alternativname gehört nicht zu diesem Titel.",
-    });
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
-  });
-
-  it("sets secondaryAlternateNameId", async () => {
-    prismaMock.boardGameAlternateName.findUnique.mockResolvedValue({
-      id: "alt-1",
-      boardGameId: "game-1",
-      name: "Foo",
-      note: null,
-      createdAt: new Date(),
-    });
-
-    const result = await markAsSecondaryAlternateName("game-1", "alt-1");
-
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
-      where: { id: "game-1" },
-      data: { secondaryAlternateNameId: "alt-1" },
-    });
-    expect(result).toEqual({ success: true });
-  });
-
-  it("clears secondaryAlternateNameId when passed null (Markierung aufheben)", async () => {
-    const result = await markAsSecondaryAlternateName("game-1", null);
-
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
-      where: { id: "game-1" },
-      data: { secondaryAlternateNameId: null },
-    });
-    expect(result).toEqual({ success: true });
-    expect(prismaMock.boardGameAlternateName.findUnique).not.toHaveBeenCalled();
-  });
-});
-
 describe("listAlternateNames", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     prismaMock.rolePermission.count.mockResolvedValue(0);
@@ -210,13 +152,10 @@ describe("listAlternateNames", () => {
     expect(prismaMock.boardGameAlternateName.findMany).not.toHaveBeenCalled();
   });
 
-  it("returns the alternate names and the current secondary marker", async () => {
+  it("returns the alternate names for the title", async () => {
     prismaMock.boardGameAlternateName.findMany.mockResolvedValue([
       { id: "alt-1", name: "Die Siedler von Catan", note: null },
     ] as never);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      secondaryAlternateNameId: "alt-1",
-    } as never);
 
     const result = await listAlternateNames("game-1");
 
@@ -230,7 +169,6 @@ describe("listAlternateNames", () => {
       alternateNames: [
         { id: "alt-1", name: "Die Siedler von Catan", note: null },
       ],
-      secondaryAlternateNameId: "alt-1",
     });
   });
 });

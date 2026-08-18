@@ -12,15 +12,12 @@ const listAlternateNamesMock = vi.fn();
 const addAlternateNameMock = vi.fn();
 const deleteAlternateNameMock = vi.fn();
 const promoteAlternateNameToTitleMock = vi.fn();
-const markAsSecondaryAlternateNameMock = vi.fn();
 vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
   listAlternateNames: (...args: unknown[]) => listAlternateNamesMock(...args),
   addAlternateName: (...args: unknown[]) => addAlternateNameMock(...args),
   deleteAlternateName: (...args: unknown[]) => deleteAlternateNameMock(...args),
   promoteAlternateNameToTitle: (...args: unknown[]) =>
     promoteAlternateNameToTitleMock(...args),
-  markAsSecondaryAlternateName: (...args: unknown[]) =>
-    markAsSecondaryAlternateNameMock(...args),
 }));
 
 afterEach(() => {
@@ -35,7 +32,6 @@ describe("AlternateNamesManager", () => {
       alternateNames: [
         { id: "alt-1", name: "Die Siedler von Catan", note: null },
       ],
-      secondaryAlternateNameId: null,
     });
 
     render(<AlternateNamesManager boardGameId="game-1" />);
@@ -50,7 +46,6 @@ describe("AlternateNamesManager", () => {
     listAlternateNamesMock.mockResolvedValue({
       success: true,
       alternateNames: [],
-      secondaryAlternateNameId: null,
     });
 
     render(<AlternateNamesManager boardGameId="game-1" />);
@@ -60,33 +55,13 @@ describe("AlternateNamesManager", () => {
     ).toBeInTheDocument();
   });
 
-  it("marks the current secondary name and offers to remove the marker", async () => {
-    listAlternateNamesMock.mockResolvedValue({
-      success: true,
-      alternateNames: [{ id: "alt-1", name: "Catan", note: null }],
-      secondaryAlternateNameId: "alt-1",
-    });
-
-    render(<AlternateNamesManager boardGameId="game-1" />);
-
-    expect(await screen.findByText(/— Sekundärname/)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Sekundärname entfernen" }),
-    ).toBeInTheDocument();
-  });
-
   it("adds a new alternate name and refreshes the list", async () => {
     const user = userEvent.setup();
     listAlternateNamesMock
-      .mockResolvedValueOnce({
-        success: true,
-        alternateNames: [],
-        secondaryAlternateNameId: null,
-      })
+      .mockResolvedValueOnce({ success: true, alternateNames: [] })
       .mockResolvedValueOnce({
         success: true,
         alternateNames: [{ id: "alt-1", name: "Catan", note: null }],
-        secondaryAlternateNameId: null,
       });
     addAlternateNameMock.mockResolvedValue({ success: true });
 
@@ -105,26 +80,21 @@ describe("AlternateNamesManager", () => {
     expect(await screen.findByText("Catan")).toBeInTheDocument();
   });
 
-  it("deletes an alternate name after confirmation", async () => {
+  it("deletes an alternate name via the icon button after confirmation (#203)", async () => {
     const user = userEvent.setup();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     listAlternateNamesMock
       .mockResolvedValueOnce({
         success: true,
         alternateNames: [{ id: "alt-1", name: "Catan", note: null }],
-        secondaryAlternateNameId: null,
       })
-      .mockResolvedValueOnce({
-        success: true,
-        alternateNames: [],
-        secondaryAlternateNameId: null,
-      });
+      .mockResolvedValueOnce({ success: true, alternateNames: [] });
     deleteAlternateNameMock.mockResolvedValue({ success: true });
 
     render(<AlternateNamesManager boardGameId="game-1" />);
 
     await screen.findByText("Catan");
-    await user.click(screen.getByRole("button", { name: "Löschen" }));
+    await user.click(screen.getByRole("button", { name: "„Catan“ löschen" }));
 
     expect(window.confirm).toHaveBeenCalledWith("„Catan“ wirklich löschen?");
     await waitFor(() =>
@@ -137,7 +107,6 @@ describe("AlternateNamesManager", () => {
     listAlternateNamesMock.mockResolvedValue({
       success: true,
       alternateNames: [{ id: "alt-1", name: "Catan", note: null }],
-      secondaryAlternateNameId: null,
     });
     promoteAlternateNameToTitleMock.mockResolvedValue({ success: true });
 
@@ -151,31 +120,6 @@ describe("AlternateNamesManager", () => {
 
     await waitFor(() =>
       expect(promoteAlternateNameToTitleMock).toHaveBeenCalledWith("alt-1"),
-    );
-  });
-
-  it("marks an alternate name as secondary", async () => {
-    const user = userEvent.setup();
-    listAlternateNamesMock.mockResolvedValue({
-      success: true,
-      alternateNames: [{ id: "alt-1", name: "Catan", note: null }],
-      secondaryAlternateNameId: null,
-    });
-    markAsSecondaryAlternateNameMock.mockResolvedValue({ success: true });
-
-    render(<AlternateNamesManager boardGameId="game-1" />);
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Als Sekundärname markieren",
-      }),
-    );
-
-    await waitFor(() =>
-      expect(markAsSecondaryAlternateNameMock).toHaveBeenCalledWith(
-        "game-1",
-        "alt-1",
-      ),
     );
   });
 });

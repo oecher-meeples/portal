@@ -23,7 +23,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     weight: 3.7,
     mechanics: ["Engine-Building"],
     alternateNames: [],
-    secondaryAlternateName: null,
+    secondaryTitle: null,
     description: "Baue den modernsten Zoo der Welt.",
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,

@@ -23,7 +23,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     weight: 3.7,
     mechanics: [],
     alternateNames: [],
-    secondaryAlternateName: null,
+    secondaryTitle: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,

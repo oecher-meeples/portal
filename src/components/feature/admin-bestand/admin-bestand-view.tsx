@@ -33,6 +33,7 @@ export type AdminBoardGameRow = {
   /** BoardGame (title) id. */
   boardGameId: string;
   title: string;
+  secondaryTitle: string | null;
   ean: string | null;
   status: "ACTIVE" | "MAINTENANCE" | "DEINVENTARISED";
   needsCompletenessCheck: boolean;

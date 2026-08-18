@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { BoardGameKind } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
 import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
+import { TitleOverviewDialog } from "@/components/widgets/board-game/title-overview-dialog";
 import { cn } from "@/lib/utils/cn";
 import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
 import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
@@ -44,10 +46,15 @@ export function EditBoardGameTitle({
   compareStatus,
   eanAutoSearch,
   eanAlternateTitles,
+  boardGameId,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
   onChange: (patch: Partial<BoardGameFormValues>) => void;
+  /** Nur im Bearbeiten-Modus gesetzt (#203) — blendet den "Alle Titel"-Dialog
+   * neben dem Sekundärtitel-Feld ein. Beim Anlegen eines neuen Titels gibt es
+   * noch keine ID, also auch keine Alternativtitel-Verwaltung. */
+  boardGameId?: string;
   /** Autocomplete suggestions for the Mechaniken multiselect, sourced from
    * the existing Bestand — omit to keep the plain comma-separated text
    * field (e.g. when creating a brand-new title with no suggestions yet
@@ -143,6 +150,30 @@ export function EditBoardGameTitle({
           <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
         </select>
       </div>
+
+      <Field
+        label="Sekundärtitel (optional)"
+        htmlFor={`${idPrefix}-secondary-title`}
+        className="sm:col-span-2"
+      >
+        <div className="flex gap-2">
+          <Input
+            id={`${idPrefix}-secondary-title`}
+            value={values.secondaryTitle}
+            onChange={(event) =>
+              onChange({ secondaryTitle: event.target.value })
+            }
+            placeholder="z. B. deutscher Titel neben einem englischen Haupttitel"
+          />
+          {boardGameId && (
+            <TitleOverviewDialog
+              boardGameId={boardGameId}
+              title={values.title}
+              secondaryTitle={values.secondaryTitle}
+            />
+          )}
+        </div>
+      </Field>
 
       <EanField
         idPrefix={idPrefix}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/components/ui/action-button";
@@ -9,19 +10,18 @@ import {
   addAlternateName,
   deleteAlternateName,
   promoteAlternateNameToTitle,
-  markAsSecondaryAlternateName,
   listAlternateNames,
 } from "@/lib/ludothek/board-game-alternate-names";
 
 type AlternateName = { id: string; name: string; note: string | null };
 
 /**
- * Verwaltung der Alternativnamen eines Titels (#187) — im Titel-Editor
- * unterhalb der Stammdaten. Lädt sich selbst (unabhängig vom umgebenden
- * Dialog), ähnlich `ExplainerVideoSearchDialog`. "Als Hauptname übernehmen"
- * tauscht nur Werte (siehe `promoteAlternateNameToTitle`), die Zeile bleibt
- * bestehen; "Als Sekundärname markieren" schaltet um (max. eine Zeile je
- * Titel, siehe `markAsSecondaryAlternateName`).
+ * Verwaltung der Alternativnamen eines Titels (#187) — lädt sich selbst,
+ * unabhängig vom umgebenden Dialog, ähnlich `ExplainerVideoSearchDialog".
+ * "Als Hauptname übernehmen" tauscht nur Werte (siehe
+ * `promoteAlternateNameToTitle`), die Zeile bleibt bestehen. Die frühere
+ * Sekundärname-Markierung ist durch `BoardGame.secondaryTitle` ersetzt (#203)
+ * — dieser Manager kennt sie nicht mehr.
  */
 export function AlternateNamesManager({
   boardGameId,
@@ -29,7 +29,6 @@ export function AlternateNamesManager({
   boardGameId: string;
 }) {
   const [names, setNames] = useState<AlternateName[]>([]);
-  const [secondaryId, setSecondaryId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -42,7 +41,6 @@ export function AlternateNamesManager({
       return;
     }
     setNames(result.alternateNames);
-    setSecondaryId(result.secondaryAlternateNameId);
     setLoadError(null);
     setIsLoading(false);
   }, [boardGameId]);
@@ -57,7 +55,6 @@ export function AlternateNamesManager({
         return;
       }
       setNames(result.alternateNames);
-      setSecondaryId(result.secondaryAlternateNameId);
       setLoadError(null);
       setIsLoading(false);
     });
@@ -104,11 +101,8 @@ export function AlternateNamesManager({
                 {alt.note && (
                   <span className="text-muted-foreground"> ({alt.note})</span>
                 )}
-                {secondaryId === alt.id && (
-                  <span className="text-muted-foreground"> — Sekundärname</span>
-                )}
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <ActionButton
                   size="sm"
                   variant="outline"
@@ -118,29 +112,15 @@ export function AlternateNamesManager({
                   Als Hauptname übernehmen
                 </ActionButton>
                 <ActionButton
-                  size="sm"
-                  variant="outline"
-                  action={() =>
-                    markAsSecondaryAlternateName(
-                      boardGameId,
-                      secondaryId === alt.id ? null : alt.id,
-                    )
-                  }
-                  onSuccess={refresh}
-                >
-                  {secondaryId === alt.id
-                    ? "Sekundärname entfernen"
-                    : "Als Sekundärname markieren"}
-                </ActionButton>
-                <ActionButton
-                  size="sm"
+                  size="icon-sm"
                   variant="outline"
                   className="text-destructive"
+                  aria-label={`„${alt.name}“ löschen`}
                   confirm={`„${alt.name}“ wirklich löschen?`}
                   action={() => deleteAlternateName(alt.id)}
                   onSuccess={refresh}
                 >
-                  Löschen
+                  <Trash2 className="size-4" />
                 </ActionButton>
               </div>
             </li>

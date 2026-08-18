@@ -168,6 +168,7 @@ export default async function GameDetailPage({
     ? {
         boardGameId: game.boardGameId,
         title: game.title,
+        secondaryTitle: game.secondaryTitle,
         ean: game.ean,
         kind: game.kind,
         bggId: game.bggId,

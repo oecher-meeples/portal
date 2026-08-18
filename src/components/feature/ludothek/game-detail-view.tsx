@@ -104,10 +104,8 @@ export function GameDetailView({
               <h1 className="font-serif text-3xl font-bold tracking-tight">
                 {game.title}
               </h1>
-              {game.secondaryAlternateName && (
-                <p className="text-muted-foreground">
-                  {game.secondaryAlternateName}
-                </p>
+              {game.secondaryTitle && (
+                <p className="text-muted-foreground">{game.secondaryTitle}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
