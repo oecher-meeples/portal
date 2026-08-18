@@ -39,9 +39,7 @@ export async function addAlternateName(
   return { success: true as const };
 }
 
-/** Löscht einen Alternativnamen. War er als Sekundärname markiert, setzt die
- * DB `BoardGame.secondaryAlternateNameId` selbst auf `null` (`ON DELETE SET
- * NULL`, siehe Migration) — kein zusätzlicher Schritt hier nötig (#187). */
+/** Löscht einen Alternativnamen (#187). */
 export async function deleteAlternateName(id: string) {
   const user = await requireGamesManagePermission();
   if (!user) {
@@ -97,62 +95,159 @@ export async function promoteAlternateNameToTitle(alternateNameId: string) {
 }
 
 /**
- * Markiert (oder entfernt, bei `alternateNameId: null`) den einen
- * Alternativnamen, der neben `title` angezeigt wird (#187) — greift über
- * `BoardGame.secondaryAlternateNameId` (unique), es kann also immer nur eine
- * Zeile je Titel markiert sein.
+ * "Als Sekundärtitel verwenden" auf einer Alternativnamen-Zeile
+ * (#203-Folge): tauscht die Zeile mit `BoardGame.secondaryTitle`. War noch
+ * kein Sekundärtitel gesetzt, gibt es nichts zurückzutauschen — die Zeile
+ * wird dann gelöscht statt eine leere Zeile zu hinterlassen (ihr Wert ist ja
+ * jetzt der Sekundärtitel).
  */
-export async function markAsSecondaryAlternateName(
-  boardGameId: string,
-  alternateNameId: string | null,
+export async function promoteAlternateNameToSecondaryTitle(
+  alternateNameId: string,
 ) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
 
-  if (alternateNameId) {
-    const alternateName = await prisma.boardGameAlternateName.findUnique({
+  const boardGameId = await prisma.$transaction(async (tx) => {
+    const alternateName = await tx.boardGameAlternateName.findUnique({
       where: { id: alternateNameId },
-      select: { boardGameId: true },
+      include: { boardGame: { select: { id: true, secondaryTitle: true } } },
     });
-    if (!alternateName || alternateName.boardGameId !== boardGameId) {
-      return { error: "Dieser Alternativname gehört nicht zu diesem Titel." };
+    if (!alternateName) return null;
+
+    await tx.boardGame.update({
+      where: { id: alternateName.boardGame.id },
+      data: { secondaryTitle: alternateName.name },
+    });
+
+    if (alternateName.boardGame.secondaryTitle) {
+      await tx.boardGameAlternateName.update({
+        where: { id: alternateNameId },
+        data: { name: alternateName.boardGame.secondaryTitle },
+      });
+    } else {
+      await tx.boardGameAlternateName.delete({
+        where: { id: alternateNameId },
+      });
     }
+
+    return alternateName.boardGame.id;
+  });
+
+  if (!boardGameId) {
+    return { error: "Alternativname wurde nicht gefunden." };
+  }
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
+/**
+ * Tauscht Haupttitel und Sekundärtitel (#203-Folge) — von beiden Zeilen im
+ * "Alle Titel"-Dialog auslösbar ("Als Haupttitel verwenden" auf der
+ * Sekundärtitel-Zeile bzw. "Als Sekundärtitel verwenden" auf der
+ * Haupttitel-Zeile sind dieselbe Operation). Ohne gesetzten Sekundärtitel
+ * gäbe es nichts zum Zurücktauschen und der Haupttitel würde leer — dieser
+ * Fall wird abgelehnt statt eine Pflichtangabe zu leeren.
+ */
+export async function swapTitleAndSecondaryTitle(boardGameId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const game = await prisma.boardGame.findUnique({
+    where: { id: boardGameId },
+    select: { title: true, secondaryTitle: true },
+  });
+  if (!game) {
+    return { error: "Titel wurde nicht gefunden." };
+  }
+  if (!game.secondaryTitle) {
+    return { error: "Kein Sekundärtitel gesetzt." };
   }
 
   await prisma.boardGame.update({
     where: { id: boardGameId },
-    data: { secondaryAlternateNameId: alternateNameId },
+    data: { title: game.secondaryTitle, secondaryTitle: game.title },
   });
 
   await revalidateTitlePaths(boardGameId);
   return { success: true as const };
 }
 
-/** Lädt die Alternativnamen-Liste plus die aktuelle Sekundärname-Markierung
- * für den Titel-Editor (#187). */
+/**
+ * Entfernt nur den "Sekundärtitel"-Status (#203-Folge-Korrektur) — der Text
+ * geht dabei nicht verloren, sondern wird als Alternativname weitergeführt,
+ * konsistent mit dem "nie Datenverlust"-Prinzip der übrigen Tausch-Aktionen
+ * hier. Zum endgültigen Verwerfen des Texts siehe `deleteSecondaryTitle`.
+ */
+export async function clearSecondaryTitle(boardGameId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const cleared = await prisma.$transaction(async (tx) => {
+    const game = await tx.boardGame.findUnique({
+      where: { id: boardGameId },
+      select: { secondaryTitle: true },
+    });
+    if (!game?.secondaryTitle) return false;
+
+    await tx.boardGameAlternateName.create({
+      data: { boardGameId, name: game.secondaryTitle },
+    });
+    await tx.boardGame.update({
+      where: { id: boardGameId },
+      data: { secondaryTitle: null },
+    });
+    return true;
+  });
+
+  if (!cleared) {
+    return { error: "Kein Sekundärtitel gesetzt." };
+  }
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
+/**
+ * Löscht den Sekundärtitel endgültig (#203-Folge-Korrektur) — Gegenstück zu
+ * `clearSecondaryTitle`, das den Text stattdessen als Alternativname
+ * weiterführt. Für den Fall, dass der Text wirklich verworfen werden soll.
+ */
+export async function deleteSecondaryTitle(boardGameId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  await prisma.boardGame.update({
+    where: { id: boardGameId },
+    data: { secondaryTitle: null },
+  });
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
+/** Lädt die Alternativnamen-Liste für den Titel-Editor (#187). Der
+ * Sekundärtitel selbst ist ein eigenständiges `BoardGame`-Feld (#203), nicht
+ * mehr Teil dieser Liste. */
 export async function listAlternateNames(boardGameId: string) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
 
-  const [alternateNames, boardGame] = await Promise.all([
-    prisma.boardGameAlternateName.findMany({
-      where: { boardGameId },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, note: true },
-    }),
-    prisma.boardGame.findUnique({
-      where: { id: boardGameId },
-      select: { secondaryAlternateNameId: true },
-    }),
-  ]);
+  const alternateNames = await prisma.boardGameAlternateName.findMany({
+    where: { boardGameId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true, note: true },
+  });
 
-  return {
-    success: true as const,
-    alternateNames,
-    secondaryAlternateNameId: boardGame?.secondaryAlternateNameId ?? null,
-  };
+  return { success: true as const, alternateNames };
 }

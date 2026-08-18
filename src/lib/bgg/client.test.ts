@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -47,9 +48,15 @@ describe("fetchBggGame", () => {
       maxPlayers: 4,
       playTimeMinutes: 150,
       weight: 3.7,
+      averageRating: 8.5,
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
+      kind: BoardGameKind.BOARDGAME,
+      languageDependence: null,
+      author: ["Mathias Wigge"],
+      yearPublished: 2021,
+      versions: [],
       alternateNames: ["Ark Nova (Deutsch)"],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
@@ -68,14 +75,113 @@ describe("fetchBggGame", () => {
       maxPlayers: 4,
       playTimeMinutes: null,
       weight: null,
+      averageRating: null,
       imageUrl: null,
       description: null,
       mechanics: [],
+      kind: BoardGameKind.BOARDGAME,
+      languageDependence: null,
+      author: [],
+      yearPublished: 1995,
+      versions: [],
       alternateNames: [],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
     });
+  });
+
+  it("maps the boardgameexpansion type attribute to BOARDGAME_EXPANSION (#202)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-expansion.xml"));
+
+    const result = await fetchBggGame(999);
+
+    expect(result.kind).toBe(BoardGameKind.BOARDGAME_EXPANSION);
+  });
+
+  it("falls back to BOARDGAME when the type attribute is missing or unknown (#202)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-full.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.kind).toBe(BoardGameKind.BOARDGAME);
+  });
+
+  it("picks the language_dependence level with the most votes (#188)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-language-poll.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.languageDependence).toBe(LanguageDependence.MODERATE_TEXT);
+  });
+
+  it("returns null for language_dependence when the poll has no votes (#188)", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-with-language-poll-no-votes.xml"),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.languageDependence).toBeNull();
+  });
+
+  it("returns null for language_dependence when the item has no poll block at all (#188)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-minimal.xml"));
+
+    const result = await fetchBggGame(1);
+
+    expect(result.languageDependence).toBeNull();
+  });
+
+  it("parses every BGG version with its own publisher, product code, year and languages (#205)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-versions.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.versions).toEqual([
+      {
+        yearPublished: 2021,
+        publisher: ["Capstone Games"],
+        productCode: "CAPS001",
+        languages: ["English"],
+      },
+      {
+        yearPublished: 2022,
+        publisher: ["Feuerland Spiele"],
+        productCode: "FEU001",
+        languages: ["German"],
+      },
+    ]);
+  });
+
+  it("takes the oldest year across versions over the item's own yearpublished (#205)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-versions.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    // Item-level yearpublished is 2021, matching the oldest version here —
+    // asserted directly against the versions data to prove it's actually
+    // computed from them, not just passed through the item's own value.
+    expect(result.yearPublished).toBe(
+      Math.min(...result.versions.map((v) => v.yearPublished ?? Infinity)),
+    );
+  });
+
+  it("requests the versions block from the bgg api (#205)", async () => {
+    const fetchMock = mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-minimal.xml"),
+    );
+
+    await fetchBggGame(1);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("versions=1"),
+      expect.anything(),
+    );
   });
 
   it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {

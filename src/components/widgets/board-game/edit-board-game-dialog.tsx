@@ -54,7 +54,10 @@ export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
 
     const [titleResult, copyResult] = await Promise.all([
       updateBoardGame(game.boardGameId, boardGameFormToTitleInput(form)),
-      updateGameCopy(game.id, { condition: form.condition || undefined }),
+      updateGameCopy(game.id, {
+        condition: form.condition || undefined,
+        ruleBookLanguages: form.ruleBookLanguages,
+      }),
     ]);
     setIsSubmitting(false);
 

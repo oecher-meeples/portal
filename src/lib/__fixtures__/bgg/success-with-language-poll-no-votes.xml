@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+	<item type="boardgame" id="342942">
+		<name type="primary" sortindex="1" value="Ark Nova" />
+		<minplayers value="1" />
+		<maxplayers value="4" />
+		<poll name="language_dependence" title="Language Dependence" totalvotes="0">
+			<results />
+		</poll>
+	</item>
+</items>

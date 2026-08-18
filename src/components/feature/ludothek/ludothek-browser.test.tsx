@@ -78,12 +78,18 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: [],
     ean: null,
     condition: null,
     bggId: null,
     alternateNames: [],
-    secondaryAlternateName: null,
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -188,6 +194,9 @@ describe("LudothekBrowser — live search", () => {
     },
   );
 });
+
+// Erstveröffentlichung-, Bewertung-, Dauer- und Spieler-Slider-Tests siehe
+// ludothek-browser-ranges.test.tsx (#214-Folge, ausgelagert wegen Dateigröße).
 
 describe("LudothekBrowser — view mode switch", () => {
   it("hides the compact icon for guests and internal users without games:manage", () => {
@@ -375,7 +384,7 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
     expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
   });
 
-  it("offers Mängelvermerk bearbeiten in the actions menu instead", async () => {
+  it("offers Exemplar bearbeiten in the actions menu instead", async () => {
     render(
       <LudothekBrowser
         {...baseProps()}
@@ -388,8 +397,6 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    expect(
-      await screen.findByText("Mängelvermerk bearbeiten"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
   });
 });

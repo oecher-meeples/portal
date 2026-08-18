@@ -87,13 +87,16 @@
 
 ### 2.7 Ludothek — Spielsuche (zwei Projektionen)
 - Eine Komponente, zwei Sichten: **öffentlich** ohne Standort, Zustand und Personen; **intern** (eingeloggt) zusätzlich mit Standort-Kette, Zustand und Verantwortliche:r
-- Suchleiste + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
+- Suchleiste (matcht auch Verlag/Autor, #205) + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik, Erstveröffentlichung von/bis); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
 - **Alle Filter liegen in `searchParams`** und werden serverseitig angewendet, damit jede Filterkombination als Link teilbar ist
-- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
+- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer, Verlag); Listenansicht zusätzlich mit Verlag, nicht in der Kompakt-Ansicht (#205); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
+- **Sprachneutral**-Badge für Titel mit BGGs Language-Dependence-Level 1 (kein notwendiger Text, #188)
+- BGG-Rating-Hexagon (Farbskala Dunkelrot–Dunkelgrün, Tooltip mit deutscher Bedeutung) auf Karten-/Listenansicht, sofern vorhanden; Default-Sortierung absteigend nach Rating, Titel ohne Rating am Ende (#214)
 - Deinventarisierte Spiele erscheinen nicht
 
 ### 2.8 Spiel-Detailseite
-- Cover, Metadaten (BGG-Import: Spieleranzahl, Dauer, Gewichtung), Beschreibung
+- Cover, Metadaten (BGG-Import: Spieleranzahl, Dauer, Gewichtung, Rating-Hexagon), Beschreibung
+- Sprachabhängigkeit (BGGs 5-stufiges Poll-Modell, als Vorschlag beim Import übernommen) und je Exemplar die Regelheft-Sprache(n) (DE/EN/Sonstige, Mehrfachauswahl, #188)
 - Intern zusätzlich: **Standort-Kette** (Spiel → Karton → Regal → Verwahrer), Verantwortliche:r, Zustand, letzte Prüfung
 - Intern: **Aufenthalts-Historie** (Vorgang, Ziel, Zeitraum, erfasst von; unbestätigte Aufenthalte mit Herkunftshinweis)
 - Aktionen: "Ausleihen", "Zurückgeben", "Weitergeben", "Ich habe dieses Spiel erhalten" — je nach aktuellem Aufenthalt

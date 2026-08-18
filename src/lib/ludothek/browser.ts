@@ -1,6 +1,11 @@
 import type { GameZustand } from "@/lib/ludothek/holdings";
-import { BoardGameKind } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+} from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
+import { languageDependenceLevel } from "@/lib/ludothek/language-dependence";
 
 /** A title referenced from a copy (e.g. base game/expansion) — titles have no
  * route of their own, only their copies do (see ADR 0008). Guest-safe: no
@@ -33,21 +38,34 @@ export type LudothekGame = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  /** BGGs Community-Durchschnittsbewertung (0–10), `null` ohne Bewertungen
+   * oder ohne BGG-ID (#214). */
+  averageRating: number | null;
   mechanics: string[];
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
-   * Titel selbst; die Anzeige zeigt nur `secondaryAlternateName` (falls
-   * gesetzt), nicht diese volle Liste. */
+   * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
+   * nicht diese volle Liste. */
   alternateNames: string[];
-  /** Der eine Alternativname, der neben `title` angezeigt wird (#187) — `null`
-   * solange kein Alternativname als Sekundärname markiert wurde. */
-  secondaryAlternateName: string | null;
+  /** Ein zweiter Titel, der neben `title` angezeigt wird (#203) — eigenes
+   * `BoardGame`-Feld, `null` solange keiner gesetzt wurde. */
+  secondaryTitle: string | null;
   description: string | null;
   explainerVideoUrl: string | null;
   kind: BoardGameKind;
+  /** BGGs Language-Dependence-Poll-Level, `null` solange nicht erfasst (#188). */
+  languageDependence: LanguageDependence | null;
+  /** Regelheft-Sprache(n) dieses Exemplars (#188). */
+  ruleBookLanguages: RuleBookLanguage[];
+  /** Verlag(e), mehrere bei Co-Publishern (#205). */
+  publisher: string[];
+  /** Autor(en)/Designer (#205). */
+  author: string[];
+  /** Erstveröffentlichungsjahr (#205). */
+  yearPublished: number | null;
   /** Base game(s) this expansion belongs to — empty unless `kind` is BOARDGAME_EXPANSION. */
   baseGames: LudothekGameRef[];
   /** Expansions in the collection that belong to this base game. */
@@ -109,17 +127,35 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
   return rest;
 }
 
+/** Nur noch vom unabhängigen Gastbereich-Filter (`free-games-list.tsx`)
+ * genutzt — das Ludothek-Filterpanel selbst nutzt seit #214-Folge `players`
+ * (Ein-Knoten-Slider statt fester Buckets). */
 export type PlayerCountFilter = "1-2" | "3-4" | "5+";
-export type DurationFilter = "short" | "mid" | "long";
 export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
-  players?: PlayerCountFilter;
-  duration?: DurationFilter;
+  /** Exakte Spieleranzahl — matcht jeden Titel, dessen min/maxPlayers diese
+   * Zahl einschließt (Ein-Knoten-Slider statt fester Buckets, #214-Folge). */
+  players?: number;
+  /** Spieldauer von/bis in Minuten (inklusive) — Slider statt fester Buckets
+   * (#214-Folge). */
+  durationFrom?: number;
+  durationTo?: number;
   maxWeight?: number;
   mechanics?: string[];
   hideExpansions?: boolean;
+  /** Erstveröffentlichung von/bis (Jahr, inklusive) — beide unabhängig
+   * voneinander setzbar (#205). */
+  yearFrom?: number;
+  yearTo?: number;
+  /** BGG-Durchschnittsbewertung von/bis (1–10, inklusive), beide unabhängig
+   * voneinander setzbar (#214-Folge). */
+  ratingFrom?: number;
+  ratingTo?: number;
+  /** Maximal zulässiges BGG-Poll-Level (1–5, s. `LANGUAGE_DEPENDENCE_BY_LEVEL`)
+   * für Sprachabhängigkeit — Ein-Knoten-Slider, `undefined` = "Alle" (#188). */
+  languageDependenceMax?: number;
   /** Defaults to "grid" when unset — only `parseLudothekSearchParams` sets it explicitly. */
   view?: LudothekViewMode;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
@@ -135,43 +171,61 @@ export type LudothekFilters = {
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
 type Timed = { playTimeMinutes: number | null };
 
-export function matchesPlayerFilter(
+/** Slider-Obergrenze für den Spieler-Filter — 1–8 sind exakte Werte, ab hier
+ * ("9+") reicht es, wenn der Titel mindestens so viele Spieler unterstützt,
+ * damit einzelne Ausreißer (z. B. ein 20-Spieler-Partyspiel) nicht die ganze
+ * Skala stauchen (#214-Folge-Korrektur). */
+export const MAX_PLAYERS_FILTER = 9;
+
+/** Zeigt Titel, die genau `players` Spieler unterstützen — Ein-Knoten-Slider
+ * statt fester Buckets (#214-Folge). Ab `MAX_PLAYERS_FILTER` ("9+") reicht
+ * es, wenn der Titel mindestens so viele Spieler unterstützt. Von
+ * `filterLudothekGames` und `buildPrivateCollectionResults` gemeinsam
+ * genutzt. */
+export function matchesPlayerCount(
   game: PlayerCounted,
-  filter: PlayerCountFilter,
-) {
+  players: number | undefined,
+): boolean {
+  if (players === undefined) return true;
   const max = game.maxPlayers ?? game.minPlayers ?? 0;
   const min = game.minPlayers ?? max;
-  if (filter === "1-2") return min <= 2;
-  if (filter === "3-4") return max >= 3 && min <= 4;
-  return max >= 5;
+  if (players >= MAX_PLAYERS_FILTER) return max >= MAX_PLAYERS_FILTER;
+  return players >= min && players <= max;
 }
 
-export function matchesDurationFilter(game: Timed, filter: DurationFilter) {
-  const minutes = game.playTimeMinutes ?? 0;
-  if (filter === "short") return minutes > 0 && minutes < 60;
-  if (filter === "mid") return minutes >= 60 && minutes <= 120;
-  return minutes > 120;
+/** Kein erfasster Wert kann keinen gesetzten Bereich erfüllen, analog zu
+ * Erstveröffentlichung und Bewertung — Slider statt fester Buckets
+ * (#214-Folge). */
+export function matchesDurationRange(
+  game: Timed,
+  from: number | undefined,
+  to: number | undefined,
+): boolean {
+  if (from === undefined && to === undefined) return true;
+  if (game.playTimeMinutes === null) return false;
+  if (from !== undefined && game.playTimeMinutes < from) return false;
+  if (to !== undefined && game.playTimeMinutes > to) return false;
+  return true;
 }
 
-const PLAYER_FILTER_VALUES = new Set<PlayerCountFilter>(["1-2", "3-4", "5+"]);
-const DURATION_FILTER_VALUES = new Set<DurationFilter>([
-  "short",
-  "mid",
-  "long",
-]);
 const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
   "grid",
   "liste",
   "compact",
 ]);
 
+/** Shared by the year and rating range filters (both plain numbers). */
+function parseNumberParam(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 /** Turns a Next.js `searchParams` object into filters — the single source of truth for URLs. */
 export function parseLudothekSearchParams(
   searchParams: Record<string, string | string[] | undefined>,
   { internal }: { internal: boolean },
 ): LudothekFilters {
-  const players = firstString(searchParams.spieler);
-  const duration = firstString(searchParams.dauer);
   const maxWeightRaw = firstString(searchParams.gewicht);
   const mechanikRaw = searchParams.mechanik;
   const view = firstString(searchParams.ansicht);
@@ -181,12 +235,9 @@ export function parseLudothekSearchParams(
     view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
       ? (view as LudothekViewMode)
       : "grid",
-    players: PLAYER_FILTER_VALUES.has(players as PlayerCountFilter)
-      ? (players as PlayerCountFilter)
-      : undefined,
-    duration: DURATION_FILTER_VALUES.has(duration as DurationFilter)
-      ? (duration as DurationFilter)
-      : undefined,
+    players: parseNumberParam(firstString(searchParams.spieler)),
+    durationFrom: parseNumberParam(firstString(searchParams.dauerVon)),
+    durationTo: parseNumberParam(firstString(searchParams.dauerBis)),
     maxWeight:
       maxWeightRaw && !Number.isNaN(Number(maxWeightRaw))
         ? Number(maxWeightRaw)
@@ -197,6 +248,11 @@ export function parseLudothekSearchParams(
         : [mechanikRaw]
       : undefined,
     hideExpansions: firstString(searchParams.ohneErweiterungen) === "1",
+    yearFrom: parseNumberParam(firstString(searchParams.jahrVon)),
+    yearTo: parseNumberParam(firstString(searchParams.jahrBis)),
+    ratingFrom: parseNumberParam(firstString(searchParams.bewertungVon)),
+    ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
+    languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
   };
 
   if (internal) {
@@ -212,10 +268,14 @@ export function parseLudothekSearchParams(
   return filters;
 }
 
-/** Title/Alternativnamen match as a substring; EAN/BGG-ID only as an exact
- * match — a partial EAN/BGG-ID hit has no business meaning (#187). */
+/** Title/Alternativnamen/Verlag/Autor match as a substring; EAN/BGG-ID only
+ * as an exact match — a partial EAN/BGG-ID hit has no business meaning
+ * (#187, Verlag/Autor seit #205). */
 export function matchesLudothekSearch(
-  game: Pick<LudothekGame, "title" | "ean" | "bggId" | "alternateNames">,
+  game: Pick<
+    LudothekGame,
+    "title" | "ean" | "bggId" | "alternateNames" | "publisher" | "author"
+  >,
   search: string,
 ): boolean {
   const term = search.trim().toLowerCase();
@@ -225,6 +285,10 @@ export function matchesLudothekSearch(
   if (game.ean !== null && game.ean === search.trim()) return true;
   if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
   if (game.alternateNames.some((name) => name.toLowerCase().includes(term)))
+    return true;
+  if (game.publisher.some((name) => name.toLowerCase().includes(term)))
+    return true;
+  if (game.author.some((name) => name.toLowerCase().includes(term)))
     return true;
 
   return false;
@@ -238,10 +302,10 @@ export function filterLudothekGames(
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
       return false;
     }
-    if (filters.players && !matchesPlayerFilter(game, filters.players)) {
+    if (!matchesPlayerCount(game, filters.players)) {
       return false;
     }
-    if (filters.duration && !matchesDurationFilter(game, filters.duration)) {
+    if (!matchesDurationRange(game, filters.durationFrom, filters.durationTo)) {
       return false;
     }
     if (filters.maxWeight !== undefined) {
@@ -256,6 +320,43 @@ export function filterLudothekGames(
       game.kind === BoardGameKind.BOARDGAME_EXPANSION
     ) {
       return false;
+    }
+    if (filters.yearFrom !== undefined || filters.yearTo !== undefined) {
+      // Kein erfasstes Jahr kann keinen gesetzten Bereich erfüllen — anders
+      // als bei `maxWeight` gibt es hier keinen sinnvollen Default (#205).
+      if (game.yearPublished === null) return false;
+      if (
+        filters.yearFrom !== undefined &&
+        game.yearPublished < filters.yearFrom
+      )
+        return false;
+      if (filters.yearTo !== undefined && game.yearPublished > filters.yearTo)
+        return false;
+    }
+    if (filters.ratingFrom !== undefined || filters.ratingTo !== undefined) {
+      // Wie beim Erstveröffentlichungsjahr: ohne Bewertung kann kein
+      // gesetzter Bereich erfüllt werden (#214-Folge).
+      if (game.averageRating === null) return false;
+      if (
+        filters.ratingFrom !== undefined &&
+        game.averageRating < filters.ratingFrom
+      )
+        return false;
+      if (
+        filters.ratingTo !== undefined &&
+        game.averageRating > filters.ratingTo
+      )
+        return false;
+    }
+    if (filters.languageDependenceMax !== undefined) {
+      // Kein erfasstes Level kann keinen gesetzten Schwellwert erfüllen,
+      // analog zu Erstveröffentlichung und Bewertung (#188).
+      if (game.languageDependence === null) return false;
+      if (
+        languageDependenceLevel(game.languageDependence) >
+        filters.languageDependenceMax
+      )
+        return false;
     }
     if (filters.zustand && game.zustand !== filters.zustand) {
       return false;
@@ -278,4 +379,15 @@ export function filterLudothekGames(
  * dialog (#124). */
 export function listDistinctMechanics(games: { mechanics: string[] }[]) {
   return [...new Set(games.flatMap((game) => game.mechanics))].sort();
+}
+
+/** Obergrenze für den Dauer-Slider (Minuten) — höchste im Bestand erfasste
+ * Spieldauer, aufgerundet auf 30-Minuten-Schritte, mindestens aber der
+ * Standard-Fallback (#214-Folge). */
+export function findMaxDurationBound(games: Timed[], fallback = 120): number {
+  const highest = Math.max(
+    fallback,
+    ...games.map((game) => game.playTimeMinutes ?? 0),
+  );
+  return Math.ceil(highest / 30) * 30;
 }

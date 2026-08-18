@@ -5,9 +5,12 @@ import Link from "next/link";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { cn } from "@/lib/utils/cn";
@@ -71,6 +74,9 @@ export function GameListRow({
           aspect="aspect-[3/4]"
         />
         {isExpansion && <RibbonCorner size="sm">Erweiterung</RibbonCorner>}
+        <CardCornerOverlay corner="top-right">
+          <BggRatingBadge averageRating={game.averageRating} />
+        </CardCornerOverlay>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <h3 className="group-hover:text-primary truncate font-serif text-lg leading-snug font-semibold">
@@ -80,6 +86,11 @@ export function GameListRow({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
+        {game.publisher.length > 0 && (
+          <p className="text-muted-foreground text-sm">
+            {game.publisher.join(", ")}
+          </p>
+        )}
         {game.description && (
           <p className="text-muted-foreground text-sm">
             {expanded
@@ -88,14 +99,16 @@ export function GameListRow({
           </p>
         )}
       </div>
-      {zustand && (
-        <GameZustandPill
-          zustand={zustand}
-          count={game.zustandCount}
-          total={game.copyCount}
-          className="shrink-0"
-        />
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+        {zustand && (
+          <GameZustandPill
+            zustand={zustand}
+            count={game.zustandCount}
+            total={game.copyCount}
+          />
+        )}
+        <LanguageIndependentPill languageDependence={game.languageDependence} />
+      </div>
 
       {actions && (
         <StopRowNavigation className="flex shrink-0 items-center gap-1">
@@ -106,7 +119,10 @@ export function GameListRow({
       {expanded && hasOverlayContent && (
         <div
           className={cn(
-            "bg-card border-primary/60 absolute inset-x-0 top-full z-10 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
+            // z-20 statt z-10: liegt sonst unter dem CardCornerOverlay
+            // (BggRatingBadge) der nächsten Zeile, da beide DOM-Reihenfolge-
+            // abhängig um denselben z-10 konkurrieren (#214-Folge-Korrektur).
+            "bg-card border-primary/60 absolute inset-x-0 top-full z-20 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
           )}
         >
           {(game.mechanics.length > 0 || game.weight) && (

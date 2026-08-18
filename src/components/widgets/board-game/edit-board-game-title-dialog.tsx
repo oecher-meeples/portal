@@ -9,7 +9,6 @@ import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
 import { parseBggId } from "@/lib/ludothek/bgg-id";
 import { compareBoardGameWithBgg } from "@/lib/ludothek/board-game-bgg-compare";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
-import { AlternateNamesManager } from "@/components/widgets/board-game/alternate-names-manager";
 import { BggComparePanel } from "@/components/widgets/board-game/bgg-compare-panel";
 import {
   boardGameFormToTitleInput,
@@ -24,10 +23,14 @@ import type { BggGameData } from "@/lib/bgg/client";
  * for the per-copy variant). */
 export type EditableBoardGameTitle = {
   boardGameId: string;
-} & Omit<BoardGameRecord, "condition">;
+} & Omit<BoardGameRecord, "condition" | "ruleBookLanguages">;
 
 function toFormValues(game: EditableBoardGameTitle) {
-  return boardGameToFormValues({ ...game, condition: null });
+  return boardGameToFormValues({
+    ...game,
+    condition: null,
+    ruleBookLanguages: [],
+  });
 }
 
 /** Edits a title's shared fields from the detail page header — for
@@ -143,13 +146,12 @@ export function EditBoardGameTitleDialog({
             onChange={patchForm}
             mechanicsOptions={mechanicsOptions}
             compareStatus={compareStatus}
+            boardGameId={game.boardGameId}
           />
           {bggCompareData && (
             <BggComparePanel bggData={bggCompareData} onChange={patchForm} />
           )}
         </div>
-
-        <AlternateNamesManager boardGameId={game.boardGameId} />
       </div>
     </ActionDialog>
   );

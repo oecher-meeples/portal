@@ -22,7 +22,11 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
   const [copies, units] = await Promise.all([
     prisma.gameCopy.findMany({
       where: { status: { not: GameInventoryStatus.DEINVENTARISED } },
-      orderBy: { boardGame: { title: "asc" } },
+      // Default sort: highest-rated first, titles without a rating last (#214).
+      orderBy: [
+        { boardGame: { averageRating: { sort: "desc", nulls: "last" } } },
+        { boardGame: { title: "asc" } },
+      ],
       include: {
         boardGame: {
           include: {
@@ -41,7 +45,6 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
               },
             },
             alternateNames: { select: { name: true } },
-            secondaryAlternateName: { select: { name: true } },
           },
         },
         holdings: {
@@ -96,15 +99,21 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       maxPlayers: boardGame.maxPlayers,
       playTimeMinutes: boardGame.playTimeMinutes,
       weight: boardGame.weight,
+      averageRating: boardGame.averageRating,
       mechanics: boardGame.mechanics,
       ean: boardGame.ean,
       condition: copy.condition,
+      ruleBookLanguages: copy.ruleBookLanguages,
       bggId: boardGame.bggId,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
-      secondaryAlternateName: boardGame.secondaryAlternateName?.name ?? null,
+      secondaryTitle: boardGame.secondaryTitle,
       description: boardGame.description,
       explainerVideoUrl: boardGame.explainerVideoUrl,
       kind: boardGame.kind,
+      languageDependence: boardGame.languageDependence,
+      publisher: boardGame.publisher,
+      author: boardGame.author,
+      yearPublished: boardGame.yearPublished,
       baseGames: boardGame.expansionCollections.map((c) => c.baseGame),
       expansions: boardGame.baseGameCollections.map((c) => c.expansion),
       explainerCount: explainerCounts.get(boardGame.id) ?? 0,

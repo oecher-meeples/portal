@@ -31,8 +31,20 @@ vi.mock("@/lib/ludothek/ean-search", () => ({
     .mockResolvedValue({ success: true, results: [] }),
 }));
 
-vi.mock("@/components/widgets/board-game/alternate-names-manager", () => ({
-  AlternateNamesManager: () => null,
+// Pulled in via `TitleOverviewDialog` (#203/#203-Folge) — this file only
+// tests the trigger's visibility, not the nested dialog's own logic (see
+// title-overview-dialog.test.tsx).
+vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
+  addAlternateName: vi.fn(),
+  deleteAlternateName: vi.fn(),
+  promoteAlternateNameToTitle: vi.fn(),
+  promoteAlternateNameToSecondaryTitle: vi.fn(),
+  swapTitleAndSecondaryTitle: vi.fn(),
+  clearSecondaryTitle: vi.fn(),
+  deleteSecondaryTitle: vi.fn(),
+  listAlternateNames: vi
+    .fn()
+    .mockResolvedValue({ success: true, alternateNames: [] }),
 }));
 
 afterEach(() => {
@@ -43,6 +55,11 @@ afterEach(() => {
 const GAME_WITHOUT_BGG_ID = {
   boardGameId: "title-1",
   title: "Arche Nova",
+  secondaryTitle: null,
+  languageDependence: null,
+  publisher: [],
+  author: [],
+  yearPublished: null,
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -50,6 +67,7 @@ const GAME_WITHOUT_BGG_ID = {
   maxPlayers: 4,
   playTimeMinutes: 90,
   weight: 3.7,
+  averageRating: 8.5,
   imageUrl: null,
   description: null,
   mechanics: [],
@@ -64,6 +82,7 @@ const BGG_DATA = {
   maxPlayers: 4,
   playTimeMinutes: 150,
   weight: 3.7,
+  averageRating: 8.5,
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel"],
@@ -71,6 +90,9 @@ const BGG_DATA = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  author: [],
+  yearPublished: null,
+  versions: [],
 };
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {

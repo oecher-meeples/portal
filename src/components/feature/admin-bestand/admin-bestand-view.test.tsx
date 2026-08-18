@@ -44,6 +44,12 @@ vi.mock("@/components/widgets/board-game/edit-board-game-dialog", () => ({
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
   AddGameCopyDialog: () => null,
 }));
+vi.mock(
+  "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog",
+  () => ({
+    AdminBestandCsvExportDialog: () => <div>csv-export-dialog</div>,
+  }),
+);
 
 const { AdminBestandView } = await import("./admin-bestand-view");
 
@@ -52,6 +58,7 @@ const games = [
     id: "1",
     boardGameId: "bg-1",
     title: "Catan",
+    secondaryTitle: null,
     ean: "4001504311892",
     status: "ACTIVE" as const,
     needsCompletenessCheck: false,
@@ -64,6 +71,7 @@ const games = [
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 2.3,
+    averageRating: 8.1,
     imageUrl: null,
     description: null,
     mechanics: [],
@@ -71,11 +79,17 @@ const games = [
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
   },
   {
     id: "2",
     boardGameId: "bg-2",
     title: "Carcassonne",
+    secondaryTitle: null,
     ean: null,
     status: "ACTIVE" as const,
     needsCompletenessCheck: false,
@@ -88,6 +102,7 @@ const games = [
     maxPlayers: 5,
     playTimeMinutes: 45,
     weight: 1.8,
+    averageRating: null,
     imageUrl: null,
     description: null,
     mechanics: [],
@@ -95,12 +110,23 @@ const games = [
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
   },
 ];
 
 describe("AdminBestandView search", () => {
   it("filters the table when a scan resolves to an EAN", () => {
-    render(<AdminBestandView games={games} showDeinventarised={false} />);
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={false}
+      />,
+    );
 
     expect(screen.getByText("Catan")).toBeInTheDocument();
     expect(screen.getByText("Carcassonne")).toBeInTheDocument();
@@ -109,5 +135,31 @@ describe("AdminBestandView search", () => {
 
     expect(screen.getByText("Catan")).toBeInTheDocument();
     expect(screen.queryByText("Carcassonne")).not.toBeInTheDocument();
+  });
+});
+
+describe("AdminBestandView CSV export gating", () => {
+  it("hides the export without games:manage", () => {
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.queryByText("csv-export-dialog")).not.toBeInTheDocument();
+  });
+
+  it("shows the export with games:manage", () => {
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={true}
+      />,
+    );
+
+    expect(screen.getByText("csv-export-dialog")).toBeInTheDocument();
   });
 });

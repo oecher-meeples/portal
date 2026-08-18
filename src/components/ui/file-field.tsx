@@ -4,13 +4,15 @@ import { useRef, useState, type ReactNode } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * File input rendered as an actual button. A bare `<input type="file">`
  * renders the browser's own "Durchsuchen…"/"Choose file" chrome, which
  * doesn't read as a button in this design system — this hides that native
  * control and drives it from a proper `<Button>` instead, echoing the
- * chosen filename(s) next to it.
+ * chosen filename(s) next to it. Also accepts a drag & drop from the
+ * desktop directly onto the field, for the same result (#186-Folge).
  *
  * Uncontrolled by design (matching the native input it wraps): pass a
  * changing `key` prop to clear the shown selection, e.g. after a
@@ -37,10 +39,36 @@ export function FileField({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileNames, setFileNames] = useState<string[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  function acceptFiles(fileList: FileList | null) {
+    const files = Array.from(fileList ?? []);
+    if (files.length > 0) {
+      setFileNames(files.map((file) => file.name));
+      onFilesSelected(files);
+    }
+  }
 
   return (
     <Field label={label} htmlFor={id} hint={hint} className={fieldClassName}>
-      <div className="flex items-center gap-2">
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded-md",
+          isDragOver && "ring-primary ring-2 ring-offset-2",
+        )}
+        onDragOver={(event) => {
+          if (disabled) return;
+          event.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(event) => {
+          if (disabled) return;
+          event.preventDefault();
+          setIsDragOver(false);
+          acceptFiles(event.dataTransfer.files);
+        }}
+      >
         <Button
           type="button"
           variant="outline"
@@ -66,11 +94,7 @@ export function FileField({
         disabled={disabled}
         className="hidden"
         onChange={(event) => {
-          const files = Array.from(event.target.files ?? []);
-          if (files.length > 0) {
-            setFileNames(files.map((file) => file.name));
-            onFilesSelected(files);
-          }
+          acceptFiles(event.target.files);
           event.target.value = "";
         }}
       />

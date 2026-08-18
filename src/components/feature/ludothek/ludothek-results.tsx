@@ -23,6 +23,7 @@ function actionsMenuCopies(game: LudothekGame & { copies: LudothekGame[] }) {
     zustand: copy.zustand,
     locationChain: copy.locationChain,
     condition: copy.condition,
+    ruleBookLanguages: copy.ruleBookLanguages,
   }));
 }
 

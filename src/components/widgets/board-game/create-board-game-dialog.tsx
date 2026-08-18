@@ -23,6 +23,10 @@ import {
 } from "@/lib/ludothek/board-games-bgg-import";
 import { createGameCopy } from "@/lib/ludothek/game-copies";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
+import {
+  resolvePublisherFromVersions,
+  resolveProductCodeFromVersions,
+} from "@/lib/ludothek/board-game-versions";
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
 import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
 import { BoardGameDuplicateWarning } from "@/components/widgets/board-game/board-game-duplicate-warning";
@@ -37,7 +41,11 @@ import {
   boardGameToFormValues,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
-import type { BggGameData, BggSearchResult } from "@/lib/bgg/client";
+import type {
+  BggGameData,
+  BggSearchResult,
+  BggVersion,
+} from "@/lib/bgg/client";
 
 type Step = 1 | 2 | 3;
 
@@ -50,12 +58,18 @@ const STEP_LABELS: Record<Step, string> = {
 export function CreateBoardGameDialog({
   defaultEan,
   defaultBggQuery,
+  onCreated,
 }: {
   defaultEan?: string;
   /** Übernimmt eine bereits eingegebene Ludothek-Suche als Startwert für den
    * BGG-Import (#183) — Admin sucht z. B. schon nach einem Titel, der noch
    * fehlt, und muss ihn nicht ein zweites Mal eintippen. */
   defaultBggQuery?: string;
+  /** Meldet den (neu angelegten oder wiederverwendeten) Titel nach
+   * erfolgreichem Anlegen — für verschachtelte Aufrufer wie
+   * `AssignExpansionDialog`s Combobox-Leerzustand, die das Ergebnis direkt
+   * als Auswahl übernehmen wollen (#204). */
+  onCreated?: (game: { id: string; title: string }) => void;
 } = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(defaultEan));
@@ -128,7 +142,13 @@ export function CreateBoardGameDialog({
         setError("Titel wurde nicht gefunden.");
         return;
       }
-      setForm(boardGameToFormValues({ ...record, condition: null }));
+      setForm(
+        boardGameToFormValues({
+          ...record,
+          condition: null,
+          ruleBookLanguages: [],
+        }),
+      );
       setError(null);
     } catch (err) {
       setError(
@@ -152,6 +172,7 @@ export function CreateBoardGameDialog({
       setPreview(result.data);
       patchForm({
         title: result.data.title,
+        kind: result.data.kind,
         bggId: String(bggId),
         minPlayers: result.data.minPlayers?.toString() ?? "",
         maxPlayers: result.data.maxPlayers?.toString() ?? "",
@@ -160,6 +181,16 @@ export function CreateBoardGameDialog({
         imageUrl: result.data.imageUrl ?? "",
         description: result.data.description ?? "",
         mechanics: result.data.mechanics.join(", "),
+        languageDependence: result.data.languageDependence,
+        author: result.data.author.join(", "),
+        yearPublished: result.data.yearPublished?.toString() ?? "",
+        // Nur übernehmen, wenn über alle (ggf. deutschen) Versionen
+        // identisch — sonst zeigt die Versions-Auswahl unten den Konflikt,
+        // das Feld bleibt bis zur manuellen Auswahl leer (#205).
+        publisher:
+          resolvePublisherFromVersions(result.data.versions).value?.join(
+            ", ",
+          ) ?? "",
         // Bei mehreren/einzelnen deutschsprachigen Treffern entscheidet der
         // Admin bewusst über die Auswahlliste (#185) — sonst wie bisher der
         // erste instruktive Video-Treffer, automatisch übernommen.
@@ -169,8 +200,8 @@ export function CreateBoardGameDialog({
             : (result.data.explainerVideoUrl ?? ""),
       });
       // `hint` steht nur bei fehlgeschlagener Übersetzung — kein Hard-
-      // Error, die Vorschau ist trotzdem nutzbar, nur ohne automatische
-      // deutsche Beschreibung (#184, nie englischen Text speichern).
+      // Error, die Vorschau ist trotzdem nutzbar, die Beschreibung bleibt
+      // dann vorerst auf Englisch statt leer (#184).
       setError(result.hint ?? null);
       await checkDuplicate(result.data.title, bggId);
       return true;
@@ -247,6 +278,16 @@ export function CreateBoardGameDialog({
     }
   }
 
+  /** Übernimmt Verlag + Product Code (als EAN) der gewählten BGG-Edition,
+   * wenn sich mehrere Editionen nicht auf einen gemeinsamen Verlag einigen
+   * (#205) — der Product Code ist meist die echte Verpackungs-EAN. */
+  function handleSelectVersion(version: BggVersion) {
+    patchForm({
+      publisher: version.publisher.join(", "),
+      ...(version.productCode ? { ean: version.productCode } : {}),
+    });
+  }
+
   function handleSkipImport() {
     setError(null);
     setStep(2);
@@ -278,6 +319,7 @@ export function CreateBoardGameDialog({
           return;
         }
         setLastHint(null);
+        onCreated?.({ id: existingBoardGame.id, title: form.title });
       } else {
         const input: CreateBoardGameInput = {
           ...boardGameFormToInput(form),
@@ -290,6 +332,10 @@ export function CreateBoardGameDialog({
           return;
         }
         setLastHint(result.hint ?? null);
+        // `result.error` above already excludes the error branch — TS just
+        // doesn't narrow `boardGameId` off of it (a plain `string` field,
+        // not a literal discriminant), same gap `result.hint` silently has too.
+        onCreated?.({ id: result.boardGameId as string, title: form.title });
       }
 
       setOpen(false);
@@ -356,6 +402,7 @@ export function CreateBoardGameDialog({
               onSelectExplainerVideo={(url) =>
                 patchForm({ explainerVideoUrl: url })
               }
+              onSelectVersion={handleSelectVersion}
             />
           )}
 
@@ -370,6 +417,11 @@ export function CreateBoardGameDialog({
                 loadingExistingTitle={isLoadingTitle}
                 eanAutoSearch
                 eanAlternateTitles={preview?.alternateNames}
+                bggProductCode={
+                  preview
+                    ? resolveProductCodeFromVersions(preview.versions).value
+                    : null
+                }
               />
             </div>
           )}

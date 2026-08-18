@@ -22,39 +22,12 @@ import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/de
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
-import type { GameZustand } from "@/lib/ludothek/holdings";
 import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
-import type { BoardGameKind } from "@prisma/client";
+import { AdminBestandCsvExportDialog } from "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog";
+import type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
 
-export type AdminBoardGameRow = {
-  /** GameCopy id. */
-  id: string;
-  /** BoardGame (title) id. */
-  boardGameId: string;
-  title: string;
-  ean: string | null;
-  status: "ACTIVE" | "MAINTENANCE" | "DEINVENTARISED";
-  needsCompletenessCheck: boolean;
-  lastCheckedAt: string | null;
-  archivedReason: string | null;
-  zustand: GameZustand;
-  locationChain: string;
-  bggId: number | null;
-  minPlayers: number | null;
-  maxPlayers: number | null;
-  playTimeMinutes: number | null;
-  weight: number | null;
-  imageUrl: string | null;
-  description: string | null;
-  mechanics: string[];
-  condition: string | null;
-  kind: BoardGameKind;
-  explainerVideoUrl: string | null;
-  /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
-   * selbst (#187). */
-  alternateNames: string[];
-};
+export type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
 
 type QuickFilter = "all" | "ungeprueft" | "mangel" | "nicht-erfasst";
 
@@ -62,10 +35,12 @@ export function AdminBestandView({
   games,
   showDeinventarised,
   defaultEan,
+  canManageGames,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
   defaultEan?: string;
+  canManageGames: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -149,16 +124,28 @@ export function AdminBestandView({
             </Button>
           ))}
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="ml-auto"
-          onClick={toggleShowDeinventarised}
-        >
-          {showDeinventarised
-            ? "Deinventarisierte ausblenden"
-            : "Deinventarisierte anzeigen"}
-        </Button>
+        <div className="ml-auto flex gap-2">
+          {canManageGames && (
+            <AdminBestandCsvExportDialog
+              filteredRows={filtered.map((game) => ({
+                title: game.title,
+                ean: game.ean,
+                status: game.status,
+                zustand: game.zustand,
+                locationChain: game.locationChain,
+              }))}
+            />
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={toggleShowDeinventarised}
+          >
+            {showDeinventarised
+              ? "Deinventarisierte ausblenden"
+              : "Deinventarisierte anzeigen"}
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border">

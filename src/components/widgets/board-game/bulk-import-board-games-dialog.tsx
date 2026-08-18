@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,17 +14,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TextAreaField } from "@/components/ui/field";
+import { FileField } from "@/components/ui/file-field";
+import { BulkScanDialog } from "@/components/ui/bulk-scan-dialog";
+import { BulkImportResultReport } from "@/components/widgets/board-game/bulk-import-result-report";
 import {
   bulkImportBoardGames,
+  fetchBulkImportCandidateDetails,
+  resolveBulkImportCandidate,
+  type BulkImportCandidateDetails,
   type BulkImportRow,
 } from "@/lib/ludothek/board-games-bulk-import";
-
-const STATUS_LABELS: Record<BulkImportRow["status"], string> = {
-  imported: "Importiert",
-  "skipped-duplicate": "Übersprungen — bereits im Bestand",
-  "needs-review": "Nicht eindeutig — bitte manuell prüfen",
-  failed: "Fehlgeschlagen",
-};
+import { parseBulkImportCsv } from "@/lib/ludothek/bulk-import-csv";
+import { mergeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
 
 /**
  * Massenimport mehrerer Titel per Namensliste (#186) — jede Zeile wird
@@ -37,17 +38,40 @@ export function BulkImportBoardGamesDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [namesText, setNamesText] = useState("");
+  const [fileFieldKey, setFileFieldKey] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const [results, setResults] = useState<BulkImportRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resolvingName, setResolvingName] = useState<string | null>(null);
+  const [candidateDetails, setCandidateDetails] = useState<
+    Record<number, BulkImportCandidateDetails>
+  >({});
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     if (!nextOpen) {
       setNamesText("");
+      setFileFieldKey((key) => key + 1);
       setResults(null);
       setError(null);
+      setCandidateDetails({});
     }
+  }
+
+  /** Shared by the scanner and the CSV upload — both only add to the
+   * existing list, never replace it, and never add an entry twice (#186-Folge). */
+  function addEntries(entries: string[]) {
+    setNamesText((current) =>
+      mergeBulkImportEntries(
+        current.split("\n").filter((line) => line.trim()),
+        entries,
+      ).join("\n"),
+    );
+  }
+
+  async function handleCsvFile(file: File) {
+    const text = await file.text();
+    addEntries(parseBulkImportCsv(text));
   }
 
   async function handleImport() {
@@ -61,6 +85,20 @@ export function BulkImportBoardGamesDialog() {
       }
       setResults(result.results);
       router.refresh();
+
+      // Best-effort, nicht blockierend — Autor/Verlag ergänzen die
+      // Kandidatenliste, sobald sie da sind, statt "Importieren" künstlich
+      // zu verlängern (#186-Folge).
+      const candidateBggIds = result.results.flatMap((row) =>
+        row.status === "needs-review" || row.status === "failed"
+          ? (row.candidates?.map((candidate) => candidate.bggId) ?? [])
+          : [],
+      );
+      if (candidateBggIds.length > 0) {
+        void fetchBulkImportCandidateDetails(candidateBggIds).then(
+          setCandidateDetails,
+        );
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -69,6 +107,22 @@ export function BulkImportBoardGamesDialog() {
       );
     } finally {
       setIsImporting(false);
+    }
+  }
+
+  /** Resolves one "Nicht importiert"-row by hand once the admin picks a
+   * candidate — replaces just that row in place, no full re-run (#186-Folge). */
+  async function handleResolveCandidate(name: string, bggId: number) {
+    setResolvingName(name);
+    try {
+      const updated = await resolveBulkImportCandidate(name, bggId);
+      setResults(
+        (current) =>
+          current?.map((row) => (row.name === name ? updated : row)) ?? current,
+      );
+      router.refresh();
+    } finally {
+      setResolvingName(null);
     }
   }
 
@@ -86,54 +140,69 @@ export function BulkImportBoardGamesDialog() {
         <DialogHeader>
           <DialogTitle>Mehrere Titel importieren</DialogTitle>
           <DialogDescription>
-            Ein Spieletitel pro Zeile. Eindeutig auflösbare Namen werden
-            automatisch angelegt; alles andere (0 oder mehrere BGG-Treffer,
-            bereits vorhanden, Fehler) landet zur manuellen Prüfung in der
-            Ergebnisliste.
+            Ein Spieletitel oder eine EAN pro Zeile — per Hand eintragen, EANs
+            scannen oder eine CSV hochladen (mit oder ohne Kopfzeile, eine oder
+            mehrere Spalten). Eindeutig auflösbare Einträge werden automatisch
+            angelegt; alles andere (0 oder mehrere BGG-Treffer, bereits
+            vorhanden, Fehler) landet zur manuellen Prüfung in der
+            Ergebnisliste. Jeder Eintrag wird nur einmal importiert, auch bei
+            mehrfachem Scan oder überlappenden Quellen.
           </DialogDescription>
         </DialogHeader>
 
-        {!results && (
-          <TextAreaField
-            id="bulk-import-names"
-            label="Spieletitel"
-            value={namesText}
-            onChange={(event) => setNamesText(event.target.value)}
-            placeholder={"Ark Nova\nWingspan\nDie Siedler von Catan"}
-            rows={8}
-          />
-        )}
-
-        {error && <p className="text-destructive text-sm">{error}</p>}
-
-        {results && (
-          <div className="flex max-h-96 flex-col gap-1.5 overflow-y-auto">
-            {results.map((row) => (
-              <div key={row.name} className="rounded-md border p-2 text-sm">
-                <p className="font-medium">{row.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  {STATUS_LABELS[row.status]}
-                </p>
-                {row.status === "needs-review" && row.candidates.length > 0 && (
-                  <ul className="text-muted-foreground mt-1 list-disc pl-4 text-xs">
-                    {row.candidates.map((candidate) => (
-                      <li key={candidate.bggId}>
-                        {candidate.title}
-                        {candidate.yearPublished
-                          ? ` (${candidate.yearPublished})`
-                          : ""}{" "}
-                        — BGG-ID {candidate.bggId}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {row.status === "failed" && (
-                  <p className="text-destructive mt-1 text-xs">{row.error}</p>
+        <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
+          {!results && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <BulkScanDialog
+                  disabled={isImporting}
+                  onDetected={(text) => addEntries([text])}
+                />
+                <FileField
+                  key={fileFieldKey}
+                  id="bulk-import-csv"
+                  label="CSV hochladen"
+                  accept=".csv,text/csv"
+                  disabled={isImporting}
+                  onFilesSelected={(files) => {
+                    const file = files[0];
+                    if (file) void handleCsvFile(file);
+                  }}
+                />
+              </div>
+              <div className="relative">
+                <TextAreaField
+                  id="bulk-import-names"
+                  label="Spieletitel oder EAN"
+                  value={namesText}
+                  onChange={(event) => setNamesText(event.target.value)}
+                  placeholder={"Ark Nova\nWingspan\n4001504311896"}
+                  rows={8}
+                  readOnly={isImporting}
+                />
+                {isImporting && (
+                  <div className="bg-background/80 absolute inset-0 top-6 flex flex-col items-center justify-center gap-2 rounded-md">
+                    <Loader2 className="text-primary size-6 animate-spin" />
+                    <p className="text-muted-foreground text-sm">
+                      Importiere …
+                    </p>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
-        )}
+            </>
+          )}
+
+          {error && <p className="text-destructive text-sm">{error}</p>}
+
+          {results && (
+            <BulkImportResultReport
+              results={results}
+              resolvingName={resolvingName}
+              candidateDetails={candidateDetails}
+              onResolveCandidate={handleResolveCandidate}
+            />
+          )}
+        </div>
 
         <DialogFooter>
           {results ? (

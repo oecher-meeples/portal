@@ -17,7 +17,10 @@ function Tooltip({
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger delay={delay} render={children} />
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Positioner sideOffset={6}>
+        <TooltipPrimitive.Positioner
+          sideOffset={6}
+          collisionPadding={{ top: 72 }}
+        >
           <TooltipPrimitive.Popup
             data-slot="tooltip-content"
             className={cn(

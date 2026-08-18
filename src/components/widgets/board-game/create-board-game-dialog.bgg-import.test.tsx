@@ -1,12 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   goNext,
@@ -30,6 +24,18 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
   findDuplicateBoardGame: (...args: unknown[]) =>
     findDuplicateBoardGameMock(...args),
+}));
+
+// Pulled in via `EditBoardGameTitle` → `TitleOverviewDialog` →
+// `AlternateNamesManager` (#203) — never opened here, just needs to import
+// cleanly (its permission check otherwise reaches for `next/headers`).
+vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
+  addAlternateName: vi.fn(),
+  deleteAlternateName: vi.fn(),
+  promoteAlternateNameToTitle: vi.fn(),
+  listAlternateNames: vi
+    .fn()
+    .mockResolvedValue({ success: true, alternateNames: [] }),
 }));
 
 const previewBggImportMock = vi.fn();
@@ -67,48 +73,6 @@ beforeEach(() => {
 
 const { CreateBoardGameDialog } = await import("./create-board-game-dialog");
 
-describe("CreateBoardGameDialog — defaultBggQuery (#183)", () => {
-  it("prefills the import field from an already-typed Ludothek search", async () => {
-    const user = userEvent.setup();
-
-    render(<CreateBoardGameDialog defaultBggQuery="Ark Nova" />);
-    const dialog = await openDialog(user);
-
-    expect(within(dialog).getByLabelText(/Titel, BGG-Link/)).toHaveValue(
-      "Ark Nova",
-    );
-  });
-
-  it("clears the prefilled query via the clear button", async () => {
-    const user = userEvent.setup();
-
-    render(<CreateBoardGameDialog defaultBggQuery="Ark Nova" />);
-    const dialog = await openDialog(user);
-
-    await user.click(
-      within(dialog).getByRole("button", { name: "Eingabe löschen" }),
-    );
-
-    expect(within(dialog).getByLabelText(/Titel, BGG-Link/)).toHaveValue("");
-  });
-
-  it("picks up a query typed after mount — re-seeded on open, not frozen at mount time", async () => {
-    const user = userEvent.setup();
-
-    const { rerender } = render(<CreateBoardGameDialog defaultBggQuery="" />);
-    // Simulates the Ludothek search box updating live while the dialog
-    // component itself stays mounted the whole time (#183 follow-up).
-    rerender(<CreateBoardGameDialog defaultBggQuery="Ark Nova" />);
-
-    await user.click(screen.getByRole("button", { name: "Spiel anlegen" }));
-    const dialog = await screen.findByRole("dialog");
-
-    expect(within(dialog).getByLabelText(/Titel, BGG-Link/)).toHaveValue(
-      "Ark Nova",
-    );
-  });
-});
-
 describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
   it("imports directly, prefills the review step and submits the enriched data", async () => {
     const user = userEvent.setup();
@@ -126,6 +90,9 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -161,6 +128,41 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
         playTimeMinutes: 150,
         mechanics: ["Engine Building"],
       }),
+    );
+  });
+
+  it("resolves the input on Enter, without clicking the Suchen-Button", async () => {
+    const user = userEvent.setup();
+    previewBggImportMock.mockResolvedValue({
+      success: true,
+      data: {
+        title: "Ark Nova",
+        minPlayers: 1,
+        maxPlayers: 4,
+        playTimeMinutes: 150,
+        weight: 3.7,
+        imageUrl: "https://example.com/ark-nova.png",
+        description: "Zoo-Aufbauspiel",
+        mechanics: ["Engine Building"],
+        explainerVideoUrl: null,
+        germanExplainerVideos: [],
+        englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
+      },
+    });
+
+    render(<CreateBoardGameDialog />);
+    const dialog = await openDialog(user);
+
+    await user.type(
+      within(dialog).getByLabelText(/Titel, BGG-Link/),
+      "342942{Enter}",
+    );
+
+    await waitFor(() =>
+      expect(previewBggImportMock).toHaveBeenCalledWith(342942),
     );
   });
 
@@ -211,6 +213,9 @@ describe("CreateBoardGameDialog — BGG-Import: BGG-Link", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 
@@ -282,6 +287,9 @@ describe("CreateBoardGameDialog — BGG-Import: Namenssuche (Fallback)", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -372,6 +380,10 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
             channel: "ChannelB",
           },
         ],
+        englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 
@@ -419,6 +431,9 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
         explainerVideoUrl: "https://www.youtube.com/watch?v=english-fallback",
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 

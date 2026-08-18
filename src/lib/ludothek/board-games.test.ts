@@ -93,7 +93,12 @@ describe("createBoardGame", () => {
 
     const result = await createBoardGame(VALID_INPUT);
 
-    expect(result).toEqual({ success: true, id: "copy-1", hint: undefined });
+    expect(result).toEqual({
+      success: true,
+      id: "copy-1",
+      boardGameId: "game-1",
+      hint: undefined,
+    });
     expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ title: "Arche Nova" }),
     });
@@ -224,7 +229,12 @@ describe("createBoardGame", () => {
 
     const result = await createBoardGame({ ...VALID_INPUT, bggId: 342942 });
 
-    expect(result).toEqual({ success: true, id: "copy-2", hint: undefined });
+    expect(result).toEqual({
+      success: true,
+      id: "copy-2",
+      boardGameId: "game-1",
+      hint: undefined,
+    });
     expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
     expect(prismaMock.gameCopy.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ boardGameId: "game-1" }),

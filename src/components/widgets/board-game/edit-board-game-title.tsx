@@ -1,15 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
+import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
+import { TitleOverviewDialog } from "@/components/widgets/board-game/title-overview-dialog";
 import { cn } from "@/lib/utils/cn";
-import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
+import {
+  formatMechanics,
+  parseMechanics,
+  parseCommaSeparatedList,
+} from "@/lib/ludothek/bgg-id";
 import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
+import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
@@ -43,10 +50,22 @@ export function EditBoardGameTitle({
   compareStatus,
   eanAutoSearch,
   eanAlternateTitles,
+  boardGameId,
+  bggProductCode,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
   onChange: (patch: Partial<BoardGameFormValues>) => void;
+  /** Nur im Bearbeiten-Modus gesetzt (#203) — blendet den "Alternativtitel"-
+   * Dialog hinter dem Titel-Feld ein (#203-Folge: dort auch Sekundärtitel
+   * setzen/entfernen, kein eigenes Textfeld mehr dafür). Beim Anlegen eines
+   * neuen Titels gibt es noch keine ID, also auch keine
+   * Alternativtitel-Verwaltung. */
+  boardGameId?: string;
+  /** Eindeutiger BGG-Product-Code aus der frisch geladenen Import-Vorschau
+   * (#205) — nur im Anlegen-Wizard gesetzt, hat dort Vorrang vor der
+   * UPCitemdb-EAN-Suche. */
+  bggProductCode?: string | null;
   /** Autocomplete suggestions for the Mechaniken multiselect, sourced from
    * the existing Bestand — omit to keep the plain comma-separated text
    * field (e.g. when creating a brand-new title with no suggestions yet
@@ -99,19 +118,33 @@ export function EditBoardGameTitle({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="flex flex-col gap-1.5">
-        <TextField
-          id={`${idPrefix}-title`}
-          label="Titel"
-          value={values.title}
-          onChange={(event) => onChange({ title: event.target.value })}
-          required
-          warning={titleWarning}
-          className={cn(
-            titleWarning &&
-              "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50",
-            diffClassName(compareStatus?.title),
+        <div className="flex items-end gap-2">
+          <TextField
+            id={`${idPrefix}-title`}
+            label="Titel"
+            fieldClassName="flex-1"
+            value={values.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            required
+            warning={titleWarning}
+            className={cn(
+              titleWarning &&
+                "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50",
+              diffClassName(compareStatus?.title),
+            )}
+          />
+          {boardGameId && (
+            <TitleOverviewDialog
+              boardGameId={boardGameId}
+              title={values.title}
+              secondaryTitle={values.secondaryTitle}
+              onTitleChange={(title) => onChange({ title })}
+              onSecondaryTitleChange={(secondaryTitle) =>
+                onChange({ secondaryTitle })
+              }
+            />
           )}
-        />
+        </div>
         {titleWarning && onLoadExistingTitle && (
           <Button
             type="button"
@@ -133,12 +166,65 @@ export function EditBoardGameTitle({
           onChange={(event) =>
             onChange({ kind: event.target.value as BoardGameKind })
           }
-          className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+          className={cn(
+            "border-input h-9 rounded-md border bg-transparent px-3 text-sm",
+            diffClassName(compareStatus?.kind),
+          )}
         >
           <option value={BoardGameKind.BOARDGAME}>Basisspiel</option>
           <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
         </select>
       </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${idPrefix}-language-dependence`}>
+          Sprachabhängigkeit (BGG-Skala, optional)
+        </Label>
+        <select
+          id={`${idPrefix}-language-dependence`}
+          value={values.languageDependence ?? ""}
+          onChange={(event) =>
+            onChange({
+              languageDependence:
+                (event.target.value as LanguageDependence) || null,
+            })
+          }
+          className={cn(
+            "border-input h-9 rounded-md border bg-transparent px-3 text-sm",
+            diffClassName(compareStatus?.languageDependence),
+          )}
+        >
+          <option value="">Nicht erfasst</option>
+          {Object.values(LanguageDependence).map((level) => (
+            <option key={level} value={level}>
+              {LANGUAGE_DEPENDENCE_LABELS[level]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <TextField
+        id={`${idPrefix}-publisher`}
+        label="Verlag(e)"
+        value={values.publisher}
+        onChange={(event) => onChange({ publisher: event.target.value })}
+        placeholder="Kommagetrennt, z. B. Feuerland Spiele"
+      />
+      <TextField
+        id={`${idPrefix}-author`}
+        label="Autor(en)"
+        value={values.author}
+        onChange={(event) => onChange({ author: event.target.value })}
+        placeholder="Kommagetrennt, z. B. Uwe Rosenberg"
+      />
+      <TextField
+        id={`${idPrefix}-year-published`}
+        label="Erstveröffentlichung"
+        type="number"
+        value={values.yearPublished}
+        onChange={(event) => onChange({ yearPublished: event.target.value })}
+        placeholder="z. B. 2021"
+      />
 
       <EanField
         idPrefix={idPrefix}
@@ -147,13 +233,14 @@ export function EditBoardGameTitle({
         title={values.title}
         autoSearchOnMount={eanAutoSearch}
         alternateTitles={eanAlternateTitles}
+        bggProductCode={bggProductCode}
+        publisherForSorting={parseCommaSeparatedList(values.publisher)}
       />
-      <TextField
-        id={`${idPrefix}-bgg-id`}
-        label="BGG-ID"
+      <BggIdField
+        idPrefix={idPrefix}
         value={values.bggId}
-        onChange={(event) => onChange({ bggId: event.target.value })}
-        placeholder="optional, z. B. 342942"
+        title={values.title}
+        onChange={(bggId) => onChange({ bggId })}
       />
 
       <div className="flex gap-3 sm:col-span-2">

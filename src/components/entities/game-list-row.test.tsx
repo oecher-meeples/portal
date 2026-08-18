@@ -21,9 +21,15 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: ["Engine-Building"],
     alternateNames: [],
-    secondaryAlternateName: null,
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
     description: "Baue den modernsten Zoo der Welt.",
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -34,6 +40,20 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     ...overrides,
   };
 }
+
+describe("GameListRow — Verlag (#205)", () => {
+  it("shows the publisher(s) when set", () => {
+    render(<GameListRow game={game({ publisher: ["Feuerland Spiele"] })} />);
+
+    expect(screen.getByText("Feuerland Spiele")).toBeInTheDocument();
+  });
+
+  it("omits the line when no publisher is set", () => {
+    render(<GameListRow game={game({ publisher: [] })} />);
+
+    expect(screen.queryByText("Feuerland Spiele")).not.toBeInTheDocument();
+  });
+});
 
 describe("GameListRow", () => {
   it("renders the core fields, description shown in full at its original spot", () => {

@@ -37,6 +37,18 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   updateBoardGame: (...args: unknown[]) => updateBoardGameMock(...args),
 }));
 
+// Pulled in via `EditBoardGameTitle` → `TitleOverviewDialog` →
+// `AlternateNamesManager` (#203) — never opened here, just needs to import
+// cleanly (its permission check otherwise reaches for `next/headers`).
+vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
+  addAlternateName: vi.fn(),
+  deleteAlternateName: vi.fn(),
+  promoteAlternateNameToTitle: vi.fn(),
+  listAlternateNames: vi
+    .fn()
+    .mockResolvedValue({ success: true, alternateNames: [] }),
+}));
+
 const previewBggImportMock = vi.fn();
 const searchBggGamesActionMock = vi.fn();
 vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
@@ -102,6 +114,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
     findDuplicateBoardGameMock.mockResolvedValue({
@@ -203,6 +218,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     });
     getBoardGameTitleForEditMock.mockResolvedValue({
       title: "Arche Nova",
+      secondaryTitle: null,
+      languageDependence: null,
       ean: "5901234123457",
       kind: "BOARDGAME",
       bggId: 342942,
@@ -214,8 +231,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       description: null,
       mechanics: [],
       explainerVideoUrl: null,
-      germanExplainerVideos: [],
-      englishExplainerVideos: [],
+      publisher: [],
+      author: [],
+      yearPublished: null,
     });
     updateBoardGameMock.mockResolvedValue({ success: true, hint: undefined });
     createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });

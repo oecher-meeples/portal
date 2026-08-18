@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { BoardGameKind, type Prisma, type PrismaClient } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+  type Prisma,
+  type PrismaClient,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
@@ -17,22 +23,41 @@ type Tx = PrismaClient | Prisma.TransactionClient;
 
 export type BoardGameTitleInput = {
   title: string;
+  /** Zweiter Titel neben `title` — z. B. eine deutsche Übersetzung neben
+   * einem englischen Haupttitel (#203). */
+  secondaryTitle?: string | null;
   bggId?: number | null;
   ean?: string | null;
   minPlayers?: number | null;
   maxPlayers?: number | null;
   playTimeMinutes?: number | null;
   weight?: number | null;
+  /** BGGs Community-Durchschnittsbewertung (0–10), analog `weight` beim
+   * BGG-Import/-Abgleich übernommen (#214). */
+  averageRating?: number | null;
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
   kind?: BoardGameKind;
+  /** BGGs Language-Dependence-Poll-Level, als Vorschlag beim BGG-Import
+   * übernommen, vom Admin frei änderbar (#188). */
+  languageDependence?: LanguageDependence | null;
+  /** Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen bei
+   * identischem Wert über alle (ggf. deutschen) BGG-Versionen, sonst wählt
+   * der Admin (#205, siehe `resolvePublisherFromVersions()`). */
+  publisher?: string[];
+  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205). */
+  author?: string[];
+  /** Erstveröffentlichungsjahr — ältestes Jahr über alle BGG-Versionen (#205). */
+  yearPublished?: number | null;
 };
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
   condition?: string | null;
+  /** Regelheft-Sprache(n) der ersten Kopie (#188). */
+  ruleBookLanguages?: RuleBookLanguage[];
   /** Initial standort for the first copy — defaults to "Unsortiert" when
    * omitted (#121/#122). `self` places it directly with the creator. */
   placement?: CopyPlacementInput;
@@ -55,16 +80,22 @@ function validateBoardGameInput(input: BoardGameTitleInput) {
 
 function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
+    secondaryTitle: input.secondaryTitle || null,
     bggId: input.bggId ?? null,
     ean: input.ean ? normaliseEan(input.ean) : null,
     minPlayers: input.minPlayers ?? null,
     maxPlayers: input.maxPlayers ?? null,
     playTimeMinutes: input.playTimeMinutes ?? null,
     weight: input.weight ?? null,
+    averageRating: input.averageRating ?? null,
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
+    languageDependence: input.languageDependence ?? null,
+    publisher: input.publisher ?? [],
+    author: input.author ?? [],
+    yearPublished: input.yearPublished ?? null,
     ...(input.kind ? { kind: input.kind } : {}),
   };
 }
@@ -174,30 +205,43 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 
   const placement = resolveCopyPlacement(input.placement, actor.id);
 
-  const copy = await prisma.$transaction(async (tx) => {
-    const title = await findOrCreateBoardGameTitle(input, tx);
+  const { copy, boardGameId, boardGameSlug } = await prisma.$transaction(
+    async (tx) => {
+      const title = await findOrCreateBoardGameTitle(input, tx);
 
-    if (!willReuseByBggId && input.alternateNames?.length) {
-      await tx.boardGameAlternateName.createMany({
-        data: input.alternateNames.map((name) => ({
-          boardGameId: title.id,
-          name,
-        })),
+      if (!willReuseByBggId && input.alternateNames?.length) {
+        await tx.boardGameAlternateName.createMany({
+          data: input.alternateNames.map((name) => ({
+            boardGameId: title.id,
+            name,
+          })),
+        });
+      }
+
+      const copy = await createGameCopyTx(tx, {
+        boardGameId: title.id,
+        boardGameTitle: title.title,
+        condition: input.condition,
+        ruleBookLanguages: input.ruleBookLanguages,
+        actorId: actor.id,
+        placement,
       });
-    }
-
-    return createGameCopyTx(tx, {
-      boardGameId: title.id,
-      boardGameTitle: title.title,
-      condition: input.condition,
-      actorId: actor.id,
-      placement,
-    });
-  });
+      return { copy, boardGameId: title.id, boardGameSlug: title.slug };
+    },
+  );
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  return { success: true as const, id: copy.id, hint };
+  // `boardGameId`/`boardGameSlug` let callers auto-select or deep-link the
+  // newly created title, e.g. the nested "Spiel anlegen" flow from
+  // `AssignExpansionDialog`s Combobox (#204) or the Massenimport-Ergebnisliste (#186).
+  return {
+    success: true as const,
+    id: copy.id,
+    boardGameId,
+    boardGameSlug,
+    hint,
+  };
 }
 
 export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
@@ -238,17 +282,23 @@ export async function getBoardGameTitleForEdit(id: string) {
     where: { id },
     select: {
       title: true,
+      secondaryTitle: true,
       ean: true,
       kind: true,
+      languageDependence: true,
       bggId: true,
       minPlayers: true,
       maxPlayers: true,
       playTimeMinutes: true,
       weight: true,
+      averageRating: true,
       imageUrl: true,
       description: true,
       mechanics: true,
       explainerVideoUrl: true,
+      publisher: true,
+      author: true,
+      yearPublished: true,
     },
   });
 }

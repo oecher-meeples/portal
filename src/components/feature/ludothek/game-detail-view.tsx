@@ -1,7 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
@@ -37,6 +42,7 @@ export type HoldingHistoryEntry = {
 
 export function GameDetailView({
   game,
+  bggId,
   explainer,
   expansionAssignment,
   titleEdit,
@@ -49,6 +55,11 @@ export function GameDetailView({
   createLfgTrigger,
 }: {
   game: PublicLudothekGame;
+  /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
+   * ohne BGG-Import — separat von `game`, weil `toPublicGame()` `bggId` als
+   * Bestandsdatum für Gäste entfernt, der externe Link aber für alle
+   * gedacht ist (#207). */
+  bggId?: number | null;
   /** Nur für eingeloggte Nutzer gesetzt — Erklärbär-Selbstauskunft ist kein Gast-Feature. */
   explainer?: {
     entries: ExplainerEntry[];
@@ -86,24 +97,49 @@ export function GameDetailView({
           {game.kind === "BOARDGAME_EXPANSION" && (
             <RibbonCorner>Erweiterung</RibbonCorner>
           )}
+          <CardCornerOverlay corner="top-right">
+            <BggRatingBadge averageRating={game.averageRating} />
+          </CardCornerOverlay>
         </div>
       </div>
 
       <div className="flex flex-col gap-6">
         <div>
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <h1 className="font-serif text-3xl font-bold tracking-tight">
-                {game.title}
-              </h1>
-              {game.secondaryAlternateName && (
-                <p className="text-muted-foreground">
-                  {game.secondaryAlternateName}
-                </p>
-              )}
+            <div className="flex items-start gap-3">
+              <div>
+                <h1 className="font-serif text-3xl font-bold tracking-tight">
+                  {game.title}
+                </h1>
+                {game.secondaryTitle && (
+                  <p className="text-muted-foreground">{game.secondaryTitle}</p>
+                )}
+                <LanguageIndependentPill
+                  languageDependence={game.languageDependence}
+                  className="mt-1"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {createLfgTrigger}
+              {bggId && (
+                <Button
+                  variant="outline"
+                  className="gap-1.5 px-2.5"
+                  aria-label="Auf BoardGameGeek ansehen"
+                  render={
+                    <a
+                      href={`https://boardgamegeek.com/boardgame/${bggId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
+                  <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
+                  <ExternalLink className="size-4" />
+                </Button>
+              )}
               {titleEdit && (
                 <EditBoardGameTitleDialog
                   game={titleEdit}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UpcLookupError, searchEanByName } from "./client";
+import { UpcLookupError, lookupEanTitle, searchEanByName } from "./client";
 
 function mockFetchOnce(ok: boolean, status: number, body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue({
@@ -114,6 +114,54 @@ describe("searchEanByName", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(timeoutError));
 
     await expect(searchEanByName("Ark Nova")).rejects.toThrow(
+      "Die Anfrage an die EAN-Suche hat zu lange gedauert.",
+    );
+  });
+});
+
+describe("lookupEanTitle", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the title of the first matching item", async () => {
+    mockFetchOnce(true, 200, {
+      items: [{ ean: "0850000576407", title: "Ark Nova" }],
+    });
+
+    expect(await lookupEanTitle("0850000576407")).toBe("Ark Nova");
+  });
+
+  it("returns null when the code isn't found", async () => {
+    mockFetchOnce(true, 200, { items: [] });
+
+    expect(await lookupEanTitle("0000000000000")).toBeNull();
+  });
+
+  it("sends the code as the upc parameter", async () => {
+    const fetchMock = mockFetchOnce(true, 200, { items: [] });
+
+    await lookupEanTitle("0850000576407");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("upc=0850000576407");
+    expect(url).toContain("api.upcitemdb.com");
+  });
+
+  it("throws UpcLookupError for a non-2xx HTTP response", async () => {
+    mockFetchOnce(false, 403, {});
+
+    await expect(lookupEanTitle("0850000576407")).rejects.toThrow(
+      UpcLookupError,
+    );
+  });
+
+  it("translates a fetch timeout into a readable UpcLookupError", async () => {
+    const timeoutError = new Error("The operation was aborted");
+    timeoutError.name = "TimeoutError";
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(timeoutError));
+
+    await expect(lookupEanTitle("0850000576407")).rejects.toThrow(
       "Die Anfrage an die EAN-Suche hat zu lange gedauert.",
     );
   });

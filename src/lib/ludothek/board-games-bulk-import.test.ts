@@ -36,8 +36,24 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
 }));
 
+const lookupEanTitleMock = vi.fn();
+vi.mock("@/lib/upc-lookup/client", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/upc-lookup/client")
+  >("@/lib/upc-lookup/client");
+  return {
+    ...actual,
+    lookupEanTitle: (...args: unknown[]) => lookupEanTitleMock(...args),
+  };
+});
+
 const { sleep } = await import("@/lib/utils/sleep");
 const { bulkImportBoardGames } = await import("./board-games-bulk-import");
+const { UpcLookupError } = await import("@/lib/upc-lookup/client");
+
+// A real EAN-13 (valid checksum) — needed since `isValidEan()` gates the
+// EAN-resolution path.
+const VALID_EAN = "4001504311896";
 
 const VALID_BGG_DATA = {
   title: "Ark Nova",
@@ -52,6 +68,9 @@ const VALID_BGG_DATA = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  author: [],
+  yearPublished: null,
+  versions: [],
 };
 
 function beforeEachSetup() {
@@ -80,7 +99,11 @@ describe("bulkImportBoardGames", () => {
       success: true,
       data: VALID_BGG_DATA,
     });
-    createBoardGameMock.mockResolvedValue({ success: true, id: "copy-1" });
+    createBoardGameMock.mockResolvedValue({
+      success: true,
+      id: "copy-1",
+      boardGameSlug: "ark-nova",
+    });
 
     const result = await bulkImportBoardGames(["Ark Nova"]);
 
@@ -102,6 +125,7 @@ describe("bulkImportBoardGames", () => {
           status: "imported",
           bggId: 342942,
           title: "Ark Nova",
+          slug: "ark-nova",
         },
       ],
     });
@@ -165,11 +189,12 @@ describe("bulkImportBoardGames", () => {
     expect(previewBggImportMock).not.toHaveBeenCalled();
   });
 
-  it("marks a row as failed when the BGG preview fails", async () => {
+  it("marks a row as failed when the BGG preview fails, keeping the matched candidate as a suggestion", async () => {
     beforeEachSetup();
-    searchBggGamesExactMock.mockResolvedValue([
+    const candidates = [
       { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
-    ]);
+    ];
+    searchBggGamesExactMock.mockResolvedValue(candidates);
     previewBggImportMock.mockResolvedValue({
       success: false,
       error: "BoardGameGeek ist aktuell nicht erreichbar.",
@@ -184,17 +209,19 @@ describe("bulkImportBoardGames", () => {
           name: "Ark Nova",
           status: "failed",
           error: "BoardGameGeek ist aktuell nicht erreichbar.",
+          candidates,
         },
       ],
     });
     expect(createBoardGameMock).not.toHaveBeenCalled();
   });
 
-  it("marks a row as failed when createBoardGame itself errors", async () => {
+  it("marks a row as failed when createBoardGame itself errors, keeping the matched candidate as a suggestion", async () => {
     beforeEachSetup();
-    searchBggGamesExactMock.mockResolvedValue([
+    const candidates = [
       { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
-    ]);
+    ];
+    searchBggGamesExactMock.mockResolvedValue(candidates);
     previewBggImportMock.mockResolvedValue({
       success: true,
       data: VALID_BGG_DATA,
@@ -212,6 +239,7 @@ describe("bulkImportBoardGames", () => {
           name: "Ark Nova",
           status: "failed",
           error: "Bitte einen Titel angeben.",
+          candidates,
         },
       ],
     });
@@ -237,5 +265,113 @@ describe("bulkImportBoardGames", () => {
     if ("error" in result) throw new Error("expected success");
     expect(result.results).toHaveLength(1);
     expect(searchBggGamesExactMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("deduplicates entries before importing (#186-Folge)", async () => {
+    beforeEachSetup();
+    searchBggGamesExactMock.mockResolvedValue([]);
+
+    const result = await bulkImportBoardGames(["Ark Nova", "ark nova"]);
+
+    if ("error" in result) throw new Error("expected success");
+    expect(result.results).toHaveLength(1);
+    expect(searchBggGamesExactMock).toHaveBeenCalledTimes(1);
+  });
+
+  describe("EAN entries (#186-Folge)", () => {
+    it("resolves an EAN to a title via UPCitemdb before searching BGG", async () => {
+      beforeEachSetup();
+      lookupEanTitleMock.mockResolvedValue("Ark Nova");
+      searchBggGamesExactMock.mockResolvedValue([
+        { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      ]);
+      previewBggImportMock.mockResolvedValue({
+        success: true,
+        data: VALID_BGG_DATA,
+      });
+      createBoardGameMock.mockResolvedValue({
+        success: true,
+        id: "copy-1",
+        boardGameSlug: "ark-nova",
+      });
+
+      const result = await bulkImportBoardGames([VALID_EAN]);
+
+      expect(lookupEanTitleMock).toHaveBeenCalledWith(VALID_EAN);
+      expect(searchBggGamesExactMock).toHaveBeenCalledWith("Ark Nova");
+      expect(result).toEqual({
+        success: true,
+        results: [
+          {
+            name: VALID_EAN,
+            status: "imported",
+            bggId: 342942,
+            title: "Ark Nova",
+            slug: "ark-nova",
+          },
+        ],
+      });
+    });
+
+    it("marks the row as failed when the EAN isn't found", async () => {
+      beforeEachSetup();
+      lookupEanTitleMock.mockResolvedValue(null);
+
+      const result = await bulkImportBoardGames([VALID_EAN]);
+
+      expect(result).toEqual({
+        success: true,
+        results: [
+          {
+            name: VALID_EAN,
+            status: "failed",
+            error: "EAN konnte keinem Titel zugeordnet werden.",
+          },
+        ],
+      });
+      expect(searchBggGamesExactMock).not.toHaveBeenCalled();
+    });
+
+    it("marks the row as failed when the EAN lookup itself errors", async () => {
+      beforeEachSetup();
+      lookupEanTitleMock.mockRejectedValue(new UpcLookupError("down", 500));
+
+      const result = await bulkImportBoardGames([VALID_EAN]);
+
+      expect(result).toEqual({
+        success: true,
+        results: [
+          {
+            name: VALID_EAN,
+            status: "failed",
+            error: "Die EAN-Suche ist aktuell nicht erreichbar.",
+          },
+        ],
+      });
+    });
+
+    it("keeps the original EAN as name but reports the resolved title on a review row", async () => {
+      beforeEachSetup();
+      lookupEanTitleMock.mockResolvedValue("Mehrdeutiger Titel");
+      const candidates = [
+        { bggId: 1, title: "Mehrdeutiger Titel", yearPublished: 1995 },
+        { bggId: 2, title: "Mehrdeutiger Titel", yearPublished: 2015 },
+      ];
+      searchBggGamesExactMock.mockResolvedValue(candidates);
+
+      const result = await bulkImportBoardGames([VALID_EAN]);
+
+      expect(result).toEqual({
+        success: true,
+        results: [
+          {
+            name: VALID_EAN,
+            status: "needs-review",
+            candidates,
+            searchedTitle: "Mehrdeutiger Titel",
+          },
+        ],
+      });
+    });
   });
 });

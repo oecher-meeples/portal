@@ -1,8 +1,6 @@
 import {
-  matchesDurationFilter,
-  matchesPlayerFilter,
-  type DurationFilter,
-  type PlayerCountFilter,
+  matchesDurationRange,
+  matchesPlayerCount,
 } from "@/lib/ludothek/browser";
 
 export type PrivateCollectionResult = {
@@ -35,18 +33,20 @@ export type PrivateCollectionEntryInput = {
  */
 export function buildPrivateCollectionResults(
   entries: PrivateCollectionEntryInput[],
-  filters: { players?: PlayerCountFilter; duration?: DurationFilter },
+  filters: {
+    players?: number;
+    durationFrom?: number;
+    durationTo?: number;
+  },
 ): PrivateCollectionResult[] {
   return entries
-    .filter(
-      (entry) =>
-        !filters.players ||
-        matchesPlayerFilter(entry.boardGame, filters.players),
-    )
-    .filter(
-      (entry) =>
-        !filters.duration ||
-        matchesDurationFilter(entry.boardGame, filters.duration),
+    .filter((entry) => matchesPlayerCount(entry.boardGame, filters.players))
+    .filter((entry) =>
+      matchesDurationRange(
+        entry.boardGame,
+        filters.durationFrom,
+        filters.durationTo,
+      ),
     )
     .map((entry) => ({
       id: entry.id,
