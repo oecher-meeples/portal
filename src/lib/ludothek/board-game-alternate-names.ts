@@ -94,6 +94,107 @@ export async function promoteAlternateNameToTitle(alternateNameId: string) {
   return { success: true as const };
 }
 
+/**
+ * "Als Sekundärtitel verwenden" auf einer Alternativnamen-Zeile
+ * (#203-Folge): tauscht die Zeile mit `BoardGame.secondaryTitle`. War noch
+ * kein Sekundärtitel gesetzt, gibt es nichts zurückzutauschen — die Zeile
+ * wird dann gelöscht statt eine leere Zeile zu hinterlassen (ihr Wert ist ja
+ * jetzt der Sekundärtitel).
+ */
+export async function promoteAlternateNameToSecondaryTitle(
+  alternateNameId: string,
+) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const boardGameId = await prisma.$transaction(async (tx) => {
+    const alternateName = await tx.boardGameAlternateName.findUnique({
+      where: { id: alternateNameId },
+      include: { boardGame: { select: { id: true, secondaryTitle: true } } },
+    });
+    if (!alternateName) return null;
+
+    await tx.boardGame.update({
+      where: { id: alternateName.boardGame.id },
+      data: { secondaryTitle: alternateName.name },
+    });
+
+    if (alternateName.boardGame.secondaryTitle) {
+      await tx.boardGameAlternateName.update({
+        where: { id: alternateNameId },
+        data: { name: alternateName.boardGame.secondaryTitle },
+      });
+    } else {
+      await tx.boardGameAlternateName.delete({
+        where: { id: alternateNameId },
+      });
+    }
+
+    return alternateName.boardGame.id;
+  });
+
+  if (!boardGameId) {
+    return { error: "Alternativname wurde nicht gefunden." };
+  }
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
+/**
+ * Tauscht Haupttitel und Sekundärtitel (#203-Folge) — von beiden Zeilen im
+ * "Alle Titel"-Dialog auslösbar ("Als Haupttitel verwenden" auf der
+ * Sekundärtitel-Zeile bzw. "Als Sekundärtitel verwenden" auf der
+ * Haupttitel-Zeile sind dieselbe Operation). Ohne gesetzten Sekundärtitel
+ * gäbe es nichts zum Zurücktauschen und der Haupttitel würde leer — dieser
+ * Fall wird abgelehnt statt eine Pflichtangabe zu leeren.
+ */
+export async function swapTitleAndSecondaryTitle(boardGameId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const game = await prisma.boardGame.findUnique({
+    where: { id: boardGameId },
+    select: { title: true, secondaryTitle: true },
+  });
+  if (!game) {
+    return { error: "Titel wurde nicht gefunden." };
+  }
+  if (!game.secondaryTitle) {
+    return { error: "Kein Sekundärtitel gesetzt." };
+  }
+
+  await prisma.boardGame.update({
+    where: { id: boardGameId },
+    data: { title: game.secondaryTitle, secondaryTitle: game.title },
+  });
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
+/** Entfernt den Sekundärtitel ersatzlos (#203-Folge) — Gegenstück zum
+ * früheren Leeren des Sekundärtitel-Textfelds, das mit dessen Entfernung
+ * zugunsten des "Alle Titel"-Dialogs weggefallen ist. */
+export async function clearSecondaryTitle(boardGameId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  await prisma.boardGame.update({
+    where: { id: boardGameId },
+    data: { secondaryTitle: null },
+  });
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
 /** Lädt die Alternativnamen-Liste für den Titel-Editor (#187). Der
  * Sekundärtitel selbst ist ein eigenständiges `BoardGame`-Feld (#203), nicht
  * mehr Teil dieser Liste. */

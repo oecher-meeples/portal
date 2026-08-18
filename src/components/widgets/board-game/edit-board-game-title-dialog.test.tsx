@@ -31,8 +31,19 @@ vi.mock("@/lib/ludothek/ean-search", () => ({
     .mockResolvedValue({ success: true, results: [] }),
 }));
 
-vi.mock("@/components/widgets/board-game/alternate-names-manager", () => ({
-  AlternateNamesManager: () => null,
+// Pulled in via `TitleOverviewDialog` (#203/#203-Folge) — this file only
+// tests the trigger's visibility, not the nested dialog's own logic (see
+// title-overview-dialog.test.tsx).
+vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
+  addAlternateName: vi.fn(),
+  deleteAlternateName: vi.fn(),
+  promoteAlternateNameToTitle: vi.fn(),
+  promoteAlternateNameToSecondaryTitle: vi.fn(),
+  swapTitleAndSecondaryTitle: vi.fn(),
+  clearSecondaryTitle: vi.fn(),
+  listAlternateNames: vi
+    .fn()
+    .mockResolvedValue({ success: true, alternateNames: [] }),
 }));
 
 afterEach(() => {

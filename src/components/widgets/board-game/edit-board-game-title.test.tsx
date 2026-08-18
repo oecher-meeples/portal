@@ -5,6 +5,10 @@ import userEvent from "@testing-library/user-event";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 const translateDescriptionMock = vi.fn();
 const fetchExplainerVideoOptionsMock = vi.fn();
 vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
@@ -20,13 +24,16 @@ vi.mock("@/lib/ludothek/ean-search", () => ({
     .mockResolvedValue({ success: true, results: [] }),
 }));
 
-// Pulled in via `TitleOverviewDialog` → `AlternateNamesManager` (#203) — this
-// file only tests the trigger's visibility, not the nested dialog's own
-// logic (see title-overview-dialog.test.tsx / alternate-names-manager.test.tsx).
+// Pulled in via `TitleOverviewDialog` (#203/#203-Folge) — this file only
+// tests the trigger's visibility, not the nested dialog's own logic (see
+// title-overview-dialog.test.tsx).
 vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
   addAlternateName: vi.fn(),
   deleteAlternateName: vi.fn(),
   promoteAlternateNameToTitle: vi.fn(),
+  promoteAlternateNameToSecondaryTitle: vi.fn(),
+  swapTitleAndSecondaryTitle: vi.fn(),
+  clearSecondaryTitle: vi.fn(),
   listAlternateNames: vi
     .fn()
     .mockResolvedValue({ success: true, alternateNames: [] }),
@@ -296,56 +303,8 @@ describe("EditBoardGameTitle", () => {
     });
   });
 
-  describe("Sekundärtitel (#203)", () => {
-    it("renders the secondary title field", () => {
-      render(
-        <EditBoardGameTitle
-          idPrefix="test"
-          values={EMPTY_BOARD_GAME_FORM}
-          onChange={vi.fn()}
-        />,
-      );
-
-      expect(
-        screen.getByLabelText("Sekundärtitel (optional)"),
-      ).toBeInTheDocument();
-    });
-
-    it("reports a secondary title change via onChange", async () => {
-      const { fireEvent } = await import("@testing-library/react");
-      const onChange = vi.fn();
-      render(
-        <EditBoardGameTitle
-          idPrefix="test"
-          values={EMPTY_BOARD_GAME_FORM}
-          onChange={onChange}
-        />,
-      );
-
-      fireEvent.change(screen.getByLabelText("Sekundärtitel (optional)"), {
-        target: { value: "Die Siedler von Catan" },
-      });
-
-      expect(onChange).toHaveBeenCalledWith({
-        secondaryTitle: "Die Siedler von Catan",
-      });
-    });
-
-    it("hides the Alle-Titel dialog trigger without a boardGameId (Anlegen-Wizard, noch kein Titel)", () => {
-      render(
-        <EditBoardGameTitle
-          idPrefix="test"
-          values={EMPTY_BOARD_GAME_FORM}
-          onChange={vi.fn()}
-        />,
-      );
-
-      expect(
-        screen.queryByRole("button", { name: "Alle Titel anzeigen" }),
-      ).not.toBeInTheDocument();
-    });
-
-    it("shows the Alle-Titel dialog trigger once a boardGameId is known (Bearbeiten-Modus)", () => {
+  describe("Alternativtitel (#203/#203-Folge)", () => {
+    it("no longer renders a free-text secondary title field", () => {
       render(
         <EditBoardGameTitle
           idPrefix="test"
@@ -356,7 +315,36 @@ describe("EditBoardGameTitle", () => {
       );
 
       expect(
-        screen.getByRole("button", { name: "Alle Titel anzeigen" }),
+        screen.queryByLabelText("Sekundärtitel (optional)"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides the Alternativtitel dialog trigger without a boardGameId (Anlegen-Wizard, noch kein Titel)", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: "Alternativtitel" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the Alternativtitel dialog trigger behind the title field once a boardGameId is known (Bearbeiten-Modus)", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+          boardGameId="game-1"
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Alternativtitel" }),
       ).toBeInTheDocument();
     });
   });

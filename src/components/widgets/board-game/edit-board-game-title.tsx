@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
@@ -57,9 +56,11 @@ export function EditBoardGameTitle({
   idPrefix: string;
   values: BoardGameFormValues;
   onChange: (patch: Partial<BoardGameFormValues>) => void;
-  /** Nur im Bearbeiten-Modus gesetzt (#203) — blendet den "Alle Titel"-Dialog
-   * neben dem Sekundärtitel-Feld ein. Beim Anlegen eines neuen Titels gibt es
-   * noch keine ID, also auch keine Alternativtitel-Verwaltung. */
+  /** Nur im Bearbeiten-Modus gesetzt (#203) — blendet den "Alternativtitel"-
+   * Dialog hinter dem Titel-Feld ein (#203-Folge: dort auch Sekundärtitel
+   * setzen/entfernen, kein eigenes Textfeld mehr dafür). Beim Anlegen eines
+   * neuen Titels gibt es noch keine ID, also auch keine
+   * Alternativtitel-Verwaltung. */
   boardGameId?: string;
   /** Eindeutiger BGG-Product-Code aus der frisch geladenen Import-Vorschau
    * (#205) — nur im Anlegen-Wizard gesetzt, hat dort Vorrang vor der
@@ -117,19 +118,33 @@ export function EditBoardGameTitle({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="flex flex-col gap-1.5">
-        <TextField
-          id={`${idPrefix}-title`}
-          label="Titel"
-          value={values.title}
-          onChange={(event) => onChange({ title: event.target.value })}
-          required
-          warning={titleWarning}
-          className={cn(
-            titleWarning &&
-              "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50",
-            diffClassName(compareStatus?.title),
+        <div className="flex items-end gap-2">
+          <TextField
+            id={`${idPrefix}-title`}
+            label="Titel"
+            fieldClassName="flex-1"
+            value={values.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            required
+            warning={titleWarning}
+            className={cn(
+              titleWarning &&
+                "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50",
+              diffClassName(compareStatus?.title),
+            )}
+          />
+          {boardGameId && (
+            <TitleOverviewDialog
+              boardGameId={boardGameId}
+              title={values.title}
+              secondaryTitle={values.secondaryTitle}
+              onTitleChange={(title) => onChange({ title })}
+              onSecondaryTitleChange={(secondaryTitle) =>
+                onChange({ secondaryTitle })
+              }
+            />
           )}
-        />
+        </div>
         {titleWarning && onLoadExistingTitle && (
           <Button
             type="button"
@@ -160,30 +175,6 @@ export function EditBoardGameTitle({
           <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
         </select>
       </div>
-
-      <Field
-        label="Sekundärtitel (optional)"
-        htmlFor={`${idPrefix}-secondary-title`}
-        className="sm:col-span-2"
-      >
-        <div className="flex gap-2">
-          <Input
-            id={`${idPrefix}-secondary-title`}
-            value={values.secondaryTitle}
-            onChange={(event) =>
-              onChange({ secondaryTitle: event.target.value })
-            }
-            placeholder="z. B. deutscher Titel neben einem englischen Haupttitel"
-          />
-          {boardGameId && (
-            <TitleOverviewDialog
-              boardGameId={boardGameId}
-              title={values.title}
-              secondaryTitle={values.secondaryTitle}
-            />
-          )}
-        </div>
-      </Field>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${idPrefix}-language-dependence`}>
