@@ -30,6 +30,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     responsibleName: null,
     responsibleContact: { mailHref: null, telegramHref: null },
     condition: null,
+    ruleBookLanguages: [],
     isMine: false,
     history: [],
     ...overrides,

@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { BoardGameKind, type Prisma, type PrismaClient } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+  type Prisma,
+  type PrismaClient,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
@@ -32,10 +38,15 @@ export type BoardGameTitleInput = {
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
   kind?: BoardGameKind;
+  /** BGGs Language-Dependence-Poll-Level, als Vorschlag beim BGG-Import
+   * übernommen, vom Admin frei änderbar (#188). */
+  languageDependence?: LanguageDependence | null;
 };
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
   condition?: string | null;
+  /** Regelheft-Sprache(n) der ersten Kopie (#188). */
+  ruleBookLanguages?: RuleBookLanguage[];
   /** Initial standort for the first copy — defaults to "Unsortiert" when
    * omitted (#121/#122). `self` places it directly with the creator. */
   placement?: CopyPlacementInput;
@@ -69,6 +80,7 @@ function toBoardGameTitleData(input: BoardGameTitleInput) {
     description: input.description || null,
     mechanics: input.mechanics ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
+    languageDependence: input.languageDependence ?? null,
     ...(input.kind ? { kind: input.kind } : {}),
   };
 }
@@ -194,6 +206,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
       boardGameId: title.id,
       boardGameTitle: title.title,
       condition: input.condition,
+      ruleBookLanguages: input.ruleBookLanguages,
       actorId: actor.id,
       placement,
     });
@@ -248,6 +261,7 @@ export async function getBoardGameTitleForEdit(id: string) {
       secondaryTitle: true,
       ean: true,
       kind: true,
+      languageDependence: true,
       bggId: true,
       minPlayers: true,
       maxPlayers: true,

@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { BggComparePanel } from "@/components/widgets/board-game/bgg-compare-panel";
 import type { BggGameData } from "@/lib/bgg/client";
 
@@ -20,6 +20,7 @@ const BGG_DATA: BggGameData = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
   kind: BoardGameKind.BOARDGAME,
+  languageDependence: LanguageDependence.MODERATE_TEXT,
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],
@@ -104,5 +105,33 @@ describe("BggComparePanel", () => {
     expect(onChange).toHaveBeenCalledWith({
       kind: BoardGameKind.BOARDGAME_EXPANSION,
     });
+  });
+
+  it("shows and applies the language dependence BGG reports (#188)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
+
+    expect(
+      screen.getByText("Mäßig viel Text – Spickzettel oder Aufkleber nötig"),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Sprachabhängigkeit übernehmen" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({
+      languageDependence: LanguageDependence.MODERATE_TEXT,
+    });
+  });
+
+  it("shows a dash when BGG has no language dependence poll result", () => {
+    render(
+      <BggComparePanel
+        bggData={{ ...BGG_DATA, languageDependence: null }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 });

@@ -45,6 +45,27 @@ enum BoardGameKind {
   BOARDGAME_EXPANSION
 }
 
+/// BGGs 5-stufiges "Language Dependence"-Poll-Modell (#188) — Level 1 = kein
+/// notwendiger Text, Level 5 = unspielbar in einer anderen Sprache. Deutsche
+/// Labels in `src/lib/ludothek/language-dependence.ts`.
+enum LanguageDependence {
+  NO_NECESSARY_TEXT
+  SOME_NECESSARY_TEXT
+  MODERATE_TEXT
+  EXTENSIVE_TEXT
+  UNPLAYABLE
+}
+
+/// Sprachen, in denen ein Exemplar sein Regelheft mitbringt (#188) — auf die
+/// im Verein tatsächlich vorkommenden Sprachen beschränkt, erweiterbar per
+/// Migration. Mehrfachauswahl (`GameCopy.ruleBookLanguages[]`), da eine
+/// Schachtel oft DE- und EN-Regelheft gemeinsam enthält.
+enum RuleBookLanguage {
+  DE
+  EN
+  OTHER
+}
+
 enum HoldingOrigin {
   INITIAL
   LOAN
@@ -358,31 +379,35 @@ model Invite {
 /// A game title — BGG/product metadata, one row per title regardless of how many
 /// physical copies the club owns (see ADR 0008, supersedes the relevant part of ADR 0001).
 model BoardGame {
-  id                String        @id @default(cuid())
-  title             String
+  id                 String              @id @default(cuid())
+  title              String
   /// Routing basis for the title detail page (see ADR on the exemplar→title slug migration).
-  slug              String        @unique
+  slug               String              @unique
   /// The single reliable product identity; unique now that copies live in GameCopy.
-  bggId             Int?          @unique
+  bggId              Int?                @unique
   /// The manufacturer barcode identifies the product, not the single copy — never unique.
-  ean               String?
-  minPlayers        Int?
-  maxPlayers        Int?
-  playTimeMinutes   Int?
-  weight            Float?
-  imageUrl          String?
-  description       String?
-  mechanics         String[]
+  ean                String?
+  minPlayers         Int?
+  maxPlayers         Int?
+  playTimeMinutes    Int?
+  weight             Float?
+  imageUrl           String?
+  description        String?
+  mechanics          String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
-  explainerVideoUrl String?
+  explainerVideoUrl  String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
-  kind              BoardGameKind @default(BOARDGAME)
+  kind               BoardGameKind       @default(BOARDGAME)
   /// A second title shown alongside `title` (e.g. the German name next to an
   /// English `title`) — a plain field, not a pointer into `alternateNames`
   /// (replaces the `secondaryAlternateNameId` mechanism, see #203).
-  secondaryTitle    String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  secondaryTitle     String?
+  /// BGGs 5-stufiges Language-Dependence-Poll-Level, `null` solange nicht
+  /// erfasst (#188) — beim BGG-Import als meistgewählter Vorschlag übernommen,
+  /// vom Admin frei änderbar.
+  languageDependence LanguageDependence?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   copies                   GameCopy[]
   explainerGames           ExplainerGame[]
@@ -423,6 +448,9 @@ model GameCopy {
   boardGameId            String
   /// The single condition note — a defect is recorded here, not in a second field.
   condition              String?
+  /// Regelheft-Sprache(n) dieses Exemplars (#188) — mehrere möglich, z. B. eine
+  /// Schachtel mit DE- und EN-Regelheft.
+  ruleBookLanguages      RuleBookLanguage[]
   needsCompletenessCheck Boolean             @default(false)
   lastCheckedAt          DateTime?
   status                 GameInventoryStatus @default(ACTIVE)

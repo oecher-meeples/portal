@@ -44,6 +44,7 @@ const GAME_WITHOUT_BGG_ID = {
   boardGameId: "title-1",
   title: "Arche Nova",
   secondaryTitle: null,
+  languageDependence: null,
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,

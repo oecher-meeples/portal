@@ -24,6 +24,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     mechanics: [],
     alternateNames: [],
     secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,

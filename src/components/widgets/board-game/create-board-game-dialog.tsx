@@ -134,7 +134,13 @@ export function CreateBoardGameDialog({
         setError("Titel wurde nicht gefunden.");
         return;
       }
-      setForm(boardGameToFormValues({ ...record, condition: null }));
+      setForm(
+        boardGameToFormValues({
+          ...record,
+          condition: null,
+          ruleBookLanguages: [],
+        }),
+      );
       setError(null);
     } catch (err) {
       setError(
@@ -167,6 +173,7 @@ export function CreateBoardGameDialog({
         imageUrl: result.data.imageUrl ?? "",
         description: result.data.description ?? "",
         mechanics: result.data.mechanics.join(", "),
+        languageDependence: result.data.languageDependence,
         // Bei mehreren/einzelnen deutschsprachigen Treffern entscheidet der
         // Admin bewusst über die Auswahlliste (#185) — sonst wie bisher der
         // erste instruktive Video-Treffer, automatisch übernommen.

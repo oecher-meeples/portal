@@ -1,5 +1,9 @@
 import type { GameZustand } from "@/lib/ludothek/holdings";
-import { BoardGameKind } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+} from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 
 /** A title referenced from a copy (e.g. base game/expansion) — titles have no
@@ -48,6 +52,10 @@ export type LudothekGame = {
   description: string | null;
   explainerVideoUrl: string | null;
   kind: BoardGameKind;
+  /** BGGs Language-Dependence-Poll-Level, `null` solange nicht erfasst (#188). */
+  languageDependence: LanguageDependence | null;
+  /** Regelheft-Sprache(n) dieses Exemplars (#188). */
+  ruleBookLanguages: RuleBookLanguage[];
   /** Base game(s) this expansion belongs to — empty unless `kind` is BOARDGAME_EXPANSION. */
   baseGames: LudothekGameRef[];
   /** Expansions in the collection that belong to this base game. */

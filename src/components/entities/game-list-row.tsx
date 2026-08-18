@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
@@ -88,14 +89,16 @@ export function GameListRow({
           </p>
         )}
       </div>
-      {zustand && (
-        <GameZustandPill
-          zustand={zustand}
-          count={game.zustandCount}
-          total={game.copyCount}
-          className="shrink-0"
-        />
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+        {zustand && (
+          <GameZustandPill
+            zustand={zustand}
+            count={game.zustandCount}
+            total={game.copyCount}
+          />
+        )}
+        <LanguageIndependentPill languageDependence={game.languageDependence} />
+      </div>
 
       {actions && (
         <StopRowNavigation className="flex shrink-0 items-center gap-1">

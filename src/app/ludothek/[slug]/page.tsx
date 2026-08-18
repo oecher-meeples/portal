@@ -120,6 +120,7 @@ export default async function GameDetailPage({
       ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
       : NO_CONTACT,
     condition: copy.condition,
+    ruleBookLanguages: copy.ruleBookLanguages,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
@@ -180,6 +181,7 @@ export default async function GameDetailPage({
         description: game.description,
         mechanics: game.mechanics,
         explainerVideoUrl: game.explainerVideoUrl,
+        languageDependence: game.languageDependence,
       }
     : undefined;
 

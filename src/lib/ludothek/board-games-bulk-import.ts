@@ -40,6 +40,7 @@ function toCreateInput(bggId: number, data: BggGameData): CreateBoardGameInput {
     description: data.description ?? undefined,
     mechanics: data.mechanics,
     explainerVideoUrl: data.explainerVideoUrl ?? undefined,
+    languageDependence: data.languageDependence,
     alternateNames: data.alternateNames,
   };
 }

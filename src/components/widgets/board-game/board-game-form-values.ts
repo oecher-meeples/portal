@@ -1,4 +1,8 @@
-import { BoardGameKind } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+} from "@prisma/client";
 import {
   parseBggId,
   parseMechanics,
@@ -26,6 +30,10 @@ export type BoardGameFormValues = {
   description: string;
   mechanics: string;
   explainerVideoUrl: string;
+  /** BGGs Language-Dependence-Poll-Level, `null` solange nicht erfasst (#188). */
+  languageDependence: LanguageDependence | null;
+  /** Regelheft-Sprache(n) dieses Exemplars, Mehrfachauswahl (#188). */
+  ruleBookLanguages: RuleBookLanguage[];
 };
 
 export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
@@ -43,6 +51,8 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   description: "",
   mechanics: "",
   explainerVideoUrl: "",
+  languageDependence: null,
+  ruleBookLanguages: [],
 };
 
 /** The subset of a BoardGame record needed to seed the edit form. */
@@ -61,6 +71,8 @@ export type BoardGameRecord = {
   description: string | null;
   mechanics: string[];
   explainerVideoUrl: string | null;
+  languageDependence: LanguageDependence | null;
+  ruleBookLanguages: RuleBookLanguage[];
 };
 
 export function boardGameToFormValues(
@@ -81,6 +93,8 @@ export function boardGameToFormValues(
     description: game.description ?? "",
     mechanics: formatMechanics(game.mechanics),
     explainerVideoUrl: game.explainerVideoUrl ?? "",
+    languageDependence: game.languageDependence,
+    ruleBookLanguages: game.ruleBookLanguages,
   };
 }
 
@@ -104,15 +118,18 @@ export function boardGameFormToTitleInput(
     description: form.description || undefined,
     mechanics: parseMechanics(form.mechanics),
     explainerVideoUrl: form.explainerVideoUrl || undefined,
+    languageDependence: form.languageDependence,
   };
 }
 
-/** Title fields plus `condition` — for `createBoardGame`, which creates the first copy too. */
+/** Title fields plus `condition`/`ruleBookLanguages` — for `createBoardGame`,
+ * which creates the first copy too. */
 export function boardGameFormToInput(
   form: BoardGameFormValues,
 ): CreateBoardGameInput {
   return {
     ...boardGameFormToTitleInput(form),
     condition: form.condition || undefined,
+    ruleBookLanguages: form.ruleBookLanguages,
   };
 }

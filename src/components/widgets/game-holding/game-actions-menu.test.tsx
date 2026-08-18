@@ -112,6 +112,7 @@ function copy(overrides: Partial<GameActionsCopy> = {}): GameActionsCopy {
     zustand: "frei",
     locationChain: "Regal A",
     condition: null,
+    ruleBookLanguages: [],
     ...overrides,
   };
 }

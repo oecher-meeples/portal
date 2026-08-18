@@ -17,6 +17,8 @@ import {
 import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ContactLinks } from "@/lib/members/contact";
+import { formatRuleBookLanguages } from "@/lib/ludothek/language-dependence";
+import type { RuleBookLanguage } from "@prisma/client";
 
 export type GameCopyRow = {
   /** GameCopy id. */
@@ -27,6 +29,8 @@ export type GameCopyRow = {
   responsibleName: string | null;
   responsibleContact: ContactLinks;
   condition: string | null;
+  /** Sprache(n) des mitgelieferten Regelhefts, z. B. `["DE", "EN"]` (#188). */
+  ruleBookLanguages: RuleBookLanguage[];
   /** Whether the current session holds this copy — gates "Weitergeben" in
    * its actions menu (#128). */
   isMine: boolean;
@@ -66,6 +70,7 @@ function actionsMenuCopy(copy: GameCopyRow) {
     zustand: copy.zustand,
     locationChain: copy.unitChain,
     condition: copy.condition,
+    ruleBookLanguages: copy.ruleBookLanguages,
     isMine: copy.isMine,
   };
 }
@@ -106,6 +111,7 @@ export function GameCopiesSection({
             <TableRow>
               <TableHead>Zustand</TableHead>
               <TableHead>Standort/Kontakt</TableHead>
+              <TableHead>Regelheft</TableHead>
               <TableHead className="text-right" />
               <TableHead className="text-right" />
             </TableRow>
@@ -116,13 +122,16 @@ export function GameCopiesSection({
                 key={copy.id}
                 gameCopyId={copy.id}
                 history={copy.history}
-                colSpan={4}
+                colSpan={5}
               >
                 <TableCell>
                   <GameZustandPill zustand={copy.zustand} />
                 </TableCell>
                 <TableCell>
                   <LocationCell copy={copy} />
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
                 </TableCell>
                 <TableCell className="text-right">
                   <GameActionsMenu
@@ -154,6 +163,11 @@ export function GameCopiesSection({
             <div className="flex flex-col gap-1">
               <GameZustandPill zustand={copy.zustand} className="w-fit" />
               <LocationCell copy={copy} />
+              {copy.ruleBookLanguages.length > 0 && (
+                <span className="text-muted-foreground text-sm">
+                  Regelheft: {formatRuleBookLanguages(copy.ruleBookLanguages)}
+                </span>
+              )}
             </div>
           </GameCopyCard>
         ))

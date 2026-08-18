@@ -24,6 +24,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     mechanics: ["Engine-Building"],
     alternateNames: [],
     secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
     description: "Baue den modernsten Zoo der Welt.",
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,

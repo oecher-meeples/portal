@@ -72,6 +72,8 @@ const games = [
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
+    languageDependence: null,
+    ruleBookLanguages: [],
   },
   {
     id: "2",
@@ -97,6 +99,8 @@ const games = [
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
+    languageDependence: null,
+    ruleBookLanguages: [],
   },
 ];
 

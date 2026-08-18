@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -52,6 +52,7 @@ describe("fetchBggGame", () => {
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
       kind: BoardGameKind.BOARDGAME,
+      languageDependence: null,
       alternateNames: ["Ark Nova (Deutsch)"],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
@@ -74,6 +75,7 @@ describe("fetchBggGame", () => {
       description: null,
       mechanics: [],
       kind: BoardGameKind.BOARDGAME,
+      languageDependence: null,
       alternateNames: [],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
@@ -95,6 +97,34 @@ describe("fetchBggGame", () => {
     const result = await fetchBggGame(342942);
 
     expect(result.kind).toBe(BoardGameKind.BOARDGAME);
+  });
+
+  it("picks the language_dependence level with the most votes (#188)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-language-poll.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.languageDependence).toBe(LanguageDependence.MODERATE_TEXT);
+  });
+
+  it("returns null for language_dependence when the poll has no votes (#188)", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-with-language-poll-no-votes.xml"),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.languageDependence).toBeNull();
+  });
+
+  it("returns null for language_dependence when the item has no poll block at all (#188)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-minimal.xml"));
+
+    const result = await fetchBggGame(1);
+
+    expect(result.languageDependence).toBeNull();
   });
 
   it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {

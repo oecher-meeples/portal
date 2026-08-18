@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { TitleOverviewDialog } from "@/components/widgets/board-game/title-overv
 import { cn } from "@/lib/utils/cn";
 import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
 import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
+import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
@@ -174,6 +175,33 @@ export function EditBoardGameTitle({
           )}
         </div>
       </Field>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor={`${idPrefix}-language-dependence`}>
+          Sprachabhängigkeit (BGG-Skala, optional)
+        </Label>
+        <select
+          id={`${idPrefix}-language-dependence`}
+          value={values.languageDependence ?? ""}
+          onChange={(event) =>
+            onChange({
+              languageDependence:
+                (event.target.value as LanguageDependence) || null,
+            })
+          }
+          className={cn(
+            "border-input h-9 rounded-md border bg-transparent px-3 text-sm",
+            diffClassName(compareStatus?.languageDependence),
+          )}
+        >
+          <option value="">Nicht erfasst</option>
+          {Object.values(LanguageDependence).map((level) => (
+            <option key={level} value={level}>
+              {LANGUAGE_DEPENDENCE_LABELS[level]}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <EanField
         idPrefix={idPrefix}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { compareBoardGameWithBgg } from "./board-game-bgg-compare";
 import type { BggGameData } from "@/lib/bgg/client";
 
@@ -13,6 +13,7 @@ const EMPTY_FORM = {
   imageUrl: "",
   description: "",
   mechanics: "",
+  languageDependence: null,
 };
 
 const BGG_DATA: BggGameData = {
@@ -25,6 +26,7 @@ const BGG_DATA: BggGameData = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
   kind: BoardGameKind.BOARDGAME,
+  languageDependence: LanguageDependence.MODERATE_TEXT,
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],
@@ -41,6 +43,7 @@ const MATCHING_FORM = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: "Kartenspiel, Engine-Building",
+  languageDependence: LanguageDependence.MODERATE_TEXT,
 };
 
 describe("compareBoardGameWithBgg", () => {
@@ -55,6 +58,7 @@ describe("compareBoardGameWithBgg", () => {
       imageUrl: true,
       description: true,
       mechanics: true,
+      languageDependence: true,
     });
   });
 
@@ -110,5 +114,23 @@ describe("compareBoardGameWithBgg", () => {
     );
 
     expect(result.kind).toBe(false);
+  });
+
+  it("marks languageDependence as a mismatch when the form disagrees with BGG's poll result (#188)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, languageDependence: LanguageDependence.UNPLAYABLE },
+      BGG_DATA,
+    );
+
+    expect(result.languageDependence).toBe(false);
+  });
+
+  it("marks languageDependence as matching when both are unset", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, languageDependence: null },
+      { ...BGG_DATA, languageDependence: null },
+    );
+
+    expect(result.languageDependence).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
@@ -107,6 +108,10 @@ export function GameDetailView({
               {game.secondaryTitle && (
                 <p className="text-muted-foreground">{game.secondaryTitle}</p>
               )}
+              <LanguageIndependentPill
+                languageDependence={game.languageDependence}
+                className="mt-1"
+              />
             </div>
             <div className="flex items-center gap-2">
               {createLfgTrigger}

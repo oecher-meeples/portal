@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+	<item type="boardgame" id="342942">
+		<name type="primary" sortindex="1" value="Ark Nova" />
+		<minplayers value="1" />
+		<maxplayers value="4" />
+		<poll name="suggested_numplayers" title="User Suggested Number of Players" totalvotes="10">
+			<results numplayers="1">
+				<result value="Best" numvotes="1" />
+			</results>
+		</poll>
+		<poll name="language_dependence" title="Language Dependence" totalvotes="66">
+			<results>
+				<result level="1" value="No necessary in-game text" numvotes="5" />
+				<result level="2" value="Some necessary text - easily memorized or small crib sheet" numvotes="10" />
+				<result level="3" value="Moderate in-game text - needs crib sheet or paste ups" numvotes="40" />
+				<result level="4" value="Extensive use of text - massive conversion needed to be playable" numvotes="8" />
+				<result level="5" value="Unplayable in another language" numvotes="3" />
+			</results>
+		</poll>
+	</item>
+</items>

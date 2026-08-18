@@ -9,7 +9,7 @@ afterEach(() => {
 });
 
 describe("EditBoardGameExemplar", () => {
-  it("renders only the condition field", () => {
+  it("renders the condition field and no title-level fields", () => {
     render(
       <EditBoardGameExemplar
         idPrefix="test"
@@ -38,6 +38,72 @@ describe("EditBoardGameExemplar", () => {
 
     expect(onChange).toHaveBeenCalledWith({
       condition: "Gebraucht, funktionstüchtig",
+    });
+  });
+
+  describe("Regelheft-Sprache(n) (#188)", () => {
+    it("renders a checkbox for every rule book language", () => {
+      render(
+        <EditBoardGameExemplar
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByLabelText("Deutsch")).toBeInTheDocument();
+      expect(screen.getByLabelText("Englisch")).toBeInTheDocument();
+      expect(screen.getByLabelText("Sonstige")).toBeInTheDocument();
+    });
+
+    it("adds a language when its checkbox is checked", () => {
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameExemplar
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByLabelText("Deutsch"));
+
+      expect(onChange).toHaveBeenCalledWith({ ruleBookLanguages: ["DE"] });
+    });
+
+    it("supports selecting multiple languages at once — a box can ship DE and EN rulebooks together", () => {
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameExemplar
+          idPrefix="test"
+          values={{ ...EMPTY_BOARD_GAME_FORM, ruleBookLanguages: ["DE"] }}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByLabelText("Englisch"));
+
+      expect(onChange).toHaveBeenCalledWith({
+        ruleBookLanguages: ["DE", "EN"],
+      });
+    });
+
+    it("removes a language when its checkbox is unchecked", () => {
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameExemplar
+          idPrefix="test"
+          values={{
+            ...EMPTY_BOARD_GAME_FORM,
+            ruleBookLanguages: ["DE", "EN"],
+          }}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.click(screen.getByLabelText("Deutsch"));
+
+      expect(onChange).toHaveBeenCalledWith({ ruleBookLanguages: ["EN"] });
     });
   });
 });

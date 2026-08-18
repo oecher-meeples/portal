@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { BoardGameKind } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { formatMechanics } from "@/lib/ludothek/bgg-id";
+import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import type { BggGameData } from "@/lib/bgg/client";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
@@ -77,6 +78,13 @@ export function BggComparePanel({
       label: "Beschreibung",
       value: bggData.description ?? "—",
       apply: () => onChange({ description: bggData.description ?? "" }),
+    },
+    {
+      label: "Sprachabhängigkeit",
+      value: bggData.languageDependence
+        ? LANGUAGE_DEPENDENCE_LABELS[bggData.languageDependence]
+        : "—",
+      apply: () => onChange({ languageDependence: bggData.languageDependence }),
     },
   ];
 

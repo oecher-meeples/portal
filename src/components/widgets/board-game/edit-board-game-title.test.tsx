@@ -185,6 +185,65 @@ describe("EditBoardGameTitle", () => {
     });
   });
 
+  describe("Sprachabhängigkeit (#188)", () => {
+    it("defaults to 'Nicht erfasst' when unset", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+        />,
+      );
+
+      expect(
+        screen.getByLabelText("Sprachabhängigkeit (BGG-Skala, optional)"),
+      ).toHaveValue("");
+    });
+
+    it("reports a level change via onChange", async () => {
+      const { fireEvent } = await import("@testing-library/react");
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.change(
+        screen.getByLabelText("Sprachabhängigkeit (BGG-Skala, optional)"),
+        { target: { value: "UNPLAYABLE" } },
+      );
+
+      expect(onChange).toHaveBeenCalledWith({
+        languageDependence: "UNPLAYABLE",
+      });
+    });
+
+    it("reports null when reset to 'Nicht erfasst'", async () => {
+      const { fireEvent } = await import("@testing-library/react");
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={{
+            ...EMPTY_BOARD_GAME_FORM,
+            languageDependence: "UNPLAYABLE",
+          }}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.change(
+        screen.getByLabelText("Sprachabhängigkeit (BGG-Skala, optional)"),
+        { target: { value: "" } },
+      );
+
+      expect(onChange).toHaveBeenCalledWith({ languageDependence: null });
+    });
+  });
+
   describe("Sekundärtitel (#203)", () => {
     it("renders the secondary title field", () => {
       render(

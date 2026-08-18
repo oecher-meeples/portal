@@ -1,4 +1,4 @@
-import type { BoardGameKind } from "@prisma/client";
+import type { BoardGameKind, LanguageDependence } from "@prisma/client";
 import type { BggGameData } from "@/lib/bgg/client";
 import { parseMechanics } from "@/lib/ludothek/bgg-id";
 
@@ -16,12 +16,14 @@ type ComparableFormValues = {
   imageUrl: string;
   description: string;
   mechanics: string;
+  languageDependence: LanguageDependence | null;
 };
 
 /** Felder mit einer 1:1-BGG-Entsprechung — Grundlage für die Randfärbung im
  * "Daten mit BGG abgleichen"-Modus (#189). `ean` und `bggId` und das
  * Erklärvideo (eigene Auswahl-UI seit #185) bleiben bewusst außen vor. `kind`
- * ist seit #202 mit dabei — BGG liefert das `type`-Attribut zuverlässig. */
+ * ist seit #202 mit dabei — BGG liefert das `type`-Attribut zuverlässig.
+ * `languageDependence` seit #188 — BGGs Community-Poll-Ergebnis. */
 export type BoardGameCompareField =
   | "title"
   | "kind"
@@ -31,7 +33,8 @@ export type BoardGameCompareField =
   | "weight"
   | "imageUrl"
   | "description"
-  | "mechanics";
+  | "mechanics"
+  | "languageDependence";
 
 function parseFormNumber(value: string): number | null {
   return value.trim() ? Number(value) : null;
@@ -66,5 +69,6 @@ export function compareBoardGameWithBgg(
     description:
       (form.description.trim() || null) === (bgg.description ?? null),
     mechanics: sameMechanics(parseMechanics(form.mechanics), bgg.mechanics),
+    languageDependence: form.languageDependence === bgg.languageDependence,
   };
 }

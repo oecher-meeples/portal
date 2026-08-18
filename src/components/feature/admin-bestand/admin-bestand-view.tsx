@@ -25,7 +25,11 @@ import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
-import type { BoardGameKind } from "@prisma/client";
+import type {
+  BoardGameKind,
+  LanguageDependence,
+  RuleBookLanguage,
+} from "@prisma/client";
 
 export type AdminBoardGameRow = {
   /** GameCopy id. */
@@ -52,6 +56,8 @@ export type AdminBoardGameRow = {
   condition: string | null;
   kind: BoardGameKind;
   explainerVideoUrl: string | null;
+  languageDependence: LanguageDependence | null;
+  ruleBookLanguages: RuleBookLanguage[];
   /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
    * selbst (#187). */
   alternateNames: string[];

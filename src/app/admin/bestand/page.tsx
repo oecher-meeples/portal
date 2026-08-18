@@ -90,6 +90,8 @@ export default async function AdminBestandPage({
       condition: copy.condition,
       kind: boardGame.kind,
       explainerVideoUrl: boardGame.explainerVideoUrl,
+      languageDependence: boardGame.languageDependence,
+      ruleBookLanguages: copy.ruleBookLanguages,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       locationChain: (() => {
         if (holding?.meepleId) {

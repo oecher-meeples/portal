@@ -23,10 +23,14 @@ import type { BggGameData } from "@/lib/bgg/client";
  * for the per-copy variant). */
 export type EditableBoardGameTitle = {
   boardGameId: string;
-} & Omit<BoardGameRecord, "condition">;
+} & Omit<BoardGameRecord, "condition" | "ruleBookLanguages">;
 
 function toFormValues(game: EditableBoardGameTitle) {
-  return boardGameToFormValues({ ...game, condition: null });
+  return boardGameToFormValues({
+    ...game,
+    condition: null,
+    ruleBookLanguages: [],
+  });
 }
 
 /** Edits a title's shared fields from the detail page header — for

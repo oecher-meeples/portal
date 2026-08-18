@@ -4,6 +4,7 @@ import { Layers } from "lucide-react";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
@@ -56,14 +57,18 @@ export function GameCard({
             {expansionCount === 1 ? "Erweiterung" : "Erweiterungen"}
           </p>
         )}
-        {zustand && (
-          <GameZustandPill
-            zustand={zustand}
-            count={game.zustandCount}
-            total={game.copyCount}
-            className="mt-auto w-fit"
+        <div className="mt-auto flex flex-wrap items-center gap-1.5">
+          {zustand && (
+            <GameZustandPill
+              zustand={zustand}
+              count={game.zustandCount}
+              total={game.copyCount}
+            />
+          )}
+          <LanguageIndependentPill
+            languageDependence={game.languageDependence}
           />
-        )}
+        </div>
       </div>
     </Link>
   );
