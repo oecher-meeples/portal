@@ -114,8 +114,8 @@ export function GameDetailView({
               {createLfgTrigger}
               {bggId && (
                 <Button
-                  size="icon"
                   variant="outline"
+                  className="gap-1.5 px-2.5"
                   aria-label="Auf BoardGameGeek ansehen"
                   render={
                     <a
@@ -125,6 +125,8 @@ export function GameDetailView({
                     />
                   }
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
+                  <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
                   <ExternalLink className="size-4" />
                 </Button>
               )}
