@@ -32,7 +32,13 @@ export function CreateBoardGameBggImportStep({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-end gap-2">
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onResolve();
+        }}
+      >
         <TextField
           id="bgg-input"
           label="Titel, BGG-Link oder BGG-ID"
@@ -42,10 +48,10 @@ export function CreateBoardGameBggImportStep({
           onClear={() => onBggInputChange("")}
           placeholder="z. B. Ark Nova, 342942 oder ein BGG-Link"
         />
-        <Button type="button" onClick={onResolve} disabled={isResolving}>
+        <Button type="submit" disabled={isResolving}>
           {isResolving ? "Suche…" : "Suchen"}
         </Button>
-      </div>
+      </form>
       {searchResults && searchResults.length > 0 && !preview && (
         <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border p-1">
           {searchResults.map((result) => (

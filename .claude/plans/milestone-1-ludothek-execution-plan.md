@@ -70,13 +70,13 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       _Definition of Done:_ `gh project item-list 1 --owner oecher-meeples --format json` zeigt für alle 9 Issue-Nummern `"status": "In progress"`.
       Kein Commit (keine Codeänderung).
 
-- [ ] **2. #202 — BGG-Fetch setzt Boardgame-Typ (Spiel/Erweiterung)**
+- [x] **2. #202 — BGG-Fetch setzt Boardgame-Typ (Spiel/Erweiterung)**
       Umsetzung gemäß Issue-Checkliste: `type`-Attribut aus BGG-XML in `lib/bgg/client.ts` extrahieren, `BggGameData` erweitern, Import (`board-games-bgg-import.ts`) und Abgleich (`board-game-bgg-compare.ts`) beziehen `kind` mit ein.
       _Definition of Done:_ Unit-Tests für Parsing (`type` → `BoardGameKind`) und für Compare-Diff grün; manuelles Setzen bleibt weiterhin möglich (Regressionstest).
       `git commit -m "feat(bgg): set boardgame kind from BGG type attribute on import and compare"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg24xGs --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#202 → In review).
 
-- [ ] **3. #206 — BGG-ID-Feld: Lupen-Icon zur Namenssuche bei leerem Feld**
+- [x] **3. #206 — BGG-ID-Feld: Lupen-Icon zur Namenssuche bei leerem Feld** (zusätzlich: Enter im BGG-Import-Suchfeld löst jetzt dieselbe Suche wie der Button aus, Nutzerwunsch während der Umsetzung)
       Neue `BggIdField`-Komponente (ersetzt inline `TextField` in `edit-board-game-title.tsx`), Icon nur bei leerem Feld sichtbar, nutzt bestehende `searchBggGamesAction`, Auswahl setzt nur `bggId` ohne vollen Import.
       _Definition of Done:_ Komponente rendert Icon nur bei leerem Wert; Auswahl-Callback setzt korrekt `bggId` (Test für die Logik, sofern nicht rein UI-präsentational).
       `git commit -m "feat(ludothek): add BGG name search icon to empty BGG-ID field"`

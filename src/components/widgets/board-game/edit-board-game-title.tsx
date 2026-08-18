@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { EanField } from "@/components/widgets/board-game/ean-field";
+import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
 import { cn } from "@/lib/utils/cn";
 import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
 import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
@@ -151,12 +152,11 @@ export function EditBoardGameTitle({
         autoSearchOnMount={eanAutoSearch}
         alternateTitles={eanAlternateTitles}
       />
-      <TextField
-        id={`${idPrefix}-bgg-id`}
-        label="BGG-ID"
+      <BggIdField
+        idPrefix={idPrefix}
         value={values.bggId}
-        onChange={(event) => onChange({ bggId: event.target.value })}
-        placeholder="optional, z. B. 342942"
+        title={values.title}
+        onChange={(bggId) => onChange({ bggId })}
       />
 
       <div className="flex gap-3 sm:col-span-2">
