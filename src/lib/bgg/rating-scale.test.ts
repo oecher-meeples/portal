@@ -11,14 +11,14 @@ describe("resolveRatingScale", () => {
     expect(resolveRatingScale(0.4)).toBeNull();
   });
 
-  it("rounds to the nearest integer before looking up the scale", () => {
+  it("rounds down (floor) before looking up the scale — matches BGG's own display", () => {
     expect(resolveRatingScale(8.4)).toEqual({
       rounded: 8,
       hex: "#66BB6A",
       meaning:
         "Sehr gutes Spiel. Ich spiele gerne mit. Werde es wahrscheinlich weiterempfehlen.",
     });
-    expect(resolveRatingScale(8.5)).toMatchObject({ rounded: 9 });
+    expect(resolveRatingScale(8.9)).toMatchObject({ rounded: 8 });
   });
 
   it("resolves the lowest step", () => {
@@ -28,10 +28,11 @@ describe("resolveRatingScale", () => {
     });
   });
 
-  it("resolves the highest step", () => {
+  it("resolves the highest step, exact 10.0 included", () => {
     expect(resolveRatingScale(9.8)).toMatchObject({
-      rounded: 10,
-      hex: "#1B5E20",
+      rounded: 9,
+      hex: "#43A047",
     });
+    expect(resolveRatingScale(10)).toMatchObject({ rounded: 10 });
   });
 });

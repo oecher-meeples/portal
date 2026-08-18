@@ -56,13 +56,15 @@ const RATING_SCALE: Record<number, { hex: string; meaning: string }> = {
 
 /**
  * `null` bei fehlendem Rating oder außerhalb 1–10 (z. B. `0` bei einem Titel
- * ohne Bewertungen) — in beiden Fällen wird kein Hexagon angezeigt.
+ * ohne Bewertungen) — in beiden Fällen wird kein Hexagon angezeigt. Die
+ * Farbstufe wird abgerundet (nicht kaufmännisch gerundet) bestimmt, damit sie
+ * mit der auf BGG selbst angezeigten Farbe übereinstimmt (#214-Korrektur).
  */
 export function resolveRatingScale(
   averageRating: number | null,
 ): { rounded: number; hex: string; meaning: string } | null {
   if (averageRating === null) return null;
-  const rounded = Math.round(averageRating);
+  const rounded = Math.floor(averageRating);
   const entry = RATING_SCALE[rounded];
   return entry ? { rounded, ...entry } : null;
 }

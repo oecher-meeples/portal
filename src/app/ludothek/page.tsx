@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/server";
 import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
+  findMaxDurationBound,
   listDistinctMechanics,
   parseLudothekSearchParams,
   toPublicGame,
@@ -32,6 +33,7 @@ export default async function LudothekPage({
   const filtered = filterLudothekGames(allGames, filters);
 
   const mechanicsOptions = listDistinctMechanics(allGames);
+  const maxDurationBound = findMaxDurationBound(allGames);
 
   const meepleOptions = internal
     ? await (async () => {
@@ -88,6 +90,7 @@ export default async function LudothekPage({
         rawSearchParams={rawSearchParams}
         filters={filters}
         mechanicsOptions={mechanicsOptions}
+        maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
         privateCollectionResults={privateCollectionResults}
       />

@@ -34,11 +34,11 @@ export function GameCard({
       href={`/ludothek/${game.boardGameSlug}`}
       className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
-      {actions && (
-        <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
-      )}
-      <CardCornerOverlay corner="top-left">
-        <BggRatingBadge averageRating={game.averageRating} />
+      <CardCornerOverlay corner="top-right">
+        <div className="flex flex-col items-end gap-1.5">
+          {actions}
+          <BggRatingBadge averageRating={game.averageRating} />
+        </div>
       </CardCornerOverlay>
       {isExpansion && <RibbonCorner>Erweiterung</RibbonCorner>}
       <GameCoverMedia

@@ -1,31 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { RangeSlider, SingleSlider } from "@/components/ui/range-slider";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
-import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { cn } from "@/lib/utils/cn";
-import type {
-  DurationFilter,
-  LudothekFilters,
-  PlayerCountFilter,
+import {
+  MAX_PLAYERS_FILTER,
+  type LudothekFilters,
 } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
-const PLAYER_OPTIONS: { label: string; value: PlayerCountFilter }[] = [
-  { label: "1–2", value: "1-2" },
-  { label: "3–4", value: "3-4" },
-  { label: "5+", value: "5+" },
-];
-
-const DURATION_OPTIONS: { label: string; value: DurationFilter }[] = [
-  { label: "<60’", value: "short" },
-  { label: "60–120’", value: "mid" },
-  { label: ">120’", value: "long" },
-];
+const MIN_YEAR = 1900;
+const MIN_RATING = 1;
+const MAX_RATING = 10;
+const MIN_PLAYERS = 1;
+const MIN_DURATION = 0;
 
 const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Frei", value: "frei" },
@@ -60,15 +52,17 @@ function FilterPill({
 
 /**
  * Die einklappbare "Filter"-Sektion von `LudothekBrowser` — ausgelagert, da
- * die Datei sonst die 400-Zeilen-Grenze reißt. Verwaltet den Erstveröffentlichung-
- * Von/Bis-Zahlenbereich selbst (debounced wie die Suche, #205); alle anderen
- * Filter sind feste Optionen, die direkt per Link (`href`) gesetzt werden.
+ * die Datei sonst die 400-Zeilen-Grenze reißt. Verwaltet Erstveröffentlichung,
+ * Bewertung und Dauer als Zwei-Knoten-Slider sowie Spieler als Ein-Knoten-
+ * Slider selbst (#205, #214-Folge); alle anderen Filter sind feste Optionen,
+ * die direkt per Link (`href`) gesetzt werden.
  */
 export function LudothekFilterPanel({
   href,
   filters,
   internal,
   mechanicsOptions,
+  maxDurationBound,
   basePath,
   rawSearchParams,
   meepleOptions,
@@ -77,32 +71,72 @@ export function LudothekFilterPanel({
   filters: LudothekFilters;
   internal: boolean;
   mechanicsOptions: string[];
+  /** Obergrenze für den Dauer-Slider, s. `findMaxDurationBound` (#214-Folge). */
+  maxDurationBound: number;
   basePath: string;
   rawSearchParams: Record<string, string | string[] | undefined>;
   meepleOptions?: { id: string; displayName: string }[];
 }) {
   const router = useRouter();
+  const currentYear = new Date().getFullYear();
 
-  // Erstveröffentlichung von/bis (#205) — freier Zahlenbereich statt fester
-  // Optionen, deshalb wie die Suche debounced statt als Filter-Pills.
-  const [yearFrom, setYearFrom] = useState(filters.yearFrom?.toString() ?? "");
-  const [yearTo, setYearTo] = useState(filters.yearTo?.toString() ?? "");
-  const debouncedYearFrom = useDebouncedValue(yearFrom);
-  const debouncedYearTo = useDebouncedValue(yearTo);
+  // Spieleranzahl (#214-Folge-Korrektur) — Ein-Knoten-Slider statt fester
+  // Buckets: zeigt Titel, die genau diese Anzahl unterstützen.
+  const [players, setPlayers] = useState(filters.players ?? MIN_PLAYERS);
 
-  useEffect(() => {
-    const current = filters.yearFrom?.toString() ?? "";
-    if (debouncedYearFrom === current) return;
-    router.replace(href({ jahrVon: debouncedYearFrom || undefined }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
-  }, [debouncedYearFrom]);
+  // Spieldauer von/bis in Minuten (#214-Folge) — gleiches Muster.
+  const [durationRange, setDurationRange] = useState<[number, number]>([
+    filters.durationFrom ?? MIN_DURATION,
+    filters.durationTo ?? maxDurationBound,
+  ]);
 
-  useEffect(() => {
-    const current = filters.yearTo?.toString() ?? "";
-    if (debouncedYearTo === current) return;
-    router.replace(href({ jahrBis: debouncedYearTo || undefined }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
-  }, [debouncedYearTo]);
+  // Erstveröffentlichung von/bis (#205) — Slider von 1900 bis heute statt
+  // fester Optionen; Grenzwerte (= "kein Filter") werden nicht in die URL
+  // geschrieben, analog zum früheren leeren Textfeld.
+  const [yearRange, setYearRange] = useState<[number, number]>([
+    filters.yearFrom ?? MIN_YEAR,
+    filters.yearTo ?? currentYear,
+  ]);
+
+  // BGG-Durchschnittsbewertung von/bis (#214-Folge) — gleiches Muster, fixer
+  // Wertebereich 1–10 statt eines dynamischen Endes.
+  const [ratingRange, setRatingRange] = useState<[number, number]>([
+    filters.ratingFrom ?? MIN_RATING,
+    filters.ratingTo ?? MAX_RATING,
+  ]);
+
+  function commitYearRange([from, to]: [number, number]) {
+    router.replace(
+      href({
+        jahrVon: from > MIN_YEAR ? String(from) : undefined,
+        jahrBis: to < currentYear ? String(to) : undefined,
+      }),
+    );
+  }
+
+  function commitRatingRange([from, to]: [number, number]) {
+    router.replace(
+      href({
+        bewertungVon: from > MIN_RATING ? String(from) : undefined,
+        bewertungBis: to < MAX_RATING ? String(to) : undefined,
+      }),
+    );
+  }
+
+  function commitPlayers(next: number) {
+    router.replace(
+      href({ spieler: next > MIN_PLAYERS ? String(next) : undefined }),
+    );
+  }
+
+  function commitDurationRange([from, to]: [number, number]) {
+    router.replace(
+      href({
+        dauerVon: from > MIN_DURATION ? String(from) : undefined,
+        dauerBis: to < maxDurationBound ? String(to) : undefined,
+      }),
+    );
+  }
 
   return (
     <details className="group">
@@ -112,64 +146,88 @@ export function LudothekFilterPanel({
       </summary>
 
       <div className="mt-3 flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Spieler
-          </span>
-          <FilterPill
-            label="Alle"
-            href={href({ spieler: undefined })}
-            active={!filters.players}
+        <div className="flex max-w-xs flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Spieler
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {players >= MAX_PLAYERS_FILTER
+                ? `${MAX_PLAYERS_FILTER}+`
+                : players}
+            </span>
+          </div>
+          <SingleSlider
+            min={MIN_PLAYERS}
+            max={MAX_PLAYERS_FILTER}
+            value={players}
+            onValueChange={setPlayers}
+            onValueCommitted={commitPlayers}
+            getAriaLabel={() => "Spieler"}
           />
-          {PLAYER_OPTIONS.map((option) => (
-            <FilterPill
-              key={option.value}
-              label={option.label}
-              href={href({ spieler: option.value })}
-              active={filters.players === option.value}
-            />
-          ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Dauer
-          </span>
-          <FilterPill
-            label="Alle"
-            href={href({ dauer: undefined })}
-            active={!filters.duration}
+        <div className="flex max-w-xs flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Dauer (Min.)
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {durationRange[0]} – {durationRange[1]}
+            </span>
+          </div>
+          <RangeSlider
+            min={MIN_DURATION}
+            max={maxDurationBound}
+            step={5}
+            value={durationRange}
+            onValueChange={setDurationRange}
+            onValueCommitted={commitDurationRange}
+            getAriaLabel={(index) => (index === 0 ? "Dauer von" : "Dauer bis")}
           />
-          {DURATION_OPTIONS.map((option) => (
-            <FilterPill
-              key={option.value}
-              label={option.label}
-              href={href({ dauer: option.value })}
-              active={filters.duration === option.value}
-            />
-          ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-            Erstveröffentlichung
-          </span>
-          <Input
-            type="number"
-            value={yearFrom}
-            onChange={(event) => setYearFrom(event.target.value)}
-            placeholder="Von"
-            aria-label="Erstveröffentlichung von"
-            className="h-8 w-24"
+        <div className="flex max-w-xs flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Erstveröffentlichung
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {yearRange[0]} – {yearRange[1]}
+            </span>
+          </div>
+          <RangeSlider
+            min={MIN_YEAR}
+            max={currentYear}
+            value={yearRange}
+            onValueChange={setYearRange}
+            onValueCommitted={commitYearRange}
+            getAriaLabel={(index) =>
+              index === 0
+                ? "Erstveröffentlichung von"
+                : "Erstveröffentlichung bis"
+            }
           />
-          <span className="text-muted-foreground text-sm">–</span>
-          <Input
-            type="number"
-            value={yearTo}
-            onChange={(event) => setYearTo(event.target.value)}
-            placeholder="Bis"
-            aria-label="Erstveröffentlichung bis"
-            className="h-8 w-24"
+        </div>
+
+        <div className="flex max-w-xs flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Bewertung
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {ratingRange[0]} – {ratingRange[1]}
+            </span>
+          </div>
+          <RangeSlider
+            min={MIN_RATING}
+            max={MAX_RATING}
+            value={ratingRange}
+            onValueChange={setRatingRange}
+            onValueCommitted={commitRatingRange}
+            getAriaLabel={(index) =>
+              index === 0 ? "Bewertung von" : "Bewertung bis"
+            }
           />
         </div>
 

@@ -126,14 +126,21 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
   return rest;
 }
 
+/** Nur noch vom unabhängigen Gastbereich-Filter (`free-games-list.tsx`)
+ * genutzt — das Ludothek-Filterpanel selbst nutzt seit #214-Folge `players`
+ * (Ein-Knoten-Slider statt fester Buckets). */
 export type PlayerCountFilter = "1-2" | "3-4" | "5+";
-export type DurationFilter = "short" | "mid" | "long";
 export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
-  players?: PlayerCountFilter;
-  duration?: DurationFilter;
+  /** Exakte Spieleranzahl — matcht jeden Titel, dessen min/maxPlayers diese
+   * Zahl einschließt (Ein-Knoten-Slider statt fester Buckets, #214-Folge). */
+  players?: number;
+  /** Spieldauer von/bis in Minuten (inklusive) — Slider statt fester Buckets
+   * (#214-Folge). */
+  durationFrom?: number;
+  durationTo?: number;
   maxWeight?: number;
   mechanics?: string[];
   hideExpansions?: boolean;
@@ -141,6 +148,10 @@ export type LudothekFilters = {
    * voneinander setzbar (#205). */
   yearFrom?: number;
   yearTo?: number;
+  /** BGG-Durchschnittsbewertung von/bis (1–10, inklusive), beide unabhängig
+   * voneinander setzbar (#214-Folge). */
+  ratingFrom?: number;
+  ratingTo?: number;
   /** Defaults to "grid" when unset — only `parseLudothekSearchParams` sets it explicitly. */
   view?: LudothekViewMode;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
@@ -156,37 +167,51 @@ export type LudothekFilters = {
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
 type Timed = { playTimeMinutes: number | null };
 
-export function matchesPlayerFilter(
+/** Slider-Obergrenze für den Spieler-Filter — 1–8 sind exakte Werte, ab hier
+ * ("9+") reicht es, wenn der Titel mindestens so viele Spieler unterstützt,
+ * damit einzelne Ausreißer (z. B. ein 20-Spieler-Partyspiel) nicht die ganze
+ * Skala stauchen (#214-Folge-Korrektur). */
+export const MAX_PLAYERS_FILTER = 9;
+
+/** Zeigt Titel, die genau `players` Spieler unterstützen — Ein-Knoten-Slider
+ * statt fester Buckets (#214-Folge). Ab `MAX_PLAYERS_FILTER` ("9+") reicht
+ * es, wenn der Titel mindestens so viele Spieler unterstützt. Von
+ * `filterLudothekGames` und `buildPrivateCollectionResults` gemeinsam
+ * genutzt. */
+export function matchesPlayerCount(
   game: PlayerCounted,
-  filter: PlayerCountFilter,
-) {
+  players: number | undefined,
+): boolean {
+  if (players === undefined) return true;
   const max = game.maxPlayers ?? game.minPlayers ?? 0;
   const min = game.minPlayers ?? max;
-  if (filter === "1-2") return min <= 2;
-  if (filter === "3-4") return max >= 3 && min <= 4;
-  return max >= 5;
+  if (players >= MAX_PLAYERS_FILTER) return max >= MAX_PLAYERS_FILTER;
+  return players >= min && players <= max;
 }
 
-export function matchesDurationFilter(game: Timed, filter: DurationFilter) {
-  const minutes = game.playTimeMinutes ?? 0;
-  if (filter === "short") return minutes > 0 && minutes < 60;
-  if (filter === "mid") return minutes >= 60 && minutes <= 120;
-  return minutes > 120;
+/** Kein erfasster Wert kann keinen gesetzten Bereich erfüllen, analog zu
+ * Erstveröffentlichung und Bewertung — Slider statt fester Buckets
+ * (#214-Folge). */
+export function matchesDurationRange(
+  game: Timed,
+  from: number | undefined,
+  to: number | undefined,
+): boolean {
+  if (from === undefined && to === undefined) return true;
+  if (game.playTimeMinutes === null) return false;
+  if (from !== undefined && game.playTimeMinutes < from) return false;
+  if (to !== undefined && game.playTimeMinutes > to) return false;
+  return true;
 }
 
-const PLAYER_FILTER_VALUES = new Set<PlayerCountFilter>(["1-2", "3-4", "5+"]);
-const DURATION_FILTER_VALUES = new Set<DurationFilter>([
-  "short",
-  "mid",
-  "long",
-]);
 const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
   "grid",
   "liste",
   "compact",
 ]);
 
-function parseYearParam(raw: string | undefined): number | undefined {
+/** Shared by the year and rating range filters (both plain numbers). */
+function parseNumberParam(raw: string | undefined): number | undefined {
   if (!raw) return undefined;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : undefined;
@@ -197,8 +222,6 @@ export function parseLudothekSearchParams(
   searchParams: Record<string, string | string[] | undefined>,
   { internal }: { internal: boolean },
 ): LudothekFilters {
-  const players = firstString(searchParams.spieler);
-  const duration = firstString(searchParams.dauer);
   const maxWeightRaw = firstString(searchParams.gewicht);
   const mechanikRaw = searchParams.mechanik;
   const view = firstString(searchParams.ansicht);
@@ -208,12 +231,9 @@ export function parseLudothekSearchParams(
     view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
       ? (view as LudothekViewMode)
       : "grid",
-    players: PLAYER_FILTER_VALUES.has(players as PlayerCountFilter)
-      ? (players as PlayerCountFilter)
-      : undefined,
-    duration: DURATION_FILTER_VALUES.has(duration as DurationFilter)
-      ? (duration as DurationFilter)
-      : undefined,
+    players: parseNumberParam(firstString(searchParams.spieler)),
+    durationFrom: parseNumberParam(firstString(searchParams.dauerVon)),
+    durationTo: parseNumberParam(firstString(searchParams.dauerBis)),
     maxWeight:
       maxWeightRaw && !Number.isNaN(Number(maxWeightRaw))
         ? Number(maxWeightRaw)
@@ -224,8 +244,10 @@ export function parseLudothekSearchParams(
         : [mechanikRaw]
       : undefined,
     hideExpansions: firstString(searchParams.ohneErweiterungen) === "1",
-    yearFrom: parseYearParam(firstString(searchParams.jahrVon)),
-    yearTo: parseYearParam(firstString(searchParams.jahrBis)),
+    yearFrom: parseNumberParam(firstString(searchParams.jahrVon)),
+    yearTo: parseNumberParam(firstString(searchParams.jahrBis)),
+    ratingFrom: parseNumberParam(firstString(searchParams.bewertungVon)),
+    ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
   };
 
   if (internal) {
@@ -275,10 +297,10 @@ export function filterLudothekGames(
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
       return false;
     }
-    if (filters.players && !matchesPlayerFilter(game, filters.players)) {
+    if (!matchesPlayerCount(game, filters.players)) {
       return false;
     }
-    if (filters.duration && !matchesDurationFilter(game, filters.duration)) {
+    if (!matchesDurationRange(game, filters.durationFrom, filters.durationTo)) {
       return false;
     }
     if (filters.maxWeight !== undefined) {
@@ -306,6 +328,21 @@ export function filterLudothekGames(
       if (filters.yearTo !== undefined && game.yearPublished > filters.yearTo)
         return false;
     }
+    if (filters.ratingFrom !== undefined || filters.ratingTo !== undefined) {
+      // Wie beim Erstveröffentlichungsjahr: ohne Bewertung kann kein
+      // gesetzter Bereich erfüllt werden (#214-Folge).
+      if (game.averageRating === null) return false;
+      if (
+        filters.ratingFrom !== undefined &&
+        game.averageRating < filters.ratingFrom
+      )
+        return false;
+      if (
+        filters.ratingTo !== undefined &&
+        game.averageRating > filters.ratingTo
+      )
+        return false;
+    }
     if (filters.zustand && game.zustand !== filters.zustand) {
       return false;
     }
@@ -327,4 +364,15 @@ export function filterLudothekGames(
  * dialog (#124). */
 export function listDistinctMechanics(games: { mechanics: string[] }[]) {
   return [...new Set(games.flatMap((game) => game.mechanics))].sort();
+}
+
+/** Obergrenze für den Dauer-Slider (Minuten) — höchste im Bestand erfasste
+ * Spieldauer, aufgerundet auf 30-Minuten-Schritte, mindestens aber der
+ * Standard-Fallback (#214-Folge). */
+export function findMaxDurationBound(games: Timed[], fallback = 120): number {
+  const highest = Math.max(
+    fallback,
+    ...games.map((game) => game.playTimeMinutes ?? 0),
+  );
+  return Math.ceil(highest / 30) * 30;
 }

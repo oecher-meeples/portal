@@ -83,46 +83,6 @@ describe("filterLudothekGames", () => {
     expect(result[0].title).toBe("Arche Nova");
   });
 
-  it("filters by player-count range", () => {
-    const small = game({ minPlayers: 1, maxPlayers: 2 });
-    const mid = game({ minPlayers: 3, maxPlayers: 4 });
-    const large = game({ minPlayers: 5, maxPlayers: 8 });
-
-    expect(
-      filterLudothekGames([small, mid, large], { players: "1-2" }),
-    ).toEqual([small]);
-    expect(
-      filterLudothekGames([small, mid, large], { players: "3-4" }),
-    ).toEqual([mid]);
-    expect(filterLudothekGames([small, mid, large], { players: "5+" })).toEqual(
-      [large],
-    );
-  });
-
-  it("includes a game spanning a range across the filter boundary", () => {
-    const spanning = game({ minPlayers: 2, maxPlayers: 5 });
-
-    expect(filterLudothekGames([spanning], { players: "3-4" })).toEqual([
-      spanning,
-    ]);
-  });
-
-  it("filters by duration bucket", () => {
-    const short = game({ playTimeMinutes: 20 });
-    const mid = game({ playTimeMinutes: 90 });
-    const long = game({ playTimeMinutes: 180 });
-
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "short" }),
-    ).toEqual([short]);
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "mid" }),
-    ).toEqual([mid]);
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "long" }),
-    ).toEqual([long]);
-  });
-
   it("filters by maximum weight", () => {
     const light = game({ weight: 1.5 });
     const heavy = game({ weight: 4.2 });
@@ -203,8 +163,9 @@ describe("filterLudothekGames", () => {
 
     const result = filterLudothekGames([match, wrongDuration], {
       search: "arche",
-      players: "3-4",
-      duration: "mid",
+      players: 3,
+      durationFrom: 60,
+      durationTo: 120,
       mechanics: ["Engine-Building"],
     });
 
@@ -250,74 +211,18 @@ describe("filterLudothekGames", () => {
     expect(result[0].title).toBe("Wingspan");
   });
 
-  describe("Erstveröffentlichung von/bis (#205)", () => {
-    it("keeps only games published within the given range", () => {
-      const games = [
-        game({ title: "Alt", yearPublished: 1995 }),
-        game({ title: "Mittel", yearPublished: 2015 }),
-        game({ title: "Neu", yearPublished: 2023 }),
-      ];
-
-      const result = filterLudothekGames(games, {
-        yearFrom: 2000,
-        yearTo: 2020,
-      });
-
-      expect(result.map((g) => g.title)).toEqual(["Mittel"]);
-    });
-
-    it("applies only the lower bound when yearTo is unset", () => {
-      const games = [
-        game({ title: "Alt", yearPublished: 1995 }),
-        game({ title: "Neu", yearPublished: 2023 }),
-      ];
-
-      expect(
-        filterLudothekGames(games, { yearFrom: 2000 }).map((g) => g.title),
-      ).toEqual(["Neu"]);
-    });
-
-    it("applies only the upper bound when yearFrom is unset", () => {
-      const games = [
-        game({ title: "Alt", yearPublished: 1995 }),
-        game({ title: "Neu", yearPublished: 2023 }),
-      ];
-
-      expect(
-        filterLudothekGames(games, { yearTo: 2000 }).map((g) => g.title),
-      ).toEqual(["Alt"]);
-    });
-
-    it("excludes titles without a recorded yearPublished once a bound is set", () => {
-      const games = [
-        game({ title: "Unbekannt", yearPublished: null }),
-        game({ title: "Bekannt", yearPublished: 2020 }),
-      ];
-
-      expect(
-        filterLudothekGames(games, { yearFrom: 2000 }).map((g) => g.title),
-      ).toEqual(["Bekannt"]);
-    });
-
-    it("is a no-op when neither bound is set", () => {
-      const games = [
-        game({ title: "Unbekannt", yearPublished: null }),
-        game({ title: "Bekannt", yearPublished: 2020 }),
-      ];
-
-      expect(filterLudothekGames(games, {})).toHaveLength(2);
-    });
-  });
+  // Erstveröffentlichung-, Bewertung- und Spieler/Dauer-Slider-Tests siehe
+  // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
 });
 
 describe("parseLudothekSearchParams", () => {
-  it("parses search, players, duration, weight and mechanics", () => {
+  // spielerVon/dauerVon/jahrVon/bewertungVon-Parsing siehe
+  // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
+  it("parses search, weight and mechanics", () => {
     expect(
       parseLudothekSearchParams(
         {
           q: "arche",
-          spieler: "3-4",
-          dauer: "mid",
           gewicht: "3.5",
           mechanik: ["Engine-Building", "Plättchenlegen"],
         },
@@ -325,27 +230,8 @@ describe("parseLudothekSearchParams", () => {
       ),
     ).toEqual({
       search: "arche",
-      players: "3-4",
-      duration: "mid",
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
-      hideExpansions: false,
-      view: "grid",
-    });
-  });
-
-  it("ignores invalid enum values instead of applying a wrong filter", () => {
-    expect(
-      parseLudothekSearchParams(
-        { spieler: "nonsense", dauer: "nonsense" },
-        { internal: false },
-      ),
-    ).toEqual({
-      search: undefined,
-      players: undefined,
-      duration: undefined,
-      maxWeight: undefined,
-      mechanics: undefined,
       hideExpansions: false,
       view: "grid",
     });
@@ -389,6 +275,26 @@ describe("parseLudothekSearchParams", () => {
 
     expect(result.yearFrom).toBeUndefined();
     expect(result.yearTo).toBeUndefined();
+  });
+
+  it("parses bewertungVon/bewertungBis as numbers (#214-Folge)", () => {
+    const result = parseLudothekSearchParams(
+      { bewertungVon: "6", bewertungBis: "9" },
+      { internal: false },
+    );
+
+    expect(result.ratingFrom).toBe(6);
+    expect(result.ratingTo).toBe(9);
+  });
+
+  it("ignores a non-numeric bewertungVon/bewertungBis instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { bewertungVon: "nonsense", bewertungBis: "" },
+      { internal: false },
+    );
+
+    expect(result.ratingFrom).toBeUndefined();
+    expect(result.ratingTo).toBeUndefined();
   });
 
   it("only parses internal filters when internal is true", () => {

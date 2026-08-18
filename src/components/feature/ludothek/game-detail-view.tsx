@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -96,6 +97,9 @@ export function GameDetailView({
           {game.kind === "BOARDGAME_EXPANSION" && (
             <RibbonCorner>Erweiterung</RibbonCorner>
           )}
+          <CardCornerOverlay corner="top-right">
+            <BggRatingBadge averageRating={game.averageRating} />
+          </CardCornerOverlay>
         </div>
       </div>
 
@@ -103,7 +107,6 @@ export function GameDetailView({
         <div>
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-3">
-              <BggRatingBadge averageRating={game.averageRating} />
               <div>
                 <h1 className="font-serif text-3xl font-bold tracking-tight">
                   {game.title}

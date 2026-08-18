@@ -49,33 +49,34 @@ describe("buildPrivateCollectionResults", () => {
     ]);
   });
 
-  it("filters by player count", () => {
+  it("filters by exact player count (#214-Folge-Korrektur)", () => {
     const solo = entry({ id: "solo", minPlayers: 1, maxPlayers: 1 });
     const party = entry({ id: "party", minPlayers: 5, maxPlayers: 8 });
 
     expect(
-      buildPrivateCollectionResults([solo, party], { players: "1-2" }).map(
+      buildPrivateCollectionResults([solo, party], { players: 1 }).map(
         (r) => r.id,
       ),
     ).toEqual(["solo"]);
     expect(
-      buildPrivateCollectionResults([solo, party], { players: "5+" }).map(
+      buildPrivateCollectionResults([solo, party], { players: 6 }).map(
         (r) => r.id,
       ),
     ).toEqual(["party"]);
   });
 
-  it("filters by duration", () => {
+  it("filters by duration range (#214-Folge)", () => {
     const short = entry({ id: "short", playTimeMinutes: 20 });
     const long = entry({ id: "long", playTimeMinutes: 180 });
 
     expect(
-      buildPrivateCollectionResults([short, long], { duration: "short" }).map(
-        (r) => r.id,
-      ),
+      buildPrivateCollectionResults([short, long], {
+        durationFrom: 0,
+        durationTo: 59,
+      }).map((r) => r.id),
     ).toEqual(["short"]);
     expect(
-      buildPrivateCollectionResults([short, long], { duration: "long" }).map(
+      buildPrivateCollectionResults([short, long], { durationFrom: 121 }).map(
         (r) => r.id,
       ),
     ).toEqual(["long"]);

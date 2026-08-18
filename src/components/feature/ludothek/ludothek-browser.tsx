@@ -75,6 +75,7 @@ export function LudothekBrowser({
   rawSearchParams,
   filters,
   mechanicsOptions,
+  maxDurationBound = 120,
   meepleOptions,
   privateCollectionResults,
 }: {
@@ -86,6 +87,10 @@ export function LudothekBrowser({
   rawSearchParams: Record<string, string | string[] | undefined>;
   filters: LudothekFilters;
   mechanicsOptions: string[];
+  /** Obergrenze für den Dauer-Slider — höchster im Bestand erfasster Wert,
+   * s. `findMaxDurationBound` (#214-Folge). Der Spieler-Slider hat eine feste
+   * Obergrenze ("8+"), s. `MAX_PLAYERS_FILTER` (#214-Folge-Korrektur). */
+  maxDurationBound?: number;
   meepleOptions?: { id: string; displayName: string }[];
   /** Internal-only, never passed for the guest area — see CONTEXT.md "kein Leak". */
   privateCollectionResults?: PrivateCollectionResult[];
@@ -150,6 +155,7 @@ export function LudothekBrowser({
           filters={filters}
           internal={internal}
           mechanicsOptions={mechanicsOptions}
+          maxDurationBound={maxDurationBound}
           basePath={basePath}
           rawSearchParams={rawSearchParams}
           meepleOptions={meepleOptions}

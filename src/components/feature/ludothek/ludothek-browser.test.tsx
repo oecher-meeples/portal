@@ -195,55 +195,8 @@ describe("LudothekBrowser — live search", () => {
   );
 });
 
-describe("LudothekBrowser — Erstveröffentlichung von/bis (#205)", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("updates jahrVon after the debounce delay", () => {
-    vi.useFakeTimers();
-    render(<LudothekBrowser {...baseProps()} internal={false} />);
-
-    fireEvent.change(screen.getByLabelText("Erstveröffentlichung von"), {
-      target: { value: "2000" },
-    });
-    expect(routerReplaceMock).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(300);
-    });
-
-    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?jahrVon=2000");
-  });
-
-  it("updates jahrBis after the debounce delay", () => {
-    vi.useFakeTimers();
-    render(<LudothekBrowser {...baseProps()} internal={false} />);
-
-    fireEvent.change(screen.getByLabelText("Erstveröffentlichung bis"), {
-      target: { value: "2020" },
-    });
-
-    act(() => {
-      vi.advanceTimersByTime(300);
-    });
-
-    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?jahrBis=2020");
-  });
-
-  it("seeds both fields from the current filters", () => {
-    render(
-      <LudothekBrowser
-        {...baseProps()}
-        internal={false}
-        filters={{ yearFrom: 2000, yearTo: 2020 }}
-      />,
-    );
-
-    expect(screen.getByLabelText("Erstveröffentlichung von")).toHaveValue(2000);
-    expect(screen.getByLabelText("Erstveröffentlichung bis")).toHaveValue(2020);
-  });
-});
+// Erstveröffentlichung-, Bewertung-, Dauer- und Spieler-Slider-Tests siehe
+// ludothek-browser-ranges.test.tsx (#214-Folge, ausgelagert wegen Dateigröße).
 
 describe("LudothekBrowser — view mode switch", () => {
   it("hides the compact icon for guests and internal users without games:manage", () => {
