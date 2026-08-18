@@ -226,6 +226,87 @@ describe("filterLudothekGames", () => {
     expect(result).toHaveLength(1);
     expect(result[0].title).toBe("Catan");
   });
+
+  it("matches on a publisher substring, case-insensitively (#205)", () => {
+    const games = [
+      game({ title: "Ark Nova", publisher: ["Feuerland Spiele"] }),
+      game({ title: "Wingspan", publisher: ["Stonemaier Games"] }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "feuerland" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Ark Nova");
+  });
+
+  it("matches on an author substring, case-insensitively (#205)", () => {
+    const games = [
+      game({ title: "Cascadia", author: ["Randy Flynn"] }),
+      game({ title: "Wingspan", author: ["Elizabeth Hargrave"] }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "hargrave" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Wingspan");
+  });
+
+  describe("Erstveröffentlichung von/bis (#205)", () => {
+    it("keeps only games published within the given range", () => {
+      const games = [
+        game({ title: "Alt", yearPublished: 1995 }),
+        game({ title: "Mittel", yearPublished: 2015 }),
+        game({ title: "Neu", yearPublished: 2023 }),
+      ];
+
+      const result = filterLudothekGames(games, {
+        yearFrom: 2000,
+        yearTo: 2020,
+      });
+
+      expect(result.map((g) => g.title)).toEqual(["Mittel"]);
+    });
+
+    it("applies only the lower bound when yearTo is unset", () => {
+      const games = [
+        game({ title: "Alt", yearPublished: 1995 }),
+        game({ title: "Neu", yearPublished: 2023 }),
+      ];
+
+      expect(
+        filterLudothekGames(games, { yearFrom: 2000 }).map((g) => g.title),
+      ).toEqual(["Neu"]);
+    });
+
+    it("applies only the upper bound when yearFrom is unset", () => {
+      const games = [
+        game({ title: "Alt", yearPublished: 1995 }),
+        game({ title: "Neu", yearPublished: 2023 }),
+      ];
+
+      expect(
+        filterLudothekGames(games, { yearTo: 2000 }).map((g) => g.title),
+      ).toEqual(["Alt"]);
+    });
+
+    it("excludes titles without a recorded yearPublished once a bound is set", () => {
+      const games = [
+        game({ title: "Unbekannt", yearPublished: null }),
+        game({ title: "Bekannt", yearPublished: 2020 }),
+      ];
+
+      expect(
+        filterLudothekGames(games, { yearFrom: 2000 }).map((g) => g.title),
+      ).toEqual(["Bekannt"]);
+    });
+
+    it("is a no-op when neither bound is set", () => {
+      const games = [
+        game({ title: "Unbekannt", yearPublished: null }),
+        game({ title: "Bekannt", yearPublished: 2020 }),
+      ];
+
+      expect(filterLudothekGames(games, {})).toHaveLength(2);
+    });
+  });
 });
 
 describe("parseLudothekSearchParams", () => {
@@ -287,6 +368,26 @@ describe("parseLudothekSearchParams", () => {
     expect(parseLudothekSearchParams({}, { internal: false }).view).toBe(
       "grid",
     );
+  });
+
+  it("parses jahrVon/jahrBis as numbers (#205)", () => {
+    const result = parseLudothekSearchParams(
+      { jahrVon: "2000", jahrBis: "2020" },
+      { internal: false },
+    );
+
+    expect(result.yearFrom).toBe(2000);
+    expect(result.yearTo).toBe(2020);
+  });
+
+  it("ignores a non-numeric jahrVon/jahrBis instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { jahrVon: "nonsense", jahrBis: "" },
+      { internal: false },
+    );
+
+    expect(result.yearFrom).toBeUndefined();
+    expect(result.yearTo).toBeUndefined();
   });
 
   it("only parses internal filters when internal is true", () => {

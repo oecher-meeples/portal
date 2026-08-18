@@ -208,6 +208,12 @@ Deinventarisierte Exemplare werden nie gelöscht (`GameCopy.status`, `archivedAt
 
 `GameCopy.ruleBookLanguages` ist davon unabhängig eine Eigenschaft des **Exemplars**: welche Sprache(n) das mitgelieferte Regelheft hat (`DE`/`EN`/`OTHER`, Mehrfachauswahl — eine Schachtel bringt oft ein deutsches und ein englisches Regelheft gemeinsam mit).
 
+### Verlag, Autor, Erstveröffentlichung (#205)
+
+BGG kennt mehrere Editionen (`versions=1`) desselben Titels mit potenziell abweichendem Verlag und Product Code je Edition (z. B. deutsche vs. englische Auflage bei unterschiedlichem Verlag). `lib/ludothek/board-game-versions.ts` löst das auf: identisch über alle (bevorzugt auf deutsche Editionen eingeengten, siehe `selectRelevantVersions()`) Versionen → automatisch übernommen; sonst wählt der Admin im Anlegen-Wizard. `BoardGame.yearPublished` ist davon unabhängig immer das älteste Jahr über *alle* Versionen — keine gekoppelte Auswahl mit dem Verlag. `author` kommt direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item, nicht aus den Versionen (Autoren ändern sich nicht zwischen Editionen).
+
+Die EAN-Suche bevorzugt einen eindeutig aufgelösten BGG-Product-Code vor der UPCitemdb-Fallback-Suche; ohne eindeutigen Code sortiert der bekannte Verlag die UPCitemdb-Kandidaten nach oben.
+
 ### Standort: eine Kette von Aufenthalten
 
 Es gibt **kein Standortfeld**. Wo ein Exemplar ist, steht in `GameHolding`: jeder Aufenthalt zeigt auf genau eines von Aufbewahrungseinheit oder Meeple, hat `startedAt` und optional `endedAt`. Ein partieller Unique-Index (`WHERE endedAt IS NULL`) garantiert genau einen offenen Aufenthalt pro Exemplar (`gameCopyId`), eine `CHECK`-Constraint genau ein Ziel. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang: einen Aufenthalt schließen, den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, steht in `origin`.
@@ -236,6 +242,9 @@ erDiagram
         String explainerVideoUrl
         BoardGameKind kind "BOARDGAME, BOARDGAME_EXPANSION"
         LanguageDependence languageDependence "nullable — BGGs 5-stufiges Poll-Level (#188)"
+        String_Array publisher "mehrere bei Co-Publishern, aus BGG-Versionen aufgelöst (#205)"
+        String_Array author "aus BGGs boardgamedesigner-Links (#205)"
+        Int yearPublished "ältestes Jahr über alle BGG-Versionen (#205)"
     }
 
     GameCopy {

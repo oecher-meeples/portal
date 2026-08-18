@@ -87,9 +87,9 @@
 
 ### 2.7 Ludothek — Spielsuche (zwei Projektionen)
 - Eine Komponente, zwei Sichten: **öffentlich** ohne Standort, Zustand und Personen; **intern** (eingeloggt) zusätzlich mit Standort-Kette, Zustand und Verantwortliche:r
-- Suchleiste + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
+- Suchleiste (matcht auch Verlag/Autor, #205) + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik, Erstveröffentlichung von/bis); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
 - **Alle Filter liegen in `searchParams`** und werden serverseitig angewendet, damit jede Filterkombination als Link teilbar ist
-- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
+- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer, Verlag); Listenansicht zusätzlich mit Verlag, nicht in der Kompakt-Ansicht (#205); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
 - **Sprachneutral**-Badge für Titel mit BGGs Language-Dependence-Level 1 (kein notwendiger Text, #188)
 - Deinventarisierte Spiele erscheinen nicht
 

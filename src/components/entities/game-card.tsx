@@ -50,6 +50,11 @@ export function GameCard({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
+        {game.publisher.length > 0 && (
+          <p className="text-muted-foreground text-sm">
+            {game.publisher.join(", ")}
+          </p>
+        )}
         {expansionCount > 0 && (
           <p className="text-muted-foreground flex items-center gap-1 text-sm">
             <Layers className="size-4" />

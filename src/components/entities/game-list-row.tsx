@@ -81,6 +81,11 @@ export function GameListRow({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
+        {game.publisher.length > 0 && (
+          <p className="text-muted-foreground text-sm">
+            {game.publisher.join(", ")}
+          </p>
+        )}
         {game.description && (
           <p className="text-muted-foreground text-sm">
             {expanded

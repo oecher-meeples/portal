@@ -134,6 +134,10 @@ export type LudothekFilters = {
   maxWeight?: number;
   mechanics?: string[];
   hideExpansions?: boolean;
+  /** Erstveröffentlichung von/bis (Jahr, inklusive) — beide unabhängig
+   * voneinander setzbar (#205). */
+  yearFrom?: number;
+  yearTo?: number;
   /** Defaults to "grid" when unset — only `parseLudothekSearchParams` sets it explicitly. */
   view?: LudothekViewMode;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
@@ -179,6 +183,12 @@ const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
   "compact",
 ]);
 
+function parseYearParam(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 /** Turns a Next.js `searchParams` object into filters — the single source of truth for URLs. */
 export function parseLudothekSearchParams(
   searchParams: Record<string, string | string[] | undefined>,
@@ -211,6 +221,8 @@ export function parseLudothekSearchParams(
         : [mechanikRaw]
       : undefined,
     hideExpansions: firstString(searchParams.ohneErweiterungen) === "1",
+    yearFrom: parseYearParam(firstString(searchParams.jahrVon)),
+    yearTo: parseYearParam(firstString(searchParams.jahrBis)),
   };
 
   if (internal) {
@@ -226,10 +238,14 @@ export function parseLudothekSearchParams(
   return filters;
 }
 
-/** Title/Alternativnamen match as a substring; EAN/BGG-ID only as an exact
- * match — a partial EAN/BGG-ID hit has no business meaning (#187). */
+/** Title/Alternativnamen/Verlag/Autor match as a substring; EAN/BGG-ID only
+ * as an exact match — a partial EAN/BGG-ID hit has no business meaning
+ * (#187, Verlag/Autor seit #205). */
 export function matchesLudothekSearch(
-  game: Pick<LudothekGame, "title" | "ean" | "bggId" | "alternateNames">,
+  game: Pick<
+    LudothekGame,
+    "title" | "ean" | "bggId" | "alternateNames" | "publisher" | "author"
+  >,
   search: string,
 ): boolean {
   const term = search.trim().toLowerCase();
@@ -239,6 +255,10 @@ export function matchesLudothekSearch(
   if (game.ean !== null && game.ean === search.trim()) return true;
   if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
   if (game.alternateNames.some((name) => name.toLowerCase().includes(term)))
+    return true;
+  if (game.publisher.some((name) => name.toLowerCase().includes(term)))
+    return true;
+  if (game.author.some((name) => name.toLowerCase().includes(term)))
     return true;
 
   return false;
@@ -270,6 +290,18 @@ export function filterLudothekGames(
       game.kind === BoardGameKind.BOARDGAME_EXPANSION
     ) {
       return false;
+    }
+    if (filters.yearFrom !== undefined || filters.yearTo !== undefined) {
+      // Kein erfasstes Jahr kann keinen gesetzten Bereich erfüllen — anders
+      // als bei `maxWeight` gibt es hier keinen sinnvollen Default (#205).
+      if (game.yearPublished === null) return false;
+      if (
+        filters.yearFrom !== undefined &&
+        game.yearPublished < filters.yearFrom
+      )
+        return false;
+      if (filters.yearTo !== undefined && game.yearPublished > filters.yearTo)
+        return false;
     }
     if (filters.zustand && game.zustand !== filters.zustand) {
       return false;

@@ -113,7 +113,8 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       _Definition of Done:_ Unit-Tests für Parsing (Publisher/Autor/Jahr aus Versions-XML), für Auto-Übernahme vs. Auswahl-UI bei Abweichung, für „ältestes Jahr gewinnt", für EAN-Priorisierung (BGG-Product-Code vor UPCitemdb, Verlags-Sortierung) — alle grün.
       `git commit -m "feat(bgg): capture publisher, author and first-publication year from BGG versions"`
 
-- [ ] **9. #205b — Verlag/Autor/Erstveröffentlichung: Suche, Filter, Anzeige, Docs**
+- [x] **9. #205b — Verlag/Autor/Erstveröffentlichung: Suche, Filter, Anzeige, Docs**
+      Filter-UI in eigene `ludothek-filter-panel.tsx` ausgelagert (400-Zeilen-Grenze).
       `matchesLudothekSearch()` um Verlag/Autor erweitern, neuer Von/Bis-Jahresfilter für Erstveröffentlichung. Verlag in `game-card.tsx` und `game-list-row.tsx` anzeigen (nicht in `game-compact-row.tsx`). `docs/features.md` und `docs/schema.md` aktualisieren.
       _Definition of Done:_ Suchtest deckt Treffer über Verlag/Autor ab; Filtertest deckt Von/Bis-Jahresbereich ab (inkl. Randfälle: nur Von, nur Bis, kein `yearPublished`); Doku-Diff vorhanden.
       `git commit -m "feat(ludothek): search and filter by publisher, author and publication year"`
