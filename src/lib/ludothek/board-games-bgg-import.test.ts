@@ -139,7 +139,7 @@ describe("previewBggImport", () => {
     });
   });
 
-  it("clears the description instead of saving English text when translation fails (#184)", async () => {
+  it("keeps the English description instead of clearing it when translation fails (#184)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
     fetchBggGameMock.mockResolvedValue({
@@ -155,10 +155,10 @@ describe("previewBggImport", () => {
       success: true,
       data: {
         title: "Ark Nova",
-        description: null,
+        description: "Build a modern zoo.",
         mechanics: [],
       },
-      hint: "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — bitte manuell auf Deutsch ergänzen.",
+      hint: "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — Beschreibung ist vorerst auf Englisch, bitte über den „Übersetzen“-Button oder manuell auf Deutsch ergänzen.",
     });
   });
 

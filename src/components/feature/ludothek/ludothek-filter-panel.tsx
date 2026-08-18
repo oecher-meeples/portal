@@ -12,12 +12,19 @@ import {
   type LudothekFilters,
 } from "@/lib/ludothek/browser";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import {
+  LANGUAGE_DEPENDENCE_BY_LEVEL,
+  LANGUAGE_DEPENDENCE_SHORT_LABELS,
+} from "@/lib/ludothek/language-dependence";
 
 const MIN_YEAR = 1900;
 const MIN_RATING = 1;
 const MAX_RATING = 10;
-const MIN_PLAYERS = 1;
+/** Slider-Position 0 = "Alle" (kein Spieler-Filter), davor liegt nichts mehr. */
+const ALL_PLAYERS = 0;
 const MIN_DURATION = 0;
+const MIN_LANGUAGE_DEPENDENCE = 0;
+const MAX_LANGUAGE_DEPENDENCE = LANGUAGE_DEPENDENCE_BY_LEVEL.length;
 
 const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Frei", value: "frei" },
@@ -81,8 +88,9 @@ export function LudothekFilterPanel({
   const currentYear = new Date().getFullYear();
 
   // Spieleranzahl (#214-Folge-Korrektur) — Ein-Knoten-Slider statt fester
-  // Buckets: zeigt Titel, die genau diese Anzahl unterstützen.
-  const [players, setPlayers] = useState(filters.players ?? MIN_PLAYERS);
+  // Buckets: zeigt Titel, die genau diese Anzahl unterstützen. Position 0 =
+  // "Alle" (kein Filter), davor liegt nichts mehr.
+  const [players, setPlayers] = useState(filters.players ?? ALL_PLAYERS);
 
   // Spieldauer von/bis in Minuten (#214-Folge) — gleiches Muster.
   const [durationRange, setDurationRange] = useState<[number, number]>([
@@ -105,6 +113,13 @@ export function LudothekFilterPanel({
     filters.ratingTo ?? MAX_RATING,
   ]);
 
+  // Sprachneutralität (#188) — Ein-Knoten-Slider über BGGs 5-stufiges
+  // Language-Dependence-Poll-Level; 0 = "Alle" (kein Filter), sonst maximal
+  // zulässiges Level.
+  const [languageDependenceMax, setLanguageDependenceMax] = useState(
+    filters.languageDependenceMax ?? MIN_LANGUAGE_DEPENDENCE,
+  );
+
   function commitYearRange([from, to]: [number, number]) {
     router.replace(
       href({
@@ -125,7 +140,7 @@ export function LudothekFilterPanel({
 
   function commitPlayers(next: number) {
     router.replace(
-      href({ spieler: next > MIN_PLAYERS ? String(next) : undefined }),
+      href({ spieler: next > ALL_PLAYERS ? String(next) : undefined }),
     );
   }
 
@@ -134,6 +149,14 @@ export function LudothekFilterPanel({
       href({
         dauerVon: from > MIN_DURATION ? String(from) : undefined,
         dauerBis: to < maxDurationBound ? String(to) : undefined,
+      }),
+    );
+  }
+
+  function commitLanguageDependenceMax(next: number) {
+    router.replace(
+      href({
+        sprache: next > MIN_LANGUAGE_DEPENDENCE ? String(next) : undefined,
       }),
     );
   }
@@ -152,13 +175,15 @@ export function LudothekFilterPanel({
               Spieler
             </span>
             <span className="text-muted-foreground text-xs">
-              {players >= MAX_PLAYERS_FILTER
-                ? `${MAX_PLAYERS_FILTER}+`
-                : players}
+              {players <= ALL_PLAYERS
+                ? "Alle"
+                : players >= MAX_PLAYERS_FILTER
+                  ? `${MAX_PLAYERS_FILTER}+`
+                  : players}
             </span>
           </div>
           <SingleSlider
-            min={MIN_PLAYERS}
+            min={ALL_PLAYERS}
             max={MAX_PLAYERS_FILTER}
             value={players}
             onValueChange={setPlayers}
@@ -228,6 +253,29 @@ export function LudothekFilterPanel({
             getAriaLabel={(index) =>
               index === 0 ? "Bewertung von" : "Bewertung bis"
             }
+          />
+        </div>
+
+        <div className="flex max-w-xs flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Sprachneutralität
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {languageDependenceMax <= MIN_LANGUAGE_DEPENDENCE
+                ? "Alle"
+                : LANGUAGE_DEPENDENCE_SHORT_LABELS[
+                    LANGUAGE_DEPENDENCE_BY_LEVEL[languageDependenceMax - 1]
+                  ]}
+            </span>
+          </div>
+          <SingleSlider
+            min={MIN_LANGUAGE_DEPENDENCE}
+            max={MAX_LANGUAGE_DEPENDENCE}
+            value={languageDependenceMax}
+            onValueChange={setLanguageDependenceMax}
+            onValueCommitted={commitLanguageDependenceMax}
+            getAriaLabel={() => "Sprachneutralität"}
           />
         </div>
 

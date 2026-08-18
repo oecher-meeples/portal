@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   filterLudothekGames,
   parseLudothekSearchParams,
@@ -102,6 +102,30 @@ describe("filterLudothekGames", () => {
     });
 
     expect(result).toEqual([tileLaying, both]);
+  });
+
+  it("filters by maximum language dependence level (#188)", () => {
+    const neutral = game({
+      languageDependence: LanguageDependence.NO_NECESSARY_TEXT,
+    });
+    const extensive = game({
+      languageDependence: LanguageDependence.EXTENSIVE_TEXT,
+    });
+    const unrated = game({ languageDependence: null });
+
+    expect(
+      filterLudothekGames([neutral, extensive, unrated], {
+        languageDependenceMax: 1,
+      }),
+    ).toEqual([neutral]);
+  });
+
+  it("excludes games without a captured language dependence when the filter is set", () => {
+    const unrated = game({ languageDependence: null });
+
+    expect(
+      filterLudothekGames([unrated], { languageDependenceMax: 5 }),
+    ).toEqual([]);
   });
 
   it("hides expansions when hideExpansions is set", () => {
@@ -295,6 +319,24 @@ describe("parseLudothekSearchParams", () => {
 
     expect(result.ratingFrom).toBeUndefined();
     expect(result.ratingTo).toBeUndefined();
+  });
+
+  it("parses sprache as a number (#188)", () => {
+    const result = parseLudothekSearchParams(
+      { sprache: "2" },
+      { internal: false },
+    );
+
+    expect(result.languageDependenceMax).toBe(2);
+  });
+
+  it("ignores a non-numeric sprache instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { sprache: "nonsense" },
+      { internal: false },
+    );
+
+    expect(result.languageDependenceMax).toBeUndefined();
   });
 
   it("only parses internal filters when internal is true", () => {

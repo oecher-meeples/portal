@@ -39,10 +39,11 @@ export async function searchBggGamesAction(query: string) {
  * angelegt werden kann — ein eigener Schritt nach `fetchBggGame()`, nicht in
  * `mapItem()` verdrahtet, damit die englischen BGG-Fixtures/-Tests
  * unverändert bleiben. Mechaniken laufen über die feste Tabelle, die
- * Beschreibung über die MyMemory-API. Schlägt die Übersetzung fehl, wird die
- * Beschreibung leer gelassen statt den englischen Original-Text zu
- * übernehmen — es soll nie englischer Text gespeichert werden, der Admin
- * trägt dann manuell ein.
+ * Beschreibung über die MyMemory-API. Schlägt die Übersetzung fehl (z. B.
+ * MyMemorys knappes Tageslimit ohne `TRANSLATION_CONTACT_EMAIL`), bleibt der
+ * englische Original-Text stehen statt die Beschreibung leer zu lassen —
+ * so geht beim Import nichts verloren, der Admin übersetzt später über den
+ * "Übersetzen"-Button im Titel-Editor (`translateDescription()` unten).
  */
 async function translateBggGameData(
   data: BggGameData,
@@ -64,11 +65,11 @@ async function translateBggGameData(
     };
   } catch (error) {
     console.warn(
-      "Übersetzung fehlgeschlagen — Beschreibung bleibt leer statt englischen Text zu speichern.",
+      "Übersetzung fehlgeschlagen — Beschreibung bleibt vorerst auf Englisch.",
       error,
     );
     return {
-      data: { ...data, description: null, mechanics },
+      data: { ...data, mechanics },
       descriptionTranslationFailed: true,
     };
   }
@@ -191,7 +192,7 @@ export async function previewBggImport(bggId: number) {
       success: true as const,
       data,
       hint: descriptionTranslationFailed
-        ? "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — bitte manuell auf Deutsch ergänzen."
+        ? "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — Beschreibung ist vorerst auf Englisch, bitte über den „Übersetzen“-Button oder manuell auf Deutsch ergänzen."
         : undefined,
     };
   } catch (error) {

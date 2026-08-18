@@ -5,6 +5,7 @@ import {
   type RuleBookLanguage,
 } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
+import { languageDependenceLevel } from "@/lib/ludothek/language-dependence";
 
 /** A title referenced from a copy (e.g. base game/expansion) — titles have no
  * route of their own, only their copies do (see ADR 0008). Guest-safe: no
@@ -152,6 +153,9 @@ export type LudothekFilters = {
    * voneinander setzbar (#214-Folge). */
   ratingFrom?: number;
   ratingTo?: number;
+  /** Maximal zulässiges BGG-Poll-Level (1–5, s. `LANGUAGE_DEPENDENCE_BY_LEVEL`)
+   * für Sprachabhängigkeit — Ein-Knoten-Slider, `undefined` = "Alle" (#188). */
+  languageDependenceMax?: number;
   /** Defaults to "grid" when unset — only `parseLudothekSearchParams` sets it explicitly. */
   view?: LudothekViewMode;
   /** Internal-only filters — harmless to pass for the public view, they just never match. */
@@ -248,6 +252,7 @@ export function parseLudothekSearchParams(
     yearTo: parseNumberParam(firstString(searchParams.jahrBis)),
     ratingFrom: parseNumberParam(firstString(searchParams.bewertungVon)),
     ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
+    languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
   };
 
   if (internal) {
@@ -340,6 +345,16 @@ export function filterLudothekGames(
       if (
         filters.ratingTo !== undefined &&
         game.averageRating > filters.ratingTo
+      )
+        return false;
+    }
+    if (filters.languageDependenceMax !== undefined) {
+      // Kein erfasstes Level kann keinen gesetzten Schwellwert erfüllen,
+      // analog zu Erstveröffentlichung und Bewertung (#188).
+      if (game.languageDependence === null) return false;
+      if (
+        languageDependenceLevel(game.languageDependence) >
+        filters.languageDependenceMax
       )
         return false;
     }

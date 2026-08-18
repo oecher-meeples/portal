@@ -200,8 +200,8 @@ export function CreateBoardGameDialog({
             : (result.data.explainerVideoUrl ?? ""),
       });
       // `hint` steht nur bei fehlgeschlagener Übersetzung — kein Hard-
-      // Error, die Vorschau ist trotzdem nutzbar, nur ohne automatische
-      // deutsche Beschreibung (#184, nie englischen Text speichern).
+      // Error, die Vorschau ist trotzdem nutzbar, die Beschreibung bleibt
+      // dann vorerst auf Englisch statt leer (#184).
       setError(result.hint ?? null);
       await checkDuplicate(result.data.title, bggId);
       return true;

@@ -32,6 +32,26 @@ export function isLanguageIndependent(
   return level === LanguageDependence.NO_NECESSARY_TEXT;
 }
 
+/** Kurzform je Poll-Level für den Sprachneutralität-Filter-Slider (Ludothek-
+ * Filterpanel) — die vollen `LANGUAGE_DEPENDENCE_LABELS` sind ganze Sätze und
+ * sprengen die Slider-Beschriftung. */
+export const LANGUAGE_DEPENDENCE_SHORT_LABELS: Record<
+  LanguageDependence,
+  string
+> = {
+  [LanguageDependence.NO_NECESSARY_TEXT]: "Sprachneutral",
+  [LanguageDependence.SOME_NECESSARY_TEXT]: "Leichter Text",
+  [LanguageDependence.MODERATE_TEXT]: "Mäßiger Text",
+  [LanguageDependence.EXTENSIVE_TEXT]: "Viel Text",
+  [LanguageDependence.UNPLAYABLE]: "Unspielbar",
+};
+
+/** Poll-Level (1–5) eines `LanguageDependence`-Werts, Kehrwert zu
+ * `LANGUAGE_DEPENDENCE_BY_LEVEL`. */
+export function languageDependenceLevel(value: LanguageDependence): number {
+  return LANGUAGE_DEPENDENCE_BY_LEVEL.indexOf(value) + 1;
+}
+
 export const RULE_BOOK_LANGUAGE_LABELS: Record<RuleBookLanguage, string> = {
   [RuleBookLanguage.DE]: "Deutsch",
   [RuleBookLanguage.EN]: "Englisch",
