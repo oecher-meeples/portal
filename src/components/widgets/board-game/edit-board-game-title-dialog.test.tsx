@@ -45,6 +45,9 @@ const GAME_WITHOUT_BGG_ID = {
   title: "Arche Nova",
   secondaryTitle: null,
   languageDependence: null,
+  publisher: [],
+  author: [],
+  yearPublished: null,
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -73,6 +76,9 @@ const BGG_DATA = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  author: [],
+  yearPublished: null,
+  versions: [],
 };
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {

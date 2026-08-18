@@ -23,6 +23,10 @@ import {
 } from "@/lib/ludothek/board-games-bgg-import";
 import { createGameCopy } from "@/lib/ludothek/game-copies";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
+import {
+  resolvePublisherFromVersions,
+  resolveProductCodeFromVersions,
+} from "@/lib/ludothek/board-game-versions";
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
 import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
 import { BoardGameDuplicateWarning } from "@/components/widgets/board-game/board-game-duplicate-warning";
@@ -37,7 +41,11 @@ import {
   boardGameToFormValues,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
-import type { BggGameData, BggSearchResult } from "@/lib/bgg/client";
+import type {
+  BggGameData,
+  BggSearchResult,
+  BggVersion,
+} from "@/lib/bgg/client";
 
 type Step = 1 | 2 | 3;
 
@@ -174,6 +182,15 @@ export function CreateBoardGameDialog({
         description: result.data.description ?? "",
         mechanics: result.data.mechanics.join(", "),
         languageDependence: result.data.languageDependence,
+        author: result.data.author.join(", "),
+        yearPublished: result.data.yearPublished?.toString() ?? "",
+        // Nur übernehmen, wenn über alle (ggf. deutschen) Versionen
+        // identisch — sonst zeigt die Versions-Auswahl unten den Konflikt,
+        // das Feld bleibt bis zur manuellen Auswahl leer (#205).
+        publisher:
+          resolvePublisherFromVersions(result.data.versions).value?.join(
+            ", ",
+          ) ?? "",
         // Bei mehreren/einzelnen deutschsprachigen Treffern entscheidet der
         // Admin bewusst über die Auswahlliste (#185) — sonst wie bisher der
         // erste instruktive Video-Treffer, automatisch übernommen.
@@ -259,6 +276,16 @@ export function CreateBoardGameDialog({
     } finally {
       setIsResolving(false);
     }
+  }
+
+  /** Übernimmt Verlag + Product Code (als EAN) der gewählten BGG-Edition,
+   * wenn sich mehrere Editionen nicht auf einen gemeinsamen Verlag einigen
+   * (#205) — der Product Code ist meist die echte Verpackungs-EAN. */
+  function handleSelectVersion(version: BggVersion) {
+    patchForm({
+      publisher: version.publisher.join(", "),
+      ...(version.productCode ? { ean: version.productCode } : {}),
+    });
   }
 
   function handleSkipImport() {
@@ -375,6 +402,7 @@ export function CreateBoardGameDialog({
               onSelectExplainerVideo={(url) =>
                 patchForm({ explainerVideoUrl: url })
               }
+              onSelectVersion={handleSelectVersion}
             />
           )}
 
@@ -389,6 +417,11 @@ export function CreateBoardGameDialog({
                 loadingExistingTitle={isLoadingTitle}
                 eanAutoSearch
                 eanAlternateTitles={preview?.alternateNames}
+                bggProductCode={
+                  preview
+                    ? resolveProductCodeFromVersions(preview.versions).value
+                    : null
+                }
               />
             </div>
           )}

@@ -58,6 +58,9 @@ export type AdminBoardGameRow = {
   explainerVideoUrl: string | null;
   languageDependence: LanguageDependence | null;
   ruleBookLanguages: RuleBookLanguage[];
+  publisher: string[];
+  author: string[];
+  yearPublished: number | null;
   /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
    * selbst (#187). */
   alternateNames: string[];

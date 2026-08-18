@@ -107,7 +107,8 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       `git commit -m "feat(ludothek): capture language-independent flag and per-copy rulebook language"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg2zgFI --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#188 → In review).
 
-- [ ] **8. #205a — Verlag/Autor/Erstveröffentlichung: Datenmodell, BGG-Import, EAN-Priorisierung**
+- [x] **8. #205a — Verlag/Autor/Erstveröffentlichung: Datenmodell, BGG-Import, EAN-Priorisierung**
+      Umgesetzt inkl. der im Issue nachgelieferten Klärungen (deutsche Edition per `language`-Link erkannt, Product Code nur bei eindeutigem Wert über die [ggf. deutschen] Versionen, ältestes Jahr unabhängig von der Verlags-Version). Neue `lib/ludothek/board-game-versions.ts` für die Auflösungslogik; Auswahl-UI bei Verlags-Konflikt im Anlegen-Wizard (Schritt 1) ergänzt.
       Migration `publisher String[]`, `author String[]`, `yearPublished Int?` an `BoardGame`. `lib/bgg/client.ts`: `boardgamepublisher`/`boardgamedesigner`-Links und `yearpublished` parsen; BGG-Call mit `versions=1`, Versionsdaten (Verlag, Product Code, Jahr) auswerten. Auto-Übernahme bei identischen Werten über alle Versionen; Auswahl-UI bei Abweichungen; ältestes Jahr bei mehreren Versionen automatisch übernehmen. EAN-Suche: BGG-Product-Code vor UPCitemdb, Verlag zur Kandidaten-Sortierung.
       _Definition of Done:_ Unit-Tests für Parsing (Publisher/Autor/Jahr aus Versions-XML), für Auto-Übernahme vs. Auswahl-UI bei Abweichung, für „ältestes Jahr gewinnt", für EAN-Priorisierung (BGG-Product-Code vor UPCitemdb, Verlags-Sortierung) — alle grün.
       `git commit -m "feat(bgg): capture publisher, author and first-publication year from BGG versions"`

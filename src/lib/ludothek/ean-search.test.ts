@@ -76,4 +76,95 @@ describe("searchEanForBoardGame", () => {
       "unexpected",
     );
   });
+
+  describe("BGG-Product-Code-Priorität (#205)", () => {
+    it("returns the BGG product code directly, without calling UPCitemdb", async () => {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      prismaMock.rolePermission.count.mockResolvedValue(1);
+
+      const result = await searchEanForBoardGame("Ark Nova", {
+        bggProductCode: "FEU001",
+        publisher: ["Feuerland Spiele"],
+      });
+
+      expect(searchEanByNameMock).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        success: true,
+        results: [
+          { ean: "FEU001", title: "Ark Nova", brand: "Feuerland Spiele" },
+        ],
+      });
+    });
+
+    it("falls back to UPCitemdb when no BGG product code is given", async () => {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      prismaMock.rolePermission.count.mockResolvedValue(1);
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "0850000576407", title: "Ark Nova" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova", {
+        bggProductCode: null,
+      });
+
+      expect(searchEanByNameMock).toHaveBeenCalledWith("Ark Nova");
+      expect(result.success && result.results).toEqual([
+        { ean: "0850000576407", title: "Ark Nova" },
+      ]);
+    });
+  });
+
+  describe("Verlags-Sortierung der UPCitemdb-Kandidaten (#205)", () => {
+    it("moves a hit with a matching brand to the front", async () => {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      prismaMock.rolePermission.count.mockResolvedValue(1);
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "US0001", title: "Ark Nova (US)", brand: "Capstone Games" },
+        { ean: "DE0001", title: "Ark Nova (DE)", brand: "Feuerland Spiele" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova", {
+        publisher: ["Feuerland Spiele"],
+      });
+
+      expect(result.success && result.results.map((r) => r.ean)).toEqual([
+        "DE0001",
+        "US0001",
+      ]);
+    });
+
+    it("matches case-insensitively and via substring", async () => {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      prismaMock.rolePermission.count.mockResolvedValue(1);
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "US0001", title: "Ark Nova (US)", brand: "Capstone Games" },
+        { ean: "DE0001", title: "Ark Nova (DE)", brand: "feuerland" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova", {
+        publisher: ["Feuerland Spiele"],
+      });
+
+      expect(result.success && result.results.map((r) => r.ean)).toEqual([
+        "DE0001",
+        "US0001",
+      ]);
+    });
+
+    it("leaves the order unchanged without a publisher to sort by", async () => {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      prismaMock.rolePermission.count.mockResolvedValue(1);
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "US0001", title: "Ark Nova (US)", brand: "Capstone Games" },
+        { ean: "DE0001", title: "Ark Nova (DE)", brand: "Feuerland Spiele" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova");
+
+      expect(result.success && result.results.map((r) => r.ean)).toEqual([
+        "US0001",
+        "DE0001",
+      ]);
+    });
+  });
 });

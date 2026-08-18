@@ -11,7 +11,11 @@ import { EanField } from "@/components/widgets/board-game/ean-field";
 import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
 import { TitleOverviewDialog } from "@/components/widgets/board-game/title-overview-dialog";
 import { cn } from "@/lib/utils/cn";
-import { formatMechanics, parseMechanics } from "@/lib/ludothek/bgg-id";
+import {
+  formatMechanics,
+  parseMechanics,
+  parseCommaSeparatedList,
+} from "@/lib/ludothek/bgg-id";
 import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
 import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
@@ -48,6 +52,7 @@ export function EditBoardGameTitle({
   eanAutoSearch,
   eanAlternateTitles,
   boardGameId,
+  bggProductCode,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
@@ -56,6 +61,10 @@ export function EditBoardGameTitle({
    * neben dem Sekundärtitel-Feld ein. Beim Anlegen eines neuen Titels gibt es
    * noch keine ID, also auch keine Alternativtitel-Verwaltung. */
   boardGameId?: string;
+  /** Eindeutiger BGG-Product-Code aus der frisch geladenen Import-Vorschau
+   * (#205) — nur im Anlegen-Wizard gesetzt, hat dort Vorrang vor der
+   * UPCitemdb-EAN-Suche. */
+  bggProductCode?: string | null;
   /** Autocomplete suggestions for the Mechaniken multiselect, sourced from
    * the existing Bestand — omit to keep the plain comma-separated text
    * field (e.g. when creating a brand-new title with no suggestions yet
@@ -203,6 +212,29 @@ export function EditBoardGameTitle({
         </select>
       </div>
 
+      <TextField
+        id={`${idPrefix}-publisher`}
+        label="Verlag(e)"
+        value={values.publisher}
+        onChange={(event) => onChange({ publisher: event.target.value })}
+        placeholder="Kommagetrennt, z. B. Feuerland Spiele"
+      />
+      <TextField
+        id={`${idPrefix}-author`}
+        label="Autor(en)"
+        value={values.author}
+        onChange={(event) => onChange({ author: event.target.value })}
+        placeholder="Kommagetrennt, z. B. Uwe Rosenberg"
+      />
+      <TextField
+        id={`${idPrefix}-year-published`}
+        label="Erstveröffentlichung"
+        type="number"
+        value={values.yearPublished}
+        onChange={(event) => onChange({ yearPublished: event.target.value })}
+        placeholder="z. B. 2021"
+      />
+
       <EanField
         idPrefix={idPrefix}
         value={values.ean}
@@ -210,6 +242,8 @@ export function EditBoardGameTitle({
         title={values.title}
         autoSearchOnMount={eanAutoSearch}
         alternateTitles={eanAlternateTitles}
+        bggProductCode={bggProductCode}
+        publisherForSorting={parseCommaSeparatedList(values.publisher)}
       />
       <BggIdField
         idPrefix={idPrefix}

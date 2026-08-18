@@ -7,6 +7,8 @@ import {
   parseBggId,
   parseMechanics,
   formatMechanics,
+  parseCommaSeparatedList,
+  formatCommaSeparatedList,
 } from "@/lib/ludothek/bgg-id";
 import type {
   BoardGameTitleInput,
@@ -34,6 +36,12 @@ export type BoardGameFormValues = {
   languageDependence: LanguageDependence | null;
   /** Regelheft-Sprache(n) dieses Exemplars, Mehrfachauswahl (#188). */
   ruleBookLanguages: RuleBookLanguage[];
+  /** Verlag(e), kommagetrennt — mehrere bei Co-Publishern (#205). */
+  publisher: string;
+  /** Autor(en)/Designer, kommagetrennt (#205). */
+  author: string;
+  /** Erstveröffentlichungsjahr (#205). */
+  yearPublished: string;
 };
 
 export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
@@ -53,6 +61,9 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   explainerVideoUrl: "",
   languageDependence: null,
   ruleBookLanguages: [],
+  publisher: "",
+  author: "",
+  yearPublished: "",
 };
 
 /** The subset of a BoardGame record needed to seed the edit form. */
@@ -73,6 +84,9 @@ export type BoardGameRecord = {
   explainerVideoUrl: string | null;
   languageDependence: LanguageDependence | null;
   ruleBookLanguages: RuleBookLanguage[];
+  publisher: string[];
+  author: string[];
+  yearPublished: number | null;
 };
 
 export function boardGameToFormValues(
@@ -95,6 +109,9 @@ export function boardGameToFormValues(
     explainerVideoUrl: game.explainerVideoUrl ?? "",
     languageDependence: game.languageDependence,
     ruleBookLanguages: game.ruleBookLanguages,
+    publisher: formatCommaSeparatedList(game.publisher),
+    author: formatCommaSeparatedList(game.author),
+    yearPublished: game.yearPublished?.toString() ?? "",
   };
 }
 
@@ -119,6 +136,9 @@ export function boardGameFormToTitleInput(
     mechanics: parseMechanics(form.mechanics),
     explainerVideoUrl: form.explainerVideoUrl || undefined,
     languageDependence: form.languageDependence,
+    publisher: parseCommaSeparatedList(form.publisher),
+    author: parseCommaSeparatedList(form.author),
+    yearPublished: form.yearPublished ? Number(form.yearPublished) : undefined,
   };
 }
 

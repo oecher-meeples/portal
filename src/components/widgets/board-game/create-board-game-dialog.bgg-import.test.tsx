@@ -90,6 +90,9 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -144,6 +147,9 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 
@@ -207,6 +213,9 @@ describe("CreateBoardGameDialog — BGG-Import: BGG-Link", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 
@@ -278,6 +287,9 @@ describe("CreateBoardGameDialog — BGG-Import: Namenssuche (Fallback)", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -368,6 +380,10 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
             channel: "ChannelB",
           },
         ],
+        englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 
@@ -415,6 +431,9 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
         explainerVideoUrl: "https://www.youtube.com/watch?v=english-fallback",
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
 

@@ -114,6 +114,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        author: [],
+        yearPublished: null,
+        versions: [],
       },
     });
     findDuplicateBoardGameMock.mockResolvedValue({
@@ -215,6 +218,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     });
     getBoardGameTitleForEditMock.mockResolvedValue({
       title: "Arche Nova",
+      secondaryTitle: null,
+      languageDependence: null,
       ean: "5901234123457",
       kind: "BOARDGAME",
       bggId: 342942,
@@ -226,8 +231,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       description: null,
       mechanics: [],
       explainerVideoUrl: null,
-      germanExplainerVideos: [],
-      englishExplainerVideos: [],
+      publisher: [],
+      author: [],
+      yearPublished: null,
     });
     updateBoardGameMock.mockResolvedValue({ success: true, hint: undefined });
     createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });

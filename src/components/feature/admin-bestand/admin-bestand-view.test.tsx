@@ -74,6 +74,9 @@ const games = [
     kind: "BOARDGAME" as const,
     languageDependence: null,
     ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
   },
   {
     id: "2",
@@ -101,6 +104,9 @@ const games = [
     kind: "BOARDGAME" as const,
     languageDependence: null,
     ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
   },
 ];
 

@@ -56,6 +56,12 @@ export type LudothekGame = {
   languageDependence: LanguageDependence | null;
   /** Regelheft-Sprache(n) dieses Exemplars (#188). */
   ruleBookLanguages: RuleBookLanguage[];
+  /** Verlag(e), mehrere bei Co-Publishern (#205). */
+  publisher: string[];
+  /** Autor(en)/Designer (#205). */
+  author: string[];
+  /** Erstveröffentlichungsjahr (#205). */
+  yearPublished: number | null;
   /** Base game(s) this expansion belongs to — empty unless `kind` is BOARDGAME_EXPANSION. */
   baseGames: LudothekGameRef[];
   /** Expansions in the collection that belong to this base game. */

@@ -8,6 +8,7 @@ import {
   type BggSearchResult,
 } from "@/lib/bgg/client";
 import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
+import { resolvePublisherFromVersions } from "@/lib/ludothek/board-game-versions";
 import {
   createBoardGame,
   type CreateBoardGameInput,
@@ -41,6 +42,12 @@ function toCreateInput(bggId: number, data: BggGameData): CreateBoardGameInput {
     mechanics: data.mechanics,
     explainerVideoUrl: data.explainerVideoUrl ?? undefined,
     languageDependence: data.languageDependence,
+    author: data.author,
+    yearPublished: data.yearPublished ?? undefined,
+    // Ohne UI zur Konfliktauflösung übernimmt der Massenimport nur einen
+    // eindeutigen Verlag — bei Abweichungen bleibt das Feld leer, korrigierbar
+    // im Titel-Editor (#205).
+    publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
     alternateNames: data.alternateNames,
   };
 }

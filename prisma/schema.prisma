@@ -406,6 +406,16 @@ model BoardGame {
   /// erfasst (#188) — beim BGG-Import als meistgewählter Vorschlag übernommen,
   /// vom Admin frei änderbar.
   languageDependence LanguageDependence?
+  /// Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen, wenn über
+  /// alle (ggf. auf deutsche Editionen gefilterten) BGG-Versionen identisch,
+  /// sonst wählt der Admin (#205).
+  publisher          String[]
+  /// Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205) —
+  /// im Gegensatz zu `publisher` nicht versionsabhängig.
+  author             String[]
+  /// Erstveröffentlichungsjahr — das älteste Jahr über alle BGG-Versionen,
+  /// unabhängig von der für `publisher` gewählten Version (#205).
+  yearPublished      Int?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 

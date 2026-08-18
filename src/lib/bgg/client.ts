@@ -23,6 +23,20 @@ export class BggApiError extends Error {
   }
 }
 
+/** Eine BGG-Edition/-Version dieses Titels (`versions=1`, #205) — Verlag und
+ * Product Code können je Edition abweichen (z. B. deutsche vs. englische
+ * Auflage bei unterschiedlichem Verlag), das Erstveröffentlichungsjahr wird
+ * unabhängig davon als ältestes über alle Versionen bestimmt. */
+export interface BggVersion {
+  yearPublished: number | null;
+  /** Alle `boardgamepublisher`-Links dieser Version — mehrere bei Co-Publishern. */
+  publisher: string[];
+  productCode: string | null;
+  /** Rohe `link type="language"`-Werte dieser Version, z. B. `["German"]` —
+   * Grundlage für die Erkennung der deutschen Edition (#205). */
+  languages: string[];
+}
+
 export interface BggGameData {
   title: string;
   minPlayers: number | null;
@@ -32,6 +46,16 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** Direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item — anders als
+   * `publisher` nicht versionsabhängig (#205). */
+  author: string[];
+  /** Ältestes Jahr über alle `versions` (falls vorhanden), sonst das
+   * Haupt-Items eigenes `yearpublished` (#205). */
+  yearPublished: number | null;
+  /** Alle BGG-Editionen dieses Titels (`versions=1`) — Grundlage für die
+   * Verlag-/Product-Code-Auto-Übernahme bzw. Auswahl-UI (#205). Leer, wenn
+   * BGG keine separaten Versionen listet. */
+  versions: BggVersion[];
   /** Aus dem `type`-Attribut des BGG-Items (`boardgame`/`boardgameexpansion`,
    * siehe #202) — jeder andere/fehlende Wert fällt auf `BOARDGAME` zurück. */
   kind: BoardGameKind;
@@ -105,10 +129,18 @@ interface BggPoll {
   results?: { result?: BggPollResult | BggPollResult[] };
 }
 
+interface BggVersionItem {
+  name?: BggNameEntry | BggNameEntry[];
+  yearpublished?: { value?: string };
+  productcode?: { value?: string };
+  link?: BggLinkEntry | BggLinkEntry[];
+}
+
 interface BggItem {
   type?: string;
   name?: BggNameEntry | BggNameEntry[];
   description?: string;
+  yearpublished?: { value?: string };
   minplayers?: { value?: string };
   maxplayers?: { value?: string };
   playingtime?: { value?: string };
@@ -123,6 +155,9 @@ interface BggItem {
     video?: BggVideoEntry | BggVideoEntry[];
   };
   poll?: BggPoll | BggPoll[];
+  versions?: {
+    item?: BggVersionItem | BggVersionItem[];
+  };
 }
 
 interface BggThingResponse {
@@ -263,6 +298,49 @@ function parseLanguageDependence(
   return LANGUAGE_DEPENDENCE_BY_LEVEL[level - 1] ?? null;
 }
 
+/** Alle `boardgamedesigner`-Links des Haupt-Items (#205) — nicht
+ * versionsabhängig, anders als `publisher`. */
+function parseAuthor(
+  links: BggLinkEntry | BggLinkEntry[] | undefined,
+): string[] {
+  return toArray(links)
+    .filter((link) => link.type === "boardgamedesigner")
+    .map((link) => link.value);
+}
+
+/** Jede BGG-Edition aus `versions=1` (#205) — Verlag/Product-Code können je
+ * Version abweichen, deshalb ein eigener Datensatz statt eines Felds am
+ * Haupt-Item. */
+function parseVersions(versions: BggItem["versions"]): BggVersion[] {
+  return toArray(versions?.item).map((version) => {
+    const links = toArray(version.link);
+    return {
+      yearPublished: parseNumber(version.yearpublished?.value),
+      publisher: links
+        .filter((link) => link.type === "boardgamepublisher")
+        .map((link) => link.value),
+      productCode: version.productcode?.value?.trim() || null,
+      languages: links
+        .filter((link) => link.type === "language")
+        .map((link) => link.value),
+    };
+  });
+}
+
+/** Ältestes Jahr über alle Versionen, sonst das Haupt-Items eigenes
+ * `yearpublished` (#205) — z. B. wenn BGG für diesen Titel keine separaten
+ * Editionen listet. */
+function resolveYearPublished(
+  item: BggItem,
+  versions: BggVersion[],
+): number | null {
+  const versionYears = versions
+    .map((v) => v.yearPublished)
+    .filter((year): year is number => year !== null);
+  if (versionYears.length > 0) return Math.min(...versionYears);
+  return parseNumber(item.yearpublished?.value);
+}
+
 function mapItem(item: BggItem): BggGameData {
   const names = toArray(item.name);
   const primaryName = names.find((name) => name.type === "primary") ?? names[0];
@@ -277,6 +355,7 @@ function mapItem(item: BggItem): BggGameData {
   const rawWeight = parseNumber(item.statistics?.ratings?.averageweight?.value);
   const germanExplainerVideos = selectGermanExplainerVideos(item.videos);
   const englishExplainerVideos = selectEnglishExplainerVideos(item.videos);
+  const versions = parseVersions(item.versions);
 
   return {
     title: primaryName?.value ?? "",
@@ -292,6 +371,9 @@ function mapItem(item: BggItem): BggGameData {
     mechanics,
     kind: parseKind(item.type),
     languageDependence: parseLanguageDependence(item.poll),
+    author: parseAuthor(item.link),
+    yearPublished: resolveYearPublished(item, versions),
+    versions,
     alternateNames,
     explainerVideoUrl:
       germanExplainerVideos[0]?.url ?? englishExplainerVideos[0]?.url ?? null,
@@ -334,7 +416,7 @@ async function fetchBggXml(
 
 export async function fetchBggGame(bggId: number): Promise<BggGameData> {
   const xml = await fetchBggXml(
-    `/thing?id=${bggId}&stats=1&videos=1`,
+    `/thing?id=${bggId}&stats=1&videos=1&versions=1`,
     REVALIDATE_SECONDS,
   );
   const parsed = parser.parse(xml) as BggThingResponse;

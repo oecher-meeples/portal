@@ -244,6 +244,58 @@ describe("EditBoardGameTitle", () => {
     });
   });
 
+  describe("Verlag, Autor, Erstveröffentlichung (#205)", () => {
+    it("renders the three fields", () => {
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByLabelText("Verlag(e)")).toBeInTheDocument();
+      expect(screen.getByLabelText("Autor(en)")).toBeInTheDocument();
+      expect(screen.getByLabelText("Erstveröffentlichung")).toBeInTheDocument();
+    });
+
+    it("reports a publisher change via onChange", async () => {
+      const { fireEvent } = await import("@testing-library/react");
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Verlag(e)"), {
+        target: { value: "Feuerland Spiele" },
+      });
+
+      expect(onChange).toHaveBeenCalledWith({ publisher: "Feuerland Spiele" });
+    });
+
+    it("reports a year change via onChange", async () => {
+      const { fireEvent } = await import("@testing-library/react");
+      const onChange = vi.fn();
+      render(
+        <EditBoardGameTitle
+          idPrefix="test"
+          values={EMPTY_BOARD_GAME_FORM}
+          onChange={onChange}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Erstveröffentlichung"), {
+        target: { value: "2021" },
+      });
+
+      expect(onChange).toHaveBeenCalledWith({ yearPublished: "2021" });
+    });
+  });
+
   describe("Sekundärtitel (#203)", () => {
     it("renders the secondary title field", () => {
       render(

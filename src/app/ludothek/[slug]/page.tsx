@@ -182,6 +182,9 @@ export default async function GameDetailPage({
         mechanics: game.mechanics,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
+        publisher: game.publisher,
+        author: game.author,
+        yearPublished: game.yearPublished,
       }
     : undefined;
 

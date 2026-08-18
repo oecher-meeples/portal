@@ -14,12 +14,15 @@ import type { EanSearchResult } from "@/lib/upc-lookup/client";
  * aber ein deutscher Alternativname von BGG durchaus im Handel gelistet ist.
  * Bricht bei einem echten API-Fehler sofort ab, statt ihn für jeden weiteren
  * Titel zu wiederholen. */
-async function searchWithFallback(titles: string[]) {
+async function searchWithFallback(
+  titles: string[],
+  options?: { bggProductCode?: string | null; publisher?: string[] },
+) {
   for (const candidate of titles) {
     const trimmed = candidate.trim();
     if (!trimmed) continue;
 
-    const result = await searchEanForBoardGame(trimmed);
+    const result = await searchEanForBoardGame(trimmed, options);
     if (!result.success) return result;
     if (result.results.length > 0) return result;
   }
@@ -39,6 +42,8 @@ export function EanField({
   title,
   autoSearchOnMount,
   alternateTitles,
+  bggProductCode,
+  publisherForSorting,
 }: {
   idPrefix: string;
   value: string;
@@ -54,6 +59,12 @@ export function EanField({
   /** BGGs Alternativnamen (#187) — liefert `title` keinen Treffer, wird der
    * Reihe nach mit jedem dieser Namen weitergesucht (#197-Folgeanfrage). */
   alternateTitles?: string[];
+  /** Eindeutiger BGG-Product-Code über die (ggf. deutschen) Versionen (#205)
+   * — hat Vorrang vor der UPCitemdb-Suche, siehe `searchEanForBoardGame()`. */
+  bggProductCode?: string | null;
+  /** Sortiert UPCitemdb-Kandidaten mit passendem `brand` nach oben (#205) —
+   * greift nur, wenn kein `bggProductCode` vorliegt. */
+  publisherForSorting?: string[];
 }) {
   const [isSearching, setIsSearching] = useState(false);
   const [candidates, setCandidates] = useState<EanSearchResult[] | null>(null);
@@ -81,10 +92,10 @@ export function EanField({
     setMessage(null);
     setCandidates(null);
     try {
-      const result = await searchWithFallback([
-        trimmedTitle,
-        ...(alternateTitles ?? []),
-      ]);
+      const result = await searchWithFallback(
+        [trimmedTitle, ...(alternateTitles ?? [])],
+        { bggProductCode, publisher: publisherForSorting },
+      );
       if (!result.success) {
         setMessage(result.error);
         return;
@@ -106,16 +117,17 @@ export function EanField({
     if (!autoSearchOnMount || value.trim() || !trimmedTitle) return;
 
     let cancelled = false;
-    searchWithFallback([trimmedTitle, ...(alternateTitles ?? [])]).then(
-      (result) => {
-        if (cancelled) return;
-        if (!result.success) {
-          setMessage(result.error);
-          return;
-        }
-        applyResults(result.results);
-      },
-    );
+    searchWithFallback([trimmedTitle, ...(alternateTitles ?? [])], {
+      bggProductCode,
+      publisher: publisherForSorting,
+    }).then((result) => {
+      if (cancelled) return;
+      if (!result.success) {
+        setMessage(result.error);
+        return;
+      }
+      applyResults(result.results);
+    });
     return () => {
       cancelled = true;
     };

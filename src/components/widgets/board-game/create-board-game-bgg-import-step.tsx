@@ -1,6 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
-import type { BggGameData, BggSearchResult } from "@/lib/bgg/client";
+import {
+  selectRelevantVersions,
+  resolvePublisherFromVersions,
+} from "@/lib/ludothek/board-game-versions";
+import type {
+  BggGameData,
+  BggSearchResult,
+  BggVersion,
+} from "@/lib/bgg/client";
 
 /**
  * Schritt 1 des Anlegen-Wizards (#183): ein Feld, drei Interpretationen
@@ -17,6 +25,7 @@ export function CreateBoardGameBggImportStep({
   preview,
   selectedExplainerVideoUrl,
   onSelectExplainerVideo,
+  onSelectVersion,
 }: {
   bggInput: string;
   onBggInputChange: (value: string) => void;
@@ -29,7 +38,16 @@ export function CreateBoardGameBggImportStep({
    * Treffer in der Auswahlliste hervor (#185). */
   selectedExplainerVideoUrl?: string;
   onSelectExplainerVideo?: (url: string) => void;
+  /** Übernimmt Verlag + Product Code (als EAN) der gewählten Version, wenn
+   * sich die BGG-Editionen nicht auf einen gemeinsamen Verlag einigen (#205). */
+  onSelectVersion?: (version: BggVersion) => void;
 }) {
+  const relevantVersions = preview
+    ? selectRelevantVersions(preview.versions)
+    : [];
+  const publisherNeedsSelection = preview
+    ? resolvePublisherFromVersions(preview.versions).needsSelection
+    : false;
   return (
     <div className="flex flex-col gap-3">
       <form
@@ -97,6 +115,41 @@ export function CreateBoardGameBggImportStep({
               </p>
             )}
           </div>
+        </div>
+      )}
+      {preview && publisherNeedsSelection && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium">
+            Verlag auswählen — BGG listet mehrere Editionen
+          </p>
+          <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border p-1">
+            {relevantVersions.map((version, index) => (
+              // BGG-Versionen tragen keine im Response mitgelieferte ID, die
+              // hier ankäme (siehe BggVersion) — Index als Key genügt, die
+              // Liste wird pro Vorschau einmalig gerendert.
+              <li key={index}>
+                <button
+                  type="button"
+                  className="hover:bg-accent hover:text-accent-foreground group w-full rounded px-2 py-1.5 text-left text-sm"
+                  onClick={() => onSelectVersion?.(version)}
+                >
+                  {version.publisher.join(", ") || "Ohne Verlagsangabe"}
+                  {version.yearPublished && (
+                    <span className="text-muted-foreground group-hover:text-accent-foreground/80">
+                      {" "}
+                      ({version.yearPublished})
+                    </span>
+                  )}
+                  {version.productCode && (
+                    <span className="text-muted-foreground group-hover:text-accent-foreground/80">
+                      {" "}
+                      — Product Code {version.productCode}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {preview && preview.germanExplainerVideos.length > 0 && (

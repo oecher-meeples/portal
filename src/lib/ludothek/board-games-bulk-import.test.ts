@@ -52,6 +52,9 @@ const VALID_BGG_DATA = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  author: [],
+  yearPublished: null,
+  versions: [],
 };
 
 function beforeEachSetup() {

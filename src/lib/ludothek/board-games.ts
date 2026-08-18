@@ -41,6 +41,14 @@ export type BoardGameTitleInput = {
   /** BGGs Language-Dependence-Poll-Level, als Vorschlag beim BGG-Import
    * übernommen, vom Admin frei änderbar (#188). */
   languageDependence?: LanguageDependence | null;
+  /** Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen bei
+   * identischem Wert über alle (ggf. deutschen) BGG-Versionen, sonst wählt
+   * der Admin (#205, siehe `resolvePublisherFromVersions()`). */
+  publisher?: string[];
+  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205). */
+  author?: string[];
+  /** Erstveröffentlichungsjahr — ältestes Jahr über alle BGG-Versionen (#205). */
+  yearPublished?: number | null;
 };
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
@@ -81,6 +89,9 @@ function toBoardGameTitleData(input: BoardGameTitleInput) {
     mechanics: input.mechanics ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
     languageDependence: input.languageDependence ?? null,
+    publisher: input.publisher ?? [],
+    author: input.author ?? [],
+    yearPublished: input.yearPublished ?? null,
     ...(input.kind ? { kind: input.kind } : {}),
   };
 }
@@ -271,6 +282,9 @@ export async function getBoardGameTitleForEdit(id: string) {
       description: true,
       mechanics: true,
       explainerVideoUrl: true,
+      publisher: true,
+      author: true,
+      yearPublished: true,
     },
   });
 }

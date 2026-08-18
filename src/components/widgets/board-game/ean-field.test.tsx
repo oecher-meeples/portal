@@ -46,7 +46,10 @@ describe("EanField", () => {
     );
 
     await waitFor(() =>
-      expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova"),
+      expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova", {
+        bggProductCode: undefined,
+        publisher: undefined,
+      }),
     );
     expect(onChange).toHaveBeenCalledWith("0850000576407");
   });
@@ -145,7 +148,10 @@ describe("EanField", () => {
     );
 
     await waitFor(() =>
-      expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova"),
+      expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova", {
+        bggProductCode: undefined,
+        publisher: undefined,
+      }),
     );
     expect(onChange).toHaveBeenCalledWith("0850000576407");
   });
@@ -170,6 +176,38 @@ describe("EanField", () => {
     );
 
     expect(searchEanForBoardGameMock).not.toHaveBeenCalled();
+  });
+
+  describe("BGG-Product-Code und Verlags-Sortierung (#205)", () => {
+    it("forwards the resolved BGG product code and publisher to the search", async () => {
+      const user = userEvent.setup();
+      searchEanForBoardGameMock.mockResolvedValue({
+        success: true,
+        results: [{ ean: "FEU001", title: "Ark Nova", brand: "Feuerland" }],
+      });
+
+      render(
+        <EanField
+          idPrefix="test"
+          value=""
+          onChange={vi.fn()}
+          title="Ark Nova"
+          bggProductCode="FEU001"
+          publisherForSorting={["Feuerland Spiele"]}
+        />,
+      );
+
+      await user.click(
+        screen.getByRole("button", { name: "EAN zum Titel suchen" }),
+      );
+
+      await waitFor(() =>
+        expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova", {
+          bggProductCode: "FEU001",
+          publisher: ["Feuerland Spiele"],
+        }),
+      );
+    });
   });
 
   describe("Fallback auf Alternativnamen (#197-Folgeanfrage)", () => {
@@ -201,12 +239,14 @@ describe("EanField", () => {
         expect(searchEanForBoardGameMock).toHaveBeenNthCalledWith(
           1,
           "Ark Nova",
+          { bggProductCode: undefined, publisher: undefined },
         ),
       );
       await waitFor(() =>
         expect(searchEanForBoardGameMock).toHaveBeenNthCalledWith(
           2,
           "Ark Nova (Deutsch)",
+          { bggProductCode: undefined, publisher: undefined },
         ),
       );
       expect(onChange).toHaveBeenCalledWith("4056282500000");

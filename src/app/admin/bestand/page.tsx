@@ -91,6 +91,9 @@ export default async function AdminBestandPage({
       kind: boardGame.kind,
       explainerVideoUrl: boardGame.explainerVideoUrl,
       languageDependence: boardGame.languageDependence,
+      publisher: boardGame.publisher,
+      author: boardGame.author,
+      yearPublished: boardGame.yearPublished,
       ruleBookLanguages: copy.ruleBookLanguages,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       locationChain: (() => {

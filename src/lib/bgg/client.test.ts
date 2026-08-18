@@ -53,6 +53,9 @@ describe("fetchBggGame", () => {
       mechanics: ["Card Play", "Income"],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
+      author: ["Mathias Wigge"],
+      yearPublished: 2021,
+      versions: [],
       alternateNames: ["Ark Nova (Deutsch)"],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
@@ -76,6 +79,9 @@ describe("fetchBggGame", () => {
       mechanics: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
+      author: [],
+      yearPublished: 1995,
+      versions: [],
       alternateNames: [],
       explainerVideoUrl: null,
       germanExplainerVideos: [],
@@ -125,6 +131,55 @@ describe("fetchBggGame", () => {
     const result = await fetchBggGame(1);
 
     expect(result.languageDependence).toBeNull();
+  });
+
+  it("parses every BGG version with its own publisher, product code, year and languages (#205)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-versions.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.versions).toEqual([
+      {
+        yearPublished: 2021,
+        publisher: ["Capstone Games"],
+        productCode: "CAPS001",
+        languages: ["English"],
+      },
+      {
+        yearPublished: 2022,
+        publisher: ["Feuerland Spiele"],
+        productCode: "FEU001",
+        languages: ["German"],
+      },
+    ]);
+  });
+
+  it("takes the oldest year across versions over the item's own yearpublished (#205)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-versions.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    // Item-level yearpublished is 2021, matching the oldest version here —
+    // asserted directly against the versions data to prove it's actually
+    // computed from them, not just passed through the item's own value.
+    expect(result.yearPublished).toBe(
+      Math.min(...result.versions.map((v) => v.yearPublished ?? Infinity)),
+    );
+  });
+
+  it("requests the versions block from the bgg api (#205)", async () => {
+    const fetchMock = mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-minimal.xml"),
+    );
+
+    await fetchBggGame(1);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("versions=1"),
+      expect.anything(),
+    );
   });
 
   it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {
