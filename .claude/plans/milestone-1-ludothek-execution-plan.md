@@ -88,7 +88,7 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       `git commit -m "feat(ludothek): add external BGG link button to game detail view"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg24xYQ --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#207 → In review).
 
-- [ ] **5. #204 — Basisspiel/Erweiterung zuordnen: Autocomplete statt Dropdown**
+- [x] **5. #204 — Basisspiel/Erweiterung zuordnen: Autocomplete statt Dropdown**
       `AssignExpansionDialog`: natives `<select>` durch `Combobox`/`ComboboxInput`/`ComboboxPopup`/`ComboboxList`/`ComboboxEmpty` ersetzen (Pattern aus `create-lfg-dialog.tsx`). `ComboboxEmpty`-State zeigt „Spiel anlegen"-Button, öffnet `create-board-game-dialog.tsx` verschachtelt, übernimmt neu angelegtes Spiel automatisch als Auswahl.
       _Definition of Done:_ Bestehende Tests für `AssignExpansionDialog` angepasst/erweitert und grün; neuer Test für „kein Treffer → Anlegen-Flow → Auswahl übernommen".
       `git commit -m "feat(ludothek): replace expansion assignment dropdown with searchable combobox"`

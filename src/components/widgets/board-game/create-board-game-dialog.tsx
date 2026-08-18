@@ -50,12 +50,18 @@ const STEP_LABELS: Record<Step, string> = {
 export function CreateBoardGameDialog({
   defaultEan,
   defaultBggQuery,
+  onCreated,
 }: {
   defaultEan?: string;
   /** Übernimmt eine bereits eingegebene Ludothek-Suche als Startwert für den
    * BGG-Import (#183) — Admin sucht z. B. schon nach einem Titel, der noch
    * fehlt, und muss ihn nicht ein zweites Mal eintippen. */
   defaultBggQuery?: string;
+  /** Meldet den (neu angelegten oder wiederverwendeten) Titel nach
+   * erfolgreichem Anlegen — für verschachtelte Aufrufer wie
+   * `AssignExpansionDialog`s Combobox-Leerzustand, die das Ergebnis direkt
+   * als Auswahl übernehmen wollen (#204). */
+  onCreated?: (game: { id: string; title: string }) => void;
 } = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(Boolean(defaultEan));
@@ -279,6 +285,7 @@ export function CreateBoardGameDialog({
           return;
         }
         setLastHint(null);
+        onCreated?.({ id: existingBoardGame.id, title: form.title });
       } else {
         const input: CreateBoardGameInput = {
           ...boardGameFormToInput(form),
@@ -291,6 +298,10 @@ export function CreateBoardGameDialog({
           return;
         }
         setLastHint(result.hint ?? null);
+        // `result.error` above already excludes the error branch — TS just
+        // doesn't narrow `boardGameId` off of it (a plain `string` field,
+        // not a literal discriminant), same gap `result.hint` silently has too.
+        onCreated?.({ id: result.boardGameId as string, title: form.title });
       }
 
       setOpen(false);

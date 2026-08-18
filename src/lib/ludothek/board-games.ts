@@ -174,7 +174,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 
   const placement = resolveCopyPlacement(input.placement, actor.id);
 
-  const copy = await prisma.$transaction(async (tx) => {
+  const { copy, boardGameId } = await prisma.$transaction(async (tx) => {
     const title = await findOrCreateBoardGameTitle(input, tx);
 
     if (!willReuseByBggId && input.alternateNames?.length) {
@@ -186,18 +186,21 @@ export async function createBoardGame(input: CreateBoardGameInput) {
       });
     }
 
-    return createGameCopyTx(tx, {
+    const copy = await createGameCopyTx(tx, {
       boardGameId: title.id,
       boardGameTitle: title.title,
       condition: input.condition,
       actorId: actor.id,
       placement,
     });
+    return { copy, boardGameId: title.id };
   });
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  return { success: true as const, id: copy.id, hint };
+  // `boardGameId` lets callers auto-select the newly created title, e.g. the
+  // nested "Spiel anlegen" flow from `AssignExpansionDialog`s Combobox (#204).
+  return { success: true as const, id: copy.id, boardGameId, hint };
 }
 
 export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
