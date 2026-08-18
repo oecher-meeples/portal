@@ -18,6 +18,7 @@ import {
   addAlternateName,
   clearSecondaryTitle,
   deleteAlternateName,
+  deleteSecondaryTitle,
   listAlternateNames,
   promoteAlternateNameToSecondaryTitle,
   promoteAlternateNameToTitle,
@@ -137,6 +138,15 @@ export function TitleOverviewDialog({
     const result = await clearSecondaryTitle(boardGameId);
     if ("success" in result) {
       onSecondaryTitleChange("");
+      await refresh();
+    }
+    return result;
+  }
+
+  async function handleDeleteSecondary() {
+    const result = await deleteSecondaryTitle(boardGameId);
+    if ("success" in result) {
+      onSecondaryTitleChange("");
     }
     return result;
   }
@@ -151,7 +161,7 @@ export function TitleOverviewDialog({
           </Button>
         }
       />
-      <DialogContent className="ring-border shadow-2xl ring-2 sm:max-w-lg">
+      <DialogContent className="ring-border shadow-2xl ring-2 sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Alle Titel</DialogTitle>
           <DialogDescription>
@@ -199,12 +209,20 @@ export function TitleOverviewDialog({
                     Als Haupttitel verwenden
                   </ActionButton>
                   <ActionButton
+                    size="sm"
+                    variant="outline"
+                    confirm="Sekundärtitel wirklich entfernen? Der Text bleibt als Alternativname erhalten."
+                    action={handleClearSecondary}
+                  >
+                    Als Sekundärtitel entfernen
+                  </ActionButton>
+                  <ActionButton
                     size="icon-sm"
                     variant="outline"
                     className="text-destructive"
-                    aria-label="Sekundärtitel entfernen"
-                    confirm="Sekundärtitel wirklich entfernen?"
-                    action={handleClearSecondary}
+                    aria-label="Sekundärtitel löschen"
+                    confirm="Sekundärtitel endgültig löschen? Der Text geht dabei verloren."
+                    action={handleDeleteSecondary}
                   >
                     <Trash2 className="size-4" />
                   </ActionButton>

@@ -177,10 +177,49 @@ export async function swapTitleAndSecondaryTitle(boardGameId: string) {
   return { success: true as const };
 }
 
-/** Entfernt den Sekundärtitel ersatzlos (#203-Folge) — Gegenstück zum
- * früheren Leeren des Sekundärtitel-Textfelds, das mit dessen Entfernung
- * zugunsten des "Alle Titel"-Dialogs weggefallen ist. */
+/**
+ * Entfernt nur den "Sekundärtitel"-Status (#203-Folge-Korrektur) — der Text
+ * geht dabei nicht verloren, sondern wird als Alternativname weitergeführt,
+ * konsistent mit dem "nie Datenverlust"-Prinzip der übrigen Tausch-Aktionen
+ * hier. Zum endgültigen Verwerfen des Texts siehe `deleteSecondaryTitle`.
+ */
 export async function clearSecondaryTitle(boardGameId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const cleared = await prisma.$transaction(async (tx) => {
+    const game = await tx.boardGame.findUnique({
+      where: { id: boardGameId },
+      select: { secondaryTitle: true },
+    });
+    if (!game?.secondaryTitle) return false;
+
+    await tx.boardGameAlternateName.create({
+      data: { boardGameId, name: game.secondaryTitle },
+    });
+    await tx.boardGame.update({
+      where: { id: boardGameId },
+      data: { secondaryTitle: null },
+    });
+    return true;
+  });
+
+  if (!cleared) {
+    return { error: "Kein Sekundärtitel gesetzt." };
+  }
+
+  await revalidateTitlePaths(boardGameId);
+  return { success: true as const };
+}
+
+/**
+ * Löscht den Sekundärtitel endgültig (#203-Folge-Korrektur) — Gegenstück zu
+ * `clearSecondaryTitle`, das den Text stattdessen als Alternativname
+ * weiterführt. Für den Fall, dass der Text wirklich verworfen werden soll.
+ */
+export async function deleteSecondaryTitle(boardGameId: string) {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { error: "Keine Berechtigung." };

@@ -41,6 +41,7 @@ vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
   promoteAlternateNameToSecondaryTitle: vi.fn(),
   swapTitleAndSecondaryTitle: vi.fn(),
   clearSecondaryTitle: vi.fn(),
+  deleteSecondaryTitle: vi.fn(),
   listAlternateNames: vi
     .fn()
     .mockResolvedValue({ success: true, alternateNames: [] }),

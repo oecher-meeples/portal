@@ -21,6 +21,7 @@ const promoteAlternateNameToTitleMock = vi.fn();
 const promoteAlternateNameToSecondaryTitleMock = vi.fn();
 const swapTitleAndSecondaryTitleMock = vi.fn();
 const clearSecondaryTitleMock = vi.fn();
+const deleteSecondaryTitleMock = vi.fn();
 vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
   listAlternateNames: (...args: unknown[]) => listAlternateNamesMock(...args),
   addAlternateName: (...args: unknown[]) => addAlternateNameMock(...args),
@@ -32,6 +33,8 @@ vi.mock("@/lib/ludothek/board-game-alternate-names", () => ({
   swapTitleAndSecondaryTitle: (...args: unknown[]) =>
     swapTitleAndSecondaryTitleMock(...args),
   clearSecondaryTitle: (...args: unknown[]) => clearSecondaryTitleMock(...args),
+  deleteSecondaryTitle: (...args: unknown[]) =>
+    deleteSecondaryTitleMock(...args),
 }));
 
 afterEach(() => {
@@ -161,7 +164,7 @@ describe("TitleOverviewDialog (#203/#203-Folge)", () => {
     expect(onSecondaryTitleChange).toHaveBeenCalledWith("Arche Nova");
   });
 
-  it("removes the secondary title after confirmation", async () => {
+  it("removes only the secondary-title status after confirmation, keeping the text as an alternate name", async () => {
     const user = userEvent.setup();
     vi.spyOn(window, "confirm").mockReturnValue(true);
     listAlternateNamesMock.mockResolvedValue({
@@ -183,14 +186,48 @@ describe("TitleOverviewDialog (#203/#203-Folge)", () => {
     await openDialog(user);
 
     await user.click(
-      screen.getByRole("button", { name: "Sekundärtitel entfernen" }),
+      screen.getByRole("button", { name: "Als Sekundärtitel entfernen" }),
     );
 
     expect(window.confirm).toHaveBeenCalledWith(
-      "Sekundärtitel wirklich entfernen?",
+      "Sekundärtitel wirklich entfernen? Der Text bleibt als Alternativname erhalten.",
     );
     await waitFor(() =>
       expect(clearSecondaryTitleMock).toHaveBeenCalledWith("game-1"),
+    );
+    expect(onSecondaryTitleChange).toHaveBeenCalledWith("");
+  });
+
+  it("deletes the secondary title for good via the delete button", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    listAlternateNamesMock.mockResolvedValue({
+      success: true,
+      alternateNames: [],
+    });
+    deleteSecondaryTitleMock.mockResolvedValue({ success: true });
+    const onSecondaryTitleChange = vi.fn();
+
+    render(
+      <TitleOverviewDialog
+        boardGameId="game-1"
+        title="Arche Nova"
+        secondaryTitle="Ark Nova"
+        onTitleChange={vi.fn()}
+        onSecondaryTitleChange={onSecondaryTitleChange}
+      />,
+    );
+    await openDialog(user);
+
+    await user.click(
+      screen.getByRole("button", { name: "Sekundärtitel löschen" }),
+    );
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Sekundärtitel endgültig löschen? Der Text geht dabei verloren.",
+    );
+    await waitFor(() =>
+      expect(deleteSecondaryTitleMock).toHaveBeenCalledWith("game-1"),
     );
     expect(onSecondaryTitleChange).toHaveBeenCalledWith("");
   });
