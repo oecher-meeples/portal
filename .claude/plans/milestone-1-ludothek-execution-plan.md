@@ -82,7 +82,7 @@ Du bist Senior Full-Stack-Entwickler:in für dieses Next.js/TypeScript/Prisma-Pr
       `git commit -m "feat(ludothek): add BGG name search icon to empty BGG-ID field"`
       Danach: `gh project item-edit --id PVTI_lADOCJfCSs4BertCzg24xVE --field-id PVTSSF_lADOCJfCSs4BertCzhZEEz0 --project-id PVT_kwDOCJfCSs4BertC --single-select-option-id df73e18b` (#206 → In review).
 
-- [ ] **4. #207 — Boardgame-Detailansicht: External-Link-Button zur BGG-Seite**
+- [x] **4. #207 — Boardgame-Detailansicht: External-Link-Button zur BGG-Seite**
       Icon-Button (`ExternalLink`, lucide-react) in `game-detail-view.tsx`, `target="_blank" rel="noopener noreferrer"`, nur bei vorhandener `bggId` gerendert.
       _Definition of Done:_ Bedingtes Rendering getestet (mit/ohne `bggId`), Link-Ziel korrekt `https://boardgamegeek.com/boardgame/{bggId}`.
       `git commit -m "feat(ludothek): add external BGG link button to game detail view"`

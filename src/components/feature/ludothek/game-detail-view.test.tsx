@@ -139,6 +139,38 @@ describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {
   });
 });
 
+describe("GameDetailView — externer BGG-Link (#207)", () => {
+  it("shows the link when a bggId is set, pointing at the BGG page in a new tab", () => {
+    render(<GameDetailView game={game()} bggId={342942} />);
+
+    const link = screen.getByRole("button", {
+      name: "Auf BoardGameGeek ansehen",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://boardgamegeek.com/boardgame/342942",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("hides the link when no bggId is set", () => {
+    render(<GameDetailView game={game()} bggId={null} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Auf BoardGameGeek ansehen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the link when bggId is not passed at all", () => {
+    render(<GameDetailView game={game()} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Auf BoardGameGeek ansehen" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("GameDetailView — Sekundärname (#187)", () => {
   it("shows the secondary alternate name next to the title when set", () => {
     render(

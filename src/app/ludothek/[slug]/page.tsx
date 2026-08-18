@@ -52,7 +52,11 @@ export default async function GameDetailPage({
       currentEvent?.id ?? null,
     );
     return (
-      <GameDetailView game={toPublicGame(game)} availability={availability} />
+      <GameDetailView
+        game={toPublicGame(game)}
+        bggId={game.bggId}
+        availability={availability}
+      />
     );
   }
 
@@ -195,6 +199,7 @@ export default async function GameDetailPage({
   return (
     <GameDetailView
       game={toPublicGame(game)}
+      bggId={game.bggId}
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
       titleEdit={titleEdit}

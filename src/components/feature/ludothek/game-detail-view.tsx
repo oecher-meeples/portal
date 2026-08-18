@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
+import { Button } from "@/components/ui/button";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
@@ -37,6 +39,7 @@ export type HoldingHistoryEntry = {
 
 export function GameDetailView({
   game,
+  bggId,
   explainer,
   expansionAssignment,
   titleEdit,
@@ -49,6 +52,11 @@ export function GameDetailView({
   createLfgTrigger,
 }: {
   game: PublicLudothekGame;
+  /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
+   * ohne BGG-Import — separat von `game`, weil `toPublicGame()` `bggId` als
+   * Bestandsdatum für Gäste entfernt, der externe Link aber für alle
+   * gedacht ist (#207). */
+  bggId?: number | null;
   /** Nur für eingeloggte Nutzer gesetzt — Erklärbär-Selbstauskunft ist kein Gast-Feature. */
   explainer?: {
     entries: ExplainerEntry[];
@@ -104,6 +112,22 @@ export function GameDetailView({
             </div>
             <div className="flex items-center gap-2">
               {createLfgTrigger}
+              {bggId && (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  aria-label="Auf BoardGameGeek ansehen"
+                  render={
+                    <a
+                      href={`https://boardgamegeek.com/boardgame/${bggId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  }
+                >
+                  <ExternalLink className="size-4" />
+                </Button>
+              )}
               {titleEdit && (
                 <EditBoardGameTitleDialog
                   game={titleEdit}
