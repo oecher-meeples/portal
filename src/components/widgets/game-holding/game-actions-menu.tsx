@@ -53,7 +53,7 @@ const ACTION_LABELS: Record<ActionKey, string> = {
   give: "Weitergeben",
   return: "Rückgabe",
   relocate: "Umlagern",
-  condition: "Mängelvermerk bearbeiten",
+  condition: "Exemplar bearbeiten",
   deinventorise: "Deinventarisieren",
   "completeness-check": "Prüfung anfordern",
 };

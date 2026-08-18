@@ -431,7 +431,7 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
     expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
   });
 
-  it("offers Mängelvermerk bearbeiten in the actions menu instead", async () => {
+  it("offers Exemplar bearbeiten in the actions menu instead", async () => {
     render(
       <LudothekBrowser
         {...baseProps()}
@@ -444,8 +444,6 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    expect(
-      await screen.findByText("Mängelvermerk bearbeiten"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
   });
 });

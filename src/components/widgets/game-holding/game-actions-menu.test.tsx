@@ -157,9 +157,7 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
     expect(screen.queryByText("Prüfung anfordern")).not.toBeInTheDocument();
     expect(screen.queryByText("Weiteres Exemplar")).not.toBeInTheDocument();
     expect(screen.queryByText("Deinventarisieren")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Mängelvermerk bearbeiten"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Exemplar bearbeiten")).not.toBeInTheDocument();
   });
 
   it("shows the games:manage entries for games:manage holders", async () => {
@@ -195,7 +193,7 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
     expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
   });
 
-  it("offers Mängelvermerk bearbeiten for games:manage holders (Plan-Schritt 10)", async () => {
+  it("offers Exemplar bearbeiten for games:manage holders (Plan-Schritt 10)", async () => {
     render(
       <GameActionsMenu
         copies={[copy({ condition: "Ecke eingedrückt" })]}
@@ -207,9 +205,7 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    expect(
-      await screen.findByText("Mängelvermerk bearbeiten"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
   });
 });
 
@@ -260,7 +256,7 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
     expect(screen.queryByText("Exemplar wählen")).not.toBeInTheDocument();
   });
 
-  it("routes Mängelvermerk bearbeiten through the picker too", async () => {
+  it("routes Exemplar bearbeiten through the picker too", async () => {
     render(
       <GameActionsMenu
         copies={TWO_COPIES}
@@ -271,7 +267,7 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
-    fireEvent.click(await screen.findByText("Mängelvermerk bearbeiten"));
+    fireEvent.click(await screen.findByText("Exemplar bearbeiten"));
     fireEvent.click(await screen.findByText("Regal A"));
 
     expect(

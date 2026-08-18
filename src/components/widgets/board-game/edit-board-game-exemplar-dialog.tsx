@@ -12,8 +12,10 @@ import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-gam
 /** Edits one physical copy's condition (Mängelvermerk) and Regelheft-Sprache(n)
  * (#188) — the counterpart to `EditBoardGameTitleDialog`, scoped to a single
  * `GameCopy` (see ADR 0008). `triggerLabel` defaults to the exemplar-table's
- * own "Bearbeiten" but is overridden to "Mängelvermerk bearbeiten" where it
- * sits in `GameActionsMenu` next to the title-level "Bearbeiten" (Plan-Schritt 10). */
+ * own "Bearbeiten" but is overridden to "Exemplar bearbeiten" where it sits in
+ * `GameActionsMenu` next to the title-level "Bearbeiten" (Plan-Schritt 10) —
+ * a label naming only the Mängelvermerk hid that Regelheft-Sprache(n) is
+ * also editable here (#188-Folge). */
 export function EditBoardGameExemplarDialog({
   copyId,
   condition,

@@ -163,11 +163,10 @@ export function GameCopiesSection({
             <div className="flex flex-col gap-1">
               <GameZustandPill zustand={copy.zustand} className="w-fit" />
               <LocationCell copy={copy} />
-              {copy.ruleBookLanguages.length > 0 && (
-                <span className="text-muted-foreground text-sm">
-                  Regelheft: {formatRuleBookLanguages(copy.ruleBookLanguages)}
-                </span>
-              )}
+              <span className="text-muted-foreground text-sm">
+                Regelheft:{" "}
+                {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
+              </span>
             </div>
           </GameCopyCard>
         ))

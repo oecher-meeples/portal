@@ -53,6 +53,32 @@ describe("GameCopiesSection", () => {
     expect(screen.getByText("Regal A")).toBeInTheDocument();
   });
 
+  it("shows a placeholder instead of nothing when the single copy has no Regelheft-Sprache set (#188-Folge)", () => {
+    render(
+      <GameCopiesSection
+        copies={[copy({ ruleBookLanguages: [] })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("Regelheft: —")).toBeInTheDocument();
+  });
+
+  it("shows the set Regelheft-Sprache(n) for the single copy", () => {
+    render(
+      <GameCopiesSection
+        copies={[copy({ ruleBookLanguages: ["DE", "EN"] })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("Regelheft: DE, EN")).toBeInTheDocument();
+  });
+
   it("wires the actions menu for the single-copy card (#128)", () => {
     render(
       <GameCopiesSection
