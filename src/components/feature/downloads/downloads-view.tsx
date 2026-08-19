@@ -22,7 +22,7 @@ export type DownloadListItem = {
   fileUrl: string;
   status: DownloadStatus;
   order: number;
-  updatedAt: Date;
+  fileUpdatedAt: Date;
 };
 
 export type LegalDocListItem = {

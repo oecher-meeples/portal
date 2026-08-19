@@ -23,7 +23,7 @@ import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { Input } from "@/components/ui/input";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
-import { formatDateTime } from "@/lib/utils/format";
+import { formatDateTime, formatDateMedium } from "@/lib/utils/format";
 import { DOWNLOAD_STATUS_LABELS } from "@/lib/downloads/labels";
 import {
   renameDownload,
@@ -166,16 +166,24 @@ export function DownloadRow({
               </form>
             ) : (
               <div className="flex items-center gap-1.5">
-                <p className="font-medium">{file.title}</p>
+                <p className="font-medium">
+                  {file.title} ({file.fileType})
+                </p>
                 {file.status === "INTERNAL" && (
                   <InternalOnlyBadge tooltip="Nur für Mitglieder" />
                 )}
               </div>
             )}
+            {canManage && (
+              <p className="text-muted-foreground text-xs">
+                {file.fileName} · {file.fileSizeFormatted}
+              </p>
+            )}
             <p className="text-muted-foreground text-xs">
-              {canManage && <>{file.fileName} · </>}
-              {file.fileType} · {file.fileSizeFormatted} · Geändert am{" "}
-              {formatDateTime(file.updatedAt)}
+              Geändert am{" "}
+              {canManage
+                ? formatDateTime(file.fileUpdatedAt)
+                : formatDateMedium(file.fileUpdatedAt)}
             </p>
           </div>
         </div>
