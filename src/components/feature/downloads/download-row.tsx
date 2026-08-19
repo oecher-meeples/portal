@@ -23,6 +23,7 @@ import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { Input } from "@/components/ui/input";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
+import { formatDateTime } from "@/lib/utils/format";
 import { DOWNLOAD_STATUS_LABELS } from "@/lib/downloads/labels";
 import {
   renameDownload,
@@ -173,7 +174,8 @@ export function DownloadRow({
             )}
             <p className="text-muted-foreground text-xs">
               {canManage && <>{file.fileName} · </>}
-              {file.fileType} · {file.fileSizeFormatted}
+              {file.fileType} · {file.fileSizeFormatted} · Geändert am{" "}
+              {formatDateTime(file.updatedAt)}
             </p>
           </div>
         </div>
