@@ -172,6 +172,8 @@ describe("updateOwnProfile", () => {
       telegramHandle: "@lea_tg",
       signalHandle: "",
       discordHandle: null,
+      address: "  Musterstraße 1, 52062 Aachen  ",
+      doorbellNote: "",
     });
 
     expect(prismaMock.meeple.update).toHaveBeenCalledWith({
@@ -183,6 +185,8 @@ describe("updateOwnProfile", () => {
         telegramHandle: "lea_tg",
         signalHandle: null,
         discordHandle: null,
+        address: "Musterstraße 1, 52062 Aachen",
+        doorbellNote: null,
       },
     });
   });
