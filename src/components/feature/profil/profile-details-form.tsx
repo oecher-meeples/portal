@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TextAreaField } from "@/components/ui/field";
 import { updateOwnProfile } from "@/components/feature/profil/actions";
 
 export function ProfileDetailsForm({
@@ -13,6 +14,8 @@ export function ProfileDetailsForm({
   telegramHandle: initialTelegramHandle,
   signalHandle: initialSignalHandle,
   discordHandle: initialDiscordHandle,
+  address: initialAddress,
+  doorbellNote: initialDoorbellNote,
 }: {
   displayName: string;
   bggUsername: string | null;
@@ -20,6 +23,8 @@ export function ProfileDetailsForm({
   telegramHandle: string | null;
   signalHandle: string | null;
   discordHandle: string | null;
+  address: string | null;
+  doorbellNote: string | null;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bggUsername, setBggUsername] = useState(initialBggUsername ?? "");
@@ -31,6 +36,8 @@ export function ProfileDetailsForm({
   const [discordHandle, setDiscordHandle] = useState(
     initialDiscordHandle ?? "",
   );
+  const [address, setAddress] = useState(initialAddress ?? "");
+  const [doorbellNote, setDoorbellNote] = useState(initialDoorbellNote ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +55,8 @@ export function ProfileDetailsForm({
       telegramHandle,
       signalHandle,
       discordHandle,
+      address,
+      doorbellNote,
     });
     setIsSaving(false);
 
@@ -116,6 +125,25 @@ export function ProfileDetailsForm({
           />
         </div>
       </div>
+
+      <TextAreaField
+        id="address"
+        label="Wohnort"
+        hint="Nur für dich sichtbar. Wird für andere erst sichtbar, wenn du sie bei einem Spielgesuch (LFG) explizit per Autofill übernimmst."
+        value={address}
+        onChange={(event) => setAddress(event.target.value)}
+        placeholder="optional"
+        rows={2}
+      />
+      <TextAreaField
+        id="doorbellNote"
+        label="Notiz zum Klingelschild"
+        hint="z. B. „bei Fam. Reiners klingeln“. Nur für dich sichtbar, außer du gibst deinen Wohnort bei einem Spielgesuch frei."
+        value={doorbellNote}
+        onChange={(event) => setDoorbellNote(event.target.value)}
+        placeholder="optional"
+        rows={2}
+      />
 
       {error && <p className="text-destructive text-sm">{error}</p>}
       {message && <p className="text-sm text-emerald-600">{message}</p>}

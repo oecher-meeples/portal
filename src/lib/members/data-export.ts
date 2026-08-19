@@ -68,6 +68,8 @@ export async function collectMeeplePersonalData(
       telegramHandle: true,
       signalHandle: true,
       discordHandle: true,
+      address: true,
+      doorbellNote: true,
       createdAt: true,
       updatedAt: true,
       neonAuthUserId: true,

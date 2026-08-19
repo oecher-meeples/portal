@@ -24,6 +24,8 @@ export type OwnProfileInput = {
   telegramHandle?: string | null;
   signalHandle?: string | null;
   discordHandle?: string | null;
+  address?: string | null;
+  doorbellNote?: string | null;
 };
 
 export type OwnBankDetailsInput = {
@@ -58,6 +60,8 @@ export async function updateOwnProfile(input: OwnProfileInput) {
       telegramHandle: optionalHandle(input.telegramHandle),
       signalHandle: optionalHandle(input.signalHandle),
       discordHandle: optionalHandle(input.discordHandle),
+      address: optionalText(input.address),
+      doorbellNote: optionalText(input.doorbellNote),
     },
   });
 
