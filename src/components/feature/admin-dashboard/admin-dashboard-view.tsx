@@ -42,13 +42,41 @@ export function AdminDashboardView({
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatTile label="Aktive Mitglieder" value={stats.activeMembers} />
-        <StatTile label="Offene Ausleihen" value={stats.openLoans} />
-        <StatTile label="Offene Einladungen" value={stats.openInvites} />
-        <StatTile label="Spiele im Bestand" value={stats.gamesInStock} />
-        <StatTile label="Nicht erfasst" value={stats.unregisteredGames} />
-        <StatTile label="Prüfungen offen" value={stats.openChecks} />
-        <StatTile label="Aktive Events" value={stats.activeEvents} />
+        <StatTile
+          label="Aktive Mitglieder"
+          value={stats.activeMembers}
+          href="/admin/mitglieder#mitglieder"
+        />
+        <StatTile
+          label="Offene Ausleihen"
+          value={stats.openLoans}
+          href="/ludothek?ausgeliehen=1"
+        />
+        <StatTile
+          label="Offene Einladungen"
+          value={stats.openInvites}
+          href="/admin/mitglieder#einladungen"
+        />
+        <StatTile
+          label="Spiele im Bestand"
+          value={stats.gamesInStock}
+          href="/admin/bestand"
+        />
+        <StatTile
+          label="Nicht erfasst"
+          value={stats.unregisteredGames}
+          href="/admin/bestand?filter=nicht-erfasst"
+        />
+        <StatTile
+          label="Prüfungen offen"
+          value={stats.openChecks}
+          href="/admin/bestand?filter=ungeprueft"
+        />
+        <StatTile
+          label="Aktive Events"
+          value={stats.activeEvents}
+          href="/admin/events"
+        />
         {blobStorageUsage && <BlobStorageUsageCard usage={blobStorageUsage} />}
       </div>
 
