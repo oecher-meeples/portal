@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { cn } from "@/lib/utils/cn";
 
@@ -11,9 +12,14 @@ export type SegmentedSliderOption<T extends string> = {
 /**
  * Discrete horizontal slider over a small, fixed set of string values.
  * Labels sit above the track (start/middle/.../end) and double as click
- * targets — the active one is highlighted in the accent color. Dragging the
- * thumb or clicking a label both set the value; there is no "none" state,
- * the value is always one of `options`.
+ * targets — the active one is highlighted in the accent color. There is no
+ * "none" state, the value is always one of `options`.
+ *
+ * `onChange` fires once per interaction — on drag release (snapped to the
+ * nearest step) or on a label click — not on every intermediate pixel while
+ * dragging. Callers typically wire this to a server action; firing on every
+ * drag step would flood it with calls. The thumb still follows the pointer
+ * smoothly during the drag via local draft state.
  */
 export function SegmentedSlider<T extends string>({
   options,
@@ -28,12 +34,20 @@ export function SegmentedSlider<T extends string>({
   disabled?: boolean;
   className?: string;
 }) {
-  const index = Math.max(
+  const committedIndex = Math.max(
     0,
     options.findIndex((option) => option.value === value),
   );
+  const [draftIndex, setDraftIndex] = useState(committedIndex);
+  // Adjust state during render (React-recommended, no Effect) when the
+  // external value changes — e.g. after a server response confirms it.
+  const [prevCommittedIndex, setPrevCommittedIndex] = useState(committedIndex);
+  if (committedIndex !== prevCommittedIndex) {
+    setPrevCommittedIndex(committedIndex);
+    setDraftIndex(committedIndex);
+  }
 
-  function handleValueChange(nextIndex: number) {
+  function handleValueCommitted(nextIndex: number) {
     const option = options[nextIndex];
     if (option) onChange(option.value);
   }
@@ -46,10 +60,13 @@ export function SegmentedSlider<T extends string>({
             key={option.value}
             type="button"
             disabled={disabled}
-            onClick={() => onChange(option.value)}
+            onClick={() => {
+              setDraftIndex(i);
+              onChange(option.value);
+            }}
             className={cn(
               "text-muted-foreground text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
-              i === index && "text-primary",
+              i === draftIndex && "text-primary",
             )}
           >
             {option.label}
@@ -57,12 +74,13 @@ export function SegmentedSlider<T extends string>({
         ))}
       </div>
       <SliderPrimitive.Root
-        value={index}
+        value={draftIndex}
         min={0}
         max={options.length - 1}
         step={1}
         disabled={disabled}
-        onValueChange={handleValueChange}
+        onValueChange={setDraftIndex}
+        onValueCommitted={handleValueCommitted}
       >
         <SliderPrimitive.Control className="flex w-full items-center py-1">
           <SliderPrimitive.Track className="bg-muted relative h-1.5 w-full rounded-full">
