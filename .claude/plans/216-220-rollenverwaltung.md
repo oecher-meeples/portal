@@ -10,7 +10,7 @@
 
 - [x] #216 Server Actions für Rollen-CRUD
 - [x] #217 Dual-Listbox-Komponente
-- [ ] #218 Drag & Drop zwischen den Rechte-Listen
+- [x] #218 Drag & Drop zwischen den Rechte-Listen
 - [ ] #219 Rollen-Verwaltungs-Dialog Integration
 - [ ] #220 Tests für Rollen-Actions & -Komponenten
 
