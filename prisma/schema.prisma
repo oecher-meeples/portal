@@ -628,14 +628,18 @@ model GameHolding {
 /// A play day or larger event, independent of the public/internal ICS calendar feed
 /// (see docs/adr/0004). The basis for shifts, explainer attendance and flea market items.
 model Event {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  title     String
-  startsAt  DateTime
-  endsAt    DateTime?
-  location  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  slug                 String    @unique
+  title                String
+  startsAt             DateTime
+  endsAt               DateTime?
+  location             String?
+  /// Whether this event has a Bring&Buy flea market at all (#211) — separate
+  /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
+  /// always open and not tied to a specific event.
+  hasBringAndBuyMarket Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   shifts               Shift[]
   shelfAssignments     EventShelfAssignment[]
