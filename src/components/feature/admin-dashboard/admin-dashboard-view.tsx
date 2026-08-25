@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Tag, Mail, ClipboardCheck, Landmark } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
+import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
+import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
 
 const QUICK_ACTIONS = [
   {
@@ -24,7 +26,13 @@ export type AdminDashboardStats = {
   activeEvents: number;
 };
 
-export function AdminDashboardView({ stats }: { stats: AdminDashboardStats }) {
+export function AdminDashboardView({
+  stats,
+  blobStorageUsage,
+}: {
+  stats: AdminDashboardStats;
+  blobStorageUsage: BlobStorageUsage | null;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -34,13 +42,42 @@ export function AdminDashboardView({ stats }: { stats: AdminDashboardStats }) {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatTile label="Aktive Mitglieder" value={stats.activeMembers} />
-        <StatTile label="Offene Ausleihen" value={stats.openLoans} />
-        <StatTile label="Offene Einladungen" value={stats.openInvites} />
-        <StatTile label="Spiele im Bestand" value={stats.gamesInStock} />
-        <StatTile label="Nicht erfasst" value={stats.unregisteredGames} />
-        <StatTile label="Prüfungen offen" value={stats.openChecks} />
-        <StatTile label="Aktive Events" value={stats.activeEvents} />
+        <StatTile
+          label="Aktive Mitglieder"
+          value={stats.activeMembers}
+          href="/admin/mitglieder#mitglieder"
+        />
+        <StatTile
+          label="Offene Ausleihen"
+          value={stats.openLoans}
+          href="/ludothek?ausgeliehen=1"
+        />
+        <StatTile
+          label="Offene Einladungen"
+          value={stats.openInvites}
+          href="/admin/mitglieder#einladungen"
+        />
+        <StatTile
+          label="Spiele im Bestand"
+          value={stats.gamesInStock}
+          href="/admin/bestand"
+        />
+        <StatTile
+          label="Nicht erfasst"
+          value={stats.unregisteredGames}
+          href="/admin/bestand?filter=nicht-erfasst"
+        />
+        <StatTile
+          label="Prüfungen offen"
+          value={stats.openChecks}
+          href="/admin/bestand?filter=ungeprueft"
+        />
+        <StatTile
+          label="Aktive Events"
+          value={stats.activeEvents}
+          href="/admin/events"
+        />
+        {blobStorageUsage && <BlobStorageUsageCard usage={blobStorageUsage} />}
       </div>
 
       <div className="flex flex-col gap-3">

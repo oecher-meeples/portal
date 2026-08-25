@@ -150,6 +150,7 @@
 
 ### 3.1 Admin-Dashboard
 - Kennzahlen-Kacheln: aktive Mitglieder, offene Ausleihen, Spiele im Bestand, nicht erfasste Spiele, offene Prüfungen, offene Invitations (kein Überfälligkeits-Widget — es gibt keine Leihfrist)
+- Jede Kachel (außer Blob-Speicher) verlinkt auf die dahinterliegende gefilterte Ansicht (#224-Folge): aktive Mitglieder/offene Einladungen → `/admin/mitglieder#mitglieder` bzw. `#einladungen`, offene Ausleihen → `/ludothek?ausgeliehen=1`, nicht erfasst/Prüfungen offen → `/admin/bestand?filter=…` (vorselektierter Schnellfilter), aktive Events → `/admin/events`
 - Schnellzugriff: Mitglied einladen, Spiel anlegen, Event erstellen
 
 ### 3.2 Mitgliederverwaltung

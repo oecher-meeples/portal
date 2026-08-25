@@ -35,16 +35,21 @@ export function AdminBestandView({
   games,
   showDeinventarised,
   defaultEan,
+  defaultQuickFilter,
   canManageGames,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
   defaultEan?: string;
+  /** Deep-link from the Admin-Dashboard-Karten (#224-Folge), z. B. `?filter=nicht-erfasst`. */
+  defaultQuickFilter?: Exclude<QuickFilter, "all">;
   canManageGames: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(
+    defaultQuickFilter ?? "all",
+  );
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {

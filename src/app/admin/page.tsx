@@ -4,6 +4,7 @@ import { getMembershipState } from "@/lib/members/meeples";
 import { isLoanHolding } from "@/lib/ludothek/holdings";
 import { UNSORTIERT_CODE } from "@/lib/inventory/codes";
 import { countActiveEvents } from "@/lib/members/dashboard";
+import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
 
 export default async function AdminDashboardPage() {
@@ -16,6 +17,7 @@ export default async function AdminDashboardPage() {
     games,
     uncheckedGames,
     events,
+    blobStorageUsage,
   ] = await Promise.all([
     prisma.meeple.findMany({
       select: { resignedAt: true, membershipEndsAt: true, anonymizedAt: true },
@@ -45,6 +47,10 @@ export default async function AdminDashboardPage() {
       },
     }),
     prisma.event.findMany({ select: { endsAt: true } }),
+    // On-demand, uncached — see #224. Failure (missing token, Vercel API
+    // hiccup) must not break the rest of the admin dashboard, so it degrades
+    // to `null` and the card simply doesn't render (see AdminDashboardView).
+    getBlobStorageUsage().catch(() => null),
   ]);
 
   const activeMembers = meeples.filter(
@@ -66,6 +72,7 @@ export default async function AdminDashboardPage() {
         openChecks: uncheckedGames,
         activeEvents: countActiveEvents(events),
       }}
+      blobStorageUsage={blobStorageUsage}
     />
   );
 }

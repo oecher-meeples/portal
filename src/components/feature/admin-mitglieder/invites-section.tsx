@@ -98,7 +98,7 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
   }, [invites, search, activeStatuses]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div id="einladungen" className="flex flex-col gap-4">
       <h2 className="font-serif text-lg font-bold">Einladungen</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
