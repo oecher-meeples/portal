@@ -33,9 +33,6 @@ export function ErklaerbaerenView({
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-xl font-semibold">
-          Das kann ich erklären:
-        </h2>
         <MyExplainerGames myGames={myGames} availableGames={availableGames} />
       </section>
     </div>

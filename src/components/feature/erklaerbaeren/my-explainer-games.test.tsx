@@ -15,11 +15,14 @@ vi.mock("next/navigation", () => ({
 const addExplainerGameMock = vi.fn();
 const updateExplainerGameLevelMock = vi.fn();
 const removeExplainerGameMock = vi.fn();
+const removeAllExplainerGamesMock = vi.fn();
 vi.mock("@/lib/explainer/actions", () => ({
   addExplainerGame: (...args: unknown[]) => addExplainerGameMock(...args),
   updateExplainerGameLevel: (...args: unknown[]) =>
     updateExplainerGameLevelMock(...args),
   removeExplainerGame: (...args: unknown[]) => removeExplainerGameMock(...args),
+  removeAllExplainerGames: (...args: unknown[]) =>
+    removeAllExplainerGamesMock(...args),
 }));
 
 const { MyExplainerGames } = await import("./my-explainer-games");
@@ -105,7 +108,9 @@ describe("MyExplainerGames — Liste (#210)", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Im Schlaf" }));
+    const slider = screen.getByRole("slider");
+    slider.focus();
+    await user.keyboard("{End}");
 
     expect(updateExplainerGameLevelMock).toHaveBeenCalledWith(
       "game-1",
@@ -183,5 +188,40 @@ describe("MyExplainerGames — Liste (#210)", () => {
 
     expect(screen.queryByText("Arche Nova")).not.toBeInTheDocument();
     expect(screen.getByText("Wingspan")).toBeInTheDocument();
+  });
+
+  it("hides the bulk-remove button when there are no own entries", () => {
+    render(<MyExplainerGames myGames={[]} availableGames={AVAILABLE_GAMES} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Alle Spiele entfernen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks for confirmation before removing all entries", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    removeAllExplainerGamesMock.mockResolvedValue({ success: true });
+    render(
+      <MyExplainerGames
+        myGames={[
+          {
+            boardGameId: "game-1",
+            boardGameTitle: "Arche Nova",
+            level: "WITH_MANUAL",
+          },
+        ]}
+        availableGames={AVAILABLE_GAMES}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Alle Spiele entfernen" }),
+    );
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Wirklich alle eigenen Erklärbär-Einträge entfernen?",
+    );
+    expect(removeAllExplainerGamesMock).toHaveBeenCalled();
   });
 });

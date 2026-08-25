@@ -20,6 +20,7 @@ import { ExplainerLevelSlider } from "@/components/entities/explainer-level-slid
 import { useAction } from "@/components/ui/use-action";
 import {
   addExplainerGame,
+  removeAllExplainerGames,
   removeExplainerGame,
   updateExplainerGameLevel,
 } from "@/lib/explainer/actions";
@@ -89,54 +90,59 @@ export function MyExplainerGames({
 
   return (
     <div className="flex flex-col gap-4">
-      <ActionDialog
-        trigger={
-          <Button className="self-end">
-            <Plus className="size-4" />
-            Neues Spiel hinzufügen
-          </Button>
-        }
-        title="Neues Spiel hinzufügen"
-        submitLabel="Hinzufügen"
-        canSubmit={selectedGame !== null}
-        action={() => addExplainerGame(selectedGame?.id ?? "", selectedLevel)}
-        onReset={resetDialog}
-      >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="explainer-search">Spiel suchen</Label>
-            <Combobox
-              items={selectableGames.map((game) => game.title)}
-              value={selectedGame?.title ?? null}
-              inputValue={inputValue}
-              onInputValueChange={setInputValue}
-              onValueChange={handleSelect}
-            >
-              <ComboboxInput
-                id="explainer-search"
-                placeholder="z. B. Arche Nova"
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-serif text-xl font-semibold">
+          Das kann ich erklären:
+        </h2>
+        <ActionDialog
+          trigger={
+            <Button>
+              <Plus className="size-4" />
+              Neues Spiel hinzufügen
+            </Button>
+          }
+          title="Neues Spiel hinzufügen"
+          submitLabel="Hinzufügen"
+          canSubmit={selectedGame !== null}
+          action={() => addExplainerGame(selectedGame?.id ?? "", selectedLevel)}
+          onReset={resetDialog}
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="explainer-search">Spiel suchen</Label>
+              <Combobox
+                items={selectableGames.map((game) => game.title)}
+                value={selectedGame?.title ?? null}
+                inputValue={inputValue}
+                onInputValueChange={setInputValue}
+                onValueChange={handleSelect}
+              >
+                <ComboboxInput
+                  id="explainer-search"
+                  placeholder="z. B. Arche Nova"
+                />
+                <ComboboxPopup>
+                  <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
+                  <ComboboxList>
+                    {(title: string) => (
+                      <ComboboxItem key={title} value={title}>
+                        {title}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxPopup>
+              </Combobox>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Erfahrungsstufe</Label>
+              <ExplainerLevelSlider
+                value={selectedLevel}
+                onChange={setSelectedLevel}
               />
-              <ComboboxPopup>
-                <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
-                <ComboboxList>
-                  {(title: string) => (
-                    <ComboboxItem key={title} value={title}>
-                      {title}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxPopup>
-            </Combobox>
+            </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Erfahrungsstufe</Label>
-            <ExplainerLevelSlider
-              value={selectedLevel}
-              onChange={setSelectedLevel}
-            />
-          </div>
-        </div>
-      </ActionDialog>
+        </ActionDialog>
+      </div>
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
@@ -165,17 +171,20 @@ export function MyExplainerGames({
         {filteredGames.map((game) => (
           <div
             key={game.boardGameId}
-            className="bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3"
+            className="bg-card flex items-center gap-4 rounded-lg border p-3"
           >
-            <span className="font-medium">{game.boardGameTitle}</span>
+            <span className="max-w-[30%] truncate font-medium">
+              {game.boardGameTitle}
+            </span>
             <ExplainerLevelSlider
               value={game.level}
               onChange={(level) => handleLevelChange(game.boardGameId, level)}
-              className="min-w-40 flex-grow"
+              className="ml-auto w-1/2"
             />
             <ActionButton
               variant="destructive"
               size="sm"
+              className="shrink-0"
               confirm={`${game.boardGameTitle} wirklich als Erklärbär-Eintrag entfernen?`}
               action={() => removeExplainerGame(game.boardGameId)}
             >
@@ -185,6 +194,19 @@ export function MyExplainerGames({
           </div>
         ))}
       </div>
+
+      {myGames.length > 0 && (
+        <ActionButton
+          variant="destructive"
+          size="sm"
+          className="self-end"
+          confirm="Wirklich alle eigenen Erklärbär-Einträge entfernen?"
+          action={() => removeAllExplainerGames()}
+        >
+          <Trash2 className="size-4" />
+          Alle Spiele entfernen
+        </ActionButton>
+      )}
     </div>
   );
 }
