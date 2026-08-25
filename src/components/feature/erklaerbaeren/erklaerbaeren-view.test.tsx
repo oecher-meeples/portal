@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 afterEach(() => {
   cleanup();
@@ -52,7 +53,8 @@ describe("ErklaerbaerenView — Verzeichnis nur für Admins (#210)", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the full directory section for an admin", () => {
+  it("shows the full directory section for an admin", async () => {
+    const user = userEvent.setup();
     render(
       <ErklaerbaerenView
         directory={DIRECTORY}
@@ -65,6 +67,11 @@ describe("ErklaerbaerenView — Verzeichnis nur für Admins (#210)", () => {
     expect(
       screen.getByRole("heading", { name: "Erklärbären-Verzeichnis" }),
     ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Erklärbären-Verzeichnis" }),
+    );
+
     expect(screen.getByText("Arche Nova")).toBeInTheDocument();
   });
 });

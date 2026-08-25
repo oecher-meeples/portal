@@ -116,7 +116,11 @@
 - Fehler-Zustände: "Kein Kamerazugriff", "Kein Code erkannt"
 
 ### 2.10 Erklärbär-Verzeichnis
-- Volles Verzeichnis (Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA) nur für Admins sichtbar (Permission-Check, kein Rollen-Enum) — Meeple sehen diesen Abschnitt nicht (#210)
+- Volles Verzeichnis nur für Admins sichtbar (Permission-Check, kein Rollen-Enum) — Meeple sehen diesen Abschnitt nicht (#210)
+  - Als Akkordeon eingeklappt (Default: zu), Klick auf "Erklärbären-Verzeichnis" klappt auf
+  - Textfilter oberhalb der Liste (Spieltitel)
+  - Switch "Spiele ohne Erklärer anzeigen?", Akzentfarbe wenn aktiv; Default: nur Spiele mit mind. einem Erklärer
+  - Je Zeile: Spieltitel + Akzent-Badge mit Erklärer-Anzahl + Lupen-Symbol, das die Erklärbären-Liste des Spiels als Dialog zeigt (`ExplainerListDialogTrigger`, gleiche Komponente wie auf der Ludothek-Detailseite)
 - Eigenansicht "Das kann ich erklären:" für alle Meeple, unabhängig vom Verzeichnis:
   - "Neues Spiel hinzufügen"-Button öffnet einen Dialog mit Combobox-Suche über den eigenen Spielbestand (analog `create-lfg-dialog.tsx`) und direkter Auswahl der Erfahrungsstufe (Slider); erst beim Bestätigen wird der Eintrag angelegt
   - Textfilter oberhalb der Liste zum Suchen innerhalb der eigenen Einträge

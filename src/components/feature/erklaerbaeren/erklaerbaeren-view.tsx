@@ -25,9 +25,6 @@ export function ErklaerbaerenView({
     <div className="flex flex-col gap-8">
       {isAdmin && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-serif text-xl font-semibold">
-            Erklärbären-Verzeichnis
-          </h2>
           <ExplainerDirectory entries={directory} />
         </section>
       )}

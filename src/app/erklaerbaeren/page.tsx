@@ -49,6 +49,18 @@ export default async function ErklaerbaerenPage() {
     }
   }
 
+  // Games without an Erklärbär are absent from `explainerGames` above —
+  // the admin view can still show them (toggled via a Switch, #210).
+  for (const game of availableGames) {
+    if (!directoryByGame.has(game.id)) {
+      directoryByGame.set(game.id, {
+        boardGameId: game.id,
+        boardGameTitle: game.title,
+        explainers: [],
+      });
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
