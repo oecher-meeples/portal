@@ -14,22 +14,21 @@ import { requireEnv } from "@/lib/utils/require-env";
  * for uploads (`BLOB_READ_WRITE_TOKEN`, see `use-blob-upload.ts`) — that is
  * exact, documented, and needs no extra token/scope.
  *
- * The included-storage limit (5 GB) is likewise not exposed by any API; it
- * is Vercel's documented Hobby/Pro included storage volume, see the pricing
- * example on https://vercel.com/docs/vercel-blob/usage-and-pricing
- * ("50 GB total - 5 GB included"). This club project runs on Hobby
- * (docs/kostenanalyse.md), so 5 GB is the correct limit for the percentage.
+ * The included-storage limit is likewise not exposed by any API — it's
+ * Vercel's included storage volume for this project's actual plan/usage
+ * tier, confirmed against the Vercel dashboard (1 GB, checked 2026-08-26)
+ * rather than assumed from the generic Hobby-plan pricing page.
  */
-const INCLUDED_STORAGE_BYTES = 5 * 1024 * 1024 * 1024;
+const INCLUDED_STORAGE_BYTES = 1 * 1024 * 1024 * 1024;
 
 /** Warning stage for the current fill level. How each stage *looks* (colour)
  * is a display concern and lives in `components/entities/*` instead. */
 export type BlobStorageTone = "ok" | "warning" | "critical";
 
-/** Pure threshold rule: ok below 80%, warning 80–94%, critical from 95%. */
+/** Pure threshold rule: ok below 75%, warning 75–89%, critical from 90%. */
 export function getBlobStorageTone(percent: number): BlobStorageTone {
-  if (percent >= 95) return "critical";
-  if (percent >= 80) return "warning";
+  if (percent >= 90) return "critical";
+  if (percent >= 75) return "warning";
   return "ok";
 }
 

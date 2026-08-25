@@ -23,8 +23,8 @@ describe("getBlobStorageUsage", () => {
     const result = await getBlobStorageUsage();
 
     expect(result.used).toBe(3000);
-    expect(result.limit).toBe(5 * 1024 * 1024 * 1024);
-    expect(result.percent).toBeCloseTo((3000 / (5 * 1024 * 1024 * 1024)) * 100);
+    expect(result.limit).toBe(1 * 1024 * 1024 * 1024);
+    expect(result.percent).toBeCloseTo((3000 / (1 * 1024 * 1024 * 1024)) * 100);
     expect(listMock).toHaveBeenCalledTimes(1);
   });
 
@@ -71,18 +71,18 @@ describe("getBlobStorageUsage", () => {
 });
 
 describe("getBlobStorageTone", () => {
-  it("is ok below 80%", () => {
+  it("is ok below 75%", () => {
     expect(getBlobStorageTone(0)).toBe("ok");
-    expect(getBlobStorageTone(79.9)).toBe("ok");
+    expect(getBlobStorageTone(74.9)).toBe("ok");
   });
 
-  it("is warning from 80% up to (excluding) 95%", () => {
-    expect(getBlobStorageTone(80)).toBe("warning");
-    expect(getBlobStorageTone(94.9)).toBe("warning");
+  it("is warning from 75% up to (excluding) 90%", () => {
+    expect(getBlobStorageTone(75)).toBe("warning");
+    expect(getBlobStorageTone(89.9)).toBe("warning");
   });
 
-  it("is critical from 95% and above", () => {
-    expect(getBlobStorageTone(95)).toBe("critical");
+  it("is critical from 90% and above", () => {
+    expect(getBlobStorageTone(90)).toBe("critical");
     expect(getBlobStorageTone(120)).toBe("critical");
   });
 });
