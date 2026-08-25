@@ -1,4 +1,4 @@
-import { requireMember } from "@/lib/auth/session";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { PageHeading } from "@/components/ui/page-heading";
 import { ErklaerbaerenView } from "@/components/feature/erklaerbaeren/erklaerbaeren-view";
@@ -6,7 +6,8 @@ import type { ExplainerDirectoryEntry } from "@/components/feature/erklaerbaeren
 import type { MyExplainerGame } from "@/components/feature/erklaerbaeren/my-explainer-games";
 
 export default async function ErklaerbaerenPage() {
-  const { meeple } = await requireMember();
+  const { user, meeple } = await requireMember();
+  const isAdmin = await hasPermissionInCurrentView(user.id, "admin:access");
 
   const [explainerGames, availableGames] = await Promise.all([
     prisma.explainerGame.findMany({
@@ -48,6 +49,18 @@ export default async function ErklaerbaerenPage() {
     }
   }
 
+  // Games without an Erklärbär are absent from `explainerGames` above —
+  // the admin view can still show them (toggled via a Switch, #210).
+  for (const game of availableGames) {
+    if (!directoryByGame.has(game.id)) {
+      directoryByGame.set(game.id, {
+        boardGameId: game.id,
+        boardGameTitle: game.title,
+        explainers: [],
+      });
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -59,6 +72,7 @@ export default async function ErklaerbaerenPage() {
         directory={[...directoryByGame.values()]}
         myGames={myGames}
         availableGames={availableGames}
+        isAdmin={isAdmin}
       />
     </div>
   );
