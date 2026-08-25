@@ -33,8 +33,24 @@ vi.mock("@/lib/members/selbstauskunft-mail", () => ({
     sendSelbstauskunftMailMock(...args),
 }));
 
+// The role CRUD rules themselves live in the lib layer and are tested in
+// src/lib/auth/roles.test.ts — here only the action wrappers matter.
+const createRoleRecordMock = vi.fn();
+const updateRoleRecordMock = vi.fn();
+const deleteRoleRecordMock = vi.fn();
+const setRolePermissionsRecordMock = vi.fn();
+vi.mock("@/lib/auth/roles", () => ({
+  createRole: (...args: unknown[]) => createRoleRecordMock(...args),
+  updateRole: (...args: unknown[]) => updateRoleRecordMock(...args),
+  deleteRole: (...args: unknown[]) => deleteRoleRecordMock(...args),
+  setRolePermissions: (...args: unknown[]) =>
+    setRolePermissionsRecordMock(...args),
+}));
+
 const {
   anonymiseMeeple,
+  createRole,
+  deleteRole,
   getOpenHoldingsSummary,
   recordResignation,
   renameMeeple,
@@ -43,6 +59,8 @@ const {
   sendSelbstauskunft,
   setMeepleRole,
   setMemberNumber,
+  setRolePermissions,
+  updateRole,
 } = await import("./actions");
 
 class ForbiddenError extends Error {}
@@ -54,6 +72,12 @@ beforeEach(() => {
   requireBankReaderMock.mockReset().mockResolvedValue({ id: "meeple-admin" });
   revealMeepleIbanMock.mockReset();
   sendSelbstauskunftMailMock.mockReset().mockResolvedValue({ success: true });
+  createRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  updateRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  deleteRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  setRolePermissionsRecordMock.mockReset().mockResolvedValue({
+    success: true,
+  });
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -83,9 +107,21 @@ describe("without the members:manage permission", () => {
     await expect(sendSelbstauskunft("meeple-1")).rejects.toThrow(
       ForbiddenError,
     );
+    await expect(createRole("Vorstand", null)).rejects.toThrow(ForbiddenError);
+    await expect(updateRole("role-1", "Vorstand", null)).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(deleteRole("role-1")).rejects.toThrow(ForbiddenError);
+    await expect(setRolePermissions("role-1", ["perm-1"])).rejects.toThrow(
+      ForbiddenError,
+    );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
     expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
+    expect(createRoleRecordMock).not.toHaveBeenCalled();
+    expect(updateRoleRecordMock).not.toHaveBeenCalled();
+    expect(deleteRoleRecordMock).not.toHaveBeenCalled();
+    expect(setRolePermissionsRecordMock).not.toHaveBeenCalled();
   });
 });
 
@@ -262,6 +298,78 @@ describe("sendSelbstauskunft", () => {
 
     expect(await sendSelbstauskunft("meeple-1")).toEqual({
       error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
+    });
+  });
+});
+
+describe("createRole", () => {
+  it("delegates to the shared role rules and revalidates on success", async () => {
+    expect(await createRole("Vorstand", "Leitung")).toEqual({
+      success: true,
+    });
+    expect(createRoleRecordMock).toHaveBeenCalledWith("Vorstand", "Leitung");
+  });
+
+  it("passes a rule violation straight back", async () => {
+    createRoleRecordMock.mockResolvedValue({
+      error: "Eine Rolle mit dem Namen „Vorstand“ existiert bereits.",
+    });
+
+    expect(await createRole("Vorstand", null)).toEqual({
+      error: "Eine Rolle mit dem Namen „Vorstand“ existiert bereits.",
+    });
+  });
+});
+
+describe("updateRole", () => {
+  it("delegates to the shared role rules and revalidates on success", async () => {
+    expect(await updateRole("role-1", "Vorstand", "Leitung")).toEqual({
+      success: true,
+    });
+    expect(updateRoleRecordMock).toHaveBeenCalledWith(
+      "role-1",
+      "Vorstand",
+      "Leitung",
+    );
+  });
+
+  it("passes a rule violation straight back", async () => {
+    updateRoleRecordMock.mockResolvedValue({
+      error: "Eine Rolle mit dem Namen „Vorstand“ existiert bereits.",
+    });
+
+    expect(await updateRole("role-1", "Vorstand", null)).toEqual({
+      error: "Eine Rolle mit dem Namen „Vorstand“ existiert bereits.",
+    });
+  });
+});
+
+describe("deleteRole", () => {
+  it("delegates to the shared role rules and revalidates on success", async () => {
+    expect(await deleteRole("role-1")).toEqual({ success: true });
+    expect(deleteRoleRecordMock).toHaveBeenCalledWith("role-1");
+  });
+});
+
+describe("setRolePermissions", () => {
+  it("delegates to the shared role rules and revalidates on success", async () => {
+    expect(await setRolePermissions("role-1", ["perm-a"])).toEqual({
+      success: true,
+    });
+    expect(setRolePermissionsRecordMock).toHaveBeenCalledWith("role-1", [
+      "perm-a",
+    ]);
+  });
+
+  it("passes a rule violation straight back (e.g. the system-admin role)", async () => {
+    setRolePermissionsRecordMock.mockResolvedValue({
+      error:
+        "Diese Rolle gewährt Systemzugriff und behält deshalb immer alle Rechte — sie können nicht einzeln entzogen werden.",
+    });
+
+    expect(await setRolePermissions("role-admin", [])).toEqual({
+      error:
+        "Diese Rolle gewährt Systemzugriff und behält deshalb immer alle Rechte — sie können nicht einzeln entzogen werden.",
     });
   });
 });

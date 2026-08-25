@@ -51,3 +51,4 @@ next-env.d.ts
 
 # transiente Session-Notizen — Plaene und Audits in .claude/ bleiben getrackt
 .claude/TODO.md
+.claude/epics.md

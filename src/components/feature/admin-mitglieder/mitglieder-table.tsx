@@ -151,6 +151,7 @@ export function MitgliederTable({
                       meepleId={meeple.id}
                       roleId={meeple.roleId}
                       roles={roles}
+                      protected={meeple.displayName === "Admin"}
                     />
                   ) : (
                     "Kein Konto"
