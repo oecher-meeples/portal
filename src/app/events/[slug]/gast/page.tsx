@@ -4,6 +4,7 @@ import {
   getFreeGamesInRoom,
   getGuestFleaMarketItems,
 } from "@/lib/events/guest-area";
+import { isBringAndBuyMarketOpen } from "@/lib/events/upcoming";
 import { GuestAreaView } from "@/components/feature/guest-area/guest-area-view";
 import type { FreeGameEntry } from "@/components/feature/guest-area/free-games-list";
 
@@ -19,9 +20,11 @@ export default async function EventGuestAreaPage({
     notFound();
   }
 
+  const showBringAndBuy = isBringAndBuyMarketOpen(event);
+
   const [freeGames, fleaMarketItems] = await Promise.all([
     getFreeGamesInRoom(event.id, {}),
-    getGuestFleaMarketItems(event.id),
+    showBringAndBuy ? getGuestFleaMarketItems(event.id) : Promise.resolve([]),
   ]);
 
   const freeGameEntries: FreeGameEntry[] = freeGames.map((game) => ({
