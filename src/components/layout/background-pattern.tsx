@@ -10,7 +10,10 @@
  */
 export function BackgroundPattern() {
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 select-none opacity-10" aria-hidden>
+    <div
+      className="pointer-events-none fixed inset-0 -z-10 opacity-10 select-none"
+      aria-hidden
+    >
       <div
         className="absolute inset-0 bg-repeat dark:hidden"
         style={{ backgroundImage: "url(/games-pattern-light-bg.png)" }}
