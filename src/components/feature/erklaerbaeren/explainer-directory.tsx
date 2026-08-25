@@ -38,12 +38,15 @@ export function ExplainerDirectory({
 
   return (
     <Accordion defaultValue={[]}>
-      <AccordionItem value="directory" className="border-b-0">
-        <AccordionTrigger className="font-serif text-xl font-semibold hover:no-underline">
+      <AccordionItem
+        value="directory"
+        className="bg-card overflow-hidden rounded-lg border"
+      >
+        <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 font-serif text-xl font-semibold hover:no-underline">
           Erklärbären-Verzeichnis
         </AccordionTrigger>
         <AccordionPanel>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 px-4 pb-1">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <TextField
                 id="explainer-directory-filter"
