@@ -138,6 +138,33 @@ describe("AdminBestandView search", () => {
   });
 });
 
+describe("AdminBestandView defaultQuickFilter (#224-Folge)", () => {
+  it("pre-selects the quick filter from the Admin-Dashboard deep link", () => {
+    render(
+      <AdminBestandView
+        games={[
+          ...games,
+          {
+            ...games[0],
+            id: "3",
+            title: "Nicht erfasst",
+            zustand: "nicht-erfasst" as const,
+          },
+        ]}
+        showDeinventarised={false}
+        canManageGames={false}
+        defaultQuickFilter="nicht-erfasst"
+      />,
+    );
+
+    expect(
+      screen.getByRole("cell", { name: "Nicht erfasst" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Catan")).not.toBeInTheDocument();
+    expect(screen.queryByText("Carcassonne")).not.toBeInTheDocument();
+  });
+});
+
 describe("AdminBestandView CSV export gating", () => {
   it("hides the export without games:manage", () => {
     render(
