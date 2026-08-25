@@ -116,7 +116,10 @@
 - Fehler-Zustände: "Kein Kamerazugriff", "Kein Code erkannt"
 
 ### 2.10 Erklärbär-Verzeichnis
-- Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA
+- Volles Verzeichnis (Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA) nur für Admins sichtbar (Permission-Check, kein Rollen-Enum) — Meeple sehen diesen Abschnitt nicht (#210)
+- Eigenansicht "Meine Spiele als Erklärbär" für alle Meeple, unabhängig vom Verzeichnis:
+  - Combobox-Suche über den eigenen Spielbestand (analog `create-lfg-dialog.tsx`); Auswahl trägt das Spiel sofort mit Erfahrungsstufe "Kann es mit Anleitung erklären" ein
+  - Quick-Edit je Eintrag: Erfahrungsstufen-Toggle + Entfernen
 
 ### 2.11 Event-Helferplan — Übersicht
 - Event-Auswahl, darunter Schichtplan-Tabelle (Zeit × Schicht-Typ: Theke/Kasse/Leihe)
