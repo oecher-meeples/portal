@@ -5,6 +5,15 @@ export type RoleActionResult = { error: string } | { success: true };
 
 const UNIQUE_CONSTRAINT_CODE = "P2002";
 
+/**
+ * Die Rolle, die aktuell "admin:access" gewährt, ist der Systemzugriff
+ * (siehe src/lib/auth/session.ts) — sie darf nie weniger als alle Rechte
+ * haben, sonst droht wieder ein stiller Lockout wie im ursprünglichen Bug
+ * (#219-Review: Umbenennen der Rolle hat den Zugriff entzogen). Identifiziert
+ * über die Permission, nicht über den Rollennamen — der bleibt frei änderbar.
+ */
+const ADMIN_ACCESS_PERMISSION_KEY = "admin:access";
+
 function isUniqueConstraintError(error: unknown) {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -80,13 +89,29 @@ export async function deleteRole(roleId: string): Promise<RoleActionResult> {
 /**
  * Sets a role's permissions to exactly the given list — removes any
  * RolePermission rows not in `permissionIds` and adds the missing ones.
- * An empty list clears all permissions from the role.
+ * An empty list clears all permissions from the role. Refuses outright for
+ * the role that currently grants "admin:access" (see
+ * ADMIN_ACCESS_PERMISSION_KEY) — that one always keeps all rights.
  * Does not check permissions — that is the caller's job.
  */
 export async function setRolePermissions(
   roleId: string,
   permissionIds: string[],
 ): Promise<RoleActionResult> {
+  const currentPermissions = await prisma.rolePermission.findMany({
+    where: { roleId },
+    include: { permission: true },
+  });
+  const isSystemAdminRole = currentPermissions.some(
+    (entry) => entry.permission.key === ADMIN_ACCESS_PERMISSION_KEY,
+  );
+  if (isSystemAdminRole) {
+    return {
+      error:
+        "Diese Rolle gewährt Systemzugriff und behält deshalb immer alle Rechte — sie können nicht einzeln entzogen werden.",
+    };
+  }
+
   await prisma.$transaction([
     prisma.rolePermission.deleteMany({
       where: { roleId, permissionId: { notIn: permissionIds } },
