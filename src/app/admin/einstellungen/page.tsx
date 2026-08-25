@@ -6,7 +6,10 @@ import { SettingsCard } from "@/components/feature/admin-settings/settings-card"
 export default async function AdminSettingsPage() {
   await requireAdmin();
 
-  const connection = await prisma.instagramConnection.findFirst();
+  const [connection, storageUnitCount] = await Promise.all([
+    prisma.instagramConnection.findFirst(),
+    prisma.storageUnit.count(),
+  ]);
 
   const modules = [
     {
@@ -21,6 +24,7 @@ export default async function AdminSettingsPage() {
       title: "Aufbewahrungseinheiten",
       description: "Lagerorte für den Spielebestand verwalten.",
       href: "/admin/einheiten",
+      count: storageUnitCount,
     },
   ];
 

@@ -14,6 +14,7 @@ export function SettingsCard({
   description,
   href,
   status,
+  count,
 }: {
   title: string;
   description: string;
@@ -22,11 +23,20 @@ export function SettingsCard({
     label: string;
     variant?: VariantProps<typeof badgeVariants>["variant"];
   };
+  count?: number;
 }) {
   return (
     <Link href={href}>
-      <Card className="hover:bg-muted/50 transition-colors">
-        <CardHeader>
+      <Card className="hover:bg-muted/50 relative transition-colors">
+        {count !== undefined && (
+          <Badge
+            variant="default"
+            className="absolute top-1/2 right-4 h-7 min-w-7 -translate-y-1/2 px-2.5 text-sm"
+          >
+            {count}
+          </Badge>
+        )}
+        <CardHeader className={count !== undefined ? "pr-14" : undefined}>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>{title}</CardTitle>
             {status && (
