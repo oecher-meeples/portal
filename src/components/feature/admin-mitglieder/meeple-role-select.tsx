@@ -15,13 +15,27 @@ export function MeepleRoleSelect({
   meepleId,
   roleId,
   roles,
+  protected: isProtected = false,
 }: {
   meepleId: string;
   roleId: string | null;
   roles: RoleOption[];
+  /** Der seed-erzeugte Fallback-Admin (displayName "Admin", siehe actions.ts::setMeepleRole) — Rolle bleibt fest. */
+  protected?: boolean;
 }) {
   const [value, setValue] = useState(roleId ?? "");
   const { run, pending, error } = useAction();
+
+  if (isProtected) {
+    return (
+      <span
+        className="text-muted-foreground text-sm"
+        title="Die Rolle dieses Kontos ist geschützt und kann nicht geändert werden."
+      >
+        {roles.find((role) => role.id === roleId)?.name ?? "—"}
+      </span>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-1">

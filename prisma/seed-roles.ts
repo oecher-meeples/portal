@@ -1,6 +1,11 @@
 import { prisma } from "../src/lib/utils/prisma";
 
 const PERMISSIONS = [
+  {
+    key: "admin:access",
+    description:
+      'Zugriff auf den Admin-Bereich und dessen Tier-Vorschau (ersetzt die frühere Prüfung auf den Rollennamen "admin", siehe src/lib/auth/session.ts)',
+  },
   { key: "posts:write", description: "Beiträge erstellen und bearbeiten" },
   { key: "posts:delete", description: "Beiträge löschen" },
   {
@@ -44,23 +49,42 @@ const PERMISSIONS = [
 
 const ROLES = [
   {
-    name: "admin",
+    name: "sysadmin",
     description: "Vollzugriff",
     permissionKeys: PERMISSIONS.map((p) => p.key),
   },
   {
-    name: "moderator",
-    description: "Redaktion",
-    permissionKeys: ["posts:write"],
+    name: "Vorstand",
+    description:
+      "Vereinsvorstand — verwaltet Mitglieder, Einladungen, Events, Ludothek, Downloads, Rechtliches und wichtige Links",
+    permissionKeys: [
+      "members:manage",
+      "invites:manage",
+      "events:manage",
+      "games:manage",
+      "downloads:manage",
+      "legal:manage",
+      "links:manage",
+    ],
   },
   {
-    name: "kassenwart",
+    name: "Kassenwart",
     description:
       "Beitragseinzug — darf Bankdaten entschlüsseln, jeder Zugriff wird protokolliert",
     permissionKeys: ["bank:read"],
   },
   {
-    name: "mitglied",
+    name: "Spielewart",
+    description: "Ludothek verwalten",
+    permissionKeys: ["games:manage"],
+  },
+  {
+    name: "Redakteur",
+    description: "Redaktion — Beiträge und Instagram-Verbindung verwalten",
+    permissionKeys: ["posts:write", "posts:delete", "instagram:connect"],
+  },
+  {
+    name: "Meeple",
     description: "Standardrolle nach Registrierung",
     permissionKeys: [],
   },

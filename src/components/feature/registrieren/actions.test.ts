@@ -27,7 +27,7 @@ const BOUND_INVITE = {
   revokedAt: null,
 };
 
-const ROLE = { id: "role-1", name: "mitglied", description: null };
+const ROLE = { id: "role-1", name: "Meeple", description: null };
 
 function mockHappyPath(
   invite: Omit<typeof BOUND_INVITE, "email"> & { email: string | null },
