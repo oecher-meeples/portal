@@ -3,8 +3,15 @@
 import { useMemo, useState } from "react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+} from "@/components/ui/combobox";
 import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
 import { useAction } from "@/components/ui/use-action";
 import {
@@ -24,10 +31,6 @@ export type SelectableGame = {
   title: string;
 };
 
-function selectClassName() {
-  return "border-input h-8 w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
-}
-
 export function MyExplainerGames({
   myGames,
   availableGames,
@@ -35,15 +38,9 @@ export function MyExplainerGames({
   myGames: MyExplainerGame[];
   availableGames: SelectableGame[];
 }) {
-  const [filter, setFilter] = useState("");
-  const [selectedGameId, setSelectedGameId] = useState("");
-  const [newLevel, setNewLevel] =
-    useState<ExplainerExperienceLevel>("WITH_MANUAL");
+  const [inputValue, setInputValue] = useState("");
   const addAction = useAction({
-    onSuccess: () => {
-      setSelectedGameId("");
-      setFilter("");
-    },
+    onSuccess: () => setInputValue(""),
   });
   const levelAction = useAction();
   const removeAction = useAction();
@@ -54,16 +51,15 @@ export function MyExplainerGames({
     [myGames],
   );
 
-  const filteredGames = useMemo(() => {
-    const query = filter.trim().toLowerCase();
-    return availableGames
-      .filter((game) => !ownGameIds.has(game.id))
-      .filter((game) => !query || game.title.toLowerCase().includes(query));
-  }, [availableGames, ownGameIds, filter]);
+  const selectableGames = useMemo(
+    () => availableGames.filter((game) => !ownGameIds.has(game.id)),
+    [availableGames, ownGameIds],
+  );
 
-  function handleAdd() {
-    if (!selectedGameId) return;
-    addAction.run(() => addExplainerGame(selectedGameId, newLevel));
+  function handleSelect(title: string | null) {
+    const selected = selectableGames.find((game) => game.title === title);
+    if (!selected) return;
+    addAction.run(() => addExplainerGame(selected.id, "WITH_MANUAL"));
   }
 
   function handleLevelChange(
@@ -82,44 +78,38 @@ export function MyExplainerGames({
       <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
         <p className="font-medium">Neues Spiel hinzufügen</p>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="explainer-filter">Spiel suchen</Label>
-          <Input
-            id="explainer-filter"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder="z. B. Arche Nova"
-          />
+          <Label htmlFor="explainer-search">Spiel suchen</Label>
+          <Combobox
+            items={selectableGames.map((game) => game.title)}
+            value={null}
+            inputValue={inputValue}
+            onInputValueChange={setInputValue}
+            onValueChange={handleSelect}
+          >
+            <ComboboxInput
+              id="explainer-search"
+              placeholder="z. B. Arche Nova"
+            />
+            <ComboboxPopup>
+              <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
+              <ComboboxList>
+                {(title: string) => (
+                  <ComboboxItem key={title} value={title}>
+                    {title}
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxPopup>
+          </Combobox>
+          <p className="text-muted-foreground text-xs">
+            Auswahl trägt dich mit der Erfahrungsstufe „Kann es mit Anleitung
+            erklären“ ein — danach unten per Quick-Edit änderbar.
+          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="explainer-game">Spiel</Label>
-            <select
-              id="explainer-game"
-              className={selectClassName()}
-              value={selectedGameId}
-              onChange={(event) => setSelectedGameId(event.target.value)}
-            >
-              <option value="">Spiel auswählen…</option>
-              {filteredGames.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Erfahrungsstufe</Label>
-            <ExplainerLevelToggle value={newLevel} onChange={setNewLevel} />
-          </div>
-        </div>
+        {addAction.pending && (
+          <p className="text-muted-foreground text-sm">Speichere…</p>
+        )}
         {error && <p className="text-destructive text-sm">{error}</p>}
-        <Button
-          onClick={handleAdd}
-          disabled={!selectedGameId || addAction.pending}
-          className="w-fit"
-        >
-          {addAction.pending ? "Speichere…" : "Hinzufügen"}
-        </Button>
       </div>
 
       <div className="flex flex-col gap-2">
