@@ -9,17 +9,25 @@ export type SegmentedSliderOption<T extends string> = {
   label: string;
 };
 
+/** Fine-grained steps between two adjacent options — makes dragging feel
+ * smooth (the thumb isn't limited to jumping between just the option
+ * count's worth of stops) while the value still only ever settles on one
+ * of `options` once released. */
+const STEPS_PER_OPTION = 100;
+
 /**
  * Discrete horizontal slider over a small, fixed set of string values.
  * Labels sit above the track (start/middle/.../end) and double as click
- * targets — the active one is highlighted in the accent color. There is no
- * "none" state, the value is always one of `options`.
+ * targets — the one nearest the thumb is highlighted in the accent color.
+ * There is no "none" state, the value is always one of `options`.
  *
- * `onChange` fires once per interaction — on drag release (snapped to the
- * nearest step) or on a label click — not on every intermediate pixel while
- * dragging. Callers typically wire this to a server action; firing on every
- * drag step would flood it with calls. The thumb still follows the pointer
- * smoothly during the drag via local draft state.
+ * Internally the track uses a fine-grained range so dragging feels smooth;
+ * on release the thumb snaps to the nearest option and `onChange` fires
+ * once with that option's value — not on every intermediate pixel while
+ * dragging. Callers typically wire this to a server action; firing on
+ * every drag step would flood it with calls. A label click commits
+ * immediately, as does a keyboard step (Home/End jump to the first/last
+ * option, Shift+Arrow moves a full option at a time).
  */
 export function SegmentedSlider<T extends string>({
   options,
@@ -34,21 +42,40 @@ export function SegmentedSlider<T extends string>({
   disabled?: boolean;
   className?: string;
 }) {
+  const max = (options.length - 1) * STEPS_PER_OPTION;
+
+  function indexToPosition(index: number) {
+    return Math.max(0, index) * STEPS_PER_OPTION;
+  }
+
+  function positionToIndex(position: number) {
+    return Math.min(
+      options.length - 1,
+      Math.max(0, Math.round(position / STEPS_PER_OPTION)),
+    );
+  }
+
   const committedIndex = Math.max(
     0,
     options.findIndex((option) => option.value === value),
   );
-  const [draftIndex, setDraftIndex] = useState(committedIndex);
+  const committedPosition = indexToPosition(committedIndex);
+
+  const [draftPosition, setDraftPosition] = useState(committedPosition);
   // Adjust state during render (React-recommended, no Effect) when the
   // external value changes — e.g. after a server response confirms it.
-  const [prevCommittedIndex, setPrevCommittedIndex] = useState(committedIndex);
-  if (committedIndex !== prevCommittedIndex) {
-    setPrevCommittedIndex(committedIndex);
-    setDraftIndex(committedIndex);
+  const [prevCommittedPosition, setPrevCommittedPosition] =
+    useState(committedPosition);
+  if (committedPosition !== prevCommittedPosition) {
+    setPrevCommittedPosition(committedPosition);
+    setDraftPosition(committedPosition);
   }
 
-  function handleValueCommitted(nextIndex: number) {
-    const option = options[nextIndex];
+  const nearestIndex = positionToIndex(draftPosition);
+
+  function commit(index: number) {
+    const option = options[index];
+    setDraftPosition(indexToPosition(index));
     if (option) onChange(option.value);
   }
 
@@ -60,13 +87,10 @@ export function SegmentedSlider<T extends string>({
             key={option.value}
             type="button"
             disabled={disabled}
-            onClick={() => {
-              setDraftIndex(i);
-              onChange(option.value);
-            }}
+            onClick={() => commit(i)}
             className={cn(
               "text-muted-foreground text-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
-              i === draftIndex && "text-primary",
+              i === nearestIndex && "text-primary",
             )}
           >
             {option.label}
@@ -74,13 +98,14 @@ export function SegmentedSlider<T extends string>({
         ))}
       </div>
       <SliderPrimitive.Root
-        value={draftIndex}
+        value={draftPosition}
         min={0}
-        max={options.length - 1}
+        max={max}
         step={1}
+        largeStep={STEPS_PER_OPTION}
         disabled={disabled}
-        onValueChange={setDraftIndex}
-        onValueCommitted={handleValueCommitted}
+        onValueChange={setDraftPosition}
+        onValueCommitted={(position) => commit(positionToIndex(position))}
       >
         <SliderPrimitive.Control className="flex w-full items-center py-1">
           <SliderPrimitive.Track className="bg-muted relative h-1.5 w-full rounded-full">
