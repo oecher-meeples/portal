@@ -46,7 +46,11 @@ export function MultiSelectCombobox({
             <ComboboxChipRemove aria-label={`${item} entfernen`} />
           </ComboboxChip>
         ))}
-        <ComboboxInput id={id} placeholder={placeholder} />
+        <ComboboxInput
+          id={id}
+          placeholder={placeholder}
+          className="h-auto min-w-24 border-none bg-transparent p-0 shadow-none focus-visible:ring-0"
+        />
       </ComboboxChips>
       <ComboboxPopup>
         <ComboboxEmpty>{emptyLabel}</ComboboxEmpty>

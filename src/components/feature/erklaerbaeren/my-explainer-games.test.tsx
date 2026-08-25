@@ -29,16 +29,37 @@ const AVAILABLE_GAMES = [
   { id: "game-2", title: "Wingspan" },
 ];
 
-describe("MyExplainerGames — Combobox-Suche (#210)", () => {
-  it("adds the selected game with level WITH_MANUAL via the combobox", async () => {
+async function openAddDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: "Neues Spiel hinzufügen" }),
+  );
+}
+
+describe("MyExplainerGames — Dialog mit Combobox-Suche (#210)", () => {
+  it("adds the selected game with the chosen level via the dialog", async () => {
     const user = userEvent.setup();
     addExplainerGameMock.mockResolvedValue({ success: true });
     render(<MyExplainerGames myGames={[]} availableGames={AVAILABLE_GAMES} />);
 
+    await openAddDialog(user);
     await user.click(screen.getByRole("combobox"));
     await user.click(await screen.findByRole("option", { name: "Arche Nova" }));
+    await user.click(screen.getByRole("button", { name: "Ohne Anleitung" }));
+    await user.click(screen.getByRole("button", { name: "Hinzufügen" }));
 
-    expect(addExplainerGameMock).toHaveBeenCalledWith("game-1", "WITH_MANUAL");
+    expect(addExplainerGameMock).toHaveBeenCalledWith(
+      "game-1",
+      "WITHOUT_MANUAL",
+    );
+  });
+
+  it("disables the submit button until a game is selected", async () => {
+    const user = userEvent.setup();
+    render(<MyExplainerGames myGames={[]} availableGames={AVAILABLE_GAMES} />);
+
+    await openAddDialog(user);
+
+    expect(screen.getByRole("button", { name: "Hinzufügen" })).toBeDisabled();
   });
 
   it("excludes games the Meeple already has an entry for", async () => {
@@ -56,6 +77,7 @@ describe("MyExplainerGames — Combobox-Suche (#210)", () => {
       />,
     );
 
+    await openAddDialog(user);
     await user.click(screen.getByRole("combobox"));
     expect(
       screen.queryByRole("option", { name: "Arche Nova" }),
@@ -64,9 +86,36 @@ describe("MyExplainerGames — Combobox-Suche (#210)", () => {
       await screen.findByRole("option", { name: "Wingspan" }),
     ).toBeInTheDocument();
   });
+});
 
-  it("keeps the quick-edit toggle and removal for existing entries", async () => {
+describe("MyExplainerGames — Liste (#210)", () => {
+  it("changes the level via the row slider", async () => {
     const user = userEvent.setup();
+    updateExplainerGameLevelMock.mockResolvedValue({ success: true });
+    render(
+      <MyExplainerGames
+        myGames={[
+          {
+            boardGameId: "game-1",
+            boardGameTitle: "Arche Nova",
+            level: "WITH_MANUAL",
+          },
+        ]}
+        availableGames={AVAILABLE_GAMES}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Im Schlaf" }));
+
+    expect(updateExplainerGameLevelMock).toHaveBeenCalledWith(
+      "game-1",
+      "BY_HEART",
+    );
+  });
+
+  it("asks for confirmation before removing an entry", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     removeExplainerGameMock.mockResolvedValue({ success: true });
     render(
       <MyExplainerGames
@@ -81,9 +130,58 @@ describe("MyExplainerGames — Combobox-Suche (#210)", () => {
       />,
     );
 
-    expect(screen.getByText("Arche Nova")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Entfernen" }));
+    await user.click(screen.getByRole("button", { name: /Entfernen/ }));
 
+    expect(window.confirm).toHaveBeenCalledWith(
+      "Arche Nova wirklich als Erklärbär-Eintrag entfernen?",
+    );
     expect(removeExplainerGameMock).toHaveBeenCalledWith("game-1");
+  });
+
+  it("does not remove the entry when the confirmation is declined", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(
+      <MyExplainerGames
+        myGames={[
+          {
+            boardGameId: "game-1",
+            boardGameTitle: "Arche Nova",
+            level: "WITH_MANUAL",
+          },
+        ]}
+        availableGames={AVAILABLE_GAMES}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Entfernen/ }));
+
+    expect(removeExplainerGameMock).not.toHaveBeenCalled();
+  });
+
+  it("filters the list by title", async () => {
+    const user = userEvent.setup();
+    render(
+      <MyExplainerGames
+        myGames={[
+          {
+            boardGameId: "game-1",
+            boardGameTitle: "Arche Nova",
+            level: "WITH_MANUAL",
+          },
+          {
+            boardGameId: "game-2",
+            boardGameTitle: "Wingspan",
+            level: "WITH_MANUAL",
+          },
+        ]}
+        availableGames={AVAILABLE_GAMES}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Spiele filtern"), "wing");
+
+    expect(screen.queryByText("Arche Nova")).not.toBeInTheDocument();
+    expect(screen.getByText("Wingspan")).toBeInTheDocument();
   });
 });

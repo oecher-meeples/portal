@@ -48,7 +48,7 @@ describe("ErklaerbaerenView — Verzeichnis nur für Admins (#210)", () => {
       screen.queryByRole("heading", { name: "Erklärbären-Verzeichnis" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Meine Spiele als Erklärbär" }),
+      screen.getByRole("heading", { name: "Das kann ich erklären:" }),
     ).toBeInTheDocument();
   });
 

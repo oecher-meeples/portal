@@ -117,9 +117,10 @@
 
 ### 2.10 Erklärbär-Verzeichnis
 - Volles Verzeichnis (Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA) nur für Admins sichtbar (Permission-Check, kein Rollen-Enum) — Meeple sehen diesen Abschnitt nicht (#210)
-- Eigenansicht "Meine Spiele als Erklärbär" für alle Meeple, unabhängig vom Verzeichnis:
-  - Combobox-Suche über den eigenen Spielbestand (analog `create-lfg-dialog.tsx`); Auswahl trägt das Spiel sofort mit Erfahrungsstufe "Kann es mit Anleitung erklären" ein
-  - Quick-Edit je Eintrag: Erfahrungsstufen-Toggle + Entfernen
+- Eigenansicht "Das kann ich erklären:" für alle Meeple, unabhängig vom Verzeichnis:
+  - "Neues Spiel hinzufügen"-Button öffnet einen Dialog mit Combobox-Suche über den eigenen Spielbestand (analog `create-lfg-dialog.tsx`) und direkter Auswahl der Erfahrungsstufe (Slider); erst beim Bestätigen wird der Eintrag angelegt
+  - Textfilter oberhalb der Liste zum Suchen innerhalb der eigenen Einträge
+  - Quick-Edit je Eintrag: Erfahrungsstufen-Slider + destruktiver Entfernen-Button mit Bestätigungsdialog
 
 ### 2.11 Event-Helferplan — Übersicht
 - Event-Auswahl, darunter Schichtplan-Tabelle (Zeit × Schicht-Typ: Theke/Kasse/Leihe)

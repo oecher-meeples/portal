@@ -1,8 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
+import { ActionButton } from "@/components/ui/action-button";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import {
   Combobox,
@@ -12,7 +16,7 @@ import {
   ComboboxList,
   ComboboxPopup,
 } from "@/components/ui/combobox";
-import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
+import { ExplainerLevelSlider } from "@/components/entities/explainer-level-slider";
 import { useAction } from "@/components/ui/use-action";
 import {
   addExplainerGame,
@@ -38,13 +42,13 @@ export function MyExplainerGames({
   myGames: MyExplainerGame[];
   availableGames: SelectableGame[];
 }) {
+  const [filter, setFilter] = useState("");
   const [inputValue, setInputValue] = useState("");
-  const addAction = useAction({
-    onSuccess: () => setInputValue(""),
-  });
+  const [selectedGame, setSelectedGame] = useState<SelectableGame | null>(null);
+  const [selectedLevel, setSelectedLevel] =
+    useState<ExplainerExperienceLevel>("WITH_MANUAL");
   const levelAction = useAction();
-  const removeAction = useAction();
-  const error = addAction.error ?? levelAction.error ?? removeAction.error;
+  const error = levelAction.error;
 
   const ownGameIds = useMemo(
     () => new Set(myGames.map((game) => game.boardGameId)),
@@ -56,10 +60,24 @@ export function MyExplainerGames({
     [availableGames, ownGameIds],
   );
 
+  const filteredGames = useMemo(() => {
+    const term = filter.trim().toLowerCase();
+    if (!term) return myGames;
+    return myGames.filter((game) =>
+      game.boardGameTitle.toLowerCase().includes(term),
+    );
+  }, [myGames, filter]);
+
   function handleSelect(title: string | null) {
-    const selected = selectableGames.find((game) => game.title === title);
-    if (!selected) return;
-    addAction.run(() => addExplainerGame(selected.id, "WITH_MANUAL"));
+    setSelectedGame(
+      selectableGames.find((game) => game.title === title) ?? null,
+    );
+  }
+
+  function resetDialog() {
+    setInputValue("");
+    setSelectedGame(null);
+    setSelectedLevel("WITH_MANUAL");
   }
 
   function handleLevelChange(
@@ -69,48 +87,69 @@ export function MyExplainerGames({
     levelAction.run(() => updateExplainerGameLevel(boardGameId, level));
   }
 
-  function handleRemove(boardGameId: string) {
-    removeAction.run(() => removeExplainerGame(boardGameId));
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <p className="font-medium">Neues Spiel hinzufügen</p>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="explainer-search">Spiel suchen</Label>
-          <Combobox
-            items={selectableGames.map((game) => game.title)}
-            value={null}
-            inputValue={inputValue}
-            onInputValueChange={setInputValue}
-            onValueChange={handleSelect}
-          >
-            <ComboboxInput
-              id="explainer-search"
-              placeholder="z. B. Arche Nova"
+      <ActionDialog
+        trigger={
+          <Button className="self-end">
+            <Plus className="size-4" />
+            Neues Spiel hinzufügen
+          </Button>
+        }
+        title="Neues Spiel hinzufügen"
+        submitLabel="Hinzufügen"
+        canSubmit={selectedGame !== null}
+        action={() => addExplainerGame(selectedGame?.id ?? "", selectedLevel)}
+        onReset={resetDialog}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="explainer-search">Spiel suchen</Label>
+            <Combobox
+              items={selectableGames.map((game) => game.title)}
+              value={selectedGame?.title ?? null}
+              inputValue={inputValue}
+              onInputValueChange={setInputValue}
+              onValueChange={handleSelect}
+            >
+              <ComboboxInput
+                id="explainer-search"
+                placeholder="z. B. Arche Nova"
+              />
+              <ComboboxPopup>
+                <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
+                <ComboboxList>
+                  {(title: string) => (
+                    <ComboboxItem key={title} value={title}>
+                      {title}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxPopup>
+            </Combobox>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Erfahrungsstufe</Label>
+            <ExplainerLevelSlider
+              value={selectedLevel}
+              onChange={setSelectedLevel}
             />
-            <ComboboxPopup>
-              <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
-              <ComboboxList>
-                {(title: string) => (
-                  <ComboboxItem key={title} value={title}>
-                    {title}
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxPopup>
-          </Combobox>
-          <p className="text-muted-foreground text-xs">
-            Auswahl trägt dich mit der Erfahrungsstufe „Kann es mit Anleitung
-            erklären“ ein — danach unten per Quick-Edit änderbar.
-          </p>
+          </div>
         </div>
-        {addAction.pending && (
-          <p className="text-muted-foreground text-sm">Speichere…</p>
-        )}
-        {error && <p className="text-destructive text-sm">{error}</p>}
-      </div>
+      </ActionDialog>
+
+      {error && <p className="text-destructive text-sm">{error}</p>}
+
+      {myGames.length > 0 && (
+        <TextField
+          id="explainer-filter"
+          label="Spiele filtern"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          onClear={() => setFilter("")}
+          placeholder="Spielname …"
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         {myGames.length === 0 && (
@@ -118,25 +157,31 @@ export function MyExplainerGames({
             Du bist noch für kein Spiel als Erklärbär eingetragen.
           </p>
         )}
-        {myGames.map((game) => (
+        {myGames.length > 0 && filteredGames.length === 0 && (
+          <p className="text-muted-foreground text-sm">
+            Kein Spiel passt zum Filter.
+          </p>
+        )}
+        {filteredGames.map((game) => (
           <div
             key={game.boardGameId}
-            className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+            className="bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border p-3"
           >
             <span className="font-medium">{game.boardGameTitle}</span>
-            <div className="flex items-center gap-2">
-              <ExplainerLevelToggle
-                value={game.level}
-                onChange={(level) => handleLevelChange(game.boardGameId, level)}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRemove(game.boardGameId)}
-              >
-                Entfernen
-              </Button>
-            </div>
+            <ExplainerLevelSlider
+              value={game.level}
+              onChange={(level) => handleLevelChange(game.boardGameId, level)}
+              className="min-w-40 flex-grow"
+            />
+            <ActionButton
+              variant="destructive"
+              size="sm"
+              confirm={`${game.boardGameTitle} wirklich als Erklärbär-Eintrag entfernen?`}
+              action={() => removeExplainerGame(game.boardGameId)}
+            >
+              <Trash2 className="size-4" />
+              Entfernen
+            </ActionButton>
           </div>
         ))}
       </div>
