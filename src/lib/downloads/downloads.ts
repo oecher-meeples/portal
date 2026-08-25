@@ -14,11 +14,12 @@ export async function listVisibleDownloads(tier: Tier) {
 }
 
 /** OFFLINE downloads only — the private table below the main list, sorted
- * by last change since there is no manual order for hidden downloads. */
+ * by last file change (see #201) since there is no manual order for hidden
+ * downloads. */
 export async function listOfflineDownloadsForAdmin() {
   return prisma.download.findMany({
     where: { status: "OFFLINE" },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { fileUpdatedAt: "desc" },
   });
 }
 

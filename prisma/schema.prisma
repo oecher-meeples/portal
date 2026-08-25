@@ -759,6 +759,10 @@ model Download {
   order         Int            @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  /// Last time the *file* itself was replaced (upload/reupload) — separate
+  /// from `updatedAt`, which also ticks on rename/status/order changes that
+  /// have nothing to do with the file's content. See #201.
+  fileUpdatedAt DateTime       @default(now())
 
   @@index([status])
   @@map("downloads")

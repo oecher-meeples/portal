@@ -93,9 +93,12 @@ export type ReplaceDownloadFileInput = {
 };
 
 /** Reupload for an existing download (see #115) — replaces the file while
- * keeping id/title/status/order untouched. Deletes the old blob only after
- * the database row points at the new one, so a failed upload never orphans
- * the row without a file, and a failed delete never loses the new file. */
+ * keeping id/title/status/order untouched. Bumps `fileUpdatedAt` explicitly
+ * since it tracks the file content, not the row (see #201) — `updatedAt`
+ * ticks automatically but also on unrelated changes like rename/status.
+ * Deletes the old blob only after the database row points at the new one,
+ * so a failed upload never orphans the row without a file, and a failed
+ * delete never loses the new file. */
 export async function replaceDownloadFile(
   id: string,
   input: ReplaceDownloadFileInput,
@@ -111,7 +114,10 @@ export async function replaceDownloadFile(
     return { error: "Download nicht gefunden." };
   }
 
-  await prisma.download.update({ where: { id }, data: input });
+  await prisma.download.update({
+    where: { id },
+    data: { ...input, fileUpdatedAt: new Date() },
+  });
   await deleteBlobs([existing.fileUrl]);
 
   revalidateDownloadPaths();
@@ -119,8 +125,8 @@ export async function replaceDownloadFile(
 }
 
 /** Manual reorder for the main list (see #113). OFFLINE downloads have no
- * manual order (they sort by `updatedAt`), so any OFFLINE id is dropped
- * rather than reordered. */
+ * manual order (they sort by `fileUpdatedAt`, see #201), so any OFFLINE id
+ * is dropped rather than reordered. */
 export async function reorderDownloads(orderedIds: string[]) {
   const forbidden = await requireManagePermission();
   if (forbidden) return forbidden;
