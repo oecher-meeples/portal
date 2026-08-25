@@ -13,7 +13,7 @@ const NEXT_STATUS: Record<FleaMarketItemStatus, FleaMarketItemStatus[]> = {
   SOLD: [],
 };
 
-async function requireCashierRights(eventId: string) {
+export async function requireCashierRights(eventId: string) {
   const meeple = await requireMeeple();
   const allowed = await hasFleaMarketRights(meeple.id, eventId);
   if (!allowed) {

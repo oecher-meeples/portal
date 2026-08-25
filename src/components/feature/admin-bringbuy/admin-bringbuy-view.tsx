@@ -23,6 +23,7 @@ import {
   findFleaMarketItemByCode,
   setFleaMarketItemStatus,
 } from "@/components/feature/admin-bringbuy/cashier-actions";
+import { ImportFleaMarketItemsDialog } from "@/components/feature/admin-bringbuy/import-flea-market-items-dialog";
 
 export type CashierItem = {
   id: string;
@@ -73,6 +74,7 @@ export function AdminBringBuyView({
         eyebrow="Flohmarkt"
         title="Bring & Buy – Kassenansicht"
         description="Artikel freigeben, Status wechseln und per Code suchen — Zugriff über events:manage oder eine aktive Kasse-Schicht."
+        action={<ImportFleaMarketItemsDialog events={events} />}
       />
 
       {events.length > 1 && (

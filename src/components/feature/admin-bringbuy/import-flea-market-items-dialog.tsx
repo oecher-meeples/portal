@@ -24,13 +24,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
-import { importFleaMarketItemsCsv } from "@/components/feature/bringbuy/import-actions";
-import type { FleaMarketEventOption } from "@/components/feature/bringbuy/create-flea-market-item-dialog";
+import { importFleaMarketItemsCsv } from "@/components/feature/admin-bringbuy/import-actions";
+import type { CashierEventOption } from "@/components/feature/admin-bringbuy/admin-bringbuy-view";
 
 export function ImportFleaMarketItemsDialog({
   events,
 }: {
-  events: FleaMarketEventOption[];
+  events: CashierEventOption[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -39,7 +39,10 @@ export function ImportFleaMarketItemsDialog({
   const [preview, setPreview] = useState<ReturnType<
     typeof parseFleaMarketCsv
   > | null>(null);
-  const [summary, setSummary] = useState<{ created: number } | null>(null);
+  const [summary, setSummary] = useState<{
+    created: number;
+    error?: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function reset() {
@@ -59,8 +62,8 @@ export function ImportFleaMarketItemsDialog({
     setIsSubmitting(true);
     const result = await importFleaMarketItemsCsv(eventId, raw);
     setIsSubmitting(false);
-    setSummary({ created: result.created });
-    router.refresh();
+    setSummary({ created: result.created, error: result.error });
+    if (!result.error) router.refresh();
   }
 
   if (events.length === 0) return null;
@@ -100,7 +103,7 @@ export function ImportFleaMarketItemsDialog({
           >
             {events.map((event) => (
               <option key={event.id} value={event.id}>
-                {event.title} · {event.dateLabel}
+                {event.title}
               </option>
             ))}
           </select>
@@ -154,7 +157,10 @@ export function ImportFleaMarketItemsDialog({
           </div>
         )}
 
-        {summary && (
+        {summary?.error && (
+          <p className="text-destructive text-sm">{summary.error}</p>
+        )}
+        {summary && !summary.error && (
           <p className="text-sm">{summary.created} Artikel angelegt.</p>
         )}
 
