@@ -5,7 +5,8 @@ vi.mock("@vercel/blob", () => ({
   list: (...args: unknown[]) => listMock(...args),
 }));
 
-const { getBlobStorageUsage } = await import("@/lib/admin/blob-storage");
+const { getBlobStorageUsage, getBlobStorageTone } =
+  await import("@/lib/admin/blob-storage");
 
 beforeEach(() => {
   listMock.mockReset();
@@ -66,5 +67,22 @@ describe("getBlobStorageUsage", () => {
     await expect(getBlobStorageUsage()).rejects.toThrow(
       "BLOB_READ_WRITE_TOKEN",
     );
+  });
+});
+
+describe("getBlobStorageTone", () => {
+  it("is ok below 80%", () => {
+    expect(getBlobStorageTone(0)).toBe("ok");
+    expect(getBlobStorageTone(79.9)).toBe("ok");
+  });
+
+  it("is warning from 80% up to (excluding) 95%", () => {
+    expect(getBlobStorageTone(80)).toBe("warning");
+    expect(getBlobStorageTone(94.9)).toBe("warning");
+  });
+
+  it("is critical from 95% and above", () => {
+    expect(getBlobStorageTone(95)).toBe("critical");
+    expect(getBlobStorageTone(120)).toBe("critical");
   });
 });

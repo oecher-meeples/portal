@@ -22,6 +22,17 @@ import { requireEnv } from "@/lib/utils/require-env";
  */
 const INCLUDED_STORAGE_BYTES = 5 * 1024 * 1024 * 1024;
 
+/** Warning stage for the current fill level. How each stage *looks* (colour)
+ * is a display concern and lives in `components/entities/*` instead. */
+export type BlobStorageTone = "ok" | "warning" | "critical";
+
+/** Pure threshold rule: ok below 80%, warning 80–94%, critical from 95%. */
+export function getBlobStorageTone(percent: number): BlobStorageTone {
+  if (percent >= 95) return "critical";
+  if (percent >= 80) return "warning";
+  return "ok";
+}
+
 export type BlobStorageUsage = {
   /** Total bytes currently stored across all blobs. */
   used: number;
