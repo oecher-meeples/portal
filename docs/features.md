@@ -137,12 +137,14 @@
 - Grid "Ausschlacht"-Spiele/Teile (`boardGameId: null` = "Allgemeines", kein Dummy-`BoardGame`-Datensatz), Zustand, Kurzbeschreibung
 - Abhol-Hinweis (Verwahrer-Anzeigename)
 - Anlage eigenständig oder per Checkbox aus der Deinventarisierung, Verwaltung durch `games:manage`
+- Auf `/markt` neben 2.13 angezeigt, fachlich getrennt vom event-gebundenen Bring & Buy Flohmarkt (3.7, #211)
 
 ### 2.13 Kleinanzeigen-Marktplatz
 - Grid Verkaufsartikel: Bild(er), Titel, Zustand, Preis, Verkäufer
 - Filter (Preis, Zustand)
 - Detailseite mit Bildergalerie, Beschreibung, Direktkontakt-Button (Mail/Telegram)
 - CTA "Anzeige inserieren" → Formular (Bilder-Upload, Titel, Zustand, Preis, Beschreibung), eigene Anzeigen bearbeitbar/löschbar
+- Enthält **kein** Bring & Buy Flohmarkt-Self-Service mehr (#211) — der event-gebundene Bring & Buy Flohmarkt wird ausschließlich über die Kassenansicht (3.7) verwaltet, nicht über eine eigene Sektion auf `/markt`
 
 ---
 
@@ -189,12 +191,15 @@
 ### 3.7 Bring & Buy Flohmarkt — Kassenansicht
 - Such-/Scanleiste für Artikel
 - Artikelliste mit Status-Toggle (FOR_SALE → RESERVED → SOLD)
-- CSV-Massenimport-Dialog (Datei-Upload, Vorschau-Tabelle vor Bestätigung)
+- CSV-Massenimport-Dialog (Datei-Upload, Vorschau-Tabelle vor Bestätigung) — einziger Weg, neue Artikel anzulegen; es gibt keine Mitglieder-Self-Service-Anlage mehr (#211)
+- Zugriff über `events:manage`-Permission oder eine aktive Kasse-Schicht des jeweiligen Events (ADR 0006) — kein dauerhafter Nav-Link für Meeples ohne Admin-Rolle
+- Voraussetzung, damit ein Event überhaupt einen Bring & Buy Flohmarkt hat: Flag `Event.hasBringAndBuyMarket`; im Gäste-Bereich (3.8) sichtbar, sobald das Event höchstens 30 Tage in der Zukunft liegt (oder bereits läuft)
 
 ### 3.8 Mobiler Gäste-Modus (Event vor Ort)
 - Reduzierte, touch-optimierte Ansicht für Tablet/Smartphone am Eingang
 - QR-Scan → sofortige Spielinfo-Karte (Cover, Kurzregeln, YouTube-Erklärvideo-Link, anwesende Erklärbären)
 - Filterbare "Was ist gerade frei?"-Liste nach Spieleranzahl
+- Bring & Buy Flohmarkt-Sektion nur sichtbar, wenn das Event `hasBringAndBuyMarket` gesetzt hat und innerhalb der nächsten 30 Tage liegt (#211) — sonst entfällt der Abschnitt vollständig
 
 ---
 

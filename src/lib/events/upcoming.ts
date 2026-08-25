@@ -56,6 +56,45 @@ export async function findCurrentEvent() {
   });
 }
 
+/** Bring&Buy is announced this far ahead of an event (#211). */
+export const BRING_AND_BUY_WINDOW_DAYS = 30;
+
+function bringAndBuyWindowEnd(now: Date): Date {
+  const windowEnd = new Date(now);
+  windowEnd.setDate(windowEnd.getDate() + BRING_AND_BUY_WINDOW_DAYS);
+  return windowEnd;
+}
+
+/**
+ * True once a single event's Bring&Buy market should be visible to guests
+ * (#211): the event has the flag, hasn't ended yet, and starts within the
+ * next `BRING_AND_BUY_WINDOW_DAYS` days. Kept as a pure function so callers
+ * that already loaded one event (e.g. the guest route) don't need a query.
+ */
+export function isBringAndBuyMarketOpen(
+  event: { hasBringAndBuyMarket: boolean; startsAt: Date; endsAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  if (!event.hasBringAndBuyMarket) return false;
+  if (event.endsAt !== null && event.endsAt < now) return false;
+  return event.startsAt <= bringAndBuyWindowEnd(now);
+}
+
+/** Events with an open Bring&Buy market (#211) — same window as `isBringAndBuyMarketOpen`. */
+export function findUpcomingBringAndBuyEvents<
+  S extends Record<string, boolean> = { id: true; title: true },
+>(select?: S, now: Date = new Date()) {
+  return prisma.event.findMany({
+    where: {
+      hasBringAndBuyMarket: true,
+      startsAt: { lte: bringAndBuyWindowEnd(now) },
+      OR: [{ endsAt: null }, { endsAt: { gte: now } }],
+    },
+    orderBy: { startsAt: "asc" },
+    select: (select ?? { id: true, title: true }) as S,
+  });
+}
+
 /**
  * Picks the event the user asked for, falling back to the next upcoming one.
  * Returns null when there is no event at all.

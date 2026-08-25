@@ -2,12 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
-import { requireMeeple } from "@/lib/members/meeples";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
+import { requireCashierRights } from "@/components/feature/admin-bringbuy/cashier-actions";
 
+/**
+ * Cashier-side bulk import (#211) — replaces the former member self-service
+ * flow. Gated the same way as the rest of the cashier view: `events:manage`
+ * or an active KASSE shift for this event (ADR 0006), never open to every
+ * meeple.
+ */
 export async function importFleaMarketItemsCsv(eventId: string, raw: string) {
-  const meeple = await requireMeeple();
+  let meeple;
+  try {
+    meeple = await requireCashierRights(eventId);
+  } catch (error) {
+    return { created: 0, errors: [], error: (error as Error).message };
+  }
 
   const { items, errors } = parseFleaMarketCsv(raw);
 
@@ -35,6 +46,6 @@ export async function importFleaMarketItemsCsv(eventId: string, raw: string) {
     created += 1;
   }
 
-  revalidatePath("/markt");
+  revalidatePath("/admin/bringbuy");
   return { created, errors };
 }

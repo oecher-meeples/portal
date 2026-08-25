@@ -3,8 +3,13 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { findUpcomingEvents, isEventCurrentlyRunning, resolveSelectedEventId } =
-  await import("./upcoming");
+const {
+  findUpcomingEvents,
+  findUpcomingBringAndBuyEvents,
+  isBringAndBuyMarketOpen,
+  isEventCurrentlyRunning,
+  resolveSelectedEventId,
+} = await import("./upcoming");
 
 describe("isEventCurrentlyRunning", () => {
   const NOW = new Date("2026-08-03T12:00:00Z");
@@ -90,6 +95,117 @@ describe("findUpcomingEvents", () => {
       expect.objectContaining({
         select: { id: true, slug: true, startsAt: true },
       }),
+    );
+  });
+});
+
+describe("isBringAndBuyMarketOpen", () => {
+  const NOW = new Date("2026-08-25T12:00:00Z");
+
+  it("is false when the event has no Bring&Buy market", () => {
+    expect(
+      isBringAndBuyMarketOpen(
+        {
+          hasBringAndBuyMarket: false,
+          startsAt: new Date("2026-08-26T10:00:00Z"),
+          endsAt: null,
+        },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is true when the event starts within the next 30 days", () => {
+    expect(
+      isBringAndBuyMarketOpen(
+        {
+          hasBringAndBuyMarket: true,
+          startsAt: new Date("2026-09-20T10:00:00Z"),
+          endsAt: null,
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false when the event starts more than 30 days from now", () => {
+    expect(
+      isBringAndBuyMarketOpen(
+        {
+          hasBringAndBuyMarket: true,
+          startsAt: new Date("2026-09-26T10:00:00Z"),
+          endsAt: null,
+        },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is true right at the 30-day boundary", () => {
+    expect(
+      isBringAndBuyMarketOpen(
+        {
+          hasBringAndBuyMarket: true,
+          startsAt: new Date("2026-09-24T12:00:00Z"),
+          endsAt: null,
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false when the event has already ended", () => {
+    expect(
+      isBringAndBuyMarketOpen(
+        {
+          hasBringAndBuyMarket: true,
+          startsAt: new Date("2026-08-20T10:00:00Z"),
+          endsAt: new Date("2026-08-20T18:00:00Z"),
+        },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is true for an ongoing multi-day event that hasn't ended", () => {
+    expect(
+      isBringAndBuyMarketOpen(
+        {
+          hasBringAndBuyMarket: true,
+          startsAt: new Date("2026-08-20T10:00:00Z"),
+          endsAt: new Date("2026-08-27T18:00:00Z"),
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("findUpcomingBringAndBuyEvents", () => {
+  it("queries only events with the flag, within the 30-day window, not ended", async () => {
+    const NOW = new Date("2026-08-25T12:00:00Z");
+    prismaMock.event.findMany.mockResolvedValue([]);
+
+    await findUpcomingBringAndBuyEvents(undefined, NOW);
+
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith({
+      where: {
+        hasBringAndBuyMarket: true,
+        startsAt: { lte: new Date("2026-09-24T12:00:00Z") },
+        OR: [{ endsAt: null }, { endsAt: { gte: NOW } }],
+      },
+      orderBy: { startsAt: "asc" },
+      select: { id: true, title: true },
+    });
+  });
+
+  it("forwards a custom select shape instead of the default", async () => {
+    prismaMock.event.findMany.mockResolvedValue([]);
+
+    await findUpcomingBringAndBuyEvents({ id: true, slug: true });
+
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ select: { id: true, slug: true } }),
     );
   });
 });

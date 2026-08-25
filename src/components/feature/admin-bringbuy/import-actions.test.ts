@@ -15,12 +15,60 @@ vi.mock("@/lib/members/meeples", async () => {
 
 const { importFleaMarketItemsCsv } = await import("./import-actions");
 
-const SELLER = { id: "meeple-1", neonAuthUserId: "auth-1" };
+const CASHIER = { id: "meeple-1", neonAuthUserId: "auth-1" };
 
 beforeEach(() => {
-  requireMeepleMock.mockResolvedValue(SELLER);
+  requireMeepleMock.mockResolvedValue(CASHIER);
+  prismaMock.meeple.findUnique.mockResolvedValue({
+    neonAuthUserId: "auth-1",
+  } as never);
+  prismaMock.rolePermission.count.mockResolvedValue(1); // events:manage by default
+  prismaMock.shiftBooking.findFirst.mockResolvedValue(null);
   prismaMock.fleaMarketItem.findMany.mockResolvedValue([]);
   prismaMock.fleaMarketItem.create.mockResolvedValue({ id: "item-x" } as never);
+});
+
+describe("importFleaMarketItemsCsv permission gate", () => {
+  it("rejects a meeple with neither events:manage nor an active KASSE shift", async () => {
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    const result = await importFleaMarketItemsCsv(
+      "event-1",
+      "title,price,description\nAzul,22\n",
+    );
+
+    expect(result).toEqual(
+      expect.objectContaining({ created: 0, error: expect.any(String) }),
+    );
+    expect(prismaMock.fleaMarketItem.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a meeple with the events:manage permission", async () => {
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    const result = await importFleaMarketItemsCsv(
+      "event-1",
+      "title,price,description\nAzul,22\n",
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(prismaMock.fleaMarketItem.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows a meeple with an active KASSE shift but no permission", async () => {
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+    prismaMock.shiftBooking.findFirst.mockResolvedValue({
+      shiftId: "shift-1",
+    } as never);
+
+    const result = await importFleaMarketItemsCsv(
+      "event-1",
+      "title,price,description\nAzul,22\n",
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(prismaMock.fleaMarketItem.create).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("importFleaMarketItemsCsv", () => {
@@ -35,7 +83,7 @@ describe("importFleaMarketItemsCsv", () => {
     expect(prismaMock.fleaMarketItem.create).toHaveBeenCalledTimes(2);
   });
 
-  it("assigns the caller's own meeple as seller and status PENDING", async () => {
+  it("assigns the cashier's own meeple as seller and status PENDING", async () => {
     await importFleaMarketItemsCsv(
       "event-1",
       "title,price,description\nAzul,22\n",
