@@ -1,16 +1,26 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission, hasRole } from "@/lib/auth/permissions";
+import { hasPermission } from "@/lib/auth/permissions";
 import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
 /**
  * Admin-only UI preview: lets an admin see the sidebar/nav as another tier
  * would. Never consulted by access-control checks (requireAdmin/requireMember
- * read the real role directly) — display only.
+ * read the real permission directly) — display only.
  */
 export const PREVIEW_TIER_COOKIE = "preview-tier";
+
+/**
+ * Grants the "admin" tier — a permission, not a role name. Deliberately not
+ * tied to any specific Role.name: which role(s) grant it is purely a
+ * RolePermission-Zuordnung, die in der Rollenverwaltung (#216) frei
+ * umbenannt/umstrukturiert werden kann, ohne diesen Zugriff lautlos zu
+ * entziehen (siehe #219-Review — genau das ist vorher mit der alten
+ * hasRole(userId, "admin")-Prüfung passiert).
+ */
+const ADMIN_ACCESS_PERMISSION = "admin:access";
 
 function isTier(value: string | undefined): value is Tier {
   return !!value && (TIER_ORDER as string[]).includes(value);
@@ -47,7 +57,7 @@ async function currentPathname() {
 export async function getRealSessionTier(): Promise<Tier> {
   const user = await getCurrentUser();
   if (!user) return "gast";
-  if (await hasRole(user.id, "admin")) return "admin";
+  if (await hasPermission(user.id, ADMIN_ACCESS_PERMISSION)) return "admin";
   return "mitglied";
 }
 
@@ -83,7 +93,7 @@ export async function hasPermissionInCurrentView(
   userId: string,
   permissionKey: string,
 ) {
-  if (await hasRole(userId, "admin")) {
+  if (await hasPermission(userId, ADMIN_ACCESS_PERMISSION)) {
     const previewTier = (await getPreviewTier()) ?? "mitglied";
     if (previewTier !== "admin") return false;
   }
@@ -115,7 +125,7 @@ export async function requireMember() {
 
 export async function requireAdmin() {
   const session = await requireMember();
-  if (!(await hasRole(session.user.id, "admin"))) {
+  if (!(await hasPermission(session.user.id, ADMIN_ACCESS_PERMISSION))) {
     redirect("/403");
   }
   return session;

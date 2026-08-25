@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
+import {
+  createRole as createRoleRecord,
+  updateRole as updateRoleRecord,
+  deleteRole as deleteRoleRecord,
+  setRolePermissions as setRolePermissionsRecord,
+} from "@/lib/auth/roles";
 import { anonymiseMeepleRecord } from "@/lib/members/anonymisation";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
@@ -111,6 +117,10 @@ export async function sendSelbstauskunft(meepleId: string) {
   return sendSelbstauskunftMail(meepleId);
 }
 
+/** Der seed-erzeugte Fallback-Admin-Account (prisma/seed.ts) — bleibt immer
+ * erreichbar, damit ein verpatzter Rollen-Umbau nie alle Admins aussperrt. */
+const PROTECTED_ADMIN_DISPLAY_NAME = "Admin";
+
 /**
  * A Meeple holds exactly one role at a time (see redeemInvite's DEFAULT_ROLE),
  * so changing it means swapping the UserRole row, not adding to a set.
@@ -122,6 +132,12 @@ export async function setMeepleRole(meepleId: string, roleId: string) {
     prisma.meeple.findUniqueOrThrow({ where: { id: meepleId } }),
     prisma.role.findUniqueOrThrow({ where: { id: roleId } }),
   ]);
+
+  if (meeple.displayName === PROTECTED_ADMIN_DISPLAY_NAME) {
+    return {
+      error: `Die Rolle des Benutzers „${PROTECTED_ADMIN_DISPLAY_NAME}“ ist geschützt und kann nicht geändert werden.`,
+    };
+  }
 
   if (!meeple.neonAuthUserId) {
     return { error: "Dieses Mitglied hat kein Login-Konto." };
@@ -135,6 +151,53 @@ export async function setMeepleRole(meepleId: string, roleId: string) {
       data: { neonAuthUserId: meeple.neonAuthUserId, roleId: role.id },
     }),
   ]);
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function createRole(name: string, description: string | null) {
+  await requireMembersManage();
+
+  const result = await createRoleRecord(name, description);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function updateRole(
+  roleId: string,
+  name: string,
+  description: string | null,
+) {
+  await requireMembersManage();
+
+  const result = await updateRoleRecord(roleId, name, description);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function deleteRole(roleId: string) {
+  await requireMembersManage();
+
+  const result = await deleteRoleRecord(roleId);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function setRolePermissions(
+  roleId: string,
+  permissionIds: string[],
+) {
+  await requireMembersManage();
+
+  const result = await setRolePermissionsRecord(roleId, permissionIds);
+  if ("error" in result) return result;
 
   revalidatePath("/admin/mitglieder");
   return { success: true as const };
