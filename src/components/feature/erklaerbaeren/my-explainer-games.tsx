@@ -1,14 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
+import { ActionButton } from "@/components/ui/action-button";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
+import {
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+} from "@/components/ui/combobox";
+import { ExplainerLevelSlider } from "@/components/entities/explainer-level-slider";
 import { useAction } from "@/components/ui/use-action";
 import {
   addExplainerGame,
+  removeAllExplainerGames,
   removeExplainerGame,
   updateExplainerGameLevel,
 } from "@/lib/explainer/actions";
@@ -24,10 +36,6 @@ export type SelectableGame = {
   title: string;
 };
 
-function selectClassName() {
-  return "border-input h-8 w-full min-w-0 rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
-}
-
 export function MyExplainerGames({
   myGames,
   availableGames,
@@ -36,34 +44,41 @@ export function MyExplainerGames({
   availableGames: SelectableGame[];
 }) {
   const [filter, setFilter] = useState("");
-  const [selectedGameId, setSelectedGameId] = useState("");
-  const [newLevel, setNewLevel] =
+  const [inputValue, setInputValue] = useState("");
+  const [selectedGame, setSelectedGame] = useState<SelectableGame | null>(null);
+  const [selectedLevel, setSelectedLevel] =
     useState<ExplainerExperienceLevel>("WITH_MANUAL");
-  const addAction = useAction({
-    onSuccess: () => {
-      setSelectedGameId("");
-      setFilter("");
-    },
-  });
   const levelAction = useAction();
-  const removeAction = useAction();
-  const error = addAction.error ?? levelAction.error ?? removeAction.error;
+  const error = levelAction.error;
 
   const ownGameIds = useMemo(
     () => new Set(myGames.map((game) => game.boardGameId)),
     [myGames],
   );
 
-  const filteredGames = useMemo(() => {
-    const query = filter.trim().toLowerCase();
-    return availableGames
-      .filter((game) => !ownGameIds.has(game.id))
-      .filter((game) => !query || game.title.toLowerCase().includes(query));
-  }, [availableGames, ownGameIds, filter]);
+  const selectableGames = useMemo(
+    () => availableGames.filter((game) => !ownGameIds.has(game.id)),
+    [availableGames, ownGameIds],
+  );
 
-  function handleAdd() {
-    if (!selectedGameId) return;
-    addAction.run(() => addExplainerGame(selectedGameId, newLevel));
+  const filteredGames = useMemo(() => {
+    const term = filter.trim().toLowerCase();
+    if (!term) return myGames;
+    return myGames.filter((game) =>
+      game.boardGameTitle.toLowerCase().includes(term),
+    );
+  }, [myGames, filter]);
+
+  function handleSelect(title: string | null) {
+    setSelectedGame(
+      selectableGames.find((game) => game.title === title) ?? null,
+    );
+  }
+
+  function resetDialog() {
+    setInputValue("");
+    setSelectedGame(null);
+    setSelectedLevel("WITH_MANUAL");
   }
 
   function handleLevelChange(
@@ -73,54 +88,74 @@ export function MyExplainerGames({
     levelAction.run(() => updateExplainerGameLevel(boardGameId, level));
   }
 
-  function handleRemove(boardGameId: string) {
-    removeAction.run(() => removeExplainerGame(boardGameId));
-  }
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <p className="font-medium">Neues Spiel hinzufügen</p>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="explainer-filter">Spiel suchen</Label>
-          <Input
-            id="explainer-filter"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            placeholder="z. B. Arche Nova"
-          />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="explainer-game">Spiel</Label>
-            <select
-              id="explainer-game"
-              className={selectClassName()}
-              value={selectedGameId}
-              onChange={(event) => setSelectedGameId(event.target.value)}
-            >
-              <option value="">Spiel auswählen…</option>
-              {filteredGames.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>Erfahrungsstufe</Label>
-            <ExplainerLevelToggle value={newLevel} onChange={setNewLevel} />
-          </div>
-        </div>
-        {error && <p className="text-destructive text-sm">{error}</p>}
-        <Button
-          onClick={handleAdd}
-          disabled={!selectedGameId || addAction.pending}
-          className="w-fit"
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-serif text-xl font-semibold">
+          Das kann ich erklären:
+        </h2>
+        <ActionDialog
+          trigger={
+            <Button>
+              <Plus className="size-4" />
+              Neues Spiel hinzufügen
+            </Button>
+          }
+          title="Neues Spiel hinzufügen"
+          submitLabel="Hinzufügen"
+          canSubmit={selectedGame !== null}
+          action={() => addExplainerGame(selectedGame?.id ?? "", selectedLevel)}
+          onReset={resetDialog}
         >
-          {addAction.pending ? "Speichere…" : "Hinzufügen"}
-        </Button>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="explainer-search">Spiel suchen</Label>
+              <Combobox
+                items={selectableGames.map((game) => game.title)}
+                value={selectedGame?.title ?? null}
+                inputValue={inputValue}
+                onInputValueChange={setInputValue}
+                onValueChange={handleSelect}
+              >
+                <ComboboxInput
+                  id="explainer-search"
+                  placeholder="z. B. Arche Nova"
+                />
+                <ComboboxPopup>
+                  <ComboboxEmpty>Keine Treffer</ComboboxEmpty>
+                  <ComboboxList>
+                    {(title: string) => (
+                      <ComboboxItem key={title} value={title}>
+                        {title}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxPopup>
+              </Combobox>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Erfahrungsstufe</Label>
+              <ExplainerLevelSlider
+                value={selectedLevel}
+                onChange={setSelectedLevel}
+              />
+            </div>
+          </div>
+        </ActionDialog>
       </div>
+
+      {error && <p className="text-destructive text-sm">{error}</p>}
+
+      {myGames.length > 0 && (
+        <TextField
+          id="explainer-filter"
+          label="Spiele filtern"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          onClear={() => setFilter("")}
+          placeholder="Spielname …"
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         {myGames.length === 0 && (
@@ -128,28 +163,50 @@ export function MyExplainerGames({
             Du bist noch für kein Spiel als Erklärbär eingetragen.
           </p>
         )}
-        {myGames.map((game) => (
+        {myGames.length > 0 && filteredGames.length === 0 && (
+          <p className="text-muted-foreground text-sm">
+            Kein Spiel passt zum Filter.
+          </p>
+        )}
+        {filteredGames.map((game) => (
           <div
             key={game.boardGameId}
-            className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+            className="bg-card flex items-center gap-4 rounded-lg border p-3"
           >
-            <span className="font-medium">{game.boardGameTitle}</span>
-            <div className="flex items-center gap-2">
-              <ExplainerLevelToggle
-                value={game.level}
-                onChange={(level) => handleLevelChange(game.boardGameId, level)}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRemove(game.boardGameId)}
-              >
-                Entfernen
-              </Button>
-            </div>
+            <span className="max-w-[30%] truncate font-medium">
+              {game.boardGameTitle}
+            </span>
+            <ExplainerLevelSlider
+              value={game.level}
+              onChange={(level) => handleLevelChange(game.boardGameId, level)}
+              className="ml-auto w-1/2"
+            />
+            <ActionButton
+              variant="destructive"
+              size="sm"
+              className="shrink-0"
+              confirm={`${game.boardGameTitle} wirklich als Erklärbär-Eintrag entfernen?`}
+              action={() => removeExplainerGame(game.boardGameId)}
+            >
+              <Trash2 className="size-4" />
+              Entfernen
+            </ActionButton>
           </div>
         ))}
       </div>
+
+      {myGames.length > 0 && (
+        <ActionButton
+          variant="destructive"
+          size="sm"
+          className="self-end"
+          confirm="Wirklich alle eigenen Erklärbär-Einträge entfernen?"
+          action={() => removeAllExplainerGames()}
+        >
+          <Trash2 className="size-4" />
+          Alle Spiele entfernen
+        </ActionButton>
+      )}
     </div>
   );
 }
