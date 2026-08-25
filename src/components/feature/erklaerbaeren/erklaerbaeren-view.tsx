@@ -12,19 +12,25 @@ export function ErklaerbaerenView({
   directory,
   myGames,
   availableGames,
+  isAdmin,
 }: {
   directory: ExplainerDirectoryEntry[];
   myGames: MyExplainerGame[];
   availableGames: SelectableGame[];
+  /** Full directory (alle Spiele × alle Erklärbären) ist admin-only (#210) —
+   * Meeple sehen nur ihre eigenen Einträge unten. */
+  isAdmin: boolean;
 }) {
   return (
     <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-3">
-        <h2 className="font-serif text-xl font-semibold">
-          Erklärbären-Verzeichnis
-        </h2>
-        <ExplainerDirectory entries={directory} />
-      </section>
+      {isAdmin && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-serif text-xl font-semibold">
+            Erklärbären-Verzeichnis
+          </h2>
+          <ExplainerDirectory entries={directory} />
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-serif text-xl font-semibold">
