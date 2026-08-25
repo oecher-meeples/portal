@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Tag, Mail, ClipboardCheck, Landmark } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
+import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
+import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
 
 const QUICK_ACTIONS = [
   {
@@ -24,7 +26,13 @@ export type AdminDashboardStats = {
   activeEvents: number;
 };
 
-export function AdminDashboardView({ stats }: { stats: AdminDashboardStats }) {
+export function AdminDashboardView({
+  stats,
+  blobStorageUsage,
+}: {
+  stats: AdminDashboardStats;
+  blobStorageUsage: BlobStorageUsage | null;
+}) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -41,6 +49,7 @@ export function AdminDashboardView({ stats }: { stats: AdminDashboardStats }) {
         <StatTile label="Nicht erfasst" value={stats.unregisteredGames} />
         <StatTile label="Prüfungen offen" value={stats.openChecks} />
         <StatTile label="Aktive Events" value={stats.activeEvents} />
+        {blobStorageUsage && <BlobStorageUsageCard usage={blobStorageUsage} />}
       </div>
 
       <div className="flex flex-col gap-3">
