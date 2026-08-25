@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { AppShell } from "@/components/layout/app-shell";
-import { BrandWatermark } from "@/components/layout/brand-watermark";
+import { BackgroundPattern } from "@/components/layout/background-pattern";
 import { CryptoRandomUuidPolyfill } from "@/components/layout/crypto-randomuuid-polyfill";
 import "./globals.css";
 
@@ -42,7 +42,7 @@ export default async function RootLayout({
     >
       <body className="flex min-h-full flex-col antialiased">
         <CryptoRandomUuidPolyfill />
-        <BrandWatermark />
+        <BackgroundPattern />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
