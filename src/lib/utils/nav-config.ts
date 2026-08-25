@@ -15,7 +15,6 @@ import {
   ChartNoAxesCombined,
   Boxes,
   Landmark,
-  PackageSearch,
   UserCog,
   ShoppingBasket,
   Settings,
@@ -161,12 +160,6 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Bestand & Inventur",
         href: "/admin/bestand",
         icon: Boxes,
-        section: "Administration",
-      },
-      {
-        label: "Aufbewahrungseinheiten",
-        href: "/admin/einheiten",
-        icon: PackageSearch,
         section: "Administration",
       },
       {

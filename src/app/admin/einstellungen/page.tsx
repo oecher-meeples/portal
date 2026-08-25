@@ -17,6 +17,11 @@ export default async function AdminSettingsPage() {
         ? { label: "Verbunden", variant: "default" as const }
         : { label: "Nicht verbunden", variant: "outline" as const },
     },
+    {
+      title: "Aufbewahrungseinheiten",
+      description: "Lagerorte für den Spielebestand verwalten.",
+      href: "/admin/einheiten",
+    },
   ];
 
   return (
