@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth/server";
 import { validateInviteToken } from "@/lib/members/invites";
 import { translateAuthError, validatePassword } from "@/lib/auth/password";
 
-const DEFAULT_ROLE = "mitglied";
+const DEFAULT_ROLE = "Meeple";
 
 export async function redeemInvite({
   token,

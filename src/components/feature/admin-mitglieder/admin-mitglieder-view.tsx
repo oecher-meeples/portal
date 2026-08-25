@@ -6,12 +6,16 @@ import {
   MitgliederTable,
   type MeepleRow,
 } from "@/components/feature/admin-mitglieder/mitglieder-table";
-import type { RoleOption } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import {
   InvitesSection,
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import {
+  RoleManagementSection,
+  type RoleManagementRow,
+} from "@/components/feature/admin-mitglieder/role-management-section";
+import type { PermissionOption } from "@/components/feature/admin-mitglieder/role-permissions-editor";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
@@ -34,13 +38,18 @@ function germanDate(value: string | null) {
 export function AdminMitgliederView({
   meeples,
   roles,
+  permissions,
+  canManageRoles,
   canReadBankData,
   isDecemberOrLater,
   deletionRequests,
   invites,
 }: {
   meeples: MeepleRow[];
-  roles: RoleOption[];
+  roles: RoleManagementRow[];
+  permissions: PermissionOption[];
+  /** Blendet die Rollenverwaltung aus — die Actions selbst sind zusätzlich serverseitig gegated (#216). */
+  canManageRoles: boolean;
   canReadBankData: boolean;
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
@@ -161,6 +170,10 @@ export function AdminMitgliederView({
             ))}
           </ul>
         </div>
+      )}
+
+      {canManageRoles && (
+        <RoleManagementSection roles={roles} permissions={permissions} />
       )}
 
       <MitgliederTable

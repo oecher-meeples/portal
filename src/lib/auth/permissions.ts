@@ -15,13 +15,6 @@ export async function hasPermission(
   return count > 0;
 }
 
-export async function hasRole(neonAuthUserId: string, roleName: string) {
-  const count = await prisma.userRole.count({
-    where: { neonAuthUserId, role: { name: roleName } },
-  });
-  return count > 0;
-}
-
 export async function requirePermission(permissionKey: string) {
   const user = await getCurrentUser();
   if (!user) {
