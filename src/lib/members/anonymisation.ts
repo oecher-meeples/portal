@@ -93,6 +93,7 @@ export async function anonymiseMeepleRecord(
         signalHandle: null,
         discordHandle: null,
         address: null,
+        shareAddress: false,
         doorbellNote: null,
         anonymizedAt: now,
       },

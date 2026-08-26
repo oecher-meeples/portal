@@ -18,7 +18,15 @@ describe("toMarketListingView", () => {
         imageUrls: ["https://blob.example/a.png"],
         sellerMeepleId: "meeple-1",
       },
-      { displayName: "Jan", email: "jan@example.com", telegramHandle: null },
+      {
+        displayName: "Jan",
+        email: "jan@example.com",
+        telegramHandle: null,
+        signalHandle: null,
+        discordHandle: null,
+        address: null,
+        shareAddress: false,
+      },
     );
 
     expect(view).toEqual({
@@ -30,7 +38,13 @@ describe("toMarketListingView", () => {
       imageUrls: ["https://blob.example/a.png"],
       sellerMeepleId: "meeple-1",
       sellerDisplayName: "Jan",
-      sellerContact: { mailHref: "mailto:jan@example.com", telegramHref: null },
+      sellerContact: {
+        mailHref: "mailto:jan@example.com",
+        telegramHref: null,
+        signalHref: null,
+        discordHandle: null,
+        address: null,
+      },
     });
   });
 });
@@ -47,7 +61,13 @@ function listing(
     imageUrls: [],
     sellerMeepleId: "meeple-1",
     sellerDisplayName: "Jan",
-    sellerContact: { mailHref: "mailto:jan@example.com", telegramHref: null },
+    sellerContact: {
+      mailHref: "mailto:jan@example.com",
+      telegramHref: null,
+      signalHref: null,
+      discordHandle: null,
+      address: null,
+    },
     ...overrides,
   };
 }

@@ -173,6 +173,7 @@ describe("updateOwnProfile", () => {
       signalHandle: "",
       discordHandle: null,
       address: "  Musterstraße 1, 52062 Aachen  ",
+      shareAddress: true,
       doorbellNote: "",
     });
 
@@ -186,9 +187,20 @@ describe("updateOwnProfile", () => {
         signalHandle: null,
         discordHandle: null,
         address: "Musterstraße 1, 52062 Aachen",
+        shareAddress: true,
         doorbellNote: null,
       },
     });
+  });
+
+  it("defaults shareAddress to false when omitted", async () => {
+    await updateOwnProfile({ displayName: "Lea" });
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ shareAddress: false }),
+      }),
+    );
   });
 
   it("rejects an empty display name", async () => {

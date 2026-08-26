@@ -20,6 +20,12 @@ CREATE TYPE "StorageUnitKind" AS ENUM ('BOX', 'SHELF');
 CREATE TYPE "BoardGameKind" AS ENUM ('BOARDGAME', 'BOARDGAME_EXPANSION');
 
 -- CreateEnum
+CREATE TYPE "LanguageDependence" AS ENUM ('NO_NECESSARY_TEXT', 'SOME_NECESSARY_TEXT', 'MODERATE_TEXT', 'EXTENSIVE_TEXT', 'UNPLAYABLE');
+
+-- CreateEnum
+CREATE TYPE "RuleBookLanguage" AS ENUM ('DE', 'EN', 'OTHER');
+
+-- CreateEnum
 CREATE TYPE "HoldingOrigin" AS ENUM ('INITIAL', 'LOAN', 'RETURN', 'HANDOVER', 'RELOCATION');
 
 -- CreateEnum
@@ -96,6 +102,8 @@ CREATE TABLE "meeples" (
     "telegramHandle" TEXT,
     "signalHandle" TEXT,
     "discordHandle" TEXT,
+    "address" TEXT,
+    "doorbellNote" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -123,6 +131,8 @@ CREATE TABLE "lfg_posts" (
     "location" TEXT,
     "maxParticipants" INTEGER NOT NULL,
     "createdByMeepleId" TEXT NOT NULL,
+    "boardGameId" TEXT,
+    "guestsMayBringGuests" BOOLEAN NOT NULL DEFAULT false,
     "closedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -131,11 +141,13 @@ CREATE TABLE "lfg_posts" (
 
 -- CreateTable
 CREATE TABLE "lfg_participants" (
+    "id" TEXT NOT NULL,
     "postId" TEXT NOT NULL,
-    "meepleId" TEXT NOT NULL,
+    "meepleId" TEXT,
+    "addedByMeepleId" TEXT NOT NULL,
     "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "lfg_participants_pkey" PRIMARY KEY ("postId","meepleId")
+    CONSTRAINT "lfg_participants_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -212,9 +224,13 @@ CREATE TABLE "newsletter_dispatch_jobs" (
 CREATE TABLE "invites" (
     "id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
+    "email" TEXT,
     "createdByUserId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresIn" INTEGER NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "redeemedAt" TIMESTAMP(3),
+    "revokedAt" TIMESTAMP(3),
 
     CONSTRAINT "invites_pkey" PRIMARY KEY ("id")
 );
@@ -223,21 +239,39 @@ CREATE TABLE "invites" (
 CREATE TABLE "board_games" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
     "bggId" INTEGER,
     "ean" TEXT,
     "minPlayers" INTEGER,
     "maxPlayers" INTEGER,
     "playTimeMinutes" INTEGER,
     "weight" DOUBLE PRECISION,
+    "averageRating" DOUBLE PRECISION,
     "imageUrl" TEXT,
     "description" TEXT,
     "mechanics" TEXT[],
     "explainerVideoUrl" TEXT,
     "kind" "BoardGameKind" NOT NULL DEFAULT 'BOARDGAME',
+    "secondaryTitle" TEXT,
+    "languageDependence" "LanguageDependence",
+    "publisher" TEXT[],
+    "author" TEXT[],
+    "yearPublished" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "board_games_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "board_game_alternate_names" (
+    "id" TEXT NOT NULL,
+    "boardGameId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "note" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "board_game_alternate_names_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -246,6 +280,7 @@ CREATE TABLE "game_copies" (
     "slug" TEXT NOT NULL,
     "boardGameId" TEXT NOT NULL,
     "condition" TEXT,
+    "ruleBookLanguages" "RuleBookLanguage"[],
     "needsCompletenessCheck" BOOLEAN NOT NULL DEFAULT false,
     "lastCheckedAt" TIMESTAMP(3),
     "status" "GameInventoryStatus" NOT NULL DEFAULT 'ACTIVE',
@@ -358,6 +393,7 @@ CREATE TABLE "events" (
     "startsAt" TIMESTAMP(3) NOT NULL,
     "endsAt" TIMESTAMP(3),
     "location" TEXT,
+    "hasBringAndBuyMarket" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -439,14 +475,29 @@ CREATE TABLE "flea_market_items" (
 CREATE TABLE "downloads" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
     "fileUrl" TEXT NOT NULL,
     "fileType" TEXT NOT NULL,
     "fileSizeBytes" INTEGER NOT NULL,
     "status" "DownloadStatus" NOT NULL DEFAULT 'PUBLIC',
+    "order" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "fileUpdatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "downloads_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "legal_documents" (
+    "id" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "sections" JSONB NOT NULL,
+    "pdfFileUrl" TEXT,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "legal_documents_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -459,6 +510,18 @@ CREATE TABLE "instagram_connections" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "instagram_connections_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "important_links" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "targetUrl" TEXT NOT NULL,
+    "iconUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "important_links_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -481,6 +544,21 @@ CREATE INDEX "deletion_requests_handledAt_idx" ON "deletion_requests"("handledAt
 
 -- CreateIndex
 CREATE INDEX "lfg_posts_createdByMeepleId_idx" ON "lfg_posts"("createdByMeepleId");
+
+-- CreateIndex
+CREATE INDEX "lfg_posts_boardGameId_idx" ON "lfg_posts"("boardGameId");
+
+-- CreateIndex
+CREATE INDEX "lfg_participants_postId_idx" ON "lfg_participants"("postId");
+
+-- CreateIndex
+CREATE INDEX "lfg_participants_meepleId_idx" ON "lfg_participants"("meepleId");
+
+-- CreateIndex
+CREATE INDEX "lfg_participants_addedByMeepleId_idx" ON "lfg_participants"("addedByMeepleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "lfg_participants_postId_meepleId_key" ON "lfg_participants"("postId", "meepleId");
 
 -- CreateIndex
 CREATE INDEX "bank_data_access_logs_at_idx" ON "bank_data_access_logs"("at");
@@ -510,10 +588,16 @@ CREATE UNIQUE INDEX "newsletter_dispatch_jobs_postId_subscriberId_key" ON "newsl
 CREATE UNIQUE INDEX "invites_token_key" ON "invites"("token");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "board_games_slug_key" ON "board_games"("slug");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "board_games_bggId_key" ON "board_games"("bggId");
 
 -- CreateIndex
 CREATE INDEX "board_games_ean_idx" ON "board_games"("ean");
+
+-- CreateIndex
+CREATE INDEX "board_game_alternate_names_boardGameId_idx" ON "board_game_alternate_names"("boardGameId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "game_copies_slug_key" ON "game_copies"("slug");
@@ -584,6 +668,9 @@ CREATE UNIQUE INDEX "downloads_fileUrl_key" ON "downloads"("fileUrl");
 -- CreateIndex
 CREATE INDEX "downloads_status_idx" ON "downloads"("status");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "legal_documents_slug_key" ON "legal_documents"("slug");
+
 -- AddForeignKey
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -600,10 +687,16 @@ ALTER TABLE "deletion_requests" ADD CONSTRAINT "deletion_requests_meepleId_fkey"
 ALTER TABLE "lfg_posts" ADD CONSTRAINT "lfg_posts_createdByMeepleId_fkey" FOREIGN KEY ("createdByMeepleId") REFERENCES "meeples"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "lfg_posts" ADD CONSTRAINT "lfg_posts_boardGameId_fkey" FOREIGN KEY ("boardGameId") REFERENCES "board_games"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "lfg_participants" ADD CONSTRAINT "lfg_participants_postId_fkey" FOREIGN KEY ("postId") REFERENCES "lfg_posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "lfg_participants" ADD CONSTRAINT "lfg_participants_meepleId_fkey" FOREIGN KEY ("meepleId") REFERENCES "meeples"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "lfg_participants" ADD CONSTRAINT "lfg_participants_addedByMeepleId_fkey" FOREIGN KEY ("addedByMeepleId") REFERENCES "meeples"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "bank_data_access_logs" ADD CONSTRAINT "bank_data_access_logs_accessedByMeepleId_fkey" FOREIGN KEY ("accessedByMeepleId") REFERENCES "meeples"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -619,6 +712,9 @@ ALTER TABLE "newsletter_dispatch_jobs" ADD CONSTRAINT "newsletter_dispatch_jobs_
 
 -- AddForeignKey
 ALTER TABLE "newsletter_dispatch_jobs" ADD CONSTRAINT "newsletter_dispatch_jobs_subscriberId_fkey" FOREIGN KEY ("subscriberId") REFERENCES "newsletter_subscribers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "board_game_alternate_names" ADD CONSTRAINT "board_game_alternate_names_boardGameId_fkey" FOREIGN KEY ("boardGameId") REFERENCES "board_games"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "game_copies" ADD CONSTRAINT "game_copies_boardGameId_fkey" FOREIGN KEY ("boardGameId") REFERENCES "board_games"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

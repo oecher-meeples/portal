@@ -69,6 +69,7 @@ export async function collectMeeplePersonalData(
       signalHandle: true,
       discordHandle: true,
       address: true,
+      shareAddress: true,
       doorbellNote: true,
       createdAt: true,
       updatedAt: true,
