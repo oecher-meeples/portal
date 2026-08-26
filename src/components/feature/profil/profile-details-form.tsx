@@ -40,7 +40,9 @@ export function ProfileDetailsForm({
     initialDiscordHandle ?? "",
   );
   const [address, setAddress] = useState(initialAddress ?? "");
-  const [shareAddress, setShareAddress] = useState(initialShareAddress);
+  const [shareAddress, setShareAddress] = useState(
+    Boolean(initialShareAddress),
+  );
   const [doorbellNote, setDoorbellNote] = useState(initialDoorbellNote ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
