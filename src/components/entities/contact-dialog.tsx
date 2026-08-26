@@ -1,5 +1,6 @@
 "use client";
 
+import { MapPinIcon, MessageCircleIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils/cn";
 import type { ContactLinks } from "@/lib/members/contact";
 
@@ -25,7 +27,13 @@ export function ContactDialog({
   contact: ContactLinks;
   className?: string;
 }) {
-  if (!contact.mailHref && !contact.telegramHref) {
+  if (
+    !contact.mailHref &&
+    !contact.telegramHref &&
+    !contact.signalHref &&
+    !contact.discordHandle &&
+    !contact.address
+  ) {
     return <span className={className}>{name}</span>;
   }
 
@@ -65,6 +73,34 @@ export function ContactDialog({
                 </a>
               }
             />
+          )}
+          {contact.signalHref && (
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a href={contact.signalHref} target="_blank" rel="noreferrer">
+                  Signal
+                </a>
+              }
+            />
+          )}
+          {contact.discordHandle && (
+            <CopyButton
+              value={contact.discordHandle}
+              label={`Discord: ${contact.discordHandle}`}
+              icon={MessageCircleIcon}
+            />
+          )}
+          {contact.address && (
+            <div className="border-input flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
+              <p className="whitespace-pre-line">{contact.address}</p>
+              <CopyButton
+                value={contact.address}
+                label="Kopieren"
+                icon={MapPinIcon}
+              />
+            </div>
           )}
         </div>
       </DialogContent>

@@ -28,7 +28,13 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     zustand: "frei",
     unitChain: "Regal A",
     responsibleName: null,
-    responsibleContact: { mailHref: null, telegramHref: null },
+    responsibleContact: {
+      mailHref: null,
+      telegramHref: null,
+      signalHref: null,
+      discordHandle: null,
+      address: null,
+    },
     condition: null,
     ruleBookLanguages: [],
     isMine: false,
@@ -137,6 +143,9 @@ describe("GameCopiesSection", () => {
             responsibleContact: {
               mailHref: "mailto:alex@example.com",
               telegramHref: null,
+              signalHref: null,
+              discordHandle: null,
+              address: null,
             },
           }),
         ]}
