@@ -1,12 +1,10 @@
-import { requirePermission } from "@/lib/auth/permissions";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPermission } from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { InstagramConnectionView } from "@/components/feature/admin-settings/instagram-connection-view";
 
 export default async function AdminInstagramSettingsPage() {
-  await requireAdmin();
-  await requirePermission("instagram:connect");
+  await requireAdminPermission("instagram:connect");
 
   const connection = await prisma.instagramConnection.findFirst();
 

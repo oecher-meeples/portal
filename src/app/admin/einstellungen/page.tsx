@@ -1,10 +1,11 @@
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPermission } from "@/lib/auth/session";
+import { EINSTELLUNGEN_PERMISSIONS } from "@/lib/utils/nav-config";
 import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { SettingsCard } from "@/components/feature/admin-settings/settings-card";
 
 export default async function AdminSettingsPage() {
-  await requireAdmin();
+  await requireAdminPermission(EINSTELLUNGEN_PERMISSIONS);
 
   const [connection, storageUnitCount] = await Promise.all([
     prisma.instagramConnection.findFirst(),

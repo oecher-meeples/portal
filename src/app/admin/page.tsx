@@ -1,4 +1,5 @@
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPermission } from "@/lib/auth/session";
+import { ADMIN_PERMISSIONS } from "@/lib/utils/nav-config";
 import { prisma } from "@/lib/utils/prisma";
 import { getMembershipState } from "@/lib/members/meeples";
 import { isLoanHolding } from "@/lib/ludothek/holdings";
@@ -8,7 +9,7 @@ import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
 
 export default async function AdminDashboardPage() {
-  await requireAdmin();
+  await requireAdminPermission([...ADMIN_PERMISSIONS]);
 
   const [
     meeples,
