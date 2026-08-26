@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { TextAreaField } from "@/components/ui/field";
 import { updateOwnProfile } from "@/components/feature/profil/actions";
 
@@ -15,6 +16,7 @@ export function ProfileDetailsForm({
   signalHandle: initialSignalHandle,
   discordHandle: initialDiscordHandle,
   address: initialAddress,
+  shareAddress: initialShareAddress,
   doorbellNote: initialDoorbellNote,
 }: {
   displayName: string;
@@ -24,6 +26,7 @@ export function ProfileDetailsForm({
   signalHandle: string | null;
   discordHandle: string | null;
   address: string | null;
+  shareAddress: boolean;
   doorbellNote: string | null;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
@@ -37,6 +40,7 @@ export function ProfileDetailsForm({
     initialDiscordHandle ?? "",
   );
   const [address, setAddress] = useState(initialAddress ?? "");
+  const [shareAddress, setShareAddress] = useState(initialShareAddress);
   const [doorbellNote, setDoorbellNote] = useState(initialDoorbellNote ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +60,7 @@ export function ProfileDetailsForm({
       signalHandle,
       discordHandle,
       address,
+      shareAddress,
       doorbellNote,
     });
     setIsSaving(false);
@@ -129,12 +134,24 @@ export function ProfileDetailsForm({
       <TextAreaField
         id="address"
         label="Wohnort"
-        hint="Nur für dich sichtbar. Wird für andere erst sichtbar, wenn du sie bei einem Spielgesuch (LFG) explizit per Autofill übernimmst."
+        hint="Nur für dich sichtbar. Wird für andere erst sichtbar, wenn du sie bei einem Spielgesuch (LFG) explizit per Autofill übernimmst, oder wenn du sie unten für alle Meeples freigibst."
         value={address}
         onChange={(event) => setAddress(event.target.value)}
         placeholder="optional"
         rows={2}
       />
+      <Label className="flex items-center justify-between gap-2 font-normal">
+        Adresse für Meeple freigeben
+        <Switch
+          id="shareAddress"
+          checked={shareAddress}
+          onCheckedChange={setShareAddress}
+        />
+      </Label>
+      <p className="text-muted-foreground -mt-2.5 text-xs">
+        Zeigt deinen Wohnort in den Kontaktmöglichkeiten (z. B. bei Ludothek-
+        Standort oder Marktplatz-Angeboten) für alle eingeloggten Meeples an.
+      </p>
       <TextAreaField
         id="doorbellNote"
         label="Notiz zum Klingelschild"

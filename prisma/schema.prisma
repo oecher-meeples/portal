@@ -177,6 +177,10 @@ model Meeple {
   signalHandle     String?
   discordHandle    String?
   address          String?
+  /** Opt-in: shows `address` to other Meeples in their `ContactDialog` (see
+   * `getContactLinks()`). Off by default — `address` alone stays private,
+   * used only for LFG-Autofill, until a Meeple explicitly flips this. */
+  shareAddress     Boolean   @default(false)
   doorbellNote     String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

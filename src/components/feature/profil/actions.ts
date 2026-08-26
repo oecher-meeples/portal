@@ -25,6 +25,7 @@ export type OwnProfileInput = {
   signalHandle?: string | null;
   discordHandle?: string | null;
   address?: string | null;
+  shareAddress?: boolean;
   doorbellNote?: string | null;
 };
 
@@ -61,6 +62,7 @@ export async function updateOwnProfile(input: OwnProfileInput) {
       signalHandle: optionalHandle(input.signalHandle),
       discordHandle: optionalHandle(input.discordHandle),
       address: optionalText(input.address),
+      shareAddress: input.shareAddress ?? false,
       doorbellNote: optionalText(input.doorbellNote),
     },
   });

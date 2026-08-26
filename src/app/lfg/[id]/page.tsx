@@ -20,7 +20,15 @@ export default async function LfgDetailPage({
       participants: {
         include: {
           meeple: {
-            select: { displayName: true, email: true, telegramHandle: true },
+            select: {
+              displayName: true,
+              email: true,
+              telegramHandle: true,
+              signalHandle: true,
+              discordHandle: true,
+              address: true,
+              shareAddress: true,
+            },
           },
           addedBy: { select: { displayName: true } },
         },

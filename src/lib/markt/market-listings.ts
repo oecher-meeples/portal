@@ -27,6 +27,10 @@ export function toMarketListingView(
     displayName: string;
     email: string | null;
     telegramHandle: string | null;
+    signalHandle: string | null;
+    discordHandle: string | null;
+    address: string | null;
+    shareAddress: boolean;
   },
 ): MarketListingView {
   return {

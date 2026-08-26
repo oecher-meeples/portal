@@ -9,7 +9,7 @@ import { getCurrentMeeple } from "@/lib/members/meeples";
 import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
-import { getContactLinks } from "@/lib/members/contact";
+import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
@@ -103,13 +103,27 @@ export default async function GameDetailPage({
   const responsibleMeeples = responsibleIds.length
     ? await prisma.meeple.findMany({
         where: { id: { in: responsibleIds } },
-        select: { id: true, email: true, telegramHandle: true },
+        select: {
+          id: true,
+          email: true,
+          telegramHandle: true,
+          signalHandle: true,
+          discordHandle: true,
+          address: true,
+          shareAddress: true,
+        },
       })
     : [];
   const contactById = new Map(
     responsibleMeeples.map((m) => [m.id, getContactLinks(m)]),
   );
-  const NO_CONTACT = { mailHref: null, telegramHref: null };
+  const NO_CONTACT: ContactLinks = {
+    mailHref: null,
+    telegramHref: null,
+    signalHref: null,
+    discordHandle: null,
+    address: null,
+  };
   const currentMeeple = await getCurrentMeeple();
   const copyRows = copies.map((copy) => ({
     id: copy.id,
