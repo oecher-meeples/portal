@@ -123,10 +123,26 @@ export async function requireMember() {
   return { user, meeple, membershipState };
 }
 
-export async function requireAdmin() {
+/**
+ * Guard for an admin-area route gated by one or more specific permissions
+ * (any match is enough) — unlike `requirePermission` this also enforces the
+ * membership-state check from `requireMember`, matching `requireAdmin`'s
+ * behaviour. Use this instead of `requireAdmin` wherever a route only needs
+ * one feature permission (e.g. `games:manage`), so a Spielewart/Kassenwart/
+ * Redakteur etc. can reach it without also holding `admin:access`.
+ */
+export async function requireAdminPermission(permissionKey: string | string[]) {
   const session = await requireMember();
-  if (!(await hasPermission(session.user.id, ADMIN_ACCESS_PERMISSION))) {
+  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  const results = await Promise.all(
+    keys.map((key) => hasPermission(session.user.id, key)),
+  );
+  if (!results.some(Boolean)) {
     redirect("/403");
   }
   return session;
+}
+
+export async function requireAdmin() {
+  return requireAdminPermission(ADMIN_ACCESS_PERMISSION);
 }

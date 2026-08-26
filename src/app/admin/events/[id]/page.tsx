@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPermission } from "@/lib/auth/session";
 import {
   EventDetailView,
   type ShiftRow,
@@ -11,7 +11,7 @@ export default async function AdminEventDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  await requireAdminPermission("events:manage");
   const { id } = await params;
 
   const [event, shelves] = await Promise.all([

@@ -1,4 +1,7 @@
-import { requireAdmin, hasPermissionInCurrentView } from "@/lib/auth/session";
+import {
+  requireAdminPermission,
+  hasPermissionInCurrentView,
+} from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { buildAdminBoardGameRows } from "@/lib/ludothek/admin-bestand-rows";
 import { AdminBestandView } from "@/components/feature/admin-bestand/admin-bestand-view";
@@ -14,7 +17,7 @@ export default async function AdminBestandPage({
     filter?: string;
   }>;
 }) {
-  await requireAdmin();
+  await requireAdminPermission("games:manage");
   const { deinventarisiert, ean, filter } = await searchParams;
   const showDeinventarised = deinventarisiert === "1";
   const defaultQuickFilter = QUICK_FILTERS.find((f) => f === filter);

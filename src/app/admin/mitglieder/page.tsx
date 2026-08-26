@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/utils/prisma";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdminPermission } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/auth/permissions";
+import { MITGLIEDER_PERMISSIONS } from "@/lib/utils/nav-config";
 import { getMembershipState } from "@/lib/members/meeples";
 import { maskIban } from "@/lib/utils/crypto";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
@@ -8,7 +9,7 @@ import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 import { listInvites } from "@/lib/members/invites";
 
 export default async function AdminMitgliederPage() {
-  const session = await requireAdmin();
+  const session = await requireAdminPermission(MITGLIEDER_PERMISSIONS);
 
   const now = new Date();
 
