@@ -23,6 +23,7 @@ const MEEPLE = {
   signalHandle: null,
   discordHandle: null,
   address: "Musterstraße 1, 52062 Aachen",
+  shareAddress: true,
   doorbellNote: "bei Fam. Reiners klingeln",
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2026-01-01"),
@@ -113,6 +114,7 @@ describe("collectMeeplePersonalData", () => {
 
     expect(result!.daten.Meeple).toMatchObject({
       address: "Musterstraße 1, 52062 Aachen",
+      shareAddress: true,
       doorbellNote: "bei Fam. Reiners klingeln",
     });
   });

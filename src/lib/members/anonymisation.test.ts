@@ -120,6 +120,7 @@ describe("anonymiseMeepleRecord", () => {
         signalHandle: null,
         discordHandle: null,
         address: null,
+        shareAddress: false,
         doorbellNote: null,
         anonymizedAt: NOW,
       },

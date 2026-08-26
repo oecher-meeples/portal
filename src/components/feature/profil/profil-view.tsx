@@ -97,6 +97,7 @@ export function ProfilView({
                 signalHandle={meeple.signalHandle}
                 discordHandle={meeple.discordHandle}
                 address={meeple.address}
+                shareAddress={meeple.shareAddress}
                 doorbellNote={meeple.doorbellNote}
               />
             </div>
