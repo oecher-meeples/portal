@@ -51,6 +51,40 @@ export function walkUnitChain(
   return { unitChain: labels.reverse().join(" → "), keeperMeepleId };
 }
 
+export type StorageUnitLite = {
+  id: string;
+  keeperMeepleId: string | null;
+};
+
+/**
+ * `unitById` for `walkUnitChain()` plus a `keeperMeepleId → displayName`
+ * lookup, built from the same `storageUnit.findMany()` result — every bulk
+ * Ludothek view (admin-bestand, Ludothek-Browser) needs both maps to resolve
+ * a copy's Standort-Kette, so this is the one place that builds them instead
+ * of each caller repeating the keeper query.
+ */
+export async function buildUnitAndKeeperMaps<T extends StorageUnitLite>(
+  units: T[],
+) {
+  const unitById = new Map(units.map((u) => [u.id, u]));
+  const keeperIds = [
+    ...new Set(
+      units
+        .map((u) => u.keeperMeepleId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const keepers = keeperIds.length
+    ? await prisma.meeple.findMany({
+        where: { id: { in: keeperIds } },
+        select: { id: true, displayName: true },
+      })
+    : [];
+  const keeperNameById = new Map(keepers.map((k) => [k.id, k.displayName]));
+
+  return { unitById, keeperNameById };
+}
+
 /** The one place that decides the display order: person/event first (the
  * pickup orientation point), then the storage units (see #121). */
 export function formatLocationChain({

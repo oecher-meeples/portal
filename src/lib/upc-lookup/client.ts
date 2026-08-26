@@ -25,6 +25,35 @@ interface UpcItemDbSearchItem {
   brand?: string;
 }
 
+/** Shared fetch + error-handling for both UPCitemdb endpoints below — same
+ * trial-tier timeout/HTTP-error mapping either way. */
+async function fetchUpcItemDb(
+  url: string,
+): Promise<{ items?: UpcItemDbSearchItem[] }> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new UpcLookupError(
+        "Die Anfrage an die EAN-Suche hat zu lange gedauert.",
+      );
+    }
+    throw error;
+  }
+
+  if (!response.ok) {
+    throw new UpcLookupError(
+      `EAN-Suche fehlgeschlagen (${response.status}).`,
+      response.status,
+    );
+  }
+
+  return response.json();
+}
+
 /**
  * Sucht eine EAN zu einem Spieletitel (#197) — keine kostenlose API mit
  * zuverlässiger Namenssuche für Brettspiele gefunden (EAN-Search.org ist
@@ -47,28 +76,9 @@ export async function searchEanByName(
     type: "product",
   });
 
-  let response: Response;
-  try {
-    response = await fetch(`${UPC_ITEM_DB_SEARCH_URL}?${params.toString()}`, {
-      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      throw new UpcLookupError(
-        "Die Anfrage an die EAN-Suche hat zu lange gedauert.",
-      );
-    }
-    throw error;
-  }
-
-  if (!response.ok) {
-    throw new UpcLookupError(
-      `EAN-Suche fehlgeschlagen (${response.status}).`,
-      response.status,
-    );
-  }
-
-  const json = (await response.json()) as { items?: UpcItemDbSearchItem[] };
+  const json = await fetchUpcItemDb(
+    `${UPC_ITEM_DB_SEARCH_URL}?${params.toString()}`,
+  );
   const seen = new Set<string>();
 
   return (json.items ?? [])
@@ -93,27 +103,8 @@ export async function searchEanByName(
 export async function lookupEanTitle(ean: string): Promise<string | null> {
   const params = new URLSearchParams({ upc: ean });
 
-  let response: Response;
-  try {
-    response = await fetch(`${UPC_ITEM_DB_LOOKUP_URL}?${params.toString()}`, {
-      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      throw new UpcLookupError(
-        "Die Anfrage an die EAN-Suche hat zu lange gedauert.",
-      );
-    }
-    throw error;
-  }
-
-  if (!response.ok) {
-    throw new UpcLookupError(
-      `EAN-Suche fehlgeschlagen (${response.status}).`,
-      response.status,
-    );
-  }
-
-  const json = (await response.json()) as { items?: UpcItemDbSearchItem[] };
+  const json = await fetchUpcItemDb(
+    `${UPC_ITEM_DB_LOOKUP_URL}?${params.toString()}`,
+  );
   return json.items?.[0]?.title || null;
 }
