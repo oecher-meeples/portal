@@ -12,7 +12,14 @@ import {
 import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/ui/copy-button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Table,
   TableBody,
@@ -98,165 +105,175 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
   }, [invites, search, activeStatuses]);
 
   return (
-    <div id="einladungen" className="flex flex-col gap-4">
-      <h2 className="font-serif text-lg font-bold">Einladungen</h2>
+    <Accordion id="einladungen" className="bg-card rounded-lg border">
+      <AccordionItem value="einladungen" className="border-b-0">
+        <AccordionTrigger className="px-5">
+          <span className="flex items-center gap-2">
+            <span className="font-serif text-lg font-bold">Einladungen</span>
+            <Badge>{invites.length}</Badge>
+          </span>
+        </AccordionTrigger>
+        <AccordionPanel className="px-5">
+          <div className="flex flex-col gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <StatTile label="Offene Einladungen" value={openCount} />
+              <StatTile label="Abgelaufene Einladungen" value={expiredCount} />
+            </div>
+            <InviteForm />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full max-w-sm">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input
+                  placeholder="E-Mail suchen …"
+                  className="pl-9"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 text-sm">
+                {INVITE_STATUS_FILTERS.map(({ value, label }) => (
+                  <Button
+                    key={value}
+                    size="sm"
+                    variant={activeStatuses.has(value) ? "default" : "outline"}
+                    onClick={() => toggleStatus(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatTile label="Offene Einladungen" value={openCount} />
-        <StatTile label="Abgelaufene Einladungen" value={expiredCount} />
-      </div>
-      <InviteForm />
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-sm">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <Input
-            placeholder="E-Mail suchen …"
-            className="pl-9"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          {INVITE_STATUS_FILTERS.map(({ value, label }) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={activeStatuses.has(value) ? "default" : "outline"}
-              onClick={() => toggleStatus(value)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-card overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>E-Mail</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Erzeugt von</TableHead>
-              <TableHead>Erzeugt am</TableHead>
-              <TableHead>Läuft ab / eingelöst am</TableHead>
-              <TableHead className="text-right"> </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredInvites.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-muted-foreground py-6 text-center"
-                >
-                  Keine Einladungen gefunden.
-                </TableCell>
-              </TableRow>
-            )}
-            {filteredInvites.map((invite) => (
-              <TableRow key={invite.id}>
-                <TableCell className="font-medium">
-                  {invite.email ?? "*"}
-                </TableCell>
-                <TableCell>
-                  <InviteStatusPill status={invite.status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {invite.createdByDisplayName}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {germanDate(invite.createdAt)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {invite.redeemedAt
-                    ? germanDate(invite.redeemedAt)
-                    : germanDate(invite.expiresAt)}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    {invite.status === "offen" && (
-                      <>
-                        {(() => {
-                          const link = buildRegistrationLink(
-                            origin,
-                            invite.token,
-                            invite.email,
-                          );
-                          const message = formatInviteMessage(
-                            link,
-                            new Date(invite.expiresAt),
-                          );
-                          const mailtoHref = `mailto:${invite.email ?? ""}?subject=${encodeURIComponent(
-                            "Einladung zu Oecher Meeples",
-                          )}&body=${encodeURIComponent(message)}`;
-                          return (
-                            <>
-                              <CopyButton
-                                size="sm"
-                                value={invite.token}
-                                label="Token kopieren"
-                                icon={Copy}
-                              />
-                              <CopyButton
-                                size="sm"
-                                value={message}
-                                label="Einladung kopieren"
-                                icon={Mail}
-                              />
-                              <CopyButton
-                                size="sm"
-                                value={link}
-                                label="Link kopieren"
-                                icon={LinkIcon}
-                              />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                render={
-                                  <a
-                                    href={mailtoHref}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  />
-                                }
-                              >
-                                <Mail />
-                                Per Mail versenden
-                              </Button>
-                            </>
-                          );
-                        })()}
-                        <ActionButton
-                          variant="destructive"
-                          size="sm"
-                          action={revokeInvite.bind(null, invite.id)}
-                          pendingLabel="Widerrufe…"
-                          confirm="Diese Einladung wirklich widerrufen? Der Link funktioniert danach nicht mehr."
-                        >
-                          <Ban />
-                          Widerrufen
-                        </ActionButton>
-                      </>
-                    )}
-                    {invite.status === "abgelaufen" && (
-                      <ActionButton
-                        variant="outline"
-                        size="sm"
-                        action={extendInvite.bind(null, invite.id)}
-                        pendingLabel="Verlängere…"
-                        confirm="Diese Einladung um ihre ursprüngliche Gültigkeitsdauer verlängern?"
+            <div className="overflow-hidden rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>E-Mail</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Erzeugt von</TableHead>
+                    <TableHead>Erzeugt am</TableHead>
+                    <TableHead>Läuft ab / eingelöst am</TableHead>
+                    <TableHead className="text-right"> </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvites.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-muted-foreground py-6 text-center"
                       >
-                        <RotateCcw />
-                        Verlängern
-                      </ActionButton>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                        Keine Einladungen gefunden.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredInvites.map((invite) => (
+                    <TableRow key={invite.id}>
+                      <TableCell className="font-medium">
+                        {invite.email ?? "*"}
+                      </TableCell>
+                      <TableCell>
+                        <InviteStatusPill status={invite.status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {invite.createdByDisplayName}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {germanDate(invite.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {invite.redeemedAt
+                          ? germanDate(invite.redeemedAt)
+                          : germanDate(invite.expiresAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {invite.status === "offen" && (
+                            <>
+                              {(() => {
+                                const link = buildRegistrationLink(
+                                  origin,
+                                  invite.token,
+                                  invite.email,
+                                );
+                                const message = formatInviteMessage(
+                                  link,
+                                  new Date(invite.expiresAt),
+                                );
+                                const mailtoHref = `mailto:${invite.email ?? ""}?subject=${encodeURIComponent(
+                                  "Einladung zu Oecher Meeples",
+                                )}&body=${encodeURIComponent(message)}`;
+                                return (
+                                  <>
+                                    <CopyButton
+                                      size="sm"
+                                      value={invite.token}
+                                      label="Token kopieren"
+                                      icon={Copy}
+                                    />
+                                    <CopyButton
+                                      size="sm"
+                                      value={message}
+                                      label="Einladung kopieren"
+                                      icon={Mail}
+                                    />
+                                    <CopyButton
+                                      size="sm"
+                                      value={link}
+                                      label="Link kopieren"
+                                      icon={LinkIcon}
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      render={
+                                        <a
+                                          href={mailtoHref}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                        />
+                                      }
+                                    >
+                                      <Mail />
+                                      Per Mail versenden
+                                    </Button>
+                                  </>
+                                );
+                              })()}
+                              <ActionButton
+                                variant="destructive"
+                                size="sm"
+                                action={revokeInvite.bind(null, invite.id)}
+                                pendingLabel="Widerrufe…"
+                                confirm="Diese Einladung wirklich widerrufen? Der Link funktioniert danach nicht mehr."
+                              >
+                                <Ban />
+                                Widerrufen
+                              </ActionButton>
+                            </>
+                          )}
+                          {invite.status === "abgelaufen" && (
+                            <ActionButton
+                              variant="outline"
+                              size="sm"
+                              action={extendInvite.bind(null, invite.id)}
+                              pendingLabel="Verlängere…"
+                              confirm="Diese Einladung um ihre ursprüngliche Gültigkeitsdauer verlängern?"
+                            >
+                              <RotateCcw />
+                              Verlängern
+                            </ActionButton>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
   );
 }
