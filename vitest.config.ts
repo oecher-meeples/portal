@@ -12,6 +12,10 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
+      // Isolated git worktrees the Agent tool creates under .claude/worktrees/
+      // for parallel subagent work — each has its own node_modules, whose
+      // version drift breaks tests when Vitest's default glob picks them up.
+      "**/.claude/worktrees/**",
       ...(process.env.VITEST_LIVE ? [] : ["**/*.live.test.ts"]),
     ],
     coverage: {

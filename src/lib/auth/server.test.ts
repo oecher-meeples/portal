@@ -32,4 +32,20 @@ describe("getCurrentUser", () => {
 
     expect(await getCurrentUser()).toBeNull();
   });
+
+  it("returns null instead of crashing when the session cookie can't be refreshed during render", async () => {
+    getSessionMock.mockRejectedValue(
+      new Error(
+        "Cookies can only be modified in a Server Action or Route Handler.",
+      ),
+    );
+
+    expect(await getCurrentUser()).toBeNull();
+  });
+
+  it("rethrows unrelated errors", async () => {
+    getSessionMock.mockRejectedValue(new Error("upstream is on fire"));
+
+    await expect(getCurrentUser()).rejects.toThrow("upstream is on fire");
+  });
 });
