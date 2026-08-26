@@ -230,7 +230,7 @@ describe("replaceDownloadFile", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.download.update).toHaveBeenCalledWith({
       where: { id: "download-1" },
-      data: NEW_FILE,
+      data: { ...NEW_FILE, fileUpdatedAt: expect.any(Date) },
     });
     expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.fileUrl]);
     expect(callOrder).toEqual(["update", "delete"]);

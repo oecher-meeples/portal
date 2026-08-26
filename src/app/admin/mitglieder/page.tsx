@@ -16,15 +16,21 @@ export default async function AdminMitgliederPage() {
     meeples,
     userRoles,
     roles,
+    permissions,
     gameHoldingCounts,
     storageUnitCounts,
     deletionRequests,
     invites,
     canReadBankData,
+    canManageRoles,
   ] = await Promise.all([
     prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
     prisma.userRole.findMany({ include: { role: true } }),
-    prisma.role.findMany({ orderBy: { name: "asc" } }),
+    prisma.role.findMany({
+      orderBy: { name: "asc" },
+      include: { permissions: true },
+    }),
+    prisma.permission.findMany({ orderBy: { key: "asc" } }),
     prisma.gameHolding.groupBy({
       by: ["meepleId"],
       where: { endedAt: null, meepleId: { not: null } },
@@ -38,6 +44,7 @@ export default async function AdminMitgliederPage() {
     listPendingDeletionRequests(now),
     listInvites(now),
     hasPermission(session.user.id, "bank:read"),
+    hasPermission(session.user.id, "members:manage"),
   ]);
 
   // A Meeple holds exactly one role (see redeemInvite's DEFAULT_ROLE) — the
@@ -68,7 +75,18 @@ export default async function AdminMitgliederPage() {
         daysRemaining: request.daysRemaining,
         overdue: request.overdue,
       }))}
-      roles={roles.map((role) => ({ id: role.id, name: role.name }))}
+      roles={roles.map((role) => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        permissionIds: role.permissions.map((entry) => entry.permissionId),
+      }))}
+      permissions={permissions.map((permission) => ({
+        id: permission.id,
+        key: permission.key,
+        description: permission.description,
+      }))}
+      canManageRoles={canManageRoles}
       canReadBankData={canReadBankData}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,

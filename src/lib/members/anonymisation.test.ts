@@ -119,6 +119,8 @@ describe("anonymiseMeepleRecord", () => {
         telegramHandle: null,
         signalHandle: null,
         discordHandle: null,
+        address: null,
+        doorbellNote: null,
         anonymizedAt: NOW,
       },
     });

@@ -45,6 +45,27 @@ enum BoardGameKind {
   BOARDGAME_EXPANSION
 }
 
+/// BGGs 5-stufiges "Language Dependence"-Poll-Modell (#188) — Level 1 = kein
+/// notwendiger Text, Level 5 = unspielbar in einer anderen Sprache. Deutsche
+/// Labels in `src/lib/ludothek/language-dependence.ts`.
+enum LanguageDependence {
+  NO_NECESSARY_TEXT
+  SOME_NECESSARY_TEXT
+  MODERATE_TEXT
+  EXTENSIVE_TEXT
+  UNPLAYABLE
+}
+
+/// Sprachen, in denen ein Exemplar sein Regelheft mitbringt (#188) — auf die
+/// im Verein tatsächlich vorkommenden Sprachen beschränkt, erweiterbar per
+/// Migration. Mehrfachauswahl (`GameCopy.ruleBookLanguages[]`), da eine
+/// Schachtel oft DE- und EN-Regelheft gemeinsam enthält.
+enum RuleBookLanguage {
+  DE
+  EN
+  OTHER
+}
+
 enum HoldingOrigin {
   INITIAL
   LOAN
@@ -155,6 +176,8 @@ model Meeple {
   telegramHandle   String?
   signalHandle     String?
   discordHandle    String?
+  address          String?
+  doorbellNote     String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -201,21 +224,21 @@ model DeletionRequest {
 /// A player-search post. `gameTitle` is deliberately free text, not a relation to
 /// BoardGame — a Gesuch can be for a title the club doesn't own (see docs/schema.md).
 model LfgPost {
-  id                String    @id @default(cuid())
-  title             String
-  gameTitle         String?
-  description       String
-  plannedAt         DateTime?
-  dateNote          String?
-  location          String?
-  maxParticipants   Int
-  createdByMeepleId String
+  id                   String    @id @default(cuid())
+  title                String
+  gameTitle            String?
+  description          String
+  plannedAt            DateTime?
+  dateNote             String?
+  location             String?
+  maxParticipants      Int
+  createdByMeepleId    String
   /// Optional link to an inventory title (#34) — gameTitle free text stays the default, this is never required.
-  boardGameId       String?
+  boardGameId          String?
   /// Erlaubt beigetretenen Meeples (nicht nur dem Ersteller), eigene Gäste hinzuzufügen (#145).
-  guestsMayBringGuests Boolean @default(false)
-  closedAt          DateTime?
-  createdAt         DateTime  @default(now())
+  guestsMayBringGuests Boolean   @default(false)
+  closedAt             DateTime?
+  createdAt            DateTime  @default(now())
 
   createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
   boardGame    BoardGame?       @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
@@ -358,27 +381,49 @@ model Invite {
 /// A game title — BGG/product metadata, one row per title regardless of how many
 /// physical copies the club owns (see ADR 0008, supersedes the relevant part of ADR 0001).
 model BoardGame {
-  id                String        @id @default(cuid())
-  title             String
+  id                 String              @id @default(cuid())
+  title              String
   /// Routing basis for the title detail page (see ADR on the exemplar→title slug migration).
-  slug              String        @unique
+  slug               String              @unique
   /// The single reliable product identity; unique now that copies live in GameCopy.
-  bggId             Int?          @unique
+  bggId              Int?                @unique
   /// The manufacturer barcode identifies the product, not the single copy — never unique.
-  ean               String?
-  minPlayers        Int?
-  maxPlayers        Int?
-  playTimeMinutes   Int?
-  weight            Float?
-  imageUrl          String?
-  description       String?
-  mechanics         String[]
+  ean                String?
+  minPlayers         Int?
+  maxPlayers         Int?
+  playTimeMinutes    Int?
+  weight             Float?
+  /// BGGs Community-Durchschnittsbewertung (0–10), `null` ohne Bewertungen
+  /// oder bei manuell angelegten Titeln ohne BGG-ID — analog zu `weight`
+  /// beim Import/Abgleich übernommen (#214).
+  averageRating      Float?
+  imageUrl           String?
+  description        String?
+  mechanics          String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
-  explainerVideoUrl String?
+  explainerVideoUrl  String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
-  kind              BoardGameKind @default(BOARDGAME)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  kind               BoardGameKind       @default(BOARDGAME)
+  /// A second title shown alongside `title` (e.g. the German name next to an
+  /// English `title`) — a plain field, not a pointer into `alternateNames`
+  /// (replaces the `secondaryAlternateNameId` mechanism, see #203).
+  secondaryTitle     String?
+  /// BGGs 5-stufiges Language-Dependence-Poll-Level, `null` solange nicht
+  /// erfasst (#188) — beim BGG-Import als meistgewählter Vorschlag übernommen,
+  /// vom Admin frei änderbar.
+  languageDependence LanguageDependence?
+  /// Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen, wenn über
+  /// alle (ggf. auf deutsche Editionen gefilterten) BGG-Versionen identisch,
+  /// sonst wählt der Admin (#205).
+  publisher          String[]
+  /// Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205) —
+  /// im Gegensatz zu `publisher` nicht versionsabhängig.
+  author             String[]
+  /// Erstveröffentlichungsjahr — das älteste Jahr über alle BGG-Versionen,
+  /// unabhängig von der für `publisher` gewählten Version (#205).
+  yearPublished      Int?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   copies                   GameCopy[]
   explainerGames           ExplainerGame[]
@@ -387,9 +432,28 @@ model BoardGame {
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
   lfgPosts                 LfgPost[]
+  alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
 
   @@index([ean])
   @@map("board_games")
+}
+
+/// A second name for a title — populated ungefiltert aus BGG `name type="alternate"`
+/// beim Import, oder manuell ergänzt (#187). Suche/Anzeige matchen zusätzlich zu
+/// `BoardGame.title` gegen diese Liste. Die Anzeige neben dem Haupttitel läuft
+/// über `BoardGame.secondaryTitle` (eigenständiges Feld, siehe #203) statt über
+/// eine Zeile hier.
+model BoardGameAlternateName {
+  id          String   @id @default(cuid())
+  boardGameId String
+  name        String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  boardGame BoardGame @relation("BoardGameAlternateNames", fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@index([boardGameId])
+  @@map("board_game_alternate_names")
 }
 
 /// A single physical copy of a title — condition, inventory status and (via
@@ -400,6 +464,9 @@ model GameCopy {
   boardGameId            String
   /// The single condition note — a defect is recorded here, not in a second field.
   condition              String?
+  /// Regelheft-Sprache(n) dieses Exemplars (#188) — mehrere möglich, z. B. eine
+  /// Schachtel mit DE- und EN-Regelheft.
+  ruleBookLanguages      RuleBookLanguage[]
   needsCompletenessCheck Boolean             @default(false)
   lastCheckedAt          DateTime?
   status                 GameInventoryStatus @default(ACTIVE)
@@ -561,14 +628,18 @@ model GameHolding {
 /// A play day or larger event, independent of the public/internal ICS calendar feed
 /// (see docs/adr/0004). The basis for shifts, explainer attendance and flea market items.
 model Event {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  title     String
-  startsAt  DateTime
-  endsAt    DateTime?
-  location  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  slug                 String    @unique
+  title                String
+  startsAt             DateTime
+  endsAt               DateTime?
+  location             String?
+  /// Whether this event has a Bring&Buy flea market at all (#211) — separate
+  /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
+  /// always open and not tied to a specific event.
+  hasBringAndBuyMarket Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   shifts               Shift[]
   shelfAssignments     EventShelfAssignment[]
@@ -692,6 +763,10 @@ model Download {
   order         Int            @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  /// Last time the *file* itself was replaced (upload/reupload) — separate
+  /// from `updatedAt`, which also ticks on rename/status/order changes that
+  /// have nothing to do with the file's content. See #201.
+  fileUpdatedAt DateTime       @default(now())
 
   @@index([status])
   @@map("downloads")

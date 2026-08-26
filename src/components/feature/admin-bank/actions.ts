@@ -8,6 +8,7 @@ import {
   revealMeepleIban,
 } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
+import { escapeCsvField } from "@/lib/utils/csv";
 
 /** The only columns the export ever contains. */
 export const BANK_CSV_COLUMNS = [
@@ -18,8 +19,7 @@ export const BANK_CSV_COLUMNS = [
 ] as const;
 
 function csvCell(value: string | number) {
-  const text = String(value);
-  return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  return escapeCsvField(value, ";");
 }
 
 export async function revealIban(meepleId: string) {

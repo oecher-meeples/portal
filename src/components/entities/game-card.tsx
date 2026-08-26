@@ -4,9 +4,11 @@ import { Layers } from "lucide-react";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
@@ -32,9 +34,12 @@ export function GameCard({
       href={`/ludothek/${game.boardGameSlug}`}
       className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
     >
-      {actions && (
-        <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
-      )}
+      <CardCornerOverlay corner="top-right">
+        <div className="flex flex-col items-end gap-1.5">
+          {actions}
+          <BggRatingBadge averageRating={game.averageRating} />
+        </div>
+      </CardCornerOverlay>
       {isExpansion && <RibbonCorner>Erweiterung</RibbonCorner>}
       <GameCoverMedia
         imageUrl={game.imageUrl}
@@ -49,6 +54,11 @@ export function GameCard({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
+        {game.publisher.length > 0 && (
+          <p className="text-muted-foreground text-sm">
+            {game.publisher.join(", ")}
+          </p>
+        )}
         {expansionCount > 0 && (
           <p className="text-muted-foreground flex items-center gap-1 text-sm">
             <Layers className="size-4" />
@@ -56,14 +66,18 @@ export function GameCard({
             {expansionCount === 1 ? "Erweiterung" : "Erweiterungen"}
           </p>
         )}
-        {zustand && (
-          <GameZustandPill
-            zustand={zustand}
-            count={game.zustandCount}
-            total={game.copyCount}
-            className="mt-auto w-fit"
+        <div className="mt-auto flex flex-wrap items-center gap-1.5">
+          {zustand && (
+            <GameZustandPill
+              zustand={zustand}
+              count={game.zustandCount}
+              total={game.copyCount}
+            />
+          )}
+          <LanguageIndependentPill
+            languageDependence={game.languageDependence}
           />
-        )}
+        </div>
       </div>
     </Link>
   );

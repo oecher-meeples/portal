@@ -1,6 +1,5 @@
 import { requireMember } from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
-import { Separator } from "@/components/ui/separator";
 import { prisma } from "@/lib/utils/prisma";
 import { toSparePartListingView } from "@/lib/inventory/spare-parts";
 import {
@@ -9,7 +8,6 @@ import {
   toMarketListingView,
 } from "@/lib/markt/market-listings";
 import { MarktBrowser } from "@/components/feature/markt/markt-browser";
-import { FleaMarketSection } from "@/components/feature/bringbuy/markt-view";
 
 export default async function MarktPage({
   searchParams,
@@ -52,8 +50,6 @@ export default async function MarktPage({
         spareParts={spareParts}
         ownMeepleId={meeple.id}
       />
-      <Separator />
-      <FleaMarketSection />
     </div>
   );
 }

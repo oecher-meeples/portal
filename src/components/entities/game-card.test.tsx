@@ -21,7 +21,15 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: [],
+    alternateNames: [],
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -32,6 +40,32 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     ...overrides,
   };
 }
+
+describe("GameCard — Verlag (#205)", () => {
+  it("shows the publisher(s) when set", () => {
+    render(<GameCard game={game({ publisher: ["Feuerland Spiele"] })} />);
+
+    expect(screen.getByText("Feuerland Spiele")).toBeInTheDocument();
+  });
+
+  it("joins several publishers with a comma", () => {
+    render(
+      <GameCard
+        game={game({ publisher: ["Feuerland Spiele", "Frosted Games"] })}
+      />,
+    );
+
+    expect(
+      screen.getByText("Feuerland Spiele, Frosted Games"),
+    ).toBeInTheDocument();
+  });
+
+  it("omits the line when no publisher is set", () => {
+    render(<GameCard game={game({ publisher: [] })} />);
+
+    expect(screen.queryByText("Feuerland Spiele")).not.toBeInTheDocument();
+  });
+});
 
 describe("GameCard — expansion ribbon (#103)", () => {
   it("shows the ribbon corner for an expansion", () => {

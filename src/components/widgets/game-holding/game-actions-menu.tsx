@@ -25,12 +25,14 @@ import {
 } from "@/components/widgets/game-holding/holding-mini-dialogs";
 import { CopyPickerDialog } from "@/components/widgets/game-holding/copy-picker-dialog";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import type { RuleBookLanguage } from "@prisma/client";
 
 export type GameActionsCopy = {
   id: string;
   zustand: GameZustand;
   locationChain: string;
   condition: string | null;
+  ruleBookLanguages: RuleBookLanguage[];
   /** Whether the current session holds this copy right now — gates
    * "Weitergeben" for the non-ambiguous case (#128). Omitted callers keep
    * showing it unconditionally, matching the previous behaviour. */
@@ -51,7 +53,7 @@ const ACTION_LABELS: Record<ActionKey, string> = {
   give: "Weitergeben",
   return: "Rückgabe",
   relocate: "Umlagern",
-  condition: "Mängelvermerk bearbeiten",
+  condition: "Exemplar bearbeiten",
   deinventorise: "Deinventarisieren",
   "completeness-check": "Prüfung anfordern",
 };
@@ -115,9 +117,10 @@ export function GameActionsMenu({
     if (!open) setChosen(null);
   }
 
-  const chosenCondition = chosen
-    ? (copies.find((c) => c.id === chosen.copyId)?.condition ?? null)
-    : null;
+  const chosenCopy = chosen
+    ? copies.find((c) => c.id === chosen.copyId)
+    : undefined;
+  const chosenCondition = chosenCopy?.condition ?? null;
 
   return (
     <>
@@ -189,6 +192,7 @@ export function GameActionsMenu({
                       <EditBoardGameExemplarDialog
                         copyId={sole.id}
                         condition={sole.condition}
+                        ruleBookLanguages={sole.ruleBookLanguages}
                         triggerLabel={ACTION_LABELS.condition}
                       />
                     </div>
@@ -257,6 +261,7 @@ export function GameActionsMenu({
         <EditBoardGameExemplarDialog
           copyId={chosen.copyId}
           condition={chosenCondition}
+          ruleBookLanguages={chosenCopy?.ruleBookLanguages ?? []}
           triggerLabel={ACTION_LABELS.condition}
           open
           onOpenChange={closeChosen}

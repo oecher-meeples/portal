@@ -54,7 +54,15 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: [],
+    alternateNames: [],
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -110,6 +118,11 @@ describe("GameDetailView — offene Gesuche (#34)", () => {
 const TITLE_EDIT_FIXTURE = {
   boardGameId: "title-1",
   title: "Arche Nova",
+  secondaryTitle: null,
+  languageDependence: null,
+  publisher: [],
+  author: [],
+  yearPublished: null,
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -117,6 +130,7 @@ const TITLE_EDIT_FIXTURE = {
   maxPlayers: 4,
   playTimeMinutes: 90,
   weight: 3.7,
+  averageRating: 8.5,
   imageUrl: null,
   description: null,
   mechanics: [],
@@ -134,6 +148,56 @@ describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {
     render(<GameDetailView game={game()} />);
 
     expect(screen.queryByText("Titel bearbeiten")).not.toBeInTheDocument();
+  });
+});
+
+describe("GameDetailView — externer BGG-Link (#207)", () => {
+  it("shows the link when a bggId is set, pointing at the BGG page in a new tab", () => {
+    render(<GameDetailView game={game()} bggId={342942} />);
+
+    const link = screen.getByRole("button", {
+      name: "Auf BoardGameGeek ansehen",
+    });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://boardgamegeek.com/boardgame/342942",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("hides the link when no bggId is set", () => {
+    render(<GameDetailView game={game()} bggId={null} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Auf BoardGameGeek ansehen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the link when bggId is not passed at all", () => {
+    render(<GameDetailView game={game()} />);
+
+    expect(
+      screen.queryByRole("button", { name: "Auf BoardGameGeek ansehen" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("GameDetailView — Sekundärtitel (#203)", () => {
+  it("shows the secondary title next to the main title when set", () => {
+    render(
+      <GameDetailView
+        game={game({ secondaryTitle: "Die Siedler von Catan" })}
+      />,
+    );
+
+    expect(screen.getByText("Die Siedler von Catan")).toBeInTheDocument();
+  });
+
+  it("omits it when no secondary title is set", () => {
+    render(<GameDetailView game={game({ secondaryTitle: null })} />);
+
+    expect(screen.queryByText("Die Siedler von Catan")).not.toBeInTheDocument();
   });
 });
 

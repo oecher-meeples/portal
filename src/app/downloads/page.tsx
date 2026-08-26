@@ -18,6 +18,7 @@ function toDownloadListItem(download: {
   fileUrl: string;
   status: DownloadStatus;
   order: number;
+  fileUpdatedAt: Date;
 }) {
   return {
     id: download.id,
@@ -28,6 +29,7 @@ function toDownloadListItem(download: {
     fileUrl: download.fileUrl,
     status: download.status,
     order: download.order,
+    fileUpdatedAt: download.fileUpdatedAt,
   };
 }
 

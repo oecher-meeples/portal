@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UserMinus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { nextTurnOfTheYear } from "@/lib/members/meeples";
+import { nextTurnOfTheYear } from "@/lib/members/membership-state";
 import {
   getOpenHoldingsSummary,
   recordResignation,

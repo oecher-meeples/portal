@@ -12,7 +12,12 @@ function Dialog({ ...props }: DialogPrimitive.Root.Props) {
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+  // Kein eigenes `data-slot` hier: wird meist mit `render={<Button/>}`
+  // komponiert, dessen eigenes `data-slot="button"` sonst mit diesem
+  // kollidiert — Base UI löst das beim SSR- und beim Hydration-Durchlauf
+  // unterschiedlich auf (Hydration-Mismatch). `data-slot="dialog-trigger"`
+  // wird nirgends als CSS-Selektor gebraucht, nur als Debug-Konvention.
+  return <DialogPrimitive.Trigger {...props} />;
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
@@ -54,14 +59,21 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm",
+          // Wenn dieser Dialog selbst einen verschachtelten Dialog geöffnet
+          // hat (Base UI setzt dafür `data-nested-dialog-open` automatisch),
+          // wird er unklickbar und optisch zurückgenommen — sonst blieb er
+          // trotz des davorliegenden Dialogs weiter bedienbar (#185-Folge).
+          "transition-[filter,opacity] duration-150 data-nested-dialog-open:pointer-events-none data-nested-dialog-open:opacity-40 data-nested-dialog-open:blur-xs",
           className,
         )}
         {...props}
       >
         {children}
         {showCloseButton && (
+          // Kein `data-slot="dialog-close"` hier — kollidiert sonst mit dem
+          // `data-slot="button"` des per `render` komponierten Buttons (siehe
+          // Kommentar in `DialogTrigger`).
           <DialogPrimitive.Close
-            data-slot="dialog-close"
             render={
               <Button
                 variant="ghost"

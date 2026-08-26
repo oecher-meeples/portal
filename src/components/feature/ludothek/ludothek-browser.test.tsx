@@ -27,7 +27,15 @@ vi.mock("@/components/ui/scan-search-dialog", () => ({
   ),
 }));
 vi.mock("@/components/widgets/board-game/create-board-game-dialog", () => ({
-  CreateBoardGameDialog: () => <button type="button">Spiel anlegen</button>,
+  CreateBoardGameDialog: ({
+    defaultBggQuery,
+  }: {
+    defaultBggQuery?: string;
+  }) => (
+    <button type="button" data-default-bgg-query={defaultBggQuery ?? ""}>
+      Spiel anlegen
+    </button>
+  ),
 }));
 
 const { LudothekBrowser } = await import("./ludothek-browser");
@@ -70,10 +78,18 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: [],
     ean: null,
     condition: null,
     bggId: null,
+    alternateNames: [],
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -179,6 +195,9 @@ describe("LudothekBrowser — live search", () => {
   );
 });
 
+// Erstveröffentlichung-, Bewertung-, Dauer- und Spieler-Slider-Tests siehe
+// ludothek-browser-ranges.test.tsx (#214-Folge, ausgelagert wegen Dateigröße).
+
 describe("LudothekBrowser — view mode switch", () => {
   it("hides the compact icon for guests and internal users without games:manage", () => {
     render(
@@ -220,6 +239,22 @@ describe("LudothekBrowser — create-board-game button (#121)", () => {
     render(<LudothekBrowser {...baseProps()} internal canManageGames />);
 
     expect(screen.getByText("Spiel anlegen")).toBeInTheDocument();
+  });
+
+  it("passes the current search query through as the BGG-import default (#183)", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        internal
+        canManageGames
+        filters={{ search: "Ark Nova" }}
+      />,
+    );
+
+    expect(screen.getByText("Spiel anlegen")).toHaveAttribute(
+      "data-default-bgg-query",
+      "Ark Nova",
+    );
   });
 });
 
@@ -349,7 +384,7 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
     expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
   });
 
-  it("offers Mängelvermerk bearbeiten in the actions menu instead", async () => {
+  it("offers Exemplar bearbeiten in the actions menu instead", async () => {
     render(
       <LudothekBrowser
         {...baseProps()}
@@ -362,8 +397,6 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    expect(
-      await screen.findByText("Mängelvermerk bearbeiten"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
   });
 });

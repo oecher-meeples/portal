@@ -44,12 +44,12 @@ describe("listVisibleDownloads", () => {
 });
 
 describe("listOfflineDownloadsForAdmin", () => {
-  it("queries only OFFLINE downloads, most recently updated first", async () => {
+  it("queries only OFFLINE downloads, most recent file change first", async () => {
     await listOfflineDownloadsForAdmin();
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: "OFFLINE" },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { fileUpdatedAt: "desc" },
     });
   });
 });

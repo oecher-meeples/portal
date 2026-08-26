@@ -1,8 +1,14 @@
-import { BoardGameKind } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+} from "@prisma/client";
 import {
   parseBggId,
   parseMechanics,
   formatMechanics,
+  parseCommaSeparatedList,
+  formatCommaSeparatedList,
 } from "@/lib/ludothek/bgg-id";
 import type {
   BoardGameTitleInput,
@@ -13,6 +19,7 @@ import type {
  * by `EditBoardGameTitle` and `EditBoardGameExemplar` (see #121/#122). */
 export type BoardGameFormValues = {
   title: string;
+  secondaryTitle: string;
   ean: string;
   condition: string;
   kind: BoardGameKind;
@@ -21,14 +28,27 @@ export type BoardGameFormValues = {
   maxPlayers: string;
   playTimeMinutes: string;
   weight: string;
+  /** BGGs Community-Durchschnittsbewertung, 0–10 (#214). */
+  averageRating: string;
   imageUrl: string;
   description: string;
   mechanics: string;
   explainerVideoUrl: string;
+  /** BGGs Language-Dependence-Poll-Level, `null` solange nicht erfasst (#188). */
+  languageDependence: LanguageDependence | null;
+  /** Regelheft-Sprache(n) dieses Exemplars, Mehrfachauswahl (#188). */
+  ruleBookLanguages: RuleBookLanguage[];
+  /** Verlag(e), kommagetrennt — mehrere bei Co-Publishern (#205). */
+  publisher: string;
+  /** Autor(en)/Designer, kommagetrennt (#205). */
+  author: string;
+  /** Erstveröffentlichungsjahr (#205). */
+  yearPublished: string;
 };
 
 export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   title: "",
+  secondaryTitle: "",
   ean: "",
   condition: "",
   kind: BoardGameKind.BOARDGAME,
@@ -37,15 +57,22 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   maxPlayers: "",
   playTimeMinutes: "",
   weight: "",
+  averageRating: "",
   imageUrl: "",
   description: "",
   mechanics: "",
   explainerVideoUrl: "",
+  languageDependence: null,
+  ruleBookLanguages: [],
+  publisher: "",
+  author: "",
+  yearPublished: "",
 };
 
 /** The subset of a BoardGame record needed to seed the edit form. */
 export type BoardGameRecord = {
   title: string;
+  secondaryTitle: string | null;
   ean: string | null;
   condition: string | null;
   kind: BoardGameKind;
@@ -54,10 +81,16 @@ export type BoardGameRecord = {
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  averageRating: number | null;
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
   explainerVideoUrl: string | null;
+  languageDependence: LanguageDependence | null;
+  ruleBookLanguages: RuleBookLanguage[];
+  publisher: string[];
+  author: string[];
+  yearPublished: number | null;
 };
 
 export function boardGameToFormValues(
@@ -65,6 +98,7 @@ export function boardGameToFormValues(
 ): BoardGameFormValues {
   return {
     title: game.title,
+    secondaryTitle: game.secondaryTitle ?? "",
     ean: game.ean ?? "",
     condition: game.condition ?? "",
     kind: game.kind,
@@ -73,10 +107,16 @@ export function boardGameToFormValues(
     maxPlayers: game.maxPlayers?.toString() ?? "",
     playTimeMinutes: game.playTimeMinutes?.toString() ?? "",
     weight: game.weight?.toString() ?? "",
+    averageRating: game.averageRating?.toString() ?? "",
     imageUrl: game.imageUrl ?? "",
     description: game.description ?? "",
     mechanics: formatMechanics(game.mechanics),
     explainerVideoUrl: game.explainerVideoUrl ?? "",
+    languageDependence: game.languageDependence,
+    ruleBookLanguages: game.ruleBookLanguages,
+    publisher: formatCommaSeparatedList(game.publisher),
+    author: formatCommaSeparatedList(game.author),
+    yearPublished: game.yearPublished?.toString() ?? "",
   };
 }
 
@@ -86,6 +126,7 @@ export function boardGameFormToTitleInput(
 ): BoardGameTitleInput {
   return {
     title: form.title,
+    secondaryTitle: form.secondaryTitle || undefined,
     ean: form.ean || undefined,
     kind: form.kind,
     bggId: form.bggId ? parseBggId(form.bggId) : undefined,
@@ -95,19 +136,26 @@ export function boardGameFormToTitleInput(
       ? Number(form.playTimeMinutes)
       : undefined,
     weight: form.weight ? Number(form.weight) : undefined,
+    averageRating: form.averageRating ? Number(form.averageRating) : undefined,
     imageUrl: form.imageUrl || undefined,
     description: form.description || undefined,
     mechanics: parseMechanics(form.mechanics),
     explainerVideoUrl: form.explainerVideoUrl || undefined,
+    languageDependence: form.languageDependence,
+    publisher: parseCommaSeparatedList(form.publisher),
+    author: parseCommaSeparatedList(form.author),
+    yearPublished: form.yearPublished ? Number(form.yearPublished) : undefined,
   };
 }
 
-/** Title fields plus `condition` — for `createBoardGame`, which creates the first copy too. */
+/** Title fields plus `condition`/`ruleBookLanguages` — for `createBoardGame`,
+ * which creates the first copy too. */
 export function boardGameFormToInput(
   form: BoardGameFormValues,
 ): CreateBoardGameInput {
   return {
     ...boardGameFormToTitleInput(form),
     condition: form.condition || undefined,
+    ruleBookLanguages: form.ruleBookLanguages,
   };
 }

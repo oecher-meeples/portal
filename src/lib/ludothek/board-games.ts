@@ -1,43 +1,71 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { BoardGameKind, type Prisma, type PrismaClient } from "@prisma/client";
+import {
+  BoardGameKind,
+  type LanguageDependence,
+  type RuleBookLanguage,
+  type Prisma,
+  type PrismaClient,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { createGameCopyTx } from "@/lib/ludothek/game-copies";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
-  BggApiError,
-  BggNotFoundError,
-  fetchBggGame,
-  type BggGameData,
-} from "@/lib/bgg/client";
+  resolveCopyPlacement,
+  type CopyPlacementInput,
+} from "@/lib/ludothek/game-copy-placement";
+import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { uniqueSlug } from "@/lib/utils/slug";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
 export type BoardGameTitleInput = {
   title: string;
+  /** Zweiter Titel neben `title` — z. B. eine deutsche Übersetzung neben
+   * einem englischen Haupttitel (#203). */
+  secondaryTitle?: string | null;
   bggId?: number | null;
   ean?: string | null;
   minPlayers?: number | null;
   maxPlayers?: number | null;
   playTimeMinutes?: number | null;
   weight?: number | null;
+  /** BGGs Community-Durchschnittsbewertung (0–10), analog `weight` beim
+   * BGG-Import/-Abgleich übernommen (#214). */
+  averageRating?: number | null;
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
   kind?: BoardGameKind;
+  /** BGGs Language-Dependence-Poll-Level, als Vorschlag beim BGG-Import
+   * übernommen, vom Admin frei änderbar (#188). */
+  languageDependence?: LanguageDependence | null;
+  /** Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen bei
+   * identischem Wert über alle (ggf. deutschen) BGG-Versionen, sonst wählt
+   * der Admin (#205, siehe `resolvePublisherFromVersions()`). */
+  publisher?: string[];
+  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205). */
+  author?: string[];
+  /** Erstveröffentlichungsjahr — ältestes Jahr über alle BGG-Versionen (#205). */
+  yearPublished?: number | null;
 };
 
 export type CreateBoardGameInput = BoardGameTitleInput & {
   condition?: string | null;
+  /** Regelheft-Sprache(n) der ersten Kopie (#188). */
+  ruleBookLanguages?: RuleBookLanguage[];
   /** Initial standort for the first copy — defaults to "Unsortiert" when
    * omitted (#121/#122). `self` places it directly with the creator. */
-  placement?: { unitId: string } | { self: true };
+  placement?: CopyPlacementInput;
+  /** Ungefiltert aus BGGs `name type="alternate"` (#187) — nur bei einem
+   * wirklich neuen Titel angelegt, siehe `willReuseByBggId` unten. Beim
+   * Anlegen eines weiteren Exemplars eines bereits bekannten `bggId`-Titels
+   * würden diese sonst bei jedem Mal dupliziert. */
+  alternateNames?: string[];
 };
 
 function validateBoardGameInput(input: BoardGameTitleInput) {
@@ -52,16 +80,22 @@ function validateBoardGameInput(input: BoardGameTitleInput) {
 
 function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
+    secondaryTitle: input.secondaryTitle || null,
     bggId: input.bggId ?? null,
     ean: input.ean ? normaliseEan(input.ean) : null,
     minPlayers: input.minPlayers ?? null,
     maxPlayers: input.maxPlayers ?? null,
     playTimeMinutes: input.playTimeMinutes ?? null,
     weight: input.weight ?? null,
+    averageRating: input.averageRating ?? null,
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
+    languageDependence: input.languageDependence ?? null,
+    publisher: input.publisher ?? [],
+    author: input.author ?? [],
+    yearPublished: input.yearPublished ?? null,
     ...(input.kind ? { kind: input.kind } : {}),
   };
 }
@@ -142,31 +176,72 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     return { error: validationError };
   }
 
+  // Ein bekannter bggId reusest den vorhandenen Titel ohnehin (siehe
+  // `findOrCreateBoardGameTitle`) — kein Duplikat. Ohne diesen Fall würde
+  // `findOrCreateBoardGameTitle` einen neuen, gleichnamigen Titel anlegen;
+  // das verhindern wir hier hart, statt es nur im Dialog zu warnen (#183).
+  const willReuseByBggId = input.bggId
+    ? Boolean(
+        await prisma.boardGame.findUnique({
+          where: { bggId: input.bggId },
+          select: { id: true },
+        }),
+      )
+    : false;
+
+  if (!willReuseByBggId) {
+    const collision = await findTitleOnlyMatch(input.title);
+    if (collision) {
+      return {
+        error: `„${collision.title}“ existiert bereits im Bestand. Bitte über „Weiteres Exemplar anlegen“ eine weitere Kopie dieses Titels anlegen, statt einen zweiten Titel mit demselben Namen zu erzeugen.`,
+      };
+    }
+  }
+
   const [hint, actor] = await Promise.all([
     duplicateEanHint(input.ean),
     ensureMeeple(user),
   ]);
 
-  const placement = input.placement
-    ? "self" in input.placement
-      ? { meepleId: actor.id }
-      : { unitId: input.placement.unitId }
-    : undefined;
+  const placement = resolveCopyPlacement(input.placement, actor.id);
 
-  const copy = await prisma.$transaction(async (tx) => {
-    const title = await findOrCreateBoardGameTitle(input, tx);
-    return createGameCopyTx(tx, {
-      boardGameId: title.id,
-      boardGameTitle: title.title,
-      condition: input.condition,
-      actorId: actor.id,
-      placement,
-    });
-  });
+  const { copy, boardGameId, boardGameSlug } = await prisma.$transaction(
+    async (tx) => {
+      const title = await findOrCreateBoardGameTitle(input, tx);
+
+      if (!willReuseByBggId && input.alternateNames?.length) {
+        await tx.boardGameAlternateName.createMany({
+          data: input.alternateNames.map((name) => ({
+            boardGameId: title.id,
+            name,
+          })),
+        });
+      }
+
+      const copy = await createGameCopyTx(tx, {
+        boardGameId: title.id,
+        boardGameTitle: title.title,
+        condition: input.condition,
+        ruleBookLanguages: input.ruleBookLanguages,
+        actorId: actor.id,
+        placement,
+      });
+      return { copy, boardGameId: title.id, boardGameSlug: title.slug };
+    },
+  );
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  return { success: true as const, id: copy.id, hint };
+  // `boardGameId`/`boardGameSlug` let callers auto-select or deep-link the
+  // newly created title, e.g. the nested "Spiel anlegen" flow from
+  // `AssignExpansionDialog`s Combobox (#204) or the Massenimport-Ergebnisliste (#186).
+  return {
+    success: true as const,
+    id: copy.id,
+    boardGameId,
+    boardGameSlug,
+    hint,
+  };
 }
 
 export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
@@ -193,30 +268,80 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
   return { success: true as const, hint };
 }
 
-export async function previewBggImport(bggId: number) {
+/**
+ * Lädt die vollen Titel-Felder eines bestehenden Titels — Grundlage für
+ * „Titel laden" im Anlegen-Dialog: statt die Eingabe bei einem erkannten
+ * Duplikat zu verwerfen, übernimmt der Admin die echten Bestandsdaten und
+ * kann sie korrigieren (#183).
+ */
+export async function getBoardGameTitleForEdit(id: string) {
   const user = await requireGamesManagePermission();
-  if (!user) {
-    return { success: false as const, error: "Keine Berechtigung." };
-  }
+  if (!user) return null;
 
-  try {
-    const data: BggGameData = await fetchBggGame(bggId);
-    return { success: true as const, data };
-  } catch (error) {
-    if (error instanceof BggNotFoundError) {
-      return { success: false as const, error: error.message };
-    }
-    if (error instanceof BggApiError) {
-      return {
-        success: false as const,
-        error:
-          "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
-      };
-    }
-    throw error;
-  }
+  return prisma.boardGame.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      secondaryTitle: true,
+      ean: true,
+      kind: true,
+      languageDependence: true,
+      bggId: true,
+      minPlayers: true,
+      maxPlayers: true,
+      playTimeMinutes: true,
+      weight: true,
+      averageRating: true,
+      imageUrl: true,
+      description: true,
+      mechanics: true,
+      explainerVideoUrl: true,
+      publisher: true,
+      author: true,
+      yearPublished: true,
+    },
+  });
 }
 
+export type DuplicateBoardGameMatch = { id: string; title: string };
+
+/** Case-insensitive exakter Titel-Match, ohne Permission-Check — interner
+ * Baustein für `findDuplicateBoardGame` (Client-Warnung) und den
+ * Server-seitigen Hard-Block in `createBoardGame` (#183). */
+async function findTitleOnlyMatch(
+  title: string,
+): Promise<DuplicateBoardGameMatch | null> {
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) return null;
+
+  return prisma.boardGame.findFirst({
+    where: { title: { equals: trimmedTitle, mode: "insensitive" } },
+    select: { id: true, title: true },
+  });
+}
+
+/**
+ * Prüft, ob dieser Titel (per `bggId` oder exaktem Titel, case-insensitive)
+ * bereits im Bestand existiert — Grundlage für die "weiteres Exemplar
+ * anlegen"-Warnung im Anlegen-Dialog (#183).
+ */
+export async function findDuplicateBoardGame(
+  title: string,
+  bggId?: number | null,
+): Promise<DuplicateBoardGameMatch | null> {
+  const user = await requireGamesManagePermission();
+  if (!user) return null;
+
+  if (bggId) {
+    const byBggId = await prisma.boardGame.findUnique({
+      where: { bggId },
+      select: { id: true, title: true },
+    });
+    if (byBggId) return byBggId;
+  }
+
+  return findTitleOnlyMatch(title);
+}
 /** Manual base game ↔ expansion assignment, see #30 — BGG import is blocked by #12. */
 export async function assignExpansion(baseGameId: string, expansionId: string) {
   const user = await requireGamesManagePermission();

@@ -3,12 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
 
-const hasRoleMock = vi.fn();
 const hasPermissionMock = vi.fn();
 vi.mock("@/lib/auth/permissions", () => ({
-  hasRole: hasRoleMock,
   hasPermission: hasPermissionMock,
 }));
+
+/** Stubs hasPermission by key — everything not listed resolves to false. */
+function mockPermissions(overrides: Record<string, boolean>) {
+  hasPermissionMock.mockImplementation((_userId: string, key: string) =>
+    Promise.resolve(overrides[key] ?? false),
+  );
+}
 
 const ensureMeepleMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
@@ -146,16 +151,16 @@ describe("getRealSessionTier", () => {
     expect(await getRealSessionTier()).toBe("gast");
   });
 
-  it("returns admin for a user with the admin role", async () => {
+  it("returns admin for a user with the admin:access permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
-    hasRoleMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true });
 
     expect(await getRealSessionTier()).toBe("admin");
   });
 
-  it("returns mitglied for a logged-in user without the admin role", async () => {
+  it("returns mitglied for a logged-in user without the admin:access permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
-    hasRoleMock.mockResolvedValue(false);
+    mockPermissions({ "admin:access": false });
 
     expect(await getRealSessionTier()).toBe("mitglied");
   });
@@ -184,7 +189,7 @@ describe("getPreviewTier", () => {
 describe("getSessionTier", () => {
   it("ignores the preview cookie for a non-admin — preview is admin-only", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
-    hasRoleMock.mockResolvedValue(false);
+    mockPermissions({ "admin:access": false });
     previewCookie = "admin";
 
     expect(await getSessionTier()).toBe("mitglied");
@@ -192,7 +197,7 @@ describe("getSessionTier", () => {
 
   it("defaults to mitglied for a real admin without a preview cookie", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
-    hasRoleMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true });
     previewCookie = undefined;
 
     expect(await getSessionTier()).toBe("mitglied");
@@ -200,7 +205,7 @@ describe("getSessionTier", () => {
 
   it("lets a real admin explicitly switch back up to admin", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
-    hasRoleMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true });
     previewCookie = "admin";
 
     expect(await getSessionTier()).toBe("admin");
@@ -208,7 +213,7 @@ describe("getSessionTier", () => {
 
   it("lets a real admin's preview cookie override the displayed tier", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
-    hasRoleMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true });
     previewCookie = "gast";
 
     expect(await getSessionTier()).toBe("gast");
@@ -217,9 +222,8 @@ describe("getSessionTier", () => {
 
 describe("hasPermissionInCurrentView", () => {
   it("defers to the real permission for a non-admin (e.g. a moderator), preview cookie or not", async () => {
-    hasRoleMock.mockResolvedValue(false);
     previewCookie = undefined;
-    hasPermissionMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": false, "posts:write": true });
 
     expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
       true,
@@ -227,33 +231,30 @@ describe("hasPermissionInCurrentView", () => {
   });
 
   it("hides an admin's permission while previewing a non-admin tier, even with the real permission", async () => {
-    hasRoleMock.mockResolvedValue(true);
     previewCookie = "gast";
     hasPermissionMock.mockClear();
-    hasPermissionMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true, "posts:write": true });
 
     expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
       false,
     );
-    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(hasPermissionMock).not.toHaveBeenCalledWith("user-1", "posts:write");
   });
 
   it("hides an admin's permission by default (no preview cookie) — mitglied is the default view (#126)", async () => {
-    hasRoleMock.mockResolvedValue(true);
     previewCookie = undefined;
     hasPermissionMock.mockClear();
-    hasPermissionMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true, "posts:write": true });
 
     expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
       false,
     );
-    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(hasPermissionMock).not.toHaveBeenCalledWith("user-1", "posts:write");
   });
 
   it("shows an admin's permission once they explicitly preview back to admin", async () => {
-    hasRoleMock.mockResolvedValue(true);
     previewCookie = "admin";
-    hasPermissionMock.mockResolvedValue(true);
+    mockPermissions({ "admin:access": true, "posts:write": true });
 
     expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
       true,
@@ -261,9 +262,8 @@ describe("hasPermissionInCurrentView", () => {
   });
 
   it("stays false without the real permission, preview or not", async () => {
-    hasRoleMock.mockResolvedValue(false);
     previewCookie = undefined;
-    hasPermissionMock.mockResolvedValue(false);
+    mockPermissions({ "admin:access": false, "posts:write": false });
 
     expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
       false,

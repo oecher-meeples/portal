@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   GameInventoryStatus,
+  type RuleBookLanguage,
   type Prisma,
   type PrismaClient,
 } from "@prisma/client";
@@ -12,11 +13,20 @@ import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { toSparePartListingData } from "@/lib/inventory/spare-part-listings";
 import { uniqueSlug } from "@/lib/utils/slug";
+import {
+  resolveCopyPlacement,
+  type CopyPlacementInput,
+} from "@/lib/ludothek/game-copy-placement";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
+export type { CopyPlacementInput };
+
 export type GameCopyInput = {
   condition?: string | null;
+  placement?: CopyPlacementInput;
+  /** Regelheft-Sprache(n) dieses Exemplars — Mehrfachauswahl (#188). */
+  ruleBookLanguages?: RuleBookLanguage[];
 };
 
 async function uniqueGameCopySlug(tx: Tx, title: string, excludeId?: string) {
@@ -40,19 +50,26 @@ export async function createGameCopyTx(
     boardGameId,
     boardGameTitle,
     condition,
+    ruleBookLanguages,
     actorId,
     placement,
   }: {
     boardGameId: string;
     boardGameTitle: string;
     condition?: string | null;
+    ruleBookLanguages?: RuleBookLanguage[];
     actorId: string;
     placement?: { unitId?: string; meepleId?: string };
   },
 ) {
   const slug = await uniqueGameCopySlug(tx, boardGameTitle);
   const created = await tx.gameCopy.create({
-    data: { slug, boardGameId, condition: condition || null },
+    data: {
+      slug,
+      boardGameId,
+      condition: condition || null,
+      ruleBookLanguages: ruleBookLanguages ?? [],
+    },
   });
 
   const target =
@@ -93,12 +110,15 @@ export async function createGameCopy(
   }
 
   const actor = await ensureMeeple(user);
+  const placement = resolveCopyPlacement(input.placement, actor.id);
   const copy = await prisma.$transaction((tx) =>
     createGameCopyTx(tx, {
       boardGameId: title.id,
       boardGameTitle: title.title,
       condition: input.condition,
+      ruleBookLanguages: input.ruleBookLanguages,
       actorId: actor.id,
+      placement,
     }),
   );
 
@@ -115,7 +135,12 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
 
   const copy = await prisma.gameCopy.update({
     where: { id },
-    data: { condition: input.condition || null },
+    data: {
+      condition: input.condition || null,
+      ...(input.ruleBookLanguages
+        ? { ruleBookLanguages: input.ruleBookLanguages }
+        : {}),
+    },
     include: { boardGame: { select: { slug: true } } },
   });
 

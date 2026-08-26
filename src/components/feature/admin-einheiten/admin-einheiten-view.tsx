@@ -51,7 +51,7 @@ export function AdminEinheitenView({
       <PageHeading
         eyebrow="Ludothek"
         title="Aufbewahrungseinheiten"
-        description="Kartons und Regale mit QR-Etikett. Der Verein hat kein Vereinsheim — Kartons stehen bei Mitgliedern."
+        description="Aufbewahrungseinheiten sind die Kartons/Regal mit QR-Codes, welche für die Einlagerung oder Events verwendet werden."
         action={isAdmin ? <CreateStorageUnitDialog /> : undefined}
       />
 

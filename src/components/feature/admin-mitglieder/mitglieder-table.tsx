@@ -68,7 +68,7 @@ export function MitgliederTable({
   }, [searchedMeeples, quickFilter]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div id="mitglieder" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full max-w-sm">
           <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -151,6 +151,7 @@ export function MitgliederTable({
                       meepleId={meeple.id}
                       roleId={meeple.roleId}
                       roles={roles}
+                      protected={meeple.displayName === "Admin"}
                     />
                   ) : (
                     "Kein Konto"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   filterLudothekGames,
   parseLudothekSearchParams,
@@ -19,10 +19,18 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: ["Engine-Building"],
     ean: null,
     condition: null,
     bggId: null,
+    alternateNames: [],
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    yearPublished: null,
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -75,46 +83,6 @@ describe("filterLudothekGames", () => {
     expect(result[0].title).toBe("Arche Nova");
   });
 
-  it("filters by player-count range", () => {
-    const small = game({ minPlayers: 1, maxPlayers: 2 });
-    const mid = game({ minPlayers: 3, maxPlayers: 4 });
-    const large = game({ minPlayers: 5, maxPlayers: 8 });
-
-    expect(
-      filterLudothekGames([small, mid, large], { players: "1-2" }),
-    ).toEqual([small]);
-    expect(
-      filterLudothekGames([small, mid, large], { players: "3-4" }),
-    ).toEqual([mid]);
-    expect(filterLudothekGames([small, mid, large], { players: "5+" })).toEqual(
-      [large],
-    );
-  });
-
-  it("includes a game spanning a range across the filter boundary", () => {
-    const spanning = game({ minPlayers: 2, maxPlayers: 5 });
-
-    expect(filterLudothekGames([spanning], { players: "3-4" })).toEqual([
-      spanning,
-    ]);
-  });
-
-  it("filters by duration bucket", () => {
-    const short = game({ playTimeMinutes: 20 });
-    const mid = game({ playTimeMinutes: 90 });
-    const long = game({ playTimeMinutes: 180 });
-
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "short" }),
-    ).toEqual([short]);
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "mid" }),
-    ).toEqual([mid]);
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "long" }),
-    ).toEqual([long]);
-  });
-
   it("filters by maximum weight", () => {
     const light = game({ weight: 1.5 });
     const heavy = game({ weight: 4.2 });
@@ -134,6 +102,30 @@ describe("filterLudothekGames", () => {
     });
 
     expect(result).toEqual([tileLaying, both]);
+  });
+
+  it("filters by maximum language dependence level (#188)", () => {
+    const neutral = game({
+      languageDependence: LanguageDependence.NO_NECESSARY_TEXT,
+    });
+    const extensive = game({
+      languageDependence: LanguageDependence.EXTENSIVE_TEXT,
+    });
+    const unrated = game({ languageDependence: null });
+
+    expect(
+      filterLudothekGames([neutral, extensive, unrated], {
+        languageDependenceMax: 1,
+      }),
+    ).toEqual([neutral]);
+  });
+
+  it("excludes games without a captured language dependence when the filter is set", () => {
+    const unrated = game({ languageDependence: null });
+
+    expect(
+      filterLudothekGames([unrated], { languageDependenceMax: 5 }),
+    ).toEqual([]);
   });
 
   it("hides expansions when hideExpansions is set", () => {
@@ -195,8 +187,9 @@ describe("filterLudothekGames", () => {
 
     const result = filterLudothekGames([match, wrongDuration], {
       search: "arche",
-      players: "3-4",
-      duration: "mid",
+      players: 3,
+      durationFrom: 60,
+      durationTo: 120,
       mechanics: ["Engine-Building"],
     });
 
@@ -208,16 +201,52 @@ describe("filterLudothekGames", () => {
       [],
     );
   });
+
+  it("matches on an alternate name substring, case-insensitively (#187)", () => {
+    const games = [
+      game({ title: "Catan", alternateNames: ["Die Siedler von Catan"] }),
+      game({ title: "Wingspan" }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "siedler" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Catan");
+  });
+
+  it("matches on a publisher substring, case-insensitively (#205)", () => {
+    const games = [
+      game({ title: "Ark Nova", publisher: ["Feuerland Spiele"] }),
+      game({ title: "Wingspan", publisher: ["Stonemaier Games"] }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "feuerland" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Ark Nova");
+  });
+
+  it("matches on an author substring, case-insensitively (#205)", () => {
+    const games = [
+      game({ title: "Cascadia", author: ["Randy Flynn"] }),
+      game({ title: "Wingspan", author: ["Elizabeth Hargrave"] }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "hargrave" });
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Wingspan");
+  });
+
+  // Erstveröffentlichung-, Bewertung- und Spieler/Dauer-Slider-Tests siehe
+  // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
 });
 
 describe("parseLudothekSearchParams", () => {
-  it("parses search, players, duration, weight and mechanics", () => {
+  // spielerVon/dauerVon/jahrVon/bewertungVon-Parsing siehe
+  // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
+  it("parses search, weight and mechanics", () => {
     expect(
       parseLudothekSearchParams(
         {
           q: "arche",
-          spieler: "3-4",
-          dauer: "mid",
           gewicht: "3.5",
           mechanik: ["Engine-Building", "Plättchenlegen"],
         },
@@ -225,27 +254,8 @@ describe("parseLudothekSearchParams", () => {
       ),
     ).toEqual({
       search: "arche",
-      players: "3-4",
-      duration: "mid",
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
-      hideExpansions: false,
-      view: "grid",
-    });
-  });
-
-  it("ignores invalid enum values instead of applying a wrong filter", () => {
-    expect(
-      parseLudothekSearchParams(
-        { spieler: "nonsense", dauer: "nonsense" },
-        { internal: false },
-      ),
-    ).toEqual({
-      search: undefined,
-      players: undefined,
-      duration: undefined,
-      maxWeight: undefined,
-      mechanics: undefined,
       hideExpansions: false,
       view: "grid",
     });
@@ -269,6 +279,64 @@ describe("parseLudothekSearchParams", () => {
     expect(parseLudothekSearchParams({}, { internal: false }).view).toBe(
       "grid",
     );
+  });
+
+  it("parses jahrVon/jahrBis as numbers (#205)", () => {
+    const result = parseLudothekSearchParams(
+      { jahrVon: "2000", jahrBis: "2020" },
+      { internal: false },
+    );
+
+    expect(result.yearFrom).toBe(2000);
+    expect(result.yearTo).toBe(2020);
+  });
+
+  it("ignores a non-numeric jahrVon/jahrBis instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { jahrVon: "nonsense", jahrBis: "" },
+      { internal: false },
+    );
+
+    expect(result.yearFrom).toBeUndefined();
+    expect(result.yearTo).toBeUndefined();
+  });
+
+  it("parses bewertungVon/bewertungBis as numbers (#214-Folge)", () => {
+    const result = parseLudothekSearchParams(
+      { bewertungVon: "6", bewertungBis: "9" },
+      { internal: false },
+    );
+
+    expect(result.ratingFrom).toBe(6);
+    expect(result.ratingTo).toBe(9);
+  });
+
+  it("ignores a non-numeric bewertungVon/bewertungBis instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { bewertungVon: "nonsense", bewertungBis: "" },
+      { internal: false },
+    );
+
+    expect(result.ratingFrom).toBeUndefined();
+    expect(result.ratingTo).toBeUndefined();
+  });
+
+  it("parses sprache as a number (#188)", () => {
+    const result = parseLudothekSearchParams(
+      { sprache: "2" },
+      { internal: false },
+    );
+
+    expect(result.languageDependenceMax).toBe(2);
+  });
+
+  it("ignores a non-numeric sprache instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { sprache: "nonsense" },
+      { internal: false },
+    );
+
+    expect(result.languageDependenceMax).toBeUndefined();
   });
 
   it("only parses internal filters when internal is true", () => {

@@ -61,6 +61,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
           "Stammdaten: Name, E-Mail-Adresse, Mitgliedsnummer, Ein- und ggf. Austrittsdatum.",
           "Bankverbindung: IBAN und Kontoinhaber:in, sofern für den SEPA-Lastschrifteinzug des Jahresbeitrags erforderlich. Nur der Kassenwart hat Zugriff auf vollständige IBANs, jeder Zugriff wird protokolliert.",
           "Freiwillige Messenger- und Plattformkennungen: BoardGameGeek-, BoardGameArena-, Telegram-, Signal- und Discord-Handle, sofern angegeben.",
+          "Wohnort und Klingelschild-Notiz: freiwillige Angabe im Profil, ausschließlich für das Mitglied selbst sichtbar. Für andere Mitglieder wird der Wohnort erst dann sichtbar, wenn das Mitglied ihn bei einem konkreten Spielgesuch (LFG) ausdrücklich per Klick freigibt — dann sehen die Teilnehmer:innen dieses Gesuchs Wohnort und Klingelschild-Notiz gemeinsam. Ohne diese explizite Aktion pro Gesuch bleiben beide Angaben verborgen.",
           "Verhaltensdaten aus der Vereinsnutzung: Verleih- und Rückgabehistorie der Ludothek, Schichtbuchungen bei Veranstaltungen, Zuordnung und Anwesenheit als Erklärbär:in, Mitspielsuchen (LFG-Posts) samt Teilnahme, Flohmarkt- und Marktplatz-Angebote inklusive der dabei hochgeladenen Fotos, sowie die private Spielesammlung, die ein Mitglied im Portal hinterlegt. In der Summe entsteht dabei ein Nutzungsprofil der Vereinsaktivität.",
           "Bei Austritt wird das Konto anonymisiert; Verleih-Historie und Vereinshistorie bleiben ohne Personenbezug erhalten.",
         ],
@@ -70,7 +71,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
         heading: "3. Rechtsgrundlagen",
         paragraphs: [
           "Stammdaten, Bankverbindung und die Verhaltensdaten aus der Vereinsnutzung verarbeiten wir zur Erfüllung des Mitgliedsvertrags und der sich daraus ergebenden Pflichten, insbesondere des Beitragseinzugs (Art. 6 Abs. 1 lit. b DSGVO).",
-          "Die freiwilligen Messenger- und Plattformkennungen verarbeiten wir auf Grundlage der Einwilligung des jeweiligen Mitglieds (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit für die Zukunft widerrufen werden.",
+          "Die freiwilligen Messenger- und Plattformkennungen sowie Wohnort und Klingelschild-Notiz verarbeiten wir auf Grundlage der Einwilligung des jeweiligen Mitglieds (Art. 6 Abs. 1 lit. a DSGVO). Die Einwilligung kann jederzeit für die Zukunft widerrufen werden.",
         ],
       },
       {

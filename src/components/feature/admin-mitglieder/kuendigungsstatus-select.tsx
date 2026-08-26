@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { nextTurnOfTheYear } from "@/lib/members/meeples";
-import type { MembershipState } from "@/lib/members/meeples";
+import { nextTurnOfTheYear } from "@/lib/members/membership-state";
+import type { MembershipState } from "@/lib/members/membership-state";
 import { useAction } from "@/components/ui/use-action";
 import {
   recordResignation,

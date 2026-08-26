@@ -73,6 +73,21 @@ export function formatDateTimeRange(
   return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
 }
 
+/** "12,3 MB" — binary (1024-based) units, one decimal, German locale separator. */
+export function formatBytes(bytes: number): string {
+  const UNITS = ["B", "KB", "MB", "GB", "TB"];
+  if (bytes < 1024) return `${bytes} B`;
+
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < UNITS.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(value)} ${UNITS[unitIndex]}`;
+}
+
 export const EXPLAINER_EXPERIENCE_LEVEL_LABELS: Record<
   ExplainerExperienceLevel,
   string

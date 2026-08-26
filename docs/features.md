@@ -87,13 +87,16 @@
 
 ### 2.7 Ludothek — Spielsuche (zwei Projektionen)
 - Eine Komponente, zwei Sichten: **öffentlich** ohne Standort, Zustand und Personen; **intern** (eingeloggt) zusätzlich mit Standort-Kette, Zustand und Verantwortliche:r
-- Suchleiste + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
+- Suchleiste (matcht auch Verlag/Autor, #205) + Filter (Spieleranzahl, Spieldauer, Komplexität/Gewichtung, Mechanik, Erstveröffentlichung von/bis); intern zusätzlich Zustand, "ist ausgeliehen", "bei Meeple X"
 - **Alle Filter liegen in `searchParams`** und werden serverseitig angewendet, damit jede Filterkombination als Link teilbar ist
-- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
+- Ergebnis-Grid: Spielkarten (Cover, Titel, Spieleranzahl, Dauer, Verlag); Listenansicht zusätzlich mit Verlag, nicht in der Kompakt-Ansicht (#205); intern Zustands-Badge (frei / ausgeliehen / Wartung / nicht erfasst)
+- **Sprachneutral**-Badge für Titel mit BGGs Language-Dependence-Level 1 (kein notwendiger Text, #188)
+- BGG-Rating-Hexagon (Farbskala Dunkelrot–Dunkelgrün, Tooltip mit deutscher Bedeutung) auf Karten-/Listenansicht, sofern vorhanden; Default-Sortierung absteigend nach Rating, Titel ohne Rating am Ende (#214)
 - Deinventarisierte Spiele erscheinen nicht
 
 ### 2.8 Spiel-Detailseite
-- Cover, Metadaten (BGG-Import: Spieleranzahl, Dauer, Gewichtung), Beschreibung
+- Cover, Metadaten (BGG-Import: Spieleranzahl, Dauer, Gewichtung, Rating-Hexagon), Beschreibung
+- Sprachabhängigkeit (BGGs 5-stufiges Poll-Modell, als Vorschlag beim Import übernommen) und je Exemplar die Regelheft-Sprache(n) (DE/EN/Sonstige, Mehrfachauswahl, #188)
 - Intern zusätzlich: **Standort-Kette** (Spiel → Karton → Regal → Verwahrer), Verantwortliche:r, Zustand, letzte Prüfung
 - Intern: **Aufenthalts-Historie** (Vorgang, Ziel, Zeitraum, erfasst von; unbestätigte Aufenthalte mit Herkunftshinweis)
 - Aktionen: "Ausleihen", "Zurückgeben", "Weitergeben", "Ich habe dieses Spiel erhalten" — je nach aktuellem Aufenthalt
@@ -113,7 +116,16 @@
 - Fehler-Zustände: "Kein Kamerazugriff", "Kein Code erkannt"
 
 ### 2.10 Erklärbär-Verzeichnis
-- Liste/Grid: Spiel → zugeordnete Erklärbären mit Erfahrungsstufe (Sterne/Badge), Kontakt-CTA
+- Volles Verzeichnis nur für Admins sichtbar (Permission-Check, kein Rollen-Enum) — Meeple sehen diesen Abschnitt nicht (#210)
+  - Als Akkordeon eingeklappt (Default: zu), Klick auf "Erklärbären-Verzeichnis" klappt auf
+  - Textfilter oberhalb der Liste (Spieltitel)
+  - Switch "Spiele ohne Erklärer anzeigen?", Akzentfarbe wenn aktiv; Default: nur Spiele mit mind. einem Erklärer
+  - Je Zeile: Spieltitel + Akzent-Badge mit Erklärer-Anzahl + Lupen-Symbol, das die Erklärbären-Liste des Spiels als Dialog zeigt (`ExplainerListDialogTrigger`, gleiche Komponente wie auf der Ludothek-Detailseite)
+- Eigenansicht "Das kann ich erklären:" für alle Meeple, unabhängig vom Verzeichnis:
+  - "Neues Spiel hinzufügen"-Button öffnet einen Dialog mit Combobox-Suche über den eigenen Spielbestand (analog `create-lfg-dialog.tsx`) und direkter Auswahl der Erfahrungsstufe (Slider); erst beim Bestätigen wird der Eintrag angelegt
+  - Textfilter oberhalb der Liste zum Suchen innerhalb der eigenen Einträge
+  - Quick-Edit je Eintrag: Erfahrungsstufen-Slider + destruktiver Entfernen-Button mit Bestätigungsdialog
+  - "Alle Spiele entfernen" (destruktiv, mit Bestätigungsdialog) unterhalb der Liste, sobald mindestens ein eigener Eintrag existiert
 
 ### 2.11 Event-Helferplan — Übersicht
 - Event-Auswahl, darunter Schichtplan-Tabelle (Zeit × Schicht-Typ: Theke/Kasse/Leihe)
@@ -125,12 +137,14 @@
 - Grid "Ausschlacht"-Spiele/Teile (`boardGameId: null` = "Allgemeines", kein Dummy-`BoardGame`-Datensatz), Zustand, Kurzbeschreibung
 - Abhol-Hinweis (Verwahrer-Anzeigename)
 - Anlage eigenständig oder per Checkbox aus der Deinventarisierung, Verwaltung durch `games:manage`
+- Auf `/markt` neben 2.13 angezeigt, fachlich getrennt vom event-gebundenen Bring & Buy Flohmarkt (3.7, #211)
 
 ### 2.13 Kleinanzeigen-Marktplatz
 - Grid Verkaufsartikel: Bild(er), Titel, Zustand, Preis, Verkäufer
 - Filter (Preis, Zustand)
 - Detailseite mit Bildergalerie, Beschreibung, Direktkontakt-Button (Mail/Telegram)
 - CTA "Anzeige inserieren" → Formular (Bilder-Upload, Titel, Zustand, Preis, Beschreibung), eigene Anzeigen bearbeitbar/löschbar
+- Enthält **kein** Bring & Buy Flohmarkt-Self-Service mehr (#211) — der event-gebundene Bring & Buy Flohmarkt wird ausschließlich über die Kassenansicht (3.7) verwaltet, nicht über eine eigene Sektion auf `/markt`
 
 ---
 
@@ -138,6 +152,7 @@
 
 ### 3.1 Admin-Dashboard
 - Kennzahlen-Kacheln: aktive Mitglieder, offene Ausleihen, Spiele im Bestand, nicht erfasste Spiele, offene Prüfungen, offene Invitations (kein Überfälligkeits-Widget — es gibt keine Leihfrist)
+- Jede Kachel (außer Blob-Speicher) verlinkt auf die dahinterliegende gefilterte Ansicht (#224-Folge): aktive Mitglieder/offene Einladungen → `/admin/mitglieder#mitglieder` bzw. `#einladungen`, offene Ausleihen → `/ludothek?ausgeliehen=1`, nicht erfasst/Prüfungen offen → `/admin/bestand?filter=…` (vorselektierter Schnellfilter), aktive Events → `/admin/events`
 - Schnellzugriff: Mitglied einladen, Spiel anlegen, Event erstellen
 
 ### 3.2 Mitgliederverwaltung
@@ -176,12 +191,15 @@
 ### 3.7 Bring & Buy Flohmarkt — Kassenansicht
 - Such-/Scanleiste für Artikel
 - Artikelliste mit Status-Toggle (FOR_SALE → RESERVED → SOLD)
-- CSV-Massenimport-Dialog (Datei-Upload, Vorschau-Tabelle vor Bestätigung)
+- CSV-Massenimport-Dialog (Datei-Upload, Vorschau-Tabelle vor Bestätigung) — einziger Weg, neue Artikel anzulegen; es gibt keine Mitglieder-Self-Service-Anlage mehr (#211)
+- Zugriff über `events:manage`-Permission oder eine aktive Kasse-Schicht des jeweiligen Events (ADR 0006) — kein dauerhafter Nav-Link für Meeples ohne Admin-Rolle
+- Voraussetzung, damit ein Event überhaupt einen Bring & Buy Flohmarkt hat: Flag `Event.hasBringAndBuyMarket`; im Gäste-Bereich (3.8) sichtbar, sobald das Event höchstens 30 Tage in der Zukunft liegt (oder bereits läuft)
 
 ### 3.8 Mobiler Gäste-Modus (Event vor Ort)
 - Reduzierte, touch-optimierte Ansicht für Tablet/Smartphone am Eingang
 - QR-Scan → sofortige Spielinfo-Karte (Cover, Kurzregeln, YouTube-Erklärvideo-Link, anwesende Erklärbären)
 - Filterbare "Was ist gerade frei?"-Liste nach Spieleranzahl
+- Bring & Buy Flohmarkt-Sektion nur sichtbar, wenn das Event `hasBringAndBuyMarket` gesetzt hat und innerhalb der nächsten 30 Tage liegt (#211) — sonst entfällt der Abschnitt vollständig
 
 ---
 

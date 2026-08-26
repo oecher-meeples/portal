@@ -1,7 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Calendar, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { ContentCard } from "@/components/entities/content-card";
 import { formatDate } from "@/lib/utils/format";
 import type { getLatestPosts } from "@/lib/content/content";
@@ -39,10 +39,26 @@ export function HomeView({
 
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <PlaceholderMedia
-            label="VEREINSFOTO / SPIELEABEND"
-            className="aspect-[16/9]"
-          />
+          {/*
+            Echtes Vereinsfoto steht noch aus (#TODO) – bis dahin dient das
+            Logo als Platzhalter statt der leeren PlaceholderMedia-Box.
+          */}
+          <div className="bg-muted relative flex aspect-[16/9] items-end justify-center overflow-hidden rounded-md border">
+            <Image
+              src="/icons/Logo-Oecher-Meeples.png"
+              alt="Vereinsfoto / Spieleabend (Platzhalter)"
+              width={3840}
+              height={1000}
+              className="h-auto w-full object-contain dark:hidden"
+            />
+            <Image
+              src="/icons/oecher-meeples-header-dark.png"
+              alt="Vereinsfoto / Spieleabend (Platzhalter)"
+              width={3840}
+              height={1000}
+              className="hidden h-auto w-full object-contain dark:block"
+            />
+          </div>
           <div className="flex flex-wrap gap-3">
             <Button render={<Link href="/downloads">Mitglied werden</Link>} />
             <Button

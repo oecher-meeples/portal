@@ -3,8 +3,36 @@ import { BoardGameKind } from "@prisma/client";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+vi.mock("@/lib/explainer/queries", () => ({
+  getExplainerCountsForGames: vi.fn().mockResolvedValue(new Map()),
+}));
+vi.mock("@/lib/content/lfg", () => ({
+  getBoardGameIdsWithOpenLfgPosts: vi.fn().mockResolvedValue(new Set()),
+}));
 
-import { countBoardGameTitles, roundDownToHundred } from "./query";
+import {
+  buildLudothekGames,
+  countBoardGameTitles,
+  roundDownToHundred,
+} from "./query";
+
+describe("buildLudothekGames", () => {
+  it("sorts by averageRating descending with unrated titles last (#214)", async () => {
+    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.storageUnit.findMany.mockResolvedValue([]);
+
+    await buildLudothekGames();
+
+    expect(prismaMock.gameCopy.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [
+          { boardGame: { averageRating: { sort: "desc", nulls: "last" } } },
+          { boardGame: { title: "asc" } },
+        ],
+      }),
+    );
+  });
+});
 
 describe("countBoardGameTitles", () => {
   it("counts only base-game titles", async () => {

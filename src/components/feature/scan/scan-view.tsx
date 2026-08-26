@@ -8,6 +8,7 @@ import { PillToggle } from "@/components/ui/pill-toggle";
 import { CodeScanner } from "@/components/ui/code-scanner";
 import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
 import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
+import { RelocateConfirmPanel } from "@/components/feature/scan/relocate-confirm-panel";
 import {
   scanPlaceGameInUnit,
   scanResolveCode,
@@ -22,7 +23,13 @@ export type SeriesMode =
 type ViewState =
   | { kind: "idle" }
   | { kind: "unknown"; raw: string }
-  | { kind: "select-game"; games: { id: string; title: string }[] }
+  | {
+      kind: "select-game";
+      games: { id: string; title: string }[];
+      /** Selecting here places directly into the active Serienmodus-Kiste
+       * instead of opening the GameHoldingPanel (#5). */
+      forEinlagern: boolean;
+    }
   | { kind: "game"; gameCopyId: string }
   | { kind: "pruefen"; gameCopyId: string; title: string }
   | {
@@ -31,6 +38,12 @@ type ViewState =
       code: string;
       label: string;
       contents: string[];
+    }
+  | {
+      kind: "confirm-relocate";
+      game: { id: string; title: string };
+      fromUnitCode: string;
+      toUnit: { id: string; code: string; label: string; contents: string[] };
     };
 
 export function ScanView({ canManageGames }: { canManageGames: boolean }) {
@@ -39,6 +52,34 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
   const [seriesMode, setSeriesMode] = useState<SeriesMode>(null);
   const [seriesLog, setSeriesLog] = useState<string[]>([]);
   const [lastRaw, setLastRaw] = useState("");
+  const [lastPlacedGame, setLastPlacedGame] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
+  async function placeInActiveUnit(
+    game: { id: string; title: string },
+    unit: { id: string; code: string },
+  ) {
+    const result = await scanPlaceGameInUnit(game.id, unit.id);
+    setSeriesLog((log) => [
+      result.error
+        ? `${game.title}: ${result.error}`
+        : `${game.title} → ${unit.code}`,
+      ...log,
+    ]);
+    if (!result.error) setLastPlacedGame(game);
+  }
+
+  function enterUnit(unit: {
+    id: string;
+    code: string;
+    label: string;
+    contents: string[];
+  }) {
+    setSeriesMode({ type: "einlagern", unitId: unit.id, unitCode: unit.code });
+    setState({ kind: "idle" });
+  }
 
   async function handleResolved(resolved: ResolvedScan) {
     if (resolved.kind === "unknown") {
@@ -47,34 +88,59 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
     }
 
     if (resolved.kind === "unit") {
-      if (seriesMode?.type === "einlagern") {
-        setSeriesLog((log) => [
-          `Einheit ${resolved.unit.code} kann nicht in sich selbst eingelagert werden.`,
-          ...log,
-        ]);
-        return;
-      }
-      setState({
-        kind: "unit",
-        unitId: resolved.unit.id,
+      const unit = {
+        id: resolved.unit.id,
         code: resolved.unit.code,
         label: resolved.unit.label,
         contents: resolved.contents.map((g) => g.boardGame.title),
-      });
+      };
+
+      if (seriesMode?.type === "einlagern") {
+        if (unit.id === seriesMode.unitId) {
+          setSeriesLog((log) => [
+            `Einheit ${unit.code} kann nicht in sich selbst eingelagert werden.`,
+            ...log,
+          ]);
+          return;
+        }
+        if (!lastPlacedGame) {
+          enterUnit(unit);
+          return;
+        }
+        setState({
+          kind: "confirm-relocate",
+          game: lastPlacedGame,
+          fromUnitCode: seriesMode.unitCode,
+          toUnit: unit,
+        });
+        return;
+      }
+
+      setState({ kind: "unit", unitId: unit.id, ...unit });
       return;
     }
 
     // resolved.kind === "games"
     if (seriesMode?.type === "einlagern") {
-      for (const game of resolved.games) {
-        const result = await scanPlaceGameInUnit(game.id, seriesMode.unitId);
-        setSeriesLog((log) => [
-          result.error
-            ? `${game.boardGame.title}: ${result.error}`
-            : `${game.boardGame.title} → ${seriesMode.unitCode}`,
-          ...log,
-        ]);
+      const unit = { id: seriesMode.unitId, code: seriesMode.unitCode };
+      if (resolved.games.length > 1) {
+        setState({
+          kind: "select-game",
+          games: resolved.games.map((g) => ({
+            id: g.id,
+            title: g.condition
+              ? `${g.boardGame.title} (${g.condition})`
+              : g.boardGame.title,
+          })),
+          forEinlagern: true,
+        });
+        return;
       }
+      const game = resolved.games[0];
+      await placeInActiveUnit(
+        { id: game.id, title: game.boardGame.title },
+        unit,
+      );
       return;
     }
 
@@ -99,7 +165,21 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
           ? `${g.boardGame.title} (${g.condition})`
           : g.boardGame.title,
       })),
+      forEinlagern: false,
     });
+  }
+
+  async function handleRelocateConfirm(
+    confirmState: Extract<ViewState, { kind: "confirm-relocate" }>,
+    relocate: boolean,
+  ) {
+    if (relocate) {
+      await placeInActiveUnit(confirmState.game, {
+        id: confirmState.toUnit.id,
+        code: confirmState.toUnit.code,
+      });
+    }
+    enterUnit(confirmState.toUnit);
   }
 
   async function handleCode(raw: string) {
@@ -159,7 +239,10 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                 <button
                   type="button"
                   className="underline"
-                  onClick={() => setSeriesMode(null)}
+                  onClick={() => {
+                    setSeriesMode(null);
+                    setLastPlacedGame(null);
+                  }}
                 >
                   beenden
                 </button>
@@ -209,7 +292,18 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                       key={game.id}
                       type="button"
                       className="hover:bg-muted rounded-md border px-3 py-2 text-left text-sm"
-                      onClick={() =>
+                      onClick={() => {
+                        if (
+                          state.forEinlagern &&
+                          seriesMode?.type === "einlagern"
+                        ) {
+                          void placeInActiveUnit(game, {
+                            id: seriesMode.unitId,
+                            code: seriesMode.unitCode,
+                          });
+                          setState({ kind: "idle" });
+                          return;
+                        }
                         setState(
                           seriesMode?.type === "pruefen"
                             ? {
@@ -218,8 +312,8 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                                 title: game.title,
                               }
                             : { kind: "game", gameCopyId: game.id },
-                        )
-                      }
+                        );
+                      }}
                     >
                       {game.title}
                     </button>
@@ -275,12 +369,24 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                       unitCode: state.code,
                     });
                     setSeriesLog([]);
+                    setLastPlacedGame(null);
                     reset();
                   }}
                 >
                   Serienmodus: Einlagern in {state.code}
                 </Button>
               </div>
+            )}
+
+            {state.kind === "confirm-relocate" && (
+              <RelocateConfirmPanel
+                game={state.game}
+                fromUnitCode={state.fromUnitCode}
+                toUnitCode={state.toUnit.code}
+                onConfirm={(relocate) =>
+                  void handleRelocateConfirm(state, relocate)
+                }
+              />
             )}
 
             {(state.kind === "unknown" ||

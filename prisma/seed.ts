@@ -32,7 +32,7 @@ const ADMIN_USER = {
 
 const DEMO_MEEPLE_1 = {
   email: process.env.SEED_DEMO_MEEPLE_1_EMAIL ?? "demo1@jan-herwig.de",
-  password: process.env.SEED_DEMO_MEEPLE_1_PASSWORD ?? "demo1234",
+  password: process.env.SEED_DEMO_PASSWORD ?? "demo1234",
   name: "Lea Demo",
 };
 
@@ -41,6 +41,22 @@ const DEMO_MEEPLE_2 = {
   password: process.env.SEED_DEMO_MEEPLE_2_PASSWORD ?? "demo1234",
   name: "Tobias Demo",
 };
+
+/**
+ * Ein Demo-Account je Vereinsamt, damit sich jede Rolle ohne Rechte-Rätselraten
+ * durchklicken lässt — Name ist zugleich der Rollenname (siehe seed-roles.ts).
+ */
+const DEMO_ROLE_ACCOUNTS = [
+  "Vorstand",
+  "Kassenwart",
+  "Spielewart",
+  "Redakteur",
+].map((name) => ({
+  name,
+  role: name,
+  email: `${name.toLowerCase()}@oecher-meeples.org`,
+  password: process.env.SEED_DEMO_PASSWORD ?? "demo1234",
+}));
 
 async function upsertNeonAuthUser({
   email,
@@ -156,7 +172,12 @@ async function seedDemoGames(adminMeepleId: string) {
   let createdCopyCount = 0;
 
   for (const game of DEMO_GAMES) {
-    if (existingIdByTitle.has(game.title)) continue;
+    // `gameIdByTitle` (unlike `existingIdByTitle`) also picks up titles
+    // created earlier in *this* loop — guards against an accidental
+    // duplicate title within `DEMO_GAMES` itself, not just against titles
+    // already in the DB from a previous run (see #183 follow-up: two
+    // separate "Catan" entries silently created two separate titles).
+    if (gameIdByTitle.has(game.title)) continue;
 
     const slug = await uniqueBoardGameSlug(prisma, game.title);
     const created = await prisma.boardGame.create({
@@ -256,8 +277,8 @@ async function seedDemoMeeples() {
     upsertNeonAuthUser(DEMO_MEEPLE_2),
   ]);
   await Promise.all([
-    assignRole(user1Id, "mitglied"),
-    assignRole(user2Id, "mitglied"),
+    assignRole(user1Id, "Meeple"),
+    assignRole(user2Id, "Meeple"),
   ]);
 
   const [meeple1, meeple2] = await Promise.all([
@@ -272,6 +293,19 @@ async function seedDemoMeeples() {
   await seedPrivateGameCollection(
     meeple2.id,
     DEMO_PRIVATE_COLLECTION_POOL.slice(30, 60),
+  );
+}
+
+/** Ein Account je Vereinsamt (DEMO_ROLE_ACCOUNTS) — Login zum Durchklicken jeder Rolle. */
+async function seedDemoRoleAccounts() {
+  for (const account of DEMO_ROLE_ACCOUNTS) {
+    const userId = await upsertNeonAuthUser(account);
+    await assignRole(userId, account.role);
+    await ensureMeeple(userId, account.name);
+  }
+
+  console.log(
+    `${DEMO_ROLE_ACCOUNTS.length} Rollen-Demo-Accounts angelegt/übersprungen.`,
   );
 }
 
@@ -333,11 +367,12 @@ async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
   await seedPermissions();
   await seedRoles();
-  await assignRole(adminUserId, "admin");
+  await assignRole(adminUserId, "sysadmin");
 
   const adminMeeple = await ensureAdminMeeple(adminUserId);
   await seedDemoGames(adminMeeple.id);
   await seedDemoMeeples();
+  await seedDemoRoleAccounts();
   await seedDemoPosts();
   await seedDemoDownloads();
   await seedDemoLegalDocuments();

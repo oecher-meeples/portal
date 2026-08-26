@@ -22,6 +22,8 @@ const MEEPLE = {
   telegramHandle: "@janh",
   signalHandle: null,
   discordHandle: null,
+  address: "Musterstraße 1, 52062 Aachen",
+  doorbellNote: "bei Fam. Reiners klingeln",
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2026-01-01"),
   neonAuthUserId: "user-1",
@@ -104,6 +106,15 @@ describe("collectMeeplePersonalData", () => {
     const result = await collectMeeplePersonalData("meeple-1");
 
     expect(result!.daten.Meeple).not.toHaveProperty("neonAuthUserId");
+  });
+
+  it("includes address and doorbell note in the export", async () => {
+    const result = await collectMeeplePersonalData("meeple-1");
+
+    expect(result!.daten.Meeple).toMatchObject({
+      address: "Musterstraße 1, 52062 Aachen",
+      doorbellNote: "bei Fam. Reiners klingeln",
+    });
   });
 
   it("includes rows where the meeple only acted as the recording person", async () => {

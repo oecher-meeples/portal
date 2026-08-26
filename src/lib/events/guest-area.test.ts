@@ -167,7 +167,7 @@ describe("getFreeGamesInRoom", () => {
       { gameCopyId: "game-3", unitId: "shelf-1" },
     ] as never);
 
-    const result = await getFreeGamesInRoom("event-1", { players: "3-4" });
+    const result = await getFreeGamesInRoom("event-1", { players: 3 });
 
     expect(result.map((g) => g.id)).toEqual(["game-1"]);
   });

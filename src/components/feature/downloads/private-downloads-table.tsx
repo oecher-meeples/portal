@@ -1,8 +1,8 @@
 import { DownloadRow } from "@/components/feature/downloads/download-row";
 import type { DownloadListItem } from "@/components/feature/downloads/downloads-view";
 
-/** OFFLINE downloads only visible to managers, sorted by `updatedAt desc`
- * (see #113, #116) — no drag handle since there is no manual order here. */
+/** OFFLINE downloads only visible to managers, sorted by `fileUpdatedAt desc`
+ * (see #113, #116, #201) — no drag handle since there is no manual order here. */
 export function PrivateDownloadsTable({
   downloads,
 }: {

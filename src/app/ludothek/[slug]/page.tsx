@@ -52,7 +52,11 @@ export default async function GameDetailPage({
       currentEvent?.id ?? null,
     );
     return (
-      <GameDetailView game={toPublicGame(game)} availability={availability} />
+      <GameDetailView
+        game={toPublicGame(game)}
+        bggId={game.bggId}
+        availability={availability}
+      />
     );
   }
 
@@ -116,6 +120,7 @@ export default async function GameDetailPage({
       ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
       : NO_CONTACT,
     condition: copy.condition,
+    ruleBookLanguages: copy.ruleBookLanguages,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
@@ -164,6 +169,7 @@ export default async function GameDetailPage({
     ? {
         boardGameId: game.boardGameId,
         title: game.title,
+        secondaryTitle: game.secondaryTitle,
         ean: game.ean,
         kind: game.kind,
         bggId: game.bggId,
@@ -171,10 +177,15 @@ export default async function GameDetailPage({
         maxPlayers: game.maxPlayers,
         playTimeMinutes: game.playTimeMinutes,
         weight: game.weight,
+        averageRating: game.averageRating,
         imageUrl: game.imageUrl,
         description: game.description,
         mechanics: game.mechanics,
         explainerVideoUrl: game.explainerVideoUrl,
+        languageDependence: game.languageDependence,
+        publisher: game.publisher,
+        author: game.author,
+        yearPublished: game.yearPublished,
       }
     : undefined;
 
@@ -195,6 +206,7 @@ export default async function GameDetailPage({
   return (
     <GameDetailView
       game={toPublicGame(game)}
+      bggId={game.bggId}
       explainer={{ entries: explainerEntries, myLevel }}
       expansionAssignment={expansionAssignment}
       titleEdit={titleEdit}

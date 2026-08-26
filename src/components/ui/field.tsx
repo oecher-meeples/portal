@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { X } from "lucide-react";
+import { TriangleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -30,13 +30,16 @@ export function Field({
 
 /** Field + Input in one go, since that is the overwhelmingly common case.
  * Pass `onClear` to show an "×"-Button while the field has a value, statt
- * dich auf die (browser- und typabhängige) native Clear-Anzeige zu verlassen. */
+ * dich auf die (browser- und typabhängige) native Clear-Anzeige zu verlassen.
+ * Pass `warning` to show a warning icon instead — z. B. bei einem erkannten
+ * Duplikat (#183); die beiden schließen sich gegenseitig aus. */
 export function TextField({
   id,
   label,
   hint,
   fieldClassName,
   onClear,
+  warning,
   ...inputProps
 }: React.ComponentProps<typeof Input> & {
   id: string;
@@ -44,15 +47,20 @@ export function TextField({
   hint?: ReactNode;
   fieldClassName?: string;
   onClear?: () => void;
+  warning?: boolean;
 }) {
   const showClear = Boolean(onClear && inputProps.value);
+  const showWarning = Boolean(warning) && !showClear;
   return (
     <Field label={label} htmlFor={id} hint={hint} className={fieldClassName}>
       <div className="relative">
         <Input
           id={id}
           {...inputProps}
-          className={cn(showClear && "pr-7", inputProps.className)}
+          className={cn(
+            (showClear || showWarning) && "pr-7",
+            inputProps.className,
+          )}
         />
         {showClear && (
           <button
@@ -63,6 +71,14 @@ export function TextField({
           >
             <X className="size-3.5" />
           </button>
+        )}
+        {showWarning && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-1.5 flex items-center text-amber-600"
+          >
+            <TriangleAlert className="size-3.5" />
+          </span>
         )}
       </div>
     </Field>

@@ -202,6 +202,18 @@ Diese Trennung löst den Teil von ADR 0001 ab, der sie ursprünglich verwarf ("n
 
 Deinventarisierte Exemplare werden nie gelöscht (`GameCopy.status`, `archivedAt`, `archivedReason`), damit die Verleih-Historie erhalten bleibt. Sie sind überall standardmäßig ausgefiltert.
 
+### Sprache: zwei getrennte Achsen
+
+`BoardGame.languageDependence` ist BGGs 5-stufiges `language_dependence`-Community-Poll-Modell (Level 1 „kein notwendiger Text" bis Level 5 „unspielbar in einer anderen Sprache", `null` = nicht erfasst) — beim BGG-Import wird das meistgewählte Level als Vorschlag übernommen, der Admin kann es ändern (#188). Das ist eine Eigenschaft des **Titels**: wie stark ein Spiel überhaupt von Sprache abhängt, unabhängig davon, welche physischen Exemplare der Verein besitzt.
+
+`GameCopy.ruleBookLanguages` ist davon unabhängig eine Eigenschaft des **Exemplars**: welche Sprache(n) das mitgelieferte Regelheft hat (`DE`/`EN`/`OTHER`, Mehrfachauswahl — eine Schachtel bringt oft ein deutsches und ein englisches Regelheft gemeinsam mit).
+
+### Verlag, Autor, Erstveröffentlichung (#205)
+
+BGG kennt mehrere Editionen (`versions=1`) desselben Titels mit potenziell abweichendem Verlag und Product Code je Edition (z. B. deutsche vs. englische Auflage bei unterschiedlichem Verlag). `lib/ludothek/board-game-versions.ts` löst das auf: identisch über alle (bevorzugt auf deutsche Editionen eingeengten, siehe `selectRelevantVersions()`) Versionen → automatisch übernommen; sonst wählt der Admin im Anlegen-Wizard. `BoardGame.yearPublished` ist davon unabhängig immer das älteste Jahr über *alle* Versionen — keine gekoppelte Auswahl mit dem Verlag. `author` kommt direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item, nicht aus den Versionen (Autoren ändern sich nicht zwischen Editionen).
+
+Die EAN-Suche bevorzugt einen eindeutig aufgelösten BGG-Product-Code vor der UPCitemdb-Fallback-Suche; ohne eindeutigen Code sortiert der bekannte Verlag die UPCitemdb-Kandidaten nach oben.
+
 ### Standort: eine Kette von Aufenthalten
 
 Es gibt **kein Standortfeld**. Wo ein Exemplar ist, steht in `GameHolding`: jeder Aufenthalt zeigt auf genau eines von Aufbewahrungseinheit oder Meeple, hat `startedAt` und optional `endedAt`. Ein partieller Unique-Index (`WHERE endedAt IS NULL`) garantiert genau einen offenen Aufenthalt pro Exemplar (`gameCopyId`), eine `CHECK`-Constraint genau ein Ziel. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang: einen Aufenthalt schließen, den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, steht in `origin`.
@@ -217,17 +229,23 @@ erDiagram
     BoardGame {
         String id PK
         String title
+        String secondaryTitle "zweiter Titel neben title, z. B. deutsch neben englisch (#203)"
         Int bggId UK "nullable — die einzige verlässliche Produkt-Identität"
         String ean "Index, nicht eindeutig — Produkt, nicht Exemplar"
         Int minPlayers
         Int maxPlayers
         Int playTimeMinutes
         Float weight
+        Float averageRating "nullable — BGGs Community-Durchschnittsbewertung 0-10 (#214)"
         String imageUrl
         String description
         String_Array mechanics
         String explainerVideoUrl
         BoardGameKind kind "BOARDGAME, BOARDGAME_EXPANSION"
+        LanguageDependence languageDependence "nullable — BGGs 5-stufiges Poll-Level (#188)"
+        String_Array publisher "mehrere bei Co-Publishern, aus BGG-Versionen aufgelöst (#205)"
+        String_Array author "aus BGGs boardgamedesigner-Links (#205)"
+        Int yearPublished "ältestes Jahr über alle BGG-Versionen (#205)"
     }
 
     GameCopy {
@@ -235,6 +253,7 @@ erDiagram
         String slug UK
         String boardGameId FK
         String condition "einzige Zustandsnotiz"
+        RuleBookLanguage_Array ruleBookLanguages "DE/EN/OTHER, Mehrfachauswahl (#188)"
         Boolean needsCompletenessCheck
         DateTime lastCheckedAt
         GameInventoryStatus status "ACTIVE, MAINTENANCE, DEINVENTARISED"

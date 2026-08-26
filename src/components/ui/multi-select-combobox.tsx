@@ -20,6 +20,7 @@ export function MultiSelectCombobox({
   onValueChange,
   placeholder,
   emptyLabel = "Keine Treffer",
+  className,
 }: {
   id?: string;
   options: string[];
@@ -27,6 +28,9 @@ export function MultiSelectCombobox({
   onValueChange: (value: string[]) => void;
   placeholder?: string;
   emptyLabel?: string;
+  /** Auf die sichtbare Chips-Box durchgereicht — z. B. für eine
+   * Abgleichs-Randfarbe im BGG-Vergleichsmodus (#189). */
+  className?: string;
 }) {
   return (
     <Combobox
@@ -35,14 +39,18 @@ export function MultiSelectCombobox({
       value={value}
       onValueChange={onValueChange}
     >
-      <ComboboxChips>
+      <ComboboxChips className={className}>
         {value.map((item) => (
           <ComboboxChip key={item}>
             {item}
             <ComboboxChipRemove aria-label={`${item} entfernen`} />
           </ComboboxChip>
         ))}
-        <ComboboxInput id={id} placeholder={placeholder} />
+        <ComboboxInput
+          id={id}
+          placeholder={placeholder}
+          className="h-auto min-w-24 border-none bg-transparent p-0 shadow-none focus-visible:ring-0"
+        />
       </ComboboxChips>
       <ComboboxPopup>
         <ComboboxEmpty>{emptyLabel}</ComboboxEmpty>

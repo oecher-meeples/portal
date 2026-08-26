@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items total="2" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+	<item type="boardgame" id="342942">
+		<name type="primary" value="Ark Nova" />
+		<yearpublished value="2021" />
+	</item>
+	<item type="boardgame" id="12345">
+		<name type="primary" value="Ark Nova: Marschmoor" />
+		<yearpublished value="2023" />
+	</item>
+</items>
