@@ -5,6 +5,7 @@ import {
   zustandFromHoldingAndUnit,
 } from "@/lib/ludothek/holdings";
 import {
+  buildUnitAndKeeperMaps,
   formatLocationChain,
   walkUnitChain,
 } from "@/lib/ludothek/holdings-lookup";
@@ -69,21 +70,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     getBoardGameIdsWithOpenLfgPosts(uniqueBoardGameIds),
   ]);
 
-  const unitById = new Map(units.map((u) => [u.id, u]));
-  const keeperIds = [
-    ...new Set(
-      units
-        .map((u) => u.keeperMeepleId)
-        .filter((id): id is string => id !== null),
-    ),
-  ];
-  const keepers = keeperIds.length
-    ? await prisma.meeple.findMany({
-        where: { id: { in: keeperIds } },
-        select: { id: true, displayName: true },
-      })
-    : [];
-  const keeperNameById = new Map(keepers.map((k) => [k.id, k.displayName]));
+  const { unitById, keeperNameById } = await buildUnitAndKeeperMaps(units);
 
   return copies.map((copy) => {
     const boardGame = copy.boardGame;

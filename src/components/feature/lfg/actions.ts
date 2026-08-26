@@ -67,23 +67,35 @@ async function loadPostWithParticipantCount(postId: string) {
   return post;
 }
 
-export async function joinLfgPost(postId: string) {
-  const meeple = await requireMeeple();
-
+/** Loads the post and rejects with the matching German error unless it's
+ * still open for new participants/guests — shared by `joinLfgPost()` and
+ * `addLfgGuest()`, which both gate on exactly this. */
+async function loadJoinablePost(postId: string) {
   const post = await loadPostWithParticipantCount(postId);
   if (!post) {
-    return { error: "Gesuch nicht gefunden." };
+    return { error: "Gesuch nicht gefunden." } as const;
   }
 
   const status = getLfgStatus(post, post._count.participants);
   if (status === "geschlossen") {
-    return { error: "Dieses Gesuch ist geschlossen." };
+    return { error: "Dieses Gesuch ist geschlossen." } as const;
   }
   if (status === "abgelaufen") {
-    return { error: "Dieses Gesuch ist abgelaufen." };
+    return { error: "Dieses Gesuch ist abgelaufen." } as const;
   }
   if (status === "voll") {
-    return { error: "Dieses Gesuch ist bereits voll." };
+    return { error: "Dieses Gesuch ist bereits voll." } as const;
+  }
+
+  return { post } as const;
+}
+
+export async function joinLfgPost(postId: string) {
+  const meeple = await requireMeeple();
+
+  const result = await loadJoinablePost(postId);
+  if ("error" in result) {
+    return result;
   }
 
   const existing = await prisma.lfgParticipant.findUnique({
@@ -107,21 +119,11 @@ export async function joinLfgPost(postId: string) {
 export async function addLfgGuest(postId: string) {
   const meeple = await requireMeeple();
 
-  const post = await loadPostWithParticipantCount(postId);
-  if (!post) {
-    return { error: "Gesuch nicht gefunden." };
+  const result = await loadJoinablePost(postId);
+  if ("error" in result) {
+    return result;
   }
-
-  const status = getLfgStatus(post, post._count.participants);
-  if (status === "geschlossen") {
-    return { error: "Dieses Gesuch ist geschlossen." };
-  }
-  if (status === "abgelaufen") {
-    return { error: "Dieses Gesuch ist abgelaufen." };
-  }
-  if (status === "voll") {
-    return { error: "Dieses Gesuch ist bereits voll." };
-  }
+  const { post } = result;
 
   const isCreator = post.createdByMeepleId === meeple.id;
   if (!isCreator) {
