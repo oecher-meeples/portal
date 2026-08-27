@@ -513,3 +513,5 @@ export async function searchBggGamesExact(
 ): Promise<BggSearchResult[]> {
   return searchBggGamesInternal(query, { exact: true });
 }
+
+export { fetchBggXml, parser, toArray, parseNumber, SEARCH_REVALIDATE_SECONDS };

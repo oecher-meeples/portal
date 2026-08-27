@@ -1,0 +1,67 @@
+import {
+  fetchBggXml,
+  parser,
+  parseNumber,
+  SEARCH_REVALIDATE_SECONDS,
+  toArray,
+} from "@/lib/bgg/client";
+
+export class BggCollectionUnavailableError extends Error {
+  constructor(username: string) {
+    super(
+      `BGG-Collection für "${username}" ist nicht abrufbar — Profil ist privat, existiert nicht, oder BGG verarbeitet die Anfrage noch (bitte gleich erneut versuchen).`,
+    );
+    this.name = "BggCollectionUnavailableError";
+  }
+}
+
+export interface BggCollectionEntry {
+  bggId: number;
+  title: string;
+}
+
+interface BggCollectionItem {
+  objectid?: string;
+  name?: { "#text"?: string } | { "#text"?: string }[];
+}
+
+interface BggCollectionResponse {
+  items?: { item?: BggCollectionItem | BggCollectionItem[] };
+  /** BGG antwortet mit diesem Block statt `items` bei ungültigem Username;
+   * ein privates Profil liefert stattdessen `items totalitems="0"` ohne
+   * erkennbaren Unterschied zu einer leeren, aber öffentlichen Collection —
+   * beides landet für den Aufrufer im selben "leere Liste"-Fall. */
+  errors?: { error?: { message?: string } };
+}
+
+/**
+ * Öffentliche BGG-Collection eines Benutzernamens (#255) — nur besessene
+ * Titel (`own=1`), keine Wunschlisten/geliehenen Einträge. Liefert nur
+ * Titel + BGG-ID, keine weiteren Metadaten (die kommen beim Titel-Abgleich
+ * ohnehin über `fetchBggGame`, falls der Titel neu angelegt werden muss).
+ */
+export async function fetchBggCollection(
+  username: string,
+): Promise<BggCollectionEntry[]> {
+  const trimmed = username.trim();
+  if (!trimmed) return [];
+
+  const xml = await fetchBggXml(
+    `/collection?username=${encodeURIComponent(trimmed)}&own=1&excludesubtype=boardgameexpansion`,
+    SEARCH_REVALIDATE_SECONDS,
+  );
+  const parsed = parser.parse(xml) as BggCollectionResponse;
+
+  if (parsed.errors) {
+    throw new BggCollectionUnavailableError(trimmed);
+  }
+
+  return toArray(parsed.items?.item)
+    .map((item) => {
+      const bggId = parseNumber(item.objectid);
+      const title = toArray(item.name)[0]?.["#text"];
+      if (bggId === null || !title) return null;
+      return { bggId, title };
+    })
+    .filter((entry): entry is BggCollectionEntry => entry !== null);
+}
