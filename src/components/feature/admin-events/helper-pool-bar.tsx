@@ -29,7 +29,9 @@ export type PoolDragData = {
  * ausgerichtet sind. Farbige Rechtecke je Helfer (`helperColorClass`,
  * konsistent über Pool und spätere Zuweisung hinweg). Jedes Rechteck ist ein
  * @dnd-kit-Draggable (#159); während des Drags werden andere Vorkommen
- * derselben Person rot markiert (`activeMeepleId`).
+ * derselben Person rot markiert (`activeMeepleId`). Dauerhaft gelb markiert
+ * (`alreadyPlanned`, #161), solange die Person an diesem Tag mindestens
+ * eine Zuweisung hat.
  */
 export function HelperPoolBar({
   dayId,
@@ -119,9 +121,14 @@ function PoolEntry({
       type="button"
       {...listeners}
       {...attributes}
+      title={
+        entry.alreadyPlanned
+          ? `${entry.displayName} ist an diesem Tag bereits verplant.`
+          : undefined
+      }
       className={`rounded px-2 py-1 text-xs font-medium ${helperColorClass(entry.meepleId)} ${
         isSameHelperDragging ? "ring-2 ring-rose-500" : ""
-      } ${entry.alreadyPlanned ? "outline outline-amber-500" : ""}`}
+      } ${entry.alreadyPlanned ? "ring-2 ring-amber-500 ring-offset-1" : ""}`}
     >
       {entry.displayName}
     </button>

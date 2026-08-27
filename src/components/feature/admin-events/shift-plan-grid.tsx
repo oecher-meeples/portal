@@ -37,11 +37,14 @@ export function ShiftPlanGrid({
   event,
   shifts,
   bookings,
+  onUnassign,
 }: {
   day: PlanDay;
   event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
   bookings: PlanBooking[];
+  /** Entf-Taste auf einem fokussierten Block (#161 Unassign). */
+  onUnassign: (shiftId: string, meepleId: string) => void;
 }) {
   const range = computeVisibleRange(
     {
@@ -135,7 +138,16 @@ export function ShiftPlanGrid({
           return (
             <div
               key={`${booking.shiftId}-${booking.meepleId}`}
-              className={`m-0.5 rounded px-1.5 py-1 text-xs font-medium ${helperColorClass(booking.meepleId)}`}
+              tabIndex={0}
+              role="button"
+              aria-label={`${booking.displayName} — Entf zum Entfernen`}
+              onKeyDown={(keyEvent) => {
+                if (keyEvent.key === "Delete" || keyEvent.key === "Backspace") {
+                  keyEvent.preventDefault();
+                  onUnassign(booking.shiftId, booking.meepleId);
+                }
+              }}
+              className={`focus-visible:ring-ring m-0.5 cursor-default rounded px-1.5 py-1 text-xs font-medium outline-none focus-visible:ring-2 ${helperColorClass(booking.meepleId)}`}
               style={{
                 gridColumn: group.startColumn + 2 + Math.max(slot, 0),
                 gridRow: `${rowStart} / ${rowEnd}`,

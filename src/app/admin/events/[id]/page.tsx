@@ -87,19 +87,6 @@ export default async function AdminEventDetailPage({
     bookings: shift.bookings,
   }));
 
-  const pool: Record<string, PoolMeeple[]> = Object.fromEntries(
-    event.days.map((day) => [
-      day.id,
-      day.availabilities.flatMap((availability) =>
-        availability.roles.map((role) => ({
-          meepleId: availability.meeple.id,
-          displayName: availability.meeple.displayName,
-          roleId: role.roleId,
-        })),
-      ),
-    ]),
-  );
-
   const bookingsByDay: Record<string, PlanBooking[]> = {};
   for (const shift of event.shifts) {
     const forDay = (bookingsByDay[shift.dayId] ??= []);
@@ -115,6 +102,30 @@ export default async function AdminEventDetailPage({
       });
     }
   }
+
+  /** Whoever has ≥1 assignment on a day gets the yellow "bereits verplant"
+   * marker in the pool bar (#161), regardless of which role it's for. */
+  const plannedMeepleIdsByDay: Record<string, Set<string>> = Object.fromEntries(
+    Object.entries(bookingsByDay).map(([dayId, bookings]) => [
+      dayId,
+      new Set(bookings.map((b) => b.meepleId)),
+    ]),
+  );
+
+  const pool: Record<string, PoolMeeple[]> = Object.fromEntries(
+    event.days.map((day) => [
+      day.id,
+      day.availabilities.flatMap((availability) =>
+        availability.roles.map((role) => ({
+          meepleId: availability.meeple.id,
+          displayName: availability.meeple.displayName,
+          roleId: role.roleId,
+          alreadyPlanned:
+            plannedMeepleIdsByDay[day.id]?.has(availability.meeple.id) ?? false,
+        })),
+      ),
+    ]),
+  );
 
   const assignedShelfIds = new Set(
     event.shelfAssignments.map((assignment) => assignment.unit.id),

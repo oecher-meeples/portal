@@ -25,7 +25,10 @@ import {
   ShiftPlanGrid,
   type RoleDropData,
 } from "@/components/feature/admin-events/shift-plan-grid";
-import { assignHelperToShift } from "@/components/feature/admin-events/shift-plan-actions";
+import {
+  assignHelperToShift,
+  unassignHelperFromShift,
+} from "@/components/feature/admin-events/shift-plan-actions";
 import { buildRoleColumns } from "@/lib/events/shift-plan";
 
 export type { PlanDay, PlanShift };
@@ -33,11 +36,14 @@ export type { PlanDay, PlanShift };
 type ActiveDrag = { meepleId: string; displayName: string } | null;
 
 /**
- * Outlook-artiger Schichtplan-Kalender (#157–#159) — Tab pro Event-Tag,
+ * Outlook-artiger Schichtplan-Kalender (#157–#159, #161) — Tab pro Event-Tag,
  * Helferpool-Leiste synchron zum Kalender-Spaltenraster darüber, Drag&Drop
  * eines Pool-Helfers auf eine Rollen-Spalte (@dnd-kit) legt eine Zuweisung
- * mit dem Ziel-Zeitraum der Schicht an. Resize (#160) und die gelbe
- * "bereits verplant"-Markierung (#161) folgen als eigene Sub-Issues.
+ * mit dem Ziel-Zeitraum der Schicht an. Der Pool-Eintrag bleibt danach
+ * sichtbar und wird gelb markiert, solange die Person an diesem Tag
+ * mindestens eine Zuweisung hat (`alreadyPlanned`); Entf-Taste auf einem
+ * fokussierten Block entfernt die Zuweisung wieder. Resize (#160) ist noch
+ * ein eigenes Sub-Issue.
  */
 export function ShiftPlanEditor({
   days,
@@ -97,6 +103,16 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
+  async function handleUnassign(shiftId: string, meepleId: string) {
+    setError(null);
+    const result = await unassignHelperFromShift(shiftId, meepleId);
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <Tabs defaultValue={days[0].id}>
@@ -127,6 +143,7 @@ export function ShiftPlanEditor({
                 event={event}
                 shifts={dayShifts}
                 bookings={bookings[day.id] ?? []}
+                onUnassign={handleUnassign}
               />
             </TabsContent>
           );
