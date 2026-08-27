@@ -1,7 +1,9 @@
+import { GameInventoryStatus } from "@prisma/client";
 import {
   matchesDurationRange,
   matchesPlayerCount,
 } from "@/lib/ludothek/browser";
+import { prisma } from "@/lib/utils/prisma";
 
 export type PrivateCollectionResult = {
   id: string;
@@ -26,6 +28,39 @@ export type PrivateCollectionEntryInput = {
     playTimeMinutes: number | null;
   };
 };
+
+/**
+ * Query-seitig erzwungene Sichtbarkeit (#255): nur Collections, deren
+ * Meeple `privateCollectionVisible` gesetzt hat, und nur Titel **ohne**
+ * bestehendes Vereinsexemplar — die tauchen sonst doppelt auf, einmal
+ * regulär mit Standort/Zustand, einmal fälschlich als "privat" markiert.
+ */
+export async function findVisiblePrivateCollectionEntries(): Promise<
+  PrivateCollectionEntryInput[]
+> {
+  return prisma.privateGameCollectionEntry.findMany({
+    where: {
+      meeple: { privateCollectionVisible: true },
+      boardGame: {
+        copies: {
+          none: { status: { not: GameInventoryStatus.DEINVENTARISED } },
+        },
+      },
+    },
+    include: {
+      meeple: { select: { displayName: true } },
+      boardGame: {
+        select: {
+          title: true,
+          imageUrl: true,
+          minPlayers: true,
+          maxPlayers: true,
+          playTimeMinutes: true,
+        },
+      },
+    },
+  });
+}
 
 /**
  * Internal-only crowdsourced results from members' private collections — never

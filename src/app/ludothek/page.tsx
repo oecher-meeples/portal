@@ -10,7 +10,10 @@ import {
   toPublicGame,
 } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
-import { buildPrivateCollectionResults } from "@/lib/ludothek/private-collection";
+import {
+  buildPrivateCollectionResults,
+  findVisiblePrivateCollectionEntries,
+} from "@/lib/ludothek/private-collection";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
@@ -75,20 +78,7 @@ export default async function LudothekPage({
   const privateCollectionResults =
     internal && filters.showPrivateCollection
       ? buildPrivateCollectionResults(
-          await prisma.privateGameCollectionEntry.findMany({
-            include: {
-              meeple: { select: { displayName: true } },
-              boardGame: {
-                select: {
-                  title: true,
-                  imageUrl: true,
-                  minPlayers: true,
-                  maxPlayers: true,
-                  playTimeMinutes: true,
-                },
-              },
-            },
-          }),
+          await findVisiblePrivateCollectionEntries(),
           filters,
         )
       : undefined;

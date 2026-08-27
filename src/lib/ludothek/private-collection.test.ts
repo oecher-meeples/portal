@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { buildPrivateCollectionResults } from "./private-collection";
+import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/lib/__mocks__/prisma";
+
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+
+const { buildPrivateCollectionResults, findVisiblePrivateCollectionEntries } =
+  await import("./private-collection");
 
 function entry(
   overrides: Partial<{
@@ -89,5 +94,37 @@ describe("buildPrivateCollectionResults", () => {
     );
 
     expect(results.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("findVisiblePrivateCollectionEntries (#255)", () => {
+  it("only queries entries whose meeple has released visibility", async () => {
+    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([]);
+
+    await findVisiblePrivateCollectionEntries();
+
+    expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          meeple: { privateCollectionVisible: true },
+        }),
+      }),
+    );
+  });
+
+  it("excludes titles that already have an active club copy", async () => {
+    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([]);
+
+    await findVisiblePrivateCollectionEntries();
+
+    expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          boardGame: {
+            copies: { none: { status: { not: "DEINVENTARISED" } } },
+          },
+        }),
+      }),
+    );
   });
 });
