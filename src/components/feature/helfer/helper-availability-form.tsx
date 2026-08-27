@@ -10,6 +10,12 @@ import {
   clearOwnHelperAvailability,
 } from "@/components/feature/helfer/availability-actions";
 import { formatWeekdayDate } from "@/lib/utils/format";
+import {
+  MINUTES_PER_DAY,
+  combineDateAndMinutes,
+  formatMinutesAsTime,
+  minutesSinceMidnight,
+} from "@/lib/utils/time-of-day";
 
 export type HelperRoleOption = { id: string; name: string };
 
@@ -20,27 +26,6 @@ export type OwnAvailability = {
   endsAt: string;
   roleIds: string[];
 };
-
-const MINUTES_PER_DAY = 24 * 60;
-
-function toDateTime(dateIso: string, minutesFromMidnight: number): Date {
-  const date = new Date(`${dateIso.slice(0, 10)}T00:00:00`);
-  date.setMinutes(minutesFromMidnight);
-  return date;
-}
-
-function minutesSinceMidnight(iso: string): number {
-  const date = new Date(iso);
-  return date.getHours() * 60 + date.getMinutes();
-}
-
-function formatMinutes(minutes: number): string {
-  const hours = Math.floor(minutes / 60)
-    .toString()
-    .padStart(2, "0");
-  const mins = (minutes % 60).toString().padStart(2, "0");
-  return `${hours}:${mins}`;
-}
 
 /** Pro Event-Tag: Verfügbarkeitsfenster (00:00–24:00-Regler) + Rollen-
  * Mehrfachauswahl (#156), beschränkt auf die Rollen, für die an diesem Tag
@@ -74,8 +59,8 @@ export function HelperAvailabilityForm({
     run(() =>
       setOwnHelperAvailability(
         day.id,
-        toDateTime(day.date, range[0]),
-        toDateTime(day.date, range[1]),
+        combineDateAndMinutes(day.date, range[0]),
+        combineDateAndMinutes(day.date, range[1]),
         roleIds,
       ),
     );
@@ -94,7 +79,7 @@ export function HelperAvailabilityForm({
           getAriaLabel={(index) => (index === 0 ? "Von" : "Bis")}
         />
         <span className="text-muted-foreground text-xs">
-          {formatMinutes(range[0])} – {formatMinutes(range[1])}
+          {formatMinutesAsTime(range[0])} – {formatMinutesAsTime(range[1])}
         </span>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-2">

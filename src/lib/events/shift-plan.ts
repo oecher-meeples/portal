@@ -99,6 +99,27 @@ export function isSlotStaffable(
 }
 
 /**
+ * Turns a drag-selected pair of slot indices (Schnellanlage: Zellen in der
+ * Uhrzeiten-Spalte selektieren) into the actual start/end instants for a new
+ * Shift — the selection always spans full step-sized blocks, so the end
+ * slot's own block is included, not just its label time.
+ */
+export function resolveSelectedTimeRange(
+  timeSlots: Date[],
+  anchorIndex: number,
+  currentIndex: number,
+  stepMinutes: number,
+): { startsAt: Date; endsAt: Date } {
+  const startIndex = Math.min(anchorIndex, currentIndex);
+  const endIndex = Math.max(anchorIndex, currentIndex);
+  const startsAt = timeSlots[startIndex];
+  const endsAt = new Date(
+    timeSlots[endIndex].getTime() + stepMinutes * 60 * 1000,
+  );
+  return { startsAt, endsAt };
+}
+
+/**
  * Time-based analogue of `computeShiftFillLevel` (#162): a Shift counts as
  * "voll geplant" only once its `capacity` parallel Stellen cover the whole
  * target period without gaps — at every instant within it, at least

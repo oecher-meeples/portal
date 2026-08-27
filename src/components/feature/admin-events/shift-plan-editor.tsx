@@ -34,6 +34,7 @@ import {
   ShiftDialog,
   type HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
+import { timeInputValue } from "@/components/ui/time-picker";
 
 export type { PlanDay, PlanShift };
 
@@ -70,6 +71,14 @@ export function ShiftPlanEditor({
   const router = useRouter();
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Aus einer Zellen-Auswahl im Grid heraus programmatisch geöffneter
+   * Schicht-anlegen-Dialog (Schnellanlage), vorausgefüllt mit Tag + Ziel-
+   * Zeit der Auswahl. */
+  const [pendingRange, setPendingRange] = useState<{
+    dayId: string;
+    startsAt: Date;
+    endsAt: Date;
+  } | null>(null);
 
   if (days.length === 0) return null;
 
@@ -175,6 +184,24 @@ export function ShiftPlanEditor({
                   defaultDayId={day.id}
                 />
               </div>
+              {pendingRange?.dayId === day.id && (
+                <ShiftDialog
+                  eventId={eventId}
+                  helperRoles={helperRoles}
+                  days={days}
+                  defaultDayId={day.id}
+                  defaultStartTime={timeInputValue(
+                    pendingRange.startsAt.toISOString(),
+                  )}
+                  defaultEndTime={timeInputValue(
+                    pendingRange.endsAt.toISOString(),
+                  )}
+                  open
+                  onOpenChange={(open) => {
+                    if (!open) setPendingRange(null);
+                  }}
+                />
+              )}
               <HelperPoolBar
                 dayId={day.id}
                 columns={columns}
@@ -188,6 +215,9 @@ export function ShiftPlanEditor({
                 bookings={bookings[day.id] ?? []}
                 onUnassign={handleUnassign}
                 onResize={handleResize}
+                onSelectRange={(startsAt, endsAt) =>
+                  setPendingRange({ dayId: day.id, startsAt, endsAt })
+                }
               />
             </TabsContent>
           );

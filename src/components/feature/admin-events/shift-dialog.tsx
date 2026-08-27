@@ -10,7 +10,7 @@ import {
   createShift,
   updateShift,
 } from "@/components/feature/admin-events/shift-actions";
-import { formatDateMedium } from "@/lib/utils/format";
+import { formatDateMedium, formatTimePlain } from "@/lib/utils/format";
 
 export type EditableShift = {
   id: string;
@@ -23,7 +23,12 @@ export type EditableShift = {
 };
 
 export type HelperRoleOption = { id: string; name: string };
-export type EventDayOption = { id: string; date: string };
+export type EventDayOption = {
+  id: string;
+  date: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
 
 /** Kombiniert das Kalenderdatum des gewählten Tags mit einer "HH:mm"-Uhrzeit
  * zum Date, das die Action erwartet — Ziel-Beginn/-Ende sind reine
@@ -39,6 +44,10 @@ export function ShiftDialog({
   helperRoles,
   days,
   defaultDayId,
+  defaultStartTime,
+  defaultEndTime,
+  open,
+  onOpenChange,
 }: {
   eventId: string;
   shift?: EditableShift;
@@ -48,33 +57,48 @@ export function ShiftDialog({
    * Dialog im Schichtplan-Editor geöffnet wurde. Ohne Wirkung beim Bearbeiten
    * einer bestehenden Schicht (die behält ihren eigenen Tag). */
   defaultDayId?: string;
+  /** Vorausgefüllte Ziel-Zeiten aus einer Zellen-Auswahl im Schichtplan-Grid
+   * (Schnellanlage) — nur beim Anlegen wirksam, HH:mm. */
+  defaultStartTime?: string;
+  defaultEndTime?: string;
+  /** Gesteuerter Open-State statt eigenem Trigger — für die programmatische
+   * Öffnung nach einer Zellen-Auswahl. Ohne diese Props zeigt der Dialog wie
+   * gewohnt seinen eigenen Trigger-Button (Anlegen/Bearbeiten). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const isEdit = Boolean(shift);
+  const isControlled = open !== undefined;
   const initialDayId = () => shift?.dayId ?? defaultDayId ?? days[0]?.id ?? "";
   const [dayId, setDayId] = useState(initialDayId);
   const [roleId, setRoleId] = useState(
     shift?.roleId ?? helperRoles[0]?.id ?? "",
   );
   const [targetStartsAt, setTargetStartsAt] = useState(
-    shift ? timeInputValue(shift.targetStartsAt) : "",
+    shift ? timeInputValue(shift.targetStartsAt) : (defaultStartTime ?? ""),
   );
   const [targetEndsAt, setTargetEndsAt] = useState(
-    shift ? timeInputValue(shift.targetEndsAt) : "",
+    shift ? timeInputValue(shift.targetEndsAt) : (defaultEndTime ?? ""),
   );
   const [capacity, setCapacity] = useState(String(shift?.capacity ?? 1));
+  const selectedDay = days.find((day) => day.id === dayId);
 
   function reset() {
     setDayId(initialDayId());
     setRoleId(shift?.roleId ?? helperRoles[0]?.id ?? "");
-    setTargetStartsAt(shift ? timeInputValue(shift.targetStartsAt) : "");
-    setTargetEndsAt(shift ? timeInputValue(shift.targetEndsAt) : "");
+    setTargetStartsAt(
+      shift ? timeInputValue(shift.targetStartsAt) : (defaultStartTime ?? ""),
+    );
+    setTargetEndsAt(
+      shift ? timeInputValue(shift.targetEndsAt) : (defaultEndTime ?? ""),
+    );
     setCapacity(String(shift?.capacity ?? 1));
   }
 
   return (
     <ActionDialog
       trigger={
-        isEdit ? (
+        isControlled ? undefined : isEdit ? (
           <Button variant="outline" size="sm" className="gap-1.5">
             <Pencil className="size-4" />
             Bearbeiten
@@ -86,6 +110,8 @@ export function ShiftDialog({
           </Button>
         )
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title={isEdit ? "Schicht bearbeiten" : "Neue Schicht"}
       description="Bedarf an einer Helferrolle für einen Event-Tag — Stellenzahl plus eigener Ziel-Zeitraum, unabhängig vom Event-Zeitraum."
       submitLabel={isEdit ? "Speichern" : "Schicht anlegen"}
@@ -124,6 +150,11 @@ export function ShiftDialog({
           ))}
         </select>
       </Field>
+      <p className="text-muted-foreground -mt-2 text-xs">
+        {selectedDay?.startsAt && selectedDay.endsAt
+          ? `Öffnungszeiten: ${formatTimePlain(selectedDay.startsAt)} – ${formatTimePlain(selectedDay.endsAt)}`
+          : "Für diesen Tag sind noch keine Öffnungszeiten hinterlegt."}
+      </p>
       <Field label="Rolle" htmlFor="shift-role">
         <select
           id="shift-role"

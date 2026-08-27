@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   computeVisibleRange,
@@ -8,10 +10,12 @@ import {
   totalColumnCount,
   computeShiftCoverage,
   isSlotStaffable,
+  resolveSelectedTimeRange,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
 import { formatTimePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/button";
 import type {
   PlanDay,
   PlanShift,
@@ -69,6 +73,7 @@ export function ShiftPlanGrid({
   bookings,
   onUnassign,
   onResize,
+  onSelectRange,
 }: {
   day: PlanDay;
   event: { startsAt: string; endsAt: string | null };
@@ -83,7 +88,25 @@ export function ShiftPlanGrid({
     startsAt: Date,
     endsAt: Date,
   ) => void;
+  /** Zellen von-bis in der Uhrzeiten-Spalte selektiert und bestätigt
+   * (Schicht-Schnellanlage) — öffnet den Schicht-anlegen-Dialog mit
+   * vorausgefüllter Ziel-Zeit. */
+  onSelectRange: (startsAt: Date, endsAt: Date) => void;
 }) {
+  const [drag, setDrag] = useState<{
+    anchor: number;
+    current: number;
+  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    function handleUp() {
+      setIsDragging(false);
+    }
+    window.addEventListener("mouseup", handleUp);
+    return () => window.removeEventListener("mouseup", handleUp);
+  }, [isDragging]);
   const range = computeVisibleRange(
     {
       startsAt: day.startsAt ? new Date(day.startsAt) : null,
@@ -154,35 +177,55 @@ export function ShiftPlanGrid({
           );
         })}
 
-        {timeSlots.map((slot, rowIndex) => (
-          <div key={slot.toISOString()} className="contents">
-            <div
-              className="text-muted-foreground border-b px-2 py-1 text-right font-mono text-xs"
-              style={{ gridRow: rowIndex + 2 }}
-            >
-              {formatTimePlain(slot.toISOString())}
+        {timeSlots.map((slot, rowIndex) => {
+          const selected =
+            drag !== null &&
+            rowIndex >= Math.min(drag.anchor, drag.current) &&
+            rowIndex <= Math.max(drag.anchor, drag.current);
+          return (
+            <div key={slot.toISOString()} className="contents">
+              <div
+                className={cn(
+                  "text-muted-foreground border-b px-2 py-1 text-right font-mono text-xs select-none",
+                  "hover:bg-primary/10 cursor-pointer",
+                  selected && "bg-primary/15",
+                )}
+                style={{ gridRow: rowIndex + 2 }}
+                onMouseDown={() => {
+                  setDrag({ anchor: rowIndex, current: rowIndex });
+                  setIsDragging(true);
+                }}
+                onMouseEnter={() => {
+                  if (!isDragging) return;
+                  setDrag((current) =>
+                    current ? { ...current, current: rowIndex } : current,
+                  );
+                }}
+              >
+                {formatTimePlain(slot.toISOString())}
+              </div>
+              {columns.flatMap((group) => {
+                const staffable = isSlotStaffable(
+                  slot,
+                  targetRangesByRole.get(group.roleId) ?? [],
+                );
+                return Array.from({ length: group.capacity }, (_, index) => (
+                  <div
+                    key={`${group.roleId}-${index}`}
+                    className={cn(
+                      "border-b border-l",
+                      !staffable && "bg-muted/40",
+                    )}
+                    style={{
+                      gridColumn: group.startColumn + 2 + index,
+                      gridRow: rowIndex + 2,
+                    }}
+                  />
+                ));
+              })}
             </div>
-            {columns.flatMap((group) => {
-              const staffable = isSlotStaffable(
-                slot,
-                targetRangesByRole.get(group.roleId) ?? [],
-              );
-              return Array.from({ length: group.capacity }, (_, index) => (
-                <div
-                  key={`${group.roleId}-${index}`}
-                  className={cn(
-                    "border-b border-l",
-                    !staffable && "bg-muted/40",
-                  )}
-                  style={{
-                    gridColumn: group.startColumn + 2 + index,
-                    gridRow: rowIndex + 2,
-                  }}
-                />
-              ));
-            })}
-          </div>
-        ))}
+          );
+        })}
 
         {columns.map((group) => {
           const shift = primaryShiftFor(group, shifts);
@@ -222,6 +265,49 @@ export function ShiftPlanGrid({
             />
           );
         })}
+
+        {drag &&
+          !isDragging &&
+          (() => {
+            const { startsAt, endsAt } = resolveSelectedTimeRange(
+              timeSlots,
+              drag.anchor,
+              drag.current,
+              STEP_MINUTES,
+            );
+            return (
+              <div
+                className="bg-popover text-popover-foreground z-10 flex items-center gap-2 self-start justify-self-start rounded-md border px-3 py-1.5 text-xs shadow-md"
+                style={{
+                  gridColumn: "1 / -1",
+                  gridRow: Math.min(drag.anchor, drag.current) + 2,
+                }}
+              >
+                <span>
+                  Schicht für {formatTimePlain(startsAt.toISOString())}–
+                  {formatTimePlain(endsAt.toISOString())} anlegen?
+                </span>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    onSelectRange(startsAt, endsAt);
+                    setDrag(null);
+                  }}
+                >
+                  Anlegen
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Auswahl verwerfen"
+                  onClick={() => setDrag(null)}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+            );
+          })()}
       </div>
     </div>
   );

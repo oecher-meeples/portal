@@ -6,6 +6,7 @@ import {
   totalColumnCount,
   computeShiftCoverage,
   isSlotStaffable,
+  resolveSelectedTimeRange,
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
@@ -222,5 +223,33 @@ describe("isSlotStaffable", () => {
 
   it("is false when there are no shifts for the role", () => {
     expect(isSlotStaffable(new Date("2026-10-10T11:00:00Z"), [])).toBe(false);
+  });
+});
+
+describe("resolveSelectedTimeRange", () => {
+  const timeSlots = buildTimeSlots(
+    {
+      start: new Date("2026-10-10T08:00:00Z"),
+      end: new Date("2026-10-10T12:00:00Z"),
+    },
+    30,
+  );
+
+  it("uses the anchor and current slot regardless of drag direction", () => {
+    expect(resolveSelectedTimeRange(timeSlots, 1, 3, 30)).toEqual({
+      startsAt: timeSlots[1],
+      endsAt: new Date(timeSlots[3].getTime() + 30 * 60 * 1000),
+    });
+    expect(resolveSelectedTimeRange(timeSlots, 3, 1, 30)).toEqual({
+      startsAt: timeSlots[1],
+      endsAt: new Date(timeSlots[3].getTime() + 30 * 60 * 1000),
+    });
+  });
+
+  it("extends a single-slot selection by one step", () => {
+    expect(resolveSelectedTimeRange(timeSlots, 2, 2, 30)).toEqual({
+      startsAt: timeSlots[2],
+      endsAt: new Date(timeSlots[2].getTime() + 30 * 60 * 1000),
+    });
   });
 });
