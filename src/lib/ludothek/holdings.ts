@@ -86,12 +86,38 @@ async function closeAndOpen(
   });
 }
 
-/** Whoever records the transition as the receiving party gets it confirmed right away. */
-function confirmationFor(
+/**
+ * Whoever records the transition as the receiving party gets it confirmed
+ * right away — and so does anyone holding `games:manage` (#274): "der
+ * Spielewart ist von dieser Regel ausgenommen: sein Wort ist Gesetz", for
+ * any recipient, regardless of prior possession. Used by `borrowGame` and
+ * `handOverGame` alike; `confirmHolding()` (forcing an already-open, foreign
+ * assignment after the fact) is a separate concern and stays untouched.
+ */
+async function confirmationFor(
+  tx: Tx,
   recordedByMeepleId: string,
   receivingMeepleId: string,
 ) {
-  return recordedByMeepleId === receivingMeepleId ? new Date() : null;
+  if (recordedByMeepleId === receivingMeepleId) {
+    return new Date();
+  }
+
+  const recorder = await tx.meeple.findUnique({
+    where: { id: recordedByMeepleId },
+    select: { neonAuthUserId: true },
+  });
+  if (!recorder?.neonAuthUserId) {
+    return null;
+  }
+
+  const grantCount = await tx.rolePermission.count({
+    where: {
+      permission: { key: "games:manage" },
+      role: { users: { some: { neonAuthUserId: recorder.neonAuthUserId } } },
+    },
+  });
+  return grantCount > 0 ? new Date() : null;
 }
 
 /**
@@ -138,7 +164,7 @@ export async function borrowGame({
       target: { meepleId },
       origin: HoldingOrigin.LOAN,
       recordedByMeepleId,
-      confirmedAt: confirmationFor(recordedByMeepleId, meepleId),
+      confirmedAt: await confirmationFor(tx, recordedByMeepleId, meepleId),
       note,
     });
   });
@@ -169,7 +195,7 @@ export async function handOverGame({
       target: { meepleId: toMeepleId },
       origin: HoldingOrigin.HANDOVER,
       recordedByMeepleId,
-      confirmedAt: confirmationFor(recordedByMeepleId, toMeepleId),
+      confirmedAt: await confirmationFor(tx, recordedByMeepleId, toMeepleId),
       note,
     });
   });
