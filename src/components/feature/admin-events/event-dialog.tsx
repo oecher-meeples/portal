@@ -18,26 +18,27 @@ export type EditableEvent = {
   location: string | null;
 };
 
-/** `datetime-local` inputs need "YYYY-MM-DDTHH:mm", an ISO string is longer. */
-function toDateTimeLocal(iso: string) {
-  return iso.slice(0, 16);
+/** `date` inputs need "YYYY-MM-DD", an ISO string is longer. Beginn/Ende sind ein
+ * reiner Datumsbereich — die Uhrzeit je Tag wird erst auf der Eventseite gesetzt (#150). */
+function toDateInput(iso: string) {
+  return iso.slice(0, 10);
 }
 
 export function EventDialog({ event }: { event?: EditableEvent }) {
   const isEdit = Boolean(event);
   const [title, setTitle] = useState(event?.title ?? "");
   const [startsAt, setStartsAt] = useState(
-    event ? toDateTimeLocal(event.startsAt) : "",
+    event ? toDateInput(event.startsAt) : "",
   );
   const [endsAt, setEndsAt] = useState(
-    event?.endsAt ? toDateTimeLocal(event.endsAt) : "",
+    event?.endsAt ? toDateInput(event.endsAt) : "",
   );
   const [location, setLocation] = useState(event?.location ?? "");
 
   function reset() {
     setTitle(event?.title ?? "");
-    setStartsAt(event ? toDateTimeLocal(event.startsAt) : "");
-    setEndsAt(event?.endsAt ? toDateTimeLocal(event.endsAt) : "");
+    setStartsAt(event ? toDateInput(event.startsAt) : "");
+    setEndsAt(event?.endsAt ? toDateInput(event.endsAt) : "");
     setLocation(event?.location ?? "");
   }
 
@@ -57,7 +58,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         )
       }
       title={isEdit ? "Event bearbeiten" : "Neues Event"}
-      description="Losgelöst vom Kalender-Feed — das Event ist die Grundlage für Schichten, Erklärbären und Flohmarkt-Artikel."
+      description="Losgelöst vom Kalender-Feed — das Event ist die Grundlage für Schichten, Erklärbären und Flohmarkt-Artikel. Uhrzeiten je Tag werden anschließend auf der Eventseite festgelegt."
       submitLabel={isEdit ? "Speichern" : "Event anlegen"}
       canSubmit={Boolean(title.trim()) && Boolean(startsAt)}
       action={() => {
@@ -81,7 +82,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
       <TextField
         id="event-starts"
         label="Beginn"
-        type="datetime-local"
+        type="date"
         value={startsAt}
         onChange={(fieldEvent) => setStartsAt(fieldEvent.target.value)}
         required
@@ -89,7 +90,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
       <TextField
         id="event-ends"
         label="Ende (optional)"
-        type="datetime-local"
+        type="date"
         value={endsAt}
         onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
       />

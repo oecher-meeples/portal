@@ -5,6 +5,7 @@ import {
   EventDetailView,
   type ShiftRow,
 } from "@/components/feature/admin-events/event-detail-view";
+import type { EditableEventDay } from "@/components/feature/admin-events/event-day-time-form";
 
 export default async function AdminEventDetailPage({
   params,
@@ -18,6 +19,7 @@ export default async function AdminEventDetailPage({
     prisma.event.findUnique({
       where: { id },
       include: {
+        days: { orderBy: { date: "asc" } },
         shifts: {
           orderBy: { startsAt: "asc" },
           include: { bookings: { select: { uncertain: true } } },
@@ -37,6 +39,13 @@ export default async function AdminEventDetailPage({
   if (!event) {
     notFound();
   }
+
+  const days: EditableEventDay[] = event.days.map((day) => ({
+    id: day.id,
+    date: day.date.toISOString(),
+    startsAt: day.startsAt?.toISOString() ?? null,
+    endsAt: day.endsAt?.toISOString() ?? null,
+  }));
 
   const shifts: ShiftRow[] = event.shifts.map((shift) => ({
     id: shift.id,
@@ -62,6 +71,7 @@ export default async function AdminEventDetailPage({
     <EventDetailView
       eventId={event.id}
       eventTitle={event.title}
+      days={days}
       shifts={shifts}
       assignedShelves={assignedShelves}
       availableShelves={availableShelves}

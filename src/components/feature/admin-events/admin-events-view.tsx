@@ -11,7 +11,7 @@ import { Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
 import { EventDialog } from "@/components/feature/admin-events/event-dialog";
 import { deleteEvent } from "@/components/feature/admin-events/actions";
-import { formatDateTimeRange } from "@/lib/utils/format";
+import { formatDateRange } from "@/lib/utils/format";
 
 export type EventRow = {
   id: string;
@@ -59,7 +59,7 @@ export function AdminEventsView({ events }: { events: EventRow[] }) {
                 <TableRow key={event.id}>
                   <TableCell>{event.title}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDateTimeRange(event.startsAt, event.endsAt)}
+                    {formatDateRange(event.startsAt, event.endsAt)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {event.location ?? "—"}

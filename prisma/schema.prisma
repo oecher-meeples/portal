@@ -658,6 +658,8 @@ model GameHolding {
 
 /// A play day or larger event, independent of the public/internal ICS calendar feed
 /// (see docs/adr/0004). The basis for shifts, explainer attendance and flea market items.
+/// `startsAt`/`endsAt` are a pure date range (no meaningful time-of-day) — actual
+/// opening times per calendar day live on `EventDay` (#150), set after creation.
 model Event {
   id                   String    @id @default(cuid())
   slug                 String    @unique
@@ -672,12 +674,31 @@ model Event {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
+  days                 EventDay[]
   shifts               Shift[]
   shelfAssignments     EventShelfAssignment[]
   explainerAttendances ExplainerAttendance[]
   fleaMarketItems      FleaMarketItem[]
 
   @@map("events")
+}
+
+/// One calendar day within an event's date range. Generated from `Event.startsAt`/
+/// `endsAt` on create/update (#150); `startsAt`/`endsAt` here hold the actual opening
+/// time for that day, set separately on the event detail page — null until then.
+model EventDay {
+  id        String    @id @default(cuid())
+  eventId   String
+  date      DateTime
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, date])
+  @@map("event_days")
 }
 
 /// Which shelves are set up at an event. Purely informational — it never changes a

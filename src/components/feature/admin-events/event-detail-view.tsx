@@ -22,6 +22,10 @@ import {
 } from "@/components/feature/admin-events/shelf-assignment-section";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
 import { formatDateTimeRange } from "@/lib/utils/format";
+import {
+  EventDayTimeForm,
+  type EditableEventDay,
+} from "@/components/feature/admin-events/event-day-time-form";
 
 export type ShiftRow = EditableShift & {
   bookings: { uncertain: boolean }[];
@@ -30,12 +34,14 @@ export type ShiftRow = EditableShift & {
 export function EventDetailView({
   eventId,
   eventTitle,
+  days,
   shifts,
   assignedShelves,
   availableShelves,
 }: {
   eventId: string;
   eventTitle: string;
+  days: EditableEventDay[];
   shifts: ShiftRow[];
   assignedShelves: ShelfOption[];
   availableShelves: ShelfOption[];
@@ -48,6 +54,13 @@ export function EventDetailView({
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
         action={<ShiftDialog eventId={eventId} />}
       />
+
+      <div className="flex flex-col gap-3 rounded-lg border p-4">
+        <h2 className="text-sm font-semibold">Öffnungszeiten je Tag</h2>
+        {days.map((day) => (
+          <EventDayTimeForm key={day.id} day={day} />
+        ))}
+      </div>
 
       <div className="overflow-hidden rounded-lg border">
         <Table>
