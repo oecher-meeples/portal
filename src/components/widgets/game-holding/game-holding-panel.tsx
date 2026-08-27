@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useAction } from "@/components/ui/use-action";
+import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import {
   scanAcceptHandover,
   scanAcceptReturn,
@@ -199,25 +200,18 @@ export function GameHoldingPanel({
       {meeplePicker && (
         <div className="bg-muted/40 flex flex-col gap-2 rounded-md border p-3">
           <p className="text-sm font-medium">Person auswählen</p>
-          <div className="flex flex-wrap gap-2">
-            {meeples.map((meeple) => (
-              <Button
-                key={meeple.id}
-                size="sm"
-                variant="outline"
-                disabled={pending}
-                onClick={() =>
-                  perform(() =>
-                    meeplePicker === "handover"
-                      ? scanGiveToMeeple(game.id, meeple.id)
-                      : scanReturnToMeeple(game.id, meeple.id),
-                  )
-                }
-              >
-                {meeple.displayName}
-              </Button>
-            ))}
-          </div>
+          <MeepleCombobox
+            options={meeples}
+            value={null}
+            onValueChange={(meepleId) => {
+              if (!meepleId) return;
+              perform(() =>
+                meeplePicker === "handover"
+                  ? scanGiveToMeeple(game.id, meepleId)
+                  : scanReturnToMeeple(game.id, meepleId),
+              );
+            }}
+          />
           <Button
             size="sm"
             variant="ghost"
