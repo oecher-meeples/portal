@@ -71,7 +71,7 @@ export function DashboardView({
 
       {openHelperRequestEvent && (
         <Link
-          href={`/helfer?event=${openHelperRequestEvent.id}`}
+          href="/helfer"
           className="bg-primary/10 hover:bg-primary/15 rounded-md p-4 text-sm transition-colors"
         >
           Für <strong>{openHelperRequestEvent.title}</strong> werden noch Helfer
