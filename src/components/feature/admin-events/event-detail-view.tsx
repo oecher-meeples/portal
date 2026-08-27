@@ -21,13 +21,14 @@ import {
   type ShelfOption,
 } from "@/components/feature/admin-events/shelf-assignment-section";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
-import { formatDateTimeRange } from "@/lib/utils/format";
+import { formatDateMedium, formatDateTimeRange } from "@/lib/utils/format";
 import {
   EventDayTimeForm,
   type EditableEventDay,
 } from "@/components/feature/admin-events/event-day-time-form";
 
 export type ShiftRow = EditableShift & {
+  dayDate: string;
   bookings: { uncertain: boolean }[];
 };
 
@@ -54,7 +55,13 @@ export function EventDetailView({
         eyebrow="Event-Betrieb"
         title={eventTitle}
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
-        action={<ShiftDialog eventId={eventId} helperRoles={helperRoles} />}
+        action={
+          <ShiftDialog
+            eventId={eventId}
+            helperRoles={helperRoles}
+            days={days}
+          />
+        }
       />
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
@@ -68,8 +75,9 @@ export function EventDetailView({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead>Typ</TableHead>
-              <TableHead>Zeitfenster</TableHead>
+              <TableHead>Tag</TableHead>
+              <TableHead>Rolle</TableHead>
+              <TableHead>Ziel-Zeitraum</TableHead>
               <TableHead>Füllstand</TableHead>
               <TableHead />
               <TableHead />
@@ -79,7 +87,7 @@ export function EventDetailView({
             {shifts.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-muted-foreground text-center"
                 >
                   Noch keine Schichten angelegt.
@@ -90,9 +98,15 @@ export function EventDetailView({
                 const fillLevel = computeShiftFillLevel(shift, shift.bookings);
                 return (
                   <TableRow key={shift.id}>
+                    <TableCell className="text-muted-foreground">
+                      {formatDateMedium(shift.dayDate)}
+                    </TableCell>
                     <TableCell>{shift.roleName}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDateTimeRange(shift.startsAt, shift.endsAt)}
+                      {formatDateTimeRange(
+                        shift.targetStartsAt,
+                        shift.targetEndsAt,
+                      )}
                     </TableCell>
                     <TableCell>
                       {fillLevel.isFull ? (
@@ -108,6 +122,7 @@ export function EventDetailView({
                         eventId={eventId}
                         shift={shift}
                         helperRoles={helperRoles}
+                        days={days}
                       />
                     </TableCell>
                     <TableCell className="text-right">

@@ -9,17 +9,20 @@ import {
   createShift,
   updateShift,
 } from "@/components/feature/admin-events/shift-actions";
+import { formatDateMedium } from "@/lib/utils/format";
 
 export type EditableShift = {
   id: string;
+  dayId: string;
   roleId: string;
   roleName: string;
-  startsAt: string;
-  endsAt: string;
+  targetStartsAt: string;
+  targetEndsAt: string;
   capacity: number;
 };
 
 export type HelperRoleOption = { id: string; name: string };
+export type EventDayOption = { id: string; date: string };
 
 function toDateTimeLocal(iso: string) {
   return iso.slice(0, 16);
@@ -29,27 +32,31 @@ export function ShiftDialog({
   eventId,
   shift,
   helperRoles,
+  days,
 }: {
   eventId: string;
   shift?: EditableShift;
   helperRoles: HelperRoleOption[];
+  days: EventDayOption[];
 }) {
   const isEdit = Boolean(shift);
+  const [dayId, setDayId] = useState(shift?.dayId ?? days[0]?.id ?? "");
   const [roleId, setRoleId] = useState(
     shift?.roleId ?? helperRoles[0]?.id ?? "",
   );
-  const [startsAt, setStartsAt] = useState(
-    shift ? toDateTimeLocal(shift.startsAt) : "",
+  const [targetStartsAt, setTargetStartsAt] = useState(
+    shift ? toDateTimeLocal(shift.targetStartsAt) : "",
   );
-  const [endsAt, setEndsAt] = useState(
-    shift ? toDateTimeLocal(shift.endsAt) : "",
+  const [targetEndsAt, setTargetEndsAt] = useState(
+    shift ? toDateTimeLocal(shift.targetEndsAt) : "",
   );
   const [capacity, setCapacity] = useState(String(shift?.capacity ?? 1));
 
   function reset() {
+    setDayId(shift?.dayId ?? days[0]?.id ?? "");
     setRoleId(shift?.roleId ?? helperRoles[0]?.id ?? "");
-    setStartsAt(shift ? toDateTimeLocal(shift.startsAt) : "");
-    setEndsAt(shift ? toDateTimeLocal(shift.endsAt) : "");
+    setTargetStartsAt(shift ? toDateTimeLocal(shift.targetStartsAt) : "");
+    setTargetEndsAt(shift ? toDateTimeLocal(shift.targetEndsAt) : "");
     setCapacity(String(shift?.capacity ?? 1));
   }
 
@@ -69,14 +76,20 @@ export function ShiftDialog({
         )
       }
       title={isEdit ? "Schicht bearbeiten" : "Neue Schicht"}
-      description="Helferrolle mit festem Zeitfenster und Kapazität."
+      description="Bedarf an einer Helferrolle für einen Event-Tag — Stellenzahl plus eigener Ziel-Zeitraum, unabhängig vom Event-Zeitraum."
       submitLabel={isEdit ? "Speichern" : "Schicht anlegen"}
-      canSubmit={Boolean(roleId) && Boolean(startsAt) && Boolean(endsAt)}
+      canSubmit={
+        Boolean(dayId) &&
+        Boolean(roleId) &&
+        Boolean(targetStartsAt) &&
+        Boolean(targetEndsAt)
+      }
       action={() => {
         const input = {
+          dayId,
           roleId,
-          startsAt: new Date(startsAt),
-          endsAt: new Date(endsAt),
+          targetStartsAt: new Date(targetStartsAt),
+          targetEndsAt: new Date(targetEndsAt),
           capacity: Number(capacity),
         };
         return shift
@@ -85,6 +98,20 @@ export function ShiftDialog({
       }}
       onReset={reset}
     >
+      <Field label="Tag" htmlFor="shift-day">
+        <select
+          id="shift-day"
+          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          value={dayId}
+          onChange={(event) => setDayId(event.target.value)}
+        >
+          {days.map((day) => (
+            <option key={day.id} value={day.id}>
+              {formatDateMedium(day.date)}
+            </option>
+          ))}
+        </select>
+      </Field>
       <Field label="Rolle" htmlFor="shift-role">
         <select
           id="shift-role"
@@ -100,24 +127,24 @@ export function ShiftDialog({
         </select>
       </Field>
       <TextField
-        id="shift-starts"
-        label="Beginn"
+        id="shift-target-starts"
+        label="Ziel-Beginn"
         type="datetime-local"
-        value={startsAt}
-        onChange={(event) => setStartsAt(event.target.value)}
+        value={targetStartsAt}
+        onChange={(event) => setTargetStartsAt(event.target.value)}
         required
       />
       <TextField
-        id="shift-ends"
-        label="Ende"
+        id="shift-target-ends"
+        label="Ziel-Ende"
         type="datetime-local"
-        value={endsAt}
-        onChange={(event) => setEndsAt(event.target.value)}
+        value={targetEndsAt}
+        onChange={(event) => setTargetEndsAt(event.target.value)}
         required
       />
       <TextField
         id="shift-capacity"
-        label="Kapazität"
+        label="Stellenzahl"
         type="number"
         min={1}
         value={capacity}

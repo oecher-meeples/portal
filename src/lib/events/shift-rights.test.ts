@@ -53,8 +53,8 @@ describe("hasRoleGrantedPermission", () => {
         meepleId: MEEPLE_ID,
         shift: {
           role: { grantsPermissionKey: PERMISSION_KEY },
-          startsAt: { lte: AT },
-          endsAt: { gte: AT },
+          targetStartsAt: { lte: AT },
+          targetEndsAt: { gte: AT },
         },
       },
     });
@@ -118,8 +118,8 @@ describe("findActiveShiftEvent", () => {
         meepleId: MEEPLE_ID,
         shift: {
           role: { name: "Leihe" },
-          startsAt: { lte: AT },
-          endsAt: { gte: AT },
+          targetStartsAt: { lte: AT },
+          targetEndsAt: { gte: AT },
         },
       },
       select: { shift: { select: { eventId: true } } },

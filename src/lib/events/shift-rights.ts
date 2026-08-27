@@ -32,8 +32,8 @@ export async function hasRoleGrantedPermission(
       meepleId,
       shift: {
         role: { grantsPermissionKey: permissionKey },
-        startsAt: { lte: at },
-        endsAt: { gte: at },
+        targetStartsAt: { lte: at },
+        targetEndsAt: { gte: at },
       },
     },
   });
@@ -59,8 +59,8 @@ export async function findActiveShiftEvent(
       meepleId,
       shift: {
         role: { name: roleName },
-        startsAt: { lte: at },
-        endsAt: { gte: at },
+        targetStartsAt: { lte: at },
+        targetEndsAt: { gte: at },
       },
     },
     select: { shift: { select: { eventId: true } } },

@@ -349,12 +349,21 @@ erDiagram
         String grantsPermissionKey "optional"
     }
 
+    EventDay {
+        String id PK
+        String eventId FK
+        DateTime date
+        DateTime startsAt "optional Öffnungszeit"
+        DateTime endsAt "optional Öffnungszeit"
+    }
+
     Shift {
         String id PK
         String eventId FK
+        String dayId FK
         String roleId FK
-        DateTime startsAt
-        DateTime endsAt
+        DateTime targetStartsAt
+        DateTime targetEndsAt
         Int capacity
     }
 
@@ -390,7 +399,9 @@ erDiagram
 
     Event ||--o{ EventShelfAssignment : "hat"
     StorageUnit ||--o{ EventShelfAssignment : "zugeordnet"
+    Event ||--o{ EventDay : "hat"
     Event ||--o{ Shift : "hat"
+    EventDay ||--o{ Shift : "an Tag"
     HelperRole ||--o{ Shift : "besetzt als"
     Shift ||--o{ ShiftBooking : "gebucht von"
     Meeple ||--o{ ShiftBooking : "bucht"

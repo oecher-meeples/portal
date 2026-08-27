@@ -37,7 +37,7 @@ export default async function DashboardPage() {
     }),
     prisma.shiftBooking.findMany({
       where: { meepleId: meeple.id },
-      select: { meepleId: true, shift: { select: { endsAt: true } } },
+      select: { meepleId: true, shift: { select: { targetEndsAt: true } } },
     }),
     prisma.lfgPost.count({ where: { closedAt: null } }),
     prisma.marketListing.count(),

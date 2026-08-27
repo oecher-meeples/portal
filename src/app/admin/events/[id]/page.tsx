@@ -21,9 +21,10 @@ export default async function AdminEventDetailPage({
       include: {
         days: { orderBy: { date: "asc" } },
         shifts: {
-          orderBy: { startsAt: "asc" },
+          orderBy: { targetStartsAt: "asc" },
           include: {
             role: { select: { id: true, name: true } },
+            day: { select: { date: true } },
             bookings: { select: { uncertain: true } },
           },
         },
@@ -56,10 +57,12 @@ export default async function AdminEventDetailPage({
 
   const shifts: ShiftRow[] = event.shifts.map((shift) => ({
     id: shift.id,
+    dayId: shift.dayId,
+    dayDate: shift.day.date.toISOString(),
     roleId: shift.role.id,
     roleName: shift.role.name,
-    startsAt: shift.startsAt.toISOString(),
-    endsAt: shift.endsAt.toISOString(),
+    targetStartsAt: shift.targetStartsAt.toISOString(),
+    targetEndsAt: shift.targetEndsAt.toISOString(),
     capacity: shift.capacity,
     bookings: shift.bookings,
   }));

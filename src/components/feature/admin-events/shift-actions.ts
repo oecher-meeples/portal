@@ -6,17 +6,18 @@ import { requirePermission } from "@/lib/auth/permissions";
 
 export type ShiftInput = {
   roleId: string;
-  startsAt: Date;
-  endsAt: Date;
+  dayId: string;
+  targetStartsAt: Date;
+  targetEndsAt: Date;
   capacity: number;
 };
 
 function validateShiftInput(input: ShiftInput) {
-  if (!input.startsAt || !input.endsAt) {
-    return "Bitte Start- und End-Zeitpunkt angeben.";
+  if (!input.targetStartsAt || !input.targetEndsAt) {
+    return "Bitte Beginn und Ende des Ziel-Zeitraums angeben.";
   }
-  if (input.endsAt <= input.startsAt) {
-    return "Das Ende muss nach dem Start liegen.";
+  if (input.targetEndsAt <= input.targetStartsAt) {
+    return "Das Ende muss nach dem Beginn liegen.";
   }
   if (!Number.isInteger(input.capacity) || input.capacity < 1) {
     return "Die Kapazität muss mindestens 1 sein.";
@@ -35,9 +36,10 @@ export async function createShift(eventId: string, input: ShiftInput) {
   const shift = await prisma.shift.create({
     data: {
       eventId,
+      dayId: input.dayId,
       roleId: input.roleId,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
+      targetStartsAt: input.targetStartsAt,
+      targetEndsAt: input.targetEndsAt,
       capacity: input.capacity,
     },
   });
@@ -57,9 +59,10 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
   const shift = await prisma.shift.update({
     where: { id: shiftId },
     data: {
+      dayId: input.dayId,
       roleId: input.roleId,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
+      targetStartsAt: input.targetStartsAt,
+      targetEndsAt: input.targetEndsAt,
       capacity: input.capacity,
     },
   });

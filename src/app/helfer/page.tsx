@@ -26,7 +26,7 @@ export default async function HelferPage({
     selectedEventId
       ? prisma.shift.findMany({
           where: { eventId: selectedEventId },
-          orderBy: { startsAt: "asc" },
+          orderBy: { targetStartsAt: "asc" },
           include: { role: { select: { name: true } }, bookings: true },
         })
       : Promise.resolve([]),
@@ -52,8 +52,8 @@ export default async function HelferPage({
     return {
       id: shift.id,
       roleName: shift.role.name,
-      startsAt: shift.startsAt.toISOString(),
-      endsAt: shift.endsAt.toISOString(),
+      startsAt: shift.targetStartsAt.toISOString(),
+      endsAt: shift.targetEndsAt.toISOString(),
       capacity: shift.capacity,
       booked: fillLevel.booked,
       isFull: fillLevel.isFull,

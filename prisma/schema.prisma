@@ -689,7 +689,8 @@ model EventDay {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  shifts Shift[]
 
   @@unique([eventId, date])
   @@map("event_days")
@@ -727,21 +728,32 @@ model HelperRole {
   @@map("helper_roles")
 }
 
+/// Bedarfs-Container (#153): Rolle + Event-Tag + Stellenzahl (`capacity`,
+/// parallele Plätze) + eigener Ziel-Zeitraum, den der Admin frei setzt —
+/// unabhängig vom Event-Start/-Ende, wegen Auf-/Abbau außerhalb der
+/// eigentlichen Veranstaltungszeit. `targetStartsAt`/`targetEndsAt` sind
+/// (noch) das einzige Zeitfenster, gegen das `hasRoleGrantedPermission` und
+/// `findActiveShiftEvent` prüfen — individuelle, verschiebbare
+/// Zuweisungs-Zeitblöcke pro `ShiftBooking` kommen erst mit dem
+/// Schichtplan-Editor (#157 ff.).
 model Shift {
-  id        String   @id @default(cuid())
-  eventId   String
-  roleId    String
-  startsAt  DateTime
-  endsAt    DateTime
-  capacity  Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  eventId        String
+  dayId          String
+  roleId         String
+  targetStartsAt DateTime
+  targetEndsAt   DateTime
+  capacity       Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  day      EventDay       @relation(fields: [dayId], references: [id], onDelete: Cascade)
   role     HelperRole     @relation(fields: [roleId], references: [id])
   bookings ShiftBooking[]
 
   @@index([eventId])
+  @@index([dayId])
   @@index([roleId])
   @@map("shifts")
 }
