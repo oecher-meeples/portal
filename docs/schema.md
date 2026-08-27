@@ -336,6 +336,7 @@ erDiagram
         DateTime startsAt
         DateTime endsAt
         String location
+        Boolean helpersWanted
     }
 
     EventShelfAssignment {

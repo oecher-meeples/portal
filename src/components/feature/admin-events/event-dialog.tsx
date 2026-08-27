@@ -5,6 +5,8 @@ import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   createEvent,
   updateEvent,
@@ -16,6 +18,7 @@ export type EditableEvent = {
   startsAt: string;
   endsAt: string | null;
   location: string | null;
+  helpersWanted: boolean;
 };
 
 /** `date` inputs need "YYYY-MM-DD", an ISO string is longer. Beginn/Ende sind ein
@@ -34,12 +37,16 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
     event?.endsAt ? toDateInput(event.endsAt) : "",
   );
   const [location, setLocation] = useState(event?.location ?? "");
+  const [helpersWanted, setHelpersWanted] = useState(
+    event?.helpersWanted ?? false,
+  );
 
   function reset() {
     setTitle(event?.title ?? "");
     setStartsAt(event ? toDateInput(event.startsAt) : "");
     setEndsAt(event?.endsAt ? toDateInput(event.endsAt) : "");
     setLocation(event?.location ?? "");
+    setHelpersWanted(event?.helpersWanted ?? false);
   }
 
   return (
@@ -67,6 +74,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
           startsAt: new Date(startsAt),
           endsAt: endsAt ? new Date(endsAt) : null,
           location: location || null,
+          helpersWanted,
         };
         return event ? updateEvent(event.id, input) : createEvent(input);
       }}
@@ -101,6 +109,14 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         onChange={(fieldEvent) => setLocation(fieldEvent.target.value)}
         placeholder="z. B. Vereinsheim"
       />
+      <Label className="flex items-center justify-between gap-2 font-normal">
+        Helfer suchen
+        <Switch
+          id="event-helpers-wanted"
+          checked={helpersWanted}
+          onCheckedChange={setHelpersWanted}
+        />
+      </Label>
     </ActionDialog>
   );
 }

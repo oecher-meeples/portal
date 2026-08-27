@@ -41,6 +41,29 @@ export async function isEventCurrentlyRunning(
 }
 
 /**
+ * True while at least one upcoming event has an open helper request
+ * (`Event.helpersWanted`, #155) — gates both the Dashboard-Karte and the
+ * "Helferplan" nav entry (see sidebar.tsx/app-shell.tsx).
+ */
+export async function hasOpenHelperRequest(): Promise<boolean> {
+  const event = await findOpenHelperRequestEvent();
+  return event !== null;
+}
+
+/** The earliest upcoming event with an open helper request, if any — feeds
+ * the Dashboard-Karte's link target (#155). */
+export async function findOpenHelperRequestEvent() {
+  return prisma.event.findFirst({
+    where: {
+      helpersWanted: true,
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, title: true },
+  });
+}
+
+/**
  * The event happening right now, if any — for pages that aren't already
  * event-scoped (e.g. the public Ludothek detail page, #121) but still want
  * to show "im Raum"-style aggregates while a Spieleabend is running.

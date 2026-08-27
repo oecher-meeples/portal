@@ -11,6 +11,7 @@ export type EventInput = {
   startsAt: Date;
   endsAt?: Date | null;
   location?: string | null;
+  helpersWanted?: boolean;
 };
 
 /** Bring `EventDay` in sync with the (possibly changed) `startsAt`/`endsAt` range:
@@ -69,6 +70,7 @@ export async function createEvent(input: EventInput) {
       startsAt: input.startsAt,
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
+      helpersWanted: input.helpersWanted ?? false,
     },
   });
   await syncEventDays(event.id, input);
@@ -96,6 +98,7 @@ export async function updateEvent(id: string, input: EventInput) {
       startsAt: input.startsAt,
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
+      helpersWanted: input.helpersWanted ?? false,
     },
   });
   await syncEventDays(id, input);

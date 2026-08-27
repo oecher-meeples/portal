@@ -23,6 +23,7 @@ export default async function AdminEventsPage() {
     startsAt: event.startsAt.toISOString(),
     endsAt: event.endsAt?.toISOString() ?? null,
     location: event.location,
+    helpersWanted: event.helpersWanted,
     shiftCount: event._count.shifts,
   }));
 

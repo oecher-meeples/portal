@@ -7,6 +7,7 @@ import { ChevronDown } from "lucide-react";
 import {
   NAV_GROUPS,
   tierAtLeast,
+  type NavFlag,
   type NavGroup,
   type NavItem,
   type Tier,
@@ -26,7 +27,9 @@ function isItemVisible(
   tier: Tier,
   permissions: ReadonlySet<string>,
   previewingLowerTier: boolean,
+  flags: Readonly<Record<NavFlag, boolean>>,
 ) {
+  if (item.requiresFlag && !flags[item.requiresFlag]) return false;
   if (item.permission) {
     if (previewingLowerTier) return false;
     if (permissions.has("admin:access")) return true;
@@ -42,10 +45,12 @@ export function Sidebar({
   tier,
   realTier,
   permissions,
+  flags,
 }: {
   tier: Tier;
   realTier: Tier;
   permissions: readonly string[];
+  flags: Readonly<Record<NavFlag, boolean>>;
 }) {
   const pathname = usePathname();
   const permissionSet = new Set(permissions);
@@ -53,7 +58,14 @@ export function Sidebar({
   const groups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) =>
-      isItemVisible(item, group, tier, permissionSet, previewingLowerTier),
+      isItemVisible(
+        item,
+        group,
+        tier,
+        permissionSet,
+        previewingLowerTier,
+        flags,
+      ),
     ),
   })).filter((group) => group.items.length > 0);
   const [collapsedGroups, setCollapsedGroups] = useState<

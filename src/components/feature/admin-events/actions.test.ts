@@ -135,6 +135,34 @@ describe("createEvent", () => {
       skipDuplicates: true,
     });
   });
+
+  it("defaults helpersWanted to false when omitted (#155)", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent(VALID_INPUT);
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ helpersWanted: false }),
+    });
+  });
+
+  it("stores helpersWanted when set (#155)", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent({ ...VALID_INPUT, helpersWanted: true });
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ helpersWanted: true }),
+    });
+  });
 });
 
 describe("updateEvent", () => {

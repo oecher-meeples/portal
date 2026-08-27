@@ -41,7 +41,17 @@ export type NavItem = {
    * previewing a lower tier still hides these (see sidebar.tsx).
    */
   permission?: string | string[];
+  /**
+   * Extra data-dependent visibility gate on top of tier/permission — the
+   * only current flag is "openHelperRequest" (#155): hides "Helferplan"
+   * unless a future event has `Event.helpersWanted` set. Resolved server-side
+   * in app-shell.tsx and passed to Sidebar; direct navigation to the href
+   * itself stays reachable regardless (the page shows its own empty state).
+   */
+  requiresFlag?: NavFlag;
 };
+
+export type NavFlag = "openHelperRequest";
 
 export type Tier = "gast" | "mitglied" | "admin";
 
@@ -145,6 +155,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/helfer",
         icon: ShieldCheck,
         section: "Mitgliederbereich",
+        requiresFlag: "openHelperRequest",
       },
       {
         label: "Ausleihe & Rückgabe",

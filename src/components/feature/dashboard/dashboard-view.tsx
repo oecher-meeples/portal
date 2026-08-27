@@ -40,6 +40,8 @@ type DashboardViewProps = {
    * dann immer sichtbar und wird inline editierbar (Pivot #110). */
   canManageLinks: boolean;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
+  /** Frühestes anstehendes Event mit `helpersWanted` (#155) — null blendet die Karte aus. */
+  openHelperRequestEvent: { id: string; title: string } | null;
 };
 
 export function DashboardView({
@@ -57,6 +59,7 @@ export function DashboardView({
   importantLinks,
   canManageLinks,
   resignationNotice,
+  openHelperRequestEvent,
 }: DashboardViewProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +68,16 @@ export function DashboardView({
         title={`Hallo, ${user.name}`}
         description="Dein persönlicher Einstieg in den internen Bereich."
       />
+
+      {openHelperRequestEvent && (
+        <Link
+          href={`/helfer?event=${openHelperRequestEvent.id}`}
+          className="bg-primary/10 hover:bg-primary/15 rounded-md p-4 text-sm transition-colors"
+        >
+          Für <strong>{openHelperRequestEvent.title}</strong> werden noch Helfer
+          gesucht — jetzt eintragen.
+        </Link>
+      )}
 
       {resignationNotice && (
         <div className="bg-primary/10 rounded-md p-4 text-sm">

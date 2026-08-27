@@ -24,6 +24,7 @@ export type EventRow = {
   startsAt: string;
   endsAt: string | null;
   location: string | null;
+  helpersWanted: boolean;
   shiftCount: number;
 };
 
@@ -86,6 +87,7 @@ export function AdminEventsView({
                         startsAt: event.startsAt,
                         endsAt: event.endsAt,
                         location: event.location,
+                        helpersWanted: event.helpersWanted,
                       }}
                     />
                   </TableCell>

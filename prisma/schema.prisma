@@ -665,6 +665,10 @@ model Event {
   /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
   /// always open and not tied to a specific event.
   hasBringAndBuyMarket Boolean   @default(false)
+  /// Gilt für das ganze Event, nicht pro Tag (#155) — schaltet die
+  /// Dashboard-Karte für Meeples frei und den "Helferplan"-Nav-Eintrag
+  /// (nur solange das Event noch kommt, siehe hasOpenHelperRequest()).
+  helpersWanted        Boolean   @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
