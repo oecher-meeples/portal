@@ -46,18 +46,30 @@ describe("fetchBggCollection (#255)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("maps owned items to bggId + title", async () => {
+  it("maps owned items to bggId, title, rating and status flags", async () => {
     mockFetchOnce(true, 200, loadFixture("collection-success.xml"));
 
     const result = await fetchBggCollection("some-user");
 
     expect(result).toEqual([
-      { bggId: 342942, title: "Ark Nova" },
-      { bggId: 13, title: "Catan" },
+      {
+        bggId: 342942,
+        title: "Ark Nova",
+        rating: 8.5,
+        forTrade: true,
+        wantToPlay: false,
+      },
+      {
+        bggId: 13,
+        title: "Catan",
+        rating: null,
+        forTrade: false,
+        wantToPlay: true,
+      },
     ]);
   });
 
-  it("requests only owned, non-expansion items", async () => {
+  it("requests only owned, non-expansion items with stats", async () => {
     const fetchMock = mockFetchOnce(
       true,
       200,
@@ -68,7 +80,17 @@ describe("fetchBggCollection (#255)", () => {
 
     const [url] = fetchMock.mock.calls[0];
     expect(url).toContain("own=1");
+    expect(url).toContain("stats=1");
     expect(url).toContain("excludesubtype=boardgameexpansion");
+  });
+
+  it("filters out items BGG returns despite own=1 not actually being owned", async () => {
+    mockFetchOnce(true, 200, loadFixture("collection-not-owned.xml"));
+
+    const result = await fetchBggCollection("some-user");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Ark Nova");
   });
 
   it("returns an empty list for a collection with no owned games", async () => {

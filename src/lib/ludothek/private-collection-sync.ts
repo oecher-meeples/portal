@@ -7,19 +7,72 @@ import {
   BggCollectionUnavailableError,
   fetchBggCollection,
 } from "@/lib/bgg/collection";
-import { BggApiError } from "@/lib/bgg/client";
+import {
+  BGG_REQUEST_THROTTLE_MS,
+  BggApiError,
+  BggNotFoundError,
+  fetchBggGame,
+} from "@/lib/bgg/client";
+import { bggDataToTitleInput } from "@/lib/ludothek/board-game-versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
+import {
+  canForceImport,
+  getImportCooldownEndsAt,
+} from "@/lib/ludothek/private-collection";
+import { formatTimePlain } from "@/lib/utils/format";
+import { sleep } from "@/lib/utils/sleep";
+import type { BggCollectionEntry } from "@/lib/bgg/collection";
+
+/**
+ * Ein wirklich neuer Titel (kein bereits katalogisierter `bggId`) bekommt
+ * dieselben vollen BGG-Metadaten wie beim Vereinsexemplar-Import — nicht nur
+ * Titel + BGG-ID (#255-Folge: "Private Spieleexemplare importieren BGG-Daten
+ * genau wie Vereinsexemplare"). Schlägt der Einzelabruf fehl (BGG nicht
+ * erreichbar/Eintrag inzwischen entfernt), wird der Titel trotzdem mit dem
+ * angelegt, was die Collection selbst mitliefert — ein einzelner
+ * fehlgeschlagener Titel bricht nicht den gesamten Import ab.
+ */
+async function resolvePrivateTitle(entry: BggCollectionEntry) {
+  const existing = await prisma.boardGame.findUnique({
+    where: { bggId: entry.bggId },
+  });
+  if (existing) return existing;
+
+  try {
+    const data = await fetchBggGame(entry.bggId);
+    const title = await findOrCreateBoardGameTitle(
+      bggDataToTitleInput(entry.bggId, data),
+    );
+    await sleep(BGG_REQUEST_THROTTLE_MS);
+    return title;
+  } catch (error) {
+    if (error instanceof BggNotFoundError || error instanceof BggApiError) {
+      return findOrCreateBoardGameTitle({
+        title: entry.title,
+        bggId: entry.bggId,
+      });
+    }
+    throw error;
+  }
+}
 
 /**
  * Manueller "Meine BGG-Collection importieren"-Trigger im eigenen Profil
  * (#255) — schreibt nur `PrivateGameCollectionEntry`, nie `GameCopy`
  * (kein Exemplar-Tracking für Privatbesitz). Jeder Titel wird per BGG-ID
- * gegen den bestehenden Katalog abgeglichen (`findOrCreateBoardGameTitle`,
- * neu anlegen falls nicht vorhanden). Duplikat-Erkennung läuft über den
- * bestehenden `@@unique([meepleId, boardGameId])`-Constraint per Upsert,
- * keine eigene Prüf-Logik nötig.
+ * gegen den bestehenden Katalog abgeglichen (`resolvePrivateTitle()`) — ein
+ * wirklich neuer Titel bekommt volle BGG-Metadaten, genau wie beim
+ * Vereinsexemplar-Import (#255-Folge). Bestehende Einträge werden vor dem
+ * Import gelöscht statt gemergt — Titel, die nicht mehr `owned=true` sind,
+ * sollen verschwinden, kein reiner Upsert. 1h-Cooldown zwischen zwei
+ * Importen (sysadmin ausgenommen), siehe `getImportCooldownEndsAt()`.
+ *
+ * `ignoreCooldown` ist der "!"-Button auf der Profil-Karte (Dev-Environment
+ * und sysadmin dauerhaft) — das Flag aus dem Client-Aufruf allein zählt
+ * nicht, `canForceImport()` prüft serverseitig erneut, wer es wirklich
+ * nutzen darf.
  */
-export async function syncPrivateBggCollection() {
+export async function syncPrivateBggCollection(ignoreCooldown = false) {
   const meeple = await getCurrentMeeple();
   if (!meeple) {
     return { error: "Keine Berechtigung." };
@@ -27,6 +80,16 @@ export async function syncPrivateBggCollection() {
   if (!meeple.bggUsername) {
     return {
       error: "Bitte zuerst einen BGG-Benutzernamen im Profil hinterlegen.",
+    };
+  }
+
+  const cooldownEndsAt =
+    ignoreCooldown && (await canForceImport(meeple.neonAuthUserId))
+      ? null
+      : await getImportCooldownEndsAt(meeple);
+  if (cooldownEndsAt) {
+    return {
+      error: `Import erst wieder ab ${formatTimePlain(cooldownEndsAt)} möglich (1h Cooldown).`,
     };
   }
 
@@ -47,19 +110,26 @@ export async function syncPrivateBggCollection() {
   }
 
   const syncedAt = new Date();
+  await prisma.privateGameCollectionEntry.deleteMany({
+    where: { meepleId: meeple.id },
+  });
   for (const entry of entries) {
-    const title = await findOrCreateBoardGameTitle({
-      title: entry.title,
-      bggId: entry.bggId,
-    });
-    await prisma.privateGameCollectionEntry.upsert({
-      where: {
-        meepleId_boardGameId: { meepleId: meeple.id, boardGameId: title.id },
+    const title = await resolvePrivateTitle(entry);
+    await prisma.privateGameCollectionEntry.create({
+      data: {
+        meepleId: meeple.id,
+        boardGameId: title.id,
+        syncedAt,
+        rating: entry.rating,
+        forTrade: entry.forTrade,
+        wantToPlay: entry.wantToPlay,
       },
-      update: { syncedAt },
-      create: { meepleId: meeple.id, boardGameId: title.id, syncedAt },
     });
   }
+  await prisma.meeple.update({
+    where: { id: meeple.id },
+    data: { privateCollectionSyncedAt: syncedAt },
+  });
 
   revalidatePath("/profil");
   revalidatePath("/ludothek");

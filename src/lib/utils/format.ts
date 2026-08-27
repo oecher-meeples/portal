@@ -46,6 +46,10 @@ const DATE_TIME = new Intl.DateTimeFormat("de-DE", {
 });
 const DATE_MEDIUM = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const DATE_PLAIN = new Intl.DateTimeFormat("de-DE");
+const TIME_PLAIN = new Intl.DateTimeFormat("de-DE", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 type DateInput = string | number | Date;
 
@@ -62,6 +66,11 @@ export function formatDateMedium(value: DateInput) {
 /** "1.2.2026" — locale default */
 export function formatDatePlain(value: DateInput) {
   return DATE_PLAIN.format(new Date(value));
+}
+
+/** "14:30" */
+export function formatTimePlain(value: DateInput) {
+  return TIME_PLAIN.format(new Date(value));
 }
 
 /** "01.02.26, 14:30 – 18:00" — the timeframe pattern used across event views. */

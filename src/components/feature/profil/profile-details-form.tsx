@@ -6,9 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TextAreaField } from "@/components/ui/field";
-import { ActionButton } from "@/components/ui/action-button";
 import { updateOwnProfile } from "@/components/feature/profil/actions";
-import { syncPrivateBggCollection } from "@/lib/ludothek/private-collection-sync";
 
 export function ProfileDetailsForm({
   displayName: initialDisplayName,
@@ -102,17 +100,6 @@ export function ProfileDetailsForm({
             onChange={(event) => setBggUsername(event.target.value)}
             placeholder="optional"
           />
-          {bggUsername.trim() && (
-            <ActionButton
-              action={syncPrivateBggCollection}
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              pendingLabel="Importiere…"
-            >
-              Meine BGG-Collection importieren
-            </ActionButton>
-          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="bgaUsername">Board-Game-Arena-Username</Label>
@@ -174,7 +161,7 @@ export function ProfileDetailsForm({
         Standort oder Marktplatz-Angeboten) für alle eingeloggten Meeples an.
       </p>
       <Label className="flex items-center justify-between gap-2 font-normal">
-        Private BGG-Collection für Meeple freigeben
+        Private BGG-Collection anderen Meeple anzeigen
         <Switch
           id="privateCollectionVisible"
           checked={privateCollectionVisible}
@@ -183,7 +170,7 @@ export function ProfileDetailsForm({
       </Label>
       <p className="text-muted-foreground -mt-2.5 text-xs">
         Deine importierte BGG-Collection wird für andere eingeloggte Meeples im
-        Ludothek-Filter „auch private anzeigen“ sichtbar (#255).
+        Ludothek-Filter „auch private anzeigen“ sichtbar.
       </p>
       <TextAreaField
         id="doorbellNote"

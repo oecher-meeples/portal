@@ -2,14 +2,14 @@
 <items totalitems="2" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse" pubdate="Thu, 27 Aug 2026 08:00:00 +0000">
 	<item objecttype="thing" objectid="342942" subtype="boardgame" collid="1">
 		<name sortindex="1">Ark Nova</name>
-		<status own="1" prevowned="0" fortrade="1" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" />
+		<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" />
 		<stats>
-			<rating value="8.5" />
+			<rating value="N/A" />
 		</stats>
 	</item>
-	<item objecttype="thing" objectid="13" subtype="boardgame" collid="2">
-		<name sortindex="1">Catan</name>
-		<status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="1" wanttobuy="0" wishlist="0" preordered="0" />
+	<item objecttype="thing" objectid="9209" subtype="boardgame" collid="3">
+		<name sortindex="1">Splendor</name>
+		<status own="0" prevowned="1" fortrade="0" want="1" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" />
 		<stats>
 			<rating value="N/A" />
 		</stats>

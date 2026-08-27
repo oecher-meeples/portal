@@ -18,11 +18,18 @@ export class BggCollectionUnavailableError extends Error {
 export interface BggCollectionEntry {
   bggId: number;
   title: string;
+  /** Persönliche Bewertung dieses Meeples, `null` unbewertet (nur mit `stats=1` verfügbar). */
+  rating: number | null;
+  /** Nur die zwei Stati, die die Übersicht anzeigt — andere werden ignoriert. */
+  forTrade: boolean;
+  wantToPlay: boolean;
 }
 
 interface BggCollectionItem {
   objectid?: string;
   name?: { "#text"?: string } | { "#text"?: string }[];
+  status?: { own?: string; fortrade?: string; wanttoplay?: string };
+  stats?: { rating?: { value?: string } };
 }
 
 interface BggCollectionResponse {
@@ -36,9 +43,10 @@ interface BggCollectionResponse {
 
 /**
  * Öffentliche BGG-Collection eines Benutzernamens (#255) — nur besessene
- * Titel (`own=1`), keine Wunschlisten/geliehenen Einträge. Liefert nur
- * Titel + BGG-ID, keine weiteren Metadaten (die kommen beim Titel-Abgleich
- * ohnehin über `fetchBggGame`, falls der Titel neu angelegt werden muss).
+ * Titel (`own=1`), keine Wunschlisten/geliehenen Einträge; zusätzlich
+ * client-seitig auf `status.own === "1"` gefiltert, da `own=1` nur ein
+ * Server-seitiger Filter-Hinweis ist. `stats=1` liefert die persönliche
+ * Bewertung mit.
  */
 export async function fetchBggCollection(
   username: string,
@@ -47,7 +55,7 @@ export async function fetchBggCollection(
   if (!trimmed) return [];
 
   const xml = await fetchBggXml(
-    `/collection?username=${encodeURIComponent(trimmed)}&own=1&excludesubtype=boardgameexpansion`,
+    `/collection?username=${encodeURIComponent(trimmed)}&own=1&stats=1&excludesubtype=boardgameexpansion`,
     SEARCH_REVALIDATE_SECONDS,
   );
   const parsed = parser.parse(xml) as BggCollectionResponse;
@@ -61,7 +69,14 @@ export async function fetchBggCollection(
       const bggId = parseNumber(item.objectid);
       const title = toArray(item.name)[0]?.["#text"];
       if (bggId === null || !title) return null;
-      return { bggId, title };
+      if (item.status?.own !== "1") return null;
+      return {
+        bggId,
+        title,
+        rating: parseNumber(item.stats?.rating?.value),
+        forTrade: item.status?.fortrade === "1",
+        wantToPlay: item.status?.wanttoplay === "1",
+      };
     })
     .filter((entry): entry is BggCollectionEntry => entry !== null);
 }
