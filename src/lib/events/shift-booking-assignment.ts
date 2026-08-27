@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { formatTimePlain } from "@/lib/utils/format";
 
 export type ShiftBookingAssignmentResult =
   { error: string } | { success: true };
@@ -54,8 +55,12 @@ export async function assignShiftBooking({
     };
   }
   if (availability.startsAt > startsAt || availability.endsAt < endsAt) {
+    // Nennt die tatsächlichen Grenzen — sonst wirkt die Ablehnung
+    // unerklärlich, wenn die Schicht selbst länger läuft als das, was diese
+    // Person gemeldet hat (Bugreport: Schicht bis 19 Uhr, Person nur bis
+    // 17:45 verfügbar).
     return {
-      error: "Der Zeitblock liegt außerhalb der gemeldeten Verfügbarkeit.",
+      error: `Der Zeitblock liegt außerhalb der gemeldeten Verfügbarkeit (${formatTimePlain(availability.startsAt)}–${formatTimePlain(availability.endsAt)}).`,
     };
   }
 

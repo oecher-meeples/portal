@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { formatTimePlain } from "@/lib/utils/format";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -89,11 +90,11 @@ describe("assignShiftBooking", () => {
     });
   });
 
-  it("rejects a block outside the reported availability window", async () => {
+  it("rejects a block outside the reported availability window, naming the actual bounds", async () => {
+    const availabilityStartsAt = new Date("2026-10-10T11:00:00Z");
+    const availabilityEndsAt = new Date("2026-10-10T18:00:00Z");
     prismaMock.helperAvailability.findUnique.mockResolvedValue(
-      availability({
-        startsAt: new Date("2026-10-10T11:00:00Z"),
-      }) as never,
+      availability({ startsAt: availabilityStartsAt }) as never,
     );
 
     const result = await assignShiftBooking({
@@ -104,7 +105,7 @@ describe("assignShiftBooking", () => {
     });
 
     expect(result).toEqual({
-      error: "Der Zeitblock liegt außerhalb der gemeldeten Verfügbarkeit.",
+      error: `Der Zeitblock liegt außerhalb der gemeldeten Verfügbarkeit (${formatTimePlain(availabilityStartsAt)}–${formatTimePlain(availabilityEndsAt)}).`,
     });
   });
 
