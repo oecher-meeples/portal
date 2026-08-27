@@ -9,7 +9,7 @@ import {
   setOwnHelperAvailability,
   clearOwnHelperAvailability,
 } from "@/components/feature/helfer/availability-actions";
-import { formatDateMedium } from "@/lib/utils/format";
+import { formatWeekdayDate } from "@/lib/utils/format";
 
 export type HelperRoleOption = { id: string; name: string };
 
@@ -82,8 +82,8 @@ export function HelperAvailabilityForm({
   }
 
   return (
-    <div className="grid grid-cols-[8rem_1fr_1fr_auto] items-center gap-4 border-b py-3 last:border-b-0">
-      <span className="text-sm font-medium">{formatDateMedium(day.date)}</span>
+    <div className="grid grid-cols-[12rem_1fr_1fr_auto] items-center gap-4 border-b py-3 last:border-b-0">
+      <span className="text-sm font-medium">{formatWeekdayDate(day.date)}</span>
       <div className="flex flex-col gap-1">
         <RangeSlider
           min={0}

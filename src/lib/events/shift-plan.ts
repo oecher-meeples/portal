@@ -84,6 +84,21 @@ export function totalColumnCount(groups: RoleColumnGroup[]): number {
 }
 
 /**
+ * Whether a grid row's time slot falls inside at least one of a role's own
+ * Shift target windows — the visible range is padded by 4h on each side
+ * (`computeVisibleRange`), so most of the grid isn't actually staffable.
+ * Cells outside every window are grayed out in the Schichtplan-Editor.
+ */
+export function isSlotStaffable(
+  slot: Date,
+  shiftsForRole: { targetStartsAt: Date; targetEndsAt: Date }[],
+): boolean {
+  return shiftsForRole.some(
+    (shift) => slot >= shift.targetStartsAt && slot < shift.targetEndsAt,
+  );
+}
+
+/**
  * Time-based analogue of `computeShiftFillLevel` (#162): a Shift counts as
  * "voll geplant" only once its `capacity` parallel Stellen cover the whole
  * target period without gaps — at every instant within it, at least

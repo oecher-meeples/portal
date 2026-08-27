@@ -84,6 +84,10 @@ export default async function HelferPage() {
   const daysByEventId: Record<string, EventDayOption[]> = {};
   const dayRolesByDayId: Record<string, { id: string; name: string }[]> = {};
   for (const day of days) {
+    // Tage ohne offene Schichten werden nicht angezeigt — für sie gibt es
+    // nichts, wofür man Verfügbarkeit melden könnte.
+    if (day.shifts.length === 0) continue;
+
     const forEvent = (daysByEventId[day.eventId] ??= []);
     forEvent.push({ id: day.id, date: day.date.toISOString() });
     const rolesById = new Map(

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatDate, formatDateShort } from "@/lib/utils/format";
+import {
+  formatBytes,
+  formatDate,
+  formatDateShort,
+  formatWeekdayDate,
+} from "@/lib/utils/format";
 
 describe("formatDate", () => {
   it("formats an ISO date as dd.mm.yyyy", () => {
@@ -10,6 +15,12 @@ describe("formatDate", () => {
 describe("formatDateShort", () => {
   it("formats an ISO date as dd.mm", () => {
     expect(formatDateShort("2026-08-01")).toBe("01.08.");
+  });
+});
+
+describe("formatWeekdayDate", () => {
+  it("formats an ISO date as '<Wochentag>, den dd.mm.'", () => {
+    expect(formatWeekdayDate("2026-08-27")).toBe("Donnerstag, den 27.08.");
   });
 });
 

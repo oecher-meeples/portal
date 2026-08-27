@@ -145,7 +145,11 @@ export function ShiftPlanEditor({
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext
+      id="shift-plan-editor"
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
       <Tabs defaultValue={days[0].id}>
         <TabsList variant="line">
           {days.map((day) => (

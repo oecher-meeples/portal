@@ -50,6 +50,11 @@ const TIME_PLAIN = new Intl.DateTimeFormat("de-DE", {
   hour: "2-digit",
   minute: "2-digit",
 });
+const WEEKDAY_LONG = new Intl.DateTimeFormat("de-DE", { weekday: "long" });
+const DAY_MONTH = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+});
 
 type DateInput = string | number | Date;
 
@@ -71,6 +76,12 @@ export function formatDatePlain(value: DateInput) {
 /** "14:30" */
 export function formatTimePlain(value: DateInput) {
   return TIME_PLAIN.format(new Date(value));
+}
+
+/** "Donnerstag, den 27.08." — Tagesüberschrift im Helferplan-Akkordion. */
+export function formatWeekdayDate(value: DateInput) {
+  const date = new Date(value);
+  return `${WEEKDAY_LONG.format(date)}, den ${DAY_MONTH.format(date)}`;
 }
 
 /** "01.02.26, 14:30 – 18:00" — the timeframe pattern used across event views. */

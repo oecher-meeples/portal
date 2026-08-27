@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import { helperColorClass } from "@/lib/events/helper-colors";
+import { cn } from "@/lib/utils/cn";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
 
 const ROW_HEIGHT_PX = 32; // matches the grid's `2rem` row track (shift-plan-grid.tsx)
@@ -104,6 +106,7 @@ export function AssignedBlock({
 
   const displayStart = drag?.liveStart ?? rowStart;
   const displayEnd = drag?.liveEnd ?? rowEnd;
+  const confirmed = booking.confirmedAt !== null;
 
   function startResize(edge: ResizeEdge) {
     return (pointerEvent: React.PointerEvent) => {
@@ -122,7 +125,8 @@ export function AssignedBlock({
     <div
       tabIndex={0}
       role="button"
-      aria-label={`${booking.displayName} — Entf zum Entfernen`}
+      aria-label={`${booking.displayName} — ${confirmed ? "bestätigt" : "unbestätigt"} — Entf zum Entfernen`}
+      title={confirmed ? "Bestätigt" : "Unbestätigt"}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onKeyDown={(keyEvent) => {
@@ -131,12 +135,17 @@ export function AssignedBlock({
           onUnassign(booking.shiftId, booking.meepleId);
         }
       }}
-      className={`focus-visible:ring-ring relative m-0.5 cursor-default rounded px-1.5 py-1 text-xs font-medium outline-none focus-visible:ring-2 ${helperColorClass(booking.meepleId)}`}
+      className={cn(
+        "focus-visible:ring-ring relative m-0.5 cursor-default rounded px-1.5 py-1 text-xs font-medium outline-none focus-visible:ring-2",
+        helperColorClass(booking.meepleId),
+        !confirmed && "border-foreground/50 border-2 border-dashed",
+      )}
       style={{
         gridColumn,
         gridRow: `${displayStart} / ${displayEnd}`,
       }}
     >
+      {confirmed && <Check className="absolute top-0.5 right-0.5 size-3" />}
       {booking.displayName}
       {focused && (
         <>

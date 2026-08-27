@@ -7,9 +7,11 @@ import {
   buildRoleColumns,
   totalColumnCount,
   computeShiftCoverage,
+  isSlotStaffable,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
 import { formatTimePlain } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
 import type {
   PlanDay,
   PlanShift,
@@ -96,6 +98,19 @@ export function ShiftPlanGrid({
   const columns = buildRoleColumns(shifts);
   const columnCount = totalColumnCount(columns);
 
+  const targetRangesByRole = new Map<
+    string,
+    { targetStartsAt: Date; targetEndsAt: Date }[]
+  >();
+  for (const shift of shifts) {
+    const list = targetRangesByRole.get(shift.roleId) ?? [];
+    list.push({
+      targetStartsAt: new Date(shift.targetStartsAt),
+      targetEndsAt: new Date(shift.targetEndsAt),
+    });
+    targetRangesByRole.set(shift.roleId, list);
+  }
+
   if (columnCount === 0) {
     return (
       <p className="text-muted-foreground py-4 text-sm">
@@ -147,13 +162,25 @@ export function ShiftPlanGrid({
             >
               {formatTimePlain(slot.toISOString())}
             </div>
-            {Array.from({ length: columnCount }, (_, index) => (
-              <div
-                key={index}
-                className="border-b border-l"
-                style={{ gridColumn: index + 2, gridRow: rowIndex + 2 }}
-              />
-            ))}
+            {columns.flatMap((group) => {
+              const staffable = isSlotStaffable(
+                slot,
+                targetRangesByRole.get(group.roleId) ?? [],
+              );
+              return Array.from({ length: group.capacity }, (_, index) => (
+                <div
+                  key={`${group.roleId}-${index}`}
+                  className={cn(
+                    "border-b border-l",
+                    !staffable && "bg-muted/40",
+                  )}
+                  style={{
+                    gridColumn: group.startColumn + 2 + index,
+                    gridRow: rowIndex + 2,
+                  }}
+                />
+              ));
+            })}
           </div>
         ))}
 

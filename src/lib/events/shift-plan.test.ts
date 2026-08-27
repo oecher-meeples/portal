@@ -5,6 +5,7 @@ import {
   buildRoleColumns,
   totalColumnCount,
   computeShiftCoverage,
+  isSlotStaffable,
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
@@ -176,5 +177,50 @@ describe("computeShiftCoverage", () => {
     ];
 
     expect(computeShiftCoverage(single, bookings)).toBe(true);
+  });
+});
+
+describe("isSlotStaffable", () => {
+  const shiftsForRole = [
+    {
+      targetStartsAt: new Date("2026-10-10T10:00:00Z"),
+      targetEndsAt: new Date("2026-10-10T14:00:00Z"),
+    },
+  ];
+
+  it("is true for a slot inside the target window", () => {
+    expect(
+      isSlotStaffable(new Date("2026-10-10T11:00:00Z"), shiftsForRole),
+    ).toBe(true);
+  });
+
+  it("is false for a slot before the target window", () => {
+    expect(
+      isSlotStaffable(new Date("2026-10-10T08:00:00Z"), shiftsForRole),
+    ).toBe(false);
+  });
+
+  it("is false for a slot at or after the target end", () => {
+    expect(
+      isSlotStaffable(new Date("2026-10-10T14:00:00Z"), shiftsForRole),
+    ).toBe(false);
+  });
+
+  it("is true when at least one of several windows covers the slot", () => {
+    const twoWindows = [
+      ...shiftsForRole,
+      {
+        targetStartsAt: new Date("2026-10-10T16:00:00Z"),
+        targetEndsAt: new Date("2026-10-10T18:00:00Z"),
+      },
+    ];
+
+    expect(isSlotStaffable(new Date("2026-10-10T17:00:00Z"), twoWindows)).toBe(
+      true,
+    );
+  });
+
+  it("is false when there are no shifts for the role", () => {
+    expect(isSlotStaffable(new Date("2026-10-10T11:00:00Z"), [])).toBe(false);
   });
 });

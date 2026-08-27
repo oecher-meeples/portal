@@ -31,4 +31,7 @@ export type PlanBooking = {
   displayName: string;
   startsAt: string;
   endsAt: string;
+  /** null solange das zugewiesene Meeple die Zuweisung nicht selbst
+   * bestätigt hat (#Helferplan-Zuweisungsbestätigung). */
+  confirmedAt: string | null;
 };

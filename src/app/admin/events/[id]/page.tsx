@@ -99,6 +99,7 @@ export default async function AdminEventDetailPage({
         displayName: booking.meeple.displayName,
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),
+        confirmedAt: booking.confirmedAt?.toISOString() ?? null,
       });
     }
   }
