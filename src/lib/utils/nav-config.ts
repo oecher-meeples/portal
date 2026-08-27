@@ -211,6 +211,13 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: "games:manage",
       },
       {
+        label: "Event-Rückgabe",
+        href: "/admin/bestand/event-rueckgabe",
+        icon: Boxes,
+        section: "Administration",
+        permission: "games:manage",
+      },
+      {
         label: "Mitglieder & Einladungen",
         href: "/admin/mitglieder",
         icon: UserCog,
