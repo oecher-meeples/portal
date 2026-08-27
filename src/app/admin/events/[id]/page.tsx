@@ -7,6 +7,7 @@ import {
 } from "@/components/feature/admin-events/event-detail-view";
 import type { EditableEventDay } from "@/components/feature/admin-events/event-day-time-form";
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
+import type { PlanBooking } from "@/lib/events/shift-plan-types";
 
 export default async function AdminEventDetailPage({
   params,
@@ -36,7 +37,15 @@ export default async function AdminEventDetailPage({
           include: {
             role: { select: { id: true, name: true } },
             day: { select: { date: true } },
-            bookings: { select: { uncertain: true } },
+            bookings: {
+              select: {
+                uncertain: true,
+                meepleId: true,
+                startsAt: true,
+                endsAt: true,
+                meeple: { select: { displayName: true } },
+              },
+            },
           },
         },
         shelfAssignments: {
@@ -91,6 +100,22 @@ export default async function AdminEventDetailPage({
     ]),
   );
 
+  const bookingsByDay: Record<string, PlanBooking[]> = {};
+  for (const shift of event.shifts) {
+    const forDay = (bookingsByDay[shift.dayId] ??= []);
+    for (const booking of shift.bookings) {
+      forDay.push({
+        shiftId: shift.id,
+        roleId: shift.roleId,
+        dayId: shift.dayId,
+        meepleId: booking.meepleId,
+        displayName: booking.meeple.displayName,
+        startsAt: booking.startsAt.toISOString(),
+        endsAt: booking.endsAt.toISOString(),
+      });
+    }
+  }
+
   const assignedShelfIds = new Set(
     event.shelfAssignments.map((assignment) => assignment.unit.id),
   );
@@ -112,6 +137,7 @@ export default async function AdminEventDetailPage({
       shifts={shifts}
       helperRoles={helperRoles}
       pool={pool}
+      bookingsByDay={bookingsByDay}
       assignedShelves={assignedShelves}
       availableShelves={availableShelves}
     />

@@ -26,10 +26,8 @@ import {
   EventDayTimeForm,
   type EditableEventDay,
 } from "@/components/feature/admin-events/event-day-time-form";
-import {
-  ShiftPlanEditor,
-  type PlanShift,
-} from "@/components/feature/admin-events/shift-plan-editor";
+import { ShiftPlanEditor } from "@/components/feature/admin-events/shift-plan-editor";
+import type { PlanShift, PlanBooking } from "@/lib/events/shift-plan-types";
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
 
 export type ShiftRow = EditableShift & {
@@ -46,6 +44,7 @@ export function EventDetailView({
   shifts,
   helperRoles,
   pool,
+  bookingsByDay,
   assignedShelves,
   availableShelves,
 }: {
@@ -57,14 +56,18 @@ export function EventDetailView({
   shifts: ShiftRow[];
   helperRoles: HelperRoleOption[];
   pool: Record<string, PoolMeeple[]>;
+  bookingsByDay: Record<string, PlanBooking[]>;
   assignedShelves: ShelfOption[];
   availableShelves: ShelfOption[];
 }) {
   const planShifts: PlanShift[] = shifts.map((shift) => ({
+    id: shift.id,
     dayId: shift.dayId,
     roleId: shift.roleId,
     roleName: shift.roleName,
     capacity: shift.capacity,
+    targetStartsAt: shift.targetStartsAt,
+    targetEndsAt: shift.targetEndsAt,
   }));
   return (
     <div className="flex flex-col gap-6">
@@ -168,6 +171,7 @@ export function EventDetailView({
           event={{ startsAt: eventStartsAt, endsAt: eventEndsAt }}
           shifts={planShifts}
           pool={pool}
+          bookings={bookingsByDay}
         />
       </div>
 

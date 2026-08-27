@@ -51,11 +51,9 @@ describe("hasRoleGrantedPermission", () => {
     expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith({
       where: {
         meepleId: MEEPLE_ID,
-        shift: {
-          role: { grantsPermissionKey: PERMISSION_KEY },
-          targetStartsAt: { lte: AT },
-          targetEndsAt: { gte: AT },
-        },
+        shift: { role: { grantsPermissionKey: PERMISSION_KEY } },
+        startsAt: { lte: AT },
+        endsAt: { gte: AT },
       },
     });
   });
@@ -116,11 +114,9 @@ describe("findActiveShiftEvent", () => {
     expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith({
       where: {
         meepleId: MEEPLE_ID,
-        shift: {
-          role: { name: "Leihe" },
-          targetStartsAt: { lte: AT },
-          targetEndsAt: { gte: AT },
-        },
+        shift: { role: { name: "Leihe" } },
+        startsAt: { lte: AT },
+        endsAt: { gte: AT },
       },
       select: { shift: { select: { eventId: true } } },
     });

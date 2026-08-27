@@ -372,6 +372,8 @@ erDiagram
         String shiftId FK
         String meepleId FK
         Boolean uncertain
+        DateTime startsAt
+        DateTime endsAt
     }
 
     HelperAvailability {

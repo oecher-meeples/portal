@@ -8,7 +8,10 @@ import { hasPermission } from "@/lib/auth/permissions";
  * currently sitting inside an assigned ShiftBooking time block for a
  * HelperRole whose `grantsPermissionKey` matches — never from a permission
  * tied to a hardcoded role name. Replaces the former hasFleaMarketRights,
- * which was hard-coupled to a "KASSE" shift type.
+ * which was hard-coupled to a "KASSE" shift type. Checks the booking's own
+ * `startsAt`/`endsAt` block (#159) rather than the Shift's overall target
+ * period, now that the Schichtplan-Editor gives each assignment its own,
+ * individually resizable time block.
  */
 export async function hasRoleGrantedPermission(
   meepleId: string,
@@ -30,11 +33,9 @@ export async function hasRoleGrantedPermission(
   const booking = await prisma.shiftBooking.findFirst({
     where: {
       meepleId,
-      shift: {
-        role: { grantsPermissionKey: permissionKey },
-        targetStartsAt: { lte: at },
-        targetEndsAt: { gte: at },
-      },
+      shift: { role: { grantsPermissionKey: permissionKey } },
+      startsAt: { lte: at },
+      endsAt: { gte: at },
     },
   });
 
@@ -57,11 +58,9 @@ export async function findActiveShiftEvent(
   const booking = await prisma.shiftBooking.findFirst({
     where: {
       meepleId,
-      shift: {
-        role: { name: roleName },
-        targetStartsAt: { lte: at },
-        targetEndsAt: { gte: at },
-      },
+      shift: { role: { name: roleName } },
+      startsAt: { lte: at },
+      endsAt: { gte: at },
     },
     select: { shift: { select: { eventId: true } } },
   });

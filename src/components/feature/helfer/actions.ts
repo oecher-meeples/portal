@@ -29,7 +29,13 @@ export async function bookShift(shiftId: string, uncertain: boolean) {
   }
 
   await prisma.shiftBooking.create({
-    data: { shiftId, meepleId: meeple.id, uncertain },
+    data: {
+      shiftId,
+      meepleId: meeple.id,
+      uncertain,
+      startsAt: shift.targetStartsAt,
+      endsAt: shift.targetEndsAt,
+    },
   });
 
   revalidatePath("/helfer");

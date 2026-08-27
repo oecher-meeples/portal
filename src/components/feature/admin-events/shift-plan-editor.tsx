@@ -1,148 +1,147 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  computeVisibleRange,
-  buildTimeSlots,
-  buildRoleColumns,
-  totalColumnCount,
-} from "@/lib/events/shift-plan";
+  DndContext,
+  DragOverlay,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { formatDateMedium } from "@/lib/utils/format";
+import { helperColorClass } from "@/lib/events/helper-colors";
+import type {
+  PlanDay,
+  PlanShift,
+  PlanBooking,
+} from "@/lib/events/shift-plan-types";
 import {
   HelperPoolBar,
   type PoolMeeple,
+  type PoolDragData,
 } from "@/components/feature/admin-events/helper-pool-bar";
-import { formatDateMedium, formatTimePlain } from "@/lib/utils/format";
+import {
+  ShiftPlanGrid,
+  type RoleDropData,
+} from "@/components/feature/admin-events/shift-plan-grid";
+import { assignHelperToShift } from "@/components/feature/admin-events/shift-plan-actions";
+import { buildRoleColumns } from "@/lib/events/shift-plan";
 
-export type PlanDay = {
-  id: string;
-  date: string;
-  startsAt: string | null;
-  endsAt: string | null;
-};
+export type { PlanDay, PlanShift };
 
-export type PlanShift = {
-  dayId: string;
-  roleId: string;
-  roleName: string;
-  capacity: number;
-};
+type ActiveDrag = { meepleId: string; displayName: string } | null;
 
 /**
- * Outlook-artiger Schichtplan-Kalender (#157/#158) — ein Tab pro Event-Tag,
- * Spalten je Rolle (Breite proportional zur Stellenzahl), Zeilen = Uhrzeit
- * im Bereich Tages-Öffnungszeit ±4h, Helferpool-Leiste synchron zum
- * Spaltenraster darüber. Drag&Drop und Resize sind eigene Sub-Issues
- * (#159/#160).
+ * Outlook-artiger Schichtplan-Kalender (#157–#159) — Tab pro Event-Tag,
+ * Helferpool-Leiste synchron zum Kalender-Spaltenraster darüber, Drag&Drop
+ * eines Pool-Helfers auf eine Rollen-Spalte (@dnd-kit) legt eine Zuweisung
+ * mit dem Ziel-Zeitraum der Schicht an. Resize (#160) und die gelbe
+ * "bereits verplant"-Markierung (#161) folgen als eigene Sub-Issues.
  */
 export function ShiftPlanEditor({
   days,
   event,
   shifts,
   pool,
+  bookings,
 }: {
   days: PlanDay[];
   event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
   pool: Record<string, PoolMeeple[]>;
+  bookings: Record<string, PlanBooking[]>;
 }) {
+  const router = useRouter();
+  const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
+  const [error, setError] = useState<string | null>(null);
+
   if (days.length === 0) return null;
 
-  return (
-    <Tabs defaultValue={days[0].id}>
-      <TabsList variant="line">
-        {days.map((day) => (
-          <TabsTrigger key={day.id} value={day.id}>
-            {formatDateMedium(day.date)}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {days.map((day) => (
-        <TabsContent
-          key={day.id}
-          value={day.id}
-          className="flex flex-col gap-2"
-        >
-          <DayPlan
-            day={day}
-            event={event}
-            shifts={shifts.filter((shift) => shift.dayId === day.id)}
-            pool={pool[day.id] ?? []}
-          />
-        </TabsContent>
-      ))}
-    </Tabs>
-  );
-}
+  function handleDragStart(dragEvent: DragStartEvent) {
+    const data = dragEvent.active.data.current as PoolDragData | undefined;
+    if (!data) return;
+    setActiveDrag({ meepleId: data.meepleId, displayName: data.displayName });
+    setError(null);
+  }
 
-function DayPlan({
-  day,
-  event,
-  shifts,
-  pool,
-}: {
-  day: PlanDay;
-  event: { startsAt: string; endsAt: string | null };
-  shifts: PlanShift[];
-  pool: PoolMeeple[];
-}) {
-  const range = computeVisibleRange(
-    {
-      startsAt: day.startsAt ? new Date(day.startsAt) : null,
-      endsAt: day.endsAt ? new Date(day.endsAt) : null,
-    },
-    {
-      startsAt: new Date(event.startsAt),
-      endsAt: event.endsAt ? new Date(event.endsAt) : null,
-    },
-  );
-  const timeSlots = buildTimeSlots(range, 30);
-  const columns = buildRoleColumns(shifts);
-  const columnCount = totalColumnCount(columns);
+  async function handleDragEnd(dragEvent: DragEndEvent) {
+    setActiveDrag(null);
+    const dragData = dragEvent.active.data.current as PoolDragData | undefined;
+    const dropData = dragEvent.over?.data.current as RoleDropData | undefined;
+    if (!dragData || !dropData) return;
 
-  if (columnCount === 0) {
-    return (
-      <p className="text-muted-foreground py-4 text-sm">
-        Für diesen Tag sind noch keine Schichten angelegt.
-      </p>
+    if (
+      dragData.roleId !== dropData.roleId ||
+      dragData.dayId !== dropData.dayId
+    ) {
+      setError("Diese Rolle passt nicht zur Ziel-Spalte.");
+      return;
+    }
+
+    const shift = shifts.find((s) => s.id === dropData.shiftId);
+    if (!shift) return;
+
+    // The block defaults to the Shift's own target period; the resize
+    // handles (#160) narrow it afterwards.
+    const result = await assignHelperToShift(
+      dropData.shiftId,
+      dragData.meepleId,
+      new Date(shift.targetStartsAt),
+      new Date(shift.targetEndsAt),
     );
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    router.refresh();
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <HelperPoolBar columns={columns} pool={pool} />
-      <div className="overflow-x-auto rounded-lg border">
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: `5rem repeat(${columnCount}, minmax(4rem, 1fr))`,
-          }}
-        >
-          <div className="bg-muted/50 border-b" />
-          {columns.map((group) => (
-            <div
-              key={group.roleId}
-              className="bg-muted/50 border-b border-l px-2 py-1.5 text-center text-xs font-semibold"
-              style={{ gridColumn: `span ${group.capacity}` }}
+    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <Tabs defaultValue={days[0].id}>
+        <TabsList variant="line">
+          {days.map((day) => (
+            <TabsTrigger key={day.id} value={day.id}>
+              {formatDateMedium(day.date)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {days.map((day) => {
+          const dayShifts = shifts.filter((shift) => shift.dayId === day.id);
+          const columns = buildRoleColumns(dayShifts);
+          return (
+            <TabsContent
+              key={day.id}
+              value={day.id}
+              className="flex flex-col gap-2"
             >
-              {group.roleName}
-            </div>
-          ))}
-
-          {timeSlots.map((slot) => (
-            <div key={slot.toISOString()} className="contents">
-              <div className="text-muted-foreground border-b px-2 py-1 text-right font-mono text-xs">
-                {formatTimePlain(slot.toISOString())}
-              </div>
-              {Array.from({ length: columnCount }, (_, index) => (
-                <div
-                  key={index}
-                  className="hover:bg-muted/30 h-8 border-b border-l"
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+              <HelperPoolBar
+                dayId={day.id}
+                columns={columns}
+                pool={pool[day.id] ?? []}
+                activeMeepleId={activeDrag?.meepleId ?? null}
+              />
+              <ShiftPlanGrid
+                day={day}
+                event={event}
+                shifts={dayShifts}
+                bookings={bookings[day.id] ?? []}
+              />
+            </TabsContent>
+          );
+        })}
+      </Tabs>
+      <DragOverlay>
+        {activeDrag && (
+          <span
+            className={`rounded px-2 py-1 text-xs font-medium shadow-lg ${helperColorClass(activeDrag.meepleId)}`}
+          >
+            {activeDrag.displayName}
+          </span>
+        )}
+      </DragOverlay>
+      {error && <p className="text-destructive text-sm">{error}</p>}
+    </DndContext>
   );
 }

@@ -801,10 +801,16 @@ model Shift {
 
 /// A member's booking of a shift. `uncertain` marks an unsure commitment but still
 /// counts against capacity — the simplest rule that avoids overbooking.
+/// `startsAt`/`endsAt` (#159) are this booking's own, individually movable
+/// time block — distinct from `Shift.targetStartsAt`/`targetEndsAt`, the
+/// container's overall target period. Defaults to the full target period on
+/// creation; the Schichtplan-Editor's resize handles (#160) narrow it.
 model ShiftBooking {
   shiftId   String
   meepleId  String
   uncertain Boolean  @default(false)
+  startsAt  DateTime
+  endsAt    DateTime
   createdAt DateTime @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)

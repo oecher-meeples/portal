@@ -74,11 +74,13 @@ describe("bookShift", () => {
     expect(prismaMock.shiftBooking.create).not.toHaveBeenCalled();
   });
 
-  it("books an open shift", async () => {
+  it("books an open shift, defaulting the block to the shift's target period", async () => {
     prismaMock.shift.findUnique.mockResolvedValue({
       id: "shift-1",
       capacity: 2,
       bookings: [],
+      targetStartsAt: new Date("2026-10-10T10:00:00Z"),
+      targetEndsAt: new Date("2026-10-10T14:00:00Z"),
     } as never);
     prismaMock.shiftBooking.findUnique.mockResolvedValue(null);
 
@@ -86,7 +88,13 @@ describe("bookShift", () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.shiftBooking.create).toHaveBeenCalledWith({
-      data: { shiftId: "shift-1", meepleId: "meeple-1", uncertain: true },
+      data: {
+        shiftId: "shift-1",
+        meepleId: "meeple-1",
+        uncertain: true,
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T14:00:00Z"),
+      },
     });
   });
 });
