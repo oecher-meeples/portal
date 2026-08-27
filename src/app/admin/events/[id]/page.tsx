@@ -82,6 +82,8 @@ export default async function AdminEventDetailPage({
     <EventDetailView
       eventId={event.id}
       eventTitle={event.title}
+      eventStartsAt={event.startsAt.toISOString()}
+      eventEndsAt={event.endsAt?.toISOString() ?? null}
       days={days}
       shifts={shifts}
       helperRoles={helperRoles}

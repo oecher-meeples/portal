@@ -26,6 +26,10 @@ import {
   EventDayTimeForm,
   type EditableEventDay,
 } from "@/components/feature/admin-events/event-day-time-form";
+import {
+  ShiftPlanEditor,
+  type PlanShift,
+} from "@/components/feature/admin-events/shift-plan-editor";
 
 export type ShiftRow = EditableShift & {
   dayDate: string;
@@ -35,6 +39,8 @@ export type ShiftRow = EditableShift & {
 export function EventDetailView({
   eventId,
   eventTitle,
+  eventStartsAt,
+  eventEndsAt,
   days,
   shifts,
   helperRoles,
@@ -43,12 +49,20 @@ export function EventDetailView({
 }: {
   eventId: string;
   eventTitle: string;
+  eventStartsAt: string;
+  eventEndsAt: string | null;
   days: EditableEventDay[];
   shifts: ShiftRow[];
   helperRoles: HelperRoleOption[];
   assignedShelves: ShelfOption[];
   availableShelves: ShelfOption[];
 }) {
+  const planShifts: PlanShift[] = shifts.map((shift) => ({
+    dayId: shift.dayId,
+    roleId: shift.roleId,
+    roleName: shift.roleName,
+    capacity: shift.capacity,
+  }));
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -142,6 +156,15 @@ export function EventDetailView({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <h2 className="font-serif text-lg font-bold">Schichtplan</h2>
+        <ShiftPlanEditor
+          days={days}
+          event={{ startsAt: eventStartsAt, endsAt: eventEndsAt }}
+          shifts={planShifts}
+        />
       </div>
 
       <ShelfAssignmentSection
