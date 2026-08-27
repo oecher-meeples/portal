@@ -15,14 +15,17 @@ export default async function AdminEventDetailPage({
   await requireAdminPermission("events:manage");
   const { id } = await params;
 
-  const [event, shelves] = await Promise.all([
+  const [event, shelves, helperRoles] = await Promise.all([
     prisma.event.findUnique({
       where: { id },
       include: {
         days: { orderBy: { date: "asc" } },
         shifts: {
           orderBy: { startsAt: "asc" },
-          include: { bookings: { select: { uncertain: true } } },
+          include: {
+            role: { select: { id: true, name: true } },
+            bookings: { select: { uncertain: true } },
+          },
         },
         shelfAssignments: {
           include: { unit: { select: { id: true, label: true } } },
@@ -33,6 +36,10 @@ export default async function AdminEventDetailPage({
       where: { kind: "SHELF", retiredAt: null },
       orderBy: { label: "asc" },
       select: { id: true, label: true },
+    }),
+    prisma.helperRole.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -49,7 +56,8 @@ export default async function AdminEventDetailPage({
 
   const shifts: ShiftRow[] = event.shifts.map((shift) => ({
     id: shift.id,
-    type: shift.type,
+    roleId: shift.role.id,
+    roleName: shift.role.name,
     startsAt: shift.startsAt.toISOString(),
     endsAt: shift.endsAt.toISOString(),
     capacity: shift.capacity,
@@ -73,6 +81,7 @@ export default async function AdminEventDetailPage({
       eventTitle={event.title}
       days={days}
       shifts={shifts}
+      helperRoles={helperRoles}
       assignedShelves={assignedShelves}
       availableShelves={availableShelves}
     />

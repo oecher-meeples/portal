@@ -343,10 +343,16 @@ erDiagram
         String unitId FK
     }
 
+    HelperRole {
+        String id PK
+        String name UK
+        String grantsPermissionKey "optional"
+    }
+
     Shift {
         String id PK
         String eventId FK
-        String type "THEKE, KASSE, LEIHE"
+        String roleId FK
         DateTime startsAt
         DateTime endsAt
         Int capacity
@@ -385,6 +391,7 @@ erDiagram
     Event ||--o{ EventShelfAssignment : "hat"
     StorageUnit ||--o{ EventShelfAssignment : "zugeordnet"
     Event ||--o{ Shift : "hat"
+    HelperRole ||--o{ Shift : "besetzt als"
     Shift ||--o{ ShiftBooking : "gebucht von"
     Meeple ||--o{ ShiftBooking : "bucht"
     Meeple ||--o{ ExplainerGame : "kann erklären"

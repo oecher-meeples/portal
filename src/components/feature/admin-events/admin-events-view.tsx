@@ -11,6 +11,11 @@ import { Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
 import { EventDialog } from "@/components/feature/admin-events/event-dialog";
 import { deleteEvent } from "@/components/feature/admin-events/actions";
+import {
+  HelperRoleManagementSection,
+  type HelperRoleRow,
+  type PermissionOption,
+} from "@/components/feature/admin-events/helper-role-management-section";
 import { formatDateRange } from "@/lib/utils/format";
 
 export type EventRow = {
@@ -22,7 +27,15 @@ export type EventRow = {
   shiftCount: number;
 };
 
-export function AdminEventsView({ events }: { events: EventRow[] }) {
+export function AdminEventsView({
+  events,
+  helperRoles,
+  permissions,
+}: {
+  events: EventRow[];
+  helperRoles: HelperRoleRow[];
+  permissions: PermissionOption[];
+}) {
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -93,6 +106,11 @@ export function AdminEventsView({ events }: { events: EventRow[] }) {
           </TableBody>
         </Table>
       </div>
+
+      <HelperRoleManagementSection
+        roles={helperRoles}
+        permissions={permissions}
+      />
     </div>
   );
 }

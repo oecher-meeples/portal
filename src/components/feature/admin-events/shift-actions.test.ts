@@ -15,7 +15,7 @@ const { createShift, updateShift, deleteShift } =
 class ForbiddenError extends Error {}
 
 const VALID_INPUT = {
-  type: "THEKE" as const,
+  roleId: "role-theke",
   startsAt: new Date("2026-10-10T10:00:00Z"),
   endsAt: new Date("2026-10-10T14:00:00Z"),
   capacity: 2,
@@ -77,7 +77,7 @@ describe("createShift", () => {
     expect(prismaMock.shift.create).toHaveBeenCalledWith({
       data: {
         eventId: "event-1",
-        type: "THEKE",
+        roleId: "role-theke",
         startsAt: VALID_INPUT.startsAt,
         endsAt: VALID_INPUT.endsAt,
         capacity: 2,
@@ -111,7 +111,7 @@ describe("updateShift", () => {
     expect(prismaMock.shift.update).toHaveBeenCalledWith({
       where: { id: "shift-1" },
       data: {
-        type: "THEKE",
+        roleId: "role-theke",
         startsAt: VALID_INPUT.startsAt,
         endsAt: VALID_INPUT.endsAt,
         capacity: 2,

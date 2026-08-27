@@ -1,12 +1,11 @@
 "use server";
 
-import type { ShiftType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 
 export type ShiftInput = {
-  type: ShiftType;
+  roleId: string;
   startsAt: Date;
   endsAt: Date;
   capacity: number;
@@ -36,7 +35,7 @@ export async function createShift(eventId: string, input: ShiftInput) {
   const shift = await prisma.shift.create({
     data: {
       eventId,
-      type: input.type,
+      roleId: input.roleId,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,
@@ -58,7 +57,7 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
   const shift = await prisma.shift.update({
     where: { id: shiftId },
     data: {
-      type: input.type,
+      roleId: input.roleId,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,

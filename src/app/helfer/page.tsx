@@ -27,7 +27,7 @@ export default async function HelferPage({
       ? prisma.shift.findMany({
           where: { eventId: selectedEventId },
           orderBy: { startsAt: "asc" },
-          include: { bookings: true },
+          include: { role: { select: { name: true } }, bookings: true },
         })
       : Promise.resolve([]),
     prisma.explainerGame.count({ where: { meepleId: meeple.id } }),
@@ -51,7 +51,7 @@ export default async function HelferPage({
       shift.bookings.find((b) => b.meepleId === meeple.id) ?? null;
     return {
       id: shift.id,
-      type: shift.type,
+      roleName: shift.role.name,
       startsAt: shift.startsAt.toISOString(),
       endsAt: shift.endsAt.toISOString(),
       capacity: shift.capacity,

@@ -13,8 +13,8 @@ import { ActionButton } from "@/components/ui/action-button";
 import {
   ShiftDialog,
   type EditableShift,
+  type HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
-import { SHIFT_TYPE_LABELS } from "@/lib/events/shift-labels";
 import { deleteShift } from "@/components/feature/admin-events/shift-actions";
 import {
   ShelfAssignmentSection,
@@ -36,6 +36,7 @@ export function EventDetailView({
   eventTitle,
   days,
   shifts,
+  helperRoles,
   assignedShelves,
   availableShelves,
 }: {
@@ -43,6 +44,7 @@ export function EventDetailView({
   eventTitle: string;
   days: EditableEventDay[];
   shifts: ShiftRow[];
+  helperRoles: HelperRoleOption[];
   assignedShelves: ShelfOption[];
   availableShelves: ShelfOption[];
 }) {
@@ -52,7 +54,7 @@ export function EventDetailView({
         eyebrow="Event-Betrieb"
         title={eventTitle}
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
-        action={<ShiftDialog eventId={eventId} />}
+        action={<ShiftDialog eventId={eventId} helperRoles={helperRoles} />}
       />
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
@@ -88,7 +90,7 @@ export function EventDetailView({
                 const fillLevel = computeShiftFillLevel(shift, shift.bookings);
                 return (
                   <TableRow key={shift.id}>
-                    <TableCell>{SHIFT_TYPE_LABELS[shift.type]}</TableCell>
+                    <TableCell>{shift.roleName}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDateTimeRange(shift.startsAt, shift.endsAt)}
                     </TableCell>
@@ -102,7 +104,11 @@ export function EventDetailView({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <ShiftDialog eventId={eventId} shift={shift} />
+                      <ShiftDialog
+                        eventId={eventId}
+                        shift={shift}
+                        helperRoles={helperRoles}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <ActionButton

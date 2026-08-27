@@ -44,7 +44,7 @@ describe("hasFleaMarketRights", () => {
         meepleId: MEEPLE_ID,
         shift: {
           eventId: EVENT_ID,
-          type: "KASSE",
+          role: { name: "Kasse" },
           startsAt: { lte: AT },
           endsAt: { gte: AT },
         },
@@ -69,7 +69,7 @@ describe("hasFleaMarketRights", () => {
     expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          shift: expect.objectContaining({ type: "KASSE" }),
+          shift: expect.objectContaining({ role: { name: "Kasse" } }),
         }),
       }),
     );

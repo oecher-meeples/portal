@@ -151,7 +151,7 @@ export async function collectMeeplePersonalData(
       include: {
         shift: {
           select: {
-            type: true,
+            role: { select: { name: true } },
             startsAt: true,
             endsAt: true,
             event: { select: { title: true } },

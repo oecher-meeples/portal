@@ -79,12 +79,6 @@ enum HoldingOrigin {
   RELOCATION
 }
 
-enum ShiftType {
-  THEKE
-  KASSE
-  LEIHE
-}
-
 enum ExplainerExperienceLevel {
   WITH_MANUAL
   WITHOUT_MANUAL
@@ -716,20 +710,39 @@ model EventShelfAssignment {
 
 /// A time slot with a fixed type and capacity within an event, self-service bookable
 /// by members. Booking a KASSE shift grants time-bound flea market rights (ADR 0006).
+/// Global, admin-definable helper role (ADR-0012) — replaces the former fixed
+/// ShiftType enum so admins can add roles (e.g. "Küche") without a migration.
+/// `grantsPermissionKey` generalizes the former KASSE hardcode: when set, the
+/// permission applies for the duration of an assigned shift booking (see
+/// hasRoleGrantedPermission in shift-rights.ts).
+model HelperRole {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  grantsPermissionKey String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  shifts Shift[]
+
+  @@map("helper_roles")
+}
+
 model Shift {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   eventId   String
-  type      ShiftType
+  roleId    String
   startsAt  DateTime
   endsAt    DateTime
   capacity  Int
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  role     HelperRole     @relation(fields: [roleId], references: [id])
   bookings ShiftBooking[]
 
   @@index([eventId])
+  @@index([roleId])
   @@map("shifts")
 }
 

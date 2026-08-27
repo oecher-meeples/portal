@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { ShiftType } from "@prisma/client";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -14,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SHIFT_TYPE_LABELS } from "@/lib/events/shift-labels";
 import {
   bookShift,
   cancelBooking,
@@ -28,7 +26,7 @@ import { formatDateTimeRange } from "@/lib/utils/format";
 
 export type HelferShiftRow = {
   id: string;
-  type: ShiftType;
+  roleName: string;
   startsAt: string;
   endsAt: string;
   capacity: number;
@@ -133,7 +131,7 @@ export function HelferView({
                   className={shift.ownBooking ? "bg-primary/5" : undefined}
                 >
                   <TableCell className="font-medium">
-                    {SHIFT_TYPE_LABELS[shift.type]}
+                    {shift.roleName}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
                     {formatDateTimeRange(shift.startsAt, shift.endsAt)}
