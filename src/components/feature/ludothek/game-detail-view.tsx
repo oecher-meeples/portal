@@ -5,6 +5,7 @@ import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { YoutubeIcon } from "@/components/ui/youtube-icon";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -29,6 +30,7 @@ import type { ExplainerEntry } from "@/lib/explainer/queries";
 import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
 import type { GuestCopyAvailability } from "@/lib/events/guest-area";
 import { formatDateMedium } from "@/lib/utils/format";
+import { buildYoutubeRulesSearchUrl } from "@/lib/utils/youtube";
 
 export type HoldingHistoryEntry = {
   id: string;
@@ -260,6 +262,36 @@ export function GameDetailView({
             {game.explainerVideoUrl && (
               <ExplainerVideo url={game.explainerVideoUrl} />
             )}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                render={
+                  <a
+                    href={buildYoutubeRulesSearchUrl(game.title, "de")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
+              >
+                <YoutubeIcon className="size-4" />
+                Nach Regeln auf Youtube suchen
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                render={
+                  <a
+                    href={buildYoutubeRulesSearchUrl(game.title, "en")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
+              >
+                <YoutubeIcon className="size-4" />
+                Search for rules on Youtube
+              </Button>
+            </div>
           </div>
         )}
 
