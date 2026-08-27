@@ -10,7 +10,12 @@ function holding(overrides: Partial<Record<string, unknown>> = {}) {
     gameCopyId: "copy-1",
     startedAt: new Date("2026-08-01"),
     meeple: { id: "meeple-1", displayName: "Anna" },
-    gameCopy: { boardGame: { title: "Ark Nova" } },
+    gameCopy: {
+      condition: null,
+      ruleBookLanguages: [],
+      inventoryNumber: null,
+      boardGame: { id: "bg-ark-nova", title: "Ark Nova" },
+    },
     ...overrides,
   };
 }
@@ -33,7 +38,12 @@ describe("getActiveHoldingsByMeeple", () => {
       holding({ gameCopyId: "copy-1" }),
       holding({
         gameCopyId: "copy-2",
-        gameCopy: { boardGame: { title: "Wingspan" } },
+        gameCopy: {
+          condition: null,
+          ruleBookLanguages: [],
+          inventoryNumber: null,
+          boardGame: { id: "bg-wingspan", title: "Wingspan" },
+        },
       }),
     ] as never);
 
@@ -46,13 +56,23 @@ describe("getActiveHoldingsByMeeple", () => {
         holdings: [
           {
             gameCopyId: "copy-1",
+            boardGameId: "bg-ark-nova",
             boardGameTitle: "Ark Nova",
             startedAt: new Date("2026-08-01"),
+            locationChain: "bei Anna",
+            condition: null,
+            ruleBookLanguages: [],
+            inventoryNumber: null,
           },
           {
             gameCopyId: "copy-2",
+            boardGameId: "bg-wingspan",
             boardGameTitle: "Wingspan",
             startedAt: new Date("2026-08-01"),
+            locationChain: "bei Anna",
+            condition: null,
+            ruleBookLanguages: [],
+            inventoryNumber: null,
           },
         ],
       },

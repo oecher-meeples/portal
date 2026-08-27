@@ -1,12 +1,22 @@
+import type { RuleBookLanguage } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { formatLocationChain } from "@/lib/ludothek/holdings-lookup";
 
 /**
  * One physical copy currently at a Meeple, for `getActiveHoldingsByMeeple()`.
+ * Carries the fields `GameActionsMenu` needs (#272-Folge) — zustand is always
+ * "ausgeliehen" here (a person-Holding by definition), so unlike
+ * `admin-bestand-rows.ts` there is no unit chain to walk.
  */
 export type ActiveMeepleHolding = {
   gameCopyId: string;
+  boardGameId: string;
   boardGameTitle: string;
   startedAt: Date;
+  locationChain: string;
+  condition: string | null;
+  ruleBookLanguages: RuleBookLanguage[];
+  inventoryNumber: string | null;
 };
 
 /** All active Meeple-holdings for one Meeple, for the accordion in #272's overview page. */
@@ -33,7 +43,14 @@ export async function getActiveHoldingsByMeeple(): Promise<
       gameCopyId: true,
       startedAt: true,
       meeple: { select: { id: true, displayName: true } },
-      gameCopy: { select: { boardGame: { select: { title: true } } } },
+      gameCopy: {
+        select: {
+          condition: true,
+          ruleBookLanguages: true,
+          inventoryNumber: true,
+          boardGame: { select: { id: true, title: true } },
+        },
+      },
     },
   });
 
@@ -48,8 +65,16 @@ export async function getActiveHoldingsByMeeple(): Promise<
     };
     entry.holdings.push({
       gameCopyId: holding.gameCopyId,
+      boardGameId: holding.gameCopy.boardGame.id,
       boardGameTitle: holding.gameCopy.boardGame.title,
       startedAt: holding.startedAt,
+      locationChain: formatLocationChain({
+        responsibleName: holding.meeple.displayName,
+        unitChain: "",
+      }),
+      condition: holding.gameCopy.condition,
+      ruleBookLanguages: holding.gameCopy.ruleBookLanguages,
+      inventoryNumber: holding.gameCopy.inventoryNumber,
     });
     byMeeple.set(holding.meeple.id, entry);
   }
@@ -57,4 +82,12 @@ export async function getActiveHoldingsByMeeple(): Promise<
   return [...byMeeple.values()].sort((a, b) =>
     a.meepleName.localeCompare(b.meepleName, "de"),
   );
+}
+
+/** Total count of currently active person-`GameHolding`s, for the Ausleihen-Karte
+ * auf `admin/bestand` (#272-Folge) — same scope as {@link getActiveHoldingsByMeeple}. */
+export async function countActiveMeepleHoldings(): Promise<number> {
+  return prisma.gameHolding.count({
+    where: { meepleId: { not: null }, endedAt: null },
+  });
 }

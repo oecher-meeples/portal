@@ -197,7 +197,7 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: "games:manage",
       },
       {
-        label: "Ausleihen nach Mitglied",
+        label: "Ausleihen",
         href: "/admin/bestand/ausleihen",
         icon: HandHeart,
         section: "Administration",

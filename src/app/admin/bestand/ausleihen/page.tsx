@@ -10,7 +10,7 @@ export default async function AusleihenPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
       <h1 className="font-serif text-2xl font-bold">Ausleihen nach Mitglied</h1>
-      <BorrowedGamesByMeepleView meeples={meeples} />
+      <BorrowedGamesByMeepleView meeples={meeples} canManageGames />
     </div>
   );
 }
