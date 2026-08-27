@@ -219,7 +219,8 @@ const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "youtu.be"]);
 
 function isYoutubeLink(link: string): boolean {
   try {
-    return YOUTUBE_HOSTS.has(new URL(link).hostname);
+    const url = new URL(link);
+    return url.protocol === "https:" && YOUTUBE_HOSTS.has(url.hostname);
   } catch {
     return false;
   }

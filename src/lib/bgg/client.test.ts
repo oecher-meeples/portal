@@ -218,6 +218,15 @@ describe("fetchBggGame", () => {
     ]);
   });
 
+  it("rejects http:// youtube links instead of importing them unnormalized (#262)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-http-video.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.explainerVideoUrl).toBeNull();
+    expect(result.englishExplainerVideos).toEqual([]);
+  });
+
   it("returns null when the videos block has no instructional entry", async () => {
     mockFetchOnce(
       true,
