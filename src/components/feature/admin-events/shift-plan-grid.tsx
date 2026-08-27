@@ -73,6 +73,7 @@ export function ShiftPlanGrid({
   bookings,
   onUnassign,
   onResize,
+  onMove,
   onSelectRange,
   activeAvailability,
 }: {
@@ -85,6 +86,14 @@ export function ShiftPlanGrid({
   onUnassign: (booking: PlanBooking) => void;
   /** Griffpunkte oben/unten auf einem fokussierten Block (#160 Resize). */
   onResize: (booking: PlanBooking, startsAt: Date, endsAt: Date) => void;
+  /** Der ganze Block wurde verschoben (#Schichtplan-Grid-Spaltenwechsel) —
+   * Zeit und/oder Spalte innerhalb derselben Rollen-Spaltengruppe. */
+  onMove: (
+    booking: PlanBooking,
+    startsAt: Date,
+    endsAt: Date,
+    slotIndex: number,
+  ) => void;
   /** Zellen von-bis in der Uhrzeiten-Spalte selektiert und bestätigt
    * (Schicht-Schnellanlage) — öffnet den Schicht-anlegen-Dialog mit
    * vorausgefüllter Ziel-Zeit. */
@@ -285,9 +294,14 @@ export function ShiftPlanGrid({
         {bookings.map((booking) => {
           const group = columns.find((g) => g.roleId === booking.roleId);
           if (!group) return null;
+          // Explizit per Drag gesetzte Spalte hat Vorrang; sonst automatisch
+          // aus der Reihenfolge der Buchungen dieser Rolle ableiten.
           const sameRole = bookings.filter((b) => b.roleId === booking.roleId);
+          const autoSlot = sameRole.findIndex(
+            (b) => b.meepleId === booking.meepleId,
+          );
           const slot = Math.min(
-            sameRole.findIndex((b) => b.meepleId === booking.meepleId),
+            Math.max(booking.slotIndex ?? autoSlot, 0),
             group.capacity - 1,
           );
           const rowStart = Math.max(2, rowForTime(booking.startsAt) + 2);
@@ -296,13 +310,16 @@ export function ShiftPlanGrid({
             <AssignedBlock
               key={booking.id}
               booking={booking}
-              gridColumn={group.startColumn + 2 + Math.max(slot, 0)}
+              gridColumn={group.startColumn + 2 + slot}
+              columnStart={group.startColumn + 2}
+              columnCount={group.capacity}
               rowStart={rowStart}
               rowEnd={rowEnd}
               maxRow={timeSlots.length + 2}
               rangeStart={range.start}
               onUnassign={onUnassign}
               onResize={onResize}
+              onMove={onMove}
             />
           );
         })}

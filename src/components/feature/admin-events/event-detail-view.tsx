@@ -1,5 +1,11 @@
 import type { EventVisibility } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { EventDialog } from "@/components/feature/admin-events/event-dialog";
 import type { HelperRoleOption } from "@/components/feature/admin-events/shift-dialog";
 import {
@@ -81,31 +87,63 @@ export function EventDetailView({
         }
       />
 
-      <div className="flex flex-col gap-3 rounded-lg border p-4">
-        <h2 className="text-sm font-semibold">Öffnungszeiten je Tag</h2>
-        {days.map((day) => (
-          <EventDayTimeForm key={day.id} day={day} />
-        ))}
-      </div>
+      <Accordion
+        defaultValue={["stammdaten", "schichten", "schichtplan"]}
+        className="flex flex-col gap-3"
+      >
+        <AccordionItem
+          value="stammdaten"
+          className="bg-card rounded-lg border px-4"
+        >
+          <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
+            Stammdaten
+          </AccordionTrigger>
+          <AccordionPanel>
+            <div className="flex flex-col gap-3">
+              <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
+              {days.map((day) => (
+                <EventDayTimeForm key={day.id} day={day} />
+              ))}
+            </div>
+          </AccordionPanel>
+        </AccordionItem>
 
-      <ShiftTableSection
-        eventId={eventId}
-        days={days}
-        shifts={shifts}
-        helperRoles={helperRoles}
-      />
+        <AccordionItem
+          value="schichten"
+          className="bg-card rounded-lg border px-4"
+        >
+          <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
+            Schichten
+          </AccordionTrigger>
+          <AccordionPanel>
+            <ShiftTableSection
+              eventId={eventId}
+              days={days}
+              shifts={shifts}
+              helperRoles={helperRoles}
+            />
+          </AccordionPanel>
+        </AccordionItem>
 
-      <div className="flex flex-col gap-3">
-        <h2 className="font-serif text-lg font-bold">Schichtplan</h2>
-        <ShiftPlanEditor
-          eventId={eventId}
-          days={days}
-          shifts={planShifts}
-          helperRoles={helperRoles}
-          pool={pool}
-          bookings={bookingsByDay}
-        />
-      </div>
+        <AccordionItem
+          value="schichtplan"
+          className="bg-card rounded-lg border px-4"
+        >
+          <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
+            Schichtplan
+          </AccordionTrigger>
+          <AccordionPanel>
+            <ShiftPlanEditor
+              eventId={eventId}
+              days={days}
+              shifts={planShifts}
+              helperRoles={helperRoles}
+              pool={pool}
+              bookings={bookingsByDay}
+            />
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
 
       <ShelfAssignmentSection
         eventId={eventId}

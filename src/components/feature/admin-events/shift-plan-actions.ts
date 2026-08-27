@@ -21,8 +21,10 @@ export async function assignHelperToShift(
   meepleId: string,
   startsAt: Date,
   endsAt: Date,
-  /** Re-times this exact booking (Resize) statt eine neue anzulegen. */
+  /** Re-times this exact booking (Resize/Move) statt eine neue anzulegen. */
   bookingId?: string,
+  /** Rein optische Spaltenposition (Drag innerhalb der Rollen-Spaltengruppe). */
+  slotIndex?: number,
 ) {
   await requirePermission("events:manage");
 
@@ -32,6 +34,7 @@ export async function assignHelperToShift(
     startsAt,
     endsAt,
     bookingId,
+    slotIndex,
   });
   if ("success" in result) await revalidateEventPath(shiftId);
   return result;

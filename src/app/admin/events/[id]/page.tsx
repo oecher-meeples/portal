@@ -46,6 +46,7 @@ export default async function AdminEventDetailPage({
                 meepleId: true,
                 startsAt: true,
                 endsAt: true,
+                slotIndex: true,
                 meeple: { select: { displayName: true } },
               },
             },
@@ -104,6 +105,7 @@ export default async function AdminEventDetailPage({
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),
         confirmedAt: booking.confirmedAt?.toISOString() ?? null,
+        slotIndex: booking.slotIndex,
       });
     }
   }

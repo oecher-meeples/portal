@@ -827,6 +827,10 @@ model ShiftBooking {
   startsAt    DateTime
   endsAt      DateTime
   confirmedAt DateTime?
+  /// 0-basierte Spalte innerhalb der Rollen-Spaltengruppe im Schichtplan-
+  /// Grid — rein optische Vorliebe der Admin (per Drag gesetzt), null lässt
+  /// die Spalte automatisch aus der Buchungsreihenfolge ableiten.
+  slotIndex   Int?
   createdAt   DateTime  @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)

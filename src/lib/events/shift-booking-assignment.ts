@@ -23,6 +23,7 @@ export async function assignShiftBooking({
   startsAt,
   endsAt,
   bookingId,
+  slotIndex,
 }: {
   shiftId: string;
   meepleId: string;
@@ -31,6 +32,10 @@ export async function assignShiftBooking({
   /** Re-times this exact booking instead of creating a new one — used by
    * the resize handles on an already-assigned block. */
   bookingId?: string;
+  /** Rein optische Spaltenposition innerhalb der Rollen-Spaltengruppe, per
+   * Drag gesetzt (#Schichtplan-Grid-Spaltenwechsel) — undefined lässt einen
+   * bestehenden Wert unangetastet, statt ihn zu löschen. */
+  slotIndex?: number;
 }): Promise<ShiftBookingAssignmentResult> {
   if (endsAt <= startsAt) {
     return { error: "Das Ende muss nach dem Beginn liegen." };
@@ -85,11 +90,17 @@ export async function assignShiftBooking({
     // widerrufen.
     await prisma.shiftBooking.update({
       where: { id: bookingId },
-      data: { startsAt, endsAt },
+      data: { startsAt, endsAt, ...(slotIndex !== undefined && { slotIndex }) },
     });
   } else {
     await prisma.shiftBooking.create({
-      data: { shiftId, meepleId, startsAt, endsAt },
+      data: {
+        shiftId,
+        meepleId,
+        startsAt,
+        endsAt,
+        ...(slotIndex !== undefined && { slotIndex }),
+      },
     });
   }
 

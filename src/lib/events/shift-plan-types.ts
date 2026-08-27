@@ -38,4 +38,7 @@ export type PlanBooking = {
   /** null solange das zugewiesene Meeple die Zuweisung nicht selbst
    * bestätigt hat (#Helferplan-Zuweisungsbestätigung). */
   confirmedAt: string | null;
+  /** Rein optische Spaltenposition innerhalb der Rollen-Spaltengruppe, per
+   * Drag gesetzt — null lässt sie aus der Buchungsreihenfolge ableiten. */
+  slotIndex: number | null;
 };

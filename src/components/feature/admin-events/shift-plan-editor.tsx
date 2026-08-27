@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -77,6 +77,16 @@ export function ShiftPlanEditor({
   bookings: Record<string, PlanBooking[]>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Ausgewählter Tag steht in der URL (?tag=<dayId>), damit ein Reload auf
+  // demselben Tag landet statt immer auf dem ersten.
+  const [selectedDayId, setSelectedDayId] = useState(() => {
+    const fromUrl = searchParams.get("tag");
+    return fromUrl && days.some((day) => day.id === fromUrl)
+      ? fromUrl
+      : (days[0]?.id ?? "");
+  });
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
   const [error, setError] = useState<string | null>(null);
   /** Aus einer Zellen-Auswahl im Grid heraus programmatisch geöffneter
@@ -220,13 +230,44 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
+  async function handleMove(
+    booking: PlanBooking,
+    startsAt: Date,
+    endsAt: Date,
+    slotIndex: number,
+  ) {
+    setError(null);
+    // Zeit und Spalte in einem Rutsch: Zeit läuft über dieselbe Validierung
+    // wie Resize, die Spalte ist rein optisch und wird nur mitgeschrieben.
+    const result = await assignHelperToShift(
+      booking.shiftId,
+      booking.meepleId,
+      startsAt,
+      endsAt,
+      booking.id,
+      slotIndex,
+    );
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    router.refresh();
+  }
+
+  function handleDayChange(dayId: string) {
+    setSelectedDayId(dayId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tag", dayId);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
   return (
     <DndContext
       id="shift-plan-editor"
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <Tabs defaultValue={days[0].id}>
+      <Tabs value={selectedDayId} onValueChange={handleDayChange}>
         <TabsList variant="line">
           {days.map((day) => (
             <TabsTrigger key={day.id} value={day.id}>
@@ -281,6 +322,7 @@ export function ShiftPlanEditor({
                 bookings={bookings[day.id] ?? []}
                 onUnassign={handleUnassign}
                 onResize={handleResize}
+                onMove={handleMove}
                 onSelectRange={(startsAt, endsAt) =>
                   setPendingRange({ dayId: day.id, startsAt, endsAt })
                 }
