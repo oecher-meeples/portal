@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -29,11 +29,26 @@ import {
   assignHelperToShift,
   unassignHelperFromShift,
 } from "@/components/feature/admin-events/shift-plan-actions";
-import { buildRoleColumns } from "@/lib/events/shift-plan";
+import {
+  buildRoleColumns,
+  intersectTimeRanges,
+  findFirstFreeSubRange,
+} from "@/lib/events/shift-plan";
+import {
+  ShiftDialog,
+  type HelperRoleOption,
+} from "@/components/feature/admin-events/shift-dialog";
+import { timeInputValue } from "@/components/ui/time-picker";
 
 export type { PlanDay, PlanShift };
 
-type ActiveDrag = { meepleId: string; displayName: string } | null;
+type ActiveDrag = {
+  meepleId: string;
+  displayName: string;
+  roleId: string;
+  startsAt: string;
+  endsAt: string;
+} | null;
 
 /**
  * Outlook-artiger Schichtplan-Kalender (#157–#161) — Tab pro Event-Tag,
@@ -47,28 +62,59 @@ type ActiveDrag = { meepleId: string; displayName: string } | null;
  * teilen sich dieselbe serverseitige Validierung (assignHelperToShift).
  */
 export function ShiftPlanEditor({
+  eventId,
   days,
-  event,
   shifts,
+  helperRoles,
   pool,
   bookings,
 }: {
+  eventId: string;
   days: PlanDay[];
-  event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
+  helperRoles: HelperRoleOption[];
   pool: Record<string, PoolMeeple[]>;
   bookings: Record<string, PlanBooking[]>;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Ausgewählter Tag steht in der URL (?tag=<dayId>), damit ein Reload auf
+  // demselben Tag landet statt immer auf dem ersten.
+  const [selectedDayId, setSelectedDayId] = useState(() => {
+    const fromUrl = searchParams.get("tag");
+    return fromUrl && days.some((day) => day.id === fromUrl)
+      ? fromUrl
+      : (days[0]?.id ?? "");
+  });
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Aus einer Zellen-Auswahl im Grid heraus programmatisch geöffneter
+   * Schicht-anlegen-Dialog (Schnellanlage), vorausgefüllt mit Tag + Ziel-
+   * Zeit der Auswahl. */
+  const [pendingRange, setPendingRange] = useState<{
+    dayId: string;
+    startsAt: Date;
+    endsAt: Date;
+  } | null>(null);
 
   if (days.length === 0) return null;
 
   function handleDragStart(dragEvent: DragStartEvent) {
     const data = dragEvent.active.data.current as PoolDragData | undefined;
     if (!data) return;
-    setActiveDrag({ meepleId: data.meepleId, displayName: data.displayName });
+    const entry = pool[data.dayId]?.find(
+      (candidate) =>
+        candidate.meepleId === data.meepleId &&
+        candidate.roleId === data.roleId,
+    );
+    setActiveDrag({
+      meepleId: data.meepleId,
+      displayName: data.displayName,
+      roleId: data.roleId,
+      startsAt: entry?.availabilityStartsAt ?? "",
+      endsAt: entry?.availabilityEndsAt ?? "",
+    });
     setError(null);
   }
 
@@ -89,13 +135,59 @@ export function ShiftPlanEditor({
     const shift = shifts.find((s) => s.id === dropData.shiftId);
     if (!shift) return;
 
-    // The block defaults to the Shift's own target period; the resize
-    // handles (#160) narrow it afterwards.
+    // Default block darf nicht einfach der volle Ziel-Zeitraum der Schicht
+    // sein — reicht die gemeldete Verfügbarkeit dieser Person nicht so weit,
+    // schlägt die serverseitige Prüfung sonst mit einer für die Admin kaum
+    // nachvollziehbaren Fehlermeldung fehl (Bugreport). Also erst auf die
+    // Schnittmenge mit der eigenen Verfügbarkeit einengen.
+    const poolEntry = pool[dropData.dayId]?.find(
+      (candidate) =>
+        candidate.meepleId === dragData.meepleId &&
+        candidate.roleId === dragData.roleId,
+    );
+    const targetRange = {
+      start: new Date(shift.targetStartsAt),
+      end: new Date(shift.targetEndsAt),
+    };
+    const availableRange = poolEntry
+      ? intersectTimeRanges(targetRange, {
+          start: new Date(poolEntry.availabilityStartsAt),
+          end: new Date(poolEntry.availabilityEndsAt),
+        })
+      : targetRange;
+    if (!availableRange) {
+      setError("Der Zeitblock liegt außerhalb der gemeldeten Verfügbarkeit.");
+      return;
+    }
+
+    // Default block: die früheste noch freie Lücke im verfügbaren Zeitraum
+    // — nicht immer "nach dem letzten Block", denn eine zweite Zuweisung
+    // derselben Person kann genauso gut *vor* einer bestehenden fehlen
+    // (z. B. "Tobias am Anfang und am Ende"). Ohne (passende) Vorbelegung
+    // bleibt es beim vollen verfügbaren Zeitraum, die Resize-Griffe (#160)
+    // engen ihn danach weiter ein.
+    const existingForShift = (bookings[dropData.dayId] ?? []).filter(
+      (booking) => booking.shiftId === dropData.shiftId,
+    );
+    const freeRange = findFirstFreeSubRange(
+      availableRange,
+      existingForShift.map((booking) => ({
+        start: new Date(booking.startsAt),
+        end: new Date(booking.endsAt),
+      })),
+    );
+    if (!freeRange) {
+      setError(
+        "Für diese Schicht ist im verfügbaren Zeitraum kein freier Abschnitt mehr übrig.",
+      );
+      return;
+    }
+
     const result = await assignHelperToShift(
       dropData.shiftId,
       dragData.meepleId,
-      new Date(shift.targetStartsAt),
-      new Date(shift.targetEndsAt),
+      freeRange.start,
+      freeRange.end,
     );
     if ("error" in result) {
       setError(result.error);
@@ -104,9 +196,9 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
-  async function handleUnassign(shiftId: string, meepleId: string) {
+  async function handleUnassign(booking: PlanBooking) {
     setError(null);
-    const result = await unassignHelperFromShift(shiftId, meepleId);
+    const result = await unassignHelperFromShift(booking.id, booking.shiftId);
     if ("error" in result) {
       setError(result.error);
       return;
@@ -115,19 +207,21 @@ export function ShiftPlanEditor({
   }
 
   async function handleResize(
-    shiftId: string,
-    meepleId: string,
+    booking: PlanBooking,
     startsAt: Date,
     endsAt: Date,
   ) {
     setError(null);
-    // Re-uses assignHelperToShift: an upsert with the same hard validations
-    // (availability boundary, no overlap with the person's other blocks).
+    // Re-uses assignHelperToShift: dieselben harten Validierungen
+    // (Verfügbarkeits-Grenze, keine Überschneidung mit anderen Blöcken der
+    // Person) — bookingId sorgt dafür, dass genau dieser Block umterminiert
+    // wird statt ein neuer zu entstehen.
     const result = await assignHelperToShift(
-      shiftId,
-      meepleId,
+      booking.shiftId,
+      booking.meepleId,
       startsAt,
       endsAt,
+      booking.id,
     );
     if ("error" in result) {
       setError(result.error);
@@ -136,10 +230,48 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
+  async function handleMove(
+    booking: PlanBooking,
+    startsAt: Date,
+    endsAt: Date,
+    slotIndex: number,
+  ) {
+    setError(null);
+    // Zeit und Spalte in einem Rutsch: Zeit läuft über dieselbe Validierung
+    // wie Resize, die Spalte ist rein optisch und wird nur mitgeschrieben.
+    const result = await assignHelperToShift(
+      booking.shiftId,
+      booking.meepleId,
+      startsAt,
+      endsAt,
+      booking.id,
+      slotIndex,
+    );
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    router.refresh();
+  }
+
+  function handleDayChange(dayId: string) {
+    setSelectedDayId(dayId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tag", dayId);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <Tabs defaultValue={days[0].id}>
-        <TabsList variant="line">
+    <DndContext
+      id="shift-plan-editor"
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <Tabs value={selectedDayId} onValueChange={handleDayChange}>
+        <TabsList
+          variant="line"
+          className="bg-background sticky top-0 z-30 py-1"
+        >
           {days.map((day) => (
             <TabsTrigger key={day.id} value={day.id}>
               {formatDateMedium(day.date)}
@@ -155,6 +287,32 @@ export function ShiftPlanEditor({
               value={day.id}
               className="flex flex-col gap-2"
             >
+              <div className="flex justify-end">
+                <ShiftDialog
+                  eventId={eventId}
+                  helperRoles={helperRoles}
+                  days={days}
+                  defaultDayId={day.id}
+                />
+              </div>
+              {pendingRange?.dayId === day.id && (
+                <ShiftDialog
+                  eventId={eventId}
+                  helperRoles={helperRoles}
+                  days={days}
+                  defaultDayId={day.id}
+                  defaultStartTime={timeInputValue(
+                    pendingRange.startsAt.toISOString(),
+                  )}
+                  defaultEndTime={timeInputValue(
+                    pendingRange.endsAt.toISOString(),
+                  )}
+                  open
+                  onOpenChange={(open) => {
+                    if (!open) setPendingRange(null);
+                  }}
+                />
+              )}
               <HelperPoolBar
                 dayId={day.id}
                 columns={columns}
@@ -163,11 +321,23 @@ export function ShiftPlanEditor({
               />
               <ShiftPlanGrid
                 day={day}
-                event={event}
                 shifts={dayShifts}
                 bookings={bookings[day.id] ?? []}
                 onUnassign={handleUnassign}
                 onResize={handleResize}
+                onMove={handleMove}
+                onSelectRange={(startsAt, endsAt) =>
+                  setPendingRange({ dayId: day.id, startsAt, endsAt })
+                }
+                activeAvailability={
+                  activeDrag
+                    ? {
+                        roleId: activeDrag.roleId,
+                        startsAt: activeDrag.startsAt,
+                        endsAt: activeDrag.endsAt,
+                      }
+                    : null
+                }
               />
             </TabsContent>
           );

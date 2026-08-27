@@ -71,18 +71,12 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
   return { success: true as const };
 }
 
+/** Löscht die Schicht mitsamt ihren Zuweisungen — `ShiftBooking.shiftId` hat
+ * `onDelete: Cascade`, ein vorheriger Block "erst Buchungen entfernen" hatte
+ * Löschen belegter Schichten faktisch unmöglich gemacht (Bugreport). Die
+ * Bestätigungsabfrage vor dem Klick ist die einzige Absicherung. */
 export async function deleteShift(shiftId: string) {
   await requirePermission("events:manage");
-
-  const bookingCount = await prisma.shiftBooking.count({
-    where: { shiftId },
-  });
-
-  if (bookingCount > 0) {
-    return {
-      error: "Diese Schicht hat bereits Buchungen — erst diese entfernen.",
-    };
-  }
 
   const shift = await prisma.shift.delete({ where: { id: shiftId } });
 

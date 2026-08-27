@@ -15,6 +15,12 @@ const VALID_INPUT = {
 };
 
 describe("setHelperAvailability", () => {
+  beforeEach(() => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "INTERNAL", helpersWanted: false },
+    } as never);
+  });
+
   it("rejects an end before or equal to the start", async () => {
     const result = await setHelperAvailability({
       ...VALID_INPUT,
@@ -67,6 +73,50 @@ describe("setHelperAvailability", () => {
         },
       },
     });
+  });
+
+  it("rejects an unknown day", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue(null);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({ error: "Tag nicht gefunden." });
+    expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects an Entwurf-Event without an open helper request", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "DRAFT", helpersWanted: false },
+    } as never);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({
+      error: "Für dieses Event ist die Helferplanung noch nicht freigegeben.",
+    });
+    expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+  });
+
+  it("allows an Entwurf-Event once helpersWanted is set — recruiting may start before release", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "DRAFT", helpersWanted: true },
+    } as never);
+    prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({ success: true });
+  });
+
+  it("allows a PUBLIC event", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "PUBLIC", helpersWanted: false },
+    } as never);
+    prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({ success: true });
   });
 });
 

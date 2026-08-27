@@ -25,7 +25,9 @@ export default async function AdminEventDetailPage({
           orderBy: { date: "asc" },
           include: {
             availabilities: {
-              include: {
+              select: {
+                startsAt: true,
+                endsAt: true,
                 meeple: { select: { id: true, displayName: true } },
                 roles: { select: { roleId: true } },
               },
@@ -39,10 +41,12 @@ export default async function AdminEventDetailPage({
             day: { select: { date: true } },
             bookings: {
               select: {
-                uncertain: true,
+                id: true,
+                confirmedAt: true,
                 meepleId: true,
                 startsAt: true,
                 endsAt: true,
+                slotIndex: true,
                 meeple: { select: { displayName: true } },
               },
             },
@@ -92,6 +96,7 @@ export default async function AdminEventDetailPage({
     const forDay = (bookingsByDay[shift.dayId] ??= []);
     for (const booking of shift.bookings) {
       forDay.push({
+        id: booking.id,
         shiftId: shift.id,
         roleId: shift.roleId,
         dayId: shift.dayId,
@@ -99,6 +104,8 @@ export default async function AdminEventDetailPage({
         displayName: booking.meeple.displayName,
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),
+        confirmedAt: booking.confirmedAt?.toISOString() ?? null,
+        slotIndex: booking.slotIndex,
       });
     }
   }
@@ -122,6 +129,8 @@ export default async function AdminEventDetailPage({
           roleId: role.roleId,
           alreadyPlanned:
             plannedMeepleIdsByDay[day.id]?.has(availability.meeple.id) ?? false,
+          availabilityStartsAt: availability.startsAt.toISOString(),
+          availabilityEndsAt: availability.endsAt.toISOString(),
         })),
       ),
     ]),
@@ -144,6 +153,9 @@ export default async function AdminEventDetailPage({
       eventTitle={event.title}
       eventStartsAt={event.startsAt.toISOString()}
       eventEndsAt={event.endsAt?.toISOString() ?? null}
+      eventLocation={event.location}
+      eventHelpersWanted={event.helpersWanted}
+      eventVisibility={event.visibility}
       days={days}
       shifts={shifts}
       helperRoles={helperRoles}

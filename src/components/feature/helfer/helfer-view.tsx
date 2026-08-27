@@ -1,10 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Table,
   TableBody,
@@ -14,9 +19,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  bookShift,
-  cancelBooking,
-  updateBookingCertainty,
+  confirmOwnShiftBooking,
+  declineOwnShiftBooking,
 } from "@/components/feature/helfer/actions";
 import {
   markAttending,
@@ -28,203 +32,194 @@ import {
   type HelperRoleOption,
   type OwnAvailability,
 } from "@/components/feature/helfer/helper-availability-form";
-import { formatDateTimeRange } from "@/lib/utils/format";
+import {
+  formatDateMedium,
+  formatWeekdayDateTimeRange,
+} from "@/lib/utils/format";
 
 export type HelferShiftRow = {
+  /** Shift-Id, für Bestätigen/Ablehnen — nicht eindeutig pro Zeile, da ein
+   * Meeple mehrfach in derselben Schicht eingetragen sein kann. */
   id: string;
+  /** Eigene Buchungs-Id, als React-Key. */
+  bookingId: string;
+  eventTitle: string;
   roleName: string;
   startsAt: string;
   endsAt: string;
-  capacity: number;
-  booked: number;
-  isFull: boolean;
-  ownBooking: { uncertain: boolean } | null;
+  confirmedAt: string | null;
 };
 
-export type HelferEventOption = {
+export type HelferEventGroup = {
   id: string;
   title: string;
+  startsAt: string;
+  location: string | null;
+  days: EventDayOption[];
+  isAttendingAsExplainer: boolean;
 };
 
 export function HelferView({
   events,
-  selectedEventId,
-  days,
-  helperRoles,
+  dayRolesByDayId,
   ownAvailabilityByDayId,
-  shifts,
+  assignedShifts,
   isExplainer,
-  isAttendingAsExplainer,
 }: {
-  events: HelferEventOption[];
-  selectedEventId: string | null;
-  days: EventDayOption[];
-  helperRoles: HelperRoleOption[];
+  events: HelferEventGroup[];
+  dayRolesByDayId: Record<string, HelperRoleOption[]>;
   ownAvailabilityByDayId: Record<string, OwnAvailability>;
-  shifts: HelferShiftRow[];
+  assignedShifts: HelferShiftRow[];
   isExplainer: boolean;
-  isAttendingAsExplainer: boolean;
 }) {
-  const router = useRouter();
   const { run, pending: isPending, error } = useAction();
-
-  function selectEvent(eventId: string) {
-    router.push(`/helfer?event=${eventId}`);
-  }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
         eyebrow="Event-Betrieb"
         title="Helferplan"
-        description="Trag dich in offene Schichten ein — sicher oder vorläufig."
+        description="Melde deine Verfügbarkeit und bestätige zugewiesene Schichten."
       />
-
-      {events.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          {events.map((event) => (
-            <Button
-              key={event.id}
-              size="sm"
-              variant={event.id === selectedEventId ? "default" : "outline"}
-              onClick={() => selectEvent(event.id)}
-            >
-              {event.title}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {selectedEventId && days.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="font-serif text-lg font-bold">Deine Verfügbarkeit</h2>
-          {days.map((day) => (
-            <HelperAvailabilityForm
-              key={day.id}
-              day={day}
-              helperRoles={helperRoles}
-              own={ownAvailabilityByDayId[day.id] ?? null}
-            />
-          ))}
-        </div>
-      )}
-
-      {isExplainer && selectedEventId && (
-        <div className="bg-primary/10 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
-          <span>
-            {isAttendingAsExplainer
-              ? "Du bist heute als Erklärbär angemeldet."
-              : "Du kannst dich für dieses Event als Erklärbär anmelden."}
-          </span>
-          <Button
-            size="sm"
-            variant={isAttendingAsExplainer ? "outline" : "default"}
-            disabled={isPending}
-            onClick={() =>
-              run(() =>
-                isAttendingAsExplainer
-                  ? markNotAttending(selectedEventId)
-                  : markAttending(selectedEventId),
-              )
-            }
-          >
-            {isAttendingAsExplainer
-              ? "Abmelden"
-              : "Ich bin heute als Erklärbär da"}
-          </Button>
-        </div>
-      )}
 
       {events.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           Aktuell ist kein Event geplant.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Typ</TableHead>
-                <TableHead>Zeit</TableHead>
-                <TableHead>Besetzt</TableHead>
-                <TableHead className="text-right"> </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shifts.map((shift) => (
-                <TableRow
-                  key={shift.id}
-                  className={shift.ownBooking ? "bg-primary/5" : undefined}
-                >
-                  <TableCell className="font-medium">
-                    {shift.roleName}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {formatDateTimeRange(shift.startsAt, shift.endsAt)}
-                  </TableCell>
-                  <TableCell>
-                    {shift.ownBooking ? (
-                      <StatusPill
-                        label={`${shift.booked}/${shift.capacity} · ${
-                          shift.ownBooking.uncertain
-                            ? "du (vorläufig)"
-                            : "du (sicher)"
-                        }`}
-                        tone={
-                          shift.ownBooking.uncertain ? "warning" : "positive"
-                        }
-                      />
-                    ) : (
-                      <span className="text-sm">
-                        {shift.booked}/{shift.capacity}
+        <Accordion defaultValue={[events[0].id]}>
+          {events.map((event) => (
+            <AccordionItem
+              key={event.id}
+              value={event.id}
+              className="bg-card overflow-hidden rounded-lg border"
+            >
+              <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 hover:no-underline">
+                <span className="flex flex-wrap items-baseline gap-2 text-left">
+                  <span className="font-serif text-base font-bold">
+                    {event.title}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    {formatDateMedium(event.startsAt)}
+                    {event.location ? ` · ${event.location}` : ""}
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionPanel>
+                <div className="flex flex-col px-4">
+                  {event.days.map((day) => (
+                    <HelperAvailabilityForm
+                      key={day.id}
+                      day={day}
+                      dayRoles={dayRolesByDayId[day.id] ?? []}
+                      own={ownAvailabilityByDayId[day.id] ?? null}
+                    />
+                  ))}
+
+                  {isExplainer && (
+                    <div className="bg-primary/10 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
+                      <span>
+                        {event.isAttendingAsExplainer
+                          ? "Du bist zu diesem Event als Erklärbär angemeldet."
+                          : "Du kannst dich für dieses Event als Erklärbär anmelden."}
                       </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {shift.ownBooking ? (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() =>
-                            run(() =>
-                              updateBookingCertainty(
-                                shift.id,
-                                !shift.ownBooking!.uncertain,
-                              ),
-                            )
-                          }
-                        >
-                          {shift.ownBooking.uncertain
-                            ? "Als sicher markieren"
-                            : "Als vorläufig markieren"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() => run(() => cancelBooking(shift.id))}
-                        >
-                          Abmelden
-                        </Button>
-                      </div>
-                    ) : shift.isFull ? (
-                      <span className="text-muted-foreground">voll</span>
-                    ) : (
                       <Button
                         size="sm"
+                        variant={
+                          event.isAttendingAsExplainer ? "outline" : "default"
+                        }
                         disabled={isPending}
-                        onClick={() => run(() => bookShift(shift.id, false))}
+                        onClick={() =>
+                          run(() =>
+                            event.isAttendingAsExplainer
+                              ? markNotAttending(event.id)
+                              : markAttending(event.id),
+                          )
+                        }
                       >
-                        Zusagen
+                        {event.isAttendingAsExplainer
+                          ? "Abmelden"
+                          : "Ich bin da"}
                       </Button>
-                    )}
-                  </TableCell>
+                    </div>
+                  )}
+                </div>
+              </AccordionPanel>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
+
+      {assignedShifts.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">
+            Deine zugewiesenen Schichten
+          </h2>
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Event</TableHead>
+                  <TableHead>Typ</TableHead>
+                  <TableHead>Zeit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right"> </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {assignedShifts.map((shift) => {
+                  const confirmed = shift.confirmedAt !== null;
+                  return (
+                    <TableRow key={shift.bookingId} className="bg-primary/5">
+                      <TableCell className="text-muted-foreground">
+                        {shift.eventTitle}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {shift.roleName}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatWeekdayDateTimeRange(
+                          shift.startsAt,
+                          shift.endsAt,
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <StatusPill
+                          label={confirmed ? "bestätigt" : "unbestätigt"}
+                          tone={confirmed ? "positive" : "warning"}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {!confirmed && (
+                            <Button
+                              size="sm"
+                              disabled={isPending}
+                              onClick={() =>
+                                run(() => confirmOwnShiftBooking(shift.id))
+                              }
+                            >
+                              Bestätigen
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() =>
+                              run(() => declineOwnShiftBooking(shift.id))
+                            }
+                          >
+                            Ablehnen
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 

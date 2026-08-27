@@ -124,19 +124,7 @@ describe("updateShift", () => {
 });
 
 describe("deleteShift", () => {
-  it("rejects deleting a shift that has bookings", async () => {
-    prismaMock.shiftBooking.count.mockResolvedValue(1);
-
-    const result = await deleteShift("shift-1");
-
-    expect(result).toEqual({
-      error: "Diese Schicht hat bereits Buchungen — erst diese entfernen.",
-    });
-    expect(prismaMock.shift.delete).not.toHaveBeenCalled();
-  });
-
-  it("deletes a shift without bookings", async () => {
-    prismaMock.shiftBooking.count.mockResolvedValue(0);
+  it("deletes a shift together with its bookings (cascade)", async () => {
     prismaMock.shift.delete.mockResolvedValue({
       id: "shift-1",
       eventId: "event-1",

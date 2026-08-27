@@ -5,11 +5,12 @@ import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField } from "@/components/ui/field";
+import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import {
   createShift,
   updateShift,
 } from "@/components/feature/admin-events/shift-actions";
-import { formatDateMedium } from "@/lib/utils/format";
+import { formatDateMedium, formatTimePlain } from "@/lib/utils/format";
 
 export type EditableShift = {
   id: string;
@@ -22,10 +23,19 @@ export type EditableShift = {
 };
 
 export type HelperRoleOption = { id: string; name: string };
-export type EventDayOption = { id: string; date: string };
+export type EventDayOption = {
+  id: string;
+  date: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
 
-function toDateTimeLocal(iso: string) {
-  return iso.slice(0, 16);
+/** Kombiniert das Kalenderdatum des gewählten Tags mit einer "HH:mm"-Uhrzeit
+ * zum Date, das die Action erwartet — Ziel-Beginn/-Ende sind reine
+ * Uhrzeiten, das Datum kommt aus der Tag-Auswahl, nicht aus einem eigenen
+ * datetime-local-Feld. */
+function toDateTime(dateIso: string, time: string): Date {
+  return new Date(`${dateIso.slice(0, 10)}T${time}:00`);
 }
 
 export function ShiftDialog({
@@ -33,48 +43,75 @@ export function ShiftDialog({
   shift,
   helperRoles,
   days,
+  defaultDayId,
+  defaultStartTime,
+  defaultEndTime,
+  open,
+  onOpenChange,
 }: {
   eventId: string;
   shift?: EditableShift;
   helperRoles: HelperRoleOption[];
   days: EventDayOption[];
+  /** Tag, mit dem sich anlegen befüllt — z. B. der Tab, aus dem heraus der
+   * Dialog im Schichtplan-Editor geöffnet wurde. Ohne Wirkung beim Bearbeiten
+   * einer bestehenden Schicht (die behält ihren eigenen Tag). */
+  defaultDayId?: string;
+  /** Vorausgefüllte Ziel-Zeiten aus einer Zellen-Auswahl im Schichtplan-Grid
+   * (Schnellanlage) — nur beim Anlegen wirksam, HH:mm. */
+  defaultStartTime?: string;
+  defaultEndTime?: string;
+  /** Gesteuerter Open-State statt eigenem Trigger — für die programmatische
+   * Öffnung nach einer Zellen-Auswahl. Ohne diese Props zeigt der Dialog wie
+   * gewohnt seinen eigenen Trigger-Button (Anlegen/Bearbeiten). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const isEdit = Boolean(shift);
-  const [dayId, setDayId] = useState(shift?.dayId ?? days[0]?.id ?? "");
+  const isControlled = open !== undefined;
+  const initialDayId = () => shift?.dayId ?? defaultDayId ?? days[0]?.id ?? "";
+  const [dayId, setDayId] = useState(initialDayId);
   const [roleId, setRoleId] = useState(
     shift?.roleId ?? helperRoles[0]?.id ?? "",
   );
   const [targetStartsAt, setTargetStartsAt] = useState(
-    shift ? toDateTimeLocal(shift.targetStartsAt) : "",
+    shift ? timeInputValue(shift.targetStartsAt) : (defaultStartTime ?? ""),
   );
   const [targetEndsAt, setTargetEndsAt] = useState(
-    shift ? toDateTimeLocal(shift.targetEndsAt) : "",
+    shift ? timeInputValue(shift.targetEndsAt) : (defaultEndTime ?? ""),
   );
   const [capacity, setCapacity] = useState(String(shift?.capacity ?? 1));
+  const selectedDay = days.find((day) => day.id === dayId);
 
   function reset() {
-    setDayId(shift?.dayId ?? days[0]?.id ?? "");
+    setDayId(initialDayId());
     setRoleId(shift?.roleId ?? helperRoles[0]?.id ?? "");
-    setTargetStartsAt(shift ? toDateTimeLocal(shift.targetStartsAt) : "");
-    setTargetEndsAt(shift ? toDateTimeLocal(shift.targetEndsAt) : "");
+    setTargetStartsAt(
+      shift ? timeInputValue(shift.targetStartsAt) : (defaultStartTime ?? ""),
+    );
+    setTargetEndsAt(
+      shift ? timeInputValue(shift.targetEndsAt) : (defaultEndTime ?? ""),
+    );
     setCapacity(String(shift?.capacity ?? 1));
   }
 
   return (
     <ActionDialog
       trigger={
-        isEdit ? (
+        isControlled ? undefined : isEdit ? (
           <Button variant="outline" size="sm" className="gap-1.5">
             <Pencil className="size-4" />
             Bearbeiten
           </Button>
         ) : (
-          <Button className="gap-1.5">
+          <Button size="sm" className="gap-1.5">
             <Plus className="size-4" />
             Schicht anlegen
           </Button>
         )
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title={isEdit ? "Schicht bearbeiten" : "Neue Schicht"}
       description="Bedarf an einer Helferrolle für einen Event-Tag — Stellenzahl plus eigener Ziel-Zeitraum, unabhängig vom Event-Zeitraum."
       submitLabel={isEdit ? "Speichern" : "Schicht anlegen"}
@@ -85,11 +122,12 @@ export function ShiftDialog({
         Boolean(targetEndsAt)
       }
       action={() => {
+        const dayDate = days.find((day) => day.id === dayId)?.date ?? "";
         const input = {
           dayId,
           roleId,
-          targetStartsAt: new Date(targetStartsAt),
-          targetEndsAt: new Date(targetEndsAt),
+          targetStartsAt: toDateTime(dayDate, targetStartsAt),
+          targetEndsAt: toDateTime(dayDate, targetEndsAt),
           capacity: Number(capacity),
         };
         return shift
@@ -112,6 +150,11 @@ export function ShiftDialog({
           ))}
         </select>
       </Field>
+      <p className="text-muted-foreground -mt-2 text-xs">
+        {selectedDay?.startsAt && selectedDay.endsAt
+          ? `Öffnungszeiten: ${formatTimePlain(selectedDay.startsAt)} – ${formatTimePlain(selectedDay.endsAt)}`
+          : "Für diesen Tag sind noch keine Öffnungszeiten hinterlegt."}
+      </p>
       <Field label="Rolle" htmlFor="shift-role">
         <select
           id="shift-role"
@@ -126,20 +169,18 @@ export function ShiftDialog({
           ))}
         </select>
       </Field>
-      <TextField
+      <TimePicker
         id="shift-target-starts"
         label="Ziel-Beginn"
-        type="datetime-local"
         value={targetStartsAt}
-        onChange={(event) => setTargetStartsAt(event.target.value)}
+        onChange={setTargetStartsAt}
         required
       />
-      <TextField
+      <TimePicker
         id="shift-target-ends"
         label="Ziel-Ende"
-        type="datetime-local"
         value={targetEndsAt}
-        onChange={(event) => setTargetEndsAt(event.target.value)}
+        onChange={setTargetEndsAt}
         required
       />
       <TextField

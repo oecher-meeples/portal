@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import { useAction } from "@/components/ui/use-action";
 import { updateEventDayTimes } from "@/components/feature/admin-events/event-day-actions";
 import { formatDateMedium } from "@/lib/utils/format";
@@ -15,12 +13,6 @@ export type EditableEventDay = {
   endsAt: string | null;
 };
 
-/** `time` inputs need "HH:mm". */
-function toTimeInput(iso: string | null) {
-  if (!iso) return "";
-  return new Date(iso).toTimeString().slice(0, 5);
-}
-
 /** Combines the day's calendar date (UTC midnight, see `enumerateEventDates`)
  * with a local "HH:mm" time input into the `Date` the action expects. */
 function toDateTime(dateIso: string, time: string): Date | null {
@@ -29,49 +21,50 @@ function toDateTime(dateIso: string, time: string): Date | null {
 }
 
 /** One row: sets the opening time for a single event day (#150), independent
- * from the Ziel-Zeitraum shift roles get per day/role (#153). */
+ * from the Ziel-Zeitraum shift roles get per day/role (#153). Speichert
+ * automatisch beim Verlassen eines Felds (onBlur) statt über einen eigenen
+ * Speichern-Button. */
 export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
-  const [startsAt, setStartsAt] = useState(toTimeInput(day.startsAt));
-  const [endsAt, setEndsAt] = useState(toTimeInput(day.endsAt));
+  const [startsAt, setStartsAt] = useState(timeInputValue(day.startsAt));
+  const [endsAt, setEndsAt] = useState(timeInputValue(day.endsAt));
   const { run, pending, error } = useAction();
 
+  function save() {
+    run(() =>
+      updateEventDayTimes(day.id, {
+        startsAt: toDateTime(day.date, startsAt),
+        endsAt: toDateTime(day.date, endsAt),
+      }),
+    );
+  }
+
   return (
-    <form
-      className="flex flex-wrap items-end gap-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        run(() =>
-          updateEventDayTimes(day.id, {
-            startsAt: toDateTime(day.date, startsAt),
-            endsAt: toDateTime(day.date, endsAt),
-          }),
-        );
-      }}
-    >
+    <div className="flex flex-wrap items-end gap-3">
       <span className="w-32 text-sm font-medium">
         {formatDateMedium(day.date)}
       </span>
-      <TextField
+      <TimePicker
         id={`event-day-${day.id}-starts`}
         label="Beginn"
-        type="time"
         value={startsAt}
-        onChange={(fieldEvent) => setStartsAt(fieldEvent.target.value)}
+        onChange={setStartsAt}
+        onBlur={save}
         fieldClassName="w-32"
+        disabled={pending}
       />
-      <TextField
+      <TimePicker
         id={`event-day-${day.id}-ends`}
         label="Ende"
-        type="time"
         value={endsAt}
-        onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
+        onChange={setEndsAt}
+        onBlur={save}
         fieldClassName="w-32"
+        disabled={pending}
       />
-      <Button type="submit" variant="outline" size="sm" disabled={pending}>
-        <Save className="size-4" />
-        Speichern
-      </Button>
+      {pending && (
+        <span className="text-muted-foreground text-xs">Speichert…</span>
+      )}
       {error && <span className="text-destructive text-xs">{error}</span>}
-    </form>
+    </div>
   );
 }

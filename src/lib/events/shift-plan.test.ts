@@ -1,50 +1,156 @@
 import { describe, expect, it } from "vitest";
 import {
   computeVisibleRange,
+  intersectTimeRanges,
+  findFirstFreeSubRange,
   buildTimeSlots,
   buildRoleColumns,
   totalColumnCount,
   computeShiftCoverage,
+  isSlotStaffable,
+  resolveSelectedTimeRange,
+  exceedsRecommendedShiftLength,
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
-  it("extends the day's opening hours by 4h on each side", () => {
-    const day = {
-      startsAt: new Date("2026-10-10T10:00:00Z"),
-      endsAt: new Date("2026-10-10T18:00:00Z"),
-    };
-    const event = {
-      startsAt: new Date("2026-10-10T09:00:00Z"),
-      endsAt: new Date("2026-10-10T19:00:00Z"),
-    };
+  it("spans the earliest shift start -1h to the latest shift end +1h", () => {
+    const day = { date: new Date(2026, 9, 10) };
+    const shiftsForDay = [
+      {
+        targetStartsAt: new Date(2026, 9, 10, 10, 0),
+        targetEndsAt: new Date(2026, 9, 10, 14, 0),
+      },
+      {
+        targetStartsAt: new Date(2026, 9, 10, 13, 0),
+        targetEndsAt: new Date(2026, 9, 10, 18, 0),
+      },
+    ];
 
-    expect(computeVisibleRange(day, event)).toEqual({
-      start: new Date("2026-10-10T06:00:00Z"),
-      end: new Date("2026-10-10T22:00:00Z"),
+    expect(computeVisibleRange(day, shiftsForDay)).toEqual({
+      start: new Date(2026, 9, 10, 9, 0),
+      end: new Date(2026, 9, 10, 19, 0),
     });
   });
 
-  it("falls back to the event's own start/end when the day has no opening hours", () => {
-    const day = { startsAt: null, endsAt: null };
-    const event = {
-      startsAt: new Date("2026-10-10T09:00:00Z"),
-      endsAt: new Date("2026-10-11T19:00:00Z"),
-    };
+  it("defaults to 16–24 Uhr on a weekday without shifts", () => {
+    const day = { date: new Date(2026, 9, 8) }; // Donnerstag
 
-    expect(computeVisibleRange(day, event)).toEqual({
-      start: new Date("2026-10-10T05:00:00Z"),
-      end: new Date("2026-10-11T23:00:00Z"),
+    expect(computeVisibleRange(day, [])).toEqual({
+      start: new Date(2026, 9, 8, 16, 0),
+      end: new Date(2026, 9, 9, 0, 0),
     });
   });
 
-  it("falls back to a single instant when the event has no end date", () => {
-    const day = { startsAt: null, endsAt: null };
-    const event = { startsAt: new Date("2026-10-10T09:00:00Z"), endsAt: null };
+  it("defaults to 8–24 Uhr on a weekend day without shifts", () => {
+    const day = { date: new Date(2026, 9, 10) }; // Samstag
 
-    expect(computeVisibleRange(day, event)).toEqual({
-      start: new Date("2026-10-10T05:00:00Z"),
-      end: new Date("2026-10-10T13:00:00Z"),
+    expect(computeVisibleRange(day, [])).toEqual({
+      start: new Date(2026, 9, 10, 8, 0),
+      end: new Date(2026, 9, 11, 0, 0),
     });
+  });
+});
+
+describe("intersectTimeRanges", () => {
+  it("returns the overlap of two ranges", () => {
+    const a = {
+      start: new Date(2026, 9, 10, 10, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    };
+    const b = {
+      start: new Date(2026, 9, 10, 12, 0),
+      end: new Date(2026, 9, 10, 18, 0),
+    };
+
+    expect(intersectTimeRanges(a, b)).toEqual({
+      start: new Date(2026, 9, 10, 12, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    });
+  });
+
+  it("returns null when the ranges don't overlap", () => {
+    const a = {
+      start: new Date(2026, 9, 10, 10, 0),
+      end: new Date(2026, 9, 10, 12, 0),
+    };
+    const b = {
+      start: new Date(2026, 9, 10, 12, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    };
+
+    expect(intersectTimeRanges(a, b)).toBeNull();
+  });
+});
+
+describe("findFirstFreeSubRange", () => {
+  const available = {
+    start: new Date(2026, 9, 10, 11, 0),
+    end: new Date(2026, 9, 10, 18, 0),
+  };
+
+  it("returns the full range when nothing is booked yet", () => {
+    expect(findFirstFreeSubRange(available, [])).toEqual(available);
+  });
+
+  it("finds the gap before an existing booking, not just after it", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 16, 0),
+        end: new Date(2026, 9, 10, 17, 30),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toEqual({
+      start: new Date(2026, 9, 10, 11, 0),
+      end: new Date(2026, 9, 10, 16, 0),
+    });
+  });
+
+  it("finds the gap after the only booking once the earlier gap is filled too", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 11, 0),
+        end: new Date(2026, 9, 10, 16, 0),
+      },
+      {
+        start: new Date(2026, 9, 10, 16, 0),
+        end: new Date(2026, 9, 10, 17, 30),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toEqual({
+      start: new Date(2026, 9, 10, 17, 30),
+      end: new Date(2026, 9, 10, 18, 0),
+    });
+  });
+
+  it("is unaffected by the order the booked ranges are passed in", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 17, 0),
+        end: new Date(2026, 9, 10, 18, 0),
+      },
+      {
+        start: new Date(2026, 9, 10, 11, 0),
+        end: new Date(2026, 9, 10, 14, 0),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toEqual({
+      start: new Date(2026, 9, 10, 14, 0),
+      end: new Date(2026, 9, 10, 17, 0),
+    });
+  });
+
+  it("returns null once every instant is already covered", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 11, 0),
+        end: new Date(2026, 9, 10, 18, 0),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toBeNull();
   });
 });
 
@@ -176,5 +282,107 @@ describe("computeShiftCoverage", () => {
     ];
 
     expect(computeShiftCoverage(single, bookings)).toBe(true);
+  });
+});
+
+describe("isSlotStaffable", () => {
+  const shiftsForRole = [
+    {
+      targetStartsAt: new Date("2026-10-10T10:00:00Z"),
+      targetEndsAt: new Date("2026-10-10T14:00:00Z"),
+    },
+  ];
+
+  it("is true for a slot inside the target window", () => {
+    expect(
+      isSlotStaffable(new Date("2026-10-10T11:00:00Z"), shiftsForRole),
+    ).toBe(true);
+  });
+
+  it("is false for a slot before the target window", () => {
+    expect(
+      isSlotStaffable(new Date("2026-10-10T08:00:00Z"), shiftsForRole),
+    ).toBe(false);
+  });
+
+  it("is false for a slot at or after the target end", () => {
+    expect(
+      isSlotStaffable(new Date("2026-10-10T14:00:00Z"), shiftsForRole),
+    ).toBe(false);
+  });
+
+  it("is true when at least one of several windows covers the slot", () => {
+    const twoWindows = [
+      ...shiftsForRole,
+      {
+        targetStartsAt: new Date("2026-10-10T16:00:00Z"),
+        targetEndsAt: new Date("2026-10-10T18:00:00Z"),
+      },
+    ];
+
+    expect(isSlotStaffable(new Date("2026-10-10T17:00:00Z"), twoWindows)).toBe(
+      true,
+    );
+  });
+
+  it("is false when there are no shifts for the role", () => {
+    expect(isSlotStaffable(new Date("2026-10-10T11:00:00Z"), [])).toBe(false);
+  });
+});
+
+describe("resolveSelectedTimeRange", () => {
+  const timeSlots = buildTimeSlots(
+    {
+      start: new Date("2026-10-10T08:00:00Z"),
+      end: new Date("2026-10-10T12:00:00Z"),
+    },
+    30,
+  );
+
+  it("uses the anchor and current slot regardless of drag direction", () => {
+    expect(resolveSelectedTimeRange(timeSlots, 1, 3, 30)).toEqual({
+      startsAt: timeSlots[1],
+      endsAt: new Date(timeSlots[3].getTime() + 30 * 60 * 1000),
+    });
+    expect(resolveSelectedTimeRange(timeSlots, 3, 1, 30)).toEqual({
+      startsAt: timeSlots[1],
+      endsAt: new Date(timeSlots[3].getTime() + 30 * 60 * 1000),
+    });
+  });
+
+  it("extends a single-slot selection by one step", () => {
+    expect(resolveSelectedTimeRange(timeSlots, 2, 2, 30)).toEqual({
+      startsAt: timeSlots[2],
+      endsAt: new Date(timeSlots[2].getTime() + 30 * 60 * 1000),
+    });
+  });
+});
+
+describe("exceedsRecommendedShiftLength", () => {
+  it("is false at exactly 6 hours", () => {
+    expect(
+      exceedsRecommendedShiftLength(
+        new Date(2026, 9, 10, 10, 0),
+        new Date(2026, 9, 10, 16, 0),
+      ),
+    ).toBe(false);
+  });
+
+  it("is true just above 6 hours", () => {
+    expect(
+      exceedsRecommendedShiftLength(
+        new Date(2026, 9, 10, 10, 0),
+        new Date(2026, 9, 10, 16, 1),
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for a short block", () => {
+    expect(
+      exceedsRecommendedShiftLength(
+        new Date(2026, 9, 10, 10, 0),
+        new Date(2026, 9, 10, 12, 0),
+      ),
+    ).toBe(false);
   });
 });

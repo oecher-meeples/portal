@@ -51,7 +51,10 @@ export async function hasOpenHelperRequest(): Promise<boolean> {
 }
 
 /** The earliest upcoming event with an open helper request, if any — feeds
- * the Dashboard-Karte's link target (#155). */
+ * the Dashboard-Karte's link target (#155). `helpersWanted` itself is the
+ * signal an admin uses to open Helferplanung to Meeples early, so it applies
+ * regardless of visibility — even an Entwurf-Event recruits helpers once
+ * this flag is set (see setHelperAvailability, same rule server-side). */
 export async function findOpenHelperRequestEvent() {
   return prisma.event.findFirst({
     where: {
@@ -60,6 +63,26 @@ export async function findOpenHelperRequestEvent() {
     },
     orderBy: { startsAt: "asc" },
     select: { id: true, title: true },
+  });
+}
+
+/** Kommende Events, die für ein eingeloggtes Meeple sichtbar sind — Intern,
+ * Öffentlich, oder Entwurf mit aktivem "Helfer suchen" (Helferplanung darf
+ * dort schon vor der eigentlichen Freigabe beginnen). Grundlage für
+ * /helfer, wo ein Meeple sich sonst für ein noch nicht freigegebenes Event
+ * melden könnte. */
+export function findUpcomingEventsVisibleToMembers<
+  S extends Record<string, boolean> = { id: true; title: true },
+>(select?: S) {
+  return prisma.event.findMany({
+    where: {
+      AND: [
+        { OR: [{ visibility: { not: "DRAFT" } }, { helpersWanted: true }] },
+        { OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }] },
+      ],
+    },
+    orderBy: { startsAt: "asc" },
+    select: (select ?? { id: true, title: true }) as S,
   });
 }
 
@@ -76,6 +99,26 @@ export async function findCurrentEvent() {
     },
     orderBy: { startsAt: "asc" },
     select: { id: true },
+  });
+}
+
+/** Öffentliche, noch kommende Events — Grundlage für die öffentliche
+ * Termine-Seite (/news, siehe lib/content/calendar.ts). Entwurf/Intern
+ * bleiben dort unsichtbar, siehe lib/events/visibility.ts. */
+export function findPublicUpcomingEvents(limit?: number) {
+  return prisma.event.findMany({
+    where: {
+      visibility: "PUBLIC",
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    take: limit,
+    select: {
+      slug: true,
+      title: true,
+      startsAt: true,
+      location: true,
+    },
   });
 }
 

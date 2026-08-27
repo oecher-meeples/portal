@@ -163,6 +163,34 @@ describe("createEvent", () => {
       data: expect.objectContaining({ helpersWanted: true }),
     });
   });
+
+  it("defaults visibility to DRAFT when omitted", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent(VALID_INPUT);
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ visibility: "DRAFT" }),
+    });
+  });
+
+  it("stores visibility when set", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent({ ...VALID_INPUT, visibility: "PUBLIC" });
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ visibility: "PUBLIC" }),
+    });
+  });
 });
 
 describe("updateEvent", () => {

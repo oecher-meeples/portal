@@ -141,17 +141,22 @@ function HelperRoleDialog({
       <Field
         label="Gewährte Permission"
         htmlFor={`helper-role-permission-${role?.id ?? "new"}`}
+        hint={
+          permissions.find(
+            (permission) => permission.key === grantsPermissionKey,
+          )?.description
+        }
       >
         <select
           id={`helper-role-permission-${role?.id ?? "new"}`}
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
           value={grantsPermissionKey}
           onChange={(event) => setGrantsPermissionKey(event.target.value)}
         >
           <option value="">Keine</option>
           {permissions.map((permission) => (
             <option key={permission.key} value={permission.key}>
-              {permission.key} — {permission.description}
+              {permission.key}
             </option>
           ))}
         </select>

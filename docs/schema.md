@@ -337,6 +337,7 @@ erDiagram
         DateTime endsAt
         String location
         Boolean helpersWanted
+        String visibility "PUBLIC, INTERNAL, DRAFT"
     }
 
     EventShelfAssignment {

@@ -117,6 +117,12 @@ enum DownloadStatus {
   OFFLINE
 }
 
+enum EventVisibility {
+  PUBLIC
+  INTERNAL
+  DRAFT
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -656,8 +662,8 @@ model GameHolding {
 /// `startsAt`/`endsAt` are a pure date range (no meaningful time-of-day) — actual
 /// opening times per calendar day live on `EventDay` (#150), set after creation.
 model Event {
-  id                   String    @id @default(cuid())
-  slug                 String    @unique
+  id                   String          @id @default(cuid())
+  slug                 String          @unique
   title                String
   startsAt             DateTime
   endsAt               DateTime?
@@ -665,13 +671,18 @@ model Event {
   /// Whether this event has a Bring&Buy flea market at all (#211) — separate
   /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
   /// always open and not tied to a specific event.
-  hasBringAndBuyMarket Boolean   @default(false)
+  hasBringAndBuyMarket Boolean         @default(false)
   /// Gilt für das ganze Event, nicht pro Tag (#155) — schaltet die
   /// Dashboard-Karte für Meeples frei und den "Helferplan"-Nav-Eintrag
   /// (nur solange das Event noch kommt, siehe hasOpenHelperRequest()).
-  helpersWanted        Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  helpersWanted        Boolean         @default(false)
+  /// Entwurf: nur für events:manage sichtbar. Intern: zusätzlich für
+  /// eingeloggte Meeples. Öffentlich: für alle, inkl. Gäste-Bereich und
+  /// öffentlicher Termine-Seite (/news). Default DRAFT — ein Event wird erst
+  /// nach bewusster Freigabe sichtbar, siehe lib/events/visibility.ts.
+  visibility           EventVisibility @default(DRAFT)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
   days                 EventDay[]
   shifts               Shift[]
@@ -799,24 +810,36 @@ model Shift {
   @@map("shifts")
 }
 
-/// A member's booking of a shift. `uncertain` marks an unsure commitment but still
-/// counts against capacity — the simplest rule that avoids overbooking.
+/// A member's booking of a shift — every row counts against capacity
+/// regardless of confirmation status, the simplest rule that avoids overbooking.
 /// `startsAt`/`endsAt` (#159) are this booking's own, individually movable
 /// time block — distinct from `Shift.targetStartsAt`/`targetEndsAt`, the
 /// container's overall target period. Defaults to the full target period on
 /// creation; the Schichtplan-Editor's resize handles (#160) narrow it.
+/// `confirmedAt` (#Helferplan-Zuweisungsbestätigung): eine Zuweisung entsteht
+/// durch den Admin im Schichtplan-Editor (Drag&Drop, `assignShiftBooking`)
+/// und gilt bis zur Bestätigung durch das zugewiesene Meeple selbst als
+/// unbestätigt (`null`). Ersetzt das frühere Selbstbuchungs-Flag `uncertain`.
 model ShiftBooking {
-  shiftId   String
-  meepleId  String
-  uncertain Boolean  @default(false)
-  startsAt  DateTime
-  endsAt    DateTime
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  shiftId     String
+  meepleId    String
+  startsAt    DateTime
+  endsAt      DateTime
+  confirmedAt DateTime?
+  /// 0-basierte Spalte innerhalb der Rollen-Spaltengruppe im Schichtplan-
+  /// Grid — rein optische Vorliebe der Admin (per Drag gesetzt), null lässt
+  /// die Spalte automatisch aus der Buchungsreihenfolge ableiten.
+  slotIndex   Int?
+  createdAt   DateTime  @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   meeple Meeple @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
 
-  @@id([shiftId, meepleId])
+  // Kein @@id([shiftId, meepleId]) mehr — ein Meeple kann in derselben Schicht
+  // mehrfach mit unterschiedlichen, nicht überlappenden Zeitblöcken
+  // eingetragen sein (z. B. eine Pausenablösung durch dieselbe Person).
+  @@index([shiftId, meepleId])
   @@map("shift_bookings")
 }
 

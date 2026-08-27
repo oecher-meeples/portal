@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
+import { getCurrentUser } from "@/lib/auth/server";
+import { getSessionTier } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
+import { isEventVisible } from "@/lib/events/visibility";
 import {
   getFreeGamesInRoom,
   getGuestFleaMarketItems,
@@ -17,6 +21,13 @@ export default async function EventGuestAreaPage({
 
   const event = await prisma.event.findUnique({ where: { slug } });
   if (!event) {
+    notFound();
+  }
+
+  const [tier, user] = await Promise.all([getSessionTier(), getCurrentUser()]);
+  const canManageEvents =
+    !!user && (await hasPermission(user.id, "events:manage"));
+  if (!isEventVisible(event.visibility, { tier, canManageEvents })) {
     notFound();
   }
 
