@@ -268,7 +268,10 @@ export function ShiftPlanEditor({
       onDragEnd={handleDragEnd}
     >
       <Tabs value={selectedDayId} onValueChange={handleDayChange}>
-        <TabsList variant="line">
+        <TabsList
+          variant="line"
+          className="bg-background sticky top-0 z-30 py-1"
+        >
           {days.map((day) => (
             <TabsTrigger key={day.id} value={day.id}>
               {formatDateMedium(day.date)}

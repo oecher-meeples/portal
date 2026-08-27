@@ -132,7 +132,12 @@ export function EventDetailView({
           <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
             Schichtplan
           </AccordionTrigger>
-          <AccordionPanel>
+          {/* overflow-visible statt des Standard-overflow-hidden: sonst
+              stickt der Tag-Tabs-Header (siehe ShiftPlanEditor) nicht relativ
+              zur Seite, weil das Panel selbst zum nächsten Scroll-Container
+              würde — kleine Unschönheit beim Ein-/Ausklappen zugunsten des
+              funktionierenden Sticky-Headers. */}
+          <AccordionPanel className="overflow-visible">
             <ShiftPlanEditor
               eventId={eventId}
               days={days}

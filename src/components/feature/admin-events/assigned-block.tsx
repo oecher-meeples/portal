@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, TriangleAlert, X } from "lucide-react";
+import {
+  exceedsRecommendedShiftLength,
+  MAX_UNBROKEN_SHIFT_HOURS,
+} from "@/lib/events/shift-plan";
 import { helperColorClass } from "@/lib/events/helper-colors";
 import { cn } from "@/lib/utils/cn";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
@@ -168,6 +172,10 @@ export function AssignedBlock({
   const displayEnd = drag?.liveEnd ?? rowEnd;
   const displaySlot = drag?.liveSlot ?? slot;
   const confirmed = booking.confirmedAt !== null;
+  const tooLong = exceedsRecommendedShiftLength(
+    new Date(booking.startsAt),
+    new Date(booking.endsAt),
+  );
 
   // Kein Factory-Muster (`edge => event => …`) — der Linter kann sonst nicht
   // ausschließen, dass der Ref-Zugriff synchron beim Rendern passiert (er tut
@@ -200,7 +208,13 @@ export function AssignedBlock({
       tabIndex={0}
       role="button"
       aria-label={`${booking.displayName} — ${confirmed ? "bestätigt" : "unbestätigt"} — Entf zum Entfernen, Ziehen zum Verschieben`}
-      title={confirmed ? "Bestätigt" : "Unbestätigt"}
+      title={
+        tooLong
+          ? `${confirmed ? "Bestätigt" : "Unbestätigt"} — über ${MAX_UNBROKEN_SHIFT_HOURS}h am Stück, Pause einplanen`
+          : confirmed
+            ? "Bestätigt"
+            : "Unbestätigt"
+      }
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onPointerDown={(pointerEvent) => beginDrag("move", pointerEvent)}
@@ -214,6 +228,7 @@ export function AssignedBlock({
         "focus-visible:ring-ring relative m-0.5 cursor-grab rounded px-1.5 py-1 text-xs font-medium outline-none focus-visible:ring-2",
         helperColorClass(booking.meepleId),
         !confirmed && "border-foreground/50 border-2 border-dashed",
+        tooLong && "ring-2 ring-amber-500",
       )}
       style={{
         gridColumn: columnStart + displaySlot,
@@ -221,6 +236,9 @@ export function AssignedBlock({
       }}
     >
       {confirmed && <Check className="absolute top-0.5 right-0.5 size-3" />}
+      {tooLong && (
+        <TriangleAlert className="absolute right-0.5 bottom-0.5 size-3 text-amber-500" />
+      )}
       {booking.displayName}
       {focused && (
         <>

@@ -9,6 +9,7 @@ import {
   computeShiftCoverage,
   isSlotStaffable,
   resolveSelectedTimeRange,
+  exceedsRecommendedShiftLength,
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
@@ -354,5 +355,34 @@ describe("resolveSelectedTimeRange", () => {
       startsAt: timeSlots[2],
       endsAt: new Date(timeSlots[2].getTime() + 30 * 60 * 1000),
     });
+  });
+});
+
+describe("exceedsRecommendedShiftLength", () => {
+  it("is false at exactly 6 hours", () => {
+    expect(
+      exceedsRecommendedShiftLength(
+        new Date(2026, 9, 10, 10, 0),
+        new Date(2026, 9, 10, 16, 0),
+      ),
+    ).toBe(false);
+  });
+
+  it("is true just above 6 hours", () => {
+    expect(
+      exceedsRecommendedShiftLength(
+        new Date(2026, 9, 10, 10, 0),
+        new Date(2026, 9, 10, 16, 1),
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for a short block", () => {
+    expect(
+      exceedsRecommendedShiftLength(
+        new Date(2026, 9, 10, 10, 0),
+        new Date(2026, 9, 10, 12, 0),
+      ),
+    ).toBe(false);
   });
 });

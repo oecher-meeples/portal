@@ -217,3 +217,20 @@ export function computeShiftCoverage(
   }
   return true;
 }
+
+/** Ab dieser Blockdauer sollte eine Pause eingeplant werden — kein hartes
+ * Limit, nur ein Hinweis im Schichtplan-Grid. */
+export const MAX_UNBROKEN_SHIFT_HOURS = 6;
+
+/**
+ * Ob ein einzelner, am Stück laufender Zeitblock die empfohlene Höchstdauer
+ * überschreitet (#Pausen-Warnung) — reine Zeitspannen-Prüfung, kein
+ * Ersatz für eine echte Pausenplanung.
+ */
+export function exceedsRecommendedShiftLength(
+  startsAt: Date,
+  endsAt: Date,
+): boolean {
+  const hours = (endsAt.getTime() - startsAt.getTime()) / (60 * 60 * 1000);
+  return hours > MAX_UNBROKEN_SHIFT_HOURS;
+}
