@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TextAreaField } from "@/components/ui/field";
+import { ActionButton } from "@/components/ui/action-button";
 import { updateOwnProfile } from "@/components/feature/profil/actions";
+import { syncPrivateBggCollection } from "@/lib/ludothek/private-collection-sync";
 
 export function ProfileDetailsForm({
   displayName: initialDisplayName,
@@ -18,6 +20,7 @@ export function ProfileDetailsForm({
   address: initialAddress,
   shareAddress: initialShareAddress,
   doorbellNote: initialDoorbellNote,
+  privateCollectionVisible: initialPrivateCollectionVisible,
 }: {
   displayName: string;
   bggUsername: string | null;
@@ -28,6 +31,7 @@ export function ProfileDetailsForm({
   address: string | null;
   shareAddress: boolean;
   doorbellNote: string | null;
+  privateCollectionVisible: boolean;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bggUsername, setBggUsername] = useState(initialBggUsername ?? "");
@@ -40,6 +44,9 @@ export function ProfileDetailsForm({
     initialDiscordHandle ?? "",
   );
   const [address, setAddress] = useState(initialAddress ?? "");
+  const [privateCollectionVisible, setPrivateCollectionVisible] = useState(
+    Boolean(initialPrivateCollectionVisible),
+  );
   const [shareAddress, setShareAddress] = useState(
     Boolean(initialShareAddress),
   );
@@ -64,6 +71,7 @@ export function ProfileDetailsForm({
       address,
       shareAddress,
       doorbellNote,
+      privateCollectionVisible,
     });
     setIsSaving(false);
 
@@ -94,6 +102,17 @@ export function ProfileDetailsForm({
             onChange={(event) => setBggUsername(event.target.value)}
             placeholder="optional"
           />
+          {bggUsername.trim() && (
+            <ActionButton
+              action={syncPrivateBggCollection}
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              pendingLabel="Importiere…"
+            >
+              Meine BGG-Collection importieren
+            </ActionButton>
+          )}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="bgaUsername">Board-Game-Arena-Username</Label>
@@ -153,6 +172,18 @@ export function ProfileDetailsForm({
       <p className="text-muted-foreground -mt-2.5 text-xs">
         Zeigt deinen Wohnort in den Kontaktmöglichkeiten (z. B. bei Ludothek-
         Standort oder Marktplatz-Angeboten) für alle eingeloggten Meeples an.
+      </p>
+      <Label className="flex items-center justify-between gap-2 font-normal">
+        Private BGG-Collection für Meeple freigeben
+        <Switch
+          id="privateCollectionVisible"
+          checked={privateCollectionVisible}
+          onCheckedChange={setPrivateCollectionVisible}
+        />
+      </Label>
+      <p className="text-muted-foreground -mt-2.5 text-xs">
+        Deine importierte BGG-Collection wird für andere eingeloggte Meeples im
+        Ludothek-Filter „auch private anzeigen“ sichtbar (#255).
       </p>
       <TextAreaField
         id="doorbellNote"

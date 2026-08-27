@@ -92,6 +92,7 @@ export function ProfilView({
               <ProfileDetailsForm
                 displayName={meeple.displayName}
                 bggUsername={meeple.bggUsername}
+                privateCollectionVisible={meeple.privateCollectionVisible}
                 bgaUsername={meeple.bgaUsername}
                 telegramHandle={meeple.telegramHandle}
                 signalHandle={meeple.signalHandle}
