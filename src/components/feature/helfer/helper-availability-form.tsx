@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import { useAction } from "@/components/ui/use-action";
 import {
   setOwnHelperAvailability,
@@ -21,10 +21,6 @@ export type OwnAvailability = {
   roleIds: string[];
 };
 
-function toTimeInput(iso: string) {
-  return new Date(iso).toTimeString().slice(0, 5);
-}
-
 function toDateTime(dateIso: string, time: string): Date {
   return new Date(`${dateIso.slice(0, 10)}T${time}:00`);
 }
@@ -41,9 +37,9 @@ export function HelperAvailabilityForm({
   own: OwnAvailability | null;
 }) {
   const [startsAt, setStartsAt] = useState(
-    own ? toTimeInput(own.startsAt) : "",
+    own ? timeInputValue(own.startsAt) : "",
   );
-  const [endsAt, setEndsAt] = useState(own ? toTimeInput(own.endsAt) : "");
+  const [endsAt, setEndsAt] = useState(own ? timeInputValue(own.endsAt) : "");
   const [roleIds, setRoleIds] = useState<string[]>(own?.roleIds ?? []);
   const { run, pending, error } = useAction();
 
@@ -72,21 +68,19 @@ export function HelperAvailabilityForm({
         <span className="w-32 text-sm font-medium">
           {formatDateMedium(day.date)}
         </span>
-        <TextField
+        <TimePicker
           id={`availability-${day.id}-starts`}
           label="Von"
-          type="time"
           value={startsAt}
-          onChange={(fieldEvent) => setStartsAt(fieldEvent.target.value)}
+          onChange={setStartsAt}
           fieldClassName="w-28"
           required
         />
-        <TextField
+        <TimePicker
           id={`availability-${day.id}-ends`}
           label="Bis"
-          type="time"
           value={endsAt}
-          onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
+          onChange={setEndsAt}
           fieldClassName="w-28"
           required
         />

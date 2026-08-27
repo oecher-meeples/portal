@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import { useAction } from "@/components/ui/use-action";
 import { updateEventDayTimes } from "@/components/feature/admin-events/event-day-actions";
 import { formatDateMedium } from "@/lib/utils/format";
@@ -15,12 +15,6 @@ export type EditableEventDay = {
   endsAt: string | null;
 };
 
-/** `time` inputs need "HH:mm". */
-function toTimeInput(iso: string | null) {
-  if (!iso) return "";
-  return new Date(iso).toTimeString().slice(0, 5);
-}
-
 /** Combines the day's calendar date (UTC midnight, see `enumerateEventDates`)
  * with a local "HH:mm" time input into the `Date` the action expects. */
 function toDateTime(dateIso: string, time: string): Date | null {
@@ -31,8 +25,8 @@ function toDateTime(dateIso: string, time: string): Date | null {
 /** One row: sets the opening time for a single event day (#150), independent
  * from the Ziel-Zeitraum shift roles get per day/role (#153). */
 export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
-  const [startsAt, setStartsAt] = useState(toTimeInput(day.startsAt));
-  const [endsAt, setEndsAt] = useState(toTimeInput(day.endsAt));
+  const [startsAt, setStartsAt] = useState(timeInputValue(day.startsAt));
+  const [endsAt, setEndsAt] = useState(timeInputValue(day.endsAt));
   const { run, pending, error } = useAction();
 
   return (
@@ -51,20 +45,18 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
       <span className="w-32 text-sm font-medium">
         {formatDateMedium(day.date)}
       </span>
-      <TextField
+      <TimePicker
         id={`event-day-${day.id}-starts`}
         label="Beginn"
-        type="time"
         value={startsAt}
-        onChange={(fieldEvent) => setStartsAt(fieldEvent.target.value)}
+        onChange={setStartsAt}
         fieldClassName="w-32"
       />
-      <TextField
+      <TimePicker
         id={`event-day-${day.id}-ends`}
         label="Ende"
-        type="time"
         value={endsAt}
-        onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
+        onChange={setEndsAt}
         fieldClassName="w-32"
       />
       <Button type="submit" variant="outline" size="sm" disabled={pending}>
