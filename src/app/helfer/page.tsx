@@ -101,7 +101,9 @@ export default async function HelferPage({
       capacity: shift.capacity,
       booked: fillLevel.booked,
       isFull: fillLevel.isFull,
-      ownBooking: ownBooking ? { uncertain: ownBooking.uncertain } : null,
+      ownBooking: ownBooking
+        ? { confirmedAt: ownBooking.confirmedAt?.toISOString() ?? null }
+        : null,
     };
   });
 

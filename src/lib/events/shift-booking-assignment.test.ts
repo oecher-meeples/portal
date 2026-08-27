@@ -162,7 +162,6 @@ describe("assignShiftBooking", () => {
         meepleId: "meeple-1",
         startsAt: START,
         endsAt: END,
-        uncertain: false,
       },
       update: { startsAt: START, endsAt: END },
     });

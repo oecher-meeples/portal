@@ -34,7 +34,7 @@ import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-b
 
 export type ShiftRow = EditableShift & {
   dayDate: string;
-  bookings: { uncertain: boolean }[];
+  bookings: { confirmedAt: Date | null }[];
 };
 
 export function EventDetailView({

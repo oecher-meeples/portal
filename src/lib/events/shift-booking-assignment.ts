@@ -67,9 +67,12 @@ export async function assignShiftBooking({
     };
   }
 
+  // `confirmedAt` stays unset on create (Meeple confirms separately, see
+  // confirmOwnShiftBooking) and untouched on an existing row (a resize
+  // shouldn't silently revoke an already-confirmed assignment).
   await prisma.shiftBooking.upsert({
     where: { shiftId_meepleId: { shiftId, meepleId } },
-    create: { shiftId, meepleId, startsAt, endsAt, uncertain: false },
+    create: { shiftId, meepleId, startsAt, endsAt },
     update: { startsAt, endsAt },
   });
 

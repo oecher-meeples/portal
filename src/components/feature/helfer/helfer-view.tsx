@@ -14,9 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  bookShift,
-  cancelBooking,
-  updateBookingCertainty,
+  confirmOwnShiftBooking,
+  declineOwnShiftBooking,
 } from "@/components/feature/helfer/actions";
 import {
   markAttending,
@@ -38,7 +37,7 @@ export type HelferShiftRow = {
   capacity: number;
   booked: number;
   isFull: boolean;
-  ownBooking: { uncertain: boolean } | null;
+  ownBooking: { confirmedAt: string | null } | null;
 };
 
 export type HelferEventOption = {
@@ -67,6 +66,7 @@ export function HelferView({
 }) {
   const router = useRouter();
   const { run, pending: isPending, error } = useAction();
+  const assignedShifts = shifts.filter((shift) => shift.ownBooking !== null);
 
   function selectEvent(eventId: string) {
     router.push(`/helfer?event=${eventId}`);
@@ -77,7 +77,7 @@ export function HelferView({
       <PageHeading
         eyebrow="Event-Betrieb"
         title="Helferplan"
-        description="Trag dich in offene Schichten ein — sicher oder vorläufig."
+        description="Melde deine Verfügbarkeit und bestätige zugewiesene Schichten."
       />
 
       {events.length > 1 && (
@@ -135,96 +135,69 @@ export function HelferView({
         </div>
       )}
 
-      {events.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          Aktuell ist kein Event geplant.
-        </p>
-      ) : (
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Typ</TableHead>
-                <TableHead>Zeit</TableHead>
-                <TableHead>Besetzt</TableHead>
-                <TableHead className="text-right"> </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shifts.map((shift) => (
-                <TableRow
-                  key={shift.id}
-                  className={shift.ownBooking ? "bg-primary/5" : undefined}
-                >
-                  <TableCell className="font-medium">
-                    {shift.roleName}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {formatDateTimeRange(shift.startsAt, shift.endsAt)}
-                  </TableCell>
-                  <TableCell>
-                    {shift.ownBooking ? (
-                      <StatusPill
-                        label={`${shift.booked}/${shift.capacity} · ${
-                          shift.ownBooking.uncertain
-                            ? "du (vorläufig)"
-                            : "du (sicher)"
-                        }`}
-                        tone={
-                          shift.ownBooking.uncertain ? "warning" : "positive"
-                        }
-                      />
-                    ) : (
-                      <span className="text-sm">
-                        {shift.booked}/{shift.capacity}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {shift.ownBooking ? (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() =>
-                            run(() =>
-                              updateBookingCertainty(
-                                shift.id,
-                                !shift.ownBooking!.uncertain,
-                              ),
-                            )
-                          }
-                        >
-                          {shift.ownBooking.uncertain
-                            ? "Als sicher markieren"
-                            : "Als vorläufig markieren"}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={isPending}
-                          onClick={() => run(() => cancelBooking(shift.id))}
-                        >
-                          Abmelden
-                        </Button>
-                      </div>
-                    ) : shift.isFull ? (
-                      <span className="text-muted-foreground">voll</span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() => run(() => bookShift(shift.id, false))}
-                      >
-                        Zusagen
-                      </Button>
-                    )}
-                  </TableCell>
+      {assignedShifts.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">
+            Deine zugewiesenen Schichten
+          </h2>
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Typ</TableHead>
+                  <TableHead>Zeit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right"> </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {assignedShifts.map((shift) => {
+                  const confirmed = shift.ownBooking!.confirmedAt !== null;
+                  return (
+                    <TableRow key={shift.id} className="bg-primary/5">
+                      <TableCell className="font-medium">
+                        {shift.roleName}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {formatDateTimeRange(shift.startsAt, shift.endsAt)}
+                      </TableCell>
+                      <TableCell>
+                        <StatusPill
+                          label={confirmed ? "bestätigt" : "unbestätigt"}
+                          tone={confirmed ? "positive" : "warning"}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {!confirmed && (
+                            <Button
+                              size="sm"
+                              disabled={isPending}
+                              onClick={() =>
+                                run(() => confirmOwnShiftBooking(shift.id))
+                              }
+                            >
+                              Bestätigen
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() =>
+                              run(() => declineOwnShiftBooking(shift.id))
+                            }
+                          >
+                            Ablehnen
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       )}
 

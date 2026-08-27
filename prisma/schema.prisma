@@ -810,19 +810,23 @@ model Shift {
   @@map("shifts")
 }
 
-/// A member's booking of a shift. `uncertain` marks an unsure commitment but still
-/// counts against capacity — the simplest rule that avoids overbooking.
+/// A member's booking of a shift — every row counts against capacity
+/// regardless of confirmation status, the simplest rule that avoids overbooking.
 /// `startsAt`/`endsAt` (#159) are this booking's own, individually movable
 /// time block — distinct from `Shift.targetStartsAt`/`targetEndsAt`, the
 /// container's overall target period. Defaults to the full target period on
 /// creation; the Schichtplan-Editor's resize handles (#160) narrow it.
+/// `confirmedAt` (#Helferplan-Zuweisungsbestätigung): eine Zuweisung entsteht
+/// durch den Admin im Schichtplan-Editor (Drag&Drop, `assignShiftBooking`)
+/// und gilt bis zur Bestätigung durch das zugewiesene Meeple selbst als
+/// unbestätigt (`null`). Ersetzt das frühere Selbstbuchungs-Flag `uncertain`.
 model ShiftBooking {
-  shiftId   String
-  meepleId  String
-  uncertain Boolean  @default(false)
-  startsAt  DateTime
-  endsAt    DateTime
-  createdAt DateTime @default(now())
+  shiftId     String
+  meepleId    String
+  startsAt    DateTime
+  endsAt      DateTime
+  confirmedAt DateTime?
+  createdAt   DateTime  @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   meeple Meeple @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)

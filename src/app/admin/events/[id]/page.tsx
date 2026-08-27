@@ -39,7 +39,7 @@ export default async function AdminEventDetailPage({
             day: { select: { date: true } },
             bookings: {
               select: {
-                uncertain: true,
+                confirmedAt: true,
                 meepleId: true,
                 startsAt: true,
                 endsAt: true,
