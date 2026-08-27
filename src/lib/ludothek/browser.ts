@@ -176,6 +176,12 @@ export type LudothekFilters = {
    * "heute anwesend" (siehe `attendingExplainerBoardGameIds` in
    * `filterLudothekGames`). */
   hasExplainer?: boolean;
+  /** Default off. Nur sinnvoll während eines laufenden Events — "nur
+   * anwesende Spiele" (#273), siehe `presentGameCopyIds` in
+   * `filterLudothekGames`. Kein Zeit-Gate an `event.endsAt`: ein Exemplar,
+   * das nach Event-Ende noch auf der Event-Unit liegt, gilt bewusst
+   * weiterhin als anwesend. */
+  onlyPresentAtEvent?: boolean;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -264,6 +270,7 @@ export function parseLudothekSearchParams(
     ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
     languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
     hasExplainer: firstString(searchParams.erklaerbaer) === "1",
+    onlyPresentAtEvent: firstString(searchParams.anwesend) === "1",
   };
 
   if (internal) {
@@ -310,11 +317,16 @@ export function filterLudothekGames(
   filters: LudothekFilters,
   {
     attendingExplainerBoardGameIds,
+    presentGameCopyIds,
   }: {
     /** Gast-während-Event-Kontext (#256): wenn gesetzt, ersetzt diese Menge
      * die einfache `explainerCount > 0`-Prüfung durch "hat ein gerade
      * anwesender Erklärbär". Weglassen für den Meeple-Kontext. */
     attendingExplainerBoardGameIds?: Set<string>;
+    /** GameCopy-Ids, deren Ahnenkette gerade die Event-Unit erreicht (#273) —
+     * nötig für `filters.onlyPresentAtEvent`. Weglassen/leer lassen, solange
+     * kein Event läuft. */
+    presentGameCopyIds?: Set<string>;
   } = {},
 ): LudothekGame[] {
   return games.filter((game) => {
@@ -394,6 +406,9 @@ export function filterLudothekGames(
         ? attendingExplainerBoardGameIds.has(game.boardGameId)
         : game.explainerCount > 0;
       if (!hasAttendingExplainer) return false;
+    }
+    if (filters.onlyPresentAtEvent) {
+      if (!presentGameCopyIds?.has(game.id)) return false;
     }
     return true;
   });

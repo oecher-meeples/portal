@@ -206,6 +206,29 @@ describe("filterLudothekGames", () => {
     expect(result).toEqual([attending]);
   });
 
+  it("filters by 'nur anwesende Spiele' via presentGameCopyIds (#273)", () => {
+    const present = game({ id: "copy-present" });
+    const absent = game({ id: "copy-absent" });
+
+    const result = filterLudothekGames(
+      [present, absent],
+      { onlyPresentAtEvent: true },
+      { presentGameCopyIds: new Set(["copy-present"]) },
+    );
+
+    expect(result).toEqual([present]);
+  });
+
+  it("shows nothing for 'nur anwesende Spiele' when no event is running", () => {
+    const result = filterLudothekGames(
+      [game({ id: "copy-1" })],
+      { onlyPresentAtEvent: true },
+      {},
+    );
+
+    expect(result).toEqual([]);
+  });
+
   it("combines multiple filters", () => {
     const match = game({
       title: "Arche Nova",
@@ -289,6 +312,7 @@ describe("parseLudothekSearchParams", () => {
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
       hasExplainer: false,
+      onlyPresentAtEvent: false,
       view: "grid",
     });
   });

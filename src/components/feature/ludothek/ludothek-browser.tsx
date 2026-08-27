@@ -79,6 +79,7 @@ export function LudothekBrowser({
   meepleOptions,
   privateCollectionResults,
   showExplainerFilter = true,
+  showPresentFilter = false,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   internal: boolean;
@@ -98,6 +99,10 @@ export function LudothekBrowser({
   /** "Erklärbär vorhanden"-Filter (#256) — für Meeples immer sichtbar
    * (Default), für Gäste nur, solange ein Event läuft. */
   showExplainerFilter?: boolean;
+  /** "Nur anwesende Spiele"-Filter (#273) — nur sichtbar, solange ein Event
+   * läuft, für Meeples wie Gäste gleichermaßen. Default aus, da meistens
+   * kein Event läuft. */
+  showPresentFilter?: boolean;
 }) {
   const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
@@ -164,6 +169,7 @@ export function LudothekBrowser({
           rawSearchParams={rawSearchParams}
           meepleOptions={meepleOptions}
           showExplainerFilter={showExplainerFilter}
+          showPresentFilter={showPresentFilter}
         />
       </div>
 

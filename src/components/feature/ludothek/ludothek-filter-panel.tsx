@@ -75,6 +75,7 @@ export function LudothekFilterPanel({
   rawSearchParams,
   meepleOptions,
   showExplainerFilter = true,
+  showPresentFilter = false,
 }: {
   href: (patch: Record<string, string | string[] | undefined>) => string;
   filters: LudothekFilters;
@@ -87,6 +88,8 @@ export function LudothekFilterPanel({
   meepleOptions?: { id: string; displayName: string }[];
   /** "Erklärbär vorhanden"-Filter (#256). */
   showExplainerFilter?: boolean;
+  /** "Nur anwesende Spiele"-Filter (#273). */
+  showPresentFilter?: boolean;
 }) {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
@@ -314,6 +317,15 @@ export function LudothekFilterPanel({
                 erklaerbaer: filters.hasExplainer ? undefined : "1",
               })}
               active={Boolean(filters.hasExplainer)}
+            />
+          )}
+          {showPresentFilter && (
+            <FilterPill
+              label="Nur anwesende Spiele"
+              href={href({
+                anwesend: filters.onlyPresentAtEvent ? undefined : "1",
+              })}
+              active={Boolean(filters.onlyPresentAtEvent)}
             />
           )}
         </div>

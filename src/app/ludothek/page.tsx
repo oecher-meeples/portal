@@ -17,6 +17,7 @@ import {
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
+import { getPresentGameCopyIds } from "@/lib/events/guest-area";
 
 export default async function LudothekPage({
   searchParams,
@@ -36,11 +37,10 @@ export default async function LudothekPage({
 
   const allGames = await buildLudothekGames();
 
-  // Gast-während-Event-Kontext (#256): der Filter selbst ist nur sichtbar,
-  // solange ein Event läuft — außerhalb eines Events gibt es für Gäste
-  // keine sinnvolle Anwesenheits-Aussage, anders als der immer verfügbare
-  // Meeple-Kontext (`explainerCount`).
-  const currentEvent = internal ? null : await findCurrentEvent();
+  // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
+  // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
+  // nur sinnvoll, solange ein Event läuft, für Meeples wie Gäste gleichermaßen.
+  const currentEvent = await findCurrentEvent();
   const showExplainerFilter = internal || currentEvent !== null;
   const attendingExplainerBoardGameIds =
     !internal && filters.hasExplainer
@@ -48,9 +48,15 @@ export default async function LudothekPage({
         ? await getAttendingExplainerBoardGameIds(currentEvent.id)
         : new Set<string>()
       : undefined;
+  const showPresentFilter = currentEvent !== null;
+  const presentGameCopyIds =
+    filters.onlyPresentAtEvent && currentEvent
+      ? await getPresentGameCopyIds(currentEvent.id)
+      : undefined;
 
   const filtered = filterLudothekGames(allGames, filters, {
     attendingExplainerBoardGameIds,
+    presentGameCopyIds,
   });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
@@ -102,6 +108,7 @@ export default async function LudothekPage({
         meepleOptions={meepleOptions}
         privateCollectionResults={privateCollectionResults}
         showExplainerFilter={showExplainerFilter}
+        showPresentFilter={showPresentFilter}
       />
     </div>
   );

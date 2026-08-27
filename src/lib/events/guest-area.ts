@@ -109,6 +109,33 @@ export async function isGameInEventRoom(gameCopyId: string, eventId: string) {
   return unitOrAncestorAssigned(unitId, new Set([eventUnitId]), parentById);
 }
 
+/**
+ * GameCopy-Ids, die gerade "im Raum" von `eventId` sind (#273) — Grundlage
+ * für den "nur anwesende Spiele"-Filter auf der Ludothek-Übersichtsseite
+ * (bisher gab's die Anwesenheits-Frage nur auf der Detailseite/-Lookup, via
+ * `isGameInEventRoom()`/`getGuestCopyAvailability()`). Leeres Set, solange
+ * das Event keine Unit hat (niemand hat eingecheckt).
+ */
+export async function getPresentGameCopyIds(
+  eventId: string,
+): Promise<Set<string>> {
+  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
+    resolveEventUnitId(eventId),
+    loadUnitParents(),
+    loadOpenHoldingUnitByGame(),
+  ]);
+  if (!eventUnitId) return new Set();
+  const assignedUnitIds = new Set([eventUnitId]);
+
+  const present = new Set<string>();
+  for (const [gameCopyId, unitId] of holdingUnitByGame) {
+    if (unitOrAncestorAssigned(unitId, assignedUnitIds, parentById)) {
+      present.add(gameCopyId);
+    }
+  }
+  return present;
+}
+
 export type AttendingExplainer = {
   meepleId: string;
   displayName: string;

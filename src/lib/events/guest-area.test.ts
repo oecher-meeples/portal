@@ -15,6 +15,7 @@ const {
   getFreeGamesInRoom,
   getGuestFleaMarketItems,
   getGuestCopyAvailability,
+  getPresentGameCopyIds,
 } = await import("./guest-area");
 
 describe("unitOrAncestorAssigned", () => {
@@ -338,5 +339,33 @@ describe("getGuestCopyAvailability (#273)", () => {
     const result = await getGuestCopyAvailability(COPIES, "event-1");
 
     expect(result).toEqual({ kind: "plain", total: 2 });
+  });
+});
+
+describe("getPresentGameCopyIds (#273)", () => {
+  it("returns an empty set when the event has no unit yet", async () => {
+    mockEventUnit(null);
+
+    const result = await getPresentGameCopyIds("event-1");
+
+    expect(result).toEqual(new Set());
+  });
+
+  it("includes copies directly on the event unit and on a nested shelf", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-1", parentUnitId: "event-unit-1" },
+      { id: "shelf-2", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-1" },
+      { gameCopyId: "copy-3", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getPresentGameCopyIds("event-1");
+
+    expect(result).toEqual(new Set(["copy-1", "copy-2"]));
   });
 });
