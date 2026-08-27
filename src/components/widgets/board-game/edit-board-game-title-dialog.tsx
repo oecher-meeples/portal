@@ -133,13 +133,15 @@ export function EditBoardGameTitleDialog({
           <p className="text-destructive text-sm">{compareError}</p>
         )}
 
-        <div
-          className={
-            bggCompareData
-              ? "grid grid-cols-1 gap-4 md:grid-cols-[1fr_18rem]"
-              : ""
-          }
-        >
+        {bggCompareData && compareStatus ? (
+          <BggComparePanel
+            bggData={bggCompareData}
+            form={form}
+            compareStatus={compareStatus}
+            onChange={patchForm}
+            onDone={resetCompare}
+          />
+        ) : (
           <EditBoardGameTitle
             idPrefix={`edit-title-${game.boardGameId}`}
             values={form}
@@ -148,10 +150,7 @@ export function EditBoardGameTitleDialog({
             compareStatus={compareStatus}
             boardGameId={game.boardGameId}
           />
-          {bggCompareData && (
-            <BggComparePanel bggData={bggCompareData} onChange={patchForm} />
-          )}
-        </div>
+        )}
       </div>
     </ActionDialog>
   );
