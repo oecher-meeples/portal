@@ -176,6 +176,36 @@ describe("filterLudothekGames", () => {
     ).toEqual([withOpenLfg, withoutOpenLfg]);
   });
 
+  it("filters by 'Erklärbär vorhanden' in the Meeple context via explainerCount (#256)", () => {
+    const withExplainer = game({ explainerCount: 2 });
+    const withoutExplainer = game({ explainerCount: 0 });
+
+    expect(
+      filterLudothekGames([withExplainer, withoutExplainer], {
+        hasExplainer: true,
+      }),
+    ).toEqual([withExplainer]);
+  });
+
+  it("filters by 'Erklärbär vorhanden' in the Gast-während-Event context via the attending-set (#256)", () => {
+    const attending = game({
+      boardGameId: "game-attending",
+      explainerCount: 0,
+    });
+    const notAttending = game({
+      boardGameId: "game-not-attending",
+      explainerCount: 5, // has an Erklärbär profile, but none attending today
+    });
+
+    const result = filterLudothekGames(
+      [attending, notAttending],
+      { hasExplainer: true },
+      { attendingExplainerBoardGameIds: new Set(["game-attending"]) },
+    );
+
+    expect(result).toEqual([attending]);
+  });
+
   it("combines multiple filters", () => {
     const match = game({
       title: "Arche Nova",
@@ -258,6 +288,7 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
+      hasExplainer: false,
       view: "grid",
     });
   });

@@ -12,6 +12,8 @@ import {
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { buildPrivateCollectionResults } from "@/lib/ludothek/private-collection";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
+import { findCurrentEvent } from "@/lib/events/upcoming";
+import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
 
 export default async function LudothekPage({
   searchParams,
@@ -30,7 +32,23 @@ export default async function LudothekPage({
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
 
   const allGames = await buildLudothekGames();
-  const filtered = filterLudothekGames(allGames, filters);
+
+  // Gast-während-Event-Kontext (#256): der Filter selbst ist nur sichtbar,
+  // solange ein Event läuft — außerhalb eines Events gibt es für Gäste
+  // keine sinnvolle Anwesenheits-Aussage, anders als der immer verfügbare
+  // Meeple-Kontext (`explainerCount`).
+  const currentEvent = internal ? null : await findCurrentEvent();
+  const showExplainerFilter = internal || currentEvent !== null;
+  const attendingExplainerBoardGameIds =
+    !internal && filters.hasExplainer
+      ? currentEvent
+        ? await getAttendingExplainerBoardGameIds(currentEvent.id)
+        : new Set<string>()
+      : undefined;
+
+  const filtered = filterLudothekGames(allGames, filters, {
+    attendingExplainerBoardGameIds,
+  });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
@@ -93,6 +111,7 @@ export default async function LudothekPage({
         maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
         privateCollectionResults={privateCollectionResults}
+        showExplainerFilter={showExplainerFilter}
       />
     </div>
   );

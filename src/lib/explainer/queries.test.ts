@@ -3,8 +3,11 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getExplainersForGame, getExplainerCountsForGames } =
-  await import("@/lib/explainer/queries");
+const {
+  getExplainersForGame,
+  getExplainerCountsForGames,
+  getAttendingExplainerBoardGameIds,
+} = await import("@/lib/explainer/queries");
 
 describe("getExplainersForGame", () => {
   it("returns an empty list when nobody explains this game", async () => {
@@ -78,5 +81,46 @@ describe("getExplainerCountsForGames", () => {
     const result = await getExplainerCountsForGames(["game-1"]);
 
     expect(result.has("game-1")).toBe(false);
+  });
+});
+
+describe("getAttendingExplainerBoardGameIds (#256)", () => {
+  it("returns an empty set when nobody is attending", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([]);
+
+    const result = await getAttendingExplainerBoardGameIds("event-1");
+
+    expect(result).toEqual(new Set());
+    expect(prismaMock.explainerGame.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns the board games an attending Erklärbär knows", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      { meepleId: "meeple-1" },
+      { meepleId: "meeple-2" },
+    ] as never);
+    prismaMock.explainerGame.findMany.mockResolvedValue([
+      { boardGameId: "game-1" },
+      { boardGameId: "game-2" },
+    ] as never);
+
+    const result = await getAttendingExplainerBoardGameIds("event-1");
+
+    expect(result).toEqual(new Set(["game-1", "game-2"]));
+    expect(prismaMock.explainerGame.findMany).toHaveBeenCalledWith({
+      where: { meepleId: { in: ["meeple-1", "meeple-2"] } },
+      select: { boardGameId: true },
+    });
+  });
+
+  it("returns an empty set when the attending Erklärbär has no ExplainerGame entries", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      { meepleId: "meeple-1" },
+    ] as never);
+    prismaMock.explainerGame.findMany.mockResolvedValue([] as never);
+
+    const result = await getAttendingExplainerBoardGameIds("event-1");
+
+    expect(result).toEqual(new Set());
   });
 });

@@ -74,6 +74,7 @@ export function LudothekFilterPanel({
   basePath,
   rawSearchParams,
   meepleOptions,
+  showExplainerFilter = true,
 }: {
   href: (patch: Record<string, string | string[] | undefined>) => string;
   filters: LudothekFilters;
@@ -84,6 +85,8 @@ export function LudothekFilterPanel({
   basePath: string;
   rawSearchParams: Record<string, string | string[] | undefined>;
   meepleOptions?: { id: string; displayName: string }[];
+  /** "Erklärbär vorhanden"-Filter (#256). */
+  showExplainerFilter?: boolean;
 }) {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
@@ -304,6 +307,15 @@ export function LudothekFilterPanel({
             })}
             active={Boolean(filters.hideExpansions)}
           />
+          {showExplainerFilter && (
+            <FilterPill
+              label="Erklärbär vorhanden"
+              href={href({
+                erklaerbaer: filters.hasExplainer ? undefined : "1",
+              })}
+              active={Boolean(filters.hasExplainer)}
+            />
+          )}
         </div>
 
         {internal && (

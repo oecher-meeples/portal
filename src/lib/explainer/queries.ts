@@ -41,3 +41,26 @@ export async function getExplainerCountsForGames(
 
   return new Map(grouped.map((g) => [g.boardGameId, g._count._all]));
 }
+
+/**
+ * BoardGame-Ids, für die gerade (während `eventId`) mind. ein anwesender
+ * Erklärbär registriert ist — Gast-während-Event-Kontext des "Erklärbär
+ * vorhanden"-Filters (#256). Bewusst kein Zeit-Scheduling: `ExplainerAttendance`
+ * ist ein reiner "heute anwesend"-Boolean pro Event (CONTEXT.md).
+ */
+export async function getAttendingExplainerBoardGameIds(
+  eventId: string,
+): Promise<Set<string>> {
+  const attendances = await prisma.explainerAttendance.findMany({
+    where: { eventId },
+    select: { meepleId: true },
+  });
+  if (attendances.length === 0) return new Set();
+
+  const games = await prisma.explainerGame.findMany({
+    where: { meepleId: { in: attendances.map((a) => a.meepleId) } },
+    select: { boardGameId: true },
+  });
+
+  return new Set(games.map((g) => g.boardGameId));
+}

@@ -170,6 +170,12 @@ export type LudothekFilters = {
   showPrivateCollection?: boolean;
   /** Default off. Members-only — matches when a title has at least one open LfgPost (#144). */
   onlyWithOpenLfg?: boolean;
+  /** Default off. Public — "Erklärbär vorhanden" (#256). For Meeples: ≥1
+   * `ExplainerGame`-Eintrag (`explainerCount > 0`). For Gäste während eines
+   * laufenden Events: enger — ≥1 Erklärbär mit `ExplainerAttendance` =
+   * "heute anwesend" (siehe `attendingExplainerBoardGameIds` in
+   * `filterLudothekGames`). */
+  hasExplainer?: boolean;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -257,6 +263,7 @@ export function parseLudothekSearchParams(
     ratingFrom: parseNumberParam(firstString(searchParams.bewertungVon)),
     ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
     languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
+    hasExplainer: firstString(searchParams.erklaerbaer) === "1",
   };
 
   if (internal) {
@@ -301,6 +308,14 @@ export function matchesLudothekSearch(
 export function filterLudothekGames(
   games: LudothekGame[],
   filters: LudothekFilters,
+  {
+    attendingExplainerBoardGameIds,
+  }: {
+    /** Gast-während-Event-Kontext (#256): wenn gesetzt, ersetzt diese Menge
+     * die einfache `explainerCount > 0`-Prüfung durch "hat ein gerade
+     * anwesender Erklärbär". Weglassen für den Meeple-Kontext. */
+    attendingExplainerBoardGameIds?: Set<string>;
+  } = {},
 ): LudothekGame[] {
   return games.filter((game) => {
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
@@ -373,6 +388,12 @@ export function filterLudothekGames(
     }
     if (filters.onlyWithOpenLfg && !game.hasOpenLfg) {
       return false;
+    }
+    if (filters.hasExplainer) {
+      const hasAttendingExplainer = attendingExplainerBoardGameIds
+        ? attendingExplainerBoardGameIds.has(game.boardGameId)
+        : game.explainerCount > 0;
+      if (!hasAttendingExplainer) return false;
     }
     return true;
   });

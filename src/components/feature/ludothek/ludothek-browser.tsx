@@ -78,6 +78,7 @@ export function LudothekBrowser({
   maxDurationBound = 120,
   meepleOptions,
   privateCollectionResults,
+  showExplainerFilter = true,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   internal: boolean;
@@ -94,6 +95,9 @@ export function LudothekBrowser({
   meepleOptions?: { id: string; displayName: string }[];
   /** Internal-only, never passed for the guest area — see CONTEXT.md "kein Leak". */
   privateCollectionResults?: PrivateCollectionResult[];
+  /** "Erklärbär vorhanden"-Filter (#256) — für Meeples immer sichtbar
+   * (Default), für Gäste nur, solange ein Event läuft. */
+  showExplainerFilter?: boolean;
 }) {
   const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
@@ -159,6 +163,7 @@ export function LudothekBrowser({
           basePath={basePath}
           rawSearchParams={rawSearchParams}
           meepleOptions={meepleOptions}
+          showExplainerFilter={showExplainerFilter}
         />
       </div>
 
