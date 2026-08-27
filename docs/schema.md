@@ -374,6 +374,19 @@ erDiagram
         Boolean uncertain
     }
 
+    HelperAvailability {
+        String id PK
+        String meepleId FK
+        String dayId FK
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailabilityRole {
+        String availabilityId FK
+        String roleId FK
+    }
+
     ExplainerGame {
         String id PK
         String meepleId FK
@@ -404,6 +417,10 @@ erDiagram
     Event ||--o{ Shift : "hat"
     EventDay ||--o{ Shift : "an Tag"
     HelperRole ||--o{ Shift : "besetzt als"
+    Meeple ||--o{ HelperAvailability : "meldet"
+    EventDay ||--o{ HelperAvailability : "an Tag"
+    HelperAvailability ||--o{ HelperAvailabilityRole : "wählt"
+    HelperRole ||--o{ HelperAvailabilityRole : "gewählt als"
     Shift ||--o{ ShiftBooking : "gebucht von"
     Meeple ||--o{ ShiftBooking : "bucht"
     Meeple ||--o{ ExplainerGame : "kann erklären"

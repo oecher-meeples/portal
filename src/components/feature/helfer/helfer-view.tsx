@@ -22,6 +22,12 @@ import {
   markAttending,
   markNotAttending,
 } from "@/components/feature/helfer/attendance-actions";
+import {
+  HelperAvailabilityForm,
+  type EventDayOption,
+  type HelperRoleOption,
+  type OwnAvailability,
+} from "@/components/feature/helfer/helper-availability-form";
 import { formatDateTimeRange } from "@/lib/utils/format";
 
 export type HelferShiftRow = {
@@ -43,12 +49,18 @@ export type HelferEventOption = {
 export function HelferView({
   events,
   selectedEventId,
+  days,
+  helperRoles,
+  ownAvailabilityByDayId,
   shifts,
   isExplainer,
   isAttendingAsExplainer,
 }: {
   events: HelferEventOption[];
   selectedEventId: string | null;
+  days: EventDayOption[];
+  helperRoles: HelperRoleOption[];
+  ownAvailabilityByDayId: Record<string, OwnAvailability>;
   shifts: HelferShiftRow[];
   isExplainer: boolean;
   isAttendingAsExplainer: boolean;
@@ -79,6 +91,20 @@ export function HelferView({
             >
               {event.title}
             </Button>
+          ))}
+        </div>
+      )}
+
+      {selectedEventId && days.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">Deine Verfügbarkeit</h2>
+          {days.map((day) => (
+            <HelperAvailabilityForm
+              key={day.id}
+              day={day}
+              helperRoles={helperRoles}
+              own={ownAvailabilityByDayId[day.id] ?? null}
+            />
           ))}
         </div>
       )}

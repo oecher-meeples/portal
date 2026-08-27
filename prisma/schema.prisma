@@ -208,6 +208,7 @@ model Meeple {
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
   lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
   shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
+  helperAvailabilities     HelperAvailability[]         @relation("HelperAvailabilityMeeple")
   explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
   explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
   fleaMarketItems          FleaMarketItem[]             @relation("FleaMarketItemSeller")
@@ -693,8 +694,9 @@ model EventDay {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  event  Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  shifts Shift[]
+  event          Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  shifts         Shift[]
+  availabilities HelperAvailability[]
 
   @@unique([eventId, date])
   @@map("event_days")
@@ -727,9 +729,44 @@ model HelperRole {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  shifts Shift[]
+  shifts              Shift[]
+  availabilityChoices HelperAvailabilityRole[]
 
   @@map("helper_roles")
+}
+
+/// Ein Meeple meldet sich für einen Event-Tag als Helfer verfügbar (#156) —
+/// eigenes Verfügbarkeitsfenster (`startsAt`/`endsAt`) plus Mehrfachauswahl
+/// der Rollen, die es an diesem Tag übernehmen würde. Getrennt von der
+/// späteren admin-seitigen Zeitblock-Zuweisung (`ShiftBooking`) — eine
+/// Zusage hier ist ein Angebot, keine Buchung. Ein Meeple hat höchstens
+/// eine Zusage pro Tag (`@@unique`); erneutes Absenden ersetzt sie.
+model HelperAvailability {
+  id        String   @id @default(cuid())
+  meepleId  String
+  dayId     String
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meeple Meeple                   @relation("HelperAvailabilityMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  day    EventDay                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  roles  HelperAvailabilityRole[]
+
+  @@unique([meepleId, dayId])
+  @@map("helper_availabilities")
+}
+
+model HelperAvailabilityRole {
+  availabilityId String
+  roleId         String
+
+  availability HelperAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  role         HelperRole         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([availabilityId, roleId])
+  @@map("helper_availability_roles")
 }
 
 /// Bedarfs-Container (#153): Rolle + Event-Tag + Stellenzahl (`capacity`,

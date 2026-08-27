@@ -10,6 +10,10 @@ import {
   type HelferEventOption,
   type HelferShiftRow,
 } from "@/components/feature/helfer/helfer-view";
+import type {
+  EventDayOption,
+  OwnAvailability,
+} from "@/components/feature/helfer/helper-availability-form";
 
 export default async function HelferPage({
   searchParams,
@@ -22,7 +26,14 @@ export default async function HelferPage({
   const events = await findUpcomingEvents();
   const selectedEventId = resolveSelectedEventId(events, requestedEventId);
 
-  const [shifts, explainerGameCount, ownAttendance] = await Promise.all([
+  const [
+    shifts,
+    explainerGameCount,
+    ownAttendance,
+    days,
+    helperRoles,
+    ownAvailabilities,
+  ] = await Promise.all([
     selectedEventId
       ? prisma.shift.findMany({
           where: { eventId: selectedEventId },
@@ -34,16 +45,49 @@ export default async function HelferPage({
     selectedEventId
       ? prisma.explainerAttendance.findUnique({
           where: {
-            eventId_meepleId: { eventId: selectedEventId, meepleId: meeple.id },
+            eventId_meepleId: {
+              eventId: selectedEventId,
+              meepleId: meeple.id,
+            },
           },
         })
       : Promise.resolve(null),
+    selectedEventId
+      ? prisma.eventDay.findMany({
+          where: { eventId: selectedEventId },
+          orderBy: { date: "asc" },
+        })
+      : Promise.resolve([]),
+    prisma.helperRole.findMany({ orderBy: { name: "asc" } }),
+    selectedEventId
+      ? prisma.helperAvailability.findMany({
+          where: { meepleId: meeple.id, day: { eventId: selectedEventId } },
+          include: { roles: { select: { roleId: true } } },
+        })
+      : Promise.resolve([]),
   ]);
 
   const eventOptions: HelferEventOption[] = events.map((event) => ({
     id: event.id,
     title: event.title,
   }));
+
+  const dayOptions: EventDayOption[] = days.map((day) => ({
+    id: day.id,
+    date: day.date.toISOString(),
+  }));
+
+  const ownAvailabilityByDayId: Record<string, OwnAvailability> =
+    Object.fromEntries(
+      ownAvailabilities.map((availability) => [
+        availability.dayId,
+        {
+          startsAt: availability.startsAt.toISOString(),
+          endsAt: availability.endsAt.toISOString(),
+          roleIds: availability.roles.map((r) => r.roleId),
+        },
+      ]),
+    );
 
   const shiftRows: HelferShiftRow[] = shifts.map((shift) => {
     const fillLevel = computeShiftFillLevel(shift, shift.bookings);
@@ -65,6 +109,9 @@ export default async function HelferPage({
     <HelferView
       events={eventOptions}
       selectedEventId={selectedEventId}
+      days={dayOptions}
+      helperRoles={helperRoles}
+      ownAvailabilityByDayId={ownAvailabilityByDayId}
       shifts={shiftRows}
       isExplainer={explainerGameCount > 0}
       isAttendingAsExplainer={ownAttendance !== null}
