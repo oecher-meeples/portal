@@ -82,6 +82,13 @@ export function formatDateTimeRange(
   return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
 }
 
+/** "10.10.2026" or "10.10.2026 – 12.10.2026" — a pure date range, no time-of-day.
+ * Used for `Event.startsAt`/`endsAt` (#150), which carry no meaningful time. */
+export function formatDateRange(startsAt: DateInput, endsAt: DateInput | null) {
+  if (!endsAt) return formatDatePlain(startsAt);
+  return `${formatDatePlain(startsAt)} – ${formatDatePlain(endsAt)}`;
+}
+
 /** "12,3 MB" — binary (1024-based) units, one decimal, German locale separator. */
 export function formatBytes(bytes: number): string {
   const UNITS = ["B", "KB", "MB", "GB", "TB"];

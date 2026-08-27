@@ -14,6 +14,7 @@ export const MEEPLE_RELATED_MODELS = [
   "ExplainerGame",
   "FleaMarketItem",
   "GameHolding",
+  "HelperAvailability",
   "Invite",
   "LfgParticipant",
   "LfgPost",
@@ -87,6 +88,7 @@ export async function collectMeeplePersonalData(
     explainerGames,
     fleaMarketItems,
     gameHoldings,
+    helperAvailabilities,
     invites,
     lfgParticipations,
     lfgPosts,
@@ -132,6 +134,13 @@ export async function collectMeeplePersonalData(
         gameCopy: { include: { boardGame: { select: { title: true } } } },
       },
     }),
+    prisma.helperAvailability.findMany({
+      where: { meepleId },
+      include: {
+        day: { select: { date: true, event: { select: { title: true } } } },
+        roles: { include: { role: { select: { name: true } } } },
+      },
+    }),
     neonAuthUserId
       ? prisma.invite.findMany({ where: { createdByUserId: neonAuthUserId } })
       : [],
@@ -151,9 +160,9 @@ export async function collectMeeplePersonalData(
       include: {
         shift: {
           select: {
-            type: true,
-            startsAt: true,
-            endsAt: true,
+            role: { select: { name: true } },
+            targetStartsAt: true,
+            targetEndsAt: true,
             event: { select: { title: true } },
           },
         },
@@ -187,6 +196,7 @@ export async function collectMeeplePersonalData(
       ExplainerGame: explainerGames,
       FleaMarketItem: fleaMarketItems,
       GameHolding: gameHoldings,
+      HelperAvailability: helperAvailabilities,
       Invite: invites,
       LfgParticipant: lfgParticipations,
       LfgPost: lfgPosts,

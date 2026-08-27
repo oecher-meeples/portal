@@ -15,9 +15,10 @@ const { createShift, updateShift, deleteShift } =
 class ForbiddenError extends Error {}
 
 const VALID_INPUT = {
-  type: "THEKE" as const,
-  startsAt: new Date("2026-10-10T10:00:00Z"),
-  endsAt: new Date("2026-10-10T14:00:00Z"),
+  roleId: "role-theke",
+  dayId: "day-1",
+  targetStartsAt: new Date("2026-10-10T10:00:00Z"),
+  targetEndsAt: new Date("2026-10-10T14:00:00Z"),
   capacity: 2,
 };
 
@@ -47,11 +48,11 @@ describe("createShift", () => {
   it("rejects an end before or equal to the start", async () => {
     const result = await createShift("event-1", {
       ...VALID_INPUT,
-      endsAt: VALID_INPUT.startsAt,
+      targetEndsAt: VALID_INPUT.targetStartsAt,
     });
 
     expect(result).toEqual({
-      error: "Das Ende muss nach dem Start liegen.",
+      error: "Das Ende muss nach dem Beginn liegen.",
     });
     expect(prismaMock.shift.create).not.toHaveBeenCalled();
   });
@@ -77,9 +78,10 @@ describe("createShift", () => {
     expect(prismaMock.shift.create).toHaveBeenCalledWith({
       data: {
         eventId: "event-1",
-        type: "THEKE",
-        startsAt: VALID_INPUT.startsAt,
-        endsAt: VALID_INPUT.endsAt,
+        dayId: "day-1",
+        roleId: "role-theke",
+        targetStartsAt: VALID_INPUT.targetStartsAt,
+        targetEndsAt: VALID_INPUT.targetEndsAt,
         capacity: 2,
       },
     });
@@ -111,9 +113,10 @@ describe("updateShift", () => {
     expect(prismaMock.shift.update).toHaveBeenCalledWith({
       where: { id: "shift-1" },
       data: {
-        type: "THEKE",
-        startsAt: VALID_INPUT.startsAt,
-        endsAt: VALID_INPUT.endsAt,
+        dayId: "day-1",
+        roleId: "role-theke",
+        targetStartsAt: VALID_INPUT.targetStartsAt,
+        targetEndsAt: VALID_INPUT.targetEndsAt,
         capacity: 2,
       },
     });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { ShiftType } from "@prisma/client";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -14,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { SHIFT_TYPE_LABELS } from "@/lib/events/shift-labels";
 import {
   bookShift,
   cancelBooking,
@@ -24,11 +22,17 @@ import {
   markAttending,
   markNotAttending,
 } from "@/components/feature/helfer/attendance-actions";
+import {
+  HelperAvailabilityForm,
+  type EventDayOption,
+  type HelperRoleOption,
+  type OwnAvailability,
+} from "@/components/feature/helfer/helper-availability-form";
 import { formatDateTimeRange } from "@/lib/utils/format";
 
 export type HelferShiftRow = {
   id: string;
-  type: ShiftType;
+  roleName: string;
   startsAt: string;
   endsAt: string;
   capacity: number;
@@ -45,12 +49,18 @@ export type HelferEventOption = {
 export function HelferView({
   events,
   selectedEventId,
+  days,
+  helperRoles,
+  ownAvailabilityByDayId,
   shifts,
   isExplainer,
   isAttendingAsExplainer,
 }: {
   events: HelferEventOption[];
   selectedEventId: string | null;
+  days: EventDayOption[];
+  helperRoles: HelperRoleOption[];
+  ownAvailabilityByDayId: Record<string, OwnAvailability>;
   shifts: HelferShiftRow[];
   isExplainer: boolean;
   isAttendingAsExplainer: boolean;
@@ -81,6 +91,20 @@ export function HelferView({
             >
               {event.title}
             </Button>
+          ))}
+        </div>
+      )}
+
+      {selectedEventId && days.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">Deine Verfügbarkeit</h2>
+          {days.map((day) => (
+            <HelperAvailabilityForm
+              key={day.id}
+              day={day}
+              helperRoles={helperRoles}
+              own={ownAvailabilityByDayId[day.id] ?? null}
+            />
           ))}
         </div>
       )}
@@ -133,7 +157,7 @@ export function HelferView({
                   className={shift.ownBooking ? "bg-primary/5" : undefined}
                 >
                   <TableCell className="font-medium">
-                    {SHIFT_TYPE_LABELS[shift.type]}
+                    {shift.roleName}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
                     {formatDateTimeRange(shift.startsAt, shift.endsAt)}

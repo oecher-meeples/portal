@@ -1,23 +1,23 @@
 "use server";
 
-import type { ShiftType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 
 export type ShiftInput = {
-  type: ShiftType;
-  startsAt: Date;
-  endsAt: Date;
+  roleId: string;
+  dayId: string;
+  targetStartsAt: Date;
+  targetEndsAt: Date;
   capacity: number;
 };
 
 function validateShiftInput(input: ShiftInput) {
-  if (!input.startsAt || !input.endsAt) {
-    return "Bitte Start- und End-Zeitpunkt angeben.";
+  if (!input.targetStartsAt || !input.targetEndsAt) {
+    return "Bitte Beginn und Ende des Ziel-Zeitraums angeben.";
   }
-  if (input.endsAt <= input.startsAt) {
-    return "Das Ende muss nach dem Start liegen.";
+  if (input.targetEndsAt <= input.targetStartsAt) {
+    return "Das Ende muss nach dem Beginn liegen.";
   }
   if (!Number.isInteger(input.capacity) || input.capacity < 1) {
     return "Die Kapazität muss mindestens 1 sein.";
@@ -36,9 +36,10 @@ export async function createShift(eventId: string, input: ShiftInput) {
   const shift = await prisma.shift.create({
     data: {
       eventId,
-      type: input.type,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
+      dayId: input.dayId,
+      roleId: input.roleId,
+      targetStartsAt: input.targetStartsAt,
+      targetEndsAt: input.targetEndsAt,
       capacity: input.capacity,
     },
   });
@@ -58,9 +59,10 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
   const shift = await prisma.shift.update({
     where: { id: shiftId },
     data: {
-      type: input.type,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
+      dayId: input.dayId,
+      roleId: input.roleId,
+      targetStartsAt: input.targetStartsAt,
+      targetEndsAt: input.targetEndsAt,
       capacity: input.capacity,
     },
   });

@@ -38,6 +38,7 @@ const FIND_MANY_MOCKS = [
   "explainerGame",
   "fleaMarketItem",
   "gameHolding",
+  "helperAvailability",
   "invite",
   "lfgParticipant",
   "lfgPost",

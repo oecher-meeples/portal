@@ -336,6 +336,7 @@ erDiagram
         DateTime startsAt
         DateTime endsAt
         String location
+        Boolean helpersWanted
     }
 
     EventShelfAssignment {
@@ -343,12 +344,27 @@ erDiagram
         String unitId FK
     }
 
+    HelperRole {
+        String id PK
+        String name UK
+        String grantsPermissionKey "optional"
+    }
+
+    EventDay {
+        String id PK
+        String eventId FK
+        DateTime date
+        DateTime startsAt "optional Öffnungszeit"
+        DateTime endsAt "optional Öffnungszeit"
+    }
+
     Shift {
         String id PK
         String eventId FK
-        String type "THEKE, KASSE, LEIHE"
-        DateTime startsAt
-        DateTime endsAt
+        String dayId FK
+        String roleId FK
+        DateTime targetStartsAt
+        DateTime targetEndsAt
         Int capacity
     }
 
@@ -356,6 +372,21 @@ erDiagram
         String shiftId FK
         String meepleId FK
         Boolean uncertain
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailability {
+        String id PK
+        String meepleId FK
+        String dayId FK
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailabilityRole {
+        String availabilityId FK
+        String roleId FK
     }
 
     ExplainerGame {
@@ -384,7 +415,14 @@ erDiagram
 
     Event ||--o{ EventShelfAssignment : "hat"
     StorageUnit ||--o{ EventShelfAssignment : "zugeordnet"
+    Event ||--o{ EventDay : "hat"
     Event ||--o{ Shift : "hat"
+    EventDay ||--o{ Shift : "an Tag"
+    HelperRole ||--o{ Shift : "besetzt als"
+    Meeple ||--o{ HelperAvailability : "meldet"
+    EventDay ||--o{ HelperAvailability : "an Tag"
+    HelperAvailability ||--o{ HelperAvailabilityRole : "wählt"
+    HelperRole ||--o{ HelperAvailabilityRole : "gewählt als"
     Shift ||--o{ ShiftBooking : "gebucht von"
     Meeple ||--o{ ShiftBooking : "bucht"
     Meeple ||--o{ ExplainerGame : "kann erklären"

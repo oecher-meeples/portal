@@ -61,7 +61,7 @@ export function summariseMemberHoldings(
 
 export type DashboardShiftBooking = {
   meepleId: string;
-  shift: { endsAt: Date };
+  shift: { targetEndsAt: Date };
 };
 
 /**
@@ -74,7 +74,9 @@ export function countUpcomingShiftBookings(
   now: Date = new Date(),
 ): number {
   return bookings.filter(
-    (b) => b.meepleId === meepleId && b.shift.endsAt.getTime() >= now.getTime(),
+    (b) =>
+      b.meepleId === meepleId &&
+      b.shift.targetEndsAt.getTime() >= now.getTime(),
   ).length;
 }
 

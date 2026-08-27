@@ -8,10 +8,14 @@ import {
 export default async function AdminEventsPage() {
   await requireAdminPermission("events:manage");
 
-  const events = await prisma.event.findMany({
-    orderBy: { startsAt: "desc" },
-    include: { _count: { select: { shifts: true } } },
-  });
+  const [events, helperRoles, permissions] = await Promise.all([
+    prisma.event.findMany({
+      orderBy: { startsAt: "desc" },
+      include: { _count: { select: { shifts: true } } },
+    }),
+    prisma.helperRole.findMany({ orderBy: { name: "asc" } }),
+    prisma.permission.findMany({ orderBy: { key: "asc" } }),
+  ]);
 
   const rows: EventRow[] = events.map((event) => ({
     id: event.id,
@@ -19,8 +23,15 @@ export default async function AdminEventsPage() {
     startsAt: event.startsAt.toISOString(),
     endsAt: event.endsAt?.toISOString() ?? null,
     location: event.location,
+    helpersWanted: event.helpersWanted,
     shiftCount: event._count.shifts,
   }));
 
-  return <AdminEventsView events={rows} />;
+  return (
+    <AdminEventsView
+      events={rows}
+      helperRoles={helperRoles}
+      permissions={permissions}
+    />
+  );
 }

@@ -15,7 +15,7 @@ import { requireCashierRights } from "@/components/feature/admin-bringbuy/cashie
 export async function importFleaMarketItemsCsv(eventId: string, raw: string) {
   let meeple;
   try {
-    meeple = await requireCashierRights(eventId);
+    meeple = await requireCashierRights();
   } catch (error) {
     return { created: 0, errors: [], error: (error as Error).message };
   }

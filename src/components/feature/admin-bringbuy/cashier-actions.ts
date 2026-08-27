@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import type { FleaMarketItemStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
-import { hasFleaMarketRights } from "@/lib/events/shift-rights";
+import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
+import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 
 const NEXT_STATUS: Record<FleaMarketItemStatus, FleaMarketItemStatus[]> = {
   PENDING: ["FOR_SALE"],
@@ -13,12 +14,15 @@ const NEXT_STATUS: Record<FleaMarketItemStatus, FleaMarketItemStatus[]> = {
   SOLD: [],
 };
 
-export async function requireCashierRights(eventId: string) {
+export async function requireCashierRights() {
   const meeple = await requireMeeple();
-  const allowed = await hasFleaMarketRights(meeple.id, eventId);
+  const allowed = await hasRoleGrantedPermission(
+    meeple.id,
+    FLEA_MARKET_CASHIER_PERMISSION_KEY,
+  );
   if (!allowed) {
     throw new Error(
-      "Keine Kassenberechtigung für dieses Event — weder events:manage noch aktive Kasse-Schicht.",
+      "Keine Kassenberechtigung — weder events:manage noch eine aktive Schicht, deren Rolle diese Rechte gewährt.",
     );
   }
   return meeple;
@@ -34,7 +38,7 @@ export async function approveFleaMarketItem(itemId: string) {
 
   let meeple;
   try {
-    meeple = await requireCashierRights(item.eventId);
+    meeple = await requireCashierRights();
   } catch (error) {
     return { error: (error as Error).message };
   }
@@ -68,7 +72,7 @@ export async function setFleaMarketItemStatus(
   }
 
   try {
-    await requireCashierRights(item.eventId);
+    await requireCashierRights();
   } catch (error) {
     return { error: (error as Error).message };
   }
@@ -90,7 +94,7 @@ export async function setFleaMarketItemStatus(
 
 export async function findFleaMarketItemByCode(eventId: string, code: string) {
   try {
-    await requireCashierRights(eventId);
+    await requireCashierRights();
   } catch (error) {
     return { error: (error as Error).message };
   }

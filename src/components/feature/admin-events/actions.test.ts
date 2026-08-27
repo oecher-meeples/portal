@@ -97,6 +97,72 @@ describe("createEvent", () => {
       data: expect.objectContaining({ slug: "spieletag-herbst-2" }),
     });
   });
+
+  it("stores endsAt as the end of that calendar day, not the submitted instant", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent(VALID_INPUT);
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        endsAt: new Date("2026-10-10T23:59:59.999Z"),
+      }),
+    });
+  });
+
+  it("creates one EventDay per day in the range (#150)", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent({
+      ...VALID_INPUT,
+      startsAt: new Date("2026-10-10T00:00:00Z"),
+      endsAt: new Date("2026-10-11T00:00:00Z"),
+    });
+
+    expect(prismaMock.eventDay.createMany).toHaveBeenCalledWith({
+      data: [
+        { eventId: "event-1", date: new Date("2026-10-10T00:00:00Z") },
+        { eventId: "event-1", date: new Date("2026-10-11T00:00:00Z") },
+      ],
+      skipDuplicates: true,
+    });
+  });
+
+  it("defaults helpersWanted to false when omitted (#155)", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent(VALID_INPUT);
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ helpersWanted: false }),
+    });
+  });
+
+  it("stores helpersWanted when set (#155)", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent({ ...VALID_INPUT, helpersWanted: true });
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ helpersWanted: true }),
+    });
+  });
 });
 
 describe("updateEvent", () => {
@@ -125,6 +191,24 @@ describe("updateEvent", () => {
     expect(prismaMock.event.update).toHaveBeenCalledWith({
       where: { id: "event-1" },
       data: expect.objectContaining({ slug: "spieletag-herbst" }),
+    });
+  });
+
+  it("drops EventDay rows for dates that fell out of the new range (#150)", async () => {
+    prismaMock.event.findUnique.mockResolvedValue({ id: "event-1" } as never);
+    prismaMock.event.update.mockResolvedValue({} as never);
+
+    await updateEvent("event-1", {
+      ...VALID_INPUT,
+      startsAt: new Date("2026-10-10T00:00:00Z"),
+      endsAt: new Date("2026-10-10T00:00:00Z"),
+    });
+
+    expect(prismaMock.eventDay.deleteMany).toHaveBeenCalledWith({
+      where: {
+        eventId: "event-1",
+        date: { notIn: [new Date("2026-10-10T00:00:00Z")] },
+      },
     });
   });
 });

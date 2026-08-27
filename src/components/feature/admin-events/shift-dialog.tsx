@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { ShiftType } from "@prisma/client";
 import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
@@ -10,15 +9,20 @@ import {
   createShift,
   updateShift,
 } from "@/components/feature/admin-events/shift-actions";
-import { SHIFT_TYPE_LABELS } from "@/lib/events/shift-labels";
+import { formatDateMedium } from "@/lib/utils/format";
 
 export type EditableShift = {
   id: string;
-  type: ShiftType;
-  startsAt: string;
-  endsAt: string;
+  dayId: string;
+  roleId: string;
+  roleName: string;
+  targetStartsAt: string;
+  targetEndsAt: string;
   capacity: number;
 };
+
+export type HelperRoleOption = { id: string; name: string };
+export type EventDayOption = { id: string; date: string };
 
 function toDateTimeLocal(iso: string) {
   return iso.slice(0, 16);
@@ -27,24 +31,32 @@ function toDateTimeLocal(iso: string) {
 export function ShiftDialog({
   eventId,
   shift,
+  helperRoles,
+  days,
 }: {
   eventId: string;
   shift?: EditableShift;
+  helperRoles: HelperRoleOption[];
+  days: EventDayOption[];
 }) {
   const isEdit = Boolean(shift);
-  const [type, setType] = useState<ShiftType>(shift?.type ?? "THEKE");
-  const [startsAt, setStartsAt] = useState(
-    shift ? toDateTimeLocal(shift.startsAt) : "",
+  const [dayId, setDayId] = useState(shift?.dayId ?? days[0]?.id ?? "");
+  const [roleId, setRoleId] = useState(
+    shift?.roleId ?? helperRoles[0]?.id ?? "",
   );
-  const [endsAt, setEndsAt] = useState(
-    shift ? toDateTimeLocal(shift.endsAt) : "",
+  const [targetStartsAt, setTargetStartsAt] = useState(
+    shift ? toDateTimeLocal(shift.targetStartsAt) : "",
+  );
+  const [targetEndsAt, setTargetEndsAt] = useState(
+    shift ? toDateTimeLocal(shift.targetEndsAt) : "",
   );
   const [capacity, setCapacity] = useState(String(shift?.capacity ?? 1));
 
   function reset() {
-    setType(shift?.type ?? "THEKE");
-    setStartsAt(shift ? toDateTimeLocal(shift.startsAt) : "");
-    setEndsAt(shift ? toDateTimeLocal(shift.endsAt) : "");
+    setDayId(shift?.dayId ?? days[0]?.id ?? "");
+    setRoleId(shift?.roleId ?? helperRoles[0]?.id ?? "");
+    setTargetStartsAt(shift ? toDateTimeLocal(shift.targetStartsAt) : "");
+    setTargetEndsAt(shift ? toDateTimeLocal(shift.targetEndsAt) : "");
     setCapacity(String(shift?.capacity ?? 1));
   }
 
@@ -64,14 +76,20 @@ export function ShiftDialog({
         )
       }
       title={isEdit ? "Schicht bearbeiten" : "Neue Schicht"}
-      description="Theke, Kasse (Flohmarkt) oder Leihe — mit festem Zeitfenster und Kapazität."
+      description="Bedarf an einer Helferrolle für einen Event-Tag — Stellenzahl plus eigener Ziel-Zeitraum, unabhängig vom Event-Zeitraum."
       submitLabel={isEdit ? "Speichern" : "Schicht anlegen"}
-      canSubmit={Boolean(startsAt) && Boolean(endsAt)}
+      canSubmit={
+        Boolean(dayId) &&
+        Boolean(roleId) &&
+        Boolean(targetStartsAt) &&
+        Boolean(targetEndsAt)
+      }
       action={() => {
         const input = {
-          type,
-          startsAt: new Date(startsAt),
-          endsAt: new Date(endsAt),
+          dayId,
+          roleId,
+          targetStartsAt: new Date(targetStartsAt),
+          targetEndsAt: new Date(targetEndsAt),
           capacity: Number(capacity),
         };
         return shift
@@ -80,39 +98,53 @@ export function ShiftDialog({
       }}
       onReset={reset}
     >
-      <Field label="Typ" htmlFor="shift-type">
+      <Field label="Tag" htmlFor="shift-day">
         <select
-          id="shift-type"
+          id="shift-day"
           className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          value={type}
-          onChange={(event) => setType(event.target.value as ShiftType)}
+          value={dayId}
+          onChange={(event) => setDayId(event.target.value)}
         >
-          {Object.entries(SHIFT_TYPE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
+          {days.map((day) => (
+            <option key={day.id} value={day.id}>
+              {formatDateMedium(day.date)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Rolle" htmlFor="shift-role">
+        <select
+          id="shift-role"
+          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          value={roleId}
+          onChange={(event) => setRoleId(event.target.value)}
+        >
+          {helperRoles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
             </option>
           ))}
         </select>
       </Field>
       <TextField
-        id="shift-starts"
-        label="Beginn"
+        id="shift-target-starts"
+        label="Ziel-Beginn"
         type="datetime-local"
-        value={startsAt}
-        onChange={(event) => setStartsAt(event.target.value)}
+        value={targetStartsAt}
+        onChange={(event) => setTargetStartsAt(event.target.value)}
         required
       />
       <TextField
-        id="shift-ends"
-        label="Ende"
+        id="shift-target-ends"
+        label="Ziel-Ende"
         type="datetime-local"
-        value={endsAt}
-        onChange={(event) => setEndsAt(event.target.value)}
+        value={targetEndsAt}
+        onChange={(event) => setTargetEndsAt(event.target.value)}
         required
       />
       <TextField
         id="shift-capacity"
-        label="Kapazität"
+        label="Stellenzahl"
         type="number"
         min={1}
         value={capacity}

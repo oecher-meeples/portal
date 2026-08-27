@@ -5,7 +5,8 @@ import {
   findUpcomingEvents,
   resolveSelectedEventId,
 } from "@/lib/events/upcoming";
-import { hasFleaMarketRights } from "@/lib/events/shift-rights";
+import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
+import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 import { computeFleaMarketStats } from "@/lib/bringbuy/stats";
 import {
   AdminBringBuyView,
@@ -35,7 +36,10 @@ export default async function AdminBringBuyPage({
     );
   }
 
-  const allowed = await hasFleaMarketRights(meeple.id, selectedEventId);
+  const allowed = await hasRoleGrantedPermission(
+    meeple.id,
+    FLEA_MARKET_CASHIER_PERMISSION_KEY,
+  );
   if (!allowed) {
     redirect("/403");
   }

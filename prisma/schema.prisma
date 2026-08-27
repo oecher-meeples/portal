@@ -79,12 +79,6 @@ enum HoldingOrigin {
   RELOCATION
 }
 
-enum ShiftType {
-  THEKE
-  KASSE
-  LEIHE
-}
-
 enum ExplainerExperienceLevel {
   WITH_MANUAL
   WITHOUT_MANUAL
@@ -214,6 +208,7 @@ model Meeple {
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
   lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
   shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
+  helperAvailabilities     HelperAvailability[]         @relation("HelperAvailabilityMeeple")
   explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
   explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
   fleaMarketItems          FleaMarketItem[]             @relation("FleaMarketItemSeller")
@@ -658,6 +653,8 @@ model GameHolding {
 
 /// A play day or larger event, independent of the public/internal ICS calendar feed
 /// (see docs/adr/0004). The basis for shifts, explainer attendance and flea market items.
+/// `startsAt`/`endsAt` are a pure date range (no meaningful time-of-day) — actual
+/// opening times per calendar day live on `EventDay` (#150), set after creation.
 model Event {
   id                   String    @id @default(cuid())
   slug                 String    @unique
@@ -669,15 +666,40 @@ model Event {
   /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
   /// always open and not tied to a specific event.
   hasBringAndBuyMarket Boolean   @default(false)
+  /// Gilt für das ganze Event, nicht pro Tag (#155) — schaltet die
+  /// Dashboard-Karte für Meeples frei und den "Helferplan"-Nav-Eintrag
+  /// (nur solange das Event noch kommt, siehe hasOpenHelperRequest()).
+  helpersWanted        Boolean   @default(false)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
+  days                 EventDay[]
   shifts               Shift[]
   shelfAssignments     EventShelfAssignment[]
   explainerAttendances ExplainerAttendance[]
   fleaMarketItems      FleaMarketItem[]
 
   @@map("events")
+}
+
+/// One calendar day within an event's date range. Generated from `Event.startsAt`/
+/// `endsAt` on create/update (#150); `startsAt`/`endsAt` here hold the actual opening
+/// time for that day, set separately on the event detail page — null until then.
+model EventDay {
+  id        String    @id @default(cuid())
+  eventId   String
+  date      DateTime
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  event          Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  shifts         Shift[]
+  availabilities HelperAvailability[]
+
+  @@unique([eventId, date])
+  @@map("event_days")
 }
 
 /// Which shelves are set up at an event. Purely informational — it never changes a
@@ -695,29 +717,100 @@ model EventShelfAssignment {
 
 /// A time slot with a fixed type and capacity within an event, self-service bookable
 /// by members. Booking a KASSE shift grants time-bound flea market rights (ADR 0006).
-model Shift {
-  id        String    @id @default(cuid())
-  eventId   String
-  type      ShiftType
+/// Global, admin-definable helper role (ADR-0012) — replaces the former fixed
+/// ShiftType enum so admins can add roles (e.g. "Küche") without a migration.
+/// `grantsPermissionKey` generalizes the former KASSE hardcode: when set, the
+/// permission applies for the duration of an assigned shift booking (see
+/// hasRoleGrantedPermission in shift-rights.ts).
+model HelperRole {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  grantsPermissionKey String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  shifts              Shift[]
+  availabilityChoices HelperAvailabilityRole[]
+
+  @@map("helper_roles")
+}
+
+/// Ein Meeple meldet sich für einen Event-Tag als Helfer verfügbar (#156) —
+/// eigenes Verfügbarkeitsfenster (`startsAt`/`endsAt`) plus Mehrfachauswahl
+/// der Rollen, die es an diesem Tag übernehmen würde. Getrennt von der
+/// späteren admin-seitigen Zeitblock-Zuweisung (`ShiftBooking`) — eine
+/// Zusage hier ist ein Angebot, keine Buchung. Ein Meeple hat höchstens
+/// eine Zusage pro Tag (`@@unique`); erneutes Absenden ersetzt sie.
+model HelperAvailability {
+  id        String   @id @default(cuid())
+  meepleId  String
+  dayId     String
   startsAt  DateTime
   endsAt    DateTime
-  capacity  Int
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meeple Meeple                   @relation("HelperAvailabilityMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  day    EventDay                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  roles  HelperAvailabilityRole[]
+
+  @@unique([meepleId, dayId])
+  @@map("helper_availabilities")
+}
+
+model HelperAvailabilityRole {
+  availabilityId String
+  roleId         String
+
+  availability HelperAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  role         HelperRole         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([availabilityId, roleId])
+  @@map("helper_availability_roles")
+}
+
+/// Bedarfs-Container (#153): Rolle + Event-Tag + Stellenzahl (`capacity`,
+/// parallele Plätze) + eigener Ziel-Zeitraum, den der Admin frei setzt —
+/// unabhängig vom Event-Start/-Ende, wegen Auf-/Abbau außerhalb der
+/// eigentlichen Veranstaltungszeit. `targetStartsAt`/`targetEndsAt` sind
+/// (noch) das einzige Zeitfenster, gegen das `hasRoleGrantedPermission` und
+/// `findActiveShiftEvent` prüfen — individuelle, verschiebbare
+/// Zuweisungs-Zeitblöcke pro `ShiftBooking` kommen erst mit dem
+/// Schichtplan-Editor (#157 ff.).
+model Shift {
+  id             String   @id @default(cuid())
+  eventId        String
+  dayId          String
+  roleId         String
+  targetStartsAt DateTime
+  targetEndsAt   DateTime
+  capacity       Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  day      EventDay       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  role     HelperRole     @relation(fields: [roleId], references: [id])
   bookings ShiftBooking[]
 
   @@index([eventId])
+  @@index([dayId])
+  @@index([roleId])
   @@map("shifts")
 }
 
 /// A member's booking of a shift. `uncertain` marks an unsure commitment but still
 /// counts against capacity — the simplest rule that avoids overbooking.
+/// `startsAt`/`endsAt` (#159) are this booking's own, individually movable
+/// time block — distinct from `Shift.targetStartsAt`/`targetEndsAt`, the
+/// container's overall target period. Defaults to the full target period on
+/// creation; the Schichtplan-Editor's resize handles (#160) narrow it.
 model ShiftBooking {
   shiftId   String
   meepleId  String
   uncertain Boolean  @default(false)
+  startsAt  DateTime
+  endsAt    DateTime
   createdAt DateTime @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)

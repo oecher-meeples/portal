@@ -6,6 +6,7 @@ import {
   countUpcomingShiftBookings,
   summariseMemberHoldings,
 } from "@/lib/members/dashboard";
+import { findOpenHelperRequestEvent } from "@/lib/events/upcoming";
 import { DashboardView } from "@/components/feature/dashboard/dashboard-view";
 import { formatDatePlain } from "@/lib/utils/format";
 
@@ -21,6 +22,7 @@ export default async function DashboardPage() {
     totalOpenLfgCount,
     activeMarketListingCount,
     importantLinks,
+    openHelperRequestEvent,
   ] = await Promise.all([
     getInternalContent(),
     prisma.gameHolding.findMany({
@@ -37,11 +39,12 @@ export default async function DashboardPage() {
     }),
     prisma.shiftBooking.findMany({
       where: { meepleId: meeple.id },
-      select: { meepleId: true, shift: { select: { endsAt: true } } },
+      select: { meepleId: true, shift: { select: { targetEndsAt: true } } },
     }),
     prisma.lfgPost.count({ where: { closedAt: null } }),
     prisma.marketListing.count(),
     listImportantLinks(),
+    findOpenHelperRequestEvent(),
   ]);
 
   const canManageLinks = await hasPermissionInCurrentView(
@@ -90,6 +93,7 @@ export default async function DashboardPage() {
       importantLinks={importantLinks}
       canManageLinks={canManageLinks}
       resignationNotice={resignationNotice}
+      openHelperRequestEvent={openHelperRequestEvent}
     />
   );
 }

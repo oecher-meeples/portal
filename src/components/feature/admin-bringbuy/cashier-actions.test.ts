@@ -13,9 +13,10 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
-const hasFleaMarketRightsMock = vi.fn();
+const hasRoleGrantedPermissionMock = vi.fn();
 vi.mock("@/lib/events/shift-rights", () => ({
-  hasFleaMarketRights: (...args: unknown[]) => hasFleaMarketRightsMock(...args),
+  hasRoleGrantedPermission: (...args: unknown[]) =>
+    hasRoleGrantedPermissionMock(...args),
 }));
 
 const {
@@ -41,7 +42,7 @@ beforeEach(() => {
 
 describe("without flea market rights", () => {
   it("rejects every cashier action without a database write", async () => {
-    hasFleaMarketRightsMock.mockResolvedValue(false);
+    hasRoleGrantedPermissionMock.mockResolvedValue(false);
     prismaMock.fleaMarketItem.findUnique.mockResolvedValue(item() as never);
 
     const approveResult = await approveFleaMarketItem("item-1");
@@ -57,7 +58,7 @@ describe("without flea market rights", () => {
 
 describe("approveFleaMarketItem", () => {
   beforeEach(() => {
-    hasFleaMarketRightsMock.mockResolvedValue(true);
+    hasRoleGrantedPermissionMock.mockResolvedValue(true);
   });
 
   it("sets approvedAt and approvedByMeepleId exactly once", async () => {
@@ -93,7 +94,7 @@ describe("approveFleaMarketItem", () => {
 
 describe("setFleaMarketItemStatus", () => {
   beforeEach(() => {
-    hasFleaMarketRightsMock.mockResolvedValue(true);
+    hasRoleGrantedPermissionMock.mockResolvedValue(true);
   });
 
   it("rejects any transition away from SOLD", async () => {
