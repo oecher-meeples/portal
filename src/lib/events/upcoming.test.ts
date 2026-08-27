@@ -5,6 +5,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const {
   findUpcomingEvents,
+  findUpcomingEventsVisibleToMembers,
   findUpcomingBringAndBuyEvents,
   findOpenHelperRequestEvent,
   hasOpenHelperRequest,
@@ -62,7 +63,10 @@ describe("hasOpenHelperRequest", () => {
 
     expect(await hasOpenHelperRequest()).toBe(true);
     expect(prismaMock.event.findFirst).toHaveBeenCalledWith({
-      where: expect.objectContaining({ helpersWanted: true }),
+      where: expect.objectContaining({
+        helpersWanted: true,
+        visibility: { not: "DRAFT" },
+      }),
       orderBy: { startsAt: "asc" },
       select: { id: true, title: true },
     });
@@ -137,6 +141,20 @@ describe("findUpcomingEvents", () => {
     expect(prismaMock.event.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         select: { id: true, slug: true, startsAt: true },
+      }),
+    );
+  });
+});
+
+describe("findUpcomingEventsVisibleToMembers", () => {
+  it("excludes Entwurf-Events from the query", async () => {
+    prismaMock.event.findMany.mockResolvedValue([]);
+
+    await findUpcomingEventsVisibleToMembers();
+
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ visibility: { not: "DRAFT" } }),
       }),
     );
   });

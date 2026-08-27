@@ -1,7 +1,7 @@
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import {
-  findUpcomingEvents,
+  findUpcomingEventsVisibleToMembers,
   resolveSelectedEventId,
 } from "@/lib/events/upcoming";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
@@ -23,7 +23,7 @@ export default async function HelferPage({
   const { meeple } = await requireMember();
   const { event: requestedEventId } = await searchParams;
 
-  const events = await findUpcomingEvents();
+  const events = await findUpcomingEventsVisibleToMembers();
   const selectedEventId = resolveSelectedEventId(events, requestedEventId);
 
   const [

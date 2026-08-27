@@ -33,6 +33,19 @@ export async function setHelperAvailability({
     return { error: "Bitte mindestens eine Rolle auswählen." };
   }
 
+  const day = await prisma.eventDay.findUnique({
+    where: { id: dayId },
+    select: { event: { select: { visibility: true } } },
+  });
+  if (!day) {
+    return { error: "Tag nicht gefunden." };
+  }
+  if (day.event.visibility === "DRAFT") {
+    return {
+      error: "Für dieses Event ist die Helferplanung noch nicht freigegeben.",
+    };
+  }
+
   await prisma.helperAvailability.upsert({
     where: { meepleId_dayId: { meepleId, dayId } },
     create: {

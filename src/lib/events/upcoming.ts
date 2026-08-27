@@ -51,15 +51,34 @@ export async function hasOpenHelperRequest(): Promise<boolean> {
 }
 
 /** The earliest upcoming event with an open helper request, if any — feeds
- * the Dashboard-Karte's link target (#155). */
+ * the Dashboard-Karte's link target (#155). Excludes Entwurf-Events: ein
+ * Meeple darf sich nicht für ein Event melden, das noch nicht mal intern
+ * sichtbar ist (siehe lib/events/visibility.ts). */
 export async function findOpenHelperRequestEvent() {
   return prisma.event.findFirst({
     where: {
       helpersWanted: true,
+      visibility: { not: "DRAFT" },
       OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
     },
     orderBy: { startsAt: "asc" },
     select: { id: true, title: true },
+  });
+}
+
+/** Kommende Events, die für ein eingeloggtes Meeple sichtbar sind (Intern
+ * oder Öffentlich, kein Entwurf) — Grundlage für /helfer, wo ein Meeple sich
+ * sonst für ein noch nicht freigegebenes Event melden könnte. */
+export function findUpcomingEventsVisibleToMembers<
+  S extends Record<string, boolean> = { id: true; title: true },
+>(select?: S) {
+  return prisma.event.findMany({
+    where: {
+      visibility: { not: "DRAFT" },
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    select: (select ?? { id: true, title: true }) as S,
   });
 }
 

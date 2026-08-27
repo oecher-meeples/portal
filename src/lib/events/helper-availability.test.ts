@@ -15,6 +15,12 @@ const VALID_INPUT = {
 };
 
 describe("setHelperAvailability", () => {
+  beforeEach(() => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "INTERNAL" },
+    } as never);
+  });
+
   it("rejects an end before or equal to the start", async () => {
     const result = await setHelperAvailability({
       ...VALID_INPUT,
@@ -67,6 +73,39 @@ describe("setHelperAvailability", () => {
         },
       },
     });
+  });
+
+  it("rejects an unknown day", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue(null);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({ error: "Tag nicht gefunden." });
+    expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects an Entwurf-Event — Helferplanung ist dort noch nicht freigegeben", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "DRAFT" },
+    } as never);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({
+      error: "Für dieses Event ist die Helferplanung noch nicht freigegeben.",
+    });
+    expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+  });
+
+  it("allows a PUBLIC event", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "PUBLIC" },
+    } as never);
+    prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toEqual({ success: true });
   });
 });
 
