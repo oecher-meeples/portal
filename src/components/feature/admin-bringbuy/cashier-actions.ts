@@ -5,9 +5,7 @@ import type { FleaMarketItemStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
 import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
-
-/** Muss zum in prisma/seed-roles.ts gepflegten Permission-Key passen. */
-export const FLEA_MARKET_CASHIER_PERMISSION_KEY = "events:manage";
+import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 
 const NEXT_STATUS: Record<FleaMarketItemStatus, FleaMarketItemStatus[]> = {
   PENDING: ["FOR_SALE"],

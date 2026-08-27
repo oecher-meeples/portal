@@ -6,7 +6,7 @@ import {
   resolveSelectedEventId,
 } from "@/lib/events/upcoming";
 import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
-import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/components/feature/admin-bringbuy/cashier-actions";
+import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 import { computeFleaMarketStats } from "@/lib/bringbuy/stats";
 import {
   AdminBringBuyView,
