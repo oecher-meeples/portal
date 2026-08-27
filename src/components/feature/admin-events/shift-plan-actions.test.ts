@@ -37,7 +37,7 @@ describe("without the events:manage permission", () => {
       assignHelperToShift("shift-1", "meeple-1", new Date(), new Date()),
     ).rejects.toThrow(ForbiddenError);
     await expect(
-      unassignHelperFromShift("shift-1", "meeple-1"),
+      unassignHelperFromShift("booking-1", "shift-1"),
     ).rejects.toThrow(ForbiddenError);
 
     expect(assignShiftBookingMock).not.toHaveBeenCalled();
@@ -64,6 +64,7 @@ describe("assignHelperToShift", () => {
       meepleId: "meeple-1",
       startsAt,
       endsAt,
+      bookingId: undefined,
     });
   });
 
@@ -82,15 +83,12 @@ describe("assignHelperToShift", () => {
 });
 
 describe("unassignHelperFromShift", () => {
-  it("delegates to unassignShiftBooking", async () => {
+  it("delegates to unassignShiftBooking with the bookingId", async () => {
     unassignShiftBookingMock.mockResolvedValue({ success: true });
 
-    const result = await unassignHelperFromShift("shift-1", "meeple-1");
+    const result = await unassignHelperFromShift("booking-1", "shift-1");
 
     expect(result).toEqual({ success: true });
-    expect(unassignShiftBookingMock).toHaveBeenCalledWith(
-      "shift-1",
-      "meeple-1",
-    );
+    expect(unassignShiftBookingMock).toHaveBeenCalledWith("booking-1");
   });
 });

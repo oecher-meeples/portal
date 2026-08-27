@@ -39,7 +39,7 @@ describe("assignShiftBooking", () => {
     });
 
     expect(result).toEqual({ error: "Das Ende muss nach dem Beginn liegen." });
-    expect(prismaMock.shiftBooking.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.shiftBooking.create).not.toHaveBeenCalled();
   });
 
   it("rejects when the shift doesn't exist", async () => {
@@ -125,10 +125,10 @@ describe("assignShiftBooking", () => {
       error:
         "Überschneidet sich zeitlich mit einer anderen Zuweisung dieser Person.",
     });
-    expect(prismaMock.shiftBooking.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.shiftBooking.create).not.toHaveBeenCalled();
   });
 
-  it("excludes the shift's own existing booking from the overlap check", async () => {
+  it("checks for overlaps across all of the person's bookings, any shift", async () => {
     await assignShiftBooking({
       shiftId: "shift-1",
       meepleId: "meeple-1",
@@ -139,14 +139,32 @@ describe("assignShiftBooking", () => {
     expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith({
       where: {
         meepleId: "meeple-1",
-        shiftId: { not: "shift-1" },
         startsAt: { lt: END },
         endsAt: { gt: START },
       },
     });
   });
 
-  it("upserts the booking on success", async () => {
+  it("excludes the booking's own row from the overlap check when resizing", async () => {
+    await assignShiftBooking({
+      shiftId: "shift-1",
+      meepleId: "meeple-1",
+      startsAt: START,
+      endsAt: END,
+      bookingId: "booking-1",
+    });
+
+    expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith({
+      where: {
+        meepleId: "meeple-1",
+        id: { not: "booking-1" },
+        startsAt: { lt: END },
+        endsAt: { gt: START },
+      },
+    });
+  });
+
+  it("creates a new booking when no bookingId is given", async () => {
     const result = await assignShiftBooking({
       shiftId: "shift-1",
       meepleId: "meeple-1",
@@ -155,30 +173,46 @@ describe("assignShiftBooking", () => {
     });
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.shiftBooking.upsert).toHaveBeenCalledWith({
-      where: { shiftId_meepleId: { shiftId: "shift-1", meepleId: "meeple-1" } },
-      create: {
+    expect(prismaMock.shiftBooking.create).toHaveBeenCalledWith({
+      data: {
         shiftId: "shift-1",
         meepleId: "meeple-1",
         startsAt: START,
         endsAt: END,
       },
-      update: { startsAt: START, endsAt: END },
     });
+    expect(prismaMock.shiftBooking.update).not.toHaveBeenCalled();
+  });
+
+  it("re-times the exact booking when a bookingId is given", async () => {
+    const result = await assignShiftBooking({
+      shiftId: "shift-1",
+      meepleId: "meeple-1",
+      startsAt: START,
+      endsAt: END,
+      bookingId: "booking-1",
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.shiftBooking.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: { startsAt: START, endsAt: END },
+    });
+    expect(prismaMock.shiftBooking.create).not.toHaveBeenCalled();
   });
 });
 
 describe("unassignShiftBooking", () => {
-  it("deletes the meeple's booking on that shift", async () => {
+  it("deletes the specific booking", async () => {
     prismaMock.shiftBooking.deleteMany.mockResolvedValue({
       count: 1,
     } as never);
 
-    const result = await unassignShiftBooking("shift-1", "meeple-1");
+    const result = await unassignShiftBooking("booking-1");
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.shiftBooking.deleteMany).toHaveBeenCalledWith({
-      where: { shiftId: "shift-1", meepleId: "meeple-1" },
+      where: { id: "booking-1" },
     });
   });
 });

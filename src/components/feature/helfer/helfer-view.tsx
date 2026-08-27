@@ -32,10 +32,17 @@ import {
   type HelperRoleOption,
   type OwnAvailability,
 } from "@/components/feature/helfer/helper-availability-form";
-import { formatDateMedium, formatDateTimeRange } from "@/lib/utils/format";
+import {
+  formatDateMedium,
+  formatWeekdayDateTimeRange,
+} from "@/lib/utils/format";
 
 export type HelferShiftRow = {
+  /** Shift-Id, für Bestätigen/Ablehnen — nicht eindeutig pro Zeile, da ein
+   * Meeple mehrfach in derselben Schicht eingetragen sein kann. */
   id: string;
+  /** Eigene Buchungs-Id, als React-Key. */
+  bookingId: string;
   eventTitle: string;
   roleName: string;
   startsAt: string;
@@ -163,7 +170,7 @@ export function HelferView({
                 {assignedShifts.map((shift) => {
                   const confirmed = shift.confirmedAt !== null;
                   return (
-                    <TableRow key={shift.id} className="bg-primary/5">
+                    <TableRow key={shift.bookingId} className="bg-primary/5">
                       <TableCell className="text-muted-foreground">
                         {shift.eventTitle}
                       </TableCell>
@@ -171,7 +178,10 @@ export function HelferView({
                         {shift.roleName}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {formatDateTimeRange(shift.startsAt, shift.endsAt)}
+                        {formatWeekdayDateTimeRange(
+                          shift.startsAt,
+                          shift.endsAt,
+                        )}
                       </TableCell>
                       <TableCell>
                         <StatusPill

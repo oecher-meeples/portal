@@ -79,15 +79,12 @@ export function ShiftPlanGrid({
   day: PlanDay;
   shifts: PlanShift[];
   bookings: PlanBooking[];
-  /** Entf-Taste auf einem fokussierten Block (#161 Unassign). */
-  onUnassign: (shiftId: string, meepleId: string) => void;
+  /** Entf-Taste bzw. sichtbarer Button auf einem fokussierten Block (#161
+   * Unassign) — zielt auf die konkrete Buchung, nicht nur (shiftId, meepleId),
+   * da ein Meeple mehrere Blöcke auf derselben Schicht haben kann. */
+  onUnassign: (booking: PlanBooking) => void;
   /** Griffpunkte oben/unten auf einem fokussierten Block (#160 Resize). */
-  onResize: (
-    shiftId: string,
-    meepleId: string,
-    startsAt: Date,
-    endsAt: Date,
-  ) => void;
+  onResize: (booking: PlanBooking, startsAt: Date, endsAt: Date) => void;
   /** Zellen von-bis in der Uhrzeiten-Spalte selektiert und bestätigt
    * (Schicht-Schnellanlage) — öffnet den Schicht-anlegen-Dialog mit
    * vorausgefüllter Ziel-Zeit. */
@@ -154,7 +151,7 @@ export function ShiftPlanGrid({
   };
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="max-h-[32rem] overflow-auto rounded-lg border">
       <div
         className="grid"
         style={{
@@ -162,7 +159,10 @@ export function ShiftPlanGrid({
           gridTemplateRows: `auto repeat(${timeSlots.length}, 2rem)`,
         }}
       >
-        <div className="bg-muted/50 border-b" style={{ gridRow: 1 }} />
+        <div
+          className="bg-muted/50 sticky top-0 z-20 border-b"
+          style={{ gridRow: 1 }}
+        />
         {columns.map((group) => {
           const fullyCovered = isRoleFullyCovered(group, shifts, bookings);
           return (
@@ -171,7 +171,7 @@ export function ShiftPlanGrid({
               title={
                 fullyCovered ? "Voll geplant — lückenlos abgedeckt" : undefined
               }
-              className={`border-b border-l px-2 py-1.5 text-center text-xs font-semibold ${
+              className={`sticky top-0 z-20 border-b border-l px-2 py-1.5 text-center text-xs font-semibold ${
                 fullyCovered
                   ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                   : "bg-muted/50"
@@ -294,7 +294,7 @@ export function ShiftPlanGrid({
           const rowEnd = Math.max(rowStart + 1, rowForTime(booking.endsAt) + 2);
           return (
             <AssignedBlock
-              key={`${booking.shiftId}-${booking.meepleId}`}
+              key={booking.id}
               booking={booking}
               gridColumn={group.startColumn + 2 + Math.max(slot, 0)}
               rowStart={rowStart}

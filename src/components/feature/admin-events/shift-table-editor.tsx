@@ -24,7 +24,7 @@ import type {
   HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
 import type { ShiftRow } from "@/components/feature/admin-events/shift-table-section";
-import { formatDateMedium } from "@/lib/utils/format";
+import { formatWeekdayDate } from "@/lib/utils/format";
 import {
   MINUTES_PER_DAY,
   combineDateAndMinutes,
@@ -142,12 +142,7 @@ export function ShiftTableEditor({
     );
     for (const shift of shifts) {
       if (keptIds.has(shift.id)) continue;
-      const result = await deleteShift(shift.id);
-      if ("error" in result) {
-        setError(result.error ?? "Unbekannter Fehler.");
-        setPending(false);
-        return;
-      }
+      await deleteShift(shift.id);
     }
 
     for (const row of rows) {
@@ -202,7 +197,7 @@ export function ShiftTableEditor({
                   >
                     {days.map((day) => (
                       <option key={day.id} value={day.id}>
-                        {formatDateMedium(day.date)}
+                        {formatWeekdayDate(day.date)}
                       </option>
                     ))}
                   </select>

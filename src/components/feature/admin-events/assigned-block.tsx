@@ -38,13 +38,8 @@ export function AssignedBlock({
   /** One past the last valid row line (`timeSlots.length + 2`). */
   maxRow: number;
   rangeStart: Date;
-  onUnassign: (shiftId: string, meepleId: string) => void;
-  onResize: (
-    shiftId: string,
-    meepleId: string,
-    startsAt: Date,
-    endsAt: Date,
-  ) => void;
+  onUnassign: (booking: PlanBooking) => void;
+  onResize: (booking: PlanBooking, startsAt: Date, endsAt: Date) => void;
 }) {
   const [focused, setFocused] = useState(false);
   const [drag, setDrag] = useState<{
@@ -94,7 +89,7 @@ export function AssignedBlock({
       const endsAt = new Date(
         rangeStart.getTime() + (current.liveEnd - 2) * STEP_MINUTES * 60_000,
       );
-      onResize(booking.shiftId, booking.meepleId, startsAt, endsAt);
+      onResize(booking, startsAt, endsAt);
     }
 
     window.addEventListener("pointermove", handleMove);
@@ -134,7 +129,7 @@ export function AssignedBlock({
       onKeyDown={(keyEvent) => {
         if (keyEvent.key === "Delete" || keyEvent.key === "Backspace") {
           keyEvent.preventDefault();
-          onUnassign(booking.shiftId, booking.meepleId);
+          onUnassign(booking);
         }
       }}
       className={cn(
@@ -165,7 +160,7 @@ export function AssignedBlock({
             title="Zuweisung entfernen"
             onClick={(clickEvent) => {
               clickEvent.stopPropagation();
-              onUnassign(booking.shiftId, booking.meepleId);
+              onUnassign(booking);
             }}
             className="bg-background/80 hover:bg-destructive hover:text-destructive-foreground absolute top-0.5 left-0.5 flex size-3.5 items-center justify-center rounded-full"
           >

@@ -107,6 +107,7 @@ export default async function HelferPage() {
 
   const assignedShifts: HelferShiftRow[] = ownBookings.map((booking) => ({
     id: booking.shiftId,
+    bookingId: booking.id,
     eventTitle: booking.shift.event.title,
     roleName: booking.shift.role.name,
     startsAt: booking.startsAt.toISOString(),

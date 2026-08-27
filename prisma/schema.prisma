@@ -821,6 +821,7 @@ model Shift {
 /// und gilt bis zur Bestätigung durch das zugewiesene Meeple selbst als
 /// unbestätigt (`null`). Ersetzt das frühere Selbstbuchungs-Flag `uncertain`.
 model ShiftBooking {
+  id          String    @id @default(cuid())
   shiftId     String
   meepleId    String
   startsAt    DateTime
@@ -831,7 +832,10 @@ model ShiftBooking {
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   meeple Meeple @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
 
-  @@id([shiftId, meepleId])
+  // Kein @@id([shiftId, meepleId]) mehr — ein Meeple kann in derselben Schicht
+  // mehrfach mit unterschiedlichen, nicht überlappenden Zeitblöcken
+  // eingetragen sein (z. B. eine Pausenablösung durch dieselbe Person).
+  @@index([shiftId, meepleId])
   @@map("shift_bookings")
 }
 

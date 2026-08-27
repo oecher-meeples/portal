@@ -21,6 +21,8 @@ export async function assignHelperToShift(
   meepleId: string,
   startsAt: Date,
   endsAt: Date,
+  /** Re-times this exact booking (Resize) statt eine neue anzulegen. */
+  bookingId?: string,
 ) {
   await requirePermission("events:manage");
 
@@ -29,18 +31,19 @@ export async function assignHelperToShift(
     meepleId,
     startsAt,
     endsAt,
+    bookingId,
   });
   if ("success" in result) await revalidateEventPath(shiftId);
   return result;
 }
 
 export async function unassignHelperFromShift(
+  bookingId: string,
   shiftId: string,
-  meepleId: string,
 ) {
   await requirePermission("events:manage");
 
-  const result = await unassignShiftBooking(shiftId, meepleId);
+  const result = await unassignShiftBooking(bookingId);
   if ("success" in result) await revalidateEventPath(shiftId);
   return result;
 }

@@ -14,7 +14,6 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
 import { Field } from "@/components/ui/field";
-import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import {
   ShiftDialog,
   type EditableShift,
@@ -24,11 +23,7 @@ import {
 import { ShiftTableEditor } from "@/components/feature/admin-events/shift-table-editor";
 import { deleteShift } from "@/components/feature/admin-events/shift-actions";
 import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
-import {
-  formatDateMedium,
-  formatDateTimeRange,
-  formatTimePlain,
-} from "@/lib/utils/format";
+import { formatTimeRange, formatWeekdayDate } from "@/lib/utils/format";
 
 export type ShiftRow = EditableShift & {
   dayDate: string;
@@ -38,11 +33,7 @@ export type ShiftRow = EditableShift & {
 const SELECT_CLASSNAME =
   "border-input bg-background h-9 rounded-md border px-3 text-sm";
 
-/** Kurzbezeichnung einer Schicht für den Mehrfachauswahl-Filter — eindeutig
- * genug, um mehrere Schichten derselben Rolle am selben Tag zu unterscheiden. */
-function shiftLabel(shift: ShiftRow): string {
-  return `${formatDateMedium(shift.dayDate)} · ${shift.roleName} (${formatTimePlain(shift.targetStartsAt)}–${formatTimePlain(shift.targetEndsAt)})`;
-}
+type FillLevelFilter = "alle" | "unvollstaendig";
 
 /**
  * Schichten-Tabelle des Events (#150 ff.) — oberhalb Tag- und Schichten-
@@ -62,14 +53,20 @@ export function ShiftTableSection({
   helperRoles: HelperRoleOption[];
 }) {
   const [filterDayId, setFilterDayId] = useState("alle");
-  const [filterLabels, setFilterLabels] = useState<string[]>([]);
+  const [filterRoleId, setFilterRoleId] = useState("alle");
+  const [filterFillLevel, setFilterFillLevel] =
+    useState<FillLevelFilter>("alle");
   const [editing, setEditing] = useState(false);
 
-  const filteredShifts = shifts.filter(
-    (shift) =>
-      (filterDayId === "alle" || shift.dayId === filterDayId) &&
-      (filterLabels.length === 0 || filterLabels.includes(shiftLabel(shift))),
-  );
+  const filteredShifts = shifts.filter((shift) => {
+    if (filterDayId !== "alle" && shift.dayId !== filterDayId) return false;
+    if (filterRoleId !== "alle" && shift.roleId !== filterRoleId) return false;
+    if (filterFillLevel === "unvollstaendig") {
+      const fillLevel = computeShiftFillLevel(shift, shift.bookings);
+      if (fillLevel.isFull) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-3">
@@ -86,24 +83,38 @@ export function ShiftTableSection({
                 <option value="alle">Alle</option>
                 {days.map((day) => (
                   <option key={day.id} value={day.id}>
-                    {formatDateMedium(day.date)}
+                    {formatWeekdayDate(day.date)}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field
-              label="Schichten"
-              htmlFor="shift-filter-labels"
-              className="min-w-64"
-            >
-              <MultiSelectCombobox
-                id="shift-filter-labels"
-                options={shifts.map(shiftLabel)}
-                value={filterLabels}
-                onValueChange={setFilterLabels}
-                placeholder="Schicht suchen …"
-                emptyLabel="Keine passende Schicht"
-              />
+            <Field label="Rolle" htmlFor="shift-filter-role">
+              <select
+                id="shift-filter-role"
+                className={SELECT_CLASSNAME}
+                value={filterRoleId}
+                onChange={(event) => setFilterRoleId(event.target.value)}
+              >
+                <option value="alle">Alle</option>
+                {helperRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Füllstand" htmlFor="shift-filter-fill-level">
+              <select
+                id="shift-filter-fill-level"
+                className={SELECT_CLASSNAME}
+                value={filterFillLevel}
+                onChange={(event) =>
+                  setFilterFillLevel(event.target.value as FillLevelFilter)
+                }
+              >
+                <option value="alle">Alle</option>
+                <option value="unvollstaendig">Unvollständige</option>
+              </select>
             </Field>
           </div>
           <Button
@@ -163,11 +174,11 @@ export function ShiftTableSection({
                   return (
                     <TableRow key={shift.id}>
                       <TableCell className="text-muted-foreground">
-                        {formatDateMedium(shift.dayDate)}
+                        {formatWeekdayDate(shift.dayDate)}
                       </TableCell>
                       <TableCell>{shift.roleName}</TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDateTimeRange(
+                        {formatTimeRange(
                           shift.targetStartsAt,
                           shift.targetEndsAt,
                         )}
@@ -194,7 +205,7 @@ export function ShiftTableSection({
                           variant="destructive"
                           size="icon-sm"
                           aria-label="Schicht löschen"
-                          confirm="Schicht wirklich löschen?"
+                          confirm="Schicht wirklich löschen? Vorhandene Zuweisungen werden mit entfernt."
                           action={deleteShift.bind(null, shift.id)}
                         >
                           <Trash2 className="size-4" />

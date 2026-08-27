@@ -41,6 +41,7 @@ export default async function AdminEventDetailPage({
             day: { select: { date: true } },
             bookings: {
               select: {
+                id: true,
                 confirmedAt: true,
                 meepleId: true,
                 startsAt: true,
@@ -94,6 +95,7 @@ export default async function AdminEventDetailPage({
     const forDay = (bookingsByDay[shift.dayId] ??= []);
     for (const booking of shift.bookings) {
       forDay.push({
+        id: booking.id,
         shiftId: shift.id,
         roleId: shift.roleId,
         dayId: shift.dayId,

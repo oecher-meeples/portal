@@ -22,8 +22,12 @@ export type PlanShift = {
   targetEndsAt: string;
 };
 
-/** One meeple's individual, admin-assigned time block on a Shift (#159). */
+/** One meeple's individual, admin-assigned time block on a Shift (#159). Ein
+ * Meeple kann mehrere Blöcke auf derselben Schicht haben (Pausenablösung
+ * durch dieselbe Person) — `id` identifiziert die einzelne Buchung, nicht
+ * das Paar (shiftId, meepleId). */
 export type PlanBooking = {
+  id: string;
   shiftId: string;
   roleId: string;
   dayId: string;

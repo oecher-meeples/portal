@@ -84,6 +84,23 @@ export function formatWeekdayDate(value: DateInput) {
   return `${WEEKDAY_LONG.format(date)}, den ${DAY_MONTH.format(date)}`;
 }
 
+/** "Donnerstag 27.08, 18:00 – 22:00" — Helferplan: zugewiesene Schicht,
+ * Beginn und Ende liegen immer am selben Tag. */
+export function formatWeekdayDateTimeRange(
+  startsAt: DateInput,
+  endsAt: DateInput,
+) {
+  const start = new Date(startsAt);
+  const dayMonth = DAY_MONTH.format(start).replace(/\.$/, "");
+  return `${WEEKDAY_LONG.format(start)} ${dayMonth}, ${formatTimePlain(startsAt)} – ${formatTimePlain(endsAt)}`;
+}
+
+/** "14:30 – 18:00" — pure time-of-day range, kein Datum. Für Tabellen, in
+ * denen der Tag schon in einer eigenen Spalte steht (Schichten-Tabelle). */
+export function formatTimeRange(startsAt: DateInput, endsAt: DateInput) {
+  return `${formatTimePlain(startsAt)} – ${formatTimePlain(endsAt)}`;
+}
+
 /** "01.02.26, 14:30 – 18:00" — the timeframe pattern used across event views. */
 export function formatDateTimeRange(
   startsAt: DateInput,

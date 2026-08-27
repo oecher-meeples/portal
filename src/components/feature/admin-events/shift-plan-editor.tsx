@@ -29,7 +29,7 @@ import {
   assignHelperToShift,
   unassignHelperFromShift,
 } from "@/components/feature/admin-events/shift-plan-actions";
-import { buildRoleColumns } from "@/lib/events/shift-plan";
+import { buildRoleColumns, intersectTimeRanges } from "@/lib/events/shift-plan";
 import {
   ShiftDialog,
   type HelperRoleOption,
@@ -121,29 +121,53 @@ export function ShiftPlanEditor({
     const shift = shifts.find((s) => s.id === dropData.shiftId);
     if (!shift) return;
 
+    // Default block darf nicht einfach der volle Ziel-Zeitraum der Schicht
+    // sein — reicht die gemeldete Verfügbarkeit dieser Person nicht so weit,
+    // schlägt die serverseitige Prüfung sonst mit einer für die Admin kaum
+    // nachvollziehbaren Fehlermeldung fehl (Bugreport). Also erst auf die
+    // Schnittmenge mit der eigenen Verfügbarkeit einengen.
+    const poolEntry = pool[dropData.dayId]?.find(
+      (candidate) =>
+        candidate.meepleId === dragData.meepleId &&
+        candidate.roleId === dragData.roleId,
+    );
+    const targetRange = {
+      start: new Date(shift.targetStartsAt),
+      end: new Date(shift.targetEndsAt),
+    };
+    const availableRange = poolEntry
+      ? intersectTimeRanges(targetRange, {
+          start: new Date(poolEntry.availabilityStartsAt),
+          end: new Date(poolEntry.availabilityEndsAt),
+        })
+      : targetRange;
+    if (!availableRange) {
+      setError("Der Zeitblock liegt außerhalb der gemeldeten Verfügbarkeit.");
+      return;
+    }
+
     // Default block: direkt nach dem letzten bereits eingetragenen Block
-    // für diese Schicht bis zum Ziel-Ende — so lässt sich eine zweite Person
-    // für eine Pausenablösung eintragen, ohne beide Blöcke von Hand
-    // deckungsgleich auseinanderzuziehen. Ohne (passende) Vorbelegung bleibt
-    // es beim vollen Ziel-Zeitraum, die Resize-Griffe (#160) engen ihn
-    // danach weiter ein.
-    const targetStartsAt = new Date(shift.targetStartsAt);
-    const targetEndsAt = new Date(shift.targetEndsAt);
+    // für diese Schicht bis zum Ende des verfügbaren Zeitraums — so lässt
+    // sich eine zweite Person für eine Pausenablösung eintragen, ohne beide
+    // Blöcke von Hand deckungsgleich auseinanderzuziehen. Ohne (passende)
+    // Vorbelegung bleibt es beim vollen verfügbaren Zeitraum, die Resize-
+    // Griffe (#160) engen ihn danach weiter ein.
     const existingForShift = (bookings[dropData.dayId] ?? []).filter(
       (booking) => booking.shiftId === dropData.shiftId,
     );
     const latestEnd = existingForShift.reduce(
       (max, booking) =>
         new Date(booking.endsAt) > max ? new Date(booking.endsAt) : max,
-      targetStartsAt,
+      availableRange.start,
     );
-    const startsAt = latestEnd < targetEndsAt ? latestEnd : targetStartsAt;
+    const startsAt =
+      latestEnd < availableRange.end ? latestEnd : availableRange.start;
 
     const result = await assignHelperToShift(
       dropData.shiftId,
       dragData.meepleId,
       startsAt,
-      targetEndsAt,
+      availableRange.end,
     );
     if ("error" in result) {
       setError(result.error);
@@ -152,9 +176,9 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
-  async function handleUnassign(shiftId: string, meepleId: string) {
+  async function handleUnassign(booking: PlanBooking) {
     setError(null);
-    const result = await unassignHelperFromShift(shiftId, meepleId);
+    const result = await unassignHelperFromShift(booking.id, booking.shiftId);
     if ("error" in result) {
       setError(result.error);
       return;
@@ -163,19 +187,21 @@ export function ShiftPlanEditor({
   }
 
   async function handleResize(
-    shiftId: string,
-    meepleId: string,
+    booking: PlanBooking,
     startsAt: Date,
     endsAt: Date,
   ) {
     setError(null);
-    // Re-uses assignHelperToShift: an upsert with the same hard validations
-    // (availability boundary, no overlap with the person's other blocks).
+    // Re-uses assignHelperToShift: dieselben harten Validierungen
+    // (Verfügbarkeits-Grenze, keine Überschneidung mit anderen Blöcken der
+    // Person) — bookingId sorgt dafür, dass genau dieser Block umterminiert
+    // wird statt ein neuer zu entstehen.
     const result = await assignHelperToShift(
-      shiftId,
-      meepleId,
+      booking.shiftId,
+      booking.meepleId,
       startsAt,
       endsAt,
+      booking.id,
     );
     if ("error" in result) {
       setError(result.error);
