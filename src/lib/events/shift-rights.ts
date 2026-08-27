@@ -40,3 +40,31 @@ export async function hasRoleGrantedPermission(
 
   return booking !== null;
 }
+
+/**
+ * The currently-running (per `at`) event a meeple is inside an active
+ * ShiftBooking for, matched by the HelperRole's name — used to gate pages
+ * that aren't about a durable permission (like `hasRoleGrantedPermission`)
+ * but about "is this person on duty for role X right now" (ADR-0006), e.g.
+ * the Ausleihe/Rückgabe-Seite (#121). Returns `null` when no such booking
+ * is currently active.
+ */
+export async function findActiveShiftEvent(
+  meepleId: string,
+  roleName: string,
+  at: Date = new Date(),
+): Promise<{ eventId: string } | null> {
+  const booking = await prisma.shiftBooking.findFirst({
+    where: {
+      meepleId,
+      shift: {
+        role: { name: roleName },
+        startsAt: { lte: at },
+        endsAt: { gte: at },
+      },
+    },
+    select: { shift: { select: { eventId: true } } },
+  });
+
+  return booking ? { eventId: booking.shift.eventId } : null;
+}

@@ -21,6 +21,7 @@ import {
   GraduationCap,
   CalendarClock,
   HandHeart,
+  PackageOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -143,6 +144,12 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Helferplan",
         href: "/helfer",
         icon: ShieldCheck,
+        section: "Mitgliederbereich",
+      },
+      {
+        label: "Ausleihe & Rückgabe",
+        href: "/ausleihe",
+        icon: PackageOpen,
         section: "Mitgliederbereich",
       },
       {
