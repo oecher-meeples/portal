@@ -33,14 +33,20 @@ export function ShiftDialog({
   shift,
   helperRoles,
   days,
+  defaultDayId,
 }: {
   eventId: string;
   shift?: EditableShift;
   helperRoles: HelperRoleOption[];
   days: EventDayOption[];
+  /** Tag, mit dem sich anlegen befüllt — z. B. der Tab, aus dem heraus der
+   * Dialog im Schichtplan-Editor geöffnet wurde. Ohne Wirkung beim Bearbeiten
+   * einer bestehenden Schicht (die behält ihren eigenen Tag). */
+  defaultDayId?: string;
 }) {
   const isEdit = Boolean(shift);
-  const [dayId, setDayId] = useState(shift?.dayId ?? days[0]?.id ?? "");
+  const initialDayId = () => shift?.dayId ?? defaultDayId ?? days[0]?.id ?? "";
+  const [dayId, setDayId] = useState(initialDayId);
   const [roleId, setRoleId] = useState(
     shift?.roleId ?? helperRoles[0]?.id ?? "",
   );
@@ -53,7 +59,7 @@ export function ShiftDialog({
   const [capacity, setCapacity] = useState(String(shift?.capacity ?? 1));
 
   function reset() {
-    setDayId(shift?.dayId ?? days[0]?.id ?? "");
+    setDayId(initialDayId());
     setRoleId(shift?.roleId ?? helperRoles[0]?.id ?? "");
     setTargetStartsAt(shift ? toDateTimeLocal(shift.targetStartsAt) : "");
     setTargetEndsAt(shift ? toDateTimeLocal(shift.targetEndsAt) : "");
@@ -69,7 +75,7 @@ export function ShiftDialog({
             Bearbeiten
           </Button>
         ) : (
-          <Button className="gap-1.5">
+          <Button size="sm" className="gap-1.5">
             <Plus className="size-4" />
             Schicht anlegen
           </Button>

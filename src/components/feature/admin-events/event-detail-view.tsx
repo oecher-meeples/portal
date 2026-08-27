@@ -75,13 +75,6 @@ export function EventDetailView({
         eyebrow="Event-Betrieb"
         title={eventTitle}
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
-        action={
-          <ShiftDialog
-            eventId={eventId}
-            helperRoles={helperRoles}
-            days={days}
-          />
-        }
       />
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
@@ -167,9 +160,11 @@ export function EventDetailView({
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-lg font-bold">Schichtplan</h2>
         <ShiftPlanEditor
+          eventId={eventId}
           days={days}
           event={{ startsAt: eventStartsAt, endsAt: eventEndsAt }}
           shifts={planShifts}
+          helperRoles={helperRoles}
           pool={pool}
           bookings={bookingsByDay}
         />

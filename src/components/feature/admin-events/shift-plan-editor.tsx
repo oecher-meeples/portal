@@ -30,6 +30,10 @@ import {
   unassignHelperFromShift,
 } from "@/components/feature/admin-events/shift-plan-actions";
 import { buildRoleColumns } from "@/lib/events/shift-plan";
+import {
+  ShiftDialog,
+  type HelperRoleOption,
+} from "@/components/feature/admin-events/shift-dialog";
 
 export type { PlanDay, PlanShift };
 
@@ -47,15 +51,19 @@ type ActiveDrag = { meepleId: string; displayName: string } | null;
  * teilen sich dieselbe serverseitige Validierung (assignHelperToShift).
  */
 export function ShiftPlanEditor({
+  eventId,
   days,
   event,
   shifts,
+  helperRoles,
   pool,
   bookings,
 }: {
+  eventId: string;
   days: PlanDay[];
   event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
+  helperRoles: HelperRoleOption[];
   pool: Record<string, PoolMeeple[]>;
   bookings: Record<string, PlanBooking[]>;
 }) {
@@ -155,6 +163,14 @@ export function ShiftPlanEditor({
               value={day.id}
               className="flex flex-col gap-2"
             >
+              <div className="flex justify-end">
+                <ShiftDialog
+                  eventId={eventId}
+                  helperRoles={helperRoles}
+                  days={days}
+                  defaultDayId={day.id}
+                />
+              </div>
               <HelperPoolBar
                 dayId={day.id}
                 columns={columns}
