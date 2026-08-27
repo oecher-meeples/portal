@@ -2,16 +2,17 @@ import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
 
 /**
- * Implements the ADR-0006 rule (docs/adr/0006-schicht-buchung-statt-permission-fuer-event-rechte.md):
- * flea market rights come from either the `events:manage` permission or an active
- * "Kasse" shift booking for this event, never from a dedicated permanent permission.
- * Still matches by the (now admin-renamable) HelperRole name — #154 replaces this
- * with the generic hasRoleGrantedPermission(meepleId, permissionKey, at) that reads
- * HelperRole.grantsPermissionKey (ADR-0012) instead.
+ * Generalizes ADR-0006 (docs/adr/0006-schicht-buchung-statt-permission-fuer-event-rechte.md)
+ * per ADR-0012 (docs/adr/0012-helferrolle-generalisiert-schicht-buchung-rechte.md):
+ * a permission comes from either holding it durably (Role/RolePermission) or
+ * currently sitting inside an assigned ShiftBooking time block for a
+ * HelperRole whose `grantsPermissionKey` matches — never from a permission
+ * tied to a hardcoded role name. Replaces the former hasFleaMarketRights,
+ * which was hard-coupled to a "KASSE" shift type.
  */
-export async function hasFleaMarketRights(
+export async function hasRoleGrantedPermission(
   meepleId: string,
-  eventId: string,
+  permissionKey: string,
   at: Date = new Date(),
 ) {
   const meeple = await prisma.meeple.findUnique({
@@ -20,7 +21,7 @@ export async function hasFleaMarketRights(
   });
 
   if (meeple?.neonAuthUserId) {
-    const allowed = await hasPermission(meeple.neonAuthUserId, "events:manage");
+    const allowed = await hasPermission(meeple.neonAuthUserId, permissionKey);
     if (allowed) {
       return true;
     }
@@ -30,8 +31,7 @@ export async function hasFleaMarketRights(
     where: {
       meepleId,
       shift: {
-        eventId,
-        role: { name: "Kasse" },
+        role: { grantsPermissionKey: permissionKey },
         startsAt: { lte: at },
         endsAt: { gte: at },
       },
