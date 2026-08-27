@@ -10,6 +10,7 @@ import {
   totalColumnCount,
   computeShiftCoverage,
   isSlotStaffable,
+  intersectTimeRanges,
   resolveSelectedTimeRange,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
@@ -68,15 +69,14 @@ function isRoleFullyCovered(
 
 export function ShiftPlanGrid({
   day,
-  event,
   shifts,
   bookings,
   onUnassign,
   onResize,
   onSelectRange,
+  activeAvailability,
 }: {
   day: PlanDay;
-  event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
   bookings: PlanBooking[];
   /** Entf-Taste auf einem fokussierten Block (#161 Unassign). */
@@ -92,6 +92,15 @@ export function ShiftPlanGrid({
    * (Schicht-Schnellanlage) — öffnet den Schicht-anlegen-Dialog mit
    * vorausgefüllter Ziel-Zeit. */
   onSelectRange: (startsAt: Date, endsAt: Date) => void;
+  /** Verfügbarkeitsfenster des gerade aus dem Pool gezogenen Meeples —
+   * grenzt den Hervorhebungsbereich beim Drüberziehen auf die tatsächlich
+   * eintragbare Zeit ein (gemeldete Verfügbarkeit ∩ Ziel-Zeitraum der
+   * Schicht), statt die ganze Spalte einheitlich zu markieren. */
+  activeAvailability: {
+    roleId: string;
+    startsAt: string;
+    endsAt: string;
+  } | null;
 }) {
   const [drag, setDrag] = useState<{
     anchor: number;
@@ -108,14 +117,11 @@ export function ShiftPlanGrid({
     return () => window.removeEventListener("mouseup", handleUp);
   }, [isDragging]);
   const range = computeVisibleRange(
-    {
-      startsAt: day.startsAt ? new Date(day.startsAt) : null,
-      endsAt: day.endsAt ? new Date(day.endsAt) : null,
-    },
-    {
-      startsAt: new Date(event.startsAt),
-      endsAt: event.endsAt ? new Date(event.endsAt) : null,
-    },
+    { date: new Date(day.date) },
+    shifts.map((shift) => ({
+      targetStartsAt: new Date(shift.targetStartsAt),
+      targetEndsAt: new Date(shift.targetEndsAt),
+    })),
   );
   const timeSlots = buildTimeSlots(range, STEP_MINUTES);
   const columns = buildRoleColumns(shifts);
@@ -230,6 +236,40 @@ export function ShiftPlanGrid({
         {columns.map((group) => {
           const shift = primaryShiftFor(group, shifts);
           if (!shift) return null;
+
+          // Hervorhebungsbereich beim Drüberziehen: gemeldete Verfügbarkeit
+          // des gezogenen Meeples ∩ Ziel-Zeitraum der Schicht dieser Spalte —
+          // nur relevant, wenn der Drag überhaupt zu dieser Rolle gehört.
+          let highlightRows: { rowStart: number; rowEnd: number } | null = null;
+          if (
+            activeAvailability &&
+            activeAvailability.roleId === group.roleId &&
+            activeAvailability.startsAt &&
+            activeAvailability.endsAt
+          ) {
+            const overlap = intersectTimeRanges(
+              {
+                start: new Date(activeAvailability.startsAt),
+                end: new Date(activeAvailability.endsAt),
+              },
+              {
+                start: new Date(shift.targetStartsAt),
+                end: new Date(shift.targetEndsAt),
+              },
+            );
+            if (overlap) {
+              const rowStart = Math.max(
+                2,
+                rowForTime(overlap.start.toISOString()) + 2,
+              );
+              const rowEnd = Math.max(
+                rowStart + 1,
+                rowForTime(overlap.end.toISOString()) + 2,
+              );
+              highlightRows = { rowStart, rowEnd };
+            }
+          }
+
           return (
             <RoleDropZone
               key={`drop-${group.roleId}`}
@@ -237,6 +277,7 @@ export function ShiftPlanGrid({
               group={group}
               shiftId={shift.id}
               rowCount={timeSlots.length}
+              highlightRows={highlightRows}
             />
           );
         })}
@@ -318,11 +359,16 @@ function RoleDropZone({
   group,
   shiftId,
   rowCount,
+  highlightRows,
 }: {
   day: PlanDay;
   group: RoleColumnGroup;
   shiftId: string;
   rowCount: number;
+  /** Nur dieser Zeilenbereich wird beim Drüberziehen hervorgehoben —
+   * fehlt er (kein passender Drag oder keine Überschneidung), bleibt die
+   * Spalte beim Hovern unmarkiert statt komplett einheitlich zu leuchten. */
+  highlightRows: { rowStart: number; rowEnd: number } | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `role::${day.id}::${group.roleId}`,
@@ -335,13 +381,23 @@ function RoleDropZone({
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      className={isOver ? "bg-primary/10" : undefined}
-      style={{
-        gridColumn: `${group.startColumn + 2} / span ${group.capacity}`,
-        gridRow: `2 / span ${rowCount}`,
-      }}
-    />
+    <>
+      <div
+        ref={setNodeRef}
+        style={{
+          gridColumn: `${group.startColumn + 2} / span ${group.capacity}`,
+          gridRow: `2 / span ${rowCount}`,
+        }}
+      />
+      {isOver && highlightRows && (
+        <div
+          className="bg-primary/15 pointer-events-none"
+          style={{
+            gridColumn: `${group.startColumn + 2} / span ${group.capacity}`,
+            gridRow: `${highlightRows.rowStart} / ${highlightRows.rowEnd}`,
+          }}
+        />
+      )}
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import type { RoleColumnGroup } from "@/lib/events/shift-plan";
 import { helperColorClass } from "@/lib/events/helper-colors";
+import { formatTimePlain } from "@/lib/utils/format";
 
 export type PoolMeeple = {
   meepleId: string;
@@ -12,6 +13,11 @@ export type PoolMeeple = {
   roleId: string;
   /** Set once this meeple has ≥1 assignment on this day (#161) — yellow marker. */
   alreadyPlanned?: boolean;
+  /** Gemeldetes Verfügbarkeitsfenster für diesen Tag — als Tooltip
+   * angezeigt, sonst sieht man im Pool nicht, wann die Person tatsächlich
+   * Zeit hat. */
+  availabilityStartsAt: string;
+  availabilityEndsAt: string;
 };
 
 export type PoolDragData = {
@@ -121,11 +127,11 @@ function PoolEntry({
       type="button"
       {...listeners}
       {...attributes}
-      title={
+      title={`Verfügbar ${formatTimePlain(entry.availabilityStartsAt)}–${formatTimePlain(entry.availabilityEndsAt)}${
         entry.alreadyPlanned
-          ? `${entry.displayName} ist an diesem Tag bereits verplant.`
-          : undefined
-      }
+          ? ` · ${entry.displayName} ist an diesem Tag bereits verplant.`
+          : ""
+      }`}
       className={`rounded px-2 py-1 text-xs font-medium ${helperColorClass(entry.meepleId)} ${
         isSameHelperDragging ? "ring-2 ring-rose-500" : ""
       } ${entry.alreadyPlanned ? "ring-2 ring-amber-500 ring-offset-1" : ""}`}

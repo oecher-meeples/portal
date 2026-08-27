@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { helperColorClass } from "@/lib/events/helper-colors";
 import { cn } from "@/lib/utils/cn";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
@@ -15,9 +15,11 @@ type ResizeEdge = "top" | "bottom";
  * Ein zugewiesener Zeitblock im Schichtplan-Kalender. Fokussierbar
  * (Entf/Rücktaste entfernt die Zuweisung, #161); bei Fokus erscheinen
  * Outlook-artige Griffpunkte oben/unten, mit denen sich der Block strecken/
- * stauchen lässt (#160) — z. B. um eine Pause für den Helfer einzuplanen.
- * Serverseitige Validierung (Verfügbarkeits-Grenze, Überschneidung) läuft
- * über dieselbe `assignShiftBooking`-Funktion wie die erste Zuweisung.
+ * stauchen lässt (#160) — z. B. um eine Pause für den Helfer einzuplanen —
+ * sowie ein sichtbarer Entfernen-Button oben links, da die Tastatur-Abkürzung
+ * allein nicht auffindbar genug war. Serverseitige Validierung
+ * (Verfügbarkeits-Grenze, Überschneidung) läuft über dieselbe
+ * `assignShiftBooking`-Funktion wie die erste Zuweisung.
  */
 export function AssignedBlock({
   booking,
@@ -157,6 +159,18 @@ export function AssignedBlock({
             onPointerDown={startResize("bottom")}
             className="bg-foreground/40 absolute inset-x-0 bottom-0 h-1.5 cursor-ns-resize"
           />
+          <button
+            type="button"
+            aria-label={`${booking.displayName} entfernen`}
+            title="Zuweisung entfernen"
+            onClick={(clickEvent) => {
+              clickEvent.stopPropagation();
+              onUnassign(booking.shiftId, booking.meepleId);
+            }}
+            className="bg-background/80 hover:bg-destructive hover:text-destructive-foreground absolute top-0.5 left-0.5 flex size-3.5 items-center justify-center rounded-full"
+          >
+            <X className="size-2.5" />
+          </button>
         </>
       )}
     </div>

@@ -38,7 +38,13 @@ import { timeInputValue } from "@/components/ui/time-picker";
 
 export type { PlanDay, PlanShift };
 
-type ActiveDrag = { meepleId: string; displayName: string } | null;
+type ActiveDrag = {
+  meepleId: string;
+  displayName: string;
+  roleId: string;
+  startsAt: string;
+  endsAt: string;
+} | null;
 
 /**
  * Outlook-artiger Schichtplan-Kalender (#157–#161) — Tab pro Event-Tag,
@@ -54,7 +60,6 @@ type ActiveDrag = { meepleId: string; displayName: string } | null;
 export function ShiftPlanEditor({
   eventId,
   days,
-  event,
   shifts,
   helperRoles,
   pool,
@@ -62,7 +67,6 @@ export function ShiftPlanEditor({
 }: {
   eventId: string;
   days: PlanDay[];
-  event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
   helperRoles: HelperRoleOption[];
   pool: Record<string, PoolMeeple[]>;
@@ -85,7 +89,18 @@ export function ShiftPlanEditor({
   function handleDragStart(dragEvent: DragStartEvent) {
     const data = dragEvent.active.data.current as PoolDragData | undefined;
     if (!data) return;
-    setActiveDrag({ meepleId: data.meepleId, displayName: data.displayName });
+    const entry = pool[data.dayId]?.find(
+      (candidate) =>
+        candidate.meepleId === data.meepleId &&
+        candidate.roleId === data.roleId,
+    );
+    setActiveDrag({
+      meepleId: data.meepleId,
+      displayName: data.displayName,
+      roleId: data.roleId,
+      startsAt: entry?.availabilityStartsAt ?? "",
+      endsAt: entry?.availabilityEndsAt ?? "",
+    });
     setError(null);
   }
 
@@ -106,13 +121,29 @@ export function ShiftPlanEditor({
     const shift = shifts.find((s) => s.id === dropData.shiftId);
     if (!shift) return;
 
-    // The block defaults to the Shift's own target period; the resize
-    // handles (#160) narrow it afterwards.
+    // Default block: direkt nach dem letzten bereits eingetragenen Block
+    // für diese Schicht bis zum Ziel-Ende — so lässt sich eine zweite Person
+    // für eine Pausenablösung eintragen, ohne beide Blöcke von Hand
+    // deckungsgleich auseinanderzuziehen. Ohne (passende) Vorbelegung bleibt
+    // es beim vollen Ziel-Zeitraum, die Resize-Griffe (#160) engen ihn
+    // danach weiter ein.
+    const targetStartsAt = new Date(shift.targetStartsAt);
+    const targetEndsAt = new Date(shift.targetEndsAt);
+    const existingForShift = (bookings[dropData.dayId] ?? []).filter(
+      (booking) => booking.shiftId === dropData.shiftId,
+    );
+    const latestEnd = existingForShift.reduce(
+      (max, booking) =>
+        new Date(booking.endsAt) > max ? new Date(booking.endsAt) : max,
+      targetStartsAt,
+    );
+    const startsAt = latestEnd < targetEndsAt ? latestEnd : targetStartsAt;
+
     const result = await assignHelperToShift(
       dropData.shiftId,
       dragData.meepleId,
-      new Date(shift.targetStartsAt),
-      new Date(shift.targetEndsAt),
+      startsAt,
+      targetEndsAt,
     );
     if ("error" in result) {
       setError(result.error);
@@ -210,13 +241,21 @@ export function ShiftPlanEditor({
               />
               <ShiftPlanGrid
                 day={day}
-                event={event}
                 shifts={dayShifts}
                 bookings={bookings[day.id] ?? []}
                 onUnassign={handleUnassign}
                 onResize={handleResize}
                 onSelectRange={(startsAt, endsAt) =>
                   setPendingRange({ dayId: day.id, startsAt, endsAt })
+                }
+                activeAvailability={
+                  activeDrag
+                    ? {
+                        roleId: activeDrag.roleId,
+                        startsAt: activeDrag.startsAt,
+                        endsAt: activeDrag.endsAt,
+                      }
+                    : null
                 }
               />
             </TabsContent>

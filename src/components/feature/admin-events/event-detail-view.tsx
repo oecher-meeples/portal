@@ -100,7 +100,6 @@ export function EventDetailView({
         <ShiftPlanEditor
           eventId={eventId}
           days={days}
-          event={{ startsAt: eventStartsAt, endsAt: eventEndsAt }}
           shifts={planShifts}
           helperRoles={helperRoles}
           pool={pool}

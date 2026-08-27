@@ -25,7 +25,9 @@ export default async function AdminEventDetailPage({
           orderBy: { date: "asc" },
           include: {
             availabilities: {
-              include: {
+              select: {
+                startsAt: true,
+                endsAt: true,
                 meeple: { select: { id: true, displayName: true } },
                 roles: { select: { roleId: true } },
               },
@@ -123,6 +125,8 @@ export default async function AdminEventDetailPage({
           roleId: role.roleId,
           alreadyPlanned:
             plannedMeepleIdsByDay[day.id]?.has(availability.meeple.id) ?? false,
+          availabilityStartsAt: availability.startsAt.toISOString(),
+          availabilityEndsAt: availability.endsAt.toISOString(),
         })),
       ),
     ]),

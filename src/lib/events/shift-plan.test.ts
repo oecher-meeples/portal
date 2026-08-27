@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeVisibleRange,
+  intersectTimeRanges,
   buildTimeSlots,
   buildRoleColumns,
   totalColumnCount,
@@ -10,43 +11,72 @@ import {
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
-  it("extends the day's opening hours by 4h on each side", () => {
-    const day = {
-      startsAt: new Date("2026-10-10T10:00:00Z"),
-      endsAt: new Date("2026-10-10T18:00:00Z"),
-    };
-    const event = {
-      startsAt: new Date("2026-10-10T09:00:00Z"),
-      endsAt: new Date("2026-10-10T19:00:00Z"),
-    };
+  it("spans the earliest shift start -1h to the latest shift end +1h", () => {
+    const day = { date: new Date(2026, 9, 10) };
+    const shiftsForDay = [
+      {
+        targetStartsAt: new Date(2026, 9, 10, 10, 0),
+        targetEndsAt: new Date(2026, 9, 10, 14, 0),
+      },
+      {
+        targetStartsAt: new Date(2026, 9, 10, 13, 0),
+        targetEndsAt: new Date(2026, 9, 10, 18, 0),
+      },
+    ];
 
-    expect(computeVisibleRange(day, event)).toEqual({
-      start: new Date("2026-10-10T06:00:00Z"),
-      end: new Date("2026-10-10T22:00:00Z"),
+    expect(computeVisibleRange(day, shiftsForDay)).toEqual({
+      start: new Date(2026, 9, 10, 9, 0),
+      end: new Date(2026, 9, 10, 19, 0),
     });
   });
 
-  it("falls back to the event's own start/end when the day has no opening hours", () => {
-    const day = { startsAt: null, endsAt: null };
-    const event = {
-      startsAt: new Date("2026-10-10T09:00:00Z"),
-      endsAt: new Date("2026-10-11T19:00:00Z"),
-    };
+  it("defaults to 16–24 Uhr on a weekday without shifts", () => {
+    const day = { date: new Date(2026, 9, 8) }; // Donnerstag
 
-    expect(computeVisibleRange(day, event)).toEqual({
-      start: new Date("2026-10-10T05:00:00Z"),
-      end: new Date("2026-10-11T23:00:00Z"),
+    expect(computeVisibleRange(day, [])).toEqual({
+      start: new Date(2026, 9, 8, 16, 0),
+      end: new Date(2026, 9, 9, 0, 0),
     });
   });
 
-  it("falls back to a single instant when the event has no end date", () => {
-    const day = { startsAt: null, endsAt: null };
-    const event = { startsAt: new Date("2026-10-10T09:00:00Z"), endsAt: null };
+  it("defaults to 8–24 Uhr on a weekend day without shifts", () => {
+    const day = { date: new Date(2026, 9, 10) }; // Samstag
 
-    expect(computeVisibleRange(day, event)).toEqual({
-      start: new Date("2026-10-10T05:00:00Z"),
-      end: new Date("2026-10-10T13:00:00Z"),
+    expect(computeVisibleRange(day, [])).toEqual({
+      start: new Date(2026, 9, 10, 8, 0),
+      end: new Date(2026, 9, 11, 0, 0),
     });
+  });
+});
+
+describe("intersectTimeRanges", () => {
+  it("returns the overlap of two ranges", () => {
+    const a = {
+      start: new Date(2026, 9, 10, 10, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    };
+    const b = {
+      start: new Date(2026, 9, 10, 12, 0),
+      end: new Date(2026, 9, 10, 18, 0),
+    };
+
+    expect(intersectTimeRanges(a, b)).toEqual({
+      start: new Date(2026, 9, 10, 12, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    });
+  });
+
+  it("returns null when the ranges don't overlap", () => {
+    const a = {
+      start: new Date(2026, 9, 10, 10, 0),
+      end: new Date(2026, 9, 10, 12, 0),
+    };
+    const b = {
+      start: new Date(2026, 9, 10, 12, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    };
+
+    expect(intersectTimeRanges(a, b)).toBeNull();
   });
 });
 
