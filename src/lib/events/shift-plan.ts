@@ -82,3 +82,46 @@ export function buildRoleColumns(
 export function totalColumnCount(groups: RoleColumnGroup[]): number {
   return groups.reduce((sum, group) => sum + group.capacity, 0);
 }
+
+/**
+ * Time-based analogue of `computeShiftFillLevel` (#162): a Shift counts as
+ * "voll geplant" only once its `capacity` parallel Stellen cover the whole
+ * target period without gaps — at every instant within it, at least
+ * `capacity` assignment blocks must be active. A count-based fill level
+ * (e.g. "3 von 3 gebucht") doesn't catch two people covering the same hour
+ * while another hour has nobody, so this walks a sweep line over every
+ * booking boundary instead.
+ */
+export function computeShiftCoverage(
+  shift: { targetStartsAt: Date; targetEndsAt: Date; capacity: number },
+  bookings: { startsAt: Date; endsAt: Date }[],
+): boolean {
+  const { targetStartsAt, targetEndsAt, capacity } = shift;
+  if (targetEndsAt <= targetStartsAt) return true;
+
+  const boundaries = new Set<number>([
+    targetStartsAt.getTime(),
+    targetEndsAt.getTime(),
+  ]);
+  for (const booking of bookings) {
+    const start = Math.max(
+      booking.startsAt.getTime(),
+      targetStartsAt.getTime(),
+    );
+    const end = Math.min(booking.endsAt.getTime(), targetEndsAt.getTime());
+    if (end > start) {
+      boundaries.add(start);
+      boundaries.add(end);
+    }
+  }
+
+  const sorted = [...boundaries].sort((a, b) => a - b);
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const [from, to] = [sorted[i], sorted[i + 1]];
+    const active = bookings.filter(
+      (b) => b.startsAt.getTime() <= from && b.endsAt.getTime() >= to,
+    ).length;
+    if (active < capacity) return false;
+  }
+  return true;
+}

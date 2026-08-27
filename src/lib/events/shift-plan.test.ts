@@ -4,6 +4,7 @@ import {
   buildTimeSlots,
   buildRoleColumns,
   totalColumnCount,
+  computeShiftCoverage,
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
@@ -93,5 +94,87 @@ describe("buildRoleColumns", () => {
     ]);
 
     expect(totalColumnCount(groups)).toBe(7);
+  });
+});
+
+describe("computeShiftCoverage", () => {
+  const shift = {
+    targetStartsAt: new Date("2026-10-10T10:00:00Z"),
+    targetEndsAt: new Date("2026-10-10T14:00:00Z"),
+    capacity: 2,
+  };
+
+  it("is true when a single booking already covers a capacity-1 shift", () => {
+    const single = { ...shift, capacity: 1 };
+    const bookings = [
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T14:00:00Z"),
+      },
+    ];
+
+    expect(computeShiftCoverage(single, bookings)).toBe(true);
+  });
+
+  it("is false when there is a gap nobody covers", () => {
+    const bookings = [
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T12:00:00Z"),
+      },
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T12:00:00Z"),
+      },
+      // 12:00-14:00 has no coverage at all
+    ];
+
+    expect(computeShiftCoverage(shift, bookings)).toBe(false);
+  });
+
+  it("is false when only one of two parallel Stellen is covered throughout", () => {
+    const bookings = [
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T14:00:00Z"),
+      },
+    ];
+
+    expect(computeShiftCoverage(shift, bookings)).toBe(false);
+  });
+
+  it("is true when two people together cover every instant, capacity 2", () => {
+    const bookings = [
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T14:00:00Z"),
+      },
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T12:00:00Z"),
+      },
+      {
+        startsAt: new Date("2026-10-10T12:00:00Z"),
+        endsAt: new Date("2026-10-10T14:00:00Z"),
+      },
+    ];
+
+    expect(computeShiftCoverage(shift, bookings)).toBe(true);
+  });
+
+  it("ignores bookings entirely outside the target period", () => {
+    const single = { ...shift, capacity: 1 };
+    const bookings = [
+      {
+        startsAt: new Date("2026-10-10T10:00:00Z"),
+        endsAt: new Date("2026-10-10T14:00:00Z"),
+      },
+      {
+        startsAt: new Date("2026-10-09T00:00:00Z"),
+        endsAt: new Date("2026-10-09T23:00:00Z"),
+      },
+    ];
+
+    expect(computeShiftCoverage(single, bookings)).toBe(true);
   });
 });

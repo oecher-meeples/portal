@@ -6,6 +6,7 @@ import {
   buildTimeSlots,
   buildRoleColumns,
   totalColumnCount,
+  computeShiftCoverage,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
 import { formatTimePlain } from "@/lib/utils/format";
@@ -30,6 +31,33 @@ export type RoleDropData = {
  * case; with several, the first is used (documented simplification, #159). */
 function primaryShiftFor(group: RoleColumnGroup, shifts: PlanShift[]) {
   return shifts.find((shift) => shift.roleId === group.roleId);
+}
+
+/** "Voll geplant" (#162): every Shift row for this role on this day must be
+ * gap-free covered by its own bookings — a role with several target windows
+ * only counts once all of them are fully staffed. */
+function isRoleFullyCovered(
+  group: RoleColumnGroup,
+  shifts: PlanShift[],
+  bookings: PlanBooking[],
+): boolean {
+  const roleShifts = shifts.filter((shift) => shift.roleId === group.roleId);
+  if (roleShifts.length === 0) return false;
+  return roleShifts.every((shift) =>
+    computeShiftCoverage(
+      {
+        targetStartsAt: new Date(shift.targetStartsAt),
+        targetEndsAt: new Date(shift.targetEndsAt),
+        capacity: shift.capacity,
+      },
+      bookings
+        .filter((booking) => booking.shiftId === shift.id)
+        .map((booking) => ({
+          startsAt: new Date(booking.startsAt),
+          endsAt: new Date(booking.endsAt),
+        })),
+    ),
+  );
 }
 
 export function ShiftPlanGrid({
@@ -91,15 +119,25 @@ export function ShiftPlanGrid({
         }}
       >
         <div className="bg-muted/50 border-b" style={{ gridRow: 1 }} />
-        {columns.map((group) => (
-          <div
-            key={group.roleId}
-            className="bg-muted/50 border-b border-l px-2 py-1.5 text-center text-xs font-semibold"
-            style={{ gridColumn: `span ${group.capacity}`, gridRow: 1 }}
-          >
-            {group.roleName}
-          </div>
-        ))}
+        {columns.map((group) => {
+          const fullyCovered = isRoleFullyCovered(group, shifts, bookings);
+          return (
+            <div
+              key={group.roleId}
+              title={
+                fullyCovered ? "Voll geplant — lückenlos abgedeckt" : undefined
+              }
+              className={`border-b border-l px-2 py-1.5 text-center text-xs font-semibold ${
+                fullyCovered
+                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                  : "bg-muted/50"
+              }`}
+              style={{ gridColumn: `span ${group.capacity}`, gridRow: 1 }}
+            >
+              {group.roleName}
+            </div>
+          );
+        })}
 
         {timeSlots.map((slot, rowIndex) => (
           <div key={slot.toISOString()} className="contents">
