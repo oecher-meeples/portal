@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import type { EventVisibility } from "@prisma/client";
 import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { Field, TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   createEvent,
   updateEvent,
 } from "@/components/feature/admin-events/actions";
+import { EVENT_VISIBILITY_LABELS } from "@/lib/events/visibility";
 
 export type EditableEvent = {
   id: string;
@@ -19,6 +21,7 @@ export type EditableEvent = {
   endsAt: string | null;
   location: string | null;
   helpersWanted: boolean;
+  visibility: EventVisibility;
 };
 
 /** `date` inputs need "YYYY-MM-DD", an ISO string is longer. Beginn/Ende sind ein
@@ -40,6 +43,9 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
   const [helpersWanted, setHelpersWanted] = useState(
     event?.helpersWanted ?? false,
   );
+  const [visibility, setVisibility] = useState<EventVisibility>(
+    event?.visibility ?? "DRAFT",
+  );
 
   function reset() {
     setTitle(event?.title ?? "");
@@ -47,6 +53,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
     setEndsAt(event?.endsAt ? toDateInput(event.endsAt) : "");
     setLocation(event?.location ?? "");
     setHelpersWanted(event?.helpersWanted ?? false);
+    setVisibility(event?.visibility ?? "DRAFT");
   }
 
   return (
@@ -75,6 +82,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
           endsAt: endsAt ? new Date(endsAt) : null,
           location: location || null,
           helpersWanted,
+          visibility,
         };
         return event ? updateEvent(event.id, input) : createEvent(input);
       }}
@@ -102,6 +110,22 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         value={endsAt}
         onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
       />
+      <Field label="Sichtbarkeit" htmlFor="event-visibility">
+        <select
+          id="event-visibility"
+          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          value={visibility}
+          onChange={(fieldEvent) =>
+            setVisibility(fieldEvent.target.value as EventVisibility)
+          }
+        >
+          {Object.entries(EVENT_VISIBILITY_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </Field>
       {isEdit && (
         <>
           <TextField

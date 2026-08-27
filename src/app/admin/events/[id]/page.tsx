@@ -144,6 +144,9 @@ export default async function AdminEventDetailPage({
       eventTitle={event.title}
       eventStartsAt={event.startsAt.toISOString()}
       eventEndsAt={event.endsAt?.toISOString() ?? null}
+      eventLocation={event.location}
+      eventHelpersWanted={event.helpersWanted}
+      eventVisibility={event.visibility}
       days={days}
       shifts={shifts}
       helperRoles={helperRoles}

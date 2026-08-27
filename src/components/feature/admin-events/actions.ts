@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { EventVisibility } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 import { uniqueSlug } from "@/lib/utils/slug";
@@ -12,6 +13,7 @@ export type EventInput = {
   endsAt?: Date | null;
   location?: string | null;
   helpersWanted?: boolean;
+  visibility?: EventVisibility;
 };
 
 /** Bring `EventDay` in sync with the (possibly changed) `startsAt`/`endsAt` range:
@@ -71,6 +73,7 @@ export async function createEvent(input: EventInput) {
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
       helpersWanted: input.helpersWanted ?? false,
+      visibility: input.visibility ?? "DRAFT",
     },
   });
   await syncEventDays(event.id, input);
@@ -99,6 +102,7 @@ export async function updateEvent(id: string, input: EventInput) {
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
       helpersWanted: input.helpersWanted ?? false,
+      visibility: input.visibility ?? "DRAFT",
     },
   });
   await syncEventDays(id, input);

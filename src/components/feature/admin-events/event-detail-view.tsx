@@ -1,3 +1,4 @@
+import type { EventVisibility } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
   Table,
@@ -10,6 +11,7 @@ import {
 import { StatusPill } from "@/components/ui/status-pill";
 import { Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
+import { EventDialog } from "@/components/feature/admin-events/event-dialog";
 import {
   ShiftDialog,
   type EditableShift,
@@ -40,6 +42,9 @@ export function EventDetailView({
   eventTitle,
   eventStartsAt,
   eventEndsAt,
+  eventLocation,
+  eventHelpersWanted,
+  eventVisibility,
   days,
   shifts,
   helperRoles,
@@ -52,6 +57,9 @@ export function EventDetailView({
   eventTitle: string;
   eventStartsAt: string;
   eventEndsAt: string | null;
+  eventLocation: string | null;
+  eventHelpersWanted: boolean;
+  eventVisibility: EventVisibility;
   days: EditableEventDay[];
   shifts: ShiftRow[];
   helperRoles: HelperRoleOption[];
@@ -75,6 +83,19 @@ export function EventDetailView({
         eyebrow="Event-Betrieb"
         title={eventTitle}
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
+        action={
+          <EventDialog
+            event={{
+              id: eventId,
+              title: eventTitle,
+              startsAt: eventStartsAt,
+              endsAt: eventEndsAt,
+              location: eventLocation,
+              helpersWanted: eventHelpersWanted,
+              visibility: eventVisibility,
+            }}
+          />
+        }
       />
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">

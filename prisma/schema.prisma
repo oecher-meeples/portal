@@ -117,6 +117,12 @@ enum DownloadStatus {
   OFFLINE
 }
 
+enum EventVisibility {
+  PUBLIC
+  INTERNAL
+  DRAFT
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -656,8 +662,8 @@ model GameHolding {
 /// `startsAt`/`endsAt` are a pure date range (no meaningful time-of-day) — actual
 /// opening times per calendar day live on `EventDay` (#150), set after creation.
 model Event {
-  id                   String    @id @default(cuid())
-  slug                 String    @unique
+  id                   String          @id @default(cuid())
+  slug                 String          @unique
   title                String
   startsAt             DateTime
   endsAt               DateTime?
@@ -665,13 +671,18 @@ model Event {
   /// Whether this event has a Bring&Buy flea market at all (#211) — separate
   /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
   /// always open and not tied to a specific event.
-  hasBringAndBuyMarket Boolean   @default(false)
+  hasBringAndBuyMarket Boolean         @default(false)
   /// Gilt für das ganze Event, nicht pro Tag (#155) — schaltet die
   /// Dashboard-Karte für Meeples frei und den "Helferplan"-Nav-Eintrag
   /// (nur solange das Event noch kommt, siehe hasOpenHelperRequest()).
-  helpersWanted        Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  helpersWanted        Boolean         @default(false)
+  /// Entwurf: nur für events:manage sichtbar. Intern: zusätzlich für
+  /// eingeloggte Meeples. Öffentlich: für alle, inkl. Gäste-Bereich und
+  /// öffentlicher Termine-Seite (/news). Default DRAFT — ein Event wird erst
+  /// nach bewusster Freigabe sichtbar, siehe lib/events/visibility.ts.
+  visibility           EventVisibility @default(DRAFT)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
   days                 EventDay[]
   shifts               Shift[]

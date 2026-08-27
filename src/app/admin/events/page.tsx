@@ -24,6 +24,7 @@ export default async function AdminEventsPage() {
     endsAt: event.endsAt?.toISOString() ?? null,
     location: event.location,
     helpersWanted: event.helpersWanted,
+    visibility: event.visibility,
     shiftCount: event._count.shifts,
   }));
 

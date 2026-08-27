@@ -79,6 +79,26 @@ export async function findCurrentEvent() {
   });
 }
 
+/** Öffentliche, noch kommende Events — Grundlage für die öffentliche
+ * Termine-Seite (/news, siehe lib/content/calendar.ts). Entwurf/Intern
+ * bleiben dort unsichtbar, siehe lib/events/visibility.ts. */
+export function findPublicUpcomingEvents(limit?: number) {
+  return prisma.event.findMany({
+    where: {
+      visibility: "PUBLIC",
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    take: limit,
+    select: {
+      slug: true,
+      title: true,
+      startsAt: true,
+      location: true,
+    },
+  });
+}
+
 /** Bring&Buy is announced this far ahead of an event (#211). */
 export const BRING_AND_BUY_WINDOW_DAYS = 30;
 
