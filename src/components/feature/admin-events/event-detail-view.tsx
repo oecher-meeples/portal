@@ -30,6 +30,7 @@ import {
   ShiftPlanEditor,
   type PlanShift,
 } from "@/components/feature/admin-events/shift-plan-editor";
+import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
 
 export type ShiftRow = EditableShift & {
   dayDate: string;
@@ -44,6 +45,7 @@ export function EventDetailView({
   days,
   shifts,
   helperRoles,
+  pool,
   assignedShelves,
   availableShelves,
 }: {
@@ -54,6 +56,7 @@ export function EventDetailView({
   days: EditableEventDay[];
   shifts: ShiftRow[];
   helperRoles: HelperRoleOption[];
+  pool: Record<string, PoolMeeple[]>;
   assignedShelves: ShelfOption[];
   availableShelves: ShelfOption[];
 }) {
@@ -164,6 +167,7 @@ export function EventDetailView({
           days={days}
           event={{ startsAt: eventStartsAt, endsAt: eventEndsAt }}
           shifts={planShifts}
+          pool={pool}
         />
       </div>
 

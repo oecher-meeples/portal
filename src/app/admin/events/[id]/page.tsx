@@ -6,6 +6,7 @@ import {
   type ShiftRow,
 } from "@/components/feature/admin-events/event-detail-view";
 import type { EditableEventDay } from "@/components/feature/admin-events/event-day-time-form";
+import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
 
 export default async function AdminEventDetailPage({
   params,
@@ -19,7 +20,17 @@ export default async function AdminEventDetailPage({
     prisma.event.findUnique({
       where: { id },
       include: {
-        days: { orderBy: { date: "asc" } },
+        days: {
+          orderBy: { date: "asc" },
+          include: {
+            availabilities: {
+              include: {
+                meeple: { select: { id: true, displayName: true } },
+                roles: { select: { roleId: true } },
+              },
+            },
+          },
+        },
         shifts: {
           orderBy: { targetStartsAt: "asc" },
           include: {
@@ -67,6 +78,19 @@ export default async function AdminEventDetailPage({
     bookings: shift.bookings,
   }));
 
+  const pool: Record<string, PoolMeeple[]> = Object.fromEntries(
+    event.days.map((day) => [
+      day.id,
+      day.availabilities.flatMap((availability) =>
+        availability.roles.map((role) => ({
+          meepleId: availability.meeple.id,
+          displayName: availability.meeple.displayName,
+          roleId: role.roleId,
+        })),
+      ),
+    ]),
+  );
+
   const assignedShelfIds = new Set(
     event.shelfAssignments.map((assignment) => assignment.unit.id),
   );
@@ -87,6 +111,7 @@ export default async function AdminEventDetailPage({
       days={days}
       shifts={shifts}
       helperRoles={helperRoles}
+      pool={pool}
       assignedShelves={assignedShelves}
       availableShelves={availableShelves}
     />

@@ -7,6 +7,10 @@ import {
   buildRoleColumns,
   totalColumnCount,
 } from "@/lib/events/shift-plan";
+import {
+  HelperPoolBar,
+  type PoolMeeple,
+} from "@/components/feature/admin-events/helper-pool-bar";
 import { formatDateMedium, formatTimePlain } from "@/lib/utils/format";
 
 export type PlanDay = {
@@ -24,19 +28,22 @@ export type PlanShift = {
 };
 
 /**
- * Outlook-artiger Schichtplan-Kalender (#157) — ein Tab pro Event-Tag,
+ * Outlook-artiger Schichtplan-Kalender (#157/#158) — ein Tab pro Event-Tag,
  * Spalten je Rolle (Breite proportional zur Stellenzahl), Zeilen = Uhrzeit
- * im Bereich Tages-Öffnungszeit ±4h. Liefert hier nur das statische Gerüst:
- * Helferpool-Leiste, Drag&Drop und Resize sind eigene Sub-Issues (#158–#160).
+ * im Bereich Tages-Öffnungszeit ±4h, Helferpool-Leiste synchron zum
+ * Spaltenraster darüber. Drag&Drop und Resize sind eigene Sub-Issues
+ * (#159/#160).
  */
 export function ShiftPlanEditor({
   days,
   event,
   shifts,
+  pool,
 }: {
   days: PlanDay[];
   event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
+  pool: Record<string, PoolMeeple[]>;
 }) {
   if (days.length === 0) return null;
 
@@ -50,11 +57,16 @@ export function ShiftPlanEditor({
         ))}
       </TabsList>
       {days.map((day) => (
-        <TabsContent key={day.id} value={day.id}>
-          <DayGrid
+        <TabsContent
+          key={day.id}
+          value={day.id}
+          className="flex flex-col gap-2"
+        >
+          <DayPlan
             day={day}
             event={event}
             shifts={shifts.filter((shift) => shift.dayId === day.id)}
+            pool={pool[day.id] ?? []}
           />
         </TabsContent>
       ))}
@@ -62,14 +74,16 @@ export function ShiftPlanEditor({
   );
 }
 
-function DayGrid({
+function DayPlan({
   day,
   event,
   shifts,
+  pool,
 }: {
   day: PlanDay;
   event: { startsAt: string; endsAt: string | null };
   shifts: PlanShift[];
+  pool: PoolMeeple[];
 }) {
   const range = computeVisibleRange(
     {
@@ -94,37 +108,40 @@ function DayGrid({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: `5rem repeat(${columnCount}, minmax(4rem, 1fr))`,
-        }}
-      >
-        <div className="bg-muted/50 border-b" />
-        {columns.map((group) => (
-          <div
-            key={group.roleId}
-            className="bg-muted/50 border-b border-l px-2 py-1.5 text-center text-xs font-semibold"
-            style={{ gridColumn: `span ${group.capacity}` }}
-          >
-            {group.roleName}
-          </div>
-        ))}
-
-        {timeSlots.map((slot) => (
-          <div key={slot.toISOString()} className="contents">
-            <div className="text-muted-foreground border-b px-2 py-1 text-right font-mono text-xs">
-              {formatTimePlain(slot.toISOString())}
+    <div className="flex flex-col gap-2">
+      <HelperPoolBar columns={columns} pool={pool} />
+      <div className="overflow-x-auto rounded-lg border">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `5rem repeat(${columnCount}, minmax(4rem, 1fr))`,
+          }}
+        >
+          <div className="bg-muted/50 border-b" />
+          {columns.map((group) => (
+            <div
+              key={group.roleId}
+              className="bg-muted/50 border-b border-l px-2 py-1.5 text-center text-xs font-semibold"
+              style={{ gridColumn: `span ${group.capacity}` }}
+            >
+              {group.roleName}
             </div>
-            {Array.from({ length: columnCount }, (_, index) => (
-              <div
-                key={index}
-                className="hover:bg-muted/30 h-8 border-b border-l"
-              />
-            ))}
-          </div>
-        ))}
+          ))}
+
+          {timeSlots.map((slot) => (
+            <div key={slot.toISOString()} className="contents">
+              <div className="text-muted-foreground border-b px-2 py-1 text-right font-mono text-xs">
+                {formatTimePlain(slot.toISOString())}
+              </div>
+              {Array.from({ length: columnCount }, (_, index) => (
+                <div
+                  key={index}
+                  className="hover:bg-muted/30 h-8 border-b border-l"
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
