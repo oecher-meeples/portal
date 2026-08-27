@@ -119,7 +119,7 @@ describe("promoteAlternateNameToTitle", () => {
     expect(result).toEqual({ error: "Alternativname wurde nicht gefunden." });
   });
 
-  it("swaps BoardGame.title and the alternate name's value, keeping the row and slug", async () => {
+  it("swaps BoardGame.title and the alternate name's value, keeping the row and slug, when a secondary title is already set (#263)", async () => {
     prismaMock.$transaction.mockImplementation((arg) =>
       typeof arg === "function" ? arg(prismaMock) : Promise.all(arg),
     );
@@ -129,7 +129,7 @@ describe("promoteAlternateNameToTitle", () => {
       name: "Die Siedler von Catan",
       note: null,
       createdAt: new Date(),
-      boardGame: { id: "game-1", title: "Catan" },
+      boardGame: { id: "game-1", title: "Catan", secondaryTitle: "Siedler" },
     } as never);
 
     const result = await promoteAlternateNameToTitle("alt-1");
@@ -141,6 +141,33 @@ describe("promoteAlternateNameToTitle", () => {
     expect(prismaMock.boardGameAlternateName.update).toHaveBeenCalledWith({
       where: { id: "alt-1" },
       data: { name: "Catan" },
+    });
+    expect(prismaMock.boardGameAlternateName.delete).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true });
+  });
+
+  it("moves the old main title into the empty secondary title instead of the alternate name list (#263)", async () => {
+    prismaMock.$transaction.mockImplementation((arg) =>
+      typeof arg === "function" ? arg(prismaMock) : Promise.all(arg),
+    );
+    prismaMock.boardGameAlternateName.findUnique.mockResolvedValue({
+      id: "alt-1",
+      boardGameId: "game-1",
+      name: "Die Siedler von Catan",
+      note: null,
+      createdAt: new Date(),
+      boardGame: { id: "game-1", title: "Catan", secondaryTitle: null },
+    } as never);
+
+    const result = await promoteAlternateNameToTitle("alt-1");
+
+    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+      where: { id: "game-1" },
+      data: { title: "Die Siedler von Catan", secondaryTitle: "Catan" },
+    });
+    expect(prismaMock.boardGameAlternateName.update).not.toHaveBeenCalled();
+    expect(prismaMock.boardGameAlternateName.delete).toHaveBeenCalledWith({
+      where: { id: "alt-1" },
     });
     expect(result).toEqual({ success: true });
   });

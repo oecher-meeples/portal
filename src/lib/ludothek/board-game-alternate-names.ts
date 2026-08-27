@@ -1,8 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
+
+/**
+ * Gemeinsames Verschiebe-oder-Löschen-Muster hinter den "Als … verwenden"-
+ * Aktionen unten: der alte Wert eines Titel-Felds landet in der Alternativ-
+ * namen-Zeile, aus der der neue Wert kam. Gab es vorher gar keinen Wert
+ * (`previousValue` leer), gibt es nichts zurückzutauschen — die Zeile wird
+ * dann gelöscht statt eine leere Zeile zu hinterlassen (#263).
+ */
+async function replaceOrDeleteAlternateName(
+  tx: Prisma.TransactionClient,
+  alternateNameId: string,
+  previousValue: string | null,
+) {
+  if (previousValue) {
+    await tx.boardGameAlternateName.update({
+      where: { id: alternateNameId },
+      data: { name: previousValue },
+    });
+  } else {
+    await tx.boardGameAlternateName.delete({ where: { id: alternateNameId } });
+  }
+}
 
 async function revalidateTitlePaths(boardGameId: string) {
   const game = await prisma.boardGame.findUnique({
@@ -55,11 +78,15 @@ export async function deleteAlternateName(id: string) {
 }
 
 /**
- * "Als Hauptname übernehmen" (#187): tauscht nur die WERTE zwischen
- * `BoardGame.title` und der gewählten Alternativnamen-Zeile — die Zeile
- * selbst bleibt bestehen (jetzt mit dem alten Titel als Wert), `slug` bleibt
- * unverändert (an den ursprünglichen Anlege-Titel gebunden, siehe Kommentar
- * "Routing basis" in `schema.prisma`), damit keine URLs brechen.
+ * "Als Hauptname übernehmen" (#187): setzt `BoardGame.title` auf den Wert
+ * der gewählten Alternativnamen-Zeile. `slug` bleibt unverändert (an den
+ * ursprünglichen Anlege-Titel gebunden, siehe Kommentar "Routing basis" in
+ * `schema.prisma`), damit keine URLs brechen.
+ *
+ * War noch kein Sekundärtitel gesetzt, wird der bisherige Haupttitel dorthin
+ * verschoben statt in die Alternativtitel-Liste zurückzuwandern (#263) — war
+ * bereits einer gesetzt, bleibt er unangetastet und der alte Haupttitel
+ * landet wie bisher als Alternativtitel-Eintrag.
  */
 export async function promoteAlternateNameToTitle(alternateNameId: string) {
   const user = await requireGamesManagePermission();
@@ -70,18 +97,26 @@ export async function promoteAlternateNameToTitle(alternateNameId: string) {
   const boardGameId = await prisma.$transaction(async (tx) => {
     const alternateName = await tx.boardGameAlternateName.findUnique({
       where: { id: alternateNameId },
-      include: { boardGame: { select: { id: true, title: true } } },
+      include: {
+        boardGame: { select: { id: true, title: true, secondaryTitle: true } },
+      },
     });
     if (!alternateName) return null;
 
-    await tx.boardGame.update({
-      where: { id: alternateName.boardGame.id },
-      data: { title: alternateName.name },
-    });
-    await tx.boardGameAlternateName.update({
-      where: { id: alternateNameId },
-      data: { name: alternateName.boardGame.title },
-    });
+    const oldTitle = alternateName.boardGame.title;
+    if (alternateName.boardGame.secondaryTitle) {
+      await tx.boardGame.update({
+        where: { id: alternateName.boardGame.id },
+        data: { title: alternateName.name },
+      });
+      await replaceOrDeleteAlternateName(tx, alternateNameId, oldTitle);
+    } else {
+      await tx.boardGame.update({
+        where: { id: alternateName.boardGame.id },
+        data: { title: alternateName.name, secondaryTitle: oldTitle },
+      });
+      await replaceOrDeleteAlternateName(tx, alternateNameId, null);
+    }
 
     return alternateName.boardGame.id;
   });
@@ -120,17 +155,11 @@ export async function promoteAlternateNameToSecondaryTitle(
       where: { id: alternateName.boardGame.id },
       data: { secondaryTitle: alternateName.name },
     });
-
-    if (alternateName.boardGame.secondaryTitle) {
-      await tx.boardGameAlternateName.update({
-        where: { id: alternateNameId },
-        data: { name: alternateName.boardGame.secondaryTitle },
-      });
-    } else {
-      await tx.boardGameAlternateName.delete({
-        where: { id: alternateNameId },
-      });
-    }
+    await replaceOrDeleteAlternateName(
+      tx,
+      alternateNameId,
+      alternateName.boardGame.secondaryTitle,
+    );
 
     return alternateName.boardGame.id;
   });
