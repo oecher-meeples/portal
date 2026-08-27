@@ -8,13 +8,13 @@ import {
   totalColumnCount,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
-import { helperColorClass } from "@/lib/events/helper-colors";
 import { formatTimePlain } from "@/lib/utils/format";
 import type {
   PlanDay,
   PlanShift,
   PlanBooking,
 } from "@/lib/events/shift-plan-types";
+import { AssignedBlock } from "@/components/feature/admin-events/assigned-block";
 
 const STEP_MINUTES = 30;
 
@@ -38,6 +38,7 @@ export function ShiftPlanGrid({
   shifts,
   bookings,
   onUnassign,
+  onResize,
 }: {
   day: PlanDay;
   event: { startsAt: string; endsAt: string | null };
@@ -45,6 +46,13 @@ export function ShiftPlanGrid({
   bookings: PlanBooking[];
   /** Entf-Taste auf einem fokussierten Block (#161 Unassign). */
   onUnassign: (shiftId: string, meepleId: string) => void;
+  /** Griffpunkte oben/unten auf einem fokussierten Block (#160 Resize). */
+  onResize: (
+    shiftId: string,
+    meepleId: string,
+    startsAt: Date,
+    endsAt: Date,
+  ) => void;
 }) {
   const range = computeVisibleRange(
     {
@@ -136,25 +144,17 @@ export function ShiftPlanGrid({
           const rowStart = Math.max(2, rowForTime(booking.startsAt) + 2);
           const rowEnd = Math.max(rowStart + 1, rowForTime(booking.endsAt) + 2);
           return (
-            <div
+            <AssignedBlock
               key={`${booking.shiftId}-${booking.meepleId}`}
-              tabIndex={0}
-              role="button"
-              aria-label={`${booking.displayName} — Entf zum Entfernen`}
-              onKeyDown={(keyEvent) => {
-                if (keyEvent.key === "Delete" || keyEvent.key === "Backspace") {
-                  keyEvent.preventDefault();
-                  onUnassign(booking.shiftId, booking.meepleId);
-                }
-              }}
-              className={`focus-visible:ring-ring m-0.5 cursor-default rounded px-1.5 py-1 text-xs font-medium outline-none focus-visible:ring-2 ${helperColorClass(booking.meepleId)}`}
-              style={{
-                gridColumn: group.startColumn + 2 + Math.max(slot, 0),
-                gridRow: `${rowStart} / ${rowEnd}`,
-              }}
-            >
-              {booking.displayName}
-            </div>
+              booking={booking}
+              gridColumn={group.startColumn + 2 + Math.max(slot, 0)}
+              rowStart={rowStart}
+              rowEnd={rowEnd}
+              maxRow={timeSlots.length + 2}
+              rangeStart={range.start}
+              onUnassign={onUnassign}
+              onResize={onResize}
+            />
           );
         })}
       </div>

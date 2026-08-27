@@ -36,14 +36,15 @@ export type { PlanDay, PlanShift };
 type ActiveDrag = { meepleId: string; displayName: string } | null;
 
 /**
- * Outlook-artiger Schichtplan-Kalender (#157–#159, #161) — Tab pro Event-Tag,
+ * Outlook-artiger Schichtplan-Kalender (#157–#161) — Tab pro Event-Tag,
  * Helferpool-Leiste synchron zum Kalender-Spaltenraster darüber, Drag&Drop
  * eines Pool-Helfers auf eine Rollen-Spalte (@dnd-kit) legt eine Zuweisung
  * mit dem Ziel-Zeitraum der Schicht an. Der Pool-Eintrag bleibt danach
  * sichtbar und wird gelb markiert, solange die Person an diesem Tag
  * mindestens eine Zuweisung hat (`alreadyPlanned`); Entf-Taste auf einem
- * fokussierten Block entfernt die Zuweisung wieder. Resize (#160) ist noch
- * ein eigenes Sub-Issue.
+ * fokussierten Block entfernt die Zuweisung wieder, dessen Griffpunkte
+ * oben/unten strecken/stauchen den Zeitblock (#160 Resize) — beide Pfade
+ * teilen sich dieselbe serverseitige Validierung (assignHelperToShift).
  */
 export function ShiftPlanEditor({
   days,
@@ -113,6 +114,28 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
+  async function handleResize(
+    shiftId: string,
+    meepleId: string,
+    startsAt: Date,
+    endsAt: Date,
+  ) {
+    setError(null);
+    // Re-uses assignHelperToShift: an upsert with the same hard validations
+    // (availability boundary, no overlap with the person's other blocks).
+    const result = await assignHelperToShift(
+      shiftId,
+      meepleId,
+      startsAt,
+      endsAt,
+    );
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <Tabs defaultValue={days[0].id}>
@@ -144,6 +167,7 @@ export function ShiftPlanEditor({
                 shifts={dayShifts}
                 bookings={bookings[day.id] ?? []}
                 onUnassign={handleUnassign}
+                onResize={handleResize}
               />
             </TabsContent>
           );
