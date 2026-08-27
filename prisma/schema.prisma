@@ -473,6 +473,9 @@ model GameCopy {
   ruleBookLanguages      RuleBookLanguage[]
   needsCompletenessCheck Boolean             @default(false)
   lastCheckedAt          DateTime?
+  /// Freier Text, externe Fortführung (z. B. Zettel am Regal), kein
+  /// automatisch lückenloses Nummernschema wie `codes.ts` (#270).
+  inventoryNumber        String?             @unique
   status                 GameInventoryStatus @default(ACTIVE)
   archivedAt             DateTime?
   archivedReason         String?
