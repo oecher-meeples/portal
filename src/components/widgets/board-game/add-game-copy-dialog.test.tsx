@@ -9,14 +9,18 @@ vi.mock("next/navigation", () => ({
 }));
 
 const createGameCopyMock = vi.fn();
+const getSuggestedInventoryNumberMock = vi.fn();
 vi.mock("@/lib/ludothek/game-copies", () => ({
   createGameCopy: (...args: unknown[]) => createGameCopyMock(...args),
+  getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
 }));
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+
+getSuggestedInventoryNumberMock.mockResolvedValue("1");
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /Weiteres Exemplar/ }));
@@ -52,6 +56,7 @@ describe("AddGameCopyDialog", () => {
     expect(createGameCopyMock).toHaveBeenCalledWith("game-1", {
       condition: "Leicht bespielt",
       ruleBookLanguages: ["DE", "EN"],
+      inventoryNumber: "1",
     });
   });
 
@@ -68,6 +73,7 @@ describe("AddGameCopyDialog", () => {
     expect(createGameCopyMock).toHaveBeenCalledWith("game-1", {
       condition: undefined,
       ruleBookLanguages: [],
+      inventoryNumber: "1",
     });
   });
 });

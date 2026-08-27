@@ -37,6 +37,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     },
     condition: null,
     ruleBookLanguages: [],
+    inventoryNumber: null,
     isMine: false,
     history: [],
     ...overrides,

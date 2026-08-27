@@ -17,6 +17,10 @@ import {
   resolveCopyPlacement,
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
+import {
+  suggestNextInventoryNumber,
+  validateInventoryNumberUniqueness,
+} from "@/lib/ludothek/game-copy-inventory-number";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -27,7 +31,17 @@ export type GameCopyInput = {
   placement?: CopyPlacementInput;
   /** Regelheft-Sprache(n) dieses Exemplars — Mehrfachauswahl (#188). */
   ruleBookLanguages?: RuleBookLanguage[];
+  /** Freie Inventarnummer (#270) — vorbelegt per `getSuggestedInventoryNumber()`. */
+  inventoryNumber?: string | null;
 };
+
+/** Vorschlag fürs Inventarnummer-Feld beim Anlegen (#270). */
+export async function getSuggestedInventoryNumber() {
+  const copies = await prisma.gameCopy.findMany({
+    select: { inventoryNumber: true },
+  });
+  return suggestNextInventoryNumber(copies.map((c) => c.inventoryNumber));
+}
 
 async function uniqueGameCopySlug(tx: Tx, title: string, excludeId?: string) {
   return uniqueSlug(
@@ -51,6 +65,7 @@ export async function createGameCopyTx(
     boardGameTitle,
     condition,
     ruleBookLanguages,
+    inventoryNumber,
     actorId,
     placement,
   }: {
@@ -58,10 +73,15 @@ export async function createGameCopyTx(
     boardGameTitle: string;
     condition?: string | null;
     ruleBookLanguages?: RuleBookLanguage[];
+    inventoryNumber?: string | null;
     actorId: string;
     placement?: { unitId?: string; meepleId?: string };
   },
 ) {
+  if (inventoryNumber) {
+    const error = await validateInventoryNumberUniqueness(tx, inventoryNumber);
+    if (error) throw new Error(error);
+  }
   const slug = await uniqueGameCopySlug(tx, boardGameTitle);
   const created = await tx.gameCopy.create({
     data: {
@@ -69,6 +89,7 @@ export async function createGameCopyTx(
       boardGameId,
       condition: condition || null,
       ruleBookLanguages: ruleBookLanguages ?? [],
+      inventoryNumber: inventoryNumber?.trim() || null,
     },
   });
 
@@ -111,16 +132,24 @@ export async function createGameCopy(
 
   const actor = await ensureMeeple(user);
   const placement = resolveCopyPlacement(input.placement, actor.id);
-  const copy = await prisma.$transaction((tx) =>
-    createGameCopyTx(tx, {
-      boardGameId: title.id,
-      boardGameTitle: title.title,
-      condition: input.condition,
-      ruleBookLanguages: input.ruleBookLanguages,
-      actorId: actor.id,
-      placement,
-    }),
-  );
+  let copy;
+  try {
+    copy = await prisma.$transaction((tx) =>
+      createGameCopyTx(tx, {
+        boardGameId: title.id,
+        boardGameTitle: title.title,
+        condition: input.condition,
+        ruleBookLanguages: input.ruleBookLanguages,
+        inventoryNumber: input.inventoryNumber,
+        actorId: actor.id,
+        placement,
+      }),
+    );
+  } catch (caught) {
+    return {
+      error: caught instanceof Error ? caught.message : "Unbekannter Fehler.",
+    };
+  }
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
@@ -133,12 +162,24 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
     return { error: "Keine Berechtigung." };
   }
 
+  if (input.inventoryNumber) {
+    const error = await validateInventoryNumberUniqueness(
+      prisma,
+      input.inventoryNumber,
+      id,
+    );
+    if (error) return { error };
+  }
+
   const copy = await prisma.gameCopy.update({
     where: { id },
     data: {
       condition: input.condition || null,
       ...(input.ruleBookLanguages
         ? { ruleBookLanguages: input.ruleBookLanguages }
+        : {}),
+      ...(input.inventoryNumber !== undefined
+        ? { inventoryNumber: input.inventoryNumber?.trim() || null }
         : {}),
     },
     include: { boardGame: { select: { slug: true } } },

@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import type { RuleBookLanguage } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/field";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
@@ -20,6 +21,7 @@ export function EditBoardGameExemplarDialog({
   copyId,
   condition,
   ruleBookLanguages,
+  inventoryNumber,
   triggerLabel = "Bearbeiten",
   open,
   onOpenChange,
@@ -27,16 +29,22 @@ export function EditBoardGameExemplarDialog({
   copyId: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
+  /** Freie Inventarnummer des Exemplars (#270). */
+  inventoryNumber?: string | null;
   triggerLabel?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const [value, setValue] = useState(condition ?? "");
   const [languages, setLanguages] = useState(ruleBookLanguages);
+  const [inventoryNumberValue, setInventoryNumberValue] = useState(
+    inventoryNumber ?? "",
+  );
 
   function reset() {
     setValue(condition ?? "");
     setLanguages(ruleBookLanguages);
+    setInventoryNumberValue(inventoryNumber ?? "");
   }
 
   return (
@@ -57,10 +65,17 @@ export function EditBoardGameExemplarDialog({
         updateGameCopy(copyId, {
           condition: value || undefined,
           ruleBookLanguages: languages,
+          inventoryNumber: inventoryNumberValue,
         })
       }
       onReset={reset}
     >
+      <TextField
+        id={`copy-${copyId}-inventory-number`}
+        label="Inventarnummer"
+        value={inventoryNumberValue}
+        onChange={(event) => setInventoryNumberValue(event.target.value)}
+      />
       <EditBoardGameExemplar
         idPrefix={`copy-${copyId}`}
         values={{

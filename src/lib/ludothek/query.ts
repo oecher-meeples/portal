@@ -91,6 +91,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       ean: boardGame.ean,
       condition: copy.condition,
       ruleBookLanguages: copy.ruleBookLanguages,
+      inventoryNumber: copy.inventoryNumber,
       bggId: boardGame.bggId,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       secondaryTitle: boardGame.secondaryTitle,

@@ -45,6 +45,8 @@ export type LudothekGame = {
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
+  /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
+  inventoryNumber: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
    * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
@@ -105,6 +107,7 @@ export type PublicLudothekGame = Omit<
   | "locationChain"
   | "ean"
   | "condition"
+  | "inventoryNumber"
   | "bggId"
 >;
 
@@ -120,6 +123,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     locationChain: _locationChain,
     ean: _ean,
     condition: _condition,
+    inventoryNumber: _inventoryNumber,
     bggId: _bggId,
     ...rest
   } = game;

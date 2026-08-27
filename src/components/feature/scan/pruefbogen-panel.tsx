@@ -12,10 +12,13 @@ import {
 export function PruefbogenPanel({
   gameCopyId,
   title,
+  inventoryNumber,
   onDone,
 }: {
   gameCopyId: string;
   title: string;
+  /** Freie Inventarnummer des Exemplars (#270). */
+  inventoryNumber?: string | null;
   onDone: () => void;
 }) {
   const [mode, setMode] = useState<"idle" | "defect">("idle");
@@ -48,7 +51,9 @@ export function PruefbogenPanel({
   return (
     <div className="flex flex-col gap-3">
       <p className="font-serif text-lg font-bold">{title}</p>
-      <p className="text-muted-foreground text-sm">Prüfbogen</p>
+      <p className="text-muted-foreground text-sm">
+        Prüfbogen{inventoryNumber ? ` · Inv.-Nr. ${inventoryNumber}` : ""}
+      </p>
 
       {mode === "idle" && (
         <div className="flex flex-col gap-3">

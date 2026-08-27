@@ -135,6 +135,7 @@ export default async function GameDetailPage({
       : NO_CONTACT,
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
+    inventoryNumber: copy.inventoryNumber,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],

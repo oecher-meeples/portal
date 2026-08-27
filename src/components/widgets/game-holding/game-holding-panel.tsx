@@ -118,6 +118,11 @@ export function GameHoldingPanel({
           <StatusPill label="unbestätigt" tone="warning" />
         )}
       </div>
+      {game.inventoryNumber && (
+        <p className="text-muted-foreground text-sm">
+          Inv.-Nr. {game.inventoryNumber}
+        </p>
+      )}
 
       {holding?.unitId && (
         <p className="text-muted-foreground text-sm">

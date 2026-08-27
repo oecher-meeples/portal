@@ -194,7 +194,13 @@ export async function scanConfirmHolding(holdingId: string) {
 }
 
 export type ScannedGameContext = {
-  game: { id: string; title: string; status: string };
+  game: {
+    id: string;
+    title: string;
+    status: string;
+    /** Freie Inventarnummer des Exemplars (#270). */
+    inventoryNumber: string | null;
+  };
   holding: {
     id: string;
     confirmedAt: string | null;
@@ -219,6 +225,7 @@ export async function scanGetGameContext(
       select: {
         id: true,
         status: true,
+        inventoryNumber: true,
         boardGame: { select: { title: true } },
       },
     }),
@@ -231,7 +238,12 @@ export async function scanGetGameContext(
   if (!copy) return null;
 
   return {
-    game: { id: copy.id, title: copy.boardGame.title, status: copy.status },
+    game: {
+      id: copy.id,
+      title: copy.boardGame.title,
+      status: copy.status,
+      inventoryNumber: copy.inventoryNumber,
+    },
     holding: holding
       ? {
           id: holding.id,

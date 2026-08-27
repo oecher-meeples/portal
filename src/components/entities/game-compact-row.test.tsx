@@ -25,6 +25,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     mechanics: [],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
     alternateNames: [],
     secondaryTitle: null,

@@ -158,6 +158,7 @@ export function AdminBestandView({
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Spiel</TableHead>
+              <TableHead>Inv.-Nr.</TableHead>
               <TableHead>Standort-Kette</TableHead>
               <TableHead>Zustand</TableHead>
               <TableHead>Letzte Prüfung</TableHead>
@@ -187,6 +188,9 @@ export function AdminBestandView({
                         className="ml-2"
                       />
                     )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {game.inventoryNumber || "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {game.locationChain || "—"}
@@ -234,7 +238,7 @@ export function AdminBestandView({
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-muted-foreground py-6 text-center"
                 >
                   Keine Spiele gefunden.
