@@ -175,7 +175,7 @@ export function TitleOverviewDialog({
         {isLoading ? (
           <p className="text-muted-foreground text-sm">Lade…</p>
         ) : (
-          <ul className="flex flex-col gap-1.5 text-sm">
+          <ul className="flex max-h-80 flex-col gap-1.5 overflow-y-auto text-sm">
             <li className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between">
               <span>
                 {title}
