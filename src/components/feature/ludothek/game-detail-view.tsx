@@ -251,49 +251,49 @@ export function GameDetailView({
           </div>
         )}
 
-        {(game.description || game.explainerVideoUrl) && (
-          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Erklärung</h2>
-            {game.description && (
-              <p className="text-sm leading-relaxed whitespace-pre-line">
-                {game.description}
-              </p>
-            )}
-            {game.explainerVideoUrl && (
-              <ExplainerVideo url={game.explainerVideoUrl} />
-            )}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="gap-1.5"
-                render={
-                  <a
-                    href={buildYoutubeRulesSearchUrl(game.title, "de")}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-              >
-                <YoutubeIcon className="size-4" />
-                Nach Regeln auf Youtube suchen
-              </Button>
-              <Button
-                variant="outline"
-                className="gap-1.5"
-                render={
-                  <a
-                    href={buildYoutubeRulesSearchUrl(game.title, "en")}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-              >
-                <YoutubeIcon className="size-4" />
-                Search for rules on Youtube
-              </Button>
-            </div>
+        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">Erklärung</h2>
+          {game.description && (
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {game.description}
+            </p>
+          )}
+          {game.explainerVideoUrl && (
+            <ExplainerVideo url={game.explainerVideoUrl} />
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a
+                  href={buildYoutubeRulesSearchUrl(game.title, "de")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <YoutubeIcon className="size-4" />
+              Nach Regeln auf Youtube suchen
+              <ExternalLink className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a
+                  href={buildYoutubeRulesSearchUrl(game.title, "en")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <YoutubeIcon className="size-4" />
+              Search for rules on Youtube
+              <ExternalLink className="size-4" />
+            </Button>
           </div>
-        )}
+        </div>
 
         {openLfgPosts && openLfgPosts.length > 0 && (
           <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">

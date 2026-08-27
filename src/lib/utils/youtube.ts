@@ -8,7 +8,7 @@ export function buildYoutubeRulesSearchUrl(
   title: string,
   language: "de" | "en",
 ): string {
-  const suffix = language === "de" ? "Regeln" : "rules";
+  const suffix = language === "de" ? "Brettspiel Regeln" : "boardgame rules";
   const query = `${title} ${suffix}`;
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
