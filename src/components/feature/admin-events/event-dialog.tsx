@@ -102,21 +102,25 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         value={endsAt}
         onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
       />
-      <TextField
-        id="event-location"
-        label="Ort (optional)"
-        value={location}
-        onChange={(fieldEvent) => setLocation(fieldEvent.target.value)}
-        placeholder="z. B. Vereinsheim"
-      />
-      <Label className="flex items-center justify-between gap-2 font-normal">
-        Helfer suchen
-        <Switch
-          id="event-helpers-wanted"
-          checked={helpersWanted}
-          onCheckedChange={setHelpersWanted}
-        />
-      </Label>
+      {isEdit && (
+        <>
+          <TextField
+            id="event-location"
+            label="Ort (optional)"
+            value={location}
+            onChange={(fieldEvent) => setLocation(fieldEvent.target.value)}
+            placeholder="z. B. Vereinsheim"
+          />
+          <Label className="flex items-center justify-between gap-2 font-normal">
+            Helfer suchen
+            <Switch
+              id="event-helpers-wanted"
+              checked={helpersWanted}
+              onCheckedChange={setHelpersWanted}
+            />
+          </Label>
+        </>
+      )}
     </ActionDialog>
   );
 }

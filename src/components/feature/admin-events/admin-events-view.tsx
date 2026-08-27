@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
   Table,
@@ -7,8 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2 } from "lucide-react";
+import { CalendarClock, Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
+import { Button } from "@/components/ui/button";
 import { EventDialog } from "@/components/feature/admin-events/event-dialog";
 import { deleteEvent } from "@/components/feature/admin-events/actions";
 import {
@@ -56,13 +58,14 @@ export function AdminEventsView({
               <TableHead>Schichten</TableHead>
               <TableHead />
               <TableHead />
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {events.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-muted-foreground text-center"
                 >
                   Noch keine Events angelegt.
@@ -71,7 +74,14 @@ export function AdminEventsView({
             ) : (
               events.map((event) => (
                 <TableRow key={event.id}>
-                  <TableCell>{event.title}</TableCell>
+                  <TableCell>
+                    <Link
+                      href={`/admin/events/${event.id}`}
+                      className="hover:underline"
+                    >
+                      {event.title}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {formatDateRange(event.startsAt, event.endsAt)}
                   </TableCell>
@@ -79,6 +89,19 @@ export function AdminEventsView({
                     {event.location ?? "—"}
                   </TableCell>
                   <TableCell>{event.shiftCount}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      render={
+                        <Link href={`/admin/events/${event.id}`}>
+                          <CalendarClock className="size-4" />
+                          Schichtplan
+                        </Link>
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <EventDialog
                       event={{
