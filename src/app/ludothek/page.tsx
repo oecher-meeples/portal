@@ -10,8 +10,11 @@ import {
   toPublicGame,
 } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
-import { buildPrivateCollectionResults } from "@/lib/ludothek/private-collection";
+import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
+import { findCurrentEvent } from "@/lib/events/upcoming";
+import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
+import { getPresentGameCopyIds } from "@/lib/events/guest-area";
 
 export default async function LudothekPage({
   searchParams,
@@ -29,8 +32,37 @@ export default async function LudothekPage({
   const rawSearchParams = await searchParams;
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
 
-  const allGames = await buildLudothekGames();
-  const filtered = filterLudothekGames(allGames, filters);
+  const clubGames = await buildLudothekGames();
+  // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
+  // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
+  // eines separaten, statischen Blocks).
+  const privateGames =
+    internal && filters.showPrivateCollection
+      ? await buildPrivateLudothekGames()
+      : [];
+  const allGames = [...clubGames, ...privateGames];
+
+  // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
+  // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
+  // nur sinnvoll, solange ein Event läuft, für Meeples wie Gäste gleichermaßen.
+  const currentEvent = await findCurrentEvent();
+  const showExplainerFilter = internal || currentEvent !== null;
+  const attendingExplainerBoardGameIds =
+    !internal && filters.hasExplainer
+      ? currentEvent
+        ? await getAttendingExplainerBoardGameIds(currentEvent.id)
+        : new Set<string>()
+      : undefined;
+  const showPresentFilter = currentEvent !== null;
+  const presentGameCopyIds =
+    filters.onlyPresentAtEvent && currentEvent
+      ? await getPresentGameCopyIds(currentEvent.id)
+      : undefined;
+
+  const filtered = filterLudothekGames(allGames, filters, {
+    attendingExplainerBoardGameIds,
+    presentGameCopyIds,
+  });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
@@ -53,28 +85,6 @@ export default async function LudothekPage({
       })()
     : undefined;
 
-  // Internal-only, and only fetched when the toggle is on — never reaches the guest path.
-  const privateCollectionResults =
-    internal && filters.showPrivateCollection
-      ? buildPrivateCollectionResults(
-          await prisma.privateGameCollectionEntry.findMany({
-            include: {
-              meeple: { select: { displayName: true } },
-              boardGame: {
-                select: {
-                  title: true,
-                  imageUrl: true,
-                  minPlayers: true,
-                  maxPlayers: true,
-                  playTimeMinutes: true,
-                },
-              },
-            },
-          }),
-          filters,
-        )
-      : undefined;
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -92,7 +102,8 @@ export default async function LudothekPage({
         mechanicsOptions={mechanicsOptions}
         maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
-        privateCollectionResults={privateCollectionResults}
+        showExplainerFilter={showExplainerFilter}
+        showPresentFilter={showPresentFilter}
       />
     </div>
   );

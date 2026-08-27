@@ -175,6 +175,7 @@ describe("updateOwnProfile", () => {
       address: "  Musterstraße 1, 52062 Aachen  ",
       shareAddress: true,
       doorbellNote: "",
+      privateCollectionVisible: true,
     });
 
     expect(prismaMock.meeple.update).toHaveBeenCalledWith({
@@ -189,16 +190,20 @@ describe("updateOwnProfile", () => {
         address: "Musterstraße 1, 52062 Aachen",
         shareAddress: true,
         doorbellNote: null,
+        privateCollectionVisible: true,
       },
     });
   });
 
-  it("defaults shareAddress to false when omitted", async () => {
+  it("defaults shareAddress and privateCollectionVisible to false when omitted", async () => {
     await updateOwnProfile({ displayName: "Lea" });
 
     expect(prismaMock.meeple.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ shareAddress: false }),
+        data: expect.objectContaining({
+          shareAddress: false,
+          privateCollectionVisible: false,
+        }),
       }),
     );
   });

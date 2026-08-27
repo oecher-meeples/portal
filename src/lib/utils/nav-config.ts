@@ -20,6 +20,7 @@ import {
   Settings,
   GraduationCap,
   CalendarClock,
+  HandHeart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -191,6 +192,27 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: "Bestand & Inventur",
         href: "/admin/bestand",
+        icon: Boxes,
+        section: "Administration",
+        permission: "games:manage",
+      },
+      {
+        label: "Ausleihen",
+        href: "/admin/bestand/ausleihen",
+        icon: HandHeart,
+        section: "Administration",
+        permission: "games:manage",
+      },
+      {
+        label: "Event-Ausgabe",
+        href: "/admin/bestand/event-ausgabe",
+        icon: Boxes,
+        section: "Administration",
+        permission: "games:manage",
+      },
+      {
+        label: "Event-Rückgabe",
+        href: "/admin/bestand/event-rueckgabe",
         icon: Boxes,
         section: "Administration",
         permission: "games:manage",

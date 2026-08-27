@@ -25,6 +25,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     mechanics: ["Engine-Building"],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
     alternateNames: [],
     secondaryTitle: null,
@@ -46,6 +47,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Karton 1",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }

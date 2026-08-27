@@ -6,6 +6,7 @@ const ZUSTAND_TONE: Record<GameZustand, StatusTone> = {
   ausgeliehen: "info",
   wartung: "warning",
   "nicht-erfasst": "neutral",
+  privat: "neutral",
 };
 
 const ZUSTAND_LABELS: Record<GameZustand, string> = {
@@ -13,6 +14,7 @@ const ZUSTAND_LABELS: Record<GameZustand, string> = {
   ausgeliehen: "Ausgeliehen",
   wartung: "Wartung",
   "nicht-erfasst": "Nicht erfasst",
+  privat: "Privatbesitz",
 };
 
 /** The one place that knows how a game's Zustand looks. Renders nothing for

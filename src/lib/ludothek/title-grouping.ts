@@ -8,6 +8,7 @@ const ZUSTAND_PRIORITY: Record<GameZustand, number> = {
   ausgeliehen: 1,
   wartung: 2,
   "nicht-erfasst": 3,
+  privat: 4,
 };
 
 export type LudothekTitleGroup<

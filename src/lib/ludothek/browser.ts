@@ -45,6 +45,8 @@ export type LudothekGame = {
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
+  /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
+  inventoryNumber: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
    * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
@@ -88,6 +90,9 @@ export type LudothekGame = {
   /** Whether this title has at least one open (see `getLfgStatus`) LfgPost —
    * backs the members-only "Zeige nur Spielergesuche"-Filter (#144). */
   hasOpenLfg: boolean;
+  /** True for a Meeple's privately imported BGG title (#255-Folge) — no
+   * `GameCopy` behind it, `zustand` is always `"privat"`, no Detailseite. */
+  isPrivate: boolean;
 };
 
 /**
@@ -105,6 +110,7 @@ export type PublicLudothekGame = Omit<
   | "locationChain"
   | "ean"
   | "condition"
+  | "inventoryNumber"
   | "bggId"
 >;
 
@@ -120,6 +126,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     locationChain: _locationChain,
     ean: _ean,
     condition: _condition,
+    inventoryNumber: _inventoryNumber,
     bggId: _bggId,
     ...rest
   } = game;
@@ -166,6 +173,18 @@ export type LudothekFilters = {
   showPrivateCollection?: boolean;
   /** Default off. Members-only — matches when a title has at least one open LfgPost (#144). */
   onlyWithOpenLfg?: boolean;
+  /** Default off. Public — "Erklärbär vorhanden" (#256). For Meeples: ≥1
+   * `ExplainerGame`-Eintrag (`explainerCount > 0`). For Gäste während eines
+   * laufenden Events: enger — ≥1 Erklärbär mit `ExplainerAttendance` =
+   * "heute anwesend" (siehe `attendingExplainerBoardGameIds` in
+   * `filterLudothekGames`). */
+  hasExplainer?: boolean;
+  /** Default off. Nur sinnvoll während eines laufenden Events — "nur
+   * anwesende Spiele" (#273), siehe `presentGameCopyIds` in
+   * `filterLudothekGames`. Kein Zeit-Gate an `event.endsAt`: ein Exemplar,
+   * das nach Event-Ende noch auf der Event-Unit liegt, gilt bewusst
+   * weiterhin als anwesend. */
+  onlyPresentAtEvent?: boolean;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -179,9 +198,7 @@ export const MAX_PLAYERS_FILTER = 9;
 
 /** Zeigt Titel, die genau `players` Spieler unterstützen — Ein-Knoten-Slider
  * statt fester Buckets (#214-Folge). Ab `MAX_PLAYERS_FILTER` ("9+") reicht
- * es, wenn der Titel mindestens so viele Spieler unterstützt. Von
- * `filterLudothekGames` und `buildPrivateCollectionResults` gemeinsam
- * genutzt. */
+ * es, wenn der Titel mindestens so viele Spieler unterstützt. */
 export function matchesPlayerCount(
   game: PlayerCounted,
   players: number | undefined,
@@ -253,6 +270,8 @@ export function parseLudothekSearchParams(
     ratingFrom: parseNumberParam(firstString(searchParams.bewertungVon)),
     ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
     languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
+    hasExplainer: firstString(searchParams.erklaerbaer) === "1",
+    onlyPresentAtEvent: firstString(searchParams.anwesend) === "1",
   };
 
   if (internal) {
@@ -297,6 +316,19 @@ export function matchesLudothekSearch(
 export function filterLudothekGames(
   games: LudothekGame[],
   filters: LudothekFilters,
+  {
+    attendingExplainerBoardGameIds,
+    presentGameCopyIds,
+  }: {
+    /** Gast-während-Event-Kontext (#256): wenn gesetzt, ersetzt diese Menge
+     * die einfache `explainerCount > 0`-Prüfung durch "hat ein gerade
+     * anwesender Erklärbär". Weglassen für den Meeple-Kontext. */
+    attendingExplainerBoardGameIds?: Set<string>;
+    /** GameCopy-Ids, deren Ahnenkette gerade die Event-Unit erreicht (#273) —
+     * nötig für `filters.onlyPresentAtEvent`. Weglassen/leer lassen, solange
+     * kein Event läuft. */
+    presentGameCopyIds?: Set<string>;
+  } = {},
 ): LudothekGame[] {
   return games.filter((game) => {
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
@@ -369,6 +401,15 @@ export function filterLudothekGames(
     }
     if (filters.onlyWithOpenLfg && !game.hasOpenLfg) {
       return false;
+    }
+    if (filters.hasExplainer) {
+      const hasAttendingExplainer = attendingExplainerBoardGameIds
+        ? attendingExplainerBoardGameIds.has(game.boardGameId)
+        : game.explainerCount > 0;
+      if (!hasAttendingExplainer) return false;
+    }
+    if (filters.onlyPresentAtEvent) {
+      if (!presentGameCopyIds?.has(game.id)) return false;
     }
     return true;
   });

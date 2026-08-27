@@ -32,17 +32,11 @@ vi.mock(
     BulkImportBoardGamesDialog: () => null,
   }),
 );
-vi.mock(
-  "@/components/widgets/board-game/deinventorise-board-game-dialog",
-  () => ({
-    DeinventoriseBoardGameDialog: () => null,
-  }),
-);
 vi.mock("@/components/widgets/board-game/edit-board-game-dialog", () => ({
   EditBoardGameDialog: () => null,
 }));
-vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
-  AddGameCopyDialog: () => null,
+vi.mock("@/components/widgets/game-holding/game-actions-menu", () => ({
+  GameActionsMenu: () => null,
 }));
 vi.mock(
   "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog",
@@ -76,6 +70,7 @@ const games = [
     description: null,
     mechanics: [],
     condition: null,
+    inventoryNumber: null,
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
@@ -107,6 +102,7 @@ const games = [
     description: null,
     mechanics: [],
     condition: null,
+    inventoryNumber: null,
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,

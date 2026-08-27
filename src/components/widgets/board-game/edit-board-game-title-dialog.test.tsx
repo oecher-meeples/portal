@@ -121,10 +121,10 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     );
 
     expect(previewBggImportMock).toHaveBeenCalledWith(342942);
-    expect(await screen.findByText("Aktuelle BGG-Daten")).toBeInTheDocument();
+    expect(await screen.findByText("Abweichungen zu BGG")).toBeInTheDocument();
   });
 
-  it("colors the title field red for a mismatch and closes the comparison again", async () => {
+  it("hides the edit form while comparing, shows it again after closing", async () => {
     const user = userEvent.setup();
     previewBggImportMock.mockResolvedValue({ success: true, data: BGG_DATA });
     render(<EditBoardGameTitleDialog game={GAME_WITH_BGG_ID} />);
@@ -132,22 +132,22 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     await user.click(
       screen.getByRole("button", { name: "Daten mit BGG abgleichen" }),
     );
-    await screen.findByText("Aktuelle BGG-Daten");
+    await screen.findByText("Abweichungen zu BGG");
 
-    // GAME_WITH_BGG_ID.title "Arche Nova" !== BGG_DATA.title "Ark Nova".
-    expect(screen.getByLabelText("Titel")).toHaveClass("border-red-600");
+    expect(screen.queryByLabelText("Titel")).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Abgleich schließen" }),
     );
 
-    expect(screen.queryByText("Aktuelle BGG-Daten")).not.toBeInTheDocument();
+    expect(screen.queryByText("Abweichungen zu BGG")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Daten mit BGG abgleichen" }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Titel")).toBeInTheDocument();
   });
 
-  it("applies a BGG value into the left form via the Übernehmen button", async () => {
+  it("applies a BGG value into the form and shows the field again once done", async () => {
     const user = userEvent.setup();
     previewBggImportMock.mockResolvedValue({ success: true, data: BGG_DATA });
     render(<EditBoardGameTitleDialog game={GAME_WITH_BGG_ID} />);
@@ -155,12 +155,14 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     await user.click(
       screen.getByRole("button", { name: "Daten mit BGG abgleichen" }),
     );
-    await screen.findByText("Aktuelle BGG-Daten");
+    await screen.findByText("Abweichungen zu BGG");
 
-    await user.click(screen.getByRole("button", { name: "Titel übernehmen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Titel: BGG-Wert übernehmen" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
 
     expect(screen.getByLabelText("Titel")).toHaveValue("Ark Nova");
-    expect(screen.getByLabelText("Titel")).toHaveClass("border-emerald-600");
   });
 
   it("shows a speaking error when the BGG fetch fails", async () => {

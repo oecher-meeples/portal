@@ -7,7 +7,10 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
 import { RuleBookLanguagesField } from "@/components/widgets/board-game/rule-book-languages-field";
-import { createGameCopy } from "@/lib/ludothek/game-copies";
+import {
+  createGameCopy,
+  getSuggestedInventoryNumber,
+} from "@/lib/ludothek/game-copies";
 
 /**
  * Adds another physical copy to an existing title — the "weiteres Exemplar"
@@ -27,6 +30,7 @@ export function AddGameCopyDialog({
   const [ruleBookLanguages, setRuleBookLanguages] = useState<
     RuleBookLanguage[]
   >([]);
+  const [inventoryNumber, setInventoryNumber] = useState("");
 
   return (
     <ActionDialog
@@ -39,17 +43,28 @@ export function AddGameCopyDialog({
       title={`Weiteres Exemplar von „${boardGameTitle}“ anlegen`}
       description="Das neue Exemplar liegt zunächst in „Unsortiert“ — Standort per Scan einlagern."
       submitLabel="Anlegen"
+      onOpen={async () => {
+        setInventoryNumber(await getSuggestedInventoryNumber());
+      }}
       action={() =>
         createGameCopy(boardGameId, {
           condition: condition || undefined,
           ruleBookLanguages,
+          inventoryNumber,
         })
       }
       onReset={() => {
         setCondition("");
         setRuleBookLanguages([]);
+        setInventoryNumber("");
       }}
     >
+      <TextField
+        id={`add-copy-${boardGameId}-inventory-number`}
+        label="Inventarnummer"
+        value={inventoryNumber}
+        onChange={(event) => setInventoryNumber(event.target.value)}
+      />
       <TextField
         id={`add-copy-${boardGameId}-condition`}
         label="Mängelvermerk"

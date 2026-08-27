@@ -31,11 +31,16 @@ export type GameCopyRow = {
   condition: string | null;
   /** Sprache(n) des mitgelieferten Regelhefts, z. B. `["DE", "EN"]` (#188). */
   ruleBookLanguages: RuleBookLanguage[];
+  /** Freie Inventarnummer des Exemplars (#270). */
+  inventoryNumber: string | null;
   /** Whether the current session holds this copy — gates "Weitergeben" in
    * its actions menu (#128). */
   isMine: boolean;
   /** This copy's own aufenthalts-history — merged into the accordion below its row (#121/#122). */
   history: HoldingHistoryEntry[];
+  /** True for a Meeple's privately imported title (#255-Folge) — no echtes
+   * `GameCopy` dahinter, daher keine Aktionen (kein `GameActionsMenu`). */
+  isPrivate: boolean;
 };
 
 /** Person (clickable via `ContactDialog`) leads, then the storage chain —
@@ -71,6 +76,7 @@ function actionsMenuCopy(copy: GameCopyRow) {
     locationChain: copy.unitChain,
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
+    inventoryNumber: copy.inventoryNumber,
     isMine: copy.isMine,
   };
 }
@@ -109,6 +115,7 @@ export function GameCopiesSection({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Inv.-Nr.</TableHead>
               <TableHead>Zustand</TableHead>
               <TableHead>Standort/Kontakt</TableHead>
               <TableHead>Regelheft</TableHead>
@@ -122,8 +129,11 @@ export function GameCopiesSection({
                 key={copy.id}
                 gameCopyId={copy.id}
                 history={copy.history}
-                colSpan={5}
+                colSpan={6}
               >
+                <TableCell className="text-muted-foreground text-sm">
+                  {copy.inventoryNumber || "—"}
+                </TableCell>
                 <TableCell>
                   <GameZustandPill zustand={copy.zustand} />
                 </TableCell>
@@ -134,12 +144,14 @@ export function GameCopiesSection({
                   {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  <GameActionsMenu
-                    copies={[actionsMenuCopy(copy)]}
-                    boardGameId={boardGameId}
-                    boardGameTitle={boardGameTitle}
-                    canManageGames={canManageGames}
-                  />
+                  {!copy.isPrivate && (
+                    <GameActionsMenu
+                      copies={[actionsMenuCopy(copy)]}
+                      boardGameId={boardGameId}
+                      boardGameTitle={boardGameTitle}
+                      canManageGames={canManageGames}
+                    />
+                  )}
                 </TableCell>
               </GameCopyTableRow>
             ))}
@@ -152,12 +164,14 @@ export function GameCopiesSection({
             gameCopyId={copy.id}
             history={copy.history}
             actions={
-              <GameActionsMenu
-                copies={[actionsMenuCopy(copy)]}
-                boardGameId={boardGameId}
-                boardGameTitle={boardGameTitle}
-                canManageGames={canManageGames}
-              />
+              !copy.isPrivate && (
+                <GameActionsMenu
+                  copies={[actionsMenuCopy(copy)]}
+                  boardGameId={boardGameId}
+                  boardGameTitle={boardGameTitle}
+                  canManageGames={canManageGames}
+                />
+              )
             }
           >
             <div className="flex flex-col gap-1">
@@ -166,6 +180,9 @@ export function GameCopiesSection({
               <span className="text-muted-foreground text-sm">
                 Regelheft:{" "}
                 {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
+              </span>
+              <span className="text-muted-foreground text-sm">
+                Inv.-Nr.: {copy.inventoryNumber || "—"}
               </span>
             </div>
           </GameCopyCard>

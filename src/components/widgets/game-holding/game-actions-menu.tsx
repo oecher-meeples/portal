@@ -33,6 +33,8 @@ export type GameActionsCopy = {
   locationChain: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
+  /** Freie Inventarnummer des Exemplars (#270). */
+  inventoryNumber: string | null;
   /** Whether the current session holds this copy right now — gates
    * "Weitergeben" for the non-ambiguous case (#128). Omitted callers keep
    * showing it unconditionally, matching the previous behaviour. */
@@ -193,6 +195,7 @@ export function GameActionsMenu({
                         copyId={sole.id}
                         condition={sole.condition}
                         ruleBookLanguages={sole.ruleBookLanguages}
+                        inventoryNumber={sole.inventoryNumber}
                         triggerLabel={ACTION_LABELS.condition}
                       />
                     </div>
@@ -262,6 +265,7 @@ export function GameActionsMenu({
           copyId={chosen.copyId}
           condition={chosenCondition}
           ruleBookLanguages={chosenCopy?.ruleBookLanguages ?? []}
+          inventoryNumber={chosenCopy?.inventoryNumber ?? null}
           triggerLabel={ACTION_LABELS.condition}
           open
           onOpenChange={closeChosen}

@@ -145,6 +145,52 @@ describe("borrowGame", () => {
       data: expect.objectContaining({ confirmedAt: null }),
     });
   });
+
+  it("confirms immediately when the recording Meeple holds games:manage (#274 Spielewart-Pfad)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      neonAuthUserId: "auth-b",
+    } as never);
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await borrowGame({
+      gameCopyId: GAME_ID,
+      meepleId: MEEPLE_A,
+      recordedByMeepleId: MEEPLE_B,
+    });
+
+    expect(prismaMock.rolePermission.count).toHaveBeenCalledWith({
+      where: {
+        permission: { key: "games:manage" },
+        role: { users: { some: { neonAuthUserId: "auth-b" } } },
+      },
+    });
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
+    });
+  });
+
+  it("stays unconfirmed when the recording Meeple lacks games:manage", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      neonAuthUserId: "auth-b",
+    } as never);
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    await borrowGame({
+      gameCopyId: GAME_ID,
+      meepleId: MEEPLE_A,
+      recordedByMeepleId: MEEPLE_B,
+    });
+
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: null }),
+    });
+  });
 });
 
 describe("handOverGame (Weitergabe)", () => {
@@ -178,6 +224,26 @@ describe("handOverGame (Weitergabe)", () => {
         recordedByMeepleId: MEEPLE_B,
       }),
     ).rejects.toThrow(HoldingConflictError);
+  });
+
+  it("confirms immediately when a games:manage Meeple hands the game to someone else (#274)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ meepleId: MEEPLE_A }) as never,
+    );
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      neonAuthUserId: "auth-warden",
+    } as never);
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await handOverGame({
+      gameCopyId: GAME_ID,
+      toMeepleId: MEEPLE_B,
+      recordedByMeepleId: "spielewart-1",
+    });
+
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
+    });
   });
 });
 

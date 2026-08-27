@@ -144,14 +144,15 @@ async function createDemoGameCopy(
   return copy;
 }
 
-async function seedDemoGames(adminMeepleId: string) {
+async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
   const unsortiert = await prisma.storageUnit.upsert({
     where: { code: UNSORTIERT_CODE },
-    update: {},
+    update: { keeperMeepleId },
     create: {
       code: UNSORTIERT_CODE,
       kind: StorageUnitKind.BOX,
       label: "Unsortiert",
+      keeperMeepleId,
     },
   });
 
@@ -296,17 +297,26 @@ async function seedDemoMeeples() {
   );
 }
 
-/** Ein Account je Vereinsamt (DEMO_ROLE_ACCOUNTS) — Login zum Durchklicken jeder Rolle. */
+/**
+ * Ein Account je Vereinsamt (DEMO_ROLE_ACCOUNTS) — Login zum Durchklicken jeder Rolle.
+ * Gibt die Meeple-Id je Rolle zurück, z. B. damit `seedDemoGames` die
+ * Unsortiert-Einheit dem Kassenwart als Keeper zuweisen kann.
+ */
 async function seedDemoRoleAccounts() {
+  const meepleIdByRole = new Map<string, string>();
+
   for (const account of DEMO_ROLE_ACCOUNTS) {
     const userId = await upsertNeonAuthUser(account);
     await assignRole(userId, account.role);
-    await ensureMeeple(userId, account.name);
+    const meeple = await ensureMeeple(userId, account.name);
+    meepleIdByRole.set(account.role, meeple.id);
   }
 
   console.log(
     `${DEMO_ROLE_ACCOUNTS.length} Rollen-Demo-Accounts angelegt/übersprungen.`,
   );
+
+  return meepleIdByRole;
 }
 
 /** Upsertet auf `slug`, damit ein Re-Seed die Demo-Beiträge nicht dupliziert. */
@@ -370,9 +380,13 @@ async function main() {
   await assignRole(adminUserId, "sysadmin");
 
   const adminMeeple = await ensureAdminMeeple(adminUserId);
-  await seedDemoGames(adminMeeple.id);
+  const meepleIdByRole = await seedDemoRoleAccounts();
+  const spielewartMeepleId = meepleIdByRole.get("Spielewart");
+  if (!spielewartMeepleId) {
+    throw new Error("Spielewart-Demo-Account wurde nicht angelegt.");
+  }
+  await seedDemoGames(adminMeeple.id, spielewartMeepleId);
   await seedDemoMeeples();
-  await seedDemoRoleAccounts();
   await seedDemoPosts();
   await seedDemoDownloads();
   await seedDemoLegalDocuments();

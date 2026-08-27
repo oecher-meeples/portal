@@ -4,6 +4,7 @@ import {
 } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { buildAdminBoardGameRows } from "@/lib/ludothek/admin-bestand-rows";
+import { countActiveMeepleHoldings } from "@/lib/ludothek/holdings-by-meeple";
 import { AdminBestandView } from "@/components/feature/admin-bestand/admin-bestand-view";
 
 const QUICK_FILTERS = ["ungeprueft", "mangel", "nicht-erfasst"] as const;
@@ -27,7 +28,10 @@ export default async function AdminBestandPage({
     ? await hasPermissionInCurrentView(user.id, "games:manage")
     : false;
 
-  const rows = await buildAdminBoardGameRows({ showDeinventarised });
+  const [rows, activeLoanCount] = await Promise.all([
+    buildAdminBoardGameRows({ showDeinventarised }),
+    countActiveMeepleHoldings(),
+  ]);
 
   return (
     <AdminBestandView
@@ -36,6 +40,7 @@ export default async function AdminBestandPage({
       defaultEan={ean}
       defaultQuickFilter={defaultQuickFilter}
       canManageGames={canManageGames}
+      activeLoanCount={activeLoanCount}
     />
   );
 }

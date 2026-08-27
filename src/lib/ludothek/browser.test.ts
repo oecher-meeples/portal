@@ -23,6 +23,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     mechanics: ["Engine-Building"],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
     alternateNames: [],
     secondaryTitle: null,
@@ -44,6 +45,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Karton 1",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -175,6 +177,59 @@ describe("filterLudothekGames", () => {
     ).toEqual([withOpenLfg, withoutOpenLfg]);
   });
 
+  it("filters by 'Erklärbär vorhanden' in the Meeple context via explainerCount (#256)", () => {
+    const withExplainer = game({ explainerCount: 2 });
+    const withoutExplainer = game({ explainerCount: 0 });
+
+    expect(
+      filterLudothekGames([withExplainer, withoutExplainer], {
+        hasExplainer: true,
+      }),
+    ).toEqual([withExplainer]);
+  });
+
+  it("filters by 'Erklärbär vorhanden' in the Gast-während-Event context via the attending-set (#256)", () => {
+    const attending = game({
+      boardGameId: "game-attending",
+      explainerCount: 0,
+    });
+    const notAttending = game({
+      boardGameId: "game-not-attending",
+      explainerCount: 5, // has an Erklärbär profile, but none attending today
+    });
+
+    const result = filterLudothekGames(
+      [attending, notAttending],
+      { hasExplainer: true },
+      { attendingExplainerBoardGameIds: new Set(["game-attending"]) },
+    );
+
+    expect(result).toEqual([attending]);
+  });
+
+  it("filters by 'nur anwesende Spiele' via presentGameCopyIds (#273)", () => {
+    const present = game({ id: "copy-present" });
+    const absent = game({ id: "copy-absent" });
+
+    const result = filterLudothekGames(
+      [present, absent],
+      { onlyPresentAtEvent: true },
+      { presentGameCopyIds: new Set(["copy-present"]) },
+    );
+
+    expect(result).toEqual([present]);
+  });
+
+  it("shows nothing for 'nur anwesende Spiele' when no event is running", () => {
+    const result = filterLudothekGames(
+      [game({ id: "copy-1" })],
+      { onlyPresentAtEvent: true },
+      {},
+    );
+
+    expect(result).toEqual([]);
+  });
+
   it("combines multiple filters", () => {
     const match = game({
       title: "Arche Nova",
@@ -257,6 +312,8 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
+      hasExplainer: false,
+      onlyPresentAtEvent: false,
       view: "grid",
     });
   });

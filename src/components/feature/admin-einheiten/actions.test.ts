@@ -221,4 +221,34 @@ describe("setUnitParent", () => {
       }),
     });
   });
+
+  it("nests a shelf under an Event storage unit the same way (#273 Stufe 2)", async () => {
+    prismaMock.storageUnit.findUnique
+      // wouldCreateCycle walk: the event unit has no parent of its own
+      .mockResolvedValueOnce({ parentUnitId: null } as never)
+      // the shelf itself, read before moving
+      .mockResolvedValueOnce({
+        id: "shelf-1",
+        keeperMeepleId: null,
+        locationNote: null,
+        retiredAt: null,
+      } as never)
+      // requireOpenUnit inside moveStorageUnit
+      .mockResolvedValueOnce({ id: "shelf-1", retiredAt: null } as never);
+    prismaMock.storageUnitMove.updateMany.mockResolvedValue({
+      count: 0,
+    } as never);
+    prismaMock.storageUnitMove.create.mockResolvedValue({} as never);
+    prismaMock.storageUnit.update.mockResolvedValue({} as never);
+
+    const result = await setUnitParent("shelf-1", "event-unit-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.storageUnitMove.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        unitId: "shelf-1",
+        parentUnitId: "event-unit-1",
+      }),
+    });
+  });
 });

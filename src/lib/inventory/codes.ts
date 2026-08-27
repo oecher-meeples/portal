@@ -6,6 +6,11 @@ export const UNSORTIERT_CODE = "OM-BOX-0000";
 const PREFIXES: Record<StorageUnitKind, string> = {
   BOX: "OM-BOX-",
   SHELF: "OM-SHELF-",
+  /** Nie von `nextUnitCode()` genutzt — Event-Codes sind deterministisch aus
+   * dem Event-Slug abgeleitet (`OM-EVENT-{slug}`, siehe `ensureEventUnit()`),
+   * nicht fortlaufend. Der Eintrag existiert nur, weil `PREFIXES` als
+   * `Record<StorageUnitKind, string>` für jeden Kind einen Wert verlangt. */
+  EVENT: "OM-EVENT-",
 };
 
 const CODE_PATTERN = /^(OM-BOX-|OM-SHELF-)(\d+)$/;

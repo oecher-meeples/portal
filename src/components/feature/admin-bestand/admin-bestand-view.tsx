@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, PackageOpen, PackageCheck } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { StatTile } from "@/components/ui/stat-tile";
+import { QuickActionCard } from "@/components/ui/quick-action-card";
 import {
   Table,
   TableBody,
@@ -18,10 +20,8 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { BulkImportBoardGamesDialog } from "@/components/widgets/board-game/bulk-import-board-games-dialog";
-import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
-import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
-import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
+import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { AdminBestandCsvExportDialog } from "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog";
@@ -37,6 +37,7 @@ export function AdminBestandView({
   defaultEan,
   defaultQuickFilter,
   canManageGames,
+  activeLoanCount = 0,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
@@ -44,13 +45,13 @@ export function AdminBestandView({
   /** Deep-link from the Admin-Dashboard-Karten (#224-Folge), z. B. `?filter=nicht-erfasst`. */
   defaultQuickFilter?: Exclude<QuickFilter, "all">;
   canManageGames: boolean;
+  activeLoanCount?: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(
     defaultQuickFilter ?? "all",
   );
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     return games.filter((game) => {
@@ -67,13 +68,6 @@ export function AdminBestandView({
       return true;
     });
   }, [games, search, quickFilter]);
-
-  async function handleRequestCheck(id: string) {
-    setBusyId(id);
-    await requestCompletenessCheck(id);
-    setBusyId(null);
-    router.refresh();
-  }
 
   function toggleShowDeinventarised() {
     const url = new URL(window.location.href);
@@ -98,6 +92,24 @@ export function AdminBestandView({
           </div>
         }
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatTile
+          label="Ausleihen"
+          value={activeLoanCount}
+          href="/admin/bestand/ausleihen"
+        />
+        <QuickActionCard
+          href="/admin/bestand/event-ausgabe"
+          label="Event-Ausgabe"
+          icon={PackageOpen}
+        />
+        <QuickActionCard
+          href="/admin/bestand/event-rueckgabe"
+          label="Event-Rückgabe"
+          icon={PackageCheck}
+        />
+      </div>
 
       <div className="bg-background sticky top-24 z-10 flex flex-wrap items-center gap-3 py-2">
         <div className="relative w-full max-w-sm">
@@ -158,6 +170,7 @@ export function AdminBestandView({
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Spiel</TableHead>
+              <TableHead>Inv.-Nr.</TableHead>
               <TableHead>Standort-Kette</TableHead>
               <TableHead>Zustand</TableHead>
               <TableHead>Letzte Prüfung</TableHead>
@@ -189,6 +202,9 @@ export function AdminBestandView({
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
+                    {game.inventoryNumber || "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {game.locationChain || "—"}
                   </TableCell>
                   <TableCell>
@@ -206,24 +222,21 @@ export function AdminBestandView({
                       )
                     ) : (
                       <div className="flex justify-end gap-2">
-                        {!game.needsCompletenessCheck && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busyId === game.id}
-                            onClick={() => handleRequestCheck(game.id)}
-                          >
-                            Prüfung anfordern
-                          </Button>
-                        )}
                         <EditBoardGameDialog game={game} />
-                        <AddGameCopyDialog
+                        <GameActionsMenu
+                          copies={[
+                            {
+                              id: game.id,
+                              zustand: game.zustand,
+                              locationChain: game.locationChain,
+                              condition: game.condition,
+                              ruleBookLanguages: game.ruleBookLanguages,
+                              inventoryNumber: game.inventoryNumber,
+                            },
+                          ]}
                           boardGameId={game.boardGameId}
                           boardGameTitle={game.title}
-                        />
-                        <DeinventoriseBoardGameDialog
-                          gameId={game.id}
-                          gameTitle={game.title}
+                          canManageGames={canManageGames}
                         />
                       </div>
                     )}
@@ -234,7 +247,7 @@ export function AdminBestandView({
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-muted-foreground py-6 text-center"
                 >
                   Keine Spiele gefunden.

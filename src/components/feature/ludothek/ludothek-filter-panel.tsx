@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { RangeSlider, SingleSlider } from "@/components/ui/range-slider";
+import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -73,6 +74,8 @@ export function LudothekFilterPanel({
   basePath,
   rawSearchParams,
   meepleOptions,
+  showExplainerFilter = true,
+  showPresentFilter = false,
 }: {
   href: (patch: Record<string, string | string[] | undefined>) => string;
   filters: LudothekFilters;
@@ -83,6 +86,10 @@ export function LudothekFilterPanel({
   basePath: string;
   rawSearchParams: Record<string, string | string[] | undefined>;
   meepleOptions?: { id: string; displayName: string }[];
+  /** "Erklärbär vorhanden"-Filter (#256). */
+  showExplainerFilter?: boolean;
+  /** "Nur anwesende Spiele"-Filter (#273). */
+  showPresentFilter?: boolean;
 }) {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
@@ -189,6 +196,7 @@ export function LudothekFilterPanel({
             onValueChange={setPlayers}
             onValueCommitted={commitPlayers}
             getAriaLabel={() => "Spieler"}
+            hideTrackFill
           />
         </div>
 
@@ -276,6 +284,7 @@ export function LudothekFilterPanel({
             onValueChange={setLanguageDependenceMax}
             onValueCommitted={commitLanguageDependenceMax}
             getAriaLabel={() => "Sprachneutralität"}
+            hideTrackFill
           />
         </div>
 
@@ -301,6 +310,24 @@ export function LudothekFilterPanel({
             })}
             active={Boolean(filters.hideExpansions)}
           />
+          {showExplainerFilter && (
+            <FilterPill
+              label="Erklärbär vorhanden"
+              href={href({
+                erklaerbaer: filters.hasExplainer ? undefined : "1",
+              })}
+              active={Boolean(filters.hasExplainer)}
+            />
+          )}
+          {showPresentFilter && (
+            <FilterPill
+              label="Nur anwesende Spiele"
+              href={href({
+                anwesend: filters.onlyPresentAtEvent ? undefined : "1",
+              })}
+              active={Boolean(filters.onlyPresentAtEvent)}
+            />
+          )}
         </div>
 
         {internal && (
@@ -347,23 +374,18 @@ export function LudothekFilterPanel({
               />
             </div>
             {meepleOptions && meepleOptions.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex max-w-xs flex-col gap-1">
                 <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                   Bei
                 </span>
-                <FilterPill
-                  label="Alle"
-                  href={href({ bei: undefined })}
-                  active={!filters.atMeepleId}
+                <MeepleCombobox
+                  options={meepleOptions}
+                  value={filters.atMeepleId ?? null}
+                  onValueChange={(meepleId) =>
+                    router.push(href({ bei: meepleId ?? undefined }))
+                  }
+                  placeholder="Alle"
                 />
-                {meepleOptions.map((meeple) => (
-                  <FilterPill
-                    key={meeple.id}
-                    label={meeple.displayName}
-                    href={href({ bei: meeple.id })}
-                    active={filters.atMeepleId === meeple.id}
-                  />
-                ))}
               </div>
             )}
           </>

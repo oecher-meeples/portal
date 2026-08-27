@@ -91,6 +91,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       ean: boardGame.ean,
       condition: copy.condition,
       ruleBookLanguages: copy.ruleBookLanguages,
+      inventoryNumber: copy.inventoryNumber,
       bggId: boardGame.bggId,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       secondaryTitle: boardGame.secondaryTitle,
@@ -105,6 +106,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       expansions: boardGame.baseGameCollections.map((c) => c.expansion),
       explainerCount: explainerCounts.get(boardGame.id) ?? 0,
       hasOpenLfg: boardGameIdsWithOpenLfg.has(boardGame.id),
+      isPrivate: false,
     };
 
     if (!holding) {

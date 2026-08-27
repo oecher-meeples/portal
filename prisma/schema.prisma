@@ -38,6 +38,11 @@ enum GameInventoryStatus {
 enum StorageUnitKind {
   BOX
   SHELF
+  /// Wurzel des Standort-Baums für die Dauer eines Events (#273) — lazy per
+  /// Upsert erzeugt, `keeperMeepleId = null` (analog "Unsortiert"). Regal-
+  /// `StorageUnit`s werden vor Ort per normalem Umlagern als Kind
+  /// eingehängt (`parentUnitId`), statt über eine eigene Zuordnungstabelle.
+  EVENT
 }
 
 enum BoardGameKind {
@@ -159,31 +164,44 @@ model UserRole {
 /// Mitgliedsprofil, 1:1 zum Login-Konto (siehe docs/adr/0002).
 /// Der Mitgliedschaftszustand wird aus resignedAt/membershipEndsAt/anonymizedAt abgeleitet.
 model Meeple {
-  id               String    @id @default(cuid())
-  neonAuthUserId   String?   @unique
-  memberNumber     Int       @unique @default(autoincrement())
-  displayName      String
-  email            String?
-  joinedAt         DateTime  @default(now())
-  resignedAt       DateTime?
-  membershipEndsAt DateTime?
-  anonymizedAt     DateTime?
-  ibanEncrypted    String?
-  ibanLast4        String?
-  accountHolder    String?
-  bggUsername      String?
-  bgaUsername      String?
-  telegramHandle   String?
-  signalHandle     String?
-  discordHandle    String?
-  address          String?
-  /** Opt-in: shows `address` to other Meeples in their `ContactDialog` (see
+  id                        String    @id @default(cuid())
+  neonAuthUserId            String?   @unique
+  memberNumber              Int       @unique @default(autoincrement())
+  displayName               String
+  email                     String?
+  joinedAt                  DateTime  @default(now())
+  resignedAt                DateTime?
+  membershipEndsAt          DateTime?
+  anonymizedAt              DateTime?
+  ibanEncrypted             String?
+  ibanLast4                 String?
+  accountHolder             String?
+  bggUsername               String?
+  bgaUsername               String?
+  telegramHandle            String?
+  signalHandle              String?
+  discordHandle             String?
+  address                   String?
+  /**
+   * Opt-in: shows `address` to other Meeples in their `ContactDialog` (see
    * `getContactLinks()`). Off by default — `address` alone stays private,
-   * used only for LFG-Autofill, until a Meeple explicitly flips this. */
-  shareAddress     Boolean   @default(false)
-  doorbellNote     String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+   * used only for LFG-Autofill, until a Meeple explicitly flips this.
+   */
+  shareAddress              Boolean   @default(false)
+  /**
+   * Opt-in: gibt die private BGG-Collection (`PrivateGameCollectionEntry`)
+   * dieses Meeples für andere interne Nutzer:innen im "auch private
+   * anzeigen"-Filter der Ludothek frei (#255). Off by default — ohne dieses
+   * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
+   */
+  privateCollectionVisible  Boolean   @default(false)
+  /// Zeitpunkt des letzten manuellen BGG-Collection-Imports (#255-Folge) —
+  /// Grundlage für den 1h-Cooldown, unabhängig von den Collection-Einträgen
+  /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
+  privateCollectionSyncedAt DateTime?
+  doorbellNote              String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   bankDataAccessesMade     BankDataAccessLog[]          @relation("BankDataAccessActor")
   bankDataAccessesReceived BankDataAccessLog[]          @relation("BankDataAccessSubject")
@@ -473,6 +491,9 @@ model GameCopy {
   ruleBookLanguages      RuleBookLanguage[]
   needsCompletenessCheck Boolean             @default(false)
   lastCheckedAt          DateTime?
+  /// Freier Text, externe Fortführung (z. B. Zettel am Regal), kein
+  /// automatisch lückenloses Nummernschema wie `codes.ts` (#270).
+  inventoryNumber        String?             @unique
   status                 GameInventoryStatus @default(ACTIVE)
   archivedAt             DateTime?
   archivedReason         String?
@@ -534,6 +555,12 @@ model PrivateGameCollectionEntry {
   meepleId    String
   boardGameId String
   syncedAt    DateTime
+  /// Persönliche BGG-Bewertung (`stats.rating`), `null` wenn unbewertet.
+  rating      Float?
+  /// BGG-Collection-Status-Flags dieses Titels (nur die zwei, die die
+  /// Übersicht anzeigt — andere Stati werden beim Sync ignoriert).
+  forTrade    Boolean  @default(false)
+  wantToPlay  Boolean  @default(false)
 
   meeple    Meeple    @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
   boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Restrict)

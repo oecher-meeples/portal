@@ -5,11 +5,13 @@ import { MembershipStatePill } from "@/components/entities/membership-state-pill
 import type { MembershipState } from "@/lib/members/meeples";
 import { BankDetailsForm } from "@/components/feature/profil/bank-details-form";
 import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-form";
+import { PrivateCollectionCard } from "@/components/feature/profil/private-collection-card";
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
 import { DataExportPanel } from "@/components/feature/profil/data-export-panel";
 import { DeletionRequestPanel } from "@/components/feature/profil/deletion-request-panel";
 import { NewsletterPreferencePanel } from "@/components/feature/profil/newsletter-preference-panel";
 import type { OpenHoldingsSummary } from "@/lib/members/open-holdings";
+import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
 import { formatDatePlain } from "@/lib/utils/format";
 
 function initials(displayName: string) {
@@ -32,12 +34,18 @@ export function ProfilView({
   deletionRequestedAt,
   openHoldings,
   newsletterPreference,
+  privateCollection,
+  privateCollectionImportCooldownEndsAt,
+  canForceImportCollection,
 }: {
   meeple: Meeple;
   membershipState: MembershipState;
   deletionRequestedAt: Date | null;
   openHoldings: OpenHoldingsSummary;
   newsletterPreference: { enabled: boolean; categories: NewsletterCategory[] };
+  privateCollection: OwnPrivateCollectionEntry[];
+  privateCollectionImportCooldownEndsAt: Date | null;
+  canForceImportCollection: boolean;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -92,6 +100,7 @@ export function ProfilView({
               <ProfileDetailsForm
                 displayName={meeple.displayName}
                 bggUsername={meeple.bggUsername}
+                privateCollectionVisible={meeple.privateCollectionVisible}
                 bgaUsername={meeple.bgaUsername}
                 telegramHandle={meeple.telegramHandle}
                 signalHandle={meeple.signalHandle}
@@ -102,6 +111,14 @@ export function ProfilView({
               />
             </div>
           </div>
+
+          <PrivateCollectionCard
+            bggUsername={meeple.bggUsername}
+            entries={privateCollection}
+            cooldownEndsAt={privateCollectionImportCooldownEndsAt}
+            canForceImport={canForceImportCollection}
+            visibleToOthers={meeple.privateCollectionVisible}
+          />
 
           <div className="bg-card rounded-lg border p-6">
             <h2 className="font-serif text-lg font-bold">Newsletter</h2>

@@ -18,6 +18,7 @@ export function ProfileDetailsForm({
   address: initialAddress,
   shareAddress: initialShareAddress,
   doorbellNote: initialDoorbellNote,
+  privateCollectionVisible: initialPrivateCollectionVisible,
 }: {
   displayName: string;
   bggUsername: string | null;
@@ -28,6 +29,7 @@ export function ProfileDetailsForm({
   address: string | null;
   shareAddress: boolean;
   doorbellNote: string | null;
+  privateCollectionVisible: boolean;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bggUsername, setBggUsername] = useState(initialBggUsername ?? "");
@@ -40,6 +42,9 @@ export function ProfileDetailsForm({
     initialDiscordHandle ?? "",
   );
   const [address, setAddress] = useState(initialAddress ?? "");
+  const [privateCollectionVisible, setPrivateCollectionVisible] = useState(
+    Boolean(initialPrivateCollectionVisible),
+  );
   const [shareAddress, setShareAddress] = useState(
     Boolean(initialShareAddress),
   );
@@ -64,6 +69,7 @@ export function ProfileDetailsForm({
       address,
       shareAddress,
       doorbellNote,
+      privateCollectionVisible,
     });
     setIsSaving(false);
 
@@ -153,6 +159,18 @@ export function ProfileDetailsForm({
       <p className="text-muted-foreground -mt-2.5 text-xs">
         Zeigt deinen Wohnort in den Kontaktmöglichkeiten (z. B. bei Ludothek-
         Standort oder Marktplatz-Angeboten) für alle eingeloggten Meeples an.
+      </p>
+      <Label className="flex items-center justify-between gap-2 font-normal">
+        Private BGG-Collection anderen Meeple anzeigen
+        <Switch
+          id="privateCollectionVisible"
+          checked={privateCollectionVisible}
+          onCheckedChange={setPrivateCollectionVisible}
+        />
+      </Label>
+      <p className="text-muted-foreground -mt-2.5 text-xs">
+        Deine importierte BGG-Collection wird für andere eingeloggte Meeples im
+        Ludothek-Filter „auch private anzeigen“ sichtbar.
       </p>
       <TextAreaField
         id="doorbellNote"

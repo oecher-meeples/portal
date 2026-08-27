@@ -15,6 +15,7 @@ const {
   getFreeGamesInRoom,
   getGuestFleaMarketItems,
   getGuestCopyAvailability,
+  getPresentGameCopyIds,
 } = await import("./guest-area");
 
 describe("unitOrAncestorAssigned", () => {
@@ -43,19 +44,40 @@ describe("unitOrAncestorAssigned", () => {
   });
 });
 
+/** #273: `resolveEventUnitId()` looks up the event's slug, then the
+ * `OM-EVENT-{slug}` storage unit by code. `eventUnitId: null` simulates
+ * "nobody has checked anything into this event yet". */
+function mockEventUnit(eventUnitId: string | null) {
+  prismaMock.event.findUnique.mockResolvedValue({ slug: "spieletag" } as never);
+  prismaMock.storageUnit.findUnique.mockResolvedValue(
+    (eventUnitId ? { id: eventUnitId } : null) as never,
+  );
+}
+
 beforeEach(() => {
-  prismaMock.eventShelfAssignment.findMany.mockResolvedValue([]);
   prismaMock.storageUnit.findMany.mockResolvedValue([]);
   prismaMock.gameHolding.findMany.mockResolvedValue([]);
+  mockEventUnit(null);
 });
 
-describe("isGameInEventRoom", () => {
-  it("is true for a game directly in an assigned shelf", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1" },
-    ] as never);
+describe("isGameInEventRoom (#273)", () => {
+  it("is true for a game directly on the event unit (Stufe 1)", async () => {
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
+      { id: "event-unit-1", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "game-1", unitId: "event-unit-1" },
+    ] as never);
+
+    expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
+  });
+
+  it("is true through a two-level chain (shelf hung under the event unit, Stufe 2)", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-1", parentUnitId: "event-unit-1" },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
       { gameCopyId: "game-1", unitId: "shelf-1" },
@@ -64,24 +86,22 @@ describe("isGameInEventRoom", () => {
     expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
   });
 
-  it("is true through a two-level chain (box in assigned shelf)", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1" },
-    ] as never);
+  it("is false when the event has no unit yet (nobody checked in)", async () => {
+    mockEventUnit(null);
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
-      { id: "box-1", parentUnitId: "shelf-1" },
+      { id: "shelf-2", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { gameCopyId: "game-1", unitId: "box-1" },
+      { gameCopyId: "game-1", unitId: "shelf-2" },
     ] as never);
 
-    expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
+    expect(await isGameInEventRoom("game-1", "event-1")).toBe(false);
   });
 
-  it("is false for an unassigned shelf", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([]);
+  it("is false for a copy sitting in an unrelated unit", async () => {
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
       { id: "shelf-2", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
@@ -156,20 +176,27 @@ describe("getFreeGamesInRoom", () => {
         maxPlayers: 8,
       }),
     ]);
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1" },
-    ] as never);
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
+      { id: "event-unit-1", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { gameCopyId: "game-1", unitId: "shelf-1" },
-      { gameCopyId: "game-3", unitId: "shelf-1" },
+      { gameCopyId: "game-1", unitId: "event-unit-1" },
+      { gameCopyId: "game-3", unitId: "event-unit-1" },
     ] as never);
 
     const result = await getFreeGamesInRoom("event-1", { players: 3 });
 
     expect(result.map((g) => g.id)).toEqual(["game-1"]);
+  });
+
+  it("returns an empty list when the event has no unit yet", async () => {
+    buildLudothekGamesMock.mockResolvedValue([ludothekGame()]);
+    mockEventUnit(null);
+
+    const result = await getFreeGamesInRoom("event-1", {});
+
+    expect(result).toEqual([]);
   });
 });
 
@@ -216,7 +243,7 @@ describe("getGuestFleaMarketItems", () => {
   });
 });
 
-describe("getGuestCopyAvailability", () => {
+describe("getGuestCopyAvailability (#273)", () => {
   const COPIES = [
     { id: "copy-1", zustand: "frei" as const },
     { id: "copy-2", zustand: "ausgeliehen" as const },
@@ -226,7 +253,7 @@ describe("getGuestCopyAvailability", () => {
     const result = await getGuestCopyAvailability(COPIES, null);
 
     expect(result).toEqual({ kind: "plain", total: 2 });
-    expect(prismaMock.eventShelfAssignment.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.event.findUnique).not.toHaveBeenCalled();
   });
 
   it("returns a plain count of zero for an empty title", async () => {
@@ -235,12 +262,32 @@ describe("getGuestCopyAvailability", () => {
     expect(result).toEqual({ kind: "plain", total: 0 });
   });
 
-  it("computes X von Y for copies assigned to a shelf at the running event", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1", unit: { label: "Regal A" } },
-    ] as never);
+  it("computes X von Y for copies on the event's collection unit (Stufe 1)", async () => {
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
+      { id: "event-unit-1", parentUnitId: null, label: "Spieletag" },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
+      { gameCopyId: "copy-2", unitId: "event-unit-1" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({
+      kind: "event",
+      total: 2,
+      inRoom: 2,
+      available: 1,
+      shelfLabels: ["Spieletag"],
+    });
+  });
+
+  it("shows the shelf's own label once it was moved out of the collection unit (Stufe 2)", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null, label: "Spieletag" },
+      { id: "shelf-1", parentUnitId: "event-unit-1", label: "Regal A" },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
       { gameCopyId: "copy-1", unitId: "shelf-1" },
@@ -258,16 +305,14 @@ describe("getGuestCopyAvailability", () => {
     });
   });
 
-  it("does not count copies outside the event's shelf assignment", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1", unit: { label: "Regal A" } },
-    ] as never);
+  it("does not count copies outside the event unit's tree", async () => {
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
-      { id: "shelf-2", parentUnitId: null },
+      { id: "event-unit-1", parentUnitId: null, label: "Spieletag" },
+      { id: "shelf-2", parentUnitId: null, label: "Regal B" },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { gameCopyId: "copy-1", unitId: "shelf-1" },
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
       { gameCopyId: "copy-2", unitId: "shelf-2" },
     ] as never);
 
@@ -278,16 +323,14 @@ describe("getGuestCopyAvailability", () => {
       total: 2,
       inRoom: 1,
       available: 1,
-      shelfLabels: ["Regal A"],
+      shelfLabels: ["Spieletag"],
     });
   });
 
-  it("falls back to a plain count when no copy is assigned to the event", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1", unit: { label: "Regal A" } },
-    ] as never);
+  it("falls back to a plain count when the event has no unit yet", async () => {
+    mockEventUnit(null);
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-2", parentUnitId: null },
+      { id: "shelf-2", parentUnitId: null, label: "Regal B" },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
       { gameCopyId: "copy-1", unitId: "shelf-2" },
@@ -296,5 +339,33 @@ describe("getGuestCopyAvailability", () => {
     const result = await getGuestCopyAvailability(COPIES, "event-1");
 
     expect(result).toEqual({ kind: "plain", total: 2 });
+  });
+});
+
+describe("getPresentGameCopyIds (#273)", () => {
+  it("returns an empty set when the event has no unit yet", async () => {
+    mockEventUnit(null);
+
+    const result = await getPresentGameCopyIds("event-1");
+
+    expect(result).toEqual(new Set());
+  });
+
+  it("includes copies directly on the event unit and on a nested shelf", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-1", parentUnitId: "event-unit-1" },
+      { id: "shelf-2", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-1" },
+      { gameCopyId: "copy-3", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getPresentGameCopyIds("event-1");
+
+    expect(result).toEqual(new Set(["copy-1", "copy-2"]));
   });
 });

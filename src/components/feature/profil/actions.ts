@@ -27,6 +27,9 @@ export type OwnProfileInput = {
   address?: string | null;
   shareAddress?: boolean;
   doorbellNote?: string | null;
+  /** Opt-in: gibt die private BGG-Collection für andere interne Nutzer:innen
+   * frei (#255). */
+  privateCollectionVisible?: boolean;
 };
 
 export type OwnBankDetailsInput = {
@@ -64,10 +67,12 @@ export async function updateOwnProfile(input: OwnProfileInput) {
       address: optionalText(input.address),
       shareAddress: input.shareAddress ?? false,
       doorbellNote: optionalText(input.doorbellNote),
+      privateCollectionVisible: input.privateCollectionVisible ?? false,
     },
   });
 
   revalidatePath("/profil");
+  revalidatePath("/ludothek");
   return { success: true as const };
 }
 

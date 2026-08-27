@@ -16,7 +16,15 @@ type Tx = PrismaClient | Prisma.TransactionClient;
 
 const MAX_UNIT_CHAIN_DEPTH = 20;
 
-export type GameZustand = "frei" | "ausgeliehen" | "wartung" | "nicht-erfasst";
+export type GameZustand =
+  | "frei"
+  | "ausgeliehen"
+  | "wartung"
+  | "nicht-erfasst"
+  /** Privatbesitz-Pseudo-Zustand (#255-Folge) — nie von
+   * `zustandFromHoldingAndUnit()` zurückgegeben, nur von
+   * `buildPrivateLudothekGames()` gesetzt. */
+  | "privat";
 
 export type UnitChainNode = {
   label: string;
@@ -112,6 +120,28 @@ export async function ensureUnsortiertUnit(tx: Tx = prisma) {
       code: UNSORTIERT_CODE,
       kind: StorageUnitKind.BOX,
       label: "Unsortiert",
+    },
+  });
+}
+
+/**
+ * Wurzel des Standort-Baums für die Dauer eines Events (#273) — analog
+ * `ensureUnsortiertUnit()`: lazy per Upsert erzeugt, `keeperMeepleId = null`
+ * (kein Verwahrer). Code deterministisch aus dem Event-Slug abgeleitet, nicht
+ * fortlaufend nummeriert — pro Event genau eine Unit, egal wie oft aufgerufen.
+ */
+export async function ensureEventUnit(
+  event: { slug: string; title: string },
+  tx: Tx = prisma,
+) {
+  const code = `OM-EVENT-${event.slug}`;
+  return tx.storageUnit.upsert({
+    where: { code },
+    update: {},
+    create: {
+      code,
+      kind: StorageUnitKind.EVENT,
+      label: event.title,
     },
   });
 }

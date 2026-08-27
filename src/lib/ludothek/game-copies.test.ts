@@ -20,6 +20,7 @@ const {
   updateGameCopy,
   deinventoriseGameCopy,
   requestCompletenessCheck,
+  getSuggestedInventoryNumber,
 } = await import("./game-copies");
 
 beforeEach(() => {
@@ -83,6 +84,54 @@ describe("createGameCopy", () => {
       }),
     });
   });
+
+  it("rejects an inventoryNumber that is already taken (#270)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-1",
+      title: "Catan",
+    } as never);
+    prismaMock.gameCopy.findFirst.mockResolvedValue({ id: "other" } as never);
+
+    const result = await createGameCopy("game-1", { inventoryNumber: "12" });
+
+    expect(result).toEqual({
+      error: 'Inventarnummer "12" ist bereits vergeben.',
+    });
+    expect(prismaMock.gameCopy.create).not.toHaveBeenCalled();
+  });
+
+  it("stores a free inventoryNumber", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-1",
+      title: "Catan",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-2" } as never);
+
+    const result = await createGameCopy("game-1", { inventoryNumber: "12" });
+
+    expect(result).toEqual({ success: true, id: "copy-2" });
+    expect(prismaMock.gameCopy.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ inventoryNumber: "12" }),
+    });
+  });
+});
+
+describe("getSuggestedInventoryNumber", () => {
+  it("suggests the next number based on existing copies", async () => {
+    prismaMock.gameCopy.findMany.mockResolvedValue([
+      { inventoryNumber: "3" },
+      { inventoryNumber: "7" },
+      { inventoryNumber: null },
+    ] as never);
+
+    const result = await getSuggestedInventoryNumber();
+
+    expect(result).toBe("8");
+  });
 });
 
 describe("updateGameCopy", () => {
@@ -109,6 +158,36 @@ describe("updateGameCopy", () => {
     expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "copy-1" },
       data: { condition: "Gebraucht" },
+      include: { boardGame: { select: { slug: true } } },
+    });
+  });
+
+  it("rejects an inventoryNumber already used by another copy (#270)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.findFirst.mockResolvedValue({ id: "other" } as never);
+
+    const result = await updateGameCopy("copy-1", { inventoryNumber: "12" });
+
+    expect(result).toEqual({
+      error: 'Inventarnummer "12" ist bereits vergeben.',
+    });
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
+  });
+
+  it("updates the inventoryNumber when it is free", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.update.mockResolvedValue({
+      boardGame: { slug: "catan" },
+    } as never);
+
+    const result = await updateGameCopy("copy-1", { inventoryNumber: "12" });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
+      where: { id: "copy-1" },
+      data: { condition: null, inventoryNumber: "12" },
       include: { boardGame: { select: { slug: true } } },
     });
   });
