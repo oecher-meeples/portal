@@ -43,14 +43,18 @@ function rowActions(
         game={game}
         mechanicsOptions={mechanicsOptions}
       />
-      <GameActionsMenu
-        copies={actionsMenuCopies(
-          game as LudothekGame & { copies: LudothekGame[] },
-        )}
-        boardGameId={game.boardGameId}
-        boardGameTitle={game.title}
-        canManageGames
-      />
+      {/* Privatbesitz-Zeilen haben kein GameCopy dahinter — die Exemplar-
+       * Übersicht bleibt für sie nicht bearbeitbar (#255-Folge). */}
+      {!game.isPrivate && (
+        <GameActionsMenu
+          copies={actionsMenuCopies(
+            game as LudothekGame & { copies: LudothekGame[] },
+          )}
+          boardGameId={game.boardGameId}
+          boardGameTitle={game.title}
+          canManageGames
+        />
+      )}
     </>
   );
 }
@@ -126,7 +130,7 @@ export function LudothekResults({
                   game={game}
                   mechanicsOptions={mechanicsOptions}
                 />
-                {"condition" in game && (
+                {"condition" in game && !game.isPrivate && (
                   <StopRowNavigation className="bg-background/90 rounded-md backdrop-blur-sm">
                     <GameActionsMenu
                       copies={actionsMenuCopies(

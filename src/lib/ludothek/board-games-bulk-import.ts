@@ -4,6 +4,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { sleep } from "@/lib/utils/sleep";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import {
+  BGG_REQUEST_THROTTLE_MS as THROTTLE_MS,
   fetchBggGame,
   searchBggGamesExact,
   type BggGameData,
@@ -11,20 +12,16 @@ import {
 } from "@/lib/bgg/client";
 import { lookupEanTitle, UpcLookupError } from "@/lib/upc-lookup/client";
 import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
-import { resolvePublisherFromVersions } from "@/lib/ludothek/board-game-versions";
+import {
+  bggDataToTitleInput,
+  resolvePublisherFromVersions,
+} from "@/lib/ludothek/board-game-versions";
 import {
   createBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
-
-/** Mind. so viel Zeit zwischen zwei BGG-Anfragen (#186) — BGGs Rate-Limit
- * skaliert nicht ungebremst auf z. B. 50 Titel, siehe `FETCH_TIMEOUT_MS` in
- * `lib/bgg/client.ts`. Konservativ etwas über der geforderten "max. 2
- * Anfragen/Sekunde" (500ms), da jeder eindeutig auflösbare Name zwei
- * aufeinanderfolgende BGG-Anfragen braucht (Suche + Detaildaten). */
-const THROTTLE_MS = 600;
 
 export type BulkImportRow =
   | {
@@ -57,24 +54,7 @@ export type BulkImportRow =
 
 function toCreateInput(bggId: number, data: BggGameData): CreateBoardGameInput {
   return {
-    title: data.title,
-    kind: data.kind,
-    bggId,
-    minPlayers: data.minPlayers ?? undefined,
-    maxPlayers: data.maxPlayers ?? undefined,
-    playTimeMinutes: data.playTimeMinutes ?? undefined,
-    weight: data.weight ?? undefined,
-    imageUrl: data.imageUrl ?? undefined,
-    description: data.description ?? undefined,
-    mechanics: data.mechanics,
-    explainerVideoUrl: data.explainerVideoUrl ?? undefined,
-    languageDependence: data.languageDependence,
-    author: data.author,
-    yearPublished: data.yearPublished ?? undefined,
-    // Ohne UI zur Konfliktauflösung übernimmt der Massenimport nur einen
-    // eindeutigen Verlag — bei Abweichungen bleibt das Feld leer, korrigierbar
-    // im Titel-Editor (#205).
-    publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
+    ...bggDataToTitleInput(bggId, data),
     alternateNames: data.alternateNames,
   };
 }

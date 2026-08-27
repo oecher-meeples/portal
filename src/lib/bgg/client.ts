@@ -426,6 +426,14 @@ async function fetchBggXml(
   return response.text();
 }
 
+/** Mind. so viel Zeit zwischen zwei `fetchBggGame`-Aufrufen in einer Schleife
+ * (#186) — BGGs Rate-Limit skaliert nicht ungebremst auf z. B. 50 Titel.
+ * Konservativ etwas über der geforderten "max. 2 Anfragen/Sekunde" (500ms),
+ * da jeder eindeutig auflösbare Name zwei aufeinanderfolgende BGG-Anfragen
+ * braucht (Suche + Detaildaten). Von Massenimport und privatem
+ * Collection-Sync gemeinsam genutzt. */
+export const BGG_REQUEST_THROTTLE_MS = 600;
+
 export async function fetchBggGame(bggId: number): Promise<BggGameData> {
   const xml = await fetchBggXml(
     `/thing?id=${bggId}&stats=1&videos=1&versions=1`,

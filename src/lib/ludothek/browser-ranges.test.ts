@@ -47,6 +47,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Karton 1",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }

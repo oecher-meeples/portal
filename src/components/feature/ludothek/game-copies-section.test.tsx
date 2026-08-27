@@ -40,6 +40,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     inventoryNumber: null,
     isMine: false,
     history: [],
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -270,5 +271,37 @@ describe("GameCopiesSection", () => {
     fireEvent.click(toggles[1]);
 
     expect(screen.getByText(/Ausleihe → Alex/)).toBeInTheDocument();
+  });
+});
+
+describe("GameCopiesSection — Privatbesitz (#255-Folge)", () => {
+  it("omits the actions menu for a private single-copy card", () => {
+    render(
+      <GameCopiesSection
+        copies={[copy({ zustand: "privat", isPrivate: true })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames
+      />,
+    );
+
+    expect(screen.queryByText(/Aktionen \(/)).not.toBeInTheDocument();
+  });
+
+  it("omits the actions menu per private table row, keeps it for a club row", () => {
+    render(
+      <GameCopiesSection
+        copies={[
+          copy({ id: "copy-1", zustand: "frei" }),
+          copy({ id: "copy-2", zustand: "privat", isPrivate: true }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames
+      />,
+    );
+
+    expect(screen.getByText("Aktionen (copy-1)")).toBeInTheDocument();
+    expect(screen.queryByText("Aktionen (copy-2)")).not.toBeInTheDocument();
   });
 });

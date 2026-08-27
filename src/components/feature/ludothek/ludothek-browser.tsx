@@ -18,8 +18,6 @@ import type {
   LudothekViewMode,
   PublicLudothekGame,
 } from "@/lib/ludothek/browser";
-import type { PrivateCollectionResult } from "@/lib/ludothek/private-collection";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
 import { cn } from "@/lib/utils/cn";
 
 const VIEW_MODE_OPTIONS: {
@@ -77,7 +75,6 @@ export function LudothekBrowser({
   mechanicsOptions,
   maxDurationBound = 120,
   meepleOptions,
-  privateCollectionResults,
   showExplainerFilter = true,
   showPresentFilter = false,
 }: {
@@ -94,8 +91,6 @@ export function LudothekBrowser({
    * Obergrenze ("8+"), s. `MAX_PLAYERS_FILTER` (#214-Folge-Korrektur). */
   maxDurationBound?: number;
   meepleOptions?: { id: string; displayName: string }[];
-  /** Internal-only, never passed for the guest area — see CONTEXT.md "kein Leak". */
-  privateCollectionResults?: PrivateCollectionResult[];
   /** "Erklärbär vorhanden"-Filter (#256) — für Meeples immer sichtbar
    * (Default), für Gäste nur, solange ein Event läuft. */
   showExplainerFilter?: boolean;
@@ -192,42 +187,6 @@ export function LudothekBrowser({
         canManageGames={canManageGames}
         mechanicsOptions={mechanicsOptions}
       />
-
-      {internal &&
-        filters.showPrivateCollection &&
-        privateCollectionResults &&
-        privateCollectionResults.length > 0 && (
-          <div className="flex flex-col gap-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Privatbesitz von Mitgliedern
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {privateCollectionResults.map((result) => (
-                <div
-                  key={result.id}
-                  className="bg-card flex flex-col overflow-hidden rounded-lg border"
-                >
-                  {result.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- external cover url
-                    <img
-                      src={result.imageUrl}
-                      alt={result.title}
-                      className="aspect-square w-full object-cover"
-                    />
-                  ) : (
-                    <PlaceholderMedia label="FOTO" />
-                  )}
-                  <div className="flex flex-1 flex-col gap-1 p-4">
-                    <p className="font-serif font-semibold">{result.title}</p>
-                    <span className="bg-muted text-muted-foreground w-fit rounded-full px-2 py-0.5 text-xs">
-                      im Privatbesitz von {result.ownerDisplayName}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
     </div>
   );
 }

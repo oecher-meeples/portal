@@ -59,6 +59,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Regal A",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -145,5 +146,60 @@ describe("LudothekResults — grid actions menu (Plan-Schritt 12)", () => {
     );
 
     expect(screen.queryByText(/Aktionen \(/)).not.toBeInTheDocument();
+  });
+});
+
+describe("LudothekResults — private collection rows (#255-Folge)", () => {
+  const PRIVATE_GAME = game({
+    id: "entry-1",
+    boardGameId: "title-private",
+    title: "Dune: Imperium",
+    zustand: "privat",
+    isPrivate: true,
+    responsibleMeepleId: "meeple-1",
+    responsibleName: "Lea Demo",
+    locationChain: "bei Lea Demo (privat)",
+  });
+
+  it("renders in the same grid as club games, with the Privatbesitz pill", () => {
+    render(
+      <LudothekResults
+        games={[game(), PRIVATE_GAME]}
+        view="grid"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("Dune: Imperium")).toBeInTheDocument();
+    expect(screen.getByText("Privatbesitz")).toBeInTheDocument();
+  });
+
+  it("links to the same detail page as a club game (#255-Folge Klarstellung)", () => {
+    render(
+      <LudothekResults games={[PRIVATE_GAME]} view="grid" canManageGames />,
+    );
+
+    expect(
+      screen.getByRole("link", { name: /Dune: Imperium/ }),
+    ).toHaveAttribute("href", "/ludothek/arche-nova");
+  });
+
+  it("never shows the actions menu, even with games:manage — the exemplar overview stays uneditable", () => {
+    render(
+      <LudothekResults games={[PRIVATE_GAME]} view="grid" canManageGames />,
+    );
+
+    expect(screen.queryByText(/Aktionen \(/)).not.toBeInTheDocument();
+  });
+
+  it("is a link in the compact admin view too", () => {
+    render(
+      <LudothekResults games={[PRIVATE_GAME]} view="compact" canManageGames />,
+    );
+
+    expect(screen.getByText("bei Lea Demo (privat)")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Dune: Imperium/ }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import type { BggVersion } from "@/lib/bgg/client";
+import type { BggGameData, BggVersion } from "@/lib/bgg/client";
 
 const GERMAN_LANGUAGE_PATTERN = /german|deutsch/i;
 
@@ -42,6 +42,38 @@ export function resolvePublisherFromVersions(
   );
   if (allSame) return { value: first.publisher, needsSelection: false };
   return { value: null, needsSelection: true };
+}
+
+/**
+ * Maps raw `fetchBggGame()`-Daten auf `BoardGameTitleInput`-Shape — von
+ * Massenimport (#186) und privatem BGG-Collection-Sync (#255-Folge)
+ * gemeinsam genutzt, damit ein neu angelegter Titel in beiden Fällen dieselben
+ * Metadaten bekommt (Mechaniken, Gewicht, Spieleranzahl/-dauer, Verlag, …),
+ * nicht nur Titel + BGG-ID. Ohne UI zur Konfliktauflösung übernimmt beide
+ * Male nur einen eindeutigen Verlag — bei Abweichungen bleibt das Feld leer,
+ * korrigierbar im Titel-Editor (#205). Bewusst nicht in `board-games.ts`
+ * (dort erzwingt "use server" async Server Actions — dies ist eine reine
+ * synchrone Mapping-Funktion).
+ */
+export function bggDataToTitleInput(bggId: number, data: BggGameData) {
+  return {
+    title: data.title,
+    kind: data.kind,
+    bggId,
+    minPlayers: data.minPlayers ?? undefined,
+    maxPlayers: data.maxPlayers ?? undefined,
+    playTimeMinutes: data.playTimeMinutes ?? undefined,
+    weight: data.weight ?? undefined,
+    averageRating: data.averageRating ?? undefined,
+    imageUrl: data.imageUrl ?? undefined,
+    description: data.description ?? undefined,
+    mechanics: data.mechanics,
+    explainerVideoUrl: data.explainerVideoUrl ?? undefined,
+    languageDependence: data.languageDependence,
+    publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
+    author: data.author,
+    yearPublished: data.yearPublished ?? undefined,
+  };
 }
 
 export function resolveProductCodeFromVersions(

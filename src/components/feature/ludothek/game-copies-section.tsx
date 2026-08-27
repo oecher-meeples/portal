@@ -38,6 +38,9 @@ export type GameCopyRow = {
   isMine: boolean;
   /** This copy's own aufenthalts-history — merged into the accordion below its row (#121/#122). */
   history: HoldingHistoryEntry[];
+  /** True for a Meeple's privately imported title (#255-Folge) — no echtes
+   * `GameCopy` dahinter, daher keine Aktionen (kein `GameActionsMenu`). */
+  isPrivate: boolean;
 };
 
 /** Person (clickable via `ContactDialog`) leads, then the storage chain —
@@ -141,12 +144,14 @@ export function GameCopiesSection({
                   {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
                 </TableCell>
                 <TableCell className="text-right">
-                  <GameActionsMenu
-                    copies={[actionsMenuCopy(copy)]}
-                    boardGameId={boardGameId}
-                    boardGameTitle={boardGameTitle}
-                    canManageGames={canManageGames}
-                  />
+                  {!copy.isPrivate && (
+                    <GameActionsMenu
+                      copies={[actionsMenuCopy(copy)]}
+                      boardGameId={boardGameId}
+                      boardGameTitle={boardGameTitle}
+                      canManageGames={canManageGames}
+                    />
+                  )}
                 </TableCell>
               </GameCopyTableRow>
             ))}
@@ -159,12 +164,14 @@ export function GameCopiesSection({
             gameCopyId={copy.id}
             history={copy.history}
             actions={
-              <GameActionsMenu
-                copies={[actionsMenuCopy(copy)]}
-                boardGameId={boardGameId}
-                boardGameTitle={boardGameTitle}
-                canManageGames={canManageGames}
-              />
+              !copy.isPrivate && (
+                <GameActionsMenu
+                  copies={[actionsMenuCopy(copy)]}
+                  boardGameId={boardGameId}
+                  boardGameTitle={boardGameTitle}
+                  canManageGames={canManageGames}
+                />
+              )
             }
           >
             <div className="flex flex-col gap-1">

@@ -90,6 +90,9 @@ export type LudothekGame = {
   /** Whether this title has at least one open (see `getLfgStatus`) LfgPost —
    * backs the members-only "Zeige nur Spielergesuche"-Filter (#144). */
   hasOpenLfg: boolean;
+  /** True for a Meeple's privately imported BGG title (#255-Folge) — no
+   * `GameCopy` behind it, `zustand` is always `"privat"`, no Detailseite. */
+  isPrivate: boolean;
 };
 
 /**
@@ -195,9 +198,7 @@ export const MAX_PLAYERS_FILTER = 9;
 
 /** Zeigt Titel, die genau `players` Spieler unterstützen — Ein-Knoten-Slider
  * statt fester Buckets (#214-Folge). Ab `MAX_PLAYERS_FILTER` ("9+") reicht
- * es, wenn der Titel mindestens so viele Spieler unterstützt. Von
- * `filterLudothekGames` und `buildPrivateCollectionResults` gemeinsam
- * genutzt. */
+ * es, wenn der Titel mindestens so viele Spieler unterstützt. */
 export function matchesPlayerCount(
   game: PlayerCounted,
   players: number | undefined,

@@ -10,10 +10,7 @@ import {
   toPublicGame,
 } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
-import {
-  buildPrivateCollectionResults,
-  findVisiblePrivateCollectionEntries,
-} from "@/lib/ludothek/private-collection";
+import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
@@ -35,7 +32,15 @@ export default async function LudothekPage({
   const rawSearchParams = await searchParams;
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
 
-  const allGames = await buildLudothekGames();
+  const clubGames = await buildLudothekGames();
+  // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
+  // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
+  // eines separaten, statischen Blocks).
+  const privateGames =
+    internal && filters.showPrivateCollection
+      ? await buildPrivateLudothekGames()
+      : [];
+  const allGames = [...clubGames, ...privateGames];
 
   // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
   // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
@@ -80,15 +85,6 @@ export default async function LudothekPage({
       })()
     : undefined;
 
-  // Internal-only, and only fetched when the toggle is on — never reaches the guest path.
-  const privateCollectionResults =
-    internal && filters.showPrivateCollection
-      ? buildPrivateCollectionResults(
-          await findVisiblePrivateCollectionEntries(),
-          filters,
-        )
-      : undefined;
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -106,7 +102,6 @@ export default async function LudothekPage({
         mechanicsOptions={mechanicsOptions}
         maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
-        privateCollectionResults={privateCollectionResults}
         showExplainerFilter={showExplainerFilter}
         showPresentFilter={showPresentFilter}
       />

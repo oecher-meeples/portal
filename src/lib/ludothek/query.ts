@@ -106,6 +106,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       expansions: boardGame.baseGameCollections.map((c) => c.expansion),
       explainerCount: explainerCounts.get(boardGame.id) ?? 0,
       hasOpenLfg: boardGameIdsWithOpenLfg.has(boardGame.id),
+      isPrivate: false,
     };
 
     if (!holding) {

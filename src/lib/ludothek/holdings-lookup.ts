@@ -16,7 +16,15 @@ type Tx = PrismaClient | Prisma.TransactionClient;
 
 const MAX_UNIT_CHAIN_DEPTH = 20;
 
-export type GameZustand = "frei" | "ausgeliehen" | "wartung" | "nicht-erfasst";
+export type GameZustand =
+  | "frei"
+  | "ausgeliehen"
+  | "wartung"
+  | "nicht-erfasst"
+  /** Privatbesitz-Pseudo-Zustand (#255-Folge) — nie von
+   * `zustandFromHoldingAndUnit()` zurückgegeben, nur von
+   * `buildPrivateLudothekGames()` gesetzt. */
+  | "privat";
 
 export type UnitChainNode = {
   label: string;

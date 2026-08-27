@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth/server";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
+import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
 import { getExplainersForGame } from "@/lib/explainer/queries";
@@ -37,11 +38,25 @@ export default async function GameDetailPage({
   const tier = await getSessionTier();
   const internal = tier !== "gast";
 
-  const games = await buildLudothekGames();
+  const clubGames = await buildLudothekGames();
   // One title can have several physical copies (same boardGameSlug) — the
   // header/description render from the first copy, `copies` below carries
   // every one of them for the exemplar table/card (#121/#122).
-  const game = games.find((g) => g.boardGameSlug === slug);
+  let games = clubGames;
+  let game = clubGames.find((g) => g.boardGameSlug === slug);
+
+  // Privatbesitz-Titel bekommen dieselbe Detailseite wie Vereinsspiele
+  // (#255-Folge) — nur intern erreichbar, unabhängig vom "Auch Privatbesitz
+  // anzeigen"-Filter der Übersichtsseite (das ist ein reiner Browse-Filter,
+  // ein direkter Link muss trotzdem funktionieren). Für Gäste nie geladen,
+  // und nur bei einem Vereins-Fehltreffer nachgeladen — kein Extra-Query auf
+  // jeder normalen Detailseite.
+  if (!game && internal) {
+    const privateGames = await buildPrivateLudothekGames();
+    games = [...clubGames, ...privateGames];
+    game = games.find((g) => g.boardGameSlug === slug);
+  }
+
   if (!game) notFound();
   const copies = games.filter((g) => g.boardGameId === game.boardGameId);
 
@@ -139,6 +154,7 @@ export default async function GameDetailPage({
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
+    isPrivate: copy.isPrivate,
   }));
 
   // Representative location for each linked base game/expansion (#121) —
