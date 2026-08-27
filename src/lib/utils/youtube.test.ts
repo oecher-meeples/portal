@@ -1,5 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { getYoutubeEmbedUrl } from "@/lib/utils/youtube";
+import {
+  buildYoutubeRulesSearchUrl,
+  getYoutubeEmbedUrl,
+} from "@/lib/utils/youtube";
+
+describe("buildYoutubeRulesSearchUrl", () => {
+  it("builds a German rules search query", () => {
+    expect(buildYoutubeRulesSearchUrl("Ark Nova", "de")).toBe(
+      "https://www.youtube.com/results?search_query=Ark%20Nova%20Regeln",
+    );
+  });
+
+  it("builds an English rules search query", () => {
+    expect(buildYoutubeRulesSearchUrl("Ark Nova", "en")).toBe(
+      "https://www.youtube.com/results?search_query=Ark%20Nova%20rules",
+    );
+  });
+
+  it("url-encodes special characters in the title", () => {
+    expect(buildYoutubeRulesSearchUrl("7 Wonders: Duel", "de")).toBe(
+      "https://www.youtube.com/results?search_query=7%20Wonders%3A%20Duel%20Regeln",
+    );
+  });
+});
 
 describe("getYoutubeEmbedUrl", () => {
   it("converts a youtube.com/watch URL", () => {
