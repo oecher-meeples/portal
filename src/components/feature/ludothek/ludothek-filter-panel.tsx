@@ -189,6 +189,7 @@ export function LudothekFilterPanel({
             onValueChange={setPlayers}
             onValueCommitted={commitPlayers}
             getAriaLabel={() => "Spieler"}
+            hideTrackFill
           />
         </div>
 
@@ -276,6 +277,7 @@ export function LudothekFilterPanel({
             onValueChange={setLanguageDependenceMax}
             onValueCommitted={commitLanguageDependenceMax}
             getAriaLabel={() => "Sprachneutralität"}
+            hideTrackFill
           />
         </div>
 
