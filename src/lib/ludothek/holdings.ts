@@ -362,6 +362,7 @@ export async function moveStorageUnit({
 }
 
 export {
+  ensureEventUnit,
   ensureUnsortiertUnit,
   formatLocationChain,
   getGameZustand,

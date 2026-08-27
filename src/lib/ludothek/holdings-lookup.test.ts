@@ -4,6 +4,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const {
+  ensureEventUnit,
   getGameZustand,
   getResponsibleMeeple,
   resolveScannedCode,
@@ -288,5 +289,51 @@ describe("formatLocationChain", () => {
     expect(formatLocationChain({ responsibleName: null, unitChain: "" })).toBe(
       "",
     );
+  });
+});
+
+describe("ensureEventUnit (#273)", () => {
+  it("upserts by a code deterministically derived from the event slug", async () => {
+    prismaMock.storageUnit.upsert.mockResolvedValue({
+      id: "unit-1",
+      code: "OM-EVENT-spieletag-2026",
+    } as never);
+
+    await ensureEventUnit({ slug: "spieletag-2026", title: "Spieletag 2026" });
+
+    expect(prismaMock.storageUnit.upsert).toHaveBeenCalledWith({
+      where: { code: "OM-EVENT-spieletag-2026" },
+      update: {},
+      create: {
+        code: "OM-EVENT-spieletag-2026",
+        kind: "EVENT",
+        label: "Spieletag 2026",
+      },
+    });
+  });
+
+  it("is idempotent — a second call for the same event reuses the row", async () => {
+    prismaMock.storageUnit.upsert.mockResolvedValue({
+      id: "unit-1",
+      code: "OM-EVENT-spieletag-2026",
+    } as never);
+
+    const event = { slug: "spieletag-2026", title: "Spieletag 2026" };
+    const first = await ensureEventUnit(event);
+    const second = await ensureEventUnit(event);
+
+    expect(first.id).toBe(second.id);
+    expect(prismaMock.storageUnit.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("has no keeper, analogous to Unsortiert", async () => {
+    prismaMock.storageUnit.upsert.mockResolvedValue({} as never);
+
+    await ensureEventUnit({ slug: "spieletag-2026", title: "Spieletag 2026" });
+
+    const call = prismaMock.storageUnit.upsert.mock.calls[0][0] as {
+      create: Record<string, unknown>;
+    };
+    expect(call.create).not.toHaveProperty("keeperMeepleId");
   });
 });

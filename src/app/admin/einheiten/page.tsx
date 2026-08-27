@@ -37,7 +37,10 @@ export default async function AdminEinheitenPage() {
   ]);
 
   const [units, gameCounts, meeples] = await Promise.all([
+    // EVENT-Units sind system-verwaltet (lazy per `ensureEventUnit()`, #273)
+    // und gehören nicht in die manuelle Karton/Regal-Verwaltung hier.
     prisma.storageUnit.findMany({
+      where: { kind: { not: "EVENT" } },
       orderBy: { code: "asc" },
       include: { keeper: { select: { displayName: true } } },
     }),
@@ -85,7 +88,9 @@ export default async function AdminEinheitenPage() {
   const rows: StorageUnitRow[] = units.map((unit) => ({
     id: unit.id,
     code: unit.code,
-    kind: unit.kind,
+    // Die Query oben filtert EVENT-Units bereits aus — Prisma engt den
+    // Rückgabetyp dadurch nicht automatisch ein (#273).
+    kind: unit.kind as "BOX" | "SHELF",
     label: unit.label,
     locationChain: locationChain(unit, unitById),
     keeperMeepleId: unit.keeperMeepleId,

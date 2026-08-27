@@ -38,6 +38,11 @@ enum GameInventoryStatus {
 enum StorageUnitKind {
   BOX
   SHELF
+  /// Wurzel des Standort-Baums für die Dauer eines Events (#273) — lazy per
+  /// Upsert erzeugt, `keeperMeepleId = null` (analog "Unsortiert"). Regal-
+  /// `StorageUnit`s werden vor Ort per normalem Umlagern als Kind
+  /// eingehängt (`parentUnitId`), statt über eine eigene Zuordnungstabelle.
+  EVENT
 }
 
 enum BoardGameKind {

@@ -116,6 +116,28 @@ export async function ensureUnsortiertUnit(tx: Tx = prisma) {
   });
 }
 
+/**
+ * Wurzel des Standort-Baums für die Dauer eines Events (#273) — analog
+ * `ensureUnsortiertUnit()`: lazy per Upsert erzeugt, `keeperMeepleId = null`
+ * (kein Verwahrer). Code deterministisch aus dem Event-Slug abgeleitet, nicht
+ * fortlaufend nummeriert — pro Event genau eine Unit, egal wie oft aufgerufen.
+ */
+export async function ensureEventUnit(
+  event: { slug: string; title: string },
+  tx: Tx = prisma,
+) {
+  const code = `OM-EVENT-${event.slug}`;
+  return tx.storageUnit.upsert({
+    where: { code },
+    update: {},
+    create: {
+      code,
+      kind: StorageUnitKind.EVENT,
+      label: event.title,
+    },
+  });
+}
+
 export type ResolvedScan =
   | { kind: "games"; games: ScannedGameCopy[] }
   | { kind: "unit"; unit: StorageUnit; contents: ScannedGameCopy[] }

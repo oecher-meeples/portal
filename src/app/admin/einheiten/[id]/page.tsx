@@ -56,7 +56,11 @@ export default async function AdminEinheitDetailPage({
       unit={{
         id: unit.id,
         code: unit.code,
-        kind: unit.kind,
+        // Event-Units (#273) sind system-verwaltet und werden hier nicht
+        // verlinkt — direkt aufgerufen zeigt diese Detailseite sie
+        // pragmatisch als "Regal" an, statt eine dritte Anzeigevariante
+        // für einen Pfad zu bauen, der praktisch nicht vorkommt.
+        kind: unit.kind as "BOX" | "SHELF",
         label: unit.label,
         locationNote: unit.locationNote,
         keeperMeepleId: unit.keeperMeepleId,
