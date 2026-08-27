@@ -10,6 +10,7 @@ import {
   requireGamesManage,
   createStorageUnit as libCreateStorageUnit,
   findStorageUnitByCode as libFindStorageUnitByCode,
+  setUnitParent as libSetUnitParent,
   type CreateStorageUnitInput,
 } from "@/lib/ludothek/storage-units";
 
@@ -113,55 +114,9 @@ export async function assignStorageUnitKeeper(
   return { success: true as const };
 }
 
-/** Walks up from `parentId` to check whether `unitId` would become its own ancestor. */
-async function wouldCreateCycle(unitId: string, parentId: string) {
-  let currentId: string | null = parentId;
-  const seen = new Set<string>();
-
-  while (currentId) {
-    if (currentId === unitId) return true;
-    if (seen.has(currentId)) return false;
-    seen.add(currentId);
-
-    const parent: { parentUnitId: string | null } | null =
-      await prisma.storageUnit.findUnique({
-        where: { id: currentId },
-        select: { parentUnitId: true },
-      });
-    currentId = parent?.parentUnitId ?? null;
-  }
-
-  return false;
-}
-
 export async function setUnitParent(
   unitId: string,
   parentUnitId: string | null,
 ) {
-  const actor = await requireGamesManage();
-
-  if (parentUnitId) {
-    if (parentUnitId === unitId) {
-      return { error: "Eine Einheit kann nicht in sich selbst stehen." };
-    }
-    if (await wouldCreateCycle(unitId, parentUnitId)) {
-      return { error: "Das würde einen Kreis in der Standort-Kette erzeugen." };
-    }
-  }
-
-  const unit = await prisma.storageUnit.findUnique({ where: { id: unitId } });
-  if (!unit) {
-    return { error: "Einheit nicht gefunden." };
-  }
-
-  await moveStorageUnit({
-    unitId,
-    recordedByMeepleId: actor.id,
-    keeperMeepleId: unit.keeperMeepleId,
-    locationNote: unit.locationNote,
-    parentUnitId,
-  });
-
-  revalidatePath("/admin/einheiten");
-  return { success: true as const };
+  return libSetUnitParent(unitId, parentUnitId);
 }

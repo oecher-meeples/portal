@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
+import { PillToggle } from "@/components/ui/pill-toggle";
 import { BulkRelocateScanView } from "@/components/feature/admin-bestand/bulk-relocate-scan-view";
+import { AssignShelfToEventView } from "@/components/feature/admin-bestand/assign-shelf-to-event-view";
 
 export type EventOption = { id: string; title: string };
 
@@ -22,6 +25,10 @@ export function EventScanPageView({
   selectedEventId,
   targetUnitId,
   targetLabel,
+  /** Nur die Event-Ausgabe (Stufe 1) bietet die Regal-Zuordnung (Stufe 2)
+   * zusätzlich an — Event-Rückgabe hat keine Event-Auswahl und braucht sie
+   * nicht (#273). */
+  offerShelfAssignment = false,
 }: {
   title: string;
   description: string;
@@ -31,8 +38,10 @@ export function EventScanPageView({
   /** `null`, solange kein Event gewählt ist. */
   targetUnitId: string | null;
   targetLabel: string;
+  offerShelfAssignment?: boolean;
 }) {
   const router = useRouter();
+  const [mode, setMode] = useState<"spiele" | "regal">("spiele");
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,11 +72,25 @@ export function EventScanPageView({
         </div>
       )}
 
-      {targetUnitId && (
+      {targetUnitId && offerShelfAssignment && (
+        <PillToggle
+          options={[
+            { label: "Spiele scannen", value: "spiele" },
+            { label: "Regal zuordnen", value: "regal" },
+          ]}
+          value={mode}
+          onChange={setMode}
+        />
+      )}
+
+      {targetUnitId && mode === "spiele" && (
         <BulkRelocateScanView
           targetUnitId={targetUnitId}
           targetLabel={targetLabel}
         />
+      )}
+      {targetUnitId && offerShelfAssignment && mode === "regal" && (
+        <AssignShelfToEventView eventUnitId={targetUnitId} />
       )}
     </div>
   );

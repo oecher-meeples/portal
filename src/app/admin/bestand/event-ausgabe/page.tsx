@@ -33,6 +33,7 @@ export default async function EventAusgabePage({
       selectedEventId={selectedEventId}
       targetUnitId={eventUnit?.id ?? null}
       targetLabel={selectedEvent?.title ?? ""}
+      offerShelfAssignment
     />
   );
 }
