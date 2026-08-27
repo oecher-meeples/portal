@@ -63,10 +63,7 @@ describe("hasOpenHelperRequest", () => {
 
     expect(await hasOpenHelperRequest()).toBe(true);
     expect(prismaMock.event.findFirst).toHaveBeenCalledWith({
-      where: expect.objectContaining({
-        helpersWanted: true,
-        visibility: { not: "DRAFT" },
-      }),
+      where: expect.objectContaining({ helpersWanted: true }),
       orderBy: { startsAt: "asc" },
       select: { id: true, title: true },
     });
@@ -95,6 +92,16 @@ describe("findOpenHelperRequestEvent", () => {
     prismaMock.event.findFirst.mockResolvedValue(null);
 
     expect(await findOpenHelperRequestEvent()).toBeNull();
+  });
+
+  it("does not filter by visibility — an Entwurf-Event with helpersWanted still counts", async () => {
+    await findOpenHelperRequestEvent();
+
+    expect(prismaMock.event.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.not.objectContaining({ visibility: expect.anything() }),
+      }),
+    );
   });
 });
 
@@ -147,14 +154,20 @@ describe("findUpcomingEvents", () => {
 });
 
 describe("findUpcomingEventsVisibleToMembers", () => {
-  it("excludes Entwurf-Events from the query", async () => {
+  it("includes non-Entwurf events, or Entwurf events with helpersWanted", async () => {
     prismaMock.event.findMany.mockResolvedValue([]);
 
     await findUpcomingEventsVisibleToMembers();
 
     expect(prismaMock.event.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ visibility: { not: "DRAFT" } }),
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            {
+              OR: [{ visibility: { not: "DRAFT" } }, { helpersWanted: true }],
+            },
+          ]),
+        }),
       }),
     );
   });

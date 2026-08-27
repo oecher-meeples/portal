@@ -135,7 +135,7 @@ _Avoid_: Batch-Umlagern, Serien-Scan als eigener Vorgang
 ### Event-Betrieb
 
 **Event**:
-Ein Spieletag oder eine Großveranstaltung mit Datum und Ort, von einem Admin angelegt. Eigenständig vom öffentlichen/internen ICS-Kalender-Feed — der Feed bleibt Ankündigung, das Event ist die Grundlage für Schichten, Erklärbären und Flohmarkt-Artikel. Hat eine Sichtbarkeit (`visibility`): **Entwurf** nur für `events:manage`, **Intern** zusätzlich für eingeloggte Meeples, **Öffentlich** für alle — inkl. Gäste-Bereich (`/events/[slug]/gast`) und der öffentlichen Termine-Seite (`/news`), wo öffentliche Events neben den ICS-Feed-Terminen erscheinen. Default beim Anlegen ist Entwurf.
+Ein Spieletag oder eine Großveranstaltung mit Datum und Ort, von einem Admin angelegt. Eigenständig vom öffentlichen/internen ICS-Kalender-Feed — der Feed bleibt Ankündigung, das Event ist die Grundlage für Schichten, Erklärbären und Flohmarkt-Artikel. Hat eine Sichtbarkeit (`visibility`): **Entwurf** nur für `events:manage`, **Intern** zusätzlich für eingeloggte Meeples, **Öffentlich** für alle — inkl. Gäste-Bereich (`/events/[slug]/gast`) und der öffentlichen Termine-Seite (`/news`), wo öffentliche Events neben den ICS-Feed-Terminen erscheinen. Default beim Anlegen ist Entwurf. Ausnahme: ist zusätzlich `helpersWanted` gesetzt, öffnet sich die Helferplanung (`/helfer`) auch für ein Entwurf-Event — ein Admin kann Helfer schon rekrutieren, bevor das Event sonst freigegeben ist.
 _Avoid_: Termin (das ist die Kalender-Ankündigung), Veranstaltung als Kalendereintrag
 
 **Regal-Zuordnung**:

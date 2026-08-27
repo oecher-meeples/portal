@@ -35,12 +35,15 @@ export async function setHelperAvailability({
 
   const day = await prisma.eventDay.findUnique({
     where: { id: dayId },
-    select: { event: { select: { visibility: true } } },
+    select: { event: { select: { visibility: true, helpersWanted: true } } },
   });
   if (!day) {
     return { error: "Tag nicht gefunden." };
   }
-  if (day.event.visibility === "DRAFT") {
+  // Entwurf ist normalerweise nur für events:manage sichtbar — "Helfer
+  // suchen" ist die bewusste Ausnahme, die Helferplanung schon vor der
+  // eigentlichen Freigabe öffnet (siehe findUpcomingEventsVisibleToMembers).
+  if (day.event.visibility === "DRAFT" && !day.event.helpersWanted) {
     return {
       error: "Für dieses Event ist die Helferplanung noch nicht freigegeben.",
     };
