@@ -5,6 +5,7 @@ import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField } from "@/components/ui/field";
+import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import {
   createShift,
   updateShift,
@@ -24,8 +25,12 @@ export type EditableShift = {
 export type HelperRoleOption = { id: string; name: string };
 export type EventDayOption = { id: string; date: string };
 
-function toDateTimeLocal(iso: string) {
-  return iso.slice(0, 16);
+/** Kombiniert das Kalenderdatum des gewählten Tags mit einer "HH:mm"-Uhrzeit
+ * zum Date, das die Action erwartet — Ziel-Beginn/-Ende sind reine
+ * Uhrzeiten, das Datum kommt aus der Tag-Auswahl, nicht aus einem eigenen
+ * datetime-local-Feld. */
+function toDateTime(dateIso: string, time: string): Date {
+  return new Date(`${dateIso.slice(0, 10)}T${time}:00`);
 }
 
 export function ShiftDialog({
@@ -51,18 +56,18 @@ export function ShiftDialog({
     shift?.roleId ?? helperRoles[0]?.id ?? "",
   );
   const [targetStartsAt, setTargetStartsAt] = useState(
-    shift ? toDateTimeLocal(shift.targetStartsAt) : "",
+    shift ? timeInputValue(shift.targetStartsAt) : "",
   );
   const [targetEndsAt, setTargetEndsAt] = useState(
-    shift ? toDateTimeLocal(shift.targetEndsAt) : "",
+    shift ? timeInputValue(shift.targetEndsAt) : "",
   );
   const [capacity, setCapacity] = useState(String(shift?.capacity ?? 1));
 
   function reset() {
     setDayId(initialDayId());
     setRoleId(shift?.roleId ?? helperRoles[0]?.id ?? "");
-    setTargetStartsAt(shift ? toDateTimeLocal(shift.targetStartsAt) : "");
-    setTargetEndsAt(shift ? toDateTimeLocal(shift.targetEndsAt) : "");
+    setTargetStartsAt(shift ? timeInputValue(shift.targetStartsAt) : "");
+    setTargetEndsAt(shift ? timeInputValue(shift.targetEndsAt) : "");
     setCapacity(String(shift?.capacity ?? 1));
   }
 
@@ -91,11 +96,12 @@ export function ShiftDialog({
         Boolean(targetEndsAt)
       }
       action={() => {
+        const dayDate = days.find((day) => day.id === dayId)?.date ?? "";
         const input = {
           dayId,
           roleId,
-          targetStartsAt: new Date(targetStartsAt),
-          targetEndsAt: new Date(targetEndsAt),
+          targetStartsAt: toDateTime(dayDate, targetStartsAt),
+          targetEndsAt: toDateTime(dayDate, targetEndsAt),
           capacity: Number(capacity),
         };
         return shift
@@ -132,20 +138,18 @@ export function ShiftDialog({
           ))}
         </select>
       </Field>
-      <TextField
+      <TimePicker
         id="shift-target-starts"
         label="Ziel-Beginn"
-        type="datetime-local"
         value={targetStartsAt}
-        onChange={(event) => setTargetStartsAt(event.target.value)}
+        onChange={setTargetStartsAt}
         required
       />
-      <TextField
+      <TimePicker
         id="shift-target-ends"
         label="Ziel-Ende"
-        type="datetime-local"
         value={targetEndsAt}
-        onChange={(event) => setTargetEndsAt(event.target.value)}
+        onChange={setTargetEndsAt}
         required
       />
       <TextField
