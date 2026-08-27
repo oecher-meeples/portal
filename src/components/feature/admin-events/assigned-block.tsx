@@ -158,8 +158,14 @@ export function AssignedBlock({
             type="button"
             aria-label={`${booking.displayName} entfernen`}
             title="Zuweisung entfernen"
-            onClick={(clickEvent) => {
-              clickEvent.stopPropagation();
+            // pointerdown statt onClick + preventDefault: ein <button> nimmt
+            // sonst beim Mousedown den Fokus, das Elternelement blurt, sein
+            // {focused && …} entfernt diesen Button noch vor dem Klick aus
+            // dem DOM — der Klick verpufft (Bugreport "Löschen blockiert").
+            // Dasselbe Muster wie bei den Resize-Griffen oben.
+            onPointerDown={(pointerEvent) => {
+              pointerEvent.preventDefault();
+              pointerEvent.stopPropagation();
               onUnassign(booking);
             }}
             className="bg-background/80 hover:bg-destructive hover:text-destructive-foreground absolute top-0.5 left-0.5 flex size-3.5 items-center justify-center rounded-full"

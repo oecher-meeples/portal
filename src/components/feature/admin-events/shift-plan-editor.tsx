@@ -29,7 +29,11 @@ import {
   assignHelperToShift,
   unassignHelperFromShift,
 } from "@/components/feature/admin-events/shift-plan-actions";
-import { buildRoleColumns, intersectTimeRanges } from "@/lib/events/shift-plan";
+import {
+  buildRoleColumns,
+  intersectTimeRanges,
+  findFirstFreeSubRange,
+} from "@/lib/events/shift-plan";
 import {
   ShiftDialog,
   type HelperRoleOption,
@@ -146,28 +150,34 @@ export function ShiftPlanEditor({
       return;
     }
 
-    // Default block: direkt nach dem letzten bereits eingetragenen Block
-    // für diese Schicht bis zum Ende des verfügbaren Zeitraums — so lässt
-    // sich eine zweite Person für eine Pausenablösung eintragen, ohne beide
-    // Blöcke von Hand deckungsgleich auseinanderzuziehen. Ohne (passende)
-    // Vorbelegung bleibt es beim vollen verfügbaren Zeitraum, die Resize-
-    // Griffe (#160) engen ihn danach weiter ein.
+    // Default block: die früheste noch freie Lücke im verfügbaren Zeitraum
+    // — nicht immer "nach dem letzten Block", denn eine zweite Zuweisung
+    // derselben Person kann genauso gut *vor* einer bestehenden fehlen
+    // (z. B. "Tobias am Anfang und am Ende"). Ohne (passende) Vorbelegung
+    // bleibt es beim vollen verfügbaren Zeitraum, die Resize-Griffe (#160)
+    // engen ihn danach weiter ein.
     const existingForShift = (bookings[dropData.dayId] ?? []).filter(
       (booking) => booking.shiftId === dropData.shiftId,
     );
-    const latestEnd = existingForShift.reduce(
-      (max, booking) =>
-        new Date(booking.endsAt) > max ? new Date(booking.endsAt) : max,
-      availableRange.start,
+    const freeRange = findFirstFreeSubRange(
+      availableRange,
+      existingForShift.map((booking) => ({
+        start: new Date(booking.startsAt),
+        end: new Date(booking.endsAt),
+      })),
     );
-    const startsAt =
-      latestEnd < availableRange.end ? latestEnd : availableRange.start;
+    if (!freeRange) {
+      setError(
+        "Für diese Schicht ist im verfügbaren Zeitraum kein freier Abschnitt mehr übrig.",
+      );
+      return;
+    }
 
     const result = await assignHelperToShift(
       dropData.shiftId,
       dragData.meepleId,
-      startsAt,
-      availableRange.end,
+      freeRange.start,
+      freeRange.end,
     );
     if ("error" in result) {
       setError(result.error);

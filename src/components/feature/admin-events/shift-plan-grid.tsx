@@ -151,7 +151,7 @@ export function ShiftPlanGrid({
   };
 
   return (
-    <div className="max-h-[32rem] overflow-auto rounded-lg border">
+    <div className="max-h-[80vh] overflow-auto rounded-lg border">
       <div
         className="grid"
         style={{

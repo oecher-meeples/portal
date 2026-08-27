@@ -48,6 +48,36 @@ export function intersectTimeRanges(
   return start < end ? { start, end } : null;
 }
 
+/**
+ * The chronologically first still-free sub-range within `available` that
+ * none of `bookedRanges` covers — the default time a fresh drop on an
+ * already partially-staffed Shift gets. Picks the earliest gap rather than
+ * always attaching after the last booking, so a second block for the same
+ * person can land *before* an existing one just as well as after it (e.g.
+ * "Tobias am Anfang und am Ende" — dropping him again finds the gap before
+ * his existing 16:00–17:30 block first). Returns null once every instant
+ * of `available` is covered.
+ */
+export function findFirstFreeSubRange(
+  available: { start: Date; end: Date },
+  bookedRanges: { start: Date; end: Date }[],
+): { start: Date; end: Date } | null {
+  const sorted = [...bookedRanges].sort(
+    (a, b) => a.start.getTime() - b.start.getTime(),
+  );
+
+  let cursor = available.start;
+  for (const range of sorted) {
+    if (range.start > cursor) {
+      return { start: cursor, end: range.start };
+    }
+    if (range.end > cursor) {
+      cursor = range.end;
+    }
+  }
+  return cursor < available.end ? { start: cursor, end: available.end } : null;
+}
+
 /** Time-of-day row labels for the grid, every `stepMinutes` from `range.start` to `range.end`. */
 export function buildTimeSlots(
   range: { start: Date; end: Date },

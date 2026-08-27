@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeVisibleRange,
   intersectTimeRanges,
+  findFirstFreeSubRange,
   buildTimeSlots,
   buildRoleColumns,
   totalColumnCount,
@@ -77,6 +78,78 @@ describe("intersectTimeRanges", () => {
     };
 
     expect(intersectTimeRanges(a, b)).toBeNull();
+  });
+});
+
+describe("findFirstFreeSubRange", () => {
+  const available = {
+    start: new Date(2026, 9, 10, 11, 0),
+    end: new Date(2026, 9, 10, 18, 0),
+  };
+
+  it("returns the full range when nothing is booked yet", () => {
+    expect(findFirstFreeSubRange(available, [])).toEqual(available);
+  });
+
+  it("finds the gap before an existing booking, not just after it", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 16, 0),
+        end: new Date(2026, 9, 10, 17, 30),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toEqual({
+      start: new Date(2026, 9, 10, 11, 0),
+      end: new Date(2026, 9, 10, 16, 0),
+    });
+  });
+
+  it("finds the gap after the only booking once the earlier gap is filled too", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 11, 0),
+        end: new Date(2026, 9, 10, 16, 0),
+      },
+      {
+        start: new Date(2026, 9, 10, 16, 0),
+        end: new Date(2026, 9, 10, 17, 30),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toEqual({
+      start: new Date(2026, 9, 10, 17, 30),
+      end: new Date(2026, 9, 10, 18, 0),
+    });
+  });
+
+  it("is unaffected by the order the booked ranges are passed in", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 17, 0),
+        end: new Date(2026, 9, 10, 18, 0),
+      },
+      {
+        start: new Date(2026, 9, 10, 11, 0),
+        end: new Date(2026, 9, 10, 14, 0),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toEqual({
+      start: new Date(2026, 9, 10, 14, 0),
+      end: new Date(2026, 9, 10, 17, 0),
+    });
+  });
+
+  it("returns null once every instant is already covered", () => {
+    const booked = [
+      {
+        start: new Date(2026, 9, 10, 11, 0),
+        end: new Date(2026, 9, 10, 18, 0),
+      },
+    ];
+
+    expect(findFirstFreeSubRange(available, booked)).toBeNull();
   });
 });
 
