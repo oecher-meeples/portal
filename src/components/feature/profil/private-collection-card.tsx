@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, Dices } from "lucide-react";
+import { ArrowRightLeft, Dices, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -251,7 +251,13 @@ export function PrivateCollectionCard({
                   className="flex items-center justify-between gap-2 rounded-md border p-2"
                 >
                   <span className="flex min-w-0 items-baseline gap-1.5">
-                    <span className="truncate">{entry.boardGame.title}</span>
+                    <Link
+                      href={`/ludothek/${entry.boardGame.slug}`}
+                      className="hover:text-primary flex min-w-0 items-center gap-1 truncate underline-offset-2 hover:underline"
+                    >
+                      <span className="truncate">{entry.boardGame.title}</span>
+                      <ExternalLink className="size-3.5 shrink-0" />
+                    </Link>
                     {entry.rating !== null && (
                       <span className="text-muted-foreground shrink-0 text-xs">
                         ★ {entry.rating.toFixed(1)}
