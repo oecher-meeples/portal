@@ -293,7 +293,13 @@ export function parseLudothekSearchParams(
 export function matchesLudothekSearch(
   game: Pick<
     LudothekGame,
-    "title" | "ean" | "bggId" | "alternateNames" | "publisher" | "author"
+    | "title"
+    | "secondaryTitle"
+    | "ean"
+    | "bggId"
+    | "alternateNames"
+    | "publisher"
+    | "author"
   >,
   search: string,
 ): boolean {
@@ -301,6 +307,7 @@ export function matchesLudothekSearch(
   if (!term) return true;
 
   if (game.title.toLowerCase().includes(term)) return true;
+  if (game.secondaryTitle?.toLowerCase().includes(term)) return true;
   if (game.ean !== null && game.ean === search.trim()) return true;
   if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
   if (game.alternateNames.some((name) => name.toLowerCase().includes(term)))
