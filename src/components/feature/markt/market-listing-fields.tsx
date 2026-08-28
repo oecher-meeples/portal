@@ -7,6 +7,7 @@ import { FileField } from "@/components/ui/file-field";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/ui/camera-capture";
 import { CoverMedia } from "@/components/ui/cover-media";
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
 import { getMarketListingUploadToken } from "@/components/feature/markt/actions";
@@ -40,19 +41,33 @@ export function MarketListingFields({
     error: uploadError,
   } = useBlobUpload("market-listings", getMarketListingUploadToken);
   const [showCamera, setShowCamera] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   async function handleImagesChange(files: File[]) {
     const urls = await uploadFiles(files);
     onImageUrlsChange([...imageUrls, ...urls]);
   }
 
-  /** Direkte Kamera-Aufnahme statt Datei-Auswahl (#108) — Foto wird wie ein
-   * hochgeladenes Bild behandelt: komprimiert, zu Blob Store hochgeladen,
-   * imageUrls ergänzt. */
-  async function handleCameraCapture(file: File) {
+  /** Direkte Kamera-Aufnahme statt Datei-Auswahl (#108) — vor der Übernahme
+   * durchläuft die Aufnahme einen Crop-Schritt (#170), erst danach wird das
+   * zugeschnittene Bild wie ein hochgeladenes Bild behandelt: komprimiert,
+   * zu Blob Store hochgeladen, imageUrls ergänzt. */
+  function handleCameraCapture(file: File) {
     setShowCamera(false);
+    setCropFile(file);
+  }
+
+  async function handleCropped(file: File) {
+    setCropFile(null);
     const compressed = await compressImage(file);
     await handleImagesChange([compressed]);
+  }
+
+  function handleCropDialogOpenChange(open: boolean) {
+    if (!open) {
+      setCropFile(null);
+      setShowCamera(true);
+    }
   }
 
   return (
@@ -112,10 +127,16 @@ export function MarketListingFields({
         )}
         {showCamera && (
           <CameraCapture
-            onCapture={(file) => void handleCameraCapture(file)}
+            onCapture={handleCameraCapture}
             onClose={() => setShowCamera(false)}
           />
         )}
+        <ImageCropDialog
+          open={cropFile !== null}
+          onOpenChange={handleCropDialogOpenChange}
+          file={cropFile}
+          onCropped={(file) => void handleCropped(file)}
+        />
         {isUploading && (
           <p className="text-muted-foreground text-sm">Lade Bilder hoch…</p>
         )}
