@@ -6,6 +6,7 @@ import { TextField, TextAreaField } from "@/components/ui/field";
 import { FileField } from "@/components/ui/file-field";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/ui/camera-capture";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
 import { getMarketListingUploadToken } from "@/components/feature/markt/actions";
@@ -122,9 +123,17 @@ export function MarketListingFields({
           <p className="text-destructive text-sm">{uploadError}</p>
         )}
         {imageUrls.length > 0 && (
-          <p className="text-muted-foreground text-xs">
-            {imageUrls.length} Bild(er) hochgeladen.
-          </p>
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {imageUrls.map((url) => (
+              <CoverMedia
+                key={url}
+                imageUrl={url}
+                alt="Hochgeladenes Bild"
+                aspect="aspect-square"
+                fit="contain"
+              />
+            ))}
+          </div>
         )}
       </div>
     </>
