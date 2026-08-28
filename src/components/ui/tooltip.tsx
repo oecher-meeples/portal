@@ -20,6 +20,12 @@ function Tooltip({
         <TooltipPrimitive.Positioner
           sideOffset={6}
           collisionPadding={{ top: 72 }}
+          // `z-50` on `Popup` alone has no effect — it isn't positioned
+          // itself, only `Positioner` is (Floating UI sets `position: fixed`
+          // there). Without it here, the tooltip could render behind a
+          // `fixed`/`sticky` ancestor with its own z-index — e.g. the
+          // header (`z-30`), which hid the Feedback-button tooltip (#282).
+          className="z-50"
         >
           <TooltipPrimitive.Popup
             data-slot="tooltip-content"
