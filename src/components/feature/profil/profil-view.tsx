@@ -108,6 +108,7 @@ export function ProfilView({
                 address={meeple.address}
                 shareAddress={meeple.shareAddress}
                 doorbellNote={meeple.doorbellNote}
+                marketNewsletterOptIn={meeple.marketNewsletterOptIn}
               />
             </div>
           </div>

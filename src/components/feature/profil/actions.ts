@@ -30,6 +30,8 @@ export type OwnProfileInput = {
   /** Opt-in: gibt die private BGG-Collection für andere interne Nutzer:innen
    * frei (#255). */
   privateCollectionVisible?: boolean;
+  /** Opt-in: täglicher Digest-Newsletter über neue Marktplatz-Angebote (#254). */
+  marketNewsletterOptIn?: boolean;
 };
 
 export type OwnBankDetailsInput = {
@@ -68,6 +70,7 @@ export async function updateOwnProfile(input: OwnProfileInput) {
       shareAddress: input.shareAddress ?? false,
       doorbellNote: optionalText(input.doorbellNote),
       privateCollectionVisible: input.privateCollectionVisible ?? false,
+      marketNewsletterOptIn: input.marketNewsletterOptIn ?? false,
     },
   });
 

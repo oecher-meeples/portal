@@ -176,6 +176,7 @@ describe("updateOwnProfile", () => {
       shareAddress: true,
       doorbellNote: "",
       privateCollectionVisible: true,
+      marketNewsletterOptIn: true,
     });
 
     expect(prismaMock.meeple.update).toHaveBeenCalledWith({
@@ -191,11 +192,12 @@ describe("updateOwnProfile", () => {
         shareAddress: true,
         doorbellNote: null,
         privateCollectionVisible: true,
+        marketNewsletterOptIn: true,
       },
     });
   });
 
-  it("defaults shareAddress and privateCollectionVisible to false when omitted", async () => {
+  it("defaults shareAddress, privateCollectionVisible and marketNewsletterOptIn to false when omitted", async () => {
     await updateOwnProfile({ displayName: "Lea" });
 
     expect(prismaMock.meeple.update).toHaveBeenCalledWith(
@@ -203,6 +205,7 @@ describe("updateOwnProfile", () => {
         data: expect.objectContaining({
           shareAddress: false,
           privateCollectionVisible: false,
+          marketNewsletterOptIn: false,
         }),
       }),
     );

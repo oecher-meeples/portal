@@ -195,6 +195,14 @@ model Meeple {
    * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
    */
   privateCollectionVisible  Boolean   @default(false)
+  /**
+   * Opt-in: täglicher Digest-Newsletter über neue Marktplatz-Angebote
+   * (`MarketListing`, #254). Bewusst ein eigenes Flag statt einer Kategorie
+   * im `NewsletterSubscriber`-Modell — das ist für anonyme/öffentliche
+   * Abonnenten gedacht, eine meeple-only-Kategorie dort würde eine
+   * dauerhafte Sonderfall-Verzweigung auf der Verwaltungsseite erzwingen.
+   */
+  marketNewsletterOptIn     Boolean   @default(false)
   /// Zeitpunkt des letzten manuellen BGG-Collection-Imports (#255-Folge) —
   /// Grundlage für den 1h-Cooldown, unabhängig von den Collection-Einträgen
   /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
