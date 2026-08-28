@@ -159,7 +159,7 @@ export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
   ]);
 
   return [...dbItems, ...calendarEvents, ...publicEvents].sort((a, b) =>
-    a.date.localeCompare(b.date),
+    b.date.localeCompare(a.date),
   );
 }
 

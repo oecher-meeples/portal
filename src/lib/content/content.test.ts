@@ -71,6 +71,19 @@ describe("getAllContent", () => {
     expect(items[0].date).toBe("2026-06-15");
     expect(items[0].body).toBe("Unser Sommerfest war ein voller Erfolg.");
   });
+
+  it("queries posts descending by date, newest first (#252)", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    await getAllContent();
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "PUBLISHED" },
+        orderBy: { date: "desc" },
+      }),
+    );
+  });
 });
 
 describe("getInternalContent", () => {

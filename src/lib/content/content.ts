@@ -93,6 +93,7 @@ const POST_WITHOUT_BODY_SELECT = {
 export async function getAllContent(): Promise<ContentItem[]> {
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
+    orderBy: { date: "desc" },
   });
   return posts.map(toContentItem);
 }
