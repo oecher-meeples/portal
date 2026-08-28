@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { CoverMedia } from "@/components/ui/cover-media";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
@@ -8,27 +12,40 @@ export function MarketListingDetailView({
   listing: MarketListingView;
 }) {
   const images = listing.imageUrls.length > 0 ? listing.imageUrls : null;
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   return (
     <div className="grid max-w-3xl gap-6 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
-        <CoverMedia
-          imageUrl={images?.[0] ?? null}
-          alt={listing.title}
-          label="FOTO"
-          aspect="aspect-square"
-          fit="contain"
-        />
+        <button
+          type="button"
+          onClick={() => images && setLightboxUrl(images[0])}
+          disabled={!images}
+          className="text-left"
+        >
+          <CoverMedia
+            imageUrl={images?.[0] ?? null}
+            alt={listing.title}
+            label="FOTO"
+            aspect="aspect-square"
+            fit="contain"
+          />
+        </button>
         {images && images.length > 1 && (
           <div className="grid grid-cols-3 gap-2">
             {images.slice(1).map((url) => (
-              <CoverMedia
+              <button
                 key={url}
-                imageUrl={url}
-                alt={listing.title}
-                aspect="aspect-square"
-                fit="contain"
-              />
+                type="button"
+                onClick={() => setLightboxUrl(url)}
+              >
+                <CoverMedia
+                  imageUrl={url}
+                  alt={listing.title}
+                  aspect="aspect-square"
+                  fit="contain"
+                />
+              </button>
             ))}
           </div>
         )}
@@ -51,6 +68,22 @@ export function MarketListingDetailView({
           <p className="leading-relaxed">{listing.description}</p>
         )}
       </div>
+      <Dialog
+        open={lightboxUrl !== null}
+        onOpenChange={(open) => !open && setLightboxUrl(null)}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogTitle className="sr-only">{listing.title}</DialogTitle>
+          {lightboxUrl && (
+            <CoverMedia
+              imageUrl={lightboxUrl}
+              alt={listing.title}
+              fit="contain"
+              sizing="natural"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
