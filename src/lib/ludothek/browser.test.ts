@@ -57,34 +57,6 @@ describe("filterLudothekGames", () => {
     expect(filterLudothekGames(games, { search: "wing" })).toHaveLength(1);
   });
 
-  it("matches an exact EAN", () => {
-    const games = [
-      game({ title: "Arche Nova", ean: "4001504311892" }),
-      game({ title: "Wingspan", ean: "0700304142529" }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "4001504311892" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Arche Nova");
-  });
-
-  it("does not match a partial EAN", () => {
-    const games = [game({ title: "Arche Nova", ean: "4001504311892" })];
-
-    expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(0);
-  });
-
-  it("matches an exact BGG-ID", () => {
-    const games = [
-      game({ title: "Arche Nova", bggId: 342942 }),
-      game({ title: "Wingspan", bggId: 266192 }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "342942" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Arche Nova");
-  });
-
   it("filters by maximum weight", () => {
     const light = game({ weight: 1.5 });
     const heavy = game({ weight: 4.2 });
@@ -257,41 +229,10 @@ describe("filterLudothekGames", () => {
     );
   });
 
-  it("matches on an alternate name substring, case-insensitively (#187)", () => {
-    const games = [
-      game({ title: "Catan", alternateNames: ["Die Siedler von Catan"] }),
-      game({ title: "Wingspan" }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "siedler" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Catan");
-  });
-
-  it("matches on a publisher substring, case-insensitively (#205)", () => {
-    const games = [
-      game({ title: "Ark Nova", publisher: ["Feuerland Spiele"] }),
-      game({ title: "Wingspan", publisher: ["Stonemaier Games"] }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "feuerland" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Ark Nova");
-  });
-
-  it("matches on an author substring, case-insensitively (#205)", () => {
-    const games = [
-      game({ title: "Cascadia", author: ["Randy Flynn"] }),
-      game({ title: "Wingspan", author: ["Elizabeth Hargrave"] }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "hargrave" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Wingspan");
-  });
-
   // Erstveröffentlichung-, Bewertung- und Spieler/Dauer-Slider-Tests siehe
   // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
+  // Textsuche (EAN/BGG-ID/Alternativname/Sekundärtitel/Verlag/Autor) siehe
+  // browser-search.test.ts (#287, ausgelagert wegen Dateigröße).
 });
 
 describe("parseLudothekSearchParams", () => {
