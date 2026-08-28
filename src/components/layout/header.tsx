@@ -2,6 +2,7 @@ import { Logo } from "@/components/layout/logo";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PreviewTierSwitcher } from "@/components/feature/admin-preview-tier/preview-tier-switcher";
+import { FeedbackButton } from "@/components/feature/feedback/feedback-button";
 import type { Tier } from "@/lib/utils/nav-config";
 
 export function Header({
@@ -17,6 +18,7 @@ export function Header({
       <Logo />
       <div className="flex items-center gap-3">
         {previewTier && <PreviewTierSwitcher tier={previewTier} />}
+        {user && <FeedbackButton />}
         <UserMenu user={user} />
         <ThemeToggle />
       </div>
