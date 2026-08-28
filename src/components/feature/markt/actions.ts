@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
+import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 
@@ -66,8 +67,13 @@ export async function updateOwnMarketListing(
   if (!listing) {
     return { error: "Anzeige nicht gefunden." };
   }
-  if (listing.sellerMeepleId !== meeple.id) {
-    return { error: "Nur die eigene Anzeige kann bearbeitet werden." };
+  const isAdmin = meeple.neonAuthUserId
+    ? await hasPermission(meeple.neonAuthUserId, "admin:access")
+    : false;
+  if (listing.sellerMeepleId !== meeple.id && !isAdmin) {
+    return {
+      error: "Nur die eigene Anzeige oder ein Admin kann sie bearbeiten.",
+    };
   }
 
   const validationError = validateMarketListingInput(input);
@@ -100,6 +106,15 @@ export async function deleteOwnMarketListing(id: string) {
   await prisma.marketListing.delete({ where: { id } });
 
   revalidatePath("/markt");
+  return { success: true as const };
+}
+
+/** Löscht ein einzelnes, bereits hochgeladenes Bild aus dem Blob Store —
+ * genutzt beim Entfernen/Ersetzen (Zuschneiden) einzelner Bilder im
+ * Markt-Formular (#175), bevor/nachdem die Anzeige gespeichert wird. */
+export async function deleteMarketListingImage(url: string) {
+  await requireMeeple();
+  await deleteBlobs([url]);
   return { success: true as const };
 }
 

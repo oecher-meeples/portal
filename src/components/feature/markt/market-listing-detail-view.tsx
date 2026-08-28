@@ -4,12 +4,15 @@ import { useState } from "react";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/entities/contact-dialog";
+import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-listing-dialog";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
 export function MarketListingDetailView({
   listing,
+  canEdit = false,
 }: {
   listing: MarketListingView;
+  canEdit?: boolean;
 }) {
   const images = listing.imageUrls.length > 0 ? listing.imageUrls : null;
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -66,6 +69,11 @@ export function MarketListingDetailView({
         </p>
         {listing.description && (
           <p className="leading-relaxed">{listing.description}</p>
+        )}
+        {canEdit && (
+          <div className="mt-2">
+            <EditMarketListingDialog listing={listing} />
+          </div>
         )}
       </div>
       <Dialog
