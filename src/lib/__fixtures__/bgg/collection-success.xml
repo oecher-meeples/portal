@@ -3,6 +3,8 @@
 	<item objecttype="thing" objectid="342942" subtype="boardgame" collid="1">
 		<name sortindex="1">Ark Nova</name>
 		<status own="1" prevowned="0" fortrade="1" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" />
+		<image>https://cf.geekdo-images.com/ark-nova.jpg</image>
+		<thumbnail>https://cf.geekdo-images.com/ark-nova-thumb.jpg</thumbnail>
 		<stats>
 			<rating value="8.5" />
 		</stats>

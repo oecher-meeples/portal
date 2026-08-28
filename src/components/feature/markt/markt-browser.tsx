@@ -8,6 +8,7 @@ import { SparePartListingCard } from "@/components/feature/markt/spare-part-list
 import { MarketListingCard } from "@/components/feature/markt/market-listing-card";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 import { CreateSparePartListingDialog } from "@/components/feature/markt/create-spare-part-listing-dialog";
+import { ImportBggListingDialog } from "@/components/feature/markt/import-bgg-listing-dialog";
 
 const TABS = [
   { label: "Kleinanzeigen", value: "kleinanzeigen" },
@@ -19,11 +20,13 @@ export function MarktBrowser({
   spareParts,
   ownMeepleId,
   canManageSpareParts,
+  bggUsername,
 }: {
   listings: MarketListingView[];
   spareParts: SparePartListingView[];
   ownMeepleId: string;
   canManageSpareParts: boolean;
+  bggUsername: string | null;
 }) {
   const [tab, setTab] =
     useState<(typeof TABS)[number]["value"]>("kleinanzeigen");
@@ -32,7 +35,18 @@ export function MarktBrowser({
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between gap-3">
         <PillToggle options={[...TABS]} value={tab} onChange={setTab} />
-        {tab === "kleinanzeigen" && <CreateMarketListingDialog />}
+        {tab === "kleinanzeigen" && (
+          <div className="flex gap-2">
+            {bggUsername && (
+              <ImportBggListingDialog
+                ownListingTitles={listings
+                  .filter((listing) => listing.sellerMeepleId === ownMeepleId)
+                  .map((listing) => listing.title)}
+              />
+            )}
+            <CreateMarketListingDialog />
+          </div>
+        )}
         {tab === "ersatzteile" && <CreateSparePartListingDialog />}
       </div>
 

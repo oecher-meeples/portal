@@ -54,6 +54,7 @@ export default async function MarktPage({
         spareParts={spareParts}
         ownMeepleId={meeple.id}
         canManageSpareParts={canManageSpareParts}
+        bggUsername={meeple.bggUsername}
       />
     </div>
   );

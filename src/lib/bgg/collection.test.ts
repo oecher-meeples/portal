@@ -58,6 +58,7 @@ describe("fetchBggCollection (#255)", () => {
         rating: 8.5,
         forTrade: true,
         wantToPlay: false,
+        imageUrl: "https://cf.geekdo-images.com/ark-nova.jpg",
       },
       {
         bggId: 13,
@@ -65,8 +66,30 @@ describe("fetchBggCollection (#255)", () => {
         rating: null,
         forTrade: false,
         wantToPlay: true,
+        imageUrl: null,
       },
     ]);
+  });
+
+  it("falls back to the thumbnail when no full image is present", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      `<?xml version="1.0" encoding="utf-8"?>
+      <items totalitems="1">
+        <item objecttype="thing" objectid="1" subtype="boardgame" collid="1">
+          <name sortindex="1">Nur Thumbnail</name>
+          <status own="1" fortrade="0" wanttoplay="0" />
+          <thumbnail>https://cf.geekdo-images.com/thumb-only.jpg</thumbnail>
+        </item>
+      </items>`,
+    );
+
+    const result = await fetchBggCollection("some-user");
+
+    expect(result[0].imageUrl).toBe(
+      "https://cf.geekdo-images.com/thumb-only.jpg",
+    );
   });
 
   it("requests only owned, non-expansion items with stats", async () => {
