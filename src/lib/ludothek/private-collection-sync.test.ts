@@ -44,6 +44,13 @@ vi.mock("@/lib/ludothek/board-game-versions", () => ({
     bggId,
     ...(data as object),
   }),
+  toBoardGameTitleData: (input: unknown) => input,
+}));
+
+const translateBggGameDataMock = vi.fn();
+vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
+  translateBggGameData: (...args: unknown[]) =>
+    translateBggGameDataMock(...args),
 }));
 
 const { syncPrivateBggCollection } = await import("./private-collection-sync");
@@ -64,6 +71,11 @@ beforeEach(() => {
   // Default: title not yet in the catalog — most tests exercise the "new
   // title" path unless they explicitly configure an existing one.
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
+  // Default: pass the raw fetched data through untranslated — individual
+  // tests only care that it's forwarded, not about the translation itself.
+  translateBggGameDataMock.mockImplementation((data: unknown) =>
+    Promise.resolve({ data, descriptionTranslationFailed: false }),
+  );
 });
 
 afterEach(() => {
@@ -259,6 +271,85 @@ describe("syncPrivateBggCollection (#255)", () => {
     expect(findOrCreateBoardGameTitleMock).toHaveBeenCalledWith({
       title: "Catan",
       bggId: 13,
+    });
+    expect(result).toEqual({ success: true, imported: 1 });
+  });
+
+  it("repairs a previously incomplete stub (failed earlier import) instead of leaving it empty (#278)", async () => {
+    fetchBggCollectionMock.mockResolvedValue([
+      {
+        bggId: 420805,
+        title: "Black Forest",
+        rating: null,
+        forTrade: false,
+        wantToPlay: false,
+      },
+    ]);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-3",
+      title: "Black Forest",
+      imageUrl: null,
+      description: null,
+      minPlayers: null,
+      maxPlayers: null,
+    } as never);
+    fetchBggGameMock.mockResolvedValue({
+      title: "Black Forest",
+      minPlayers: 1,
+      maxPlayers: 4,
+      mechanics: ["Worker Placement"],
+    });
+    prismaMock.boardGame.update.mockResolvedValue({ id: "game-3" } as never);
+
+    const result = await syncPrivateBggCollection();
+
+    expect(fetchBggGameMock).toHaveBeenCalledWith(420805);
+    expect(prismaMock.boardGame.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "game-3" },
+        data: expect.objectContaining({
+          title: "Black Forest",
+          minPlayers: 1,
+          maxPlayers: 4,
+        }),
+      }),
+    );
+    expect(findOrCreateBoardGameTitleMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true, imported: 1 });
+  });
+
+  it("keeps the existing stub when the repair fetch fails again", async () => {
+    fetchBggCollectionMock.mockResolvedValue([
+      {
+        bggId: 420805,
+        title: "Black Forest",
+        rating: null,
+        forTrade: false,
+        wantToPlay: false,
+      },
+    ]);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-3",
+      title: "Black Forest",
+      imageUrl: null,
+      description: null,
+      minPlayers: null,
+      maxPlayers: null,
+    } as never);
+    fetchBggGameMock.mockRejectedValue(new BggNotFoundError(420805));
+
+    const result = await syncPrivateBggCollection();
+
+    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
+    expect(prismaMock.privateGameCollectionEntry.create).toHaveBeenCalledWith({
+      data: {
+        meepleId: "meeple-1",
+        boardGameId: "game-3",
+        syncedAt: expect.any(Date),
+        rating: null,
+        forTrade: false,
+        wantToPlay: false,
+      },
     });
     expect(result).toEqual({ success: true, imported: 1 });
   });

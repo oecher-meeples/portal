@@ -90,6 +90,16 @@ enum FleaMarketItemStatus {
   FOR_SALE
   RESERVED
   SOLD
+  /// Kassenperson hat den Verkaufserlös an die Verkäufer:in ausgezahlt (#266)
+  /// — explizite Kassierer-Aktion, kein impliziter Zustand.
+  PAID_OUT
+  /// Verkäufer:in hat ein nicht verkauftes Stück wieder abgeholt (#266) —
+  /// von FOR_SALE oder RESERVED aus erreichbar.
+  RETURNED
+  /// Nach Event-Ende, für nicht abgeholte Artikel (#266) — manuelle
+  /// Kassierer-Aktion, kein Cron/Automatismus. Reines Status-Label, keine
+  /// automatische Ludothek-/GameCopy-Buchung (siehe #267).
+  DONATED
 }
 
 enum NewsletterCategory {
@@ -195,6 +205,14 @@ model Meeple {
    * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
    */
   privateCollectionVisible  Boolean   @default(false)
+  /**
+   * Opt-in: täglicher Digest-Newsletter über neue Marktplatz-Angebote
+   * (`MarketListing`, #254). Bewusst ein eigenes Flag statt einer Kategorie
+   * im `NewsletterSubscriber`-Modell — das ist für anonyme/öffentliche
+   * Abonnenten gedacht, eine meeple-only-Kategorie dort würde eine
+   * dauerhafte Sonderfall-Verzweigung auf der Verwaltungsseite erzwingen.
+   */
+  marketNewsletterOptIn     Boolean   @default(false)
   /// Zeitpunkt des letzten manuellen BGG-Collection-Imports (#255-Folge) —
   /// Grundlage für den 1h-Cooldown, unabhängig von den Collection-Einträgen
   /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
@@ -455,6 +473,7 @@ model BoardGame {
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
   lfgPosts                 LfgPost[]
+  marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
 
   @@index([ean])
@@ -539,12 +558,18 @@ model MarketListing {
   priceEuros     Int
   condition      String
   imageUrls      String[]
+  /// Optionaler Link zum Inventar-Titel — gesetzt bei Anlage per "BGG for
+  /// trade importieren" (#275), erlaubt Anzeige/Rückverweis über den
+  /// gemeinsamen `BoardGame`-Datensatz statt einer eigenen bggId (#278).
+  boardGameId    String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  seller Meeple @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  seller    Meeple     @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame? @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
 
   @@index([sellerMeepleId])
+  @@index([boardGameId])
   @@map("market_listings")
 }
 
@@ -684,11 +709,13 @@ model Event {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
-  days                 EventDay[]
-  shifts               Shift[]
-  shelfAssignments     EventShelfAssignment[]
-  explainerAttendances ExplainerAttendance[]
-  fleaMarketItems      FleaMarketItem[]
+  days                      EventDay[]
+  shifts                    Shift[]
+  shelfAssignments          EventShelfAssignment[]
+  explainerAttendances      ExplainerAttendance[]
+  fleaMarketItems           FleaMarketItem[]
+  fleaMarketExternalSellers FleaMarketExternalSeller[]
+  fleaMarketCarts           FleaMarketCart[]
 
   @@map("events")
 }
@@ -879,22 +906,73 @@ model FleaMarketItem {
   id                 String               @id @default(cuid())
   code               String               @unique
   eventId            String
-  sellerMeepleId     String
+  /// Vereinsmitglied als Verkäufer:in — exklusiv zu `externalSellerId`
+  /// (#266: Meeple braucht kein Token, ist über die Anmeldung identifiziert).
+  sellerMeepleId     String?
+  /// Externe, nicht angemeldete Verkäufer:in — exklusiv zu `sellerMeepleId`,
+  /// siehe `FleaMarketExternalSeller` (#266).
+  externalSellerId   String?
   title              String
+  /// Sprache des Spiels — Pflichtfeld im Self-Service-Formular (#266).
+  language           String?
   description        String?
   priceEuros         Int
   status             FleaMarketItemStatus @default(PENDING)
   approvedAt         DateTime?
   approvedByMeepleId String?
+  /// Nur gesetzt, während der Artikel in einem reservierten Warenkorb liegt
+  /// (#266) — leer, sobald der Warenkorb verkauft/aufgelöst wird.
+  cartId             String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
-  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  seller Meeple @relation("FleaMarketItemSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  event          Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seller         Meeple?                   @relation("FleaMarketItemSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  externalSeller FleaMarketExternalSeller? @relation(fields: [externalSellerId], references: [id], onDelete: Cascade)
+  cart           FleaMarketCart?           @relation(fields: [cartId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
   @@index([sellerMeepleId])
+  @@index([externalSellerId])
+  @@index([cartId])
   @@map("flea_market_items")
+}
+
+/// Externe, nicht als Meeple angemeldete Verkäufer:in eines Bring & Buy-Events
+/// (#266) — per E-Mail-Link-Token identifiziert, kein Vereinskonto. Der Token
+/// wird ungültig, sobald keiner ihrer Artikel mehr eine offene Aktion braucht
+/// (siehe `isFleaMarketExternalSellerTokenValid` in lib/bringbuy/status.ts).
+model FleaMarketExternalSeller {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  handle    String
+  email     String
+  token     String   @unique
+  createdAt DateTime @default(now())
+
+  event Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items FleaMarketItem[]
+
+  @@index([eventId])
+  @@map("flea_market_external_sellers")
+}
+
+/// Zwischengespeicherter, reservierter Kassen-Warenkorb (#266) — überlebt
+/// Reload und Geräte-/Sitzungswechsel der Kassenperson. Der aktive, noch
+/// unentschiedene Warenkorb an der Kasse ist reiner Client-State und wird
+/// erst bei "Reservieren" hier persistiert.
+model FleaMarketCart {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  createdAt DateTime @default(now())
+
+  event Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items FleaMarketItem[]
+
+  @@index([eventId])
+  @@map("flea_market_carts")
 }
 
 /// A downloadable file managed by admins (upload, visibility, delete), replacing

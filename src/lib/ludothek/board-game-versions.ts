@@ -1,4 +1,6 @@
 import type { BggGameData, BggVersion } from "@/lib/bgg/client";
+import { normaliseEan } from "@/lib/inventory/ean";
+import type { BoardGameTitleInput } from "@/lib/ludothek/board-games";
 
 const GERMAN_LANGUAGE_PATTERN = /german|deutsch/i;
 
@@ -73,6 +75,36 @@ export function bggDataToTitleInput(bggId: number, data: BggGameData) {
     publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
     author: data.author,
     yearPublished: data.yearPublished ?? undefined,
+  };
+}
+
+/** Dieselbe Feld-Zuordnung wie `createBoardGame()`/`updateBoardGame()` intern
+ * verwenden — hier dupliziert statt aus `board-games.ts` exportiert, weil
+ * dessen "use server" jeden Export zu einer async Server Action zwingt
+ * (#278-Folge: Build-Fehler "Server Actions must be async functions" bei
+ * einer synchronen Export daraus). Vom privaten Collection-Sync genutzt, um
+ * einen zuvor als BGG-Stub angelegten Titel per direktem
+ * `prisma.boardGame.update` zu reparieren, ohne über das `games:manage`-
+ * gated `updateBoardGame()` zu gehen (läuft für jeden Meeple). */
+export function toBoardGameTitleData(input: BoardGameTitleInput) {
+  return {
+    secondaryTitle: input.secondaryTitle || null,
+    bggId: input.bggId ?? null,
+    ean: input.ean ? normaliseEan(input.ean) : null,
+    minPlayers: input.minPlayers ?? null,
+    maxPlayers: input.maxPlayers ?? null,
+    playTimeMinutes: input.playTimeMinutes ?? null,
+    weight: input.weight ?? null,
+    averageRating: input.averageRating ?? null,
+    imageUrl: input.imageUrl || null,
+    description: input.description || null,
+    mechanics: input.mechanics ?? [],
+    explainerVideoUrl: input.explainerVideoUrl || null,
+    languageDependence: input.languageDependence ?? null,
+    publisher: input.publisher ?? [],
+    author: input.author ?? [],
+    yearPublished: input.yearPublished ?? null,
+    ...(input.kind ? { kind: input.kind } : {}),
   };
 }
 

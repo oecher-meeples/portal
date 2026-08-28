@@ -55,6 +55,7 @@ export function GameDetailView({
   availability,
   openLfgPosts,
   createLfgTrigger,
+  marketListingSection,
 }: {
   game: PublicLudothekGame;
   /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
@@ -90,6 +91,10 @@ export function GameDetailView({
    * import so this feature stays isolated from `components/feature/lfg`
    * (#142, see CLAUDE.md layer rules). */
   createLfgTrigger?: ReactNode;
+  /** Fertig gerenderter Marktplatz-Hinweis/-Trigger ("wird verkauft" oder
+   * "Verkaufen"), von der Seite komponiert — analog `createLfgTrigger`, hält
+   * diesen Titel von `components/feature/markt` isoliert (#278). */
+  marketListingSection?: ReactNode;
 }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
@@ -124,6 +129,7 @@ export function GameDetailView({
             </div>
             <div className="flex items-center gap-2">
               {createLfgTrigger}
+              {marketListingSection}
               {bggId && (
                 <Button
                   variant="outline"

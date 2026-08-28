@@ -45,7 +45,7 @@ export async function searchBggGamesAction(query: string) {
  * so geht beim Import nichts verloren, der Admin übersetzt später über den
  * "Übersetzen"-Button im Titel-Editor (`translateDescription()` unten).
  */
-async function translateBggGameData(
+export async function translateBggGameData(
   data: BggGameData,
 ): Promise<{ data: BggGameData; descriptionTranslationFailed: boolean }> {
   const mechanics = translateMechanics(data.mechanics);

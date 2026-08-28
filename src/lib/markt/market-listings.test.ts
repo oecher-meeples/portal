@@ -17,6 +17,7 @@ describe("toMarketListingView", () => {
         condition: "Sehr gut",
         imageUrls: ["https://blob.example/a.png"],
         sellerMeepleId: "meeple-1",
+        boardGame: null,
       },
       {
         displayName: "Jan",
@@ -45,6 +46,7 @@ describe("toMarketListingView", () => {
         discordHandle: null,
         address: null,
       },
+      boardGame: null,
     });
   });
 });
@@ -68,6 +70,7 @@ function listing(
       discordHandle: null,
       address: null,
     },
+    boardGame: null,
     ...overrides,
   };
 }
@@ -90,6 +93,15 @@ describe("parseMarketListingSearchParams", () => {
     expect(parseMarketListingSearchParams({})).toEqual({
       maxPriceEuros: undefined,
       condition: undefined,
+      search: undefined,
+    });
+  });
+
+  it("parses the title search param", () => {
+    expect(parseMarketListingSearchParams({ suche: "Black Forest" })).toEqual({
+      maxPriceEuros: undefined,
+      condition: undefined,
+      search: "Black Forest",
     });
   });
 });
@@ -114,5 +126,15 @@ describe("filterMarketListings", () => {
 
   it("returns everything when no filter is set", () => {
     expect(filterMarketListings(listings, {})).toEqual(listings);
+  });
+
+  it("filters by title search, case-insensitive", () => {
+    const searchable = [
+      listing({ id: "a", title: "Black Forest" }),
+      listing({ id: "b", title: "Catan" }),
+    ];
+    expect(filterMarketListings(searchable, { search: "black" })).toEqual([
+      searchable[0],
+    ]);
   });
 });

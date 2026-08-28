@@ -23,6 +23,8 @@ export interface BggCollectionEntry {
   /** Nur die zwei Stati, die die Übersicht anzeigt — andere werden ignoriert. */
   forTrade: boolean;
   wantToPlay: boolean;
+  /** BGG liefert hier bereits die kleinere Vorschau-Variante des Covers. */
+  imageUrl: string | null;
 }
 
 interface BggCollectionItem {
@@ -30,6 +32,8 @@ interface BggCollectionItem {
   name?: { "#text"?: string } | { "#text"?: string }[];
   status?: { own?: string; fortrade?: string; wanttoplay?: string };
   stats?: { rating?: { value?: string } };
+  image?: string;
+  thumbnail?: string;
 }
 
 interface BggCollectionResponse {
@@ -76,6 +80,7 @@ export async function fetchBggCollection(
         rating: parseNumber(item.stats?.rating?.value),
         forTrade: item.status?.fortrade === "1",
         wantToPlay: item.status?.wanttoplay === "1",
+        imageUrl: item.image ?? item.thumbnail ?? null,
       };
     })
     .filter((entry): entry is BggCollectionEntry => entry !== null);

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
-import { requireCashierRights } from "@/components/feature/admin-bringbuy/cashier-actions";
+import { requireCashierRights } from "@/lib/bringbuy/actions";
 
 /**
  * Cashier-side bulk import (#211) — replaces the former member self-service
