@@ -13,39 +13,66 @@ import {
   BggNotFoundError,
   fetchBggGame,
 } from "@/lib/bgg/client";
-import { bggDataToTitleInput } from "@/lib/ludothek/board-game-versions";
+import {
+  bggDataToTitleInput,
+  toBoardGameTitleData,
+} from "@/lib/ludothek/board-game-versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
+import { translateBggGameData } from "@/lib/ludothek/board-games-bgg-import";
 import {
   canForceImport,
   getImportCooldownEndsAt,
 } from "@/lib/ludothek/private-collection";
 import { formatTimePlain } from "@/lib/utils/format";
 import { sleep } from "@/lib/utils/sleep";
+import type { BoardGame } from "@prisma/client";
 import type { BggCollectionEntry } from "@/lib/bgg/collection";
+
+/** Ein früherer Import ist am `fetchBggGame()`-Aufruf gescheitert und hat nur
+ * Titel + `bggId` hinterlassen (Fallback unten) — an den fehlenden
+ * Kernfeldern zuverlässig erkennbar, unabhängig davon, wie „leer" ein
+ * wirklich spärlicher BGG-Eintrag sonst sein könnte. */
+function isIncompleteStub(boardGame: BoardGame) {
+  return (
+    !boardGame.imageUrl &&
+    !boardGame.description &&
+    boardGame.minPlayers === null &&
+    boardGame.maxPlayers === null
+  );
+}
 
 /**
  * Ein wirklich neuer Titel (kein bereits katalogisierter `bggId`) bekommt
- * dieselben vollen BGG-Metadaten wie beim Vereinsexemplar-Import — nicht nur
- * Titel + BGG-ID (#255-Folge: "Private Spieleexemplare importieren BGG-Daten
- * genau wie Vereinsexemplare"). Schlägt der Einzelabruf fehl (BGG nicht
- * erreichbar/Eintrag inzwischen entfernt), wird der Titel trotzdem mit dem
- * angelegt, was die Collection selbst mitliefert — ein einzelner
- * fehlgeschlagener Titel bricht nicht den gesamten Import ab.
+ * dieselben vollen, übersetzten BGG-Metadaten wie beim Vereinsexemplar-Import
+ * (#255-Folge, #278-Folge: bisher fehlte hier die deutsche Übersetzung aus
+ * `translateBggGameData()`) — nicht nur Titel + BGG-ID. Ein zuvor als Stub
+ * angelegter Titel (voriger Import ist am Einzelabruf gescheitert) wird bei
+ * jedem weiteren Sync erneut versucht, statt für immer leer zu bleiben.
+ * Schlägt der Abruf wieder fehl (BGG nicht erreichbar/Eintrag entfernt),
+ * bleibt der bestehende Titel unangetastet bzw. der Stub-Fallback greift —
+ * ein einzelner fehlgeschlagener Titel bricht nicht den gesamten Import ab.
  */
 async function resolvePrivateTitle(entry: BggCollectionEntry) {
   const existing = await prisma.boardGame.findUnique({
     where: { bggId: entry.bggId },
   });
-  if (existing) return existing;
+  if (existing && !isIncompleteStub(existing)) return existing;
 
   try {
-    const data = await fetchBggGame(entry.bggId);
-    const title = await findOrCreateBoardGameTitle(
-      bggDataToTitleInput(entry.bggId, data),
-    );
+    const rawData = await fetchBggGame(entry.bggId);
+    const { data } = await translateBggGameData(rawData);
+    const input = bggDataToTitleInput(entry.bggId, data);
     await sleep(BGG_REQUEST_THROTTLE_MS);
-    return title;
+
+    if (existing) {
+      return await prisma.boardGame.update({
+        where: { id: existing.id },
+        data: { title: input.title, ...toBoardGameTitleData(input) },
+      });
+    }
+    return await findOrCreateBoardGameTitle(input);
   } catch (error) {
+    if (existing) return existing;
     if (error instanceof BggNotFoundError || error instanceof BggApiError) {
       return findOrCreateBoardGameTitle({
         title: entry.title,
