@@ -36,7 +36,11 @@ Aktueller Stand: **0 Verstöße** repo-weit.
 src/lib/
 ├── auth/       Session, Tier-Ermittlung, Auth-Client
 ├── bgg/        BoardGameGeek-Integration
-├── bringbuy/   Flohmarkt-Regeln
+├── bringbuy/   Flohmarkt-Regeln + Server Actions: Statuswechsel/Warenkorb (`actions.ts`), Token-Anmeldung externer
+│               Verkäufer:innen (`external-sellers.ts`), eigene Artikel für Meeple **und** externe Verkäufer:innen
+│               (`own-items.ts`) — bewusst hier statt in `components/feature/admin-bringbuy/`, weil sowohl die
+│               Kassenansicht als auch die neue Verkäufer-Registrierungsseite (`feature/bringbuy`) darauf zugreifen
+│               und die Layer-Regel keinen Cross-Feature-Import erlaubt (#266)
 ├── content/    News/Content (inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
@@ -119,6 +123,8 @@ widgets/
 │   ├── game-holding-panel.tsx     Detailseiten-Panel: ausleihen, bestätigen, weitergeben, zurückgeben, einlagern
 │   ├── game-actions-menu.tsx      Rechtebasiertes Aktionen-Dropdown für Listen-/Kompakt-Zeilen (#121/#122)
 │   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
+├── bringbuy/
+│   └── register-external-seller-dialog.tsx  Self-Service-Anmeldung externer Bring & Buy-Verkäufer:innen (#266) — vom Gäste-Bereich (`feature/guest-area`) genutzt, darf aber nicht aus `feature/bringbuy` importieren (Layer-Regel), deshalb hier
 └── board-game/
     ├── board-game-form-values.ts        Form-State ↔ Titel-/Exemplar-Input (`BoardGameFormValues`, `boardGameFormTo…`) — geteilt von allen Formularen unten
     ├── edit-board-game-title.tsx        Titel-Stammdaten-Formularfelder (Titel, EAN, `kind`, BGG-Felder, Spieleranzahl, Beschreibung, …)
@@ -141,7 +147,7 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 
 ## `src/components/feature/` — je ein Anwendungsfall
 
-28 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, …). Typisches Innenleben:
+31 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, `bringbuy`, …). Typisches Innenleben:
 
 - `<domäne>-view.tsx` — Smart Component, verdrahtet ui/entities/widgets mit State & Actions
 - `actions.ts` — Server Actions dieses Anwendungsfalls

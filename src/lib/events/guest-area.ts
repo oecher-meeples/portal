@@ -281,7 +281,7 @@ const GUEST_VISIBLE_STATUSES: FleaMarketItemStatus[] = ["FOR_SALE", "RESERVED"];
  * Flea market items visible in the guest area: never PENDING (not yet approved)
  * and SOLD items are hidden too, since they can no longer be bought (CONTEXT.md
  * "Flohmarkt-Artikel"). A separate, read-only query — no duplicate of the
- * cashier-side query in `src/components/feature/admin-bringbuy/cashier-actions.ts`.
+ * cashier-side query in `src/lib/bringbuy/actions.ts`.
  */
 export async function getGuestFleaMarketItems(
   eventId: string,

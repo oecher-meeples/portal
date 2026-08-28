@@ -149,4 +149,7 @@ export const FLEA_MARKET_ITEM_STATUS_LABELS: Record<
   FOR_SALE: "Im Verkauf",
   RESERVED: "Reserviert",
   SOLD: "Verkauft",
+  PAID_OUT: "Ausgezahlt",
+  RETURNED: "Zurückgegeben",
+  DONATED: "Gespendet",
 };
