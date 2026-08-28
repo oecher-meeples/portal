@@ -226,7 +226,17 @@ export function PostForm({
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="body">Inhalt (Markdown)</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="body">Inhalt (Markdown)</Label>
+            <a
+              href="https://de.wikipedia.org/wiki/Markdown"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground text-xs underline underline-offset-2"
+            >
+              Was ist Markdown?
+            </a>
+          </div>
           <div className="flex gap-1">
             <Button
               type="button"

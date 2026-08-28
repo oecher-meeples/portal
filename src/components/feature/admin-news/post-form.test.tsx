@@ -31,6 +31,18 @@ async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("PostForm", () => {
+  it("links to a Markdown explanation next to the content label (#260)", () => {
+    render(<PostForm />);
+
+    const link = screen.getByRole("link", { name: "Was ist Markdown?" });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://de.wikipedia.org/wiki/Markdown",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("navigates back to the post list on success", async () => {
     const user = userEvent.setup();
     createPostMock.mockResolvedValue({ success: true, id: "post-1" });
