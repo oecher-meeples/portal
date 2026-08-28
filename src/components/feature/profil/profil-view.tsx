@@ -10,6 +10,7 @@ import { ResignMembershipPanel } from "@/components/feature/profil/resign-member
 import { DataExportPanel } from "@/components/feature/profil/data-export-panel";
 import { DeletionRequestPanel } from "@/components/feature/profil/deletion-request-panel";
 import { NewsletterPreferencePanel } from "@/components/feature/profil/newsletter-preference-panel";
+import { MarketNewsletterToggle } from "@/components/widgets/market-newsletter-toggle";
 import type { OpenHoldingsSummary } from "@/lib/members/open-holdings";
 import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
 import { formatDatePlain } from "@/lib/utils/format";
@@ -108,7 +109,6 @@ export function ProfilView({
                 address={meeple.address}
                 shareAddress={meeple.shareAddress}
                 doorbellNote={meeple.doorbellNote}
-                marketNewsletterOptIn={meeple.marketNewsletterOptIn}
               />
             </div>
           </div>
@@ -127,6 +127,11 @@ export function ProfilView({
               <NewsletterPreferencePanel
                 initialEnabled={newsletterPreference.enabled}
                 initialCategories={newsletterPreference.categories}
+              />
+            </div>
+            <div className="mt-4 border-t pt-4">
+              <MarketNewsletterToggle
+                initialEnabled={meeple.marketNewsletterOptIn}
               />
             </div>
           </div>

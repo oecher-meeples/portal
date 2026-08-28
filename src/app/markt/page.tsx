@@ -8,6 +8,7 @@ import {
   toMarketListingView,
 } from "@/lib/markt/market-listings";
 import { MarktBrowser } from "@/components/feature/markt/markt-browser";
+import { MarketNewsletterToggle } from "@/components/widgets/market-newsletter-toggle";
 
 export default async function MarktPage({
   searchParams,
@@ -52,6 +53,11 @@ export default async function MarktPage({
         eyebrow="Community-Handel"
         title="Marktplatz & Ersatzteillager"
         description="Interner Kleinanzeigen-Markt zwischen Mitgliedern – plus das Ausschlacht-Lager für einzelne Komponenten."
+        action={
+          <MarketNewsletterToggle
+            initialEnabled={meeple.marketNewsletterOptIn}
+          />
+        }
       />
       <MarktBrowser
         listings={listings}

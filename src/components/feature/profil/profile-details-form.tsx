@@ -19,7 +19,6 @@ export function ProfileDetailsForm({
   shareAddress: initialShareAddress,
   doorbellNote: initialDoorbellNote,
   privateCollectionVisible: initialPrivateCollectionVisible,
-  marketNewsletterOptIn: initialMarketNewsletterOptIn,
 }: {
   displayName: string;
   bggUsername: string | null;
@@ -31,7 +30,6 @@ export function ProfileDetailsForm({
   shareAddress: boolean;
   doorbellNote: string | null;
   privateCollectionVisible: boolean;
-  marketNewsletterOptIn: boolean;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bggUsername, setBggUsername] = useState(initialBggUsername ?? "");
@@ -49,9 +47,6 @@ export function ProfileDetailsForm({
   );
   const [shareAddress, setShareAddress] = useState(
     Boolean(initialShareAddress),
-  );
-  const [marketNewsletterOptIn, setMarketNewsletterOptIn] = useState(
-    Boolean(initialMarketNewsletterOptIn),
   );
   const [doorbellNote, setDoorbellNote] = useState(initialDoorbellNote ?? "");
   const [message, setMessage] = useState<string | null>(null);
@@ -75,7 +70,6 @@ export function ProfileDetailsForm({
       shareAddress,
       doorbellNote,
       privateCollectionVisible,
-      marketNewsletterOptIn,
     });
     setIsSaving(false);
 
@@ -177,18 +171,6 @@ export function ProfileDetailsForm({
       <p className="text-muted-foreground -mt-2.5 text-xs">
         Deine importierte BGG-Collection wird für andere eingeloggte Meeples im
         Ludothek-Filter „auch private anzeigen“ sichtbar.
-      </p>
-      <Label className="flex items-center justify-between gap-2 font-normal">
-        Marktplatz-Newsletter
-        <Switch
-          id="marketNewsletterOptIn"
-          checked={marketNewsletterOptIn}
-          onCheckedChange={setMarketNewsletterOptIn}
-        />
-      </Label>
-      <p className="text-muted-foreground -mt-2.5 text-xs">
-        Täglicher Digest per E-Mail, wenn es an diesem Tag neue Marktplatz-
-        Angebote gab.
       </p>
       <TextAreaField
         id="doorbellNote"
