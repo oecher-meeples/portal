@@ -36,9 +36,10 @@ describe("getLegalDocument", () => {
 });
 
 describe("listAllLegalDocuments", () => {
-  it("returns all four documents in the fixed LEGAL_DOCS order", async () => {
+  it("returns all documents in the fixed LEGAL_DOCS order", async () => {
     prismaMock.legalDocument.findMany.mockResolvedValue([
       { slug: "beitragsordnung" },
+      { slug: "urheberrechte" },
       { slug: "satzung" },
       { slug: "impressum" },
       { slug: "datenschutz" },
@@ -51,6 +52,7 @@ describe("listAllLegalDocuments", () => {
       "datenschutz",
       "impressum",
       "beitragsordnung",
+      "urheberrechte",
     ]);
   });
 

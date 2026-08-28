@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { LEGAL_DOCS } from "../../src/data/downloads";
 import { DEMO_LEGAL_DOCUMENTS } from "./demo-legal-documents";
 
-const FIXED_SLUGS = ["satzung", "datenschutz", "impressum", "beitragsordnung"];
-
 describe("DEMO_LEGAL_DOCUMENTS", () => {
-  it("has exactly the four fixed slugs", () => {
+  it("has exactly the fixed LEGAL_DOCS slugs", () => {
     const slugs = DEMO_LEGAL_DOCUMENTS.map((doc) => doc.slug);
-    expect(slugs.sort()).toEqual([...FIXED_SLUGS].sort());
+    const fixedSlugs = LEGAL_DOCS.map((doc) => doc.slug);
+    expect(slugs.sort()).toEqual([...fixedSlugs].sort());
   });
 
   it("has a non-empty sections list for every entry", () => {

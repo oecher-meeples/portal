@@ -178,4 +178,39 @@ export const DEMO_LEGAL_DOCUMENTS: {
       },
     ],
   },
+  {
+    slug: "urheberrechte",
+    title: LEGAL_DOCS.find((doc) => doc.slug === "urheberrechte")!.title,
+    pdfFileUrl: null,
+    sections: [
+      {
+        id: "bilder",
+        heading: "Bilder und Grafiken",
+        paragraphs: [
+          "Aktuell setzt das Portal keine attributionspflichtigen Stock-Bilder oder -Grafiken ein. Alle verwendeten visuellen Assets (Logo, Hintergrundmuster) sind eigenes Vereinsmaterial.",
+          "Ein früher auf der Vorgängerseite genutztes Stock-Bild („Aachen Skyline“, #41744895, Urheber: JiSign, Quelle: Fotolia) ist im aktuellen Portal nicht mehr im Einsatz.",
+        ],
+      },
+      {
+        id: "icons",
+        heading: "Icons",
+        paragraphs: [
+          "Die im Portal verwendeten Icons stammen aus der Bibliothek „lucide-react“ (MIT-Lizenz).",
+        ],
+        links: [
+          {
+            label: "Third-Party-Lizenzverzeichnis",
+            href: "/THIRD-PARTY-LICENSES.md",
+          },
+        ],
+      },
+      {
+        id: "fonts",
+        heading: "Web-Fonts",
+        paragraphs: [
+          "Die Schriftarten „Geist“ und „Geist Mono“ werden über Google Fonts eingebunden. Beide stehen unter der SIL Open Font License und erfordern keine Urhebernennung im laufenden Betrieb.",
+        ],
+      },
+    ],
+  },
 ];
