@@ -38,19 +38,21 @@ function MarketImageThumbnail({
   onSetCover: () => void;
 }) {
   return (
-    <div className="group relative">
-      <CoverMedia
-        imageUrl={url}
-        alt="Hochgeladenes Bild"
-        aspect="aspect-square"
-        fit="contain"
-      />
-      {isCover && (
-        <span className="bg-primary text-primary-foreground absolute top-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
-          Titelbild
-        </span>
-      )}
-      <div className="absolute right-1 bottom-1 flex gap-1">
+    <div className="border-border flex flex-col gap-1.5 rounded-lg border p-1.5">
+      <div className="relative">
+        <CoverMedia
+          imageUrl={url}
+          alt="Hochgeladenes Bild"
+          aspect="aspect-square"
+          fit="contain"
+        />
+        {isCover && (
+          <span className="bg-primary text-primary-foreground absolute top-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+            Titelbild
+          </span>
+        )}
+      </div>
+      <div className="flex justify-center gap-1">
         {!isCover && (
           <Button
             type="button"
@@ -251,7 +253,7 @@ export function MarketListingFields({
           <p className="text-destructive text-sm">{uploadError}</p>
         )}
         {imageUrls.length > 0 && (
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {imageUrls.map((url, index) => (
               <MarketImageThumbnail
                 key={url}
