@@ -2,13 +2,19 @@ import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { prisma } from "@/lib/utils/prisma";
 
+/** Nur die wirklich privaten Felder auf oberster Ebene — Titel/Bild/Slug
+ * kommen über die `boardGame`-Relation, nicht als eigene Kopien (#310):
+ * private und Vereinsspiele sind beide dasselbe `BoardGame`-Titelobjekt. */
 export type OwnPrivateCollectionEntry = {
   id: string;
-  title: string;
-  imageUrl: string | null;
   rating: number | null;
   forTrade: boolean;
   wantToPlay: boolean;
+  boardGame: {
+    slug: string;
+    title: string;
+    imageUrl: string | null;
+  };
 };
 
 /**
@@ -20,7 +26,7 @@ export type OwnPrivateCollectionEntry = {
 export async function getOwnPrivateCollection(
   meepleId: string,
 ): Promise<OwnPrivateCollectionEntry[]> {
-  const entries = await prisma.privateGameCollectionEntry.findMany({
+  return prisma.privateGameCollectionEntry.findMany({
     where: { meepleId },
     orderBy: { boardGame: { title: "asc" } },
     select: {
@@ -28,17 +34,9 @@ export async function getOwnPrivateCollection(
       rating: true,
       forTrade: true,
       wantToPlay: true,
-      boardGame: { select: { title: true, imageUrl: true } },
+      boardGame: { select: { slug: true, title: true, imageUrl: true } },
     },
   });
-  return entries.map((entry) => ({
-    id: entry.id,
-    title: entry.boardGame.title,
-    imageUrl: entry.boardGame.imageUrl,
-    rating: entry.rating,
-    forTrade: entry.forTrade,
-    wantToPlay: entry.wantToPlay,
-  }));
 }
 
 const IMPORT_COOLDOWN_MS = 60 * 60 * 1000;
