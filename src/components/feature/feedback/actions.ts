@@ -6,10 +6,21 @@ import {
   GithubApiError,
 } from "@/lib/feedback/github-client";
 
+/** Präfix macht in der Issue-Liste auf einen Blick klar: extern über den
+ * Feedback-Button eingereicht, nicht intern von einer Mitwirkenden angelegt. */
+const FEEDBACK_TITLE_PREFIX = "[Feedback]";
+
+/** Der GitHub-Issue-Autor ist technisch immer der Owner des `GITHUB_TOKEN`,
+ * nicht das einreichende Meeple — die Präambel macht die echte Herkunft im
+ * Body sichtbar. */
+function buildFeedbackBody(displayName: string, message: string): string {
+  return `> Über den Feedback-Button auf der Website eingereicht von ${displayName}.\n\n${message}`;
+}
+
 /** Käfer-Icon im Header (#282) — jeder eingeloggte Meeple darf Feedback
  * einreichen, kein zusätzliches Permission-Gate. */
 export async function submitFeedback(subject: string, body: string) {
-  await requireMeeple();
+  const meeple = await requireMeeple();
 
   const trimmedSubject = subject.trim();
   const trimmedBody = body.trim();
@@ -21,7 +32,10 @@ export async function submitFeedback(subject: string, body: string) {
   }
 
   try {
-    await createFeedbackSubIssue(trimmedSubject, trimmedBody);
+    await createFeedbackSubIssue(
+      `${FEEDBACK_TITLE_PREFIX} ${trimmedSubject}`,
+      buildFeedbackBody(meeple.displayName, trimmedBody),
+    );
     return { success: true as const };
   } catch (error) {
     if (error instanceof GithubApiError) {

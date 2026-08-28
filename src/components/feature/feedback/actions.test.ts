@@ -16,7 +16,10 @@ vi.mock("@/lib/feedback/github-client", () => ({
 const { submitFeedback } = await import("./actions");
 
 beforeEach(() => {
-  requireMeepleMock.mockResolvedValue({ id: "meeple-1" });
+  requireMeepleMock.mockResolvedValue({
+    id: "meeple-1",
+    displayName: "Alex",
+  });
 });
 
 describe("submitFeedback", () => {
@@ -41,7 +44,7 @@ describe("submitFeedback", () => {
     expect(createFeedbackSubIssueMock).not.toHaveBeenCalled();
   });
 
-  it("trims and forwards subject/body to createFeedbackSubIssue", async () => {
+  it("prefixes the title and prepends a preamble naming the actual submitter", async () => {
     createFeedbackSubIssueMock.mockResolvedValue({
       number: 320,
       url: "https://github.com/oecher-meeples/portal/issues/320",
@@ -50,7 +53,10 @@ describe("submitFeedback", () => {
     const result = await submitFeedback("  Betreff  ", "  Text  ");
 
     expect(result).toEqual({ success: true });
-    expect(createFeedbackSubIssueMock).toHaveBeenCalledWith("Betreff", "Text");
+    expect(createFeedbackSubIssueMock).toHaveBeenCalledWith(
+      "[Feedback] Betreff",
+      "> Über den Feedback-Button auf der Website eingereicht von Alex.\n\nText",
+    );
   });
 
   it("surfaces a GithubApiError as a user-facing message instead of throwing", async () => {
