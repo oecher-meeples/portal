@@ -473,6 +473,7 @@ model BoardGame {
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
   lfgPosts                 LfgPost[]
+  marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
 
   @@index([ean])
@@ -557,12 +558,18 @@ model MarketListing {
   priceEuros     Int
   condition      String
   imageUrls      String[]
+  /// Optionaler Link zum Inventar-Titel — gesetzt bei Anlage per "BGG for
+  /// trade importieren" (#275), erlaubt Anzeige/Rückverweis über den
+  /// gemeinsamen `BoardGame`-Datensatz statt einer eigenen bggId (#278).
+  boardGameId    String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  seller Meeple @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  seller    Meeple     @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame? @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
 
   @@index([sellerMeepleId])
+  @@index([boardGameId])
   @@map("market_listings")
 }
 

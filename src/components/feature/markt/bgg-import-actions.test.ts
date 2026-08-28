@@ -27,6 +27,15 @@ vi.mock("@/components/feature/markt/actions", () => ({
   createMarketListing: (...args: unknown[]) => createMarketListingMock(...args),
 }));
 
+const boardGameFindUniqueMock = vi.fn();
+vi.mock("@/lib/utils/prisma", () => ({
+  prisma: {
+    boardGame: {
+      findUnique: (...args: unknown[]) => boardGameFindUniqueMock(...args),
+    },
+  },
+}));
+
 const { fetchOwnBggForTradeEntries, createMarketListingFromBgg } =
   await import("./bgg-import-actions");
 
@@ -39,6 +48,8 @@ beforeEach(() => {
   putMock.mockReset();
   createMarketListingMock.mockReset();
   createMarketListingMock.mockResolvedValue({ success: true, id: "listing-1" });
+  boardGameFindUniqueMock.mockReset();
+  boardGameFindUniqueMock.mockResolvedValue(null);
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
@@ -109,8 +120,30 @@ describe("createMarketListingFromBgg", () => {
       priceEuros: 30,
       condition: "Sehr gut",
       imageUrls: ["https://blob/bgg-1.jpg"],
+      boardGameId: null,
     });
     expect(result).toEqual({ success: true, id: "listing-1" });
+  });
+
+  it("links the listing to the matching inventory title (#278)", async () => {
+    putMock.mockResolvedValue({ url: "https://blob/bgg-1.jpg" });
+    boardGameFindUniqueMock.mockResolvedValue({ id: "board-game-1" });
+
+    await createMarketListingFromBgg({
+      bggId: 1,
+      title: "Ark Nova",
+      imageUrl: "https://img/1.jpg",
+      priceEuros: 30,
+      condition: "Sehr gut",
+    });
+
+    expect(boardGameFindUniqueMock).toHaveBeenCalledWith({
+      where: { bggId: 1 },
+      select: { id: true },
+    });
+    expect(createMarketListingMock).toHaveBeenCalledWith(
+      expect.objectContaining({ boardGameId: "board-game-1" }),
+    );
   });
 
   it("creates the listing without an image when there is none to import", async () => {

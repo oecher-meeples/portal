@@ -16,6 +16,10 @@ export type MarketListingInput = {
   priceEuros: number;
   condition: string;
   imageUrls?: string[];
+  /** Link zum Inventar-Titel (#278) — nur bei Anlage per BGG-Import gesetzt,
+   * `undefined` in den normalen Formularen lässt einen bestehenden Link beim
+   * Bearbeiten unangetastet (Prisma ignoriert `undefined`-Felder im Update). */
+  boardGameId?: string | null;
 };
 
 function validateMarketListingInput(input: MarketListingInput) {
@@ -38,6 +42,7 @@ function toMarketListingData(input: MarketListingInput) {
     priceEuros: input.priceEuros,
     condition: input.condition.trim(),
     imageUrls: input.imageUrls ?? [],
+    boardGameId: input.boardGameId,
   };
 }
 

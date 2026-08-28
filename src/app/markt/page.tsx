@@ -15,7 +15,8 @@ export default async function MarktPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { user, meeple } = await requireMember();
-  const filters = parseMarketListingSearchParams(await searchParams);
+  const rawSearchParams = await searchParams;
+  const filters = parseMarketListingSearchParams(rawSearchParams);
   const canManageSpareParts = await hasPermissionInCurrentView(
     user.id,
     "games:manage",
@@ -23,7 +24,10 @@ export default async function MarktPage({
 
   const [marketListings, sparePartListings] = await Promise.all([
     prisma.marketListing.findMany({
-      include: { seller: true },
+      include: {
+        seller: true,
+        boardGame: { select: { slug: true, bggId: true } },
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.sparePartListing.findMany({
@@ -55,6 +59,9 @@ export default async function MarktPage({
         ownMeepleId={meeple.id}
         canManageSpareParts={canManageSpareParts}
         bggUsername={meeple.bggUsername}
+        basePath="/markt"
+        rawSearchParams={rawSearchParams}
+        search={filters.search ?? ""}
       />
     </div>
   );

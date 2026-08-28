@@ -1,6 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
+import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
 import {
   BggCollectionUnavailableError,
@@ -99,7 +100,10 @@ export type CreateMarketListingFromBggInput = {
 };
 
 /** Legt eine Anzeige aus einem BGG-"for trade"-Eintrag an (#275) — Titel und
- * Bild kommen aus BGG, Beschreibung/Preis/Zustand pflegt der Meeple selbst. */
+ * Bild kommen aus BGG, Beschreibung/Preis/Zustand pflegt der Meeple selbst.
+ * Existiert der Titel bereits im Inventar (per `bggId` erkannt), wird die
+ * Anzeige damit verknüpft (#278) statt eine eigene BGG-Referenz zu speichern
+ * — der bestehende `BoardGame`-Datensatz trägt bereits den BGG-Link. */
 export async function createMarketListingFromBgg(
   input: CreateMarketListingFromBggInput,
 ) {
@@ -111,11 +115,17 @@ export async function createMarketListingFromBgg(
     if (uploaded) imageUrls.push(uploaded);
   }
 
+  const matchingBoardGame = await prisma.boardGame.findUnique({
+    where: { bggId: input.bggId },
+    select: { id: true },
+  });
+
   return createMarketListing({
     title: input.title,
     description: input.description,
     priceEuros: input.priceEuros,
     condition: input.condition,
     imageUrls,
+    boardGameId: matchingBoardGame?.id ?? null,
   });
 }

@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { PillToggle } from "@/components/ui/pill-toggle";
+import { Input } from "@/components/ui/input";
+import { useDebouncedValue } from "@/components/ui/use-debounced-value";
+import { buildHref } from "@/lib/utils/query-string";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 import type { SparePartListingView } from "@/lib/inventory/spare-parts";
 import { SparePartListingCard } from "@/components/feature/markt/spare-part-listing-view";
@@ -21,20 +26,61 @@ export function MarktBrowser({
   ownMeepleId,
   canManageSpareParts,
   bggUsername,
+  basePath,
+  rawSearchParams,
+  search: initialSearch,
 }: {
   listings: MarketListingView[];
   spareParts: SparePartListingView[];
   ownMeepleId: string;
   canManageSpareParts: boolean;
   bggUsername: string | null;
+  basePath: string;
+  rawSearchParams: Record<string, string | string[] | undefined>;
+  /** Vorbefüllte Titelsuche aus der URL (`?suche=`, #278-Folge) — z. B. per
+   * Link von der Titel-Detailseite aus vorausgefüllt. */
+  search: string;
 }) {
   const [tab, setTab] =
     useState<(typeof TABS)[number]["value"]>("kleinanzeigen");
+  const router = useRouter();
+  const [search, setSearch] = useState(initialSearch);
+  const debouncedSearch = useDebouncedValue(search);
+
+  useEffect(() => {
+    if (debouncedSearch === initialSearch) return;
+    router.replace(
+      buildHref(basePath, rawSearchParams, {
+        suche: debouncedSearch || undefined,
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
+  }, [debouncedSearch]);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <PillToggle options={[...TABS]} value={tab} onChange={setTab} />
+        {tab === "kleinanzeigen" && (
+          <div className="relative w-64 max-w-full">
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Anzeigen durchsuchen …"
+              className={search ? "pr-8" : undefined}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Suche leeren"
+                className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-2 flex items-center"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+        )}
         {tab === "kleinanzeigen" && (
           <div className="flex gap-2">
             {bggUsername && (

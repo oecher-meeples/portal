@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { Plus, Tag } from "lucide-react";
 import { prisma } from "@/lib/utils/prisma";
 import { Button } from "@/components/ui/button";
 import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
+import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getCurrentMeeple } from "@/lib/members/meeples";
@@ -234,6 +236,37 @@ export default async function GameDetailPage({
     />
   );
 
+  // Existiert bereits (mind.) eine Marktplatz-Anzeige für diesen Titel,
+  // verlinkt der Button auf die vorgefilterte Übersicht statt auf eine
+  // einzelne Anzeige (#278-Folge) — bei mehreren Exemplaren/Anzeigen sollen
+  // alle sichtbar sein, nicht nur die zuletzt angelegte.
+  const hasActiveMarketListing = await prisma.marketListing.findFirst({
+    where: { boardGameId: game.boardGameId },
+    select: { id: true },
+  });
+  const marketListingSection = hasActiveMarketListing ? (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-1.5"
+      render={<Link href={`/markt?suche=${encodeURIComponent(game.title)}`} />}
+    >
+      <Tag className="size-4" />
+      Wird gerade verkauft
+    </Button>
+  ) : (
+    <CreateMarketListingDialog
+      trigger={
+        <Button variant="outline" size="sm" className="gap-1.5">
+          <Tag className="size-4" />
+          Verkaufen
+        </Button>
+      }
+      initialTitle={game.title}
+      boardGameId={game.boardGameId}
+    />
+  );
+
   return (
     <GameDetailView
       game={toPublicGame(game)}
@@ -247,6 +280,7 @@ export default async function GameDetailPage({
       canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
       createLfgTrigger={createLfgTrigger}
+      marketListingSection={marketListingSection}
     />
   );
 }
