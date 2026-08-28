@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ActionDialog } from "@/components/ui/action-dialog";
+import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { MarketListingFields } from "@/components/feature/markt/market-listing-fields";
-import { updateOwnMarketListing } from "@/components/feature/markt/actions";
+import {
+  updateOwnMarketListing,
+  deleteOwnMarketListing,
+} from "@/components/feature/markt/actions";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
 export function EditMarketListingDialog({
@@ -12,6 +17,7 @@ export function EditMarketListingDialog({
 }: {
   listing: MarketListingView;
 }) {
+  const router = useRouter();
   const [title, setTitle] = useState(listing.title);
   const [description, setDescription] = useState(listing.description ?? "");
   const [priceEuros, setPriceEuros] = useState(String(listing.priceEuros));
@@ -59,6 +65,16 @@ export function EditMarketListingDialog({
         imageUrls={imageUrls}
         onImageUrlsChange={setImageUrls}
       />
+      <ActionButton
+        variant="destructive"
+        size="sm"
+        className="self-start"
+        confirm="Diese Anzeige wirklich löschen?"
+        action={() => deleteOwnMarketListing(listing.id)}
+        onSuccess={() => router.push("/markt")}
+      >
+        Anzeige löschen
+      </ActionButton>
     </ActionDialog>
   );
 }
