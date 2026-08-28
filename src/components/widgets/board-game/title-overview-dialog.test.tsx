@@ -232,7 +232,7 @@ describe("TitleOverviewDialog (#203/#203-Folge)", () => {
     expect(onSecondaryTitleChange).toHaveBeenCalledWith("");
   });
 
-  it("promotes an alternate name to the main title", async () => {
+  it("promotes an alternate name to the main title and moves the previous title into the (now visible) secondary title, when none was set (#285)", async () => {
     const user = userEvent.setup();
     listAlternateNamesMock.mockResolvedValue({
       success: true,
@@ -240,6 +240,7 @@ describe("TitleOverviewDialog (#203/#203-Folge)", () => {
     });
     promoteAlternateNameToTitleMock.mockResolvedValue({ success: true });
     const onTitleChange = vi.fn();
+    const onSecondaryTitleChange = vi.fn();
 
     render(
       <TitleOverviewDialog
@@ -247,7 +248,7 @@ describe("TitleOverviewDialog (#203/#203-Folge)", () => {
         title="Die Siedler von Catan"
         secondaryTitle=""
         onTitleChange={onTitleChange}
-        onSecondaryTitleChange={vi.fn()}
+        onSecondaryTitleChange={onSecondaryTitleChange}
       />,
     );
     await openDialog(user);
@@ -262,6 +263,43 @@ describe("TitleOverviewDialog (#203/#203-Folge)", () => {
       expect(promoteAlternateNameToTitleMock).toHaveBeenCalledWith("alt-1"),
     );
     expect(onTitleChange).toHaveBeenCalledWith("Catan");
+    expect(onSecondaryTitleChange).toHaveBeenCalledWith(
+      "Die Siedler von Catan",
+    );
+  });
+
+  it("promotes an alternate name to the main title without touching an already-set secondary title (#285)", async () => {
+    const user = userEvent.setup();
+    listAlternateNamesMock.mockResolvedValue({
+      success: true,
+      alternateNames: [{ id: "alt-1", name: "Catan", note: null }],
+    });
+    promoteAlternateNameToTitleMock.mockResolvedValue({ success: true });
+    const onTitleChange = vi.fn();
+    const onSecondaryTitleChange = vi.fn();
+
+    render(
+      <TitleOverviewDialog
+        boardGameId="game-1"
+        title="Die Siedler von Catan"
+        secondaryTitle="Ark Nova"
+        onTitleChange={onTitleChange}
+        onSecondaryTitleChange={onSecondaryTitleChange}
+      />,
+    );
+    await openDialog(user);
+
+    await screen.findByText("Catan");
+    const row = screen.getByText("Catan").closest("li")!;
+    await user.click(
+      within(row).getByRole("button", { name: "Als Haupttitel verwenden" }),
+    );
+
+    await waitFor(() =>
+      expect(promoteAlternateNameToTitleMock).toHaveBeenCalledWith("alt-1"),
+    );
+    expect(onTitleChange).toHaveBeenCalledWith("Catan");
+    expect(onSecondaryTitleChange).not.toHaveBeenCalled();
   });
 
   it("promotes an alternate name to the secondary title", async () => {
