@@ -38,6 +38,7 @@ import {
   ShiftDialog,
   type HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
+import { ShiftPlanCsvExportButton } from "@/components/feature/admin-events/shift-plan-csv-export-button";
 import { timeInputValue } from "@/components/ui/time-picker";
 
 export type { PlanDay, PlanShift };
@@ -287,7 +288,8 @@ export function ShiftPlanEditor({
               value={day.id}
               className="flex flex-col gap-2"
             >
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
+                <ShiftPlanCsvExportButton dayId={day.id} />
                 <ShiftDialog
                   eventId={eventId}
                   helperRoles={helperRoles}
