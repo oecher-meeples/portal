@@ -1,4 +1,4 @@
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
@@ -12,25 +12,22 @@ export function MarketListingDetailView({
   return (
     <div className="grid max-w-3xl gap-6 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
-        {images ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external blob storage urls
-          <img
-            src={images[0]}
-            alt={listing.title}
-            className="aspect-square w-full rounded-md border object-cover"
-          />
-        ) : (
-          <PlaceholderMedia label="FOTO" aspect="aspect-square" />
-        )}
+        <CoverMedia
+          imageUrl={images?.[0] ?? null}
+          alt={listing.title}
+          label="FOTO"
+          aspect="aspect-square"
+          fit="contain"
+        />
         {images && images.length > 1 && (
           <div className="grid grid-cols-3 gap-2">
             {images.slice(1).map((url) => (
-              // eslint-disable-next-line @next/next/no-img-element -- external blob storage urls
-              <img
+              <CoverMedia
                 key={url}
-                src={url}
+                imageUrl={url}
                 alt={listing.title}
-                className="aspect-square w-full rounded-md border object-cover"
+                aspect="aspect-square"
+                fit="contain"
               />
             ))}
           </div>
