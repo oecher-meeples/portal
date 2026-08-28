@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { ActionButton } from "@/components/ui/action-button";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-listing-dialog";
@@ -18,7 +18,12 @@ export function MarketListingCard({
   return (
     <div className="bg-card flex flex-col overflow-hidden rounded-lg border">
       <Link href={`/markt/${listing.id}`}>
-        <PlaceholderMedia label="FOTO" />
+        <CoverMedia
+          imageUrl={listing.imageUrls[0] ?? null}
+          alt={listing.title}
+          label="FOTO"
+          fit="contain"
+        />
       </Link>
       <div className="flex flex-1 flex-col gap-1 p-4">
         <div className="flex items-start justify-between gap-2">
