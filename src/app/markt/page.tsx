@@ -1,4 +1,4 @@
-import { requireMember } from "@/lib/auth/session";
+import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { toSparePartListingView } from "@/lib/inventory/spare-parts";
@@ -14,8 +14,12 @@ export default async function MarktPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { meeple } = await requireMember();
+  const { user, meeple } = await requireMember();
   const filters = parseMarketListingSearchParams(await searchParams);
+  const canManageSpareParts = await hasPermissionInCurrentView(
+    user.id,
+    "games:manage",
+  );
 
   const [marketListings, sparePartListings] = await Promise.all([
     prisma.marketListing.findMany({
@@ -49,6 +53,7 @@ export default async function MarktPage({
         listings={listings}
         spareParts={spareParts}
         ownMeepleId={meeple.id}
+        canManageSpareParts={canManageSpareParts}
       />
     </div>
   );

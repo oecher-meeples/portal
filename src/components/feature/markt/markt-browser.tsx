@@ -7,6 +7,7 @@ import type { SparePartListingView } from "@/lib/inventory/spare-parts";
 import { SparePartListingCard } from "@/components/feature/markt/spare-part-listing-view";
 import { MarketListingCard } from "@/components/feature/markt/market-listing-card";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
+import { CreateSparePartListingDialog } from "@/components/feature/markt/create-spare-part-listing-dialog";
 
 const TABS = [
   { label: "Kleinanzeigen", value: "kleinanzeigen" },
@@ -17,10 +18,12 @@ export function MarktBrowser({
   listings,
   spareParts,
   ownMeepleId,
+  canManageSpareParts,
 }: {
   listings: MarketListingView[];
   spareParts: SparePartListingView[];
   ownMeepleId: string;
+  canManageSpareParts: boolean;
 }) {
   const [tab, setTab] =
     useState<(typeof TABS)[number]["value"]>("kleinanzeigen");
@@ -30,6 +33,7 @@ export function MarktBrowser({
       <div className="flex items-center justify-between gap-3">
         <PillToggle options={[...TABS]} value={tab} onChange={setTab} />
         {tab === "kleinanzeigen" && <CreateMarketListingDialog />}
+        {tab === "ersatzteile" && <CreateSparePartListingDialog />}
       </div>
 
       {tab === "kleinanzeigen" ? (
@@ -50,7 +54,13 @@ export function MarktBrowser({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {spareParts.map((part) => (
-            <SparePartListingCard key={part.id} part={part} />
+            <SparePartListingCard
+              key={part.id}
+              part={part}
+              canManage={
+                canManageSpareParts || part.keeperMeepleId === ownMeepleId
+              }
+            />
           ))}
           {spareParts.length === 0 && (
             <p className="text-muted-foreground text-sm">

@@ -1,16 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { toSparePartListingView } from "./spare-parts";
 
+const KEEPER = {
+  displayName: "Jan",
+  email: "jan@example.com",
+  telegramHandle: null,
+  signalHandle: null,
+  discordHandle: null,
+  address: null,
+  shareAddress: false,
+};
+
 describe("toSparePartListingView", () => {
-  it("resolves the keeper's display name", () => {
+  it("resolves the keeper's display name and contact links", () => {
     const view = toSparePartListingView(
       {
         id: "listing-1",
         title: "Agricola (Ausschlachtung)",
         condition: "beschädigt",
         description: "Tableaus und Holzressourcen zur Weiterverwendung.",
+        keeperMeepleId: "meeple-1",
       },
-      { displayName: "Jan" },
+      KEEPER,
     );
 
     expect(view).toEqual({
@@ -18,7 +29,15 @@ describe("toSparePartListingView", () => {
       title: "Agricola (Ausschlachtung)",
       condition: "beschädigt",
       description: "Tableaus und Holzressourcen zur Weiterverwendung.",
+      keeperMeepleId: "meeple-1",
       keeperDisplayName: "Jan",
+      keeperContact: {
+        mailHref: "mailto:jan@example.com",
+        telegramHref: null,
+        signalHref: null,
+        discordHandle: null,
+        address: null,
+      },
     });
   });
 
@@ -29,8 +48,9 @@ describe("toSparePartListingView", () => {
         title: "Allgemeines",
         condition: "gemischt",
         description: null,
+        keeperMeepleId: "meeple-1",
       },
-      { displayName: "Verein" },
+      KEEPER,
     );
 
     expect(view.title).toBe("Allgemeines");
