@@ -119,7 +119,14 @@ export function TitleOverviewDialog({
   async function handlePromoteAlternateToTitle(alt: AlternateName) {
     const result = await promoteAlternateNameToTitle(alt.id);
     if ("success" in result) {
+      const previousTitle = title;
       onTitleChange(alt.name);
+      // War noch kein Sekundärtitel gesetzt, verschiebt der Server den
+      // bisherigen Haupttitel dorthin (siehe `promoteAlternateNameToTitle`)
+      // — sonst bleibt der bisherige Sekundärtitel unangetastet (#285).
+      if (!secondaryTitle) {
+        onSecondaryTitleChange(previousTitle);
+      }
       await refresh();
     }
     return result;
