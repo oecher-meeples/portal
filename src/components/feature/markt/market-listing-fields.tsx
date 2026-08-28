@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Camera, Crop, Star, Trash2 } from "lucide-react";
+import { Camera, Crop, GripVertical, Star, Trash2 } from "lucide-react";
 import { TextField, TextAreaField } from "@/components/ui/field";
+import { cn } from "@/lib/utils/cn";
 import { FileField } from "@/components/ui/file-field";
 import { Button } from "@/components/ui/button";
 import { CameraCapture } from "@/components/ui/camera-capture";
@@ -23,23 +24,55 @@ async function urlToFile(url: string): Promise<File> {
 }
 
 /** Ein bereits hochgeladenes Bild mit Zuschneiden-/Löschen-/
- * Titelbild-Aktionen (#175). Einmalig genutzt, daher kein eigener Dateiname. */
+ * Titelbild-/Umsortieren-Aktionen (#175). Einmalig genutzt, daher kein
+ * eigener Dateiname. Umsortieren per natives HTML5-Drag&Drop statt
+ * @dnd-kit/sortable — die wenigen Kacheln in einem einzelnen Grid brauchen
+ * keinen eigenen DnD-Kontext, und @dnd-kit/sortable ist noch keine
+ * Abhängigkeit dieses Projekts. */
 function MarketImageThumbnail({
   url,
+  index,
   isCover,
+  isDragTarget,
   onCrop,
   onRemove,
   onSetCover,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
 }: {
   url: string;
+  index: number;
   isCover: boolean;
+  isDragTarget: boolean;
   onCrop: () => void;
   onRemove: () => void;
   onSetCover: () => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (index: number) => void;
+  onDragLeave: () => void;
+  onDrop: (index: number) => void;
 }) {
   return (
-    <div className="border-border flex flex-col gap-1.5 rounded-lg border p-1.5">
-      <div className="relative">
+    <div
+      className={cn(
+        "border-border flex flex-col gap-1.5 rounded-lg border p-1.5",
+        isDragTarget && "border-primary",
+      )}
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver(index);
+      }}
+      onDragLeave={onDragLeave}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop(index);
+      }}
+    >
+      <div className="relative cursor-grab active:cursor-grabbing">
         <CoverMedia
           imageUrl={url}
           alt="Hochgeladenes Bild"
@@ -51,6 +84,12 @@ function MarketImageThumbnail({
             Titelbild
           </span>
         )}
+        <span
+          className="bg-background/80 text-muted-foreground absolute top-1 right-1 rounded p-0.5"
+          title="Zum Sortieren ziehen"
+        >
+          <GripVertical className="size-3.5" />
+        </span>
       </div>
       <div className="flex justify-center gap-1">
         {!isCover && (
@@ -120,6 +159,19 @@ export function MarketListingFields({
   // Bei Bearbeiten eines bereits hochgeladenen Bildes (statt einer neuen
   // Kamera-Aufnahme) trägt dieser State die zu ersetzende URL.
   const [cropTargetUrl, setCropTargetUrl] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  function handleReorder(targetIndex: number) {
+    const fromIndex = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (fromIndex === null || fromIndex === targetIndex) return;
+    const next = [...imageUrls];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    onImageUrlsChange(next);
+  }
 
   async function handleImagesChange(files: File[]) {
     const urls = await uploadFiles(files);
@@ -258,10 +310,16 @@ export function MarketListingFields({
               <MarketImageThumbnail
                 key={url}
                 url={url}
+                index={index}
                 isCover={index === 0}
+                isDragTarget={dragOverIndex === index && dragIndex !== index}
                 onCrop={() => void handleCropExisting(url)}
                 onRemove={() => void handleRemoveImage(url)}
                 onSetCover={() => handleSetCover(url)}
+                onDragStart={setDragIndex}
+                onDragOver={setDragOverIndex}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={handleReorder}
               />
             ))}
           </div>
