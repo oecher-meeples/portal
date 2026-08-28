@@ -53,28 +53,30 @@ export function EditMarketListingDialog({
       }
       onReset={reset}
     >
-      <MarketListingFields
-        title={title}
-        onTitleChange={setTitle}
-        priceEuros={priceEuros}
-        onPriceEurosChange={setPriceEuros}
-        condition={condition}
-        onConditionChange={setCondition}
-        description={description}
-        onDescriptionChange={setDescription}
-        imageUrls={imageUrls}
-        onImageUrlsChange={setImageUrls}
-      />
-      <ActionButton
-        variant="destructive"
-        size="sm"
-        className="self-start"
-        confirm="Diese Anzeige wirklich löschen?"
-        action={() => deleteOwnMarketListing(listing.id)}
-        onSuccess={() => router.push("/markt")}
-      >
-        Anzeige löschen
-      </ActionButton>
+      <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+        <MarketListingFields
+          title={title}
+          onTitleChange={setTitle}
+          priceEuros={priceEuros}
+          onPriceEurosChange={setPriceEuros}
+          condition={condition}
+          onConditionChange={setCondition}
+          description={description}
+          onDescriptionChange={setDescription}
+          imageUrls={imageUrls}
+          onImageUrlsChange={setImageUrls}
+        />
+        <ActionButton
+          variant="destructive"
+          size="sm"
+          className="self-start"
+          confirm="Diese Anzeige wirklich löschen?"
+          action={() => deleteOwnMarketListing(listing.id)}
+          onSuccess={() => router.push("/markt")}
+        >
+          Anzeige löschen
+        </ActionButton>
+      </div>
     </ActionDialog>
   );
 }
