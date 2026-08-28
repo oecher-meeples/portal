@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-listing-dialog";
+import { cn } from "@/lib/utils/cn";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
 export function MarketListingDetailView({
@@ -18,7 +19,17 @@ export function MarketListingDetailView({
   canEdit?: boolean;
 }) {
   const images = listing.imageUrls.length > 0 ? listing.imageUrls : null;
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  function showPreviousImage() {
+    if (!images || lightboxIndex === null) return;
+    setLightboxIndex((lightboxIndex - 1 + images.length) % images.length);
+  }
+
+  function showNextImage() {
+    if (!images || lightboxIndex === null) return;
+    setLightboxIndex((lightboxIndex + 1) % images.length);
+  }
 
   return (
     <div className="flex max-w-3xl flex-col gap-4">
@@ -56,7 +67,7 @@ export function MarketListingDetailView({
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => images && setLightboxUrl(images[0])}
+            onClick={() => images && setLightboxIndex(0)}
             disabled={!images}
             className="text-left"
           >
@@ -70,11 +81,11 @@ export function MarketListingDetailView({
           </button>
           {images && images.length > 1 && (
             <div className="grid grid-cols-3 gap-2">
-              {images.slice(1).map((url) => (
+              {images.slice(1).map((url, offset) => (
                 <button
                   key={url}
                   type="button"
-                  onClick={() => setLightboxUrl(url)}
+                  onClick={() => setLightboxIndex(offset + 1)}
                 >
                   <CoverMedia
                     imageUrl={url}
@@ -112,18 +123,70 @@ export function MarketListingDetailView({
         </div>
       </div>
       <Dialog
-        open={lightboxUrl !== null}
-        onOpenChange={(open) => !open && setLightboxUrl(null)}
+        open={lightboxIndex !== null}
+        onOpenChange={(open) => !open && setLightboxIndex(null)}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogTitle className="sr-only">{listing.title}</DialogTitle>
-          {lightboxUrl && (
-            <CoverMedia
-              imageUrl={lightboxUrl}
-              alt={listing.title}
-              fit="contain"
-              sizing="natural"
-            />
+          {images && lightboxIndex !== null && (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                {images.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Vorheriges Bild"
+                    onClick={showPreviousImage}
+                  >
+                    <ChevronLeft className="size-5" />
+                  </Button>
+                )}
+                <CoverMedia
+                  imageUrl={images[lightboxIndex]}
+                  alt={listing.title}
+                  fit="contain"
+                  sizing="natural"
+                  className="min-w-0 flex-1"
+                />
+                {images.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Nächstes Bild"
+                    onClick={showNextImage}
+                  >
+                    <ChevronRight className="size-5" />
+                  </Button>
+                )}
+              </div>
+              {images.length > 1 && (
+                <div className="flex justify-center gap-2 overflow-x-auto">
+                  {images.map((url, index) => (
+                    <button
+                      key={url}
+                      type="button"
+                      aria-label={`Bild ${index + 1} anzeigen`}
+                      onClick={() => setLightboxIndex(index)}
+                      className={cn(
+                        "size-14 shrink-0 overflow-hidden rounded-md border-2",
+                        index === lightboxIndex
+                          ? "border-primary"
+                          : "border-transparent",
+                      )}
+                    >
+                      <CoverMedia
+                        imageUrl={url}
+                        alt=""
+                        aspect="aspect-square"
+                        fit="cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>
