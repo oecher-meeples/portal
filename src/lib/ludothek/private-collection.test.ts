@@ -108,15 +108,15 @@ describe("buildPrivateLudothekGames (#255-Folge)", () => {
   });
 });
 
-describe("getOwnPrivateCollection (#255-Folge)", () => {
-  it("maps rating and status flags alongside the title", async () => {
+describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
+  it("returns the private fields plus the boardGame relation for title/image/slug", async () => {
     prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([
       {
         id: "entry-1",
         rating: 8.5,
         forTrade: true,
         wantToPlay: false,
-        boardGame: { title: "Ark Nova", imageUrl: null },
+        boardGame: { slug: "ark-nova", title: "Ark Nova", imageUrl: null },
       },
     ] as never);
 
@@ -125,13 +125,21 @@ describe("getOwnPrivateCollection (#255-Folge)", () => {
     expect(result).toEqual([
       {
         id: "entry-1",
-        title: "Ark Nova",
-        imageUrl: null,
         rating: 8.5,
         forTrade: true,
         wantToPlay: false,
+        boardGame: { slug: "ark-nova", title: "Ark Nova", imageUrl: null },
       },
     ]);
+    expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          boardGame: {
+            select: { slug: true, title: true, imageUrl: true },
+          },
+        }),
+      }),
+    );
   });
 });
 

@@ -74,7 +74,9 @@ export function PrivateCollectionCard({
   const visibleEntries = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = entries
-      .filter((entry) => !term || entry.title.toLowerCase().includes(term))
+      .filter(
+        (entry) => !term || entry.boardGame.title.toLowerCase().includes(term),
+      )
       .filter(
         (entry) =>
           statusFilters.size === 0 ||
@@ -85,7 +87,7 @@ export function PrivateCollectionCard({
     return [...filtered].sort((a, b) =>
       sortMode === "rating"
         ? (b.rating ?? -1) - (a.rating ?? -1)
-        : a.title.localeCompare(b.title, "de"),
+        : a.boardGame.title.localeCompare(b.boardGame.title, "de"),
     );
   }, [entries, search, sortMode, statusFilters]);
 
@@ -249,7 +251,7 @@ export function PrivateCollectionCard({
                   className="flex items-center justify-between gap-2 rounded-md border p-2"
                 >
                   <span className="flex min-w-0 items-baseline gap-1.5">
-                    <span className="truncate">{entry.title}</span>
+                    <span className="truncate">{entry.boardGame.title}</span>
                     {entry.rating !== null && (
                       <span className="text-muted-foreground shrink-0 text-xs">
                         ★ {entry.rating.toFixed(1)}
