@@ -11,7 +11,7 @@ import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import {
   findOrCreateBoardGameTitle,
   uniqueBoardGameSlug,
-} from "../src/lib/ludothek/board-games";
+} from "../src/lib/ludothek/board-game-title-lookup";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
