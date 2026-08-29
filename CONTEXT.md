@@ -4,27 +4,67 @@ Vereinsportal eines Brettspielvereins: öffentliche Außendarstellung, interner 
 
 ## Language
 
+> **⚠️ Noch nicht implementiert:** Der Personen-Abschnitt unten spiegelt den beschlossenen Zielzustand aus [ADR 0013](adr/0013-vereinsmitglied-getrennt-von-meeple.md) und `docs/mitglieder-konzept.md` (Split in `Vereinsmitglied`- und `Meeple`-Tabelle, löst [ADR 0002](adr/0002-meeple-eins-zu-eins-zum-login.md) ab) — Code und Schema sind noch auf dem alten 1:1-Stand.
+
 ### Personen
 
-**Meeple**:
-Ein Vereinsmitglied mit Portal-Account — 1:1 zum Login-Konto, entsteht beim ersten Login. Ein Vereinsmitglied ohne Portal-Account ist im Portal nicht abbildbar. Einzige Ausnahme ist der anonymisierte Meeple: er hat kein Konto mehr und existiert nur noch, damit die Historie lesbar bleibt.
-_Avoid_: User, Mitgliedsprofil, Member (im Code), Nutzer
+**Vereinsmitglied** (neu, `docs/mitglieder-konzept.md`):
+Der administrative Datensatz zur Mitgliedschaft im Verein (Mitgliedsnummer, Name, Geburtsdatum, Adresse, Beitrag, IBAN) — gepflegt vom Vorstand (IBAN exklusiv vom Kassenwart), unabhängig davon, ob die Person je ein Portal-Konto hatte. Trägt optional eine Referenz auf ein `Meeple`. Löst die bisherige 1:1-Verschmelzung aus [ADR 0002](adr/0002-meeple-eins-zu-eins-zum-login.md) ab — diese Entscheidung gilt als überholt. Name, Geburtsdatum, Geburtsort, Adresse und Telefon starten `nullable`, solange der Vorstand die genaue Pflichtfeld-Liste noch nicht bestätigt hat — kein Platzhalter-Backfill.
+_Avoid_: Mitglied als Synonym für Meeple, Meeple für Verwaltungsdaten verwenden, Pflichtfelder erzwingen, ohne dass echte Daten vorliegen
+
+**Beitragsart-Kategorien** (Anzeige, nicht Datenmodell):
+**Meeple** (Einzel-/Selbstgewählter Beitrag, Alter > 18), **JungMeeple** (Jugendbeitrag, 13–18), **MiniMeeple** (Kinderbeitrag, < 13) — reine Anzeige-Labels für die Infocard-Aufteilung unter `/admin/mitglieder`, abgeleitet aus `Vereinsmitglied.birthDate`. Nicht mit dem Kern-Begriff **Meeple** (dem Portal-Profil) verwechseln — hier ist "Meeple" nur die Erwachsenen-Kategorie unter drei altersbasierten Labels.
+_Avoid_: Als eigene DB-Entität oder Rolle missverstehen
+
+**Meeple** (überarbeitet):
+Das Selbstdarstellungs- und Interaktionsprofil im Portal, 1:1 zum Login-Konto (`neonAuthUserId`). Referenziert optional ein `Vereinsmitglied` — nicht mehr zwingend, nicht mehr automatisch gleichbedeutend mit Vereinsmitgliedschaft. Ein Meeple ohne Vereinsmitglied-Referenz ist entweder ein **Systemkonto** (hat noch ein Login) oder ein **Anonymes Konto** (kein Login mehr, reiner Historien-Rest).
+_Avoid_: User, Mitgliedsprofil, Member (im Code), Nutzer, Meeple = Vereinsmitgliedschaft
+
+**Systemkonto**:
+Ein `Meeple` ohne `Vereinsmitglied`-Referenz, aber mit Login — für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` in einem Schritt: Neon-Auth-User per `auth.admin.createUser()`, `Meeple` mit vorgegebenem Displaynamen, danach ein Passwort-Reset-Link an die angegebene E-Mail — kein Invite-Mechanismus (der ließe für die kurze Zeit bis zur Einlösung einen Zwischenzustand entstehen, der von einem Anonymen Konto nicht unterscheidbar wäre).
+_Avoid_: Verwechslung mit Anonymem Konto (das hat kein Login mehr), Systemkonto per Einladung anlegen
+
+**Anonymes Konto**:
+Ein `Meeple` ohne `Vereinsmitglied`-Referenz und ohne Login — Einbahnstraßen-Zustand, dient nur der lesbaren Historie (Aufenthalte, Gesuche). Kein Zurück zu einem Login möglich. Erscheint deshalb in keinem Auswahl-Picker mehr (Filter auf `anonymizedAt: null`).
+Ein Sonderfall trägt keinen echten anonymisierten Namen, sondern ist ein einziges, dauerhaftes **Sammelkonto "Anonymer Meeple"** — Platzhalter-Ziel für ungeklärte externe Interaktionspartner in der Ludothek (siehe **Verantwortliche:r**), nicht aus einer echten Anonymisierung entstanden. Trägt bewusst denselben generischen Displaynamen wie echte anonymisierte Alt-Meeples (zusätzliche Anonymität, kein Namenskonflikt, da beide ohnehin aus jedem Picker gefiltert sind) — nur mit `games:manage` per Suffix unterscheidbar (z. B. "Anonymer Meeple #4").
+_Avoid_: Reaktivierung, Wiederherstellung, das Sammelkonto mit einem konkreten anonymisierten Alt-Mitglied verwechseln
+
+**Vereinsmitgliedschafts-Zustand** (abgeleitet, nicht persistiert):
+Aus `meepleId`/`resignedAt`/`membershipEndsAt` abgeleitet: **Unregistriert** (kein `meepleId`, kein `resignedAt`) → **Registriert** (`meepleId` vorhanden, kein `resignedAt`) → bei gesetztem `resignedAt` entscheidet nur noch das Datum: **Gekündigt** (`membershipEndsAt` in der Zukunft) vs. **Ausgetreten** (`membershipEndsAt` in der Vergangenheit) — `meepleId` spielt für diese beiden keine Rolle mehr.
+_Avoid_: Zustand als gespeichertes Feld, Gekündigt/Ausgetreten an `meepleId` festmachen
 
 **Kündigung**:
-Der Vermerk, dass ein Meeple austritt. Die Mitgliedschaft läuft bis zum Jahreswechsel unverändert weiter — er darf weiter ausleihen. Ab Dezember wird auf noch bei ihm liegende Spiele hingewiesen.
-_Avoid_: Austritt (der Austritt ist erst die Wirkung), Deaktivierung
+Der Vermerk, dass ein Vereinsmitglied austritt (`resignedAt`). Kündigungsfrist 4 Wochen (siehe #258): wirkt zum nächsten 31.12., außer das wären weniger als 4 Wochen ab Eingang — dann erst zum übernächsten 31.12. Die Mitgliedschaft läuft bis `membershipEndsAt` unverändert weiter — es darf weiter ausleihen. In den letzten 31 Tagen wird auf noch offene Ausleihen hingewiesen.
+_Avoid_: Austritt (der Austritt ist erst die Wirkung), Deaktivierung, reine Stichtagsregel ohne 4-Wochen-Mindestvorlauf
 
 **Ausgetreten**:
-Der Zustand nach dem Jahreswechsel einer Kündigung. Der Zugang beschränkt sich auf das Abwickeln: eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Kalender und Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt; annehmen darf er nichts mehr.
-_Avoid_: Inaktiv, gesperrt, ehemalig
+Der Zustand nach Ablauf von `membershipEndsAt`. Der Zugang beschränkt sich auf das Abwickeln: eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Kalender und Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt; annehmen darf die Person nichts mehr. Login bleibt bis zur Anonymisierung möglich. Technisch eine echte `Role` mit eigenem Rechte-Satz, aber nie manuell zuweisbar — da Vertragslaufzeiten fest an den Jahreswechsel gebunden sind, pflegt ein Cron-Job am 2.1. 02:00 die `UserRole`-Zeile für alle betroffenen Vereinsmitglieder in einem Rutsch.
+_Avoid_: Inaktiv, gesperrt, ehemalig, Login-Verlust gleichzeitig mit Austritt annehmen, manuelle Rollenzuweisung
 
-**Anonymisierung**:
-Das Löschen des Login-Kontos samt Namen und Kontaktdaten, sobald ein ausgetretener Meeple keine Vereinsspiele mehr bei sich hat. Der Meeple bleibt als namenloser Rest bestehen, damit Aufenthalte und Gesuche weiter lesbar sind.
-_Avoid_: Kontolöschung, DSGVO-Löschung, Pseudonymisierung
+**Anonymisierung** (3 Stufen, löst die bisherige Sanft/Hart-Unterscheidung ab):
+1. **DSGVO-Löschung optionaler Daten**: alle optionalen Meeple-Daten (Kontakt, Spiele, LFG, Marktplatz) werden gelöscht, `displayName` generisch überschrieben; Login bleibt aktiv. Auslösbar vom Meeple selbst oder von Vorstand/Datenschutzbeauftragtem.
+2. **Kontodeaktivierung**: zusätzlich wird das Login-Konto deaktiviert/gelöscht, `Meeple` und `Vereinsmitglied` werden getrennt (keine Verbindung mehr herstellbar). Ausgelöst durch Selbst-Löschung des Kontos, oder automatisch durch denselben Cron am 2.1. 02:00 (siehe **Ausgetreten**) für alle Ausgetretenen ohne offene Ausleihen. Wer zu dem Zeitpunkt noch offene Ausleihen hat, erscheint stattdessen als Warn-Infocard im Admin-Dashboard für Vorstand/Spielewart — die lösen das Problem (Spiele eintreiben) und starten Stufe 2 danach manuell, kein fortlaufender Hintergrund-Check bei jeder Rückgabe.
+3. **Löschung des Vereinsmitglieds**: 12 Monate nach `membershipEndsAt` **und** keine Spiele mehr ausgeliehen (beide Bedingungen), wird der `Vereinsmitglied`-Datensatz selbst gelöscht (nicht nur überschrieben) — die 12-Monats-Uhr beginnt exakt mit `membershipEndsAt`, nicht mit einer vorzeitigen Selbst-Kontolöschung. Der anonymisierte `Meeple`-Rest bleibt für die Historie bestehen.
+
+Da Mitgliedschaften immer zum Jahreswechsel enden, fallen "gerade ausgetreten" (Stufe 2) und "vor 12 Monaten ausgetreten" (Stufe 3) beide auf denselben 31.12. — **ein einziger jährlicher Cron** (2.1., 02:00, siehe **Ausgetreten**) prüft beide Stufen in einem Rutsch. Fälle mit noch offenen Ausleihen werden nicht automatisch verarbeitet, sondern als Warn-Infocard im Admin-Dashboard **und** einer einzigen gesammelten Mail (beide Stufen zusammen, ein Abschnitt je Stufe) an Vorstand/Spielewart gemeldet; die lösen das Problem und starten die jeweilige Stufe danach manuell.
+_Avoid_: Kontolöschung, DSGVO-Löschung und Anonymisierung synonym für nur eine Stufe verwenden, Pseudonymisierung, 12-Monats-Frist ab Kontolöschung statt ab `membershipEndsAt` zählen, eine Mail pro betroffenem Mitglied statt gesammelt
+
+**Bankverbindungs-Änderungsantrag** (neu):
+IBAN wird nie direkt vom Meeple überschrieben — nur beantragt. Ein neuer Antrag ersetzt automatisch einen noch offenen. Freigabe ausschließlich durch den Kassenwart; erst danach wird die aktive IBAN ersetzt. Für aktive Vereinsmitglieder ist ein Löschen der Bankdaten nicht möglich (nur Ändern). Der Kassenwart kann stattdessen auch ablehnen (Pflichtgrund) — löst automatisch eine Mail mit dem Grund ans Meeple aus.
+_Avoid_: Direktes Überschreiben der IBAN durchs Profilformular, Ablehnen ohne Benachrichtigung des Meeples
+
+**E-Mail-Änderung** (neu, 3 unabhängige Adressen):
+Login-E-Mail (Neon Auth) und Profil-Kontakt-E-Mail (`Meeple.email`) ändert das Meeple direkt selbst, wirksam nach Bestätigungslink an die neue Adresse. Die `Vereinsmitglied.email` läuft dagegen wie die IBAN als Änderungsantrag (inkl. Ablehnen mit Mail) — Bestätigungslink verifiziert nur die Erreichbarkeit, ersetzt aber nicht die Freigabe durch den Vorstand.
+_Avoid_: Vereinsmitglied-E-Mail ohne Vorstandsfreigabe direkt ändern lassen, alle drei E-Mail-Adressen für dieselbe halten
 
 **Kassenwart**:
-Rolle mit dem alleinigen Recht, gespeicherte Bankdaten zu entschlüsseln. Jeder solche Zugriff wird protokolliert.
+Rolle mit dem alleinigen Recht, gespeicherte Bankdaten zu entschlüsseln **und** Bankverbindungs-Änderungsanträge freizugeben. Jeder Entschlüsselungs-Zugriff wird protokolliert.
 _Avoid_: Schatzmeister, Finanzadmin
+
+**Einladung** (überarbeitet):
+Immer einmalig einlösbar und E-Mail-gebunden (Doppel-Schlüssel: `email` + `token`, `email` ist eindeutig) — der ungebundene, mehrfach einlösbare Invite-Typ entfällt ersatzlos (Vorstandsentscheidung). Nur noch **eine** Spielart: die **Mitgliedseinladung**, aus einem `Vereinsmitglied` heraus erstellt, legt bei Einlösung automatisch ein neues `Meeple` an und verknüpft es. Systemkonten laufen **nicht** mehr über Einladungen (siehe **Systemkonto** unten). Ändert sich die E-Mail eines Vereinsmitglieds, während eine Einladung offen ist, verfällt sie nicht automatisch — ein Popup fragt, ob sie widerrufen und neu erstellt werden soll.
+Die Gültigkeitsdauer ist eine globale Einstellung (`/admin/einstellungen`, sichtbar nur mit `invites:manage`, Default 7 Tage) — kein individuelles Überschreiben pro Einladung mehr.
+_Avoid_: Ungebundene/mehrfach einlösbare Einladung, automatisches Kaskadieren der E-Mail-Änderung auf offene Einladungen, individuelle Gültigkeitsdauer pro Einladung, Systemkonto-Einladung (gibt es nicht mehr)
 
 ### Ludothek
 
@@ -57,8 +97,8 @@ Ein mit QR-Code etikettiertes physisches Behältnis für Spiele — entweder ein
 _Avoid_: Lager, Ort, Location, Box vs. Shelf als getrennte Konzepte
 
 **Aufenthalt**:
-Wo ein Spiel in einem Zeitraum war. Ziel ist entweder eine Aufbewahrungseinheit oder ein Meeple; ein Spiel hat **immer genau einen** offenen Aufenthalt. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang — einen Aufenthalt schließen und den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, wird am Aufenthalt festgehalten und entscheidet, ob er als Ausleihe zählt.
-_Avoid_: Standort als Feld, Borrow-Datensatz, Verleihvorgang
+Wo ein Spiel in einem Zeitraum war. Ziel ist entweder eine Aufbewahrungseinheit oder ein **Vereinsmitglied** (nicht mehr direkt ein Meeple, seit `docs/mitglieder-konzept.md` — ein Vereinsmitglied kann auch ohne Meeple ein Spiel halten); ein Spiel hat **immer genau einen** offenen Aufenthalt. Ausleihe, Rückgabe, Weitergabe und Umlagern sind derselbe Vorgang — einen Aufenthalt schließen und den nächsten öffnen. Welcher Vorgang ihn geöffnet hat, wird am Aufenthalt festgehalten und entscheidet, ob er als Ausleihe zählt.
+_Avoid_: Standort als Feld, Borrow-Datensatz, Verleihvorgang, Aufenthaltsziel als Meeple annehmen
 
 **Unsortiert**:
 Die Aufbewahrungseinheit für Spiele, deren physischer Standort noch nie erfasst wurde. Behauptet keinen echten Ort und hat keinen Verwahrer; ihr Inhalt ist die Arbeitsliste der Ersterfassung.
@@ -73,11 +113,12 @@ Der Meeple, bei dem eine Aufbewahrungseinheit steht. Spiele in seinen Einheiten 
 _Avoid_: Besitzer, Eigentümer, Lagerist
 
 **Ausleiher**:
-Der Meeple, der ein Spiel direkt bei sich hat, weil er es ausgeliehen bekommen hat.
+Das Vereinsmitglied, das ein Spiel direkt bei sich hat, weil es ausgeliehen wurde.
 _Avoid_: Leiher, Halter, Mieter
 
 **Verantwortliche:r**:
-Oberbegriff für die Person, bei der ein Spiel gerade liegt — Ausleiher bei direkter Ausleihe, sonst der Verwahrer der Einheit über die Kette Spiel → Karton → Regal → Meeple. Wird abgeleitet, nie gespeichert, und kann fehlen (Einheit ohne Verwahrer).
+Oberbegriff für die Person, bei der ein Spiel gerade liegt — Ausleiher bei direkter Ausleihe, sonst der Verwahrer der Einheit über die Kette Spiel → Karton → Regal → Vereinsmitglied. Wird abgeleitet, nie gespeichert, und kann fehlen (Einheit ohne Verwahrer). Hat das haltende Vereinsmitglied ein `Meeple`, gilt das Spiel für andere Meeples als **ausgeliehen, verfügbar** (Kontakt über das Meeple-Profil sichtbar); hat es keins, als **ausgeliehen, nicht verfügbar** (kein Kontakt für andere Meeples — nur der Spielewart sieht die Vereinsmitglied-Adresse/-Telefonnummer, berechtigtes Interesse des Vereins an seinem Eigentum).
+Für Vereinsmitglieder **ohne Portal-Zugang** gibt es vier Wege, wie ein Aufenthalt bei ihnen entsteht/endet: Spielewart gibt direkt an sie aus ("An extern ausgeben"), ein Meeple meldet eine Weitergabe an sie per Freitext-Name (landet vorübergehend beim Sammelkonto **Anonymer Meeple**, siehe dort, bis der Spielewart zuordnet), oder sie geben ein Spiel an einen Meeple/Spielewart zurück (einseitige Bestätigung "erhalten", kein Handshake nötig).
 _Avoid_: Besitzer, Eigentümer
 
 **Vollständigkeitsprüfung**:
@@ -89,7 +130,7 @@ Ein Spiel scheidet aus dem Bestand aus (Verkauf, Verlust, Zerstörung), ohne gel
 _Avoid_: Löschen, Archivieren, Aussortieren
 
 **Zustand**:
-Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einer Person, Abholung ggf. aufwendiger), **Wartung** (bei der Vollständigkeitsprüfung durchgefallen), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
+Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einem Vereinsmitglied, Abholung ggf. aufwendiger — Unterfall **verfügbar** wenn das Mitglied ein Meeple hat, sonst **nicht verfügbar**, siehe **Verantwortliche:r**), **Wartung** (bei der Vollständigkeitsprüfung durchgefallen), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
 _Avoid_: Verfügbarkeit, Status (Status meint die Bestandszugehörigkeit: aktiv oder deinventarisiert), Zustand für den materiellen Zustand eines Exemplars (das ist der **Mängelvermerk**, siehe unten)
 
 **Regelheft-Sprache(n)** (`GameCopy.ruleBookLanguages`, geplant, siehe #188):
