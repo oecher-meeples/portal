@@ -19,9 +19,8 @@ vi.mock("@/lib/members/invite-settings", () => ({
     setDefaultInviteDaysMock(...args),
 }));
 
-const { disconnectInstagram, updateDefaultInviteDays } = await import(
-  "./actions"
-);
+const { disconnectInstagram, updateDefaultInviteDays } =
+  await import("./actions");
 
 describe("disconnectInstagram", () => {
   it("rejects when the user lacks the instagram:connect permission", async () => {

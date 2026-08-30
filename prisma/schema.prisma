@@ -486,7 +486,12 @@ model PendingChange {
   /// New value the member proposes — IBAN in the clear here (only until
   /// approved, then re-encrypted like `Member.ibanEncrypted`) or the new email.
   newValue         String
+  /// Nur `kind: IBAN` — der neue Kontoinhaber, geht mit der IBAN zusammen ein.
+  newAccountHolder String?
   requestedAt      DateTime           @default(now())
+  /// Reachability-Token für den Bestätigungslink (nur MEMBER_EMAIL) — null,
+  /// solange kein Link nötig war (IBAN) oder nach Bestätigung verbraucht.
+  confirmToken     String?            @unique
   /// Set once the member confirms via emailed link — only relevant for
   /// MEMBER_EMAIL, which additionally needs board approval afterwards.
   confirmedAt      DateTime?

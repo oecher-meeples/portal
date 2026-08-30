@@ -2,12 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
-import {
-  encryptSecret,
-  ibanLast4,
-  isValidIban,
-  normaliseIban,
-} from "@/lib/utils/crypto";
 import { computeMembershipEndsAt, requireMeeple } from "@/lib/members/meeples";
 import {
   collectMeeplePersonalData,
@@ -15,6 +9,11 @@ import {
 } from "@/lib/members/data-export";
 import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
 import { setMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
+import {
+  requestEmailChange,
+  requestIbanChange,
+  requestIbanClearing,
+} from "@/lib/members/pending-changes";
 import type { NewsletterCategory } from "@prisma/client";
 
 export type OwnProfileInput = {
@@ -94,33 +93,19 @@ async function requireOwnMember(meepleId: string) {
   return { success: true as const, member };
 }
 
+/** Schreibt seit #330 nicht mehr direkt — legt einen `PendingChange` an, der
+ * erst nach Kassenwart-Freigabe wirksam wird. */
 export async function updateOwnBankDetails(input: OwnBankDetailsInput) {
   const meeple = await requireMeeple();
-
-  const accountHolder = input.accountHolder.trim();
-  if (!accountHolder) {
-    return { error: "Bitte den Kontoinhaber angeben." };
-  }
-
-  const iban = normaliseIban(input.iban);
-  if (!isValidIban(iban)) {
-    return { error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe." };
-  }
 
   const ownMember = await requireOwnMember(meeple.id);
   if (!ownMember.success) return { error: ownMember.error };
 
-  await prisma.member.update({
-    where: { meepleId: meeple.id },
-    data: {
-      accountHolder,
-      ibanEncrypted: encryptSecret(iban),
-      ibanLast4: ibanLast4(iban),
-    },
-  });
+  const result = await requestIbanChange(ownMember.member.id, input);
+  if ("error" in result) return result;
 
   revalidatePath("/profil");
-  return { success: true as const, ibanLast4: ibanLast4(iban) };
+  return { success: true as const };
 }
 
 export async function clearOwnBankDetails() {
@@ -129,10 +114,23 @@ export async function clearOwnBankDetails() {
   const ownMember = await requireOwnMember(meeple.id);
   if (!ownMember.success) return { error: ownMember.error };
 
-  await prisma.member.update({
-    where: { meepleId: meeple.id },
-    data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
-  });
+  const result = await requestIbanClearing(ownMember.member.id);
+  if ("error" in result) return result;
+
+  revalidatePath("/profil");
+  return { success: true as const };
+}
+
+/** Vereinsmitglied-E-Mail (nicht die Login-E-Mail!) — braucht
+ * Bestätigungslink + Vorstandsfreigabe, siehe `pending-changes.ts`. */
+export async function requestOwnEmailChange(newEmail: string) {
+  const meeple = await requireMeeple();
+
+  const ownMember = await requireOwnMember(meeple.id);
+  if (!ownMember.success) return { error: ownMember.error };
+
+  const result = await requestEmailChange(ownMember.member.id, newEmail);
+  if ("error" in result) return result;
 
   revalidatePath("/profil");
   return { success: true as const };

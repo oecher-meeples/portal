@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission, requirePermission } from "@/lib/auth/permissions";
-import {
-  MAX_INVITE_DAYS,
-  MIN_INVITE_DAYS,
-} from "@/lib/members/invites";
+import { MAX_INVITE_DAYS, MIN_INVITE_DAYS } from "@/lib/members/invites";
 import { setDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export async function disconnectInstagram() {

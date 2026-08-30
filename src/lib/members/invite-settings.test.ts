@@ -3,9 +3,8 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getDefaultInviteDays, setDefaultInviteDays } = await import(
-  "@/lib/members/invite-settings"
-);
+const { getDefaultInviteDays, setDefaultInviteDays } =
+  await import("@/lib/members/invite-settings");
 
 describe("getDefaultInviteDays", () => {
   it("upserts the singleton row and returns its defaultDays", async () => {

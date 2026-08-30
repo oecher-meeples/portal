@@ -4,6 +4,7 @@ import { maskIban } from "@/lib/utils/crypto";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
 import type { MembershipState } from "@/lib/members/meeples";
 import { BankDetailsForm } from "@/components/feature/profil/bank-details-form";
+import { MemberEmailChangeDialog } from "@/components/feature/profil/member-email-change-dialog";
 import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-form";
 import { PrivateCollectionCard } from "@/components/feature/profil/private-collection-card";
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
@@ -86,7 +87,12 @@ export function ProfilView({
               </div>
               <div>
                 <dt className="text-muted-foreground">E-Mail</dt>
-                <dd className="break-all">{member?.email ?? "—"}</dd>
+                <dd className="flex flex-wrap items-center gap-2 break-all">
+                  {member?.email ?? "—"}
+                  {member && (
+                    <MemberEmailChangeDialog currentEmail={member.email} />
+                  )}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Kündigung vermerkt</dt>
@@ -94,8 +100,9 @@ export function ProfilView({
               </div>
             </dl>
             <p className="text-muted-foreground text-xs">
-              Mitgliedsnummer, Beitrittsdatum und E-Mail-Adresse werden über das
-              Login-Konto und die Mitgliederverwaltung geführt.
+              Mitgliedsnummer und Beitrittsdatum werden über das Login-Konto und
+              die Mitgliederverwaltung geführt. Eine E-Mail-Änderung braucht
+              einen Bestätigungslink und die Freigabe des Vorstands.
             </p>
           </div>
 

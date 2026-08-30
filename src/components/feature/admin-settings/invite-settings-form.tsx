@@ -8,11 +8,7 @@ import { useAction } from "@/components/ui/use-action";
 import { MAX_INVITE_DAYS } from "@/lib/members/invites";
 import { updateDefaultInviteDays } from "@/components/feature/admin-settings/actions";
 
-export function InviteSettingsForm({
-  defaultDays,
-}: {
-  defaultDays: number;
-}) {
+export function InviteSettingsForm({ defaultDays }: { defaultDays: number }) {
   const [days, setDays] = useState(defaultDays);
   const { run, pending, error } = useAction();
 

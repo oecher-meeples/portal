@@ -14,7 +14,11 @@ import { isValidEmail } from "@/lib/utils/validate-email";
  */
 type AdminAuth = {
   admin: {
-    createUser: (args: { email: string; name: string; password: string }) => Promise<{
+    createUser: (args: {
+      email: string;
+      name: string;
+      password: string;
+    }) => Promise<{
       data?: { user: { id: string } } | null;
       error?: { message?: string } | null;
     }>;

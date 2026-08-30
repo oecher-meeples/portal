@@ -18,6 +18,10 @@ import {
 } from "@/components/feature/admin-mitglieder/role-management-section";
 import type { PermissionOption } from "@/components/feature/admin-mitglieder/role-permissions-editor";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
+import {
+  PendingChangesPanel,
+  type PendingChangeRow,
+} from "@/components/widgets/pending-changes/pending-changes-panel";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
@@ -49,6 +53,7 @@ export function AdminMitgliederView({
   membersWithoutLogin,
   defaultInviteDays,
   canCreateSystemkonto,
+  pendingEmailChanges,
 }: {
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
@@ -62,6 +67,7 @@ export function AdminMitgliederView({
   membersWithoutLogin: MemberWithoutLoginRow[];
   defaultInviteDays: number;
   canCreateSystemkonto: boolean;
+  pendingEmailChanges: PendingChangeRow[];
 }) {
   const withOpenHoldings = meeples.filter(
     (m) =>
@@ -179,6 +185,11 @@ export function AdminMitgliederView({
           </ul>
         </div>
       )}
+
+      <PendingChangesPanel
+        title="Offene E-Mail-Änderungsanträge"
+        changes={pendingEmailChanges}
+      />
 
       {canManageRoles && (
         <RoleManagementSection roles={roles} permissions={permissions} />

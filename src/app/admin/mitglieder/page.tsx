@@ -9,6 +9,9 @@ import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 import { listInvites } from "@/lib/members/invites";
 import { listMembersWithoutLogin } from "@/lib/members/members-without-login";
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
+import { listOpenPendingChanges } from "@/lib/members/pending-changes";
+import { memberDisplayName } from "@/lib/members/member-display-name";
+import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
   const session = await requireAdminPermission(MITGLIEDER_PERMISSIONS);
@@ -26,6 +29,7 @@ export default async function AdminMitgliederPage() {
     invites,
     membersWithoutLogin,
     defaultInviteDays,
+    pendingChanges,
     canReadBankData,
     canManageRoles,
     canCreateSystemkonto,
@@ -69,6 +73,7 @@ export default async function AdminMitgliederPage() {
     listInvites(now),
     listMembersWithoutLogin(),
     getDefaultInviteDays(),
+    listOpenPendingChanges(),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
     hasPermission(session.user.id, "admin:access"),
@@ -179,6 +184,16 @@ export default async function AdminMitgliederPage() {
       membersWithoutLogin={membersWithoutLogin}
       defaultInviteDays={defaultInviteDays}
       canCreateSystemkonto={canCreateSystemkonto}
+      pendingEmailChanges={pendingChanges
+        .filter((change) => change.kind === PendingChangeKind.MEMBER_EMAIL)
+        .map((change) => ({
+          id: change.id,
+          memberDisplayName: memberDisplayName(change.member),
+          memberNumber: change.member.memberNumber,
+          displayValue: change.newValue,
+          requestedAt: change.requestedAt.toISOString(),
+          confirmed: change.confirmedAt !== null,
+        }))}
     />
   );
 }

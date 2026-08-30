@@ -57,7 +57,9 @@ export async function redeemInvite({
       data: { neonAuthUserId: data.user.id, roleId: role.id },
     });
 
-    const member = await tx.member.findUnique({ where: { email: invite.email } });
+    const member = await tx.member.findUnique({
+      where: { email: invite.email },
+    });
     const displayName =
       [member?.firstName, member?.lastName].filter(Boolean).join(" ") ||
       name.trim() ||

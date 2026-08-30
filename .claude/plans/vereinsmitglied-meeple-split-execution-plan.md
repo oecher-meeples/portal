@@ -77,21 +77,23 @@ Ebenfalls vorhanden und Ausgangspunkt für die jeweiligen Pakete: `getMembership
 **Abhängigkeit:** Paket 2 (Vereinsmitglied-Tabelle). Parallelisierbar mit Paket 4 und 5.
 
 ### 3a — Einladungen (#329)
-- [ ] `Invite.email` von `String?` auf `String` (Pflicht) — ungebundenen Invite-Typ entfernen, Migration prüft/bereinigt bestehende `email: null`-Zeilen (voraussichtlich nur Demo-Daten).
-- [ ] "Einladung erstellen/verlängern" aus der Vereinsmitglieder-Tabelle heraus, übernimmt `Vereinsmitglied.email` (`invites:manage`).
-- [ ] Redeem-Flow: legt neues `Meeple` an (Displayname aus Vor-/Nachname), verknüpft `Vereinsmitglied.meepleId`.
-- [ ] Separate "Neues Mitglied einladen"-Ansicht entfernen (`invite-form.tsx`, sofern das die ungebundene Variante war — prüfen).
-- [ ] Neue Einstellung "Gültigkeitsdauer für Einladungen" auf `/admin/einstellungen` (Default 7 Tage, `invites:manage`), ersetzt Pro-Invite-Auswahl.
-- [ ] Popup bei E-Mail-Änderung eines Vereinsmitglieds mit offener Einladung: Widerrufen-und-neu-erstellen-Dialog, kein Auto-Kaskadieren.
-- [ ] **Systemkonto anlegen** (kein Invite): Button oberhalb der Meeple-Tabelle (`admin:access`), `auth.admin.createUser({ email, name })` + `Meeple` ohne Vereinsmitglied-Referenz + `auth.requestPasswordReset()`. **Blocker klären vor Implementierung:** ob `admin:access` (unser Permission-Modell) ausreicht, oder better-auths eigenes `adminRoles`-Feld zusätzlich gesetzt werden muss (siehe Issue-Body, `node_modules/better-auth/dist/plugins/admin/routes.mjs`) — Fallback: Raw-SQL-Rollen-Update wie im bisherigen Seed-Script.
-- [ ] Voraussetzung `#324` ("Passwort vergessen"-Flow) prüfen — falls noch offen, vor Systemkonto-Teil klären/priorisieren.
+- [x] `Invite.email` von `String?` auf `String` (Pflicht) — ungebundener Invite-Typ entfernt, Migration löscht bestehende `email: null`-Zeilen (Demo-Daten, siehe `20260830032816_paket3_invites_pendingchanges`).
+- [x] "Einladung erstellen/verlängern": `InviteForm` wählt jetzt ein `Member` ohne Login statt Freitext-E-Mail (`listMembersWithoutLogin()`), `createInvite({ memberId, days })` übernimmt `Member.email` serverseitig.
+- [x] Redeem-Flow: legt neues `Meeple` an (Displayname aus Vor-/Nachname, Fallback Signup-Name), verknüpft `Member.meepleId` — direkt in der Transaktion, nicht erst über `ensureMeeple()` beim nächsten Login.
+- [x] Separate "Neues Mitglied einladen"-Ansicht — **geprüft, existiert nicht getrennt**: `invite-form.tsx` war schon Teil der Mitglieder-Tabellen-Seite, nur der ungebundene Zweig wurde entfernt.
+- [x] Neue Einstellung "Gültigkeitsdauer für Einladungen" auf `/admin/einstellungen/einladungen` (Default 7 Tage, `invites:manage`, `InviteSettings`-Singleton), ersetzt Pro-Invite-Auswahl als Vorbelegung.
+- [ ] Popup bei E-Mail-Änderung eines Vereinsmitglieds mit offener Einladung: Widerrufen-und-neu-erstellen-Dialog — **verschoben nach Paket 6**, da es keine Admin-UI zum Bearbeiten von `Member.email` vor dem dortigen Vereinsmitglieder-Akkordeon gibt (kein Wegwerf-Dialog vorab).
+- [x] **Systemkonto anlegen** (kein Invite): Button oberhalb der Meeple-Tabelle (`admin:access`), `auth.admin.createUser({ email, name, password })` + `Meeple` ohne Vereinsmitglied-Referenz + `auth.requestPasswordReset()` (`src/lib/members/systemkonto.ts`). **Blocker-Ergebnis:** `@neondatabase/auth`s Server-Typen lösen `admin`/`requestPasswordReset` strukturell auf `unknown` auf (kein Plugin-Typinferenz-Pfad) — mit lokalen Minimal-Signaturen implementiert, **ungetestet gegen die echte Neon-Auth-API** (nur Unit-Test mit gemocktem `auth`). Vor produktivem Einsatz einmal manuell smoke-testen, ob `admin:access` (unser Modell) tatsächlich ausreicht oder Neon Auth serverseitig zusätzlich eine eigene Rollen-/Admin-Konfiguration verlangt.
+- [x] Voraussetzung `#324` ("Passwort vergessen"-Flow) geprüft — **weiterhin offen** (kein `requestPasswordReset`/`forgot-password`/`reset-password`-Flow im Code), Systemkonto-Feature ist auf `auth.requestPasswordReset()` als einzigen Weg zu einem nutzbaren Passwort angewiesen; das ist derselbe ungetestete Aufruf wie oben.
 
 ### 3b — IBAN-/E-Mail-Änderungsanträge (#330)
-- [ ] `PendingChange`-Modell (`kind: IBAN | MEMBER_EMAIL`) wie im Issue-Vorschlag skizziert — Teil derselben Migration wie 2/5.
-- [ ] Gemeinsamer Server-Action-Baustein (Antrag stellen/bestätigen/freigeben/ablehnen inkl. Ablehnungs-Mail), von beiden `kind`-Werten genutzt.
-- [ ] IBAN: neuer Antrag ersetzt automatisch offenen, Freigabe exklusiv Kassenwart, kein Löschen ohne Ersatzwert für aktive Mitglieder.
-- [ ] Vereinsmitglied-E-Mail: Bestätigungslink (Erreichbarkeit) **und** Vorstandsfreigabe nötig, bevor `Vereinsmitglied.email` ersetzt wird.
-- [ ] Login-E-Mail/`Meeple.email`: direkt änderbar mit Bestätigungslink, **kein** `PendingChange` — klar abgrenzen.
+- [x] `PendingChange`-Modell (`kind: IBAN | MEMBER_EMAIL`) — eigene Migration (nicht mehr Teil von 2/5, die waren zu dem Zeitpunkt schon deployed), siehe `20260830032816…`/`20260830180000_pending_change_confirm_token` (Reihenfolge-Bug beim ersten Anlauf entdeckt und korrigiert: Migrationsordner-Timestamps müssen nach Wirkreihenfolge sortieren, nicht nach Erzeugungszeitpunkt — sonst schlägt eine frische Shadow-DB-Replay fehl, auch wenn `migrate deploy` gegen die schon migrierte Dev-DB durchläuft).
+- [x] Gemeinsamer Baustein `src/lib/members/pending-changes.ts` (Antrag stellen/bestätigen/freigeben/ablehnen inkl. Ablehnungs-Mail an die *aktuelle* Adresse) + `pending-change-actions.ts` (Server-Action-Gate, kind-abhängige Permission) — von beiden `kind`-Werten genutzt.
+- [x] IBAN: neuer Antrag ersetzt automatisch offenen (`replaceOpenPendingChange`), Freigabe exklusiv Kassenwart (`bank:read`), Löschen nur nach Kündigung (`requestIbanClearing` prüft `resignedAt`).
+- [x] Vereinsmitglied-E-Mail: Bestätigungslink (`/mitglied/e-mail-bestaetigen`) **und** Vorstandsfreigabe (`members:manage`) nötig, bevor `Member.email` ersetzt wird — `approvePendingChange` verweigert die Freigabe ohne `confirmedAt`.
+- [x] Login-E-Mail/`Meeple.email`: **weiterhin nicht änderbar** — kein Bestätigungslink-Flow existiert dafür im Repo (#324-Nachbarthema), bewusst nicht in diesem Paket nachgebaut; nur die Abgrenzung zur Vereinsmitglied-E-Mail ist jetzt im Code dokumentiert (Kommentar in `member-email-change-dialog.tsx`).
+- [x] Minimale Admin-UI: `PendingChangesPanel` (`components/widgets/pending-changes/`, DRY zwischen `/admin/bank` und `/admin/mitglieder`) — Freigeben/Ablehnen-Buttons. Tiefere Integration ins Vereinsmitglieder-Akkordeon folgt in Paket 6.
+- [x] Profil-Self-Service: `BankDetailsForm` beantragt jetzt statt sofort zu schreiben, neuer `MemberEmailChangeDialog` für die Vereinsmitglied-E-Mail.
 
 **Test-Scope:** `invites.test.ts` (gebundene Pflicht, Verlängern/Widerrufen), `pending-changes.test.ts` (neu: Ersetzen offener Anträge, Ablehnen+Mail, Freigabe-Gate je `kind`).
 
