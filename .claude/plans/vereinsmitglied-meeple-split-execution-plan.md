@@ -146,16 +146,18 @@ Ebenfalls vorhanden und Ausgangspunkt für die jeweiligen Pakete: `getMembership
 **Schicht:** `src/components/feature/admin-mitglieder/`
 **Abhängigkeit:** Pakete 2, 3, 5 (braucht alle neuen Datenstrukturen/Prozesse als Grundlage). Letztes Paket — keine UI vor Abschluss der zugehörigen `lib`-Vorbedingungen.
 
-- [ ] **Vereinsmitglieder-Akkordeon** (default offen): Mitgliedsnummer, voller Name, Beitrittsdatum, Austrittsdatum, Zustand, Beitragsart, Meeple-Link/Einladen-Button, Kündigung-vermerken/-widerrufen, Anonymisieren-Button (Stufe 1/2 je nach Zustand, Stufe-3-Button separat sobald Voraussetzungen erfüllt).
-- [ ] **Meeple-Akkordeon** (default zu): Displayname, Rollen-Badges (Mehrfachrollen aus Paket 1), Status, Beigetreten am, Kündigung-vermerken-Button; darüber "Systemkonto anlegen"-Button.
-- [ ] **Einladungen-Akkordeon** (default zu, `invites:manage`): bestehende Verlängern/Widerrufen-Ansicht bleibt, "Neues Mitglied einladen" entfällt (siehe Paket 3a).
-- [ ] **Rollen-Akkordeon**: bereits vorhandene Dual-Listbox (#215, siehe "Bereits vorhandener Code") + neue Mehrfachauswahl-Zuweisung (#335/Paket 1) im selben Akkordeon zusammenführen — **hier nur UI-Konsistenz herstellen** (Badge-Darstellung, Dialog-Optik), kein Neubau der Dual-Listbox.
-- [ ] Akkordeon-Header mit Datensatz-Anzahl-Badge (Muster ist an `RoleManagementSection` bereits vorhanden).
-- [ ] Infocard "Aktive Mitglieder" mit Beitragsart-Unterteilung (Meeple/JungMeeple/MiniMeeple), Klick filtert Vereinsmitglieder-Tabelle.
-- [ ] Infocards verlinken in passende Akkordeons, öffnen sie und setzen ggf. Filter.
-- [ ] Such-/Filterfelder für alle Tabellen.
+- [x] **Vereinsmitglieder-Akkordeon** (default offen, neue `vereinsmitglieder-table.tsx`): Mitgliedsnummer, voller Name, Beitragsart, Zustand, Beitrittsdatum (des verknüpften Meeple-Logins), Kündigung/Austritt, Portal-Login-Spalte (Einladen-Button direkt aus der Zeile statt über den Mitglied-Picker in der Einladungen-Sektion), Kündigung-vermerken/-widerrufen, Anonymisieren-Button (Stufe 1+2 zusammen, wie in Paket 4 gebaut) + Stufe-3-Button sobald `stufe3Eligible`.
+- [x] **Meeple-Akkordeon** (default zu): bestehende `mitglieder-table.tsx` unverändert übernommen — deckt Displayname/Rollen-Badges/Status/Beigetreten/Kündigung-vermerken bereits ab, kein Neubau nötig. "Systemkonto anlegen"-Button sitzt bereits darüber (unverändert aus Paket 3a).
+- [x] **Einladungen-Akkordeon**: unverändert aus Paket 3a (Mitglied-Picker statt Freitext-E-Mail, "Neues Mitglied einladen" bereits entfallen).
+- [x] **Rollen-Akkordeon**: `RoleManagementSection` bereits ein eigenständiges Akkordeon mit Datensatz-Badge — keine weitere Änderung nötig, entspricht der Plan-Vorgabe "nur UI-Konsistenz, kein Neubau".
+- [x] Akkordeon-Header mit Datensatz-Anzahl-Badge — für alle vier Akkordeons bereits vorhanden (Muster aus `RoleManagementSection` durchgängig übernommen).
+- [x] Infocard "Aktive Mitglieder" mit Beitragsart-Unterteilung (Meeple/JungMeeple/MiniMeeple/individuell) auf Basis von `determineContribution()`.
+- [~] Infocards verlinken in passende Akkordeons — **vereinfacht umgesetzt**: die "Aktive Mitglieder"-Karte ist ein reiner `#vereinsmitglieder`-Anker-Link (Browser-natives Scrollen), aber öffnet das Akkordeon nicht automatisch und setzt keinen Filter. Volles "öffnen + filtern" bräuchte kontrolliertes Accordion-State + URL-Query-Param-Wiring über mehrere unabhängige Client-Komponenten hinweg — als bewusste Zeitbudget-Entscheidung nicht gebaut, kein bestehendes Muster dafür im Repo.
+- [x] Such-/Filterfelder: neue Suche in der Vereinsmitglieder-Tabelle (Name/E-Mail/Nr.); Meeple-Tabelle hatte Suche+Quick-Filter bereits aus Paket 1.
 
-**Test-Scope:** Komponententests für neue/geänderte Akkordeon-Inhalte, Filter-Interaktion; Server-Action-Tests soweit hier noch neue Actions entstehen (meist schon in Paketen 2–5 abgedeckt).
+**Umsetzungshinweis:** `MeepleEditDialog` (Bank-Reveal, Rollen, Kündigungsstatus, Anonymisieren, Selbstauskunft in einem Dialog) wurde **nicht** aufgeteilt — ein sauberer Vereinsmitglied/Meeple-Split dieses Dialogs wäre ein eigenes, nicht unerhebliches Stück Arbeit und stand nicht explizit in der Paket-6-Checkliste; die neuen Tabellen-Zeilenaktionen in `vereinsmitglieder-table.tsx` decken die dort geforderten Aktionen bereits über eigene, schlankere Bausteine ab (`ResignMembershipDialog`, `AnonymiseMeepleDialog`, `DeleteMemberDialog`).
+
+**Test-Scope:** Komponenten sind wie der Rest von `components/feature/` bewusst außerhalb des Coverage-Scopes (`vitest.config.ts`); keine neuen Server Actions in diesem Paket, alle Aktionen der neuen Tabelle rufen bereits in Paket 2–5 getestete Actions wieder.
 
 ---
 

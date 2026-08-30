@@ -1,0 +1,217 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { RotateCcw, Search, UserPlus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ActionButton } from "@/components/ui/action-button";
+import { MembershipStatePill } from "@/components/entities/membership-state-pill";
+import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
+import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
+import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
+import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
+import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
+import { formatDatePlain } from "@/lib/utils/format";
+import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
+
+export type { VereinsmitgliedRow };
+
+function germanDate(value: string | null) {
+  return value ? formatDatePlain(value) : "—";
+}
+
+/** Vereinsmitglieder-Akkordeon (#334, Paket 6) — Member-zentrisch, standardmäßig
+ * offen (im Gegensatz zum Meeple-Akkordeon in `mitglieder-table.tsx`). */
+export function VereinsmitgliederTable({
+  members,
+  defaultInviteDays,
+}: {
+  members: VereinsmitgliedRow[];
+  defaultInviteDays: number;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filteredMembers = useMemo(() => {
+    if (!search) return members;
+    const needle = search.toLowerCase();
+    return members.filter(
+      (member) =>
+        member.displayName.toLowerCase().includes(needle) ||
+        member.email.toLowerCase().includes(needle) ||
+        String(member.memberNumber).includes(needle),
+    );
+  }, [members, search]);
+
+  return (
+    <Accordion
+      id="vereinsmitglieder"
+      defaultValue={["vereinsmitglieder"]}
+      className="bg-card rounded-lg border"
+    >
+      <AccordionItem value="vereinsmitglieder" className="border-b-0">
+        <AccordionTrigger className="px-5">
+          <span className="flex items-center gap-2">
+            <span className="font-serif text-lg font-bold">
+              Vereinsmitglieder
+            </span>
+            <Badge>{members.length}</Badge>
+          </span>
+        </AccordionTrigger>
+        <AccordionPanel className="px-5">
+          <div className="flex flex-col gap-4">
+            <div className="relative w-full max-w-sm">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Input
+                placeholder="Vereinsmitglied suchen …"
+                className="pl-9"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+
+            <div className="overflow-hidden rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Nr.</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Beitragsart</TableHead>
+                    <TableHead>Zustand</TableHead>
+                    <TableHead>Beigetreten</TableHead>
+                    <TableHead>Kündigung / Austritt</TableHead>
+                    <TableHead>Portal-Login</TableHead>
+                    <TableHead className="text-right"> </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMembers.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="text-muted-foreground py-6 text-center"
+                      >
+                        Keine Vereinsmitglieder gefunden.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-mono">
+                        {member.memberNumber}
+                      </TableCell>
+                      <TableCell
+                        className={
+                          member.membershipState === "anonymisiert"
+                            ? "text-muted-foreground"
+                            : "font-medium"
+                        }
+                      >
+                        {member.displayName}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {member.contributionCategory
+                          ? CONTRIBUTION_CATEGORY_LABELS[
+                              member.contributionCategory
+                            ]
+                          : "unbestimmt"}
+                      </TableCell>
+                      <TableCell>
+                        <MembershipStatePill state={member.membershipState} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {germanDate(member.joinedAt)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {member.resignedAt
+                          ? `${germanDate(member.resignedAt)} → ${germanDate(member.membershipEndsAt)}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {member.meepleId ? (
+                          "vorhanden"
+                        ) : (
+                          <ActionButton
+                            size="sm"
+                            variant="outline"
+                            action={async () => {
+                              await createInvite({
+                                memberId: member.id,
+                                days: defaultInviteDays,
+                              });
+                            }}
+                            pendingLabel="Lade ein…"
+                          >
+                            <UserPlus />
+                            Einladen
+                          </ActionButton>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {member.stufe3Eligible && (
+                            <DeleteMemberDialog
+                              memberId={member.id}
+                              displayName={member.displayName}
+                            />
+                          )}
+                          {member.membershipState === "ausgetreten" &&
+                            member.meepleId &&
+                            member.openGames === 0 &&
+                            member.openUnits === 0 && (
+                              <AnonymiseMeepleDialog
+                                meepleId={member.meepleId}
+                                displayName={member.displayName}
+                              />
+                            )}
+                          {member.meepleId &&
+                            member.membershipState !== "anonymisiert" && (
+                              <>
+                                {member.resignedAt ? (
+                                  <ActionButton
+                                    variant="outline"
+                                    size="sm"
+                                    action={revokeResignation.bind(
+                                      null,
+                                      member.meepleId,
+                                    )}
+                                    pendingLabel="Widerrufe…"
+                                  >
+                                    <RotateCcw />
+                                    Widerrufen
+                                  </ActionButton>
+                                ) : (
+                                  <ResignMembershipDialog
+                                    meepleId={member.meepleId}
+                                    displayName={member.displayName}
+                                  />
+                                )}
+                              </>
+                            )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
+  );
+}

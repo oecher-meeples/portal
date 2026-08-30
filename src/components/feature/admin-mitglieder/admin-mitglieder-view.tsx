@@ -7,6 +7,11 @@ import {
   type MeepleRow,
 } from "@/components/feature/admin-mitglieder/mitglieder-table";
 import {
+  VereinsmitgliederTable,
+  type VereinsmitgliedRow,
+} from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
+import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
+import {
   InvitesSection,
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
@@ -43,6 +48,7 @@ function germanDate(value: string | null) {
 }
 
 export function AdminMitgliederView({
+  members,
   meeples,
   roles,
   permissions,
@@ -57,6 +63,7 @@ export function AdminMitgliederView({
   pendingEmailChanges,
   stufe3Candidates,
 }: {
+  members: VereinsmitgliedRow[];
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
   permissions: PermissionOption[];
@@ -89,6 +96,17 @@ export function AdminMitgliederView({
       m.openUnits === 0,
   );
 
+  const activeMembers = members.filter((m) => m.membershipState === "aktiv");
+  const activeByContribution = {
+    mini: activeMembers.filter((m) => m.contributionCategory === "mini").length,
+    jung: activeMembers.filter((m) => m.contributionCategory === "jung").length,
+    meeple: activeMembers.filter((m) => m.contributionCategory === "meeple")
+      .length,
+    individuell: activeMembers.filter(
+      (m) => m.contributionCategory === "individuell",
+    ).length,
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -98,7 +116,11 @@ export function AdminMitgliederView({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Mitglieder" value={meeples.length} hint="insgesamt" />
+        <StatTile
+          label="Vereinsmitglieder"
+          value={members.length}
+          hint="insgesamt"
+        />
         <StatTile
           label="Kündigungen mit Bestand"
           value={withOpenHoldings.length}
@@ -110,6 +132,41 @@ export function AdminMitgliederView({
           hint="ausgetreten, ohne Bestand"
         />
       </div>
+
+      <a
+        href="#vereinsmitglieder"
+        className="bg-card hover:bg-muted/50 block rounded-lg border p-5 transition-colors"
+      >
+        <h2 className="font-serif text-lg font-bold">
+          Aktive Mitglieder — {activeMembers.length}
+        </h2>
+        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.mini}
+            </dt>
+            <dd className="font-mono">{activeByContribution.mini}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.jung}
+            </dt>
+            <dd className="font-mono">{activeByContribution.jung}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.meeple}
+            </dt>
+            <dd className="font-mono">{activeByContribution.meeple}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.individuell}
+            </dt>
+            <dd className="font-mono">{activeByContribution.individuell}</dd>
+          </div>
+        </dl>
+      </a>
 
       {deletionRequests.length > 0 && (
         <div
@@ -229,6 +286,11 @@ export function AdminMitgliederView({
       {canManageRoles && (
         <RoleManagementSection roles={roles} permissions={permissions} />
       )}
+
+      <VereinsmitgliederTable
+        members={members}
+        defaultInviteDays={defaultInviteDays}
+      />
 
       {canCreateSystemkonto && (
         <div className="flex justify-end">

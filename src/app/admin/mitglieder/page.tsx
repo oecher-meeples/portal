@@ -12,6 +12,7 @@ import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 import { listOpenPendingChanges } from "@/lib/members/pending-changes";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { listMembersEligibleForStufe3 } from "@/lib/members/anonymisation";
+import { determineContribution } from "@/lib/members/contribution";
 import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
@@ -20,6 +21,7 @@ export default async function AdminMitgliederPage() {
   const now = new Date();
 
   const [
+    members,
     meeples,
     userRoles,
     roles,
@@ -36,6 +38,19 @@ export default async function AdminMitgliederPage() {
     canManageRoles,
     canCreateSystemkonto,
   ] = await Promise.all([
+    prisma.member.findMany({
+      orderBy: { memberNumber: "asc" },
+      include: {
+        meeple: {
+          select: {
+            id: true,
+            displayName: true,
+            joinedAt: true,
+            anonymizedAt: true,
+          },
+        },
+      },
+    }),
     prisma.meeple.findMany({
       orderBy: { memberNumber: "asc" },
       include: {
@@ -112,6 +127,7 @@ export default async function AdminMitgliederPage() {
   const openUnitsByMeepleId = new Map(
     storageUnitCounts.map((row) => [row.keeperMeepleId!, row._count._all]),
   );
+  const stufe3EligibleIds = new Set(stufe3Candidates.map((m) => m.id));
 
   return (
     <AdminMitgliederView
@@ -138,6 +154,30 @@ export default async function AdminMitgliederPage() {
       }))}
       canManageRoles={canManageRoles}
       canReadBankData={canReadBankData}
+      members={members.map((member) => ({
+        id: member.id,
+        memberNumber: member.memberNumber,
+        displayName: memberDisplayName(member),
+        email: member.email,
+        meepleId: member.meepleId,
+        joinedAt: member.meeple?.joinedAt.toISOString() ?? null,
+        resignedAt: member.resignedAt?.toISOString() ?? null,
+        membershipEndsAt: member.membershipEndsAt?.toISOString() ?? null,
+        membershipState: getMembershipState(
+          {
+            resignedAt: member.resignedAt,
+            membershipEndsAt: member.membershipEndsAt,
+            anonymizedAt: member.meeple?.anonymizedAt ?? null,
+          },
+          now,
+        ),
+        contributionCategory: determineContribution(member, now).category,
+        openGames: openGamesByVereinsmitgliedId.get(member.id) ?? 0,
+        openUnits: member.meepleId
+          ? (openUnitsByMeepleId.get(member.meepleId) ?? 0)
+          : 0,
+        stufe3Eligible: stufe3EligibleIds.has(member.id),
+      }))}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,
