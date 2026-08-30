@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
-import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
+import {
+  requireAdminPermission,
+  hasPermissionInCurrentView,
+} from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { getLfgParticipantDisplayName, getLfgStatus } from "@/lib/content/lfg";
 import { getContactLinks } from "@/lib/members/contact";
@@ -11,7 +14,7 @@ export default async function LfgDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, meeple } = await requireMember();
+  const { user, meeple } = await requireAdminPermission("lfg:participate");
   const { id } = await params;
 
   const post = await prisma.lfgPost.findUnique({

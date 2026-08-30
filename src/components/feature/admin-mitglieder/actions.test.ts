@@ -47,17 +47,30 @@ vi.mock("@/lib/auth/roles", () => ({
     setRolePermissionsRecordMock(...args),
 }));
 
+// The assignment rules themselves live in the lib layer and are tested in
+// src/lib/auth/user-roles.test.ts — here only the action wrappers matter.
+const assignMeepleRoleRecordMock = vi.fn();
+const removeMeepleRoleRecordMock = vi.fn();
+const listMeepleRoleAssignmentsMock = vi.fn();
+vi.mock("@/lib/auth/user-roles", () => ({
+  assignMeepleRole: (...args: unknown[]) => assignMeepleRoleRecordMock(...args),
+  removeMeepleRole: (...args: unknown[]) => removeMeepleRoleRecordMock(...args),
+  listMeepleRoleAssignments: (...args: unknown[]) =>
+    listMeepleRoleAssignmentsMock(...args),
+}));
+
 const {
   anonymiseMeeple,
+  assignMeepleRole,
   createRole,
   deleteRole,
   getOpenHoldingsSummary,
   recordResignation,
+  removeMeepleRole,
   renameMeeple,
   revealMemberIban,
   revokeResignation,
   sendSelbstauskunft,
-  setMeepleRole,
   setMemberNumber,
   setRolePermissions,
   updateRole,
@@ -78,6 +91,9 @@ beforeEach(() => {
   setRolePermissionsRecordMock.mockReset().mockResolvedValue({
     success: true,
   });
+  assignMeepleRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  removeMeepleRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  listMeepleRoleAssignmentsMock.mockReset().mockResolvedValue([]);
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -95,7 +111,10 @@ describe("without the members:manage permission", () => {
     await expect(getOpenHoldingsSummary("meeple-1")).rejects.toThrow(
       ForbiddenError,
     );
-    await expect(setMeepleRole("meeple-1", "role-1")).rejects.toThrow(
+    await expect(assignMeepleRole("meeple-1", "role-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(removeMeepleRole("user-role-1")).rejects.toThrow(
       ForbiddenError,
     );
     await expect(setMemberNumber("meeple-1", 10)).rejects.toThrow(
@@ -182,39 +201,58 @@ describe("anonymiseMeeple", () => {
   });
 });
 
-describe("setMeepleRole", () => {
-  it("swaps the meeple's UserRole row for the chosen role", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
-      neonAuthUserId: "user-1",
-    } as never);
-    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
-      id: "role-admin",
-    } as never);
-
-    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
+describe("assignMeepleRole", () => {
+  it("delegates to the shared assignment rules and revalidates on success", async () => {
+    expect(await assignMeepleRole("meeple-1", "role-admin")).toEqual({
       success: true,
     });
+    expect(assignMeepleRoleRecordMock).toHaveBeenCalledWith(
+      "meeple-1",
+      "role-admin",
+      undefined,
+    );
+  });
 
-    expect(prismaMock.userRole.deleteMany).toHaveBeenCalledWith({
-      where: { neonAuthUserId: "user-1" },
+  it("passes a rule violation straight back without revalidating", async () => {
+    assignMeepleRoleRecordMock.mockResolvedValue({
+      error: "Dieses Mitglied hat kein Login-Konto.",
     });
-    expect(prismaMock.userRole.create).toHaveBeenCalledWith({
-      data: { neonAuthUserId: "user-1", roleId: "role-admin" },
+
+    expect(await assignMeepleRole("meeple-1", "role-admin")).toEqual({
+      error: "Dieses Mitglied hat kein Login-Konto.",
     });
   });
 
-  it("refuses to assign a role to a Meeple without a login account", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
-      neonAuthUserId: null,
-    } as never);
-    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
-      id: "role-admin",
-    } as never);
-
-    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
-      error: "Dieses Mitglied hat kein Login-Konto.",
+  it("requires admin:access instead of members:manage when a time window is given", async () => {
+    await assignMeepleRole("meeple-1", "role-vorstand", {
+      startsAt: new Date("2026-01-01"),
+      endsAt: new Date("2027-01-01"),
     });
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+
+    expect(requirePermissionMock).toHaveBeenCalledWith("admin:access");
+  });
+
+  it("requires members:manage for a plain assignment (no window)", async () => {
+    await assignMeepleRole("meeple-1", "role-vorstand");
+
+    expect(requirePermissionMock).toHaveBeenCalledWith("members:manage");
+  });
+});
+
+describe("removeMeepleRole", () => {
+  it("delegates to the shared rules and revalidates on success", async () => {
+    expect(await removeMeepleRole("user-role-1")).toEqual({ success: true });
+    expect(removeMeepleRoleRecordMock).toHaveBeenCalledWith("user-role-1");
+  });
+
+  it("passes a rule violation straight back", async () => {
+    removeMeepleRoleRecordMock.mockResolvedValue({
+      error: "Rollenzuweisung nicht gefunden.",
+    });
+
+    expect(await removeMeepleRole("user-role-1")).toEqual({
+      error: "Rollenzuweisung nicht gefunden.",
+    });
   });
 });
 

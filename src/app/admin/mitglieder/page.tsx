@@ -26,7 +26,10 @@ export default async function AdminMitgliederPage() {
     canManageRoles,
   ] = await Promise.all([
     prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
-    prisma.userRole.findMany({ include: { role: true } }),
+    prisma.userRole.findMany({
+      include: { role: { select: { id: true, name: true } } },
+      orderBy: { startsAt: "desc" },
+    }),
     prisma.role.findMany({
       orderBy: { name: "asc" },
       include: { permissions: true },
@@ -48,13 +51,28 @@ export default async function AdminMitgliederPage() {
     hasPermission(session.user.id, "members:manage"),
   ]);
 
-  // A Meeple holds exactly one role (see redeemInvite's DEFAULT_ROLE) — the
-  // first match is enough even if a data inconsistency left more than one.
-  const roleIdByUserId = new Map<string, string>();
+  // A Meeple can hold several roles at once (#335), each with its own
+  // (possibly expired, #264) time window — group all assignments per user.
+  const roleAssignmentsByUserId = new Map<
+    string,
+    {
+      id: string;
+      roleId: string;
+      roleName: string;
+      startsAt: Date;
+      endsAt: Date | null;
+    }[]
+  >();
   for (const userRole of userRoles) {
-    if (!roleIdByUserId.has(userRole.neonAuthUserId)) {
-      roleIdByUserId.set(userRole.neonAuthUserId, userRole.roleId);
-    }
+    const list = roleAssignmentsByUserId.get(userRole.neonAuthUserId) ?? [];
+    list.push({
+      id: userRole.id,
+      roleId: userRole.roleId,
+      roleName: userRole.role.name,
+      startsAt: userRole.startsAt,
+      endsAt: userRole.endsAt,
+    });
+    roleAssignmentsByUserId.set(userRole.neonAuthUserId, list);
   }
 
   const openGamesByMeepleId = new Map(
@@ -95,9 +113,16 @@ export default async function AdminMitgliederPage() {
         displayName: meeple.displayName,
         email: meeple.email,
         hasAccount: meeple.neonAuthUserId !== null,
-        roleId: meeple.neonAuthUserId
-          ? (roleIdByUserId.get(meeple.neonAuthUserId) ?? null)
-          : null,
+        roleAssignments: (meeple.neonAuthUserId
+          ? (roleAssignmentsByUserId.get(meeple.neonAuthUserId) ?? [])
+          : []
+        ).map((a) => ({
+          id: a.id,
+          roleId: a.roleId,
+          roleName: a.roleName,
+          startsAt: a.startsAt.toISOString(),
+          endsAt: a.endsAt?.toISOString() ?? null,
+        })),
         membershipState: getMembershipState(meeple, now),
         joinedAt: meeple.joinedAt.toISOString(),
         resignedAt: meeple.resignedAt?.toISOString() ?? null,

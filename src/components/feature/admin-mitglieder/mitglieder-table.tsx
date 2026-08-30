@@ -165,7 +165,7 @@ export function MitgliederTable({
                         {meeple.hasAccount ? (
                           <MeepleRoleSelect
                             meepleId={meeple.id}
-                            roleId={meeple.roleId}
+                            assignments={meeple.roleAssignments}
                             roles={roles}
                             protected={meeple.displayName === "Admin"}
                           />

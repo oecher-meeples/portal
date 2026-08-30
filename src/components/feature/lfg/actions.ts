@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
-import { requireMeeple } from "@/lib/members/meeples";
+import { requireMeeple, requireMeeplePermission } from "@/lib/members/meeples";
 import { getLfgStatus } from "@/lib/content/lfg";
 
 export type LfgPostInput = {
@@ -21,7 +21,7 @@ export type LfgPostInput = {
 };
 
 export async function createLfgPost(input: LfgPostInput) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("lfg:participate");
 
   if (!input.title.trim()) {
     return { error: "Bitte einen Titel angeben." };
@@ -91,7 +91,7 @@ async function loadJoinablePost(postId: string) {
 }
 
 export async function joinLfgPost(postId: string) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("lfg:participate");
 
   const result = await loadJoinablePost(postId);
   if ("error" in result) {
@@ -117,7 +117,7 @@ export async function joinLfgPost(postId: string) {
 /** Ersteller darf immer Gäste hinzufügen; beigetretene Meeples nur, wenn
  * `guestsMayBringGuests` aktiv ist (#145). Anzeigename ist immer generiert. */
 export async function addLfgGuest(postId: string) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("lfg:participate");
 
   const result = await loadJoinablePost(postId);
   if ("error" in result) {
@@ -152,7 +152,7 @@ export async function addLfgGuest(postId: string) {
 /** Entfernen darf, wer den Gast hinzugefügt hat; der Ersteller zusätzlich
  * jeden Gast (#145). */
 export async function removeLfgGuest(participantId: string) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("lfg:participate");
 
   const participant = await prisma.lfgParticipant.findUnique({
     where: { id: participantId },
@@ -177,7 +177,7 @@ export async function removeLfgGuest(participantId: string) {
 }
 
 export async function leaveLfgPost(postId: string) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("lfg:participate");
 
   const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
   if (!post) {

@@ -150,12 +150,12 @@ export async function getUpcomingEventsIncludingInternal(limit = 3) {
   return posts.map(toContentItem);
 }
 
-/** Interne Beiträge sind nur mit Session sichtbar — used to gate the detail page. */
+/** Interne Beiträge brauchen news:internal:view (nicht nur eine Session) — used to gate the detail page. */
 export function canViewContentItem(
   item: Pick<ContentItem, "internal">,
-  hasSession: boolean,
+  canViewInternal: boolean,
 ) {
-  return !item.internal || hasSession;
+  return !item.internal || canViewInternal;
 }
 
 export { TYPE_TO_DB, DB_TO_TYPE };

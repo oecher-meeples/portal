@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
-import { requireMeeple } from "@/lib/members/meeples";
+import { requireMeeplePermission } from "@/lib/members/meeples";
 import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
@@ -47,7 +47,7 @@ function toMarketListingData(input: MarketListingInput) {
 }
 
 export async function createMarketListing(input: MarketListingInput) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("market:participate");
 
   const validationError = validateMarketListingInput(input);
   if (validationError) {
@@ -66,7 +66,7 @@ export async function updateOwnMarketListing(
   id: string,
   input: MarketListingInput,
 ) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("market:participate");
 
   const listing = await prisma.marketListing.findUnique({ where: { id } });
   if (!listing) {
@@ -97,7 +97,7 @@ export async function updateOwnMarketListing(
 }
 
 export async function deleteOwnMarketListing(id: string) {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("market:participate");
 
   const listing = await prisma.marketListing.findUnique({ where: { id } });
   if (!listing) {
@@ -118,13 +118,13 @@ export async function deleteOwnMarketListing(id: string) {
  * genutzt beim Entfernen/Ersetzen (Zuschneiden) einzelner Bilder im
  * Markt-Formular (#175), bevor/nachdem die Anzeige gespeichert wird. */
 export async function deleteMarketListingImage(url: string) {
-  await requireMeeple();
+  await requireMeeplePermission("market:participate");
   await deleteBlobs([url]);
   return { success: true as const };
 }
 
 export async function getMarketListingUploadToken(pathname: string) {
-  await requireMeeple();
+  await requireMeeplePermission("market:participate");
 
   return generateClientTokenFromReadWriteToken({
     pathname: normaliseBlobPath(pathname, "market-listings"),

@@ -4,7 +4,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 class RedirectError extends Error {}
 
-const requireMeepleMock = vi.fn();
+const requireMeeplePermissionMock = vi.fn();
 const getMembershipStateMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
   const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
@@ -12,7 +12,7 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return {
     ...actual,
-    requireMeeple: requireMeepleMock,
+    requireMeeplePermission: requireMeeplePermissionMock,
     getMembershipState: getMembershipStateMock,
   };
 });
@@ -82,7 +82,7 @@ const SELF = { id: "meeple-self" };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireMeepleMock.mockResolvedValue(SELF);
+  requireMeeplePermissionMock.mockResolvedValue(SELF);
   getMembershipStateMock.mockReturnValue("aktiv");
   borrowGameMock.mockResolvedValue({ id: "holding-new" });
   handOverGameMock.mockResolvedValue({ id: "holding-new" });
@@ -94,7 +94,7 @@ beforeEach(() => {
 
 describe("without a session", () => {
   it("books nothing", async () => {
-    requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
+    requireMeeplePermissionMock.mockRejectedValue(new RedirectError("/login"));
 
     await expect(scanBorrowGame("game-1")).rejects.toThrow(RedirectError);
     expect(borrowGameMock).not.toHaveBeenCalled();

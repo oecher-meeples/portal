@@ -7,6 +7,7 @@ import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
@@ -38,7 +39,12 @@ export default async function GameDetailPage({
 }) {
   const { slug } = await params;
   const tier = await getSessionTier();
-  const internal = tier !== "gast";
+  const user = await getCurrentUser();
+  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
+  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
+  const internal =
+    tier !== "gast" &&
+    (user ? await hasPermission(user.id, "ludothek:view") : false);
 
   const clubGames = await buildLudothekGames();
   // One title can have several physical copies (same boardGameSlug) — the
@@ -172,9 +178,8 @@ export default async function GameDetailPage({
     ]),
   );
 
-  const [explainerEntries, user, openLfgPosts] = await Promise.all([
+  const [explainerEntries, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
-    getCurrentUser(),
     getOpenLfgPostsForBoardGame(game.boardGameId),
   ]);
   const myLevel =

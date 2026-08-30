@@ -162,12 +162,18 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+/// Eine Zuweisung gilt für ein Zeitfenster [startsAt, endsAt); mehrere Fenster
+/// derselben Rolle über die Zeit sind möglich (z. B. Wahlperioden, siehe #264),
+/// exakt-doppelte Zuweisung im selben Fenster nicht.
 model UserRole {
+  id             String    @id @default(cuid())
   neonAuthUserId String
   roleId         String
-  role           Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  startsAt       DateTime  @default(now())
+  endsAt         DateTime?
+  role           Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@id([neonAuthUserId, roleId])
+  @@unique([neonAuthUserId, roleId, startsAt])
   @@map("user_roles")
 }
 

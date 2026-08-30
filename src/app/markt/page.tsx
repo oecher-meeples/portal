@@ -1,4 +1,7 @@
-import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
+import {
+  requireAdminPermission,
+  hasPermissionInCurrentView,
+} from "@/lib/auth/session";
 import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { toSparePartListingView } from "@/lib/inventory/spare-parts";
@@ -15,7 +18,7 @@ export default async function MarktPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { user, meeple } = await requireMember();
+  const { user, meeple } = await requireAdminPermission("market:participate");
   const rawSearchParams = await searchParams;
   const filters = parseMarketListingSearchParams(rawSearchParams);
   const canManageSpareParts = await hasPermissionInCurrentView(

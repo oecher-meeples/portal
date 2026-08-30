@@ -1,4 +1,4 @@
-import { requireMember } from "@/lib/auth/session";
+import { requireAdminPermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { PageHeading } from "@/components/ui/page-heading";
 import { getLfgStatus } from "@/lib/content/lfg";
@@ -14,7 +14,7 @@ export default async function LfgPage({
 }: {
   searchParams: Promise<{ vergangene?: string }>;
 }) {
-  const { meeple } = await requireMember();
+  const { meeple } = await requireAdminPermission("lfg:participate");
   const { vergangene } = await searchParams;
   const showExpired = vergangene === "1";
 

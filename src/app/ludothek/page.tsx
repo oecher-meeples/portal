@@ -1,6 +1,7 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
@@ -22,9 +23,12 @@ export default async function LudothekPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const tier = await getSessionTier();
-  const internal = tier !== "gast";
-
   const user = await getCurrentUser();
+  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
+  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
+  const internal =
+    tier !== "gast" &&
+    (user ? await hasPermission(user.id, "ludothek:view") : false);
   const canManageGames = user
     ? await hasPermissionInCurrentView(user.id, "games:manage")
     : false;

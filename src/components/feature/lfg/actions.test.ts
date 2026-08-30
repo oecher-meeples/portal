@@ -6,11 +6,16 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeepleMock = vi.fn();
+const requireMeeplePermissionMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
   const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
     "@/lib/members/meeples",
   );
-  return { ...actual, requireMeeple: requireMeepleMock };
+  return {
+    ...actual,
+    requireMeeple: requireMeepleMock,
+    requireMeeplePermission: requireMeeplePermissionMock,
+  };
 });
 
 const {
@@ -35,6 +40,7 @@ const VALID_INPUT = {
 
 beforeEach(() => {
   requireMeepleMock.mockResolvedValue(CREATOR);
+  requireMeeplePermissionMock.mockResolvedValue(CREATOR);
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -46,6 +52,7 @@ beforeEach(() => {
 describe("without a session", () => {
   it("writes nothing", async () => {
     requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
+    requireMeeplePermissionMock.mockRejectedValue(new RedirectError("/login"));
 
     await expect(createLfgPost(VALID_INPUT)).rejects.toThrow(RedirectError);
     await expect(joinLfgPost("post-1")).rejects.toThrow(RedirectError);
@@ -116,7 +123,7 @@ describe("joinLfgPost", () => {
   }
 
   beforeEach(() => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.lfgParticipant.findUnique.mockResolvedValue(null);
     prismaMock.lfgParticipant.create.mockResolvedValue({} as never);
   });
@@ -196,7 +203,7 @@ describe("leaveLfgPost", () => {
   });
 
   it("lets a participant leave", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.lfgPost.findUnique.mockResolvedValue({
       id: "post-1",
       createdByMeepleId: CREATOR.id,
@@ -292,7 +299,7 @@ describe("addLfgGuest", () => {
   });
 
   it("rejects a non-creator when guestsMayBringGuests is off", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
 
     const result = await addLfgGuest("post-1");
@@ -304,7 +311,7 @@ describe("addLfgGuest", () => {
   });
 
   it("lets a joined participant add a guest when guestsMayBringGuests is on", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.lfgPost.findUnique.mockResolvedValue(
       post({ guestsMayBringGuests: true }) as never,
     );
@@ -323,7 +330,7 @@ describe("addLfgGuest", () => {
   });
 
   it("rejects a non-participant even when guestsMayBringGuests is on", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.lfgPost.findUnique.mockResolvedValue(
       post({ guestsMayBringGuests: true }) as never,
     );
@@ -362,7 +369,7 @@ describe("removeLfgGuest", () => {
   }
 
   it("lets whoever added the guest remove them", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.lfgParticipant.findUnique.mockResolvedValue(
       guestParticipant() as never,
     );
@@ -388,7 +395,7 @@ describe("removeLfgGuest", () => {
   });
 
   it("rejects removal by someone who neither added the guest nor created the post", async () => {
-    requireMeepleMock.mockResolvedValue({
+    requireMeeplePermissionMock.mockResolvedValue({
       id: "meeple-third",
       neonAuthUserId: "auth-third",
     });

@@ -1,4 +1,5 @@
 import type { MembershipState } from "@/lib/members/meeples";
+import type { MeepleRoleAssignment } from "@/lib/auth/user-roles";
 
 /**
  * One row of the Mitglieder table / edit dialog. Lives in its own file
@@ -11,7 +12,8 @@ export type MeepleRow = {
   memberNumber: number;
   displayName: string;
   email: string | null;
-  roleId: string | null;
+  /** Alle Rollenzuweisungen (auch abgelaufene, siehe #264) — Mehrfachrollen (#335). */
+  roleAssignments: MeepleRoleAssignment[];
   hasAccount: boolean;
   membershipState: MembershipState;
   joinedAt: string;

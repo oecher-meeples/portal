@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
-import { getMembershipState, requireMeeple } from "@/lib/members/meeples";
+import {
+  getMembershipState,
+  requireMeeplePermission,
+} from "@/lib/members/meeples";
 import {
   borrowGame,
   confirmHolding,
@@ -16,7 +19,7 @@ import {
 } from "@/lib/ludothek/holdings";
 
 async function requireActingMeeple() {
-  const meeple = await requireMeeple();
+  const meeple = await requireMeeplePermission("ludothek:borrow");
   return { meeple, membershipState: getMembershipState(meeple) };
 }
 
@@ -64,7 +67,7 @@ function toResultAndRevalidate<T extends { gameCopyId: string }>(
 }
 
 export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
-  await requireMeeple();
+  await requireMeeplePermission("ludothek:borrow");
   try {
     return await resolveScannedCode(raw);
   } catch {
