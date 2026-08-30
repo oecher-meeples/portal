@@ -5,12 +5,12 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const requireMeepleMock = vi.fn();
+const requireMeeplePermissionMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
   const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
     "@/lib/members/meeples",
   );
-  return { ...actual, requireMeeple: requireMeepleMock };
+  return { ...actual, requireMeeplePermission: requireMeeplePermissionMock };
 });
 
 const generateClientTokenMock = vi.fn();
@@ -63,7 +63,7 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 beforeEach(() => {
-  requireMeepleMock.mockResolvedValue(OWNER);
+  requireMeeplePermissionMock.mockResolvedValue(OWNER);
   deleteBlobsMock.mockReset();
   deleteBlobsMock.mockResolvedValue(undefined);
   hasPermissionMock.mockReset();
@@ -73,7 +73,7 @@ beforeEach(() => {
 
 describe("without a session", () => {
   it("writes nothing", async () => {
-    requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
+    requireMeeplePermissionMock.mockRejectedValue(new RedirectError("/login"));
 
     await expect(createMarketListing(VALID_INPUT)).rejects.toThrow(
       RedirectError,
@@ -162,7 +162,7 @@ describe("updateOwnMarketListing", () => {
   });
 
   it("rejects editing someone else's listing", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
     );
@@ -176,7 +176,7 @@ describe("updateOwnMarketListing", () => {
   });
 
   it("allows an admin to edit someone else's listing (#175)", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
@@ -244,7 +244,7 @@ describe("deleteOwnMarketListing", () => {
   });
 
   it("rejects deleting someone else's listing", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
     );

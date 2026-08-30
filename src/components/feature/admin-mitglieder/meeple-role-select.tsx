@@ -2,60 +2,122 @@
 
 import { useState } from "react";
 import { useAction } from "@/components/ui/use-action";
-import { setMeepleRole } from "@/components/feature/admin-mitglieder/actions";
+import {
+  assignMeepleRole,
+  removeMeepleRole,
+} from "@/components/feature/admin-mitglieder/actions";
+import type { MeepleRoleAssignment } from "@/lib/auth/user-roles";
+import { formatDatePlain } from "@/lib/utils/format";
 
 export type RoleOption = { id: string; name: string };
 
+function isActive(assignment: MeepleRoleAssignment, now: Date) {
+  const startsAt = new Date(assignment.startsAt);
+  const endsAt = assignment.endsAt ? new Date(assignment.endsAt) : null;
+  return startsAt <= now && (!endsAt || endsAt > now);
+}
+
 /**
- * A Meeple holds exactly one role — selecting a new one swaps the
- * assignment server-side (see setMeepleRole). Meeples without a login
- * account (invite not yet redeemed) can't hold a role at all.
+ * A Meeple can hold several roles at once (#335) — each assignment can be
+ * removed independently (ends it now, history stays visible, see #264).
+ * Adding a role is a plain "starts now, never ends" assignment; a term of
+ * office with an explicit window isn't editable here (admin:access-Vorgabe,
+ * bewusst kein UI-Feinschliff in Paket 1 — siehe Ausführungsplan Paket 6).
  */
 export function MeepleRoleSelect({
   meepleId,
-  roleId,
+  assignments,
   roles,
   protected: isProtected = false,
 }: {
   meepleId: string;
-  roleId: string | null;
+  assignments: MeepleRoleAssignment[];
   roles: RoleOption[];
-  /** Der seed-erzeugte Fallback-Admin (displayName "Admin", siehe actions.ts::setMeepleRole) — Rolle bleibt fest. */
+  /** Der seed-erzeugte Fallback-Admin (displayName "Admin") — Rollen bleiben fest. */
   protected?: boolean;
 }) {
-  const [value, setValue] = useState(roleId ?? "");
+  const [pendingRoleId, setPendingRoleId] = useState("");
   const { run, pending, error } = useAction();
+  const now = new Date();
+
+  const active = assignments.filter((a) => isActive(a, now));
+  const expired = assignments.filter((a) => !isActive(a, now));
+  const activeRoleIds = new Set(active.map((a) => a.roleId));
+  const assignableRoles = roles.filter((role) => !activeRoleIds.has(role.id));
 
   if (isProtected) {
     return (
       <span
         className="text-muted-foreground text-sm"
-        title="Die Rolle dieses Kontos ist geschützt und kann nicht geändert werden."
+        title="Die Rollen dieses Kontos sind geschützt und können nicht geändert werden."
       >
-        {roles.find((role) => role.id === roleId)?.name ?? "—"}
+        {active.map((a) => a.roleName).join(", ") || "—"}
       </span>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <select
-        value={value}
-        disabled={pending}
-        onChange={(event) => {
-          const nextRoleId = event.target.value;
-          setValue(nextRoleId);
-          run(() => setMeepleRole(meepleId, nextRoleId));
-        }}
-        className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
-      >
-        {!roleId && <option value="">— keine Rolle —</option>}
-        {roles.map((role) => (
-          <option key={role.id} value={role.id}>
-            {role.name}
-          </option>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap gap-1">
+        {active.length === 0 && (
+          <span className="text-muted-foreground text-sm">— keine Rolle —</span>
+        )}
+        {active.map((assignment) => (
+          <span
+            key={assignment.id}
+            className="border-input inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+          >
+            {assignment.roleName}
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run(() => removeMeepleRole(assignment.id))}
+              className="text-muted-foreground hover:text-destructive disabled:opacity-60"
+              aria-label={`Rolle ${assignment.roleName} entfernen`}
+            >
+              ×
+            </button>
+          </span>
         ))}
-      </select>
+      </div>
+      {assignableRoles.length > 0 && (
+        <select
+          value={pendingRoleId}
+          disabled={pending}
+          onChange={(event) => {
+            const roleId = event.target.value;
+            if (!roleId) return;
+            setPendingRoleId("");
+            run(() => assignMeepleRole(meepleId, roleId));
+          }}
+          className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
+        >
+          <option value="">+ Rolle hinzufügen …</option>
+          {assignableRoles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
+        </select>
+      )}
+      {expired.length > 0 && (
+        <details className="text-muted-foreground text-xs">
+          <summary className="cursor-pointer">
+            {expired.length} abgelaufene Zuweisung(en)
+          </summary>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {expired.map((assignment) => (
+              <li key={assignment.id}>
+                {assignment.roleName}: {formatDatePlain(assignment.startsAt)}
+                {" – "}
+                {assignment.endsAt
+                  ? formatDatePlain(assignment.endsAt)
+                  : "offen"}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {error && <span className="text-destructive text-xs">{error}</span>}
     </div>
   );

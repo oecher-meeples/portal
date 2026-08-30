@@ -146,7 +146,7 @@ export function MeepleEditDialog({
             {meeple.hasAccount ? (
               <MeepleRoleSelect
                 meepleId={meeple.id}
-                roleId={meeple.roleId}
+                assignments={meeple.roleAssignments}
                 roles={roles}
               />
             ) : (

@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
@@ -111,7 +112,17 @@ export async function requireMember() {
   }
 
   const meeple = await ensureMeeple(user);
-  const membershipState = getMembershipState(meeple);
+  // resignedAt/membershipEndsAt moved to the linked Member (#328) —
+  // anonymizedAt stays on Meeple.
+  const member = await prisma.member.findUnique({
+    where: { meepleId: meeple.id },
+    select: { resignedAt: true, membershipEndsAt: true },
+  });
+  const membershipState = getMembershipState({
+    resignedAt: member?.resignedAt ?? null,
+    membershipEndsAt: member?.membershipEndsAt ?? null,
+    anonymizedAt: meeple.anonymizedAt,
+  });
 
   if (membershipState !== "aktiv" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();

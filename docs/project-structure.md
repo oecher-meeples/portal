@@ -49,8 +49,12 @@ src/lib/
 ├── links/      Kuratierte „Wichtige Links" fürs Dashboard (`ImportantLink`) — Reihenfolge nach `createdAt`, keine manuelle Sortierung
 ├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
-│               ├── holdings-lookup.ts  Leseseite (Zustand, Scan auflösen, Verantwortliche)
-│               ├── holding-actions.ts  Server Actions über den Übergängen
+│               ├── holdings-external.ts Übergänge mit externem Ziel (#333): an extern weitergeben/ausgeben, Umbuchen, Rückgabe-von-extern-Bestätigung
+│               ├── holdings-lookup.ts  Leseseite (Zustand inkl. verfügbar/nicht-verfügbar, Scan auflösen, Verantwortliche)
+│               ├── anonymer-meeple.ts  Sammelkonto "Anonymer Meeple" (#333) — Displayname-Konstante + `Member`-Lookup, geteilt mit `prisma/seed.ts`
+│               ├── holding-actions.ts  Server Actions über den internen Übergängen
+│               ├── holding-actions-external.ts Server Actions über den externen Übergängen (#333a/b, Umbuchen, Member-Picker)
+│               ├── holding-actions-shared.ts   Von beiden `holding-actions*.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern
 │               ├── permissions.ts      `requireGamesManagePermission()` — geteilt von `board-games.ts` und `game-copies.ts`
@@ -125,6 +129,8 @@ widgets/
 │   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
 ├── bringbuy/
 │   └── register-external-seller-dialog.tsx  Self-Service-Anmeldung externer Bring & Buy-Verkäufer:innen (#266) — vom Gäste-Bereich (`feature/guest-area`) genutzt, darf aber nicht aus `feature/bringbuy` importieren (Layer-Regel), deshalb hier
+├── pending-changes/
+│   └── pending-changes-panel.tsx  Offene IBAN-/E-Mail-Änderungsanträge freigeben/ablehnen (#330) — von `/admin/bank` (kind: IBAN) **und** `/admin/mitglieder` (kind: MEMBER_EMAIL) eingebunden, deshalb hier statt in einem der beiden Features
 └── board-game/
     ├── board-game-form-values.ts        Form-State ↔ Titel-/Exemplar-Input (`BoardGameFormValues`, `boardGameFormTo…`) — geteilt von allen Formularen unten
     ├── edit-board-game-title.tsx        Titel-Stammdaten-Formularfelder (Titel, EAN, `kind`, BGG-Felder, Spieleranzahl, Beschreibung, …)

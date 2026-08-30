@@ -21,11 +21,14 @@ export default async function AdminDashboardPage() {
     blobStorageUsage,
   ] = await Promise.all([
     prisma.meeple.findMany({
-      select: { resignedAt: true, membershipEndsAt: true, anonymizedAt: true },
+      select: {
+        anonymizedAt: true,
+        member: { select: { resignedAt: true, membershipEndsAt: true } },
+      },
     }),
     prisma.gameHolding.findMany({
-      where: { endedAt: null, meepleId: { not: null } },
-      select: { meepleId: true, origin: true },
+      where: { endedAt: null, vereinsmitgliedId: { not: null } },
+      select: { vereinsmitgliedId: true, origin: true },
     }),
     prisma.invite.count({
       where: { redeemedAt: null, expiresAt: { gt: new Date() } },
@@ -55,7 +58,12 @@ export default async function AdminDashboardPage() {
   ]);
 
   const activeMembers = meeples.filter(
-    (m) => getMembershipState(m) === "aktiv",
+    (m) =>
+      getMembershipState({
+        resignedAt: m.member?.resignedAt ?? null,
+        membershipEndsAt: m.member?.membershipEndsAt ?? null,
+        anonymizedAt: m.anonymizedAt,
+      }) === "aktiv",
   ).length;
   const openLoans = openLoanHoldings.filter((h) => isLoanHolding(h)).length;
   const unregisteredGames = games.filter(

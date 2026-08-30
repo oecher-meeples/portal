@@ -3,7 +3,8 @@ import type { GameZustand } from "@/lib/ludothek/holdings";
 
 const ZUSTAND_TONE: Record<GameZustand, StatusTone> = {
   frei: "positive",
-  ausgeliehen: "info",
+  "ausgeliehen-verfuegbar": "info",
+  "ausgeliehen-nicht-verfuegbar": "warning",
   wartung: "warning",
   "nicht-erfasst": "neutral",
   privat: "neutral",
@@ -11,7 +12,8 @@ const ZUSTAND_TONE: Record<GameZustand, StatusTone> = {
 
 const ZUSTAND_LABELS: Record<GameZustand, string> = {
   frei: "Frei",
-  ausgeliehen: "Ausgeliehen",
+  "ausgeliehen-verfuegbar": "Ausgeliehen",
+  "ausgeliehen-nicht-verfuegbar": "Ausgeliehen (nicht verfügbar)",
   wartung: "Wartung",
   "nicht-erfasst": "Nicht erfasst",
   privat: "Privatbesitz",

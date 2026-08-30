@@ -15,7 +15,7 @@ const {
 const BASE_INVITE = {
   id: "invite-1",
   token: "abc123",
-  email: null,
+  email: "abc@example.com",
   createdByUserId: "user-1",
   createdAt: new Date(),
   expiresIn: 7 * 24 * 60,
@@ -154,16 +154,10 @@ describe("computeExpiresAt", () => {
 });
 
 describe("buildRegistrationLink", () => {
-  it("includes the email param for a bound invite", () => {
+  it("includes the bound email param", () => {
     expect(
       buildRegistrationLink("https://example.com", "tok123", "a@b.com"),
     ).toBe("https://example.com/registrieren?token=tok123&email=a%40b.com");
-  });
-
-  it("omits the email param for an unbound invite", () => {
-    expect(buildRegistrationLink("https://example.com", "tok123", null)).toBe(
-      "https://example.com/registrieren?token=tok123",
-    );
   });
 });
 

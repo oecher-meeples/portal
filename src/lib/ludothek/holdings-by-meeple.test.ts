@@ -5,11 +5,26 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const { getActiveHoldingsByMeeple } = await import("./holdings-by-meeple");
 
+function member(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: "member-1",
+    firstName: null,
+    lastName: null,
+    email: "anna@example.com",
+    street: null,
+    postalCode: null,
+    city: null,
+    phone: null,
+    meeple: { displayName: "Anna", neonAuthUserId: "auth-1" },
+    ...overrides,
+  };
+}
+
 function holding(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     gameCopyId: "copy-1",
     startedAt: new Date("2026-08-01"),
-    meeple: { id: "meeple-1", displayName: "Anna" },
+    vereinsmitglied: member(),
     gameCopy: {
       condition: null,
       ruleBookLanguages: [],
@@ -28,12 +43,12 @@ describe("getActiveHoldingsByMeeple", () => {
 
     expect(prismaMock.gameHolding.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { meepleId: { not: null }, endedAt: null },
+        where: { vereinsmitgliedId: { not: null }, endedAt: null },
       }),
     );
   });
 
-  it("groups multiple copies of one meeple together", async () => {
+  it("groups multiple copies of one member together", async () => {
     prismaMock.gameHolding.findMany.mockResolvedValue([
       holding({ gameCopyId: "copy-1" }),
       holding({
@@ -51,8 +66,13 @@ describe("getActiveHoldingsByMeeple", () => {
 
     expect(result).toEqual([
       {
-        meepleId: "meeple-1",
-        meepleName: "Anna",
+        vereinsmitgliedId: "member-1",
+        memberName: "Anna",
+        verfuegbar: true,
+        street: null,
+        postalCode: null,
+        city: null,
+        phone: null,
         holdings: [
           {
             gameCopyId: "copy-1",
@@ -79,26 +99,46 @@ describe("getActiveHoldingsByMeeple", () => {
     ]);
   });
 
-  it("keeps distinct meeples separate, sorted by name", async () => {
+  it("keeps distinct members separate, sorted by name", async () => {
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      holding({ meeple: { id: "meeple-2", displayName: "Zoe" } }),
-      holding({ meeple: { id: "meeple-1", displayName: "Anna" } }),
+      holding({
+        vereinsmitglied: member({
+          id: "member-2",
+          meeple: { displayName: "Zoe", neonAuthUserId: "auth-2" },
+        }),
+      }),
+      holding({ vereinsmitglied: member({ id: "member-1" }) }),
     ] as never);
 
     const result = await getActiveHoldingsByMeeple();
 
-    expect(result.map((entry) => entry.meepleName)).toEqual(["Anna", "Zoe"]);
+    expect(result.map((entry) => entry.memberName)).toEqual(["Anna", "Zoe"]);
   });
 
-  it("includes a meeple who is only receiving a return for storage (#272)", async () => {
+  it("includes a member who is only receiving a return for storage (#272)", async () => {
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      holding({ meeple: { id: "meeple-1", displayName: "Kassenwart Anna" } }),
+      holding({
+        vereinsmitglied: member({
+          id: "member-1",
+          meeple: { displayName: "Kassenwart Anna", neonAuthUserId: "auth-1" },
+        }),
+      }),
     ] as never);
 
     const result = await getActiveHoldingsByMeeple();
 
     expect(result).toHaveLength(1);
-    expect(result[0].meepleId).toBe("meeple-1");
+    expect(result[0].vereinsmitgliedId).toBe("member-1");
+  });
+
+  it("marks a Member with no Meeple login as nicht verfügbar (#333)", async () => {
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      holding({ vereinsmitglied: member({ meeple: null }) }),
+    ] as never);
+
+    const result = await getActiveHoldingsByMeeple();
+
+    expect(result[0].verfuegbar).toBe(false);
   });
 
   it("returns an empty list when nothing is currently held by a person", async () => {

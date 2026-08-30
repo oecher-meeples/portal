@@ -7,8 +7,12 @@ Vereinsportal eines Brettspielvereins: öffentliche Außendarstellung, interner 
 ### Personen
 
 **Meeple**:
-Ein Vereinsmitglied mit Portal-Account — 1:1 zum Login-Konto, entsteht beim ersten Login. Ein Vereinsmitglied ohne Portal-Account ist im Portal nicht abbildbar. Einzige Ausnahme ist der anonymisierte Meeple: er hat kein Konto mehr und existiert nur noch, damit die Historie lesbar bleibt.
-_Avoid_: User, Mitgliedsprofil, Member (im Code), Nutzer
+Ein Portal-Account — entsteht beim ersten Login. Seit dem Vereinsmitglied/Meeple-Split (ADR 0013, #328) nicht mehr zwingend 1:1 zur Vereinsmitgliedschaft: ein Meeple kann ohne Vereinsmitglied existieren (Systemkonto, anonymisierter Alt-Meeple), ein Vereinsmitglied kann ohne Meeple existieren (noch kein Login). Datenmodell: `Meeple`.
+_Avoid_: User, Mitgliedsprofil, Nutzer
+
+**Vereinsmitglied** (`Member` im Code):
+Die offizielle Mitgliedschaft im Verein — Mitgliedsnummer, Kontaktdaten fürs Vereinsregister, Bankdaten, Kündigung/Austrittsdatum. Seit ADR 0013 (#328) getrennt vom Portal-Account (`Meeple`), verknüpft über `Member.meepleId` (optional, 1:1). Nur Mitgliedsnummer und E-Mail sind Pflichtfelder; Name, Geburtsdatum, Adresse, Telefon bleiben leer, bis der Vorstand sie einträgt — kein Platzhalter-Backfill.
+_Avoid_: Meeple als Synonym (das ist der Portal-Account), Member im Fließtext (nur als Modellname im Code)
 
 **Kündigung**:
 Der Vermerk, dass ein Meeple austritt. Die Mitgliedschaft läuft bis zum Jahreswechsel unverändert weiter — er darf weiter ausleihen. Ab Dezember wird auf noch bei ihm liegende Spiele hingewiesen.

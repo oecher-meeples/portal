@@ -16,7 +16,7 @@ import {
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
-async function requireOpenHolding(tx: Tx, gameCopyId: string) {
+export async function requireOpenHolding(tx: Tx, gameCopyId: string) {
   const holding = await tx.gameHolding.findFirst({
     where: { gameCopyId, endedAt: null },
   });
@@ -47,7 +47,7 @@ async function requireOpenUnit(tx: Tx, unitId: string) {
   return unit;
 }
 
-async function closeAndOpen(
+export async function closeAndOpen(
   tx: Tx,
   {
     gameCopyId,
@@ -60,7 +60,7 @@ async function closeAndOpen(
   }: {
     gameCopyId: string;
     previous: GameHolding;
-    target: { unitId: string } | { meepleId: string };
+    target: { unitId: string } | { vereinsmitgliedId: string };
     origin: HoldingOrigin;
     recordedByMeepleId: string;
     confirmedAt: Date | null;
@@ -90,16 +90,22 @@ async function closeAndOpen(
  * Whoever records the transition as the receiving party gets it confirmed
  * right away — and so does anyone holding `games:manage` (#274): "der
  * Spielewart ist von dieser Regel ausgenommen: sein Wort ist Gesetz", for
- * any recipient, regardless of prior possession. Used by `borrowGame` and
- * `handOverGame` alike; `confirmHolding()` (forcing an already-open, foreign
- * assignment after the fact) is a separate concern and stays untouched.
+ * any recipient, regardless of prior possession. `isSelf` is resolved by the
+ * caller (holding-actions.ts), not looked up here — since the domain layer
+ * works with `Member` targets (#333), while "acting as the receiver" is a
+ * question about the acting *Meeple's* identity, which only the caller
+ * (already holding both identities) can answer without a Meeple↔Member
+ * lookup leaking into this fachfrei-vereinsmitglied module. Used by
+ * `borrowGame` and `handOverGame` alike; `confirmHolding()` (forcing an
+ * already-open, foreign assignment after the fact) is a separate concern and
+ * stays untouched.
  */
 async function confirmationFor(
   tx: Tx,
   recordedByMeepleId: string,
-  receivingMeepleId: string,
+  isSelf: boolean,
 ) {
-  if (recordedByMeepleId === receivingMeepleId) {
+  if (isSelf) {
     return new Date();
   }
 
@@ -121,14 +127,15 @@ async function confirmationFor(
 }
 
 /**
- * A holding counts as a loan exactly when it targets a Meeple via LOAN or HANDOVER —
- * a RETURN to a person is explicitly not a loan (see CONTEXT.md "Ausleihe").
+ * A holding counts as a loan exactly when it targets a Vereinsmitglied via
+ * LOAN or HANDOVER — a RETURN to a person is explicitly not a loan (see
+ * CONTEXT.md "Ausleihe").
  */
 export function isLoanHolding(
-  holding: Pick<GameHolding, "meepleId" | "origin">,
+  holding: Pick<GameHolding, "vereinsmitgliedId" | "origin">,
 ) {
   return (
-    holding.meepleId !== null &&
+    holding.vereinsmitgliedId !== null &&
     (holding.origin === HoldingOrigin.LOAN ||
       holding.origin === HoldingOrigin.HANDOVER)
   );
@@ -136,13 +143,18 @@ export function isLoanHolding(
 
 export async function borrowGame({
   gameCopyId,
-  meepleId,
+  vereinsmitgliedId,
   recordedByMeepleId,
+  isSelf,
   note,
 }: {
   gameCopyId: string;
-  meepleId: string;
+  vereinsmitgliedId: string;
   recordedByMeepleId: string;
+  /** True wenn die erfassende und die empfangende Identität dieselbe Person
+   * sind (der Regelfall: ein Meeple bucht auf sein eigenes Vereinsmitglied
+   * aus) — vom Aufrufer aufgelöst, siehe `confirmationFor()`. */
+  isSelf: boolean;
   note?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
@@ -161,10 +173,10 @@ export async function borrowGame({
     return closeAndOpen(tx, {
       gameCopyId,
       previous,
-      target: { meepleId },
+      target: { vereinsmitgliedId },
       origin: HoldingOrigin.LOAN,
       recordedByMeepleId,
-      confirmedAt: await confirmationFor(tx, recordedByMeepleId, meepleId),
+      confirmedAt: await confirmationFor(tx, recordedByMeepleId, isSelf),
       note,
     });
   });
@@ -172,18 +184,20 @@ export async function borrowGame({
 
 export async function handOverGame({
   gameCopyId,
-  toMeepleId,
+  toVereinsmitgliedId,
   recordedByMeepleId,
+  isSelf,
   note,
 }: {
   gameCopyId: string;
-  toMeepleId: string;
+  toVereinsmitgliedId: string;
   recordedByMeepleId: string;
+  isSelf: boolean;
   note?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
     const previous = await requireOpenHolding(tx, gameCopyId);
-    if (!previous.meepleId) {
+    if (!previous.vereinsmitgliedId) {
       throw new HoldingConflictError(
         "Weitergeben kann nur, wer das Spiel gerade selbst bei sich hat — es liegt aktuell in einer Einheit.",
       );
@@ -192,10 +206,10 @@ export async function handOverGame({
     return closeAndOpen(tx, {
       gameCopyId,
       previous,
-      target: { meepleId: toMeepleId },
+      target: { vereinsmitgliedId: toVereinsmitgliedId },
       origin: HoldingOrigin.HANDOVER,
       recordedByMeepleId,
-      confirmedAt: await confirmationFor(tx, recordedByMeepleId, toMeepleId),
+      confirmedAt: await confirmationFor(tx, recordedByMeepleId, isSelf),
       note,
     });
   });
@@ -204,7 +218,7 @@ export async function handOverGame({
 export async function returnGame({
   gameCopyId,
   toUnitId,
-  toMeepleId,
+  toVereinsmitgliedId,
   recordedByMeepleId,
   note,
 }: {
@@ -212,12 +226,12 @@ export async function returnGame({
   recordedByMeepleId: string;
   note?: string | null;
 } & (
-  | { toUnitId: string; toMeepleId?: never }
-  | { toMeepleId: string; toUnitId?: never }
+  | { toUnitId: string; toVereinsmitgliedId?: never }
+  | { toVereinsmitgliedId: string; toUnitId?: never }
 )) {
   return prisma.$transaction(async (tx) => {
     const previous = await requireOpenHolding(tx, gameCopyId);
-    if (!previous.meepleId) {
+    if (!previous.vereinsmitgliedId) {
       throw new HoldingConflictError(
         "Zurückgeben kann nur, was gerade bei einer Person liegt — dieses Spiel liegt bereits in einer Einheit.",
       );
@@ -240,10 +254,12 @@ export async function returnGame({
     return closeAndOpen(tx, {
       gameCopyId,
       previous,
-      target: { meepleId: toMeepleId! },
+      target: { vereinsmitgliedId: toVereinsmitgliedId! },
       origin: HoldingOrigin.RETURN,
       recordedByMeepleId,
-      // Only completed once the accepting person actually stores it away (einlagern).
+      // Only completed once the accepting person actually stores it away
+      // (einlagern) — or, for a return from someone with no reachable Meeple
+      // login ("nicht verfügbar", #333c/d), via `confirmExternalReturn()`.
       confirmedAt: null,
       note,
     });
@@ -286,10 +302,10 @@ export async function relocateGame({
 
 export async function confirmHolding({
   holdingId,
-  confirmingMeepleId,
+  confirmingVereinsmitgliedId,
 }: {
   holdingId: string;
-  confirmingMeepleId: string;
+  confirmingVereinsmitgliedId: string;
 }) {
   const holding = await prisma.gameHolding.findUnique({
     where: { id: holdingId },
@@ -297,14 +313,14 @@ export async function confirmHolding({
   if (!holding || holding.endedAt) {
     throw new HoldingConflictError("Dieser Aufenthalt ist nicht mehr offen.");
   }
-  if (holding.meepleId !== confirmingMeepleId) {
+  if (holding.vereinsmitgliedId !== confirmingVereinsmitgliedId) {
     throw new HoldingConflictError(
       "Nur die empfangende Person kann diesen Aufenthalt bestätigen.",
     );
   }
   if (holding.origin === HoldingOrigin.RETURN) {
     throw new HoldingConflictError(
-      "Eine Rückgabe wird nicht per Klick bestätigt, sondern durch Einlagern in eine Einheit.",
+      "Eine Rückgabe wird nicht per Klick bestätigt, sondern durch Einlagern in eine Einheit — für eine Rückgabe von extern siehe confirmExternalReturn().",
     );
   }
   if (holding.confirmedAt) {
@@ -367,6 +383,7 @@ export {
   formatLocationChain,
   getGameZustand,
   getResponsibleMeeple,
+  isVerfuegbarerVereinsmitglied,
   resolveScannedCode,
   walkUnitChain,
   zustandFromHoldingAndUnit,

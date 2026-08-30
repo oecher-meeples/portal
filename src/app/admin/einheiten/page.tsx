@@ -49,7 +49,13 @@ export default async function AdminEinheitenPage() {
       where: { endedAt: null, unitId: { not: null } },
       _count: { _all: true },
     }),
-    prisma.meeple.findMany(),
+    prisma.meeple.findMany({
+      include: {
+        member: {
+          select: { id: true, resignedAt: true, membershipEndsAt: true },
+        },
+      },
+    }),
   ]);
 
   const unitById = new Map(units.map((u) => [u.id, u]));
@@ -57,14 +63,22 @@ export default async function AdminEinheitenPage() {
     gameCounts.map((row) => [row.unitId!, row._count._all]),
   );
 
+  function membershipStateOf(meeple: (typeof meeples)[number]) {
+    return getMembershipState({
+      resignedAt: meeple.member?.resignedAt ?? null,
+      membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
+      anonymizedAt: meeple.anonymizedAt,
+    });
+  }
+
   const resignedMeeples = meeples.filter(
-    (m) => getMembershipState(m) === "ausgetreten",
+    (m) => membershipStateOf(m) === "ausgetreten",
   );
 
   const [openHoldingsAll, unitsWithKeeper] = await Promise.all([
     prisma.gameHolding.groupBy({
-      by: ["meepleId"],
-      where: { endedAt: null, meepleId: { not: null } },
+      by: ["vereinsmitgliedId"],
+      where: { endedAt: null, vereinsmitgliedId: { not: null } },
       _count: { _all: true },
     }),
     prisma.storageUnit.groupBy({
@@ -76,8 +90,11 @@ export default async function AdminEinheitenPage() {
 
   const resignedHolders: ResignedHolderRow[] = resignedMeeples
     .map((meeple) => {
-      const gameCount =
-        openHoldingsAll.find((r) => r.meepleId === meeple.id)?._count._all ?? 0;
+      const gameCount = meeple.member
+        ? (openHoldingsAll.find(
+            (r) => r.vereinsmitgliedId === meeple.member!.id,
+          )?._count._all ?? 0)
+        : 0;
       const unitCount =
         unitsWithKeeper.find((r) => r.keeperMeepleId === meeple.id)?._count
           ._all ?? 0;
@@ -100,7 +117,7 @@ export default async function AdminEinheitenPage() {
   }));
 
   const keeperOptions = meeples
-    .filter((m) => getMembershipState(m) !== "anonymisiert")
+    .filter((m) => membershipStateOf(m) !== "anonymisiert")
     .map((m) => ({ id: m.id, displayName: m.displayName }));
 
   return (

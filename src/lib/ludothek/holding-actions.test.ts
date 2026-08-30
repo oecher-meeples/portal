@@ -4,7 +4,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 class RedirectError extends Error {}
 
-const requireMeepleMock = vi.fn();
+const requireMeeplePermissionMock = vi.fn();
 const getMembershipStateMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
   const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
@@ -12,7 +12,7 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return {
     ...actual,
-    requireMeeple: requireMeepleMock,
+    requireMeeplePermission: requireMeeplePermissionMock,
     getMembershipState: getMembershipStateMock,
   };
 });
@@ -21,6 +21,7 @@ vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 const gameCopyFindUniqueMock = vi.fn();
 const gameHoldingFindFirstMock = vi.fn();
 const meepleFindManyMock = vi.fn();
+const memberFindUniqueMock = vi.fn();
 vi.mock("@/lib/utils/prisma", () => ({
   prisma: {
     gameCopy: {
@@ -30,6 +31,9 @@ vi.mock("@/lib/utils/prisma", () => ({
       findFirst: (...args: unknown[]) => gameHoldingFindFirstMock(...args),
     },
     meeple: { findMany: (...args: unknown[]) => meepleFindManyMock(...args) },
+    member: {
+      findUnique: (...args: unknown[]) => memberFindUniqueMock(...args),
+    },
   },
 }));
 vi.mock("next/navigation", () => ({
@@ -78,12 +82,21 @@ const {
   scanReturnToUnit,
 } = await import("./holding-actions");
 
-const SELF = { id: "meeple-self" };
+const SELF = { id: "meeple-self", anonymizedAt: null };
+const OWN_MEMBER = { id: "member-self" };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  requireMeepleMock.mockResolvedValue(SELF);
+  requireMeeplePermissionMock.mockResolvedValue(SELF);
   getMembershipStateMock.mockReturnValue("aktiv");
+  // Own-Member lookup (requireActingMeeple) resolves by default; individual
+  // tests override for a target-Meeple lookup (requireMemberForMeeple).
+  memberFindUniqueMock.mockImplementation(
+    ({ where }: { where: { meepleId: string } }) =>
+      where.meepleId === SELF.id
+        ? Promise.resolve(OWN_MEMBER)
+        : Promise.resolve(null),
+  );
   borrowGameMock.mockResolvedValue({ id: "holding-new" });
   handOverGameMock.mockResolvedValue({ id: "holding-new" });
   returnGameMock.mockResolvedValue({ id: "holding-new" });
@@ -94,7 +107,7 @@ beforeEach(() => {
 
 describe("without a session", () => {
   it("books nothing", async () => {
-    requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
+    requireMeeplePermissionMock.mockRejectedValue(new RedirectError("/login"));
 
     await expect(scanBorrowGame("game-1")).rejects.toThrow(RedirectError);
     expect(borrowGameMock).not.toHaveBeenCalled();
@@ -102,18 +115,14 @@ describe("without a session", () => {
 });
 
 describe("scanBorrowGame (Ausbuchen)", () => {
-  it("always books out to the acting meeple's own id, ignoring any foreign id in the call", async () => {
-    await (
-      scanBorrowGame as unknown as (
-        gameCopyId: string,
-        foreignMeepleId?: string,
-      ) => Promise<unknown>
-    )("game-1", "meeple-someone-else");
+  it("books out to the acting meeple's own linked Member, isSelf true", async () => {
+    await scanBorrowGame("game-1");
 
     expect(borrowGameMock).toHaveBeenCalledWith({
       gameCopyId: "game-1",
-      meepleId: "meeple-self",
+      vereinsmitgliedId: "member-self",
       recordedByMeepleId: "meeple-self",
+      isSelf: true,
     });
   });
 
@@ -124,6 +133,18 @@ describe("scanBorrowGame (Ausbuchen)", () => {
 
     expect(result).toEqual({
       error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
+    });
+    expect(borrowGameMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Meeple with no linked Vereinsmitglied instead of silently 500ing", async () => {
+    memberFindUniqueMock.mockResolvedValue(null);
+
+    const result = await scanBorrowGame("game-1");
+
+    expect(result).toEqual({
+      error:
+        "Dieses Konto ist mit keinem Vereinsmitglied verknüpft — Ausleihen/Rückgeben ist nur für Vereinsmitglieder möglich.",
     });
     expect(borrowGameMock).not.toHaveBeenCalled();
   });
@@ -162,19 +183,35 @@ describe("scanAcceptHandover / scanConfirmHolding (annehmen)", () => {
     });
     expect(returnGameMock).not.toHaveBeenCalled();
   });
+
+  it("scanConfirmHolding confirms using the acting Meeple's own Member id", async () => {
+    await scanConfirmHolding("holding-1");
+
+    expect(confirmHoldingMock).toHaveBeenCalledWith({
+      holdingId: "holding-1",
+      confirmingVereinsmitgliedId: "member-self",
+    });
+  });
 });
 
 describe("giving actions stay allowed for a resigned meeple", () => {
-  it("allows handing a game over to someone else", async () => {
+  it("allows handing a game over to someone else, resolving their Member id", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
+    memberFindUniqueMock.mockImplementation(
+      ({ where }: { where: { meepleId: string } }) =>
+        Promise.resolve(
+          where.meepleId === "meeple-other" ? { id: "member-other" } : null,
+        ),
+    );
 
     const result = await scanGiveToMeeple("game-1", "meeple-other");
 
     expect(result).toEqual({ success: true, value: { id: "holding-new" } });
     expect(handOverGameMock).toHaveBeenCalledWith({
       gameCopyId: "game-1",
-      toMeepleId: "meeple-other",
+      toVereinsmitgliedId: "member-other",
       recordedByMeepleId: "meeple-self",
+      isSelf: false,
     });
   });
 
@@ -218,11 +255,18 @@ describe("giving actions stay allowed for a resigned meeple", () => {
 
 describe("scanReturnToMeeple", () => {
   it("records a return to a person, distinct from a handover", async () => {
+    memberFindUniqueMock.mockImplementation(
+      ({ where }: { where: { meepleId: string } }) =>
+        Promise.resolve(
+          where.meepleId === "meeple-other" ? { id: "member-other" } : null,
+        ),
+    );
+
     await scanReturnToMeeple("game-1", "meeple-other");
 
     expect(returnGameMock).toHaveBeenCalledWith({
       gameCopyId: "game-1",
-      toMeepleId: "meeple-other",
+      toVereinsmitgliedId: "member-other",
       recordedByMeepleId: "meeple-self",
     });
     expect(handOverGameMock).not.toHaveBeenCalled();
@@ -246,7 +290,7 @@ describe("scanPlaceGameInUnit", () => {
   it("returns when the game was with a person", async () => {
     gameHoldingFindFirstMock.mockResolvedValue({
       unitId: null,
-      meepleId: "meeple-other",
+      vereinsmitgliedId: "member-other",
     });
 
     await scanPlaceGameInUnit("game-1", "unit-new");
@@ -278,7 +322,7 @@ describe("scanGetGameContext", () => {
     expect(await scanGetGameContext("game-x")).toBeNull();
   });
 
-  it("marks isSelf when the acting meeple holds the game", async () => {
+  it("marks isSelf and verfuegbar when the acting meeple holds the game", async () => {
     gameCopyFindUniqueMock.mockResolvedValue({
       id: "game-1",
       status: "ACTIVE",
@@ -287,27 +331,62 @@ describe("scanGetGameContext", () => {
     gameHoldingFindFirstMock.mockResolvedValue({
       id: "holding-1",
       confirmedAt: null,
+      origin: "LOAN",
       unitId: null,
-      meepleId: "meeple-self",
+      vereinsmitgliedId: "member-self",
       unit: null,
-      meeple: null,
+      vereinsmitglied: {
+        firstName: null,
+        lastName: null,
+        email: "self@example.com",
+        meeple: { displayName: "Self", neonAuthUserId: "auth-self" },
+      },
     });
 
     const context = await scanGetGameContext("game-1");
 
     expect(context?.isSelf).toBe(true);
-    expect(context?.holding?.meepleId).toBe("meeple-self");
+    expect(context?.holding?.vereinsmitgliedId).toBe("member-self");
+    expect(context?.holding?.verfuegbar).toBe(true);
+  });
+
+  it("marks nicht verfügbar when the holding Member has no Meeple login", async () => {
+    gameCopyFindUniqueMock.mockResolvedValue({
+      id: "game-1",
+      status: "ACTIVE",
+      boardGame: { title: "Arche Nova" },
+    });
+    gameHoldingFindFirstMock.mockResolvedValue({
+      id: "holding-1",
+      confirmedAt: new Date(),
+      origin: "LOAN",
+      unitId: null,
+      vereinsmitgliedId: "member-external",
+      unit: null,
+      vereinsmitglied: {
+        firstName: "Erika",
+        lastName: "Musterfrau",
+        email: "erika@example.com",
+        meeple: null,
+      },
+    });
+
+    const context = await scanGetGameContext("game-1");
+
+    expect(context?.holding?.verfuegbar).toBe(false);
   });
 });
 
 describe("scanListMeeples", () => {
-  it("excludes anonymised meeples", async () => {
+  it("excludes anonymised meeples and the collective account", async () => {
     meepleFindManyMock.mockResolvedValue([]);
 
     await scanListMeeples();
 
     expect(meepleFindManyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { anonymizedAt: null } }),
+      expect.objectContaining({
+        where: { anonymizedAt: null, displayName: { not: "Anonymer Meeple" } },
+      }),
     );
   });
 });

@@ -9,7 +9,6 @@ import {
   findOpenInviteByEmail,
   MAX_INVITE_DAYS,
 } from "@/lib/members/invites";
-import { isValidEmail } from "@/lib/utils/validate-email";
 import { prisma } from "@/lib/utils/prisma";
 
 async function requireInvitesManage() {
@@ -35,40 +34,45 @@ async function applyExpiresIn(id: string, expiresIn?: number) {
   });
 }
 
+/** Einladungen sind seit #329 immer an ein bestehendes `Member` gebunden —
+ * `memberId` statt einer frei eingegebenen E-Mail-Adresse, damit die
+ * Einladung nie an eine Adresse geht, die zu keinem Mitglied gehört. */
 export async function createInvite({
-  email,
+  memberId,
   days,
 }: {
-  email: string | null;
+  memberId: string;
   days: number;
 }) {
   const admin = await requireInvitesManage();
   assertValidDays(days);
   const expiresIn = daysToMinutes(days);
-  const normalizedEmail = email?.trim().toLowerCase() || null;
-  if (normalizedEmail && !isValidEmail(normalizedEmail)) {
-    throw new Error("Ungültige E-Mail-Adresse.");
-  }
 
-  if (normalizedEmail) {
-    const existing = await findOpenInviteByEmail(normalizedEmail);
-    if (existing) {
-      const updated = await applyExpiresIn(existing.id, expiresIn);
-      revalidatePath("/admin/mitglieder");
-      return {
-        token: updated.token,
-        email: normalizedEmail,
-        expiresAt: updated.expiresAt.toISOString(),
-        extended: true as const,
-      };
-    }
+  const member = await prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+  });
+  if (member.meepleId) {
+    throw new Error("Dieses Mitglied hat bereits ein Portal-Login.");
+  }
+  const email = member.email;
+
+  const existing = await findOpenInviteByEmail(email);
+  if (existing) {
+    const updated = await applyExpiresIn(existing.id, expiresIn);
+    revalidatePath("/admin/mitglieder");
+    return {
+      token: updated.token,
+      email,
+      expiresAt: updated.expiresAt.toISOString(),
+      extended: true as const,
+    };
   }
 
   const invite = await prisma.invite.create({
     data: {
       token: randomBytes(24).toString("hex"),
       createdByUserId: admin.id,
-      email: normalizedEmail,
+      email,
       expiresIn,
       expiresAt: computeExpiresAt(expiresIn),
     },
@@ -77,7 +81,7 @@ export async function createInvite({
   revalidatePath("/admin/mitglieder");
   return {
     token: invite.token,
-    email: normalizedEmail,
+    email,
     expiresAt: invite.expiresAt.toISOString(),
     extended: false as const,
   };

@@ -66,7 +66,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
 
 const TWO_COPIES = [
   game({ id: "copy-1" }),
-  game({ id: "copy-2", zustand: "ausgeliehen" }),
+  game({ id: "copy-2", zustand: "ausgeliehen-verfuegbar" }),
 ];
 
 describe("LudothekResults — one entry per title (#121/#122)", () => {

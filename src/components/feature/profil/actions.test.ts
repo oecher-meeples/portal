@@ -29,11 +29,20 @@ vi.mock("@/lib/newsletter/subscribers", () => ({
     setMeepleNewsletterPreferenceMock(...args),
 }));
 
-const { decryptSecret } = await import("@/lib/utils/crypto");
+const requestIbanChangeMock = vi.fn();
+const requestIbanClearingMock = vi.fn();
+const requestEmailChangeMock = vi.fn();
+vi.mock("@/lib/members/pending-changes", () => ({
+  requestIbanChange: (...args: unknown[]) => requestIbanChangeMock(...args),
+  requestIbanClearing: (...args: unknown[]) => requestIbanClearingMock(...args),
+  requestEmailChange: (...args: unknown[]) => requestEmailChangeMock(...args),
+}));
+
 const {
   clearOwnBankDetails,
   exportOwnPersonalData,
   requestOwnDeletion,
+  requestOwnEmailChange,
   resignOwnMembership,
   updateNewsletterPreference,
   updateOwnBankDetails,
@@ -41,7 +50,8 @@ const {
   withdrawOwnDeletionRequest,
 } = await import("./actions");
 
-const OWN = { id: "meeple-1", resignedAt: null };
+const OWN = { id: "meeple-1" };
+const OWN_MEMBER = { id: "member-1", resignedAt: null };
 const IBAN = "DE89 3704 0044 0532 0130 00";
 
 class RedirectError extends Error {}
@@ -53,6 +63,10 @@ beforeEach(() => {
   requireMeepleMock.mockResolvedValue(OWN);
   findOpenDeletionRequestMock.mockReset();
   findOpenDeletionRequestMock.mockResolvedValue(null);
+  requestIbanChangeMock.mockReset();
+  requestIbanClearingMock.mockReset();
+  requestEmailChangeMock.mockReset();
+  prismaMock.member.findUnique.mockResolvedValue(OWN_MEMBER as never);
 });
 
 describe("without a session", () => {
@@ -66,6 +80,9 @@ describe("without a session", () => {
       updateOwnBankDetails({ accountHolder: "Lea", iban: IBAN }),
     ).rejects.toThrow(RedirectError);
     await expect(clearOwnBankDetails()).rejects.toThrow(RedirectError);
+    await expect(requestOwnEmailChange("neu@example.com")).rejects.toThrow(
+      RedirectError,
+    );
     await expect(resignOwnMembership()).rejects.toThrow(RedirectError);
     await expect(exportOwnPersonalData()).rejects.toThrow(RedirectError);
     await expect(requestOwnDeletion()).rejects.toThrow(RedirectError);
@@ -216,56 +233,78 @@ describe("updateOwnProfile", () => {
   });
 });
 
+// #330: das eigentliche Validieren/Speichern der IBAN läuft seit dem
+// PendingChange-Umbau in src/lib/members/pending-changes.ts (eigene Tests
+// dort) — hier nur die Delegation und das Vereinsmitglied-Gate.
 describe("updateOwnBankDetails", () => {
-  it("persists the iban encrypted and never returns the clear text", async () => {
+  it("delegates to requestIbanChange for the caller's own Member", async () => {
+    requestIbanChangeMock.mockResolvedValue({ success: true });
+
     const result = await updateOwnBankDetails({
       accountHolder: "Lea Beispiel",
       iban: IBAN,
     });
 
-    expect(result).toEqual({ success: true, ibanLast4: "3000" });
-    expect(JSON.stringify(result)).not.toContain("370400440532");
-
-    const { data } = prismaMock.meeple.update.mock.calls[0][0] as {
-      data: { ibanEncrypted: string; ibanLast4: string; accountHolder: string };
-    };
-    expect(data.accountHolder).toBe("Lea Beispiel");
-    expect(data.ibanLast4).toBe("3000");
-    expect(data.ibanEncrypted).not.toContain("370400440532");
-    expect(decryptSecret(data.ibanEncrypted)).toBe("DE89370400440532013000");
+    expect(result).toEqual({ success: true });
+    expect(requestIbanChangeMock).toHaveBeenCalledWith("member-1", {
+      accountHolder: "Lea Beispiel",
+      iban: IBAN,
+    });
   });
 
-  it("rejects an invalid iban", async () => {
+  it("surfaces the pending-change error unchanged", async () => {
+    requestIbanChangeMock.mockResolvedValue({
+      error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe.",
+    });
+
     const result = await updateOwnBankDetails({
       accountHolder: "Lea",
-      iban: "DE88370400440532013000",
+      iban: "invalid",
     });
 
     expect(result).toEqual({
       error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe.",
     });
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
   });
 
-  it("rejects a missing account holder", async () => {
+  it("reports a member without a Vereinsmitglied row instead of throwing", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
     const result = await updateOwnBankDetails({
-      accountHolder: " ",
+      accountHolder: "Lea",
       iban: IBAN,
     });
 
-    expect(result).toEqual({ error: "Bitte den Kontoinhaber angeben." });
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      error:
+        "Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende dich an den Vorstand.",
+    });
+    expect(requestIbanChangeMock).not.toHaveBeenCalled();
   });
 });
 
 describe("clearOwnBankDetails", () => {
-  it("empties every bank field", async () => {
-    await clearOwnBankDetails();
+  it("delegates to requestIbanClearing for the caller's own Member", async () => {
+    requestIbanClearingMock.mockResolvedValue({ success: true });
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
-      data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
-    });
+    const result = await clearOwnBankDetails();
+
+    expect(result).toEqual({ success: true });
+    expect(requestIbanClearingMock).toHaveBeenCalledWith("member-1");
+  });
+});
+
+describe("requestOwnEmailChange", () => {
+  it("delegates to requestEmailChange for the caller's own Member", async () => {
+    requestEmailChangeMock.mockResolvedValue({ success: true });
+
+    const result = await requestOwnEmailChange("neu@example.com");
+
+    expect(result).toEqual({ success: true });
+    expect(requestEmailChangeMock).toHaveBeenCalledWith(
+      "member-1",
+      "neu@example.com",
+    );
   });
 });
 
@@ -279,8 +318,8 @@ describe("resignOwnMembership", () => {
       success: true,
       membershipEndsAt: new Date("2027-01-01T00:00:00.000Z"),
     });
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: {
         resignedAt: new Date("2026-07-29T12:00:00Z"),
         membershipEndsAt: new Date("2027-01-01T00:00:00.000Z"),
@@ -291,16 +330,27 @@ describe("resignOwnMembership", () => {
   });
 
   it("does not overwrite an existing resignation", async () => {
-    requireMeepleMock.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       resignedAt: new Date("2026-02-01T00:00:00Z"),
-    });
+    } as never);
 
     const result = await resignOwnMembership();
 
     expect(result).toEqual({
       error: "Für diese Mitgliedschaft liegt bereits eine Kündigung vor.",
     });
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
+  });
+
+  it("reports a member without a Vereinsmitglied row instead of throwing", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    const result = await resignOwnMembership();
+
+    expect(result).toEqual({
+      error:
+        "Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende dich an den Vorstand.",
+    });
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
   });
 });

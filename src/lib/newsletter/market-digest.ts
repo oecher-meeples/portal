@@ -51,19 +51,20 @@ export async function sendMarketDigest(): Promise<{
     return { newListings: 0, recipients: 0, succeeded: 0, failed: 0 };
   }
 
+  // Die E-Mail-Adresse lebt seit #328 auf dem verknüpften Vereinsmitglied.
   const recipients = await prisma.meeple.findMany({
-    where: { marketNewsletterOptIn: true, email: { not: null } },
-    select: { email: true },
+    where: { marketNewsletterOptIn: true, member: { isNot: null } },
+    select: { member: { select: { email: true } } },
   });
 
   const html = digestEmailHtml(newListings);
   let succeeded = 0;
   let failed = 0;
   for (const recipient of recipients) {
-    if (!recipient.email) continue;
+    if (!recipient.member?.email) continue;
     try {
       await sendTransactionalEmail({
-        to: recipient.email,
+        to: recipient.member.email,
         subject: "Neue Angebote im Marktplatz",
         html,
       });

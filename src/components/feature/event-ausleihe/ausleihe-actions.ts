@@ -74,7 +74,7 @@ export async function ausleiheGetAvailability(
   });
   if (!holding) return null;
 
-  if (!holding.meepleId) {
+  if (!holding.vereinsmitgliedId) {
     return { kind: "available" };
   }
 
@@ -103,10 +103,20 @@ export async function ausleiheGetAvailability(
 export async function ausleiheIssueGame(gameCopyId: string) {
   const result = await toResult(async () => {
     const meeple = await requireAusleiheMeeple();
+    const member = await prisma.member.findUnique({
+      where: { meepleId: meeple.id },
+      select: { id: true },
+    });
+    if (!member) {
+      throw new HoldingConflictError(
+        "Dieses Konto ist mit keinem Vereinsmitglied verknüpft — Ausgabe an einen Gast ist nur für Vereinsmitglieder möglich.",
+      );
+    }
     return borrowGame({
       gameCopyId,
-      meepleId: meeple.id,
+      vereinsmitgliedId: member.id,
       recordedByMeepleId: meeple.id,
+      isSelf: true,
     });
   });
   if ("success" in result) revalidatePath("/ausleihe");

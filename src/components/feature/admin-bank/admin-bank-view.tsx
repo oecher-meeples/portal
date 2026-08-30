@@ -14,6 +14,10 @@ import {
 } from "@/components/ui/table";
 import { revealIban } from "@/components/feature/admin-bank/actions";
 import { BankCsvExportDialog } from "@/components/feature/admin-bank/bank-csv-export-dialog";
+import {
+  PendingChangesPanel,
+  type PendingChangeRow,
+} from "@/components/widgets/pending-changes/pending-changes-panel";
 
 export type BankDataRow = {
   id: string;
@@ -40,9 +44,11 @@ const KIND_LABELS: Record<string, string> = {
 export function AdminBankView({
   rows,
   logs,
+  pendingIbanChanges,
 }: {
   rows: BankDataRow[];
   logs: BankAccessLogRow[];
+  pendingIbanChanges: PendingChangeRow[];
 }) {
   const [revealed, setRevealed] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -81,6 +87,11 @@ export function AdminBankView({
           hint="Nachpflege nötig"
         />
       </div>
+
+      <PendingChangesPanel
+        title="Offene IBAN-Änderungsanträge"
+        changes={pendingIbanChanges}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <BankCsvExportDialog ibanCount={withIban} />

@@ -1,0 +1,242 @@
+import "server-only";
+import { randomBytes } from "node:crypto";
+import { PendingChangeKind } from "@prisma/client";
+import { prisma } from "@/lib/utils/prisma";
+import {
+  encryptSecret,
+  ibanLast4,
+  isValidIban,
+  normaliseIban,
+} from "@/lib/utils/crypto";
+import { isValidEmail } from "@/lib/utils/validate-email";
+import {
+  buildEmailChangeConfirmationLink,
+  sendEmailChangeConfirmationMail,
+  sendPendingChangeRejectedMail,
+} from "@/lib/members/pending-change-mail";
+
+function siteUrl(): string {
+  return process.env.PUBLIC_SITE_URL ?? "";
+}
+
+/**
+ * Änderungsanträge an sensiblen `Member`-Feldern (#330) — IBAN braucht nur
+ * Kassenwart-Freigabe, die Vereinsmitglied-E-Mail zusätzlich einen
+ * Bestätigungslink (Erreichbarkeit) vor der Vorstandsfreigabe. Die
+ * Login-E-Mail (`Meeple`/Neon Auth) läuft **nicht** hierüber — die ändert
+ * sich direkt mit Bestätigungslink, ohne Board-Freigabe.
+ */
+
+async function replaceOpenPendingChange(
+  memberId: string,
+  kind: PendingChangeKind,
+) {
+  // Ein neuer Antrag ersetzt automatisch einen noch offenen (#330) — kein
+  // "Ablehnen"-Mail nötig, der alte Antrag war schlicht überholt.
+  await prisma.pendingChange.deleteMany({
+    where: { memberId, kind, approvedAt: null, rejectedAt: null },
+  });
+}
+
+export async function requestIbanChange(
+  memberId: string,
+  { accountHolder, iban }: { accountHolder: string; iban: string },
+) {
+  const trimmedHolder = accountHolder.trim();
+  if (!trimmedHolder) {
+    return { error: "Bitte den Kontoinhaber angeben." };
+  }
+
+  const normalised = normaliseIban(iban);
+  if (!isValidIban(normalised)) {
+    return { error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe." };
+  }
+
+  await replaceOpenPendingChange(memberId, PendingChangeKind.IBAN);
+  await prisma.pendingChange.create({
+    data: {
+      memberId,
+      kind: PendingChangeKind.IBAN,
+      newValue: normalised,
+      newAccountHolder: trimmedHolder,
+    },
+  });
+
+  return { success: true as const };
+}
+
+/** Löschen der IBAN ohne Ersatzwert ist nur nach Kündigung erlaubt — ein
+ * aktives Mitglied braucht immer eine hinterlegte IBAN für den Beitragseinzug. */
+export async function requestIbanClearing(memberId: string) {
+  const member = await prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+  });
+  if (!member.resignedAt) {
+    return {
+      error:
+        "Die IBAN kann nur gelöscht werden, wenn die Mitgliedschaft gekündigt ist — sonst bitte eine neue IBAN hinterlegen.",
+    };
+  }
+
+  await replaceOpenPendingChange(memberId, PendingChangeKind.IBAN);
+  await prisma.member.update({
+    where: { id: memberId },
+    data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
+  });
+
+  return { success: true as const };
+}
+
+export async function requestEmailChange(memberId: string, newEmail: string) {
+  const normalised = newEmail.trim().toLowerCase();
+  if (!isValidEmail(normalised)) {
+    return { error: "Ungültige E-Mail-Adresse." };
+  }
+
+  const conflict = await prisma.member.findUnique({
+    where: { email: normalised },
+  });
+  if (conflict && conflict.id !== memberId) {
+    return { error: "Diese E-Mail-Adresse wird bereits verwendet." };
+  }
+
+  await replaceOpenPendingChange(memberId, PendingChangeKind.MEMBER_EMAIL);
+  const change = await prisma.pendingChange.create({
+    data: {
+      memberId,
+      kind: PendingChangeKind.MEMBER_EMAIL,
+      newValue: normalised,
+      confirmToken: randomBytes(24).toString("hex"),
+    },
+  });
+
+  const confirmLink = buildEmailChangeConfirmationLink(
+    siteUrl(),
+    change.confirmToken!,
+  );
+  await sendEmailChangeConfirmationMail(normalised, confirmLink);
+
+  return { success: true as const };
+}
+
+export async function confirmEmailChange(token: string) {
+  const change = await prisma.pendingChange.findUnique({
+    where: { confirmToken: token },
+  });
+  if (!change || change.kind !== PendingChangeKind.MEMBER_EMAIL) {
+    return { error: "Bestätigungslink ungültig oder bereits verwendet." };
+  }
+  if (change.rejectedAt) {
+    return { error: "Dieser Änderungsantrag wurde bereits abgelehnt." };
+  }
+
+  await prisma.pendingChange.update({
+    where: { id: change.id },
+    data: { confirmedAt: new Date(), confirmToken: null },
+  });
+
+  return { success: true as const };
+}
+
+/**
+ * Kassenwart (IBAN) bzw. Vorstand (MEMBER_EMAIL) — welche Berechtigung das
+ * konkret voraussetzt, gated die aufrufende Server Action, nicht diese
+ * Funktion (die kennt nur die fachliche Reihenfolge: E-Mail-Änderungen erst
+ * nach Bestätigung durch das Mitglied freigebbar).
+ */
+export async function approvePendingChange(id: string, approverId: string) {
+  const change = await prisma.pendingChange.findUnique({ where: { id } });
+  if (!change) {
+    return { error: "Änderungsantrag nicht gefunden." };
+  }
+  if (change.approvedAt || change.rejectedAt) {
+    return { error: "Über diesen Antrag wurde bereits entschieden." };
+  }
+  if (change.kind === PendingChangeKind.MEMBER_EMAIL && !change.confirmedAt) {
+    return {
+      error:
+        "Das Mitglied muss die neue E-Mail-Adresse erst über den Bestätigungslink bestätigen.",
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (change.kind === PendingChangeKind.IBAN) {
+      await tx.member.update({
+        where: { id: change.memberId },
+        data: {
+          accountHolder: change.newAccountHolder,
+          ibanEncrypted: encryptSecret(change.newValue),
+          ibanLast4: ibanLast4(change.newValue),
+        },
+      });
+    } else {
+      await tx.member.update({
+        where: { id: change.memberId },
+        data: { email: change.newValue },
+      });
+    }
+
+    await tx.pendingChange.update({
+      where: { id },
+      data: { approvedAt: new Date(), approvedByUserId: approverId },
+    });
+  });
+
+  return { success: true as const };
+}
+
+export async function rejectPendingChange(
+  id: string,
+  approverId: string,
+  reason: string,
+) {
+  const change = await prisma.pendingChange.findUnique({
+    where: { id },
+    include: { member: { select: { email: true } } },
+  });
+  if (!change) {
+    return { error: "Änderungsantrag nicht gefunden." };
+  }
+  if (change.approvedAt || change.rejectedAt) {
+    return { error: "Über diesen Antrag wurde bereits entschieden." };
+  }
+
+  const trimmedReason = reason.trim() || null;
+  await prisma.pendingChange.update({
+    where: { id },
+    data: {
+      rejectedAt: new Date(),
+      rejectedByUserId: approverId,
+      rejectionReason: trimmedReason,
+    },
+  });
+
+  // Geht an die aktuell hinterlegte E-Mail-Adresse — die neu beantragte ist
+  // bei einer Ablehnung ja gerade nicht (mehr) vertrauenswürdig bestätigt.
+  await sendPendingChangeRejectedMail(
+    change.member.email,
+    change.kind,
+    trimmedReason,
+  );
+
+  return { success: true as const, memberId: change.memberId };
+}
+
+export async function listOpenPendingChanges() {
+  return prisma.pendingChange.findMany({
+    where: { approvedAt: null, rejectedAt: null },
+    orderBy: { requestedAt: "asc" },
+    include: {
+      member: {
+        select: {
+          id: true,
+          email: true,
+          memberNumber: true,
+          firstName: true,
+          lastName: true,
+          meeple: { select: { displayName: true } },
+        },
+      },
+    },
+  });
+}

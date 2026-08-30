@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/utils/prisma";
 import { requireMember } from "@/lib/auth/session";
 import { ProfilView } from "@/components/feature/profil/profil-view";
 import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
@@ -13,6 +14,7 @@ export default async function ProfilPage() {
   const { meeple, membershipState } = await requireMember();
 
   const [
+    member,
     openDeletionRequest,
     openHoldings,
     newsletterPreference,
@@ -20,6 +22,7 @@ export default async function ProfilPage() {
     privateCollectionImportCooldownEndsAt,
     canForceImportCollection,
   ] = await Promise.all([
+    prisma.member.findUnique({ where: { meepleId: meeple.id } }),
     findOpenDeletionRequest(meeple.id),
     countOpenHoldings(meeple.id),
     findMeepleNewsletterPreference(meeple.id),
@@ -31,6 +34,7 @@ export default async function ProfilPage() {
   return (
     <ProfilView
       meeple={meeple}
+      member={member}
       membershipState={membershipState}
       deletionRequestedAt={openDeletionRequest?.requestedAt ?? null}
       openHoldings={openHoldings}

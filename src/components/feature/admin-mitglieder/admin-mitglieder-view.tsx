@@ -7,15 +7,27 @@ import {
   type MeepleRow,
 } from "@/components/feature/admin-mitglieder/mitglieder-table";
 import {
+  VereinsmitgliederTable,
+  type VereinsmitgliedRow,
+} from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
+import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
+import {
   InvitesSection,
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
+import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import {
   RoleManagementSection,
   type RoleManagementRow,
 } from "@/components/feature/admin-mitglieder/role-management-section";
 import type { PermissionOption } from "@/components/feature/admin-mitglieder/role-permissions-editor";
+import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
+import {
+  PendingChangesPanel,
+  type PendingChangeRow,
+} from "@/components/widgets/pending-changes/pending-changes-panel";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
@@ -36,6 +48,7 @@ function germanDate(value: string | null) {
 }
 
 export function AdminMitgliederView({
+  members,
   meeples,
   roles,
   permissions,
@@ -44,7 +57,13 @@ export function AdminMitgliederView({
   isDecemberOrLater,
   deletionRequests,
   invites,
+  membersWithoutLogin,
+  defaultInviteDays,
+  canCreateSystemkonto,
+  pendingEmailChanges,
+  stufe3Candidates,
 }: {
+  members: VereinsmitgliedRow[];
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
   permissions: PermissionOption[];
@@ -54,6 +73,16 @@ export function AdminMitgliederView({
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
+  membersWithoutLogin: MemberWithoutLoginRow[];
+  defaultInviteDays: number;
+  canCreateSystemkonto: boolean;
+  pendingEmailChanges: PendingChangeRow[];
+  stufe3Candidates: {
+    id: string;
+    memberNumber: number;
+    displayName: string;
+    membershipEndsAt: string;
+  }[];
 }) {
   const withOpenHoldings = meeples.filter(
     (m) =>
@@ -67,6 +96,17 @@ export function AdminMitgliederView({
       m.openUnits === 0,
   );
 
+  const activeMembers = members.filter((m) => m.membershipState === "aktiv");
+  const activeByContribution = {
+    mini: activeMembers.filter((m) => m.contributionCategory === "mini").length,
+    jung: activeMembers.filter((m) => m.contributionCategory === "jung").length,
+    meeple: activeMembers.filter((m) => m.contributionCategory === "meeple")
+      .length,
+    individuell: activeMembers.filter(
+      (m) => m.contributionCategory === "individuell",
+    ).length,
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeading
@@ -76,7 +116,11 @@ export function AdminMitgliederView({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Mitglieder" value={meeples.length} hint="insgesamt" />
+        <StatTile
+          label="Vereinsmitglieder"
+          value={members.length}
+          hint="insgesamt"
+        />
         <StatTile
           label="Kündigungen mit Bestand"
           value={withOpenHoldings.length}
@@ -88,6 +132,41 @@ export function AdminMitgliederView({
           hint="ausgetreten, ohne Bestand"
         />
       </div>
+
+      <a
+        href="#vereinsmitglieder"
+        className="bg-card hover:bg-muted/50 block rounded-lg border p-5 transition-colors"
+      >
+        <h2 className="font-serif text-lg font-bold">
+          Aktive Mitglieder — {activeMembers.length}
+        </h2>
+        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.mini}
+            </dt>
+            <dd className="font-mono">{activeByContribution.mini}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.jung}
+            </dt>
+            <dd className="font-mono">{activeByContribution.jung}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.meeple}
+            </dt>
+            <dd className="font-mono">{activeByContribution.meeple}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">
+              {CONTRIBUTION_CATEGORY_LABELS.individuell}
+            </dt>
+            <dd className="font-mono">{activeByContribution.individuell}</dd>
+          </div>
+        </dl>
+      </a>
 
       {deletionRequests.length > 0 && (
         <div
@@ -172,8 +251,51 @@ export function AdminMitgliederView({
         </div>
       )}
 
+      <PendingChangesPanel
+        title="Offene E-Mail-Änderungsanträge"
+        changes={pendingEmailChanges}
+      />
+
+      {stufe3Candidates.length > 0 && (
+        <div className="bg-card rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">
+            Bereit zur endgültigen Löschung (Stufe 3)
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
+          </p>
+          <ul className="mt-3 flex flex-col divide-y text-sm">
+            {stufe3Candidates.map((member) => (
+              <li
+                key={member.id}
+                className="flex items-center justify-between py-2"
+              >
+                <span>
+                  #{member.memberNumber} {member.displayName}
+                </span>
+                <DeleteMemberDialog
+                  memberId={member.id}
+                  displayName={member.displayName}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {canManageRoles && (
         <RoleManagementSection roles={roles} permissions={permissions} />
+      )}
+
+      <VereinsmitgliederTable
+        members={members}
+        defaultInviteDays={defaultInviteDays}
+      />
+
+      {canCreateSystemkonto && (
+        <div className="flex justify-end">
+          <SystemkontoDialog />
+        </div>
       )}
 
       <MitgliederTable
@@ -182,7 +304,11 @@ export function AdminMitgliederView({
         canReadBankData={canReadBankData}
       />
 
-      <InvitesSection invites={invites} />
+      <InvitesSection
+        invites={invites}
+        membersWithoutLogin={membersWithoutLogin}
+        defaultDays={defaultInviteDays}
+      />
     </div>
   );
 }

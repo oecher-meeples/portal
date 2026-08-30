@@ -5,16 +5,17 @@ import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermissionInCurrentView, getSessionTier } from "@/lib/auth/session";
-import { tierAtLeast } from "@/lib/utils/nav-config";
+import { hasPermission } from "@/lib/auth/permissions";
+import { hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
-  const [allItems, user, sessionTier] = await Promise.all([
+  const [allItems, user] = await Promise.all([
     getAllContentWithCalendar(),
     getCurrentUser(),
-    getSessionTier(),
   ]);
-  const canSeeInternal = tierAtLeast(sessionTier, "mitglied");
+  const canSeeInternal = user
+    ? await hasPermission(user.id, "news:internal:view")
+    : false;
   const items = canSeeInternal
     ? allItems
     : allItems.filter((item) => !item.internal);

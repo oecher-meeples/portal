@@ -52,13 +52,16 @@ describe("requireBankReader", () => {
 
 describe("revealMeepleIban", () => {
   it("returns the decrypted iban and writes exactly one log entry", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       ibanEncrypted: encryptSecret(IBAN),
     } as never);
 
     const result = await revealMeepleIban("meeple-1", "meeple-kassenwart");
 
+    expect(prismaMock.member.findUnique).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
+      select: { ibanEncrypted: true },
+    });
     expect(result).toEqual({ success: true, iban: IBAN });
     expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
       data: {
@@ -70,8 +73,7 @@ describe("revealMeepleIban", () => {
   });
 
   it("reports a missing iban without writing a log entry", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       ibanEncrypted: null,
     } as never);
 
@@ -83,8 +85,8 @@ describe("revealMeepleIban", () => {
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
   });
 
-  it("reports an unknown meeple without writing a log entry", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(null);
+  it("reports an unknown/unlinked meeple without writing a log entry", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
 
     const result = await revealMeepleIban("nope", "meeple-kassenwart");
 

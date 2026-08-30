@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
-import { anonymiseMeepleRecord } from "@/lib/members/anonymisation";
+import { anonymiseMeepleStufe2 } from "@/lib/members/anonymisation";
 
 /**
  * TODO (Vorstandsentscheidung, siehe #49): Aufbewahrungsfrist für Stammdaten
@@ -30,8 +30,9 @@ export function retentionCutoff(retentionMonths: number, now: Date): Date {
 
 /**
  * Anonymises members whose membership ended longer ago than the retention
- * period. Reuses `anonymiseMeepleRecord`, so the open-holdings precondition and
- * the blob deletion apply here exactly as in the admin path.
+ * period. Reuses `anonymiseMeepleStufe2` (Stufe 1 + Login-Löschung +
+ * Member-Entkopplung, siehe #331), so the open-holdings precondition and the
+ * blob deletion apply here exactly as in the admin path.
  *
  * Runs on the existing daily cron (`/api/cron/instagram-queue`) — deliberately
  * no second cron entry, mirroring `deleteExpiredBankDataAccessLogs`.
@@ -47,24 +48,25 @@ export async function anonymiseExpiredMeeples({
     return { skipped: true, anonymised: 0, failed: [] };
   }
 
-  const candidates = await prisma.meeple.findMany({
+  const candidates = await prisma.member.findMany({
     where: {
-      anonymizedAt: null,
+      meepleId: { not: null },
+      meeple: { anonymizedAt: null },
       membershipEndsAt: {
         not: null,
         lt: retentionCutoff(retentionMonths, now),
       },
     },
-    select: { id: true },
+    select: { meepleId: true },
   });
 
   const failed: RetentionRunSummary["failed"] = [];
   let anonymised = 0;
 
   for (const candidate of candidates) {
-    const result = await anonymiseMeepleRecord(candidate.id, now);
+    const result = await anonymiseMeepleStufe2(candidate.meepleId!, now);
     if ("error" in result) {
-      failed.push({ meepleId: candidate.id, error: result.error });
+      failed.push({ meepleId: candidate.meepleId!, error: result.error });
       continue;
     }
     anonymised += 1;

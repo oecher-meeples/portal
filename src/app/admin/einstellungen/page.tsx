@@ -27,6 +27,11 @@ export default async function AdminSettingsPage() {
       href: "/admin/einheiten",
       count: storageUnitCount,
     },
+    {
+      title: "Einladungen",
+      description: "Gültigkeitsdauer für neue Einladungen festlegen.",
+      href: "/admin/einstellungen/einladungen",
+    },
   ];
 
   return (

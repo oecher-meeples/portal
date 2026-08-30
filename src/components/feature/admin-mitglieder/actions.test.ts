@@ -12,10 +12,22 @@ vi.mock("@/lib/auth/permissions", () => ({
 
 // The anonymisation rules themselves live in the lib layer and are tested in
 // src/lib/members/anonymisation.test.ts — here only the action wrapper matters.
-const anonymiseMeepleRecordMock = vi.fn();
+const anonymiseMeepleStufe1Mock = vi.fn();
+const anonymiseMeepleStufe2Mock = vi.fn();
+const anonymiseMemberStufe3Mock = vi.fn();
 vi.mock("@/lib/members/anonymisation", () => ({
-  anonymiseMeepleRecord: (...args: unknown[]) =>
-    anonymiseMeepleRecordMock(...args),
+  anonymiseMeepleStufe1: (...args: unknown[]) =>
+    anonymiseMeepleStufe1Mock(...args),
+  anonymiseMeepleStufe2: (...args: unknown[]) =>
+    anonymiseMeepleStufe2Mock(...args),
+  anonymiseMemberStufe3: (...args: unknown[]) =>
+    anonymiseMemberStufe3Mock(...args),
+}));
+
+const removeAusgetretenRoleMock = vi.fn();
+vi.mock("@/lib/auth/ausgetreten-role", () => ({
+  removeAusgetretenRole: (...args: unknown[]) =>
+    removeAusgetretenRoleMock(...args),
 }));
 
 // Ditto for the bank-reveal and Selbstauskunft-mail rules — those are tested in
@@ -47,17 +59,31 @@ vi.mock("@/lib/auth/roles", () => ({
     setRolePermissionsRecordMock(...args),
 }));
 
+// The assignment rules themselves live in the lib layer and are tested in
+// src/lib/auth/user-roles.test.ts — here only the action wrappers matter.
+const assignMeepleRoleRecordMock = vi.fn();
+const removeMeepleRoleRecordMock = vi.fn();
+const listMeepleRoleAssignmentsMock = vi.fn();
+vi.mock("@/lib/auth/user-roles", () => ({
+  assignMeepleRole: (...args: unknown[]) => assignMeepleRoleRecordMock(...args),
+  removeMeepleRole: (...args: unknown[]) => removeMeepleRoleRecordMock(...args),
+  listMeepleRoleAssignments: (...args: unknown[]) =>
+    listMeepleRoleAssignmentsMock(...args),
+}));
+
 const {
   anonymiseMeeple,
+  deleteMemberPermanently,
+  assignMeepleRole,
   createRole,
   deleteRole,
   getOpenHoldingsSummary,
   recordResignation,
+  removeMeepleRole,
   renameMeeple,
   revealMemberIban,
   revokeResignation,
   sendSelbstauskunft,
-  setMeepleRole,
   setMemberNumber,
   setRolePermissions,
   updateRole,
@@ -67,8 +93,13 @@ class ForbiddenError extends Error {}
 
 beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
-  anonymiseMeepleRecordMock.mockReset();
-  anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe1Mock.mockReset();
+  anonymiseMeepleStufe1Mock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe2Mock.mockReset();
+  anonymiseMeepleStufe2Mock.mockResolvedValue({ success: true });
+  anonymiseMemberStufe3Mock.mockReset();
+  anonymiseMemberStufe3Mock.mockResolvedValue({ success: true });
+  removeAusgetretenRoleMock.mockReset();
   requireBankReaderMock.mockReset().mockResolvedValue({ id: "meeple-admin" });
   revealMeepleIbanMock.mockReset();
   sendSelbstauskunftMailMock.mockReset().mockResolvedValue({ success: true });
@@ -78,6 +109,9 @@ beforeEach(() => {
   setRolePermissionsRecordMock.mockReset().mockResolvedValue({
     success: true,
   });
+  assignMeepleRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  removeMeepleRoleRecordMock.mockReset().mockResolvedValue({ success: true });
+  listMeepleRoleAssignmentsMock.mockReset().mockResolvedValue([]);
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -92,10 +126,16 @@ describe("without the members:manage permission", () => {
     );
     await expect(revokeResignation("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(anonymiseMeeple("meeple-1")).rejects.toThrow(ForbiddenError);
+    await expect(deleteMemberPermanently("member-1")).rejects.toThrow(
+      ForbiddenError,
+    );
     await expect(getOpenHoldingsSummary("meeple-1")).rejects.toThrow(
       ForbiddenError,
     );
-    await expect(setMeepleRole("meeple-1", "role-1")).rejects.toThrow(
+    await expect(assignMeepleRole("meeple-1", "role-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(removeMeepleRole("user-role-1")).rejects.toThrow(
       ForbiddenError,
     );
     await expect(setMemberNumber("meeple-1", 10)).rejects.toThrow(
@@ -117,7 +157,7 @@ describe("without the members:manage permission", () => {
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
-    expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
+    expect(anonymiseMeepleStufe1Mock).not.toHaveBeenCalled();
     expect(createRoleRecordMock).not.toHaveBeenCalled();
     expect(updateRoleRecordMock).not.toHaveBeenCalled();
     expect(deleteRoleRecordMock).not.toHaveBeenCalled();
@@ -126,13 +166,13 @@ describe("without the members:manage permission", () => {
 });
 
 describe("recordResignation", () => {
-  it("sets both resignedAt and membershipEndsAt", async () => {
+  it("sets both resignedAt and membershipEndsAt on the linked Member", async () => {
     vi.setSystemTime(new Date("2026-07-29T12:00:00Z"));
 
     await recordResignation("meeple-1", new Date("2027-01-01T00:00:00Z"));
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: {
         resignedAt: new Date("2026-07-29T12:00:00Z"),
         membershipEndsAt: new Date("2027-01-01T00:00:00Z"),
@@ -153,26 +193,37 @@ describe("recordResignation", () => {
 });
 
 describe("revokeResignation", () => {
-  it("clears both date fields", async () => {
+  it("clears both date fields on the linked Member and any Ausgetreten-Rolle", async () => {
     await revokeResignation("meeple-1");
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: { resignedAt: null, membershipEndsAt: null },
     });
+    expect(removeAusgetretenRoleMock).toHaveBeenCalledWith("meeple-1");
   });
 });
 
 describe("anonymiseMeeple", () => {
-  it("delegates to the shared anonymisation rules and revalidates on success", async () => {
-    anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
-
+  it("runs Stufe 1 then Stufe 2 and revalidates on success", async () => {
     expect(await anonymiseMeeple("meeple-1")).toEqual({ success: true });
-    expect(anonymiseMeepleRecordMock).toHaveBeenCalledWith("meeple-1");
+    expect(anonymiseMeepleStufe1Mock).toHaveBeenCalledWith("meeple-1");
+    expect(anonymiseMeepleStufe2Mock).toHaveBeenCalledWith("meeple-1");
   });
 
-  it("passes a rule violation straight back without revalidating", async () => {
-    anonymiseMeepleRecordMock.mockResolvedValue({
+  it("passes a Stufe-1 violation straight back without attempting Stufe 2", async () => {
+    anonymiseMeepleStufe1Mock.mockResolvedValue({
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
+    });
+
+    expect(await anonymiseMeeple("meeple-1")).toEqual({
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
+    });
+    expect(anonymiseMeepleStufe2Mock).not.toHaveBeenCalled();
+  });
+
+  it("passes a Stufe-2 violation straight back without revalidating", async () => {
+    anonymiseMeepleStufe2Mock.mockResolvedValue({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
 
@@ -182,39 +233,77 @@ describe("anonymiseMeeple", () => {
   });
 });
 
-describe("setMeepleRole", () => {
-  it("swaps the meeple's UserRole row for the chosen role", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
-      neonAuthUserId: "user-1",
-    } as never);
-    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
-      id: "role-admin",
-    } as never);
-
-    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
+describe("deleteMemberPermanently", () => {
+  it("delegates to Stufe 3 and revalidates on success", async () => {
+    expect(await deleteMemberPermanently("member-1")).toEqual({
       success: true,
     });
+    expect(anonymiseMemberStufe3Mock).toHaveBeenCalledWith("member-1");
+  });
 
-    expect(prismaMock.userRole.deleteMany).toHaveBeenCalledWith({
-      where: { neonAuthUserId: "user-1" },
+  it("passes a rule violation straight back", async () => {
+    anonymiseMemberStufe3Mock.mockResolvedValue({
+      error: "Seit dem Austritt sind noch keine 12 Monate vergangen.",
     });
-    expect(prismaMock.userRole.create).toHaveBeenCalledWith({
-      data: { neonAuthUserId: "user-1", roleId: "role-admin" },
+
+    expect(await deleteMemberPermanently("member-1")).toEqual({
+      error: "Seit dem Austritt sind noch keine 12 Monate vergangen.",
+    });
+  });
+});
+
+describe("assignMeepleRole", () => {
+  it("delegates to the shared assignment rules and revalidates on success", async () => {
+    expect(await assignMeepleRole("meeple-1", "role-admin")).toEqual({
+      success: true,
+    });
+    expect(assignMeepleRoleRecordMock).toHaveBeenCalledWith(
+      "meeple-1",
+      "role-admin",
+      undefined,
+    );
+  });
+
+  it("passes a rule violation straight back without revalidating", async () => {
+    assignMeepleRoleRecordMock.mockResolvedValue({
+      error: "Dieses Mitglied hat kein Login-Konto.",
+    });
+
+    expect(await assignMeepleRole("meeple-1", "role-admin")).toEqual({
+      error: "Dieses Mitglied hat kein Login-Konto.",
     });
   });
 
-  it("refuses to assign a role to a Meeple without a login account", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
-      neonAuthUserId: null,
-    } as never);
-    prismaMock.role.findUniqueOrThrow.mockResolvedValue({
-      id: "role-admin",
-    } as never);
-
-    expect(await setMeepleRole("meeple-1", "role-admin")).toEqual({
-      error: "Dieses Mitglied hat kein Login-Konto.",
+  it("requires admin:access instead of members:manage when a time window is given", async () => {
+    await assignMeepleRole("meeple-1", "role-vorstand", {
+      startsAt: new Date("2026-01-01"),
+      endsAt: new Date("2027-01-01"),
     });
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+
+    expect(requirePermissionMock).toHaveBeenCalledWith("admin:access");
+  });
+
+  it("requires members:manage for a plain assignment (no window)", async () => {
+    await assignMeepleRole("meeple-1", "role-vorstand");
+
+    expect(requirePermissionMock).toHaveBeenCalledWith("members:manage");
+  });
+});
+
+describe("removeMeepleRole", () => {
+  it("delegates to the shared rules and revalidates on success", async () => {
+    expect(await removeMeepleRole("user-role-1")).toEqual({ success: true });
+    expect(removeMeepleRoleRecordMock).toHaveBeenCalledWith("user-role-1");
+  });
+
+  it("passes a rule violation straight back", async () => {
+    removeMeepleRoleRecordMock.mockResolvedValue({
+      error: "Rollenzuweisung nicht gefunden.",
+    });
+
+    expect(await removeMeepleRole("user-role-1")).toEqual({
+      error: "Rollenzuweisung nicht gefunden.",
+    });
   });
 });
 

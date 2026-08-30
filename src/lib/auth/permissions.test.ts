@@ -4,10 +4,12 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const { hasPermission } = await import("@/lib/auth/permissions");
+const { hasPermission, getUserPermissionKeys } =
+  await import("@/lib/auth/permissions");
 
 describe("hasPermission", () => {
-  it("returns true when the user has a role granting the permission", async () => {
+  it("returns true when the user has an active role granting the permission", async () => {
+    vi.setSystemTime(new Date("2026-08-30T10:00:00Z"));
     prismaMock.rolePermission.count.mockResolvedValue(1);
 
     const result = await hasPermission("user-1", "posts:write");
@@ -16,9 +18,21 @@ describe("hasPermission", () => {
     expect(prismaMock.rolePermission.count).toHaveBeenCalledWith({
       where: {
         permission: { key: "posts:write" },
-        role: { users: { some: { neonAuthUserId: "user-1" } } },
+        role: {
+          users: {
+            some: {
+              neonAuthUserId: "user-1",
+              startsAt: { lte: new Date("2026-08-30T10:00:00Z") },
+              OR: [
+                { endsAt: null },
+                { endsAt: { gt: new Date("2026-08-30T10:00:00Z") } },
+              ],
+            },
+          },
+        },
       },
     });
+    vi.useRealTimers();
   });
 
   it("returns false when none of the user's roles grant the permission", async () => {
@@ -35,5 +49,36 @@ describe("hasPermission", () => {
     const result = await hasPermission("user-2", "members:manage");
 
     expect(result).toBe(true);
+  });
+});
+
+describe("getUserPermissionKeys", () => {
+  it("filters on the same active-assignment window as hasPermission", async () => {
+    vi.setSystemTime(new Date("2026-08-30T10:00:00Z"));
+    prismaMock.rolePermission.findMany.mockResolvedValue([
+      { permission: { key: "games:manage" } },
+    ] as never);
+
+    const keys = await getUserPermissionKeys("user-1");
+
+    expect(keys).toEqual(["games:manage"]);
+    expect(prismaMock.rolePermission.findMany).toHaveBeenCalledWith({
+      where: {
+        role: {
+          users: {
+            some: {
+              neonAuthUserId: "user-1",
+              startsAt: { lte: new Date("2026-08-30T10:00:00Z") },
+              OR: [
+                { endsAt: null },
+                { endsAt: { gt: new Date("2026-08-30T10:00:00Z") } },
+              ],
+            },
+          },
+        },
+      },
+      select: { permission: { select: { key: true } } },
+    });
+    vi.useRealTimers();
   });
 });

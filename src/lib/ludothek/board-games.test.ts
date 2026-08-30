@@ -38,6 +38,7 @@ beforeEach(() => {
   prismaMock.boardGame.count.mockResolvedValue(0);
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
   prismaMock.boardGame.findFirst.mockResolvedValue(null);
+  prismaMock.member.findUnique.mockResolvedValue({ id: "member-1" } as never);
 });
 
 describe("createBoardGame", () => {
@@ -192,11 +193,27 @@ describe("createBoardGame", () => {
     expect(prismaMock.storageUnit.upsert).not.toHaveBeenCalled();
     expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        meepleId: "meeple-1",
+        vereinsmitgliedId: "member-1",
         unitId: null,
         origin: "INITIAL",
       }),
     });
+  });
+
+  it("rejects placement:self when the creator has no linked Vereinsmitglied (#333)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    const result = await createBoardGame({
+      ...VALID_INPUT,
+      placement: { self: true },
+    });
+
+    expect(result).toEqual({
+      error: expect.stringContaining("Vereinsmitglied verknüpft"),
+    });
+    expect(prismaMock.gameHolding.create).not.toHaveBeenCalled();
   });
 
   it("resolves a copy-slug collision with a numeric suffix", async () => {

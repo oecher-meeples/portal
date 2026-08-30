@@ -43,17 +43,17 @@ describe("sendMarketDigest", () => {
     expect(sendTransactionalEmailMock).not.toHaveBeenCalled();
   });
 
-  it("only queries opted-in meeples with an email address", async () => {
+  it("only queries opted-in meeples with a linked Vereinsmitglied", async () => {
     prismaMock.marketListing.findMany.mockResolvedValue([listing()] as never);
     prismaMock.meeple.findMany.mockResolvedValue([
-      { email: "a@example.com" },
+      { member: { email: "a@example.com" } },
     ] as never);
 
     await sendMarketDigest();
 
     expect(prismaMock.meeple.findMany).toHaveBeenCalledWith({
-      where: { marketNewsletterOptIn: true, email: { not: null } },
-      select: { email: true },
+      where: { marketNewsletterOptIn: true, member: { isNot: null } },
+      select: { member: { select: { email: true } } },
     });
   });
 
@@ -63,8 +63,8 @@ describe("sendMarketDigest", () => {
       listing({ id: "listing-2", title: "Wingspan" }),
     ] as never);
     prismaMock.meeple.findMany.mockResolvedValue([
-      { email: "a@example.com" },
-      { email: "b@example.com" },
+      { member: { email: "a@example.com" } },
+      { member: { email: "b@example.com" } },
     ] as never);
 
     const result = await sendMarketDigest();
@@ -87,8 +87,8 @@ describe("sendMarketDigest", () => {
   it("counts a failed send without throwing", async () => {
     prismaMock.marketListing.findMany.mockResolvedValue([listing()] as never);
     prismaMock.meeple.findMany.mockResolvedValue([
-      { email: "a@example.com" },
-      { email: "b@example.com" },
+      { member: { email: "a@example.com" } },
+      { member: { email: "b@example.com" } },
     ] as never);
     sendTransactionalEmailMock
       .mockResolvedValueOnce(undefined)

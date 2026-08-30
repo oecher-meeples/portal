@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
-import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
+import {
+  requireAdminPermission,
+  hasPermissionInCurrentView,
+} from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { getLfgParticipantDisplayName, getLfgStatus } from "@/lib/content/lfg";
-import { getContactLinks } from "@/lib/members/contact";
+import { getContactLinks, meepleEmail } from "@/lib/members/contact";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
 import { formatDateMedium } from "@/lib/utils/format";
 
@@ -11,7 +14,7 @@ export default async function LfgDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, meeple } = await requireMember();
+  const { user, meeple } = await requireAdminPermission("lfg:participate");
   const { id } = await params;
 
   const post = await prisma.lfgPost.findUnique({
@@ -22,7 +25,7 @@ export default async function LfgDetailPage({
           meeple: {
             select: {
               displayName: true,
-              email: true,
+              member: { select: { email: true } },
               telegramHandle: true,
               signalHandle: true,
               discordHandle: true,
@@ -73,7 +76,7 @@ export default async function LfgDetailPage({
         }),
         contact:
           p.meepleId !== null && viewerIsParticipant && p.meeple
-            ? getContactLinks(p.meeple)
+            ? getContactLinks({ ...p.meeple, email: meepleEmail(p.meeple) })
             : null,
         canRemove:
           p.meepleId === null && (p.addedByMeepleId === meeple.id || isCreator),

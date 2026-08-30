@@ -7,12 +7,18 @@ import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
-import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
+import {
+  getContactLinks,
+  meepleEmail,
+  type ContactLinks,
+} from "@/lib/members/contact";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
@@ -38,7 +44,12 @@ export default async function GameDetailPage({
 }) {
   const { slug } = await params;
   const tier = await getSessionTier();
-  const internal = tier !== "gast";
+  const user = await getCurrentUser();
+  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
+  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
+  const internal =
+    tier !== "gast" &&
+    (user ? await hasPermission(user.id, "ludothek:view") : false);
 
   const clubGames = await buildLudothekGames();
   // One title can have several physical copies (same boardGameSlug) — the
@@ -84,7 +95,14 @@ export default async function GameDetailPage({
     orderBy: { startedAt: "desc" },
     include: {
       unit: { select: { label: true, code: true } },
-      meeple: { select: { displayName: true } },
+      vereinsmitglied: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          meeple: { select: { displayName: true } },
+        },
+      },
       recordedBy: { select: { displayName: true } },
     },
   });
@@ -94,8 +112,8 @@ export default async function GameDetailPage({
     const entry: HoldingHistoryEntry = {
       id: holding.id,
       origin: ORIGIN_LABELS[holding.origin] ?? holding.origin,
-      target: holding.meeple
-        ? holding.meeple.displayName
+      target: holding.vereinsmitglied
+        ? memberDisplayName(holding.vereinsmitglied)
         : (holding.unit?.label ?? holding.unit?.code ?? "—"),
       startedAt: formatDateTime(holding.startedAt),
       endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
@@ -122,7 +140,7 @@ export default async function GameDetailPage({
         where: { id: { in: responsibleIds } },
         select: {
           id: true,
-          email: true,
+          member: { select: { email: true } },
           telegramHandle: true,
           signalHandle: true,
           discordHandle: true,
@@ -132,7 +150,10 @@ export default async function GameDetailPage({
       })
     : [];
   const contactById = new Map(
-    responsibleMeeples.map((m) => [m.id, getContactLinks(m)]),
+    responsibleMeeples.map((m) => [
+      m.id,
+      getContactLinks({ ...m, email: meepleEmail(m) }),
+    ]),
   );
   const NO_CONTACT: ContactLinks = {
     mailHref: null,
@@ -172,9 +193,8 @@ export default async function GameDetailPage({
     ]),
   );
 
-  const [explainerEntries, user, openLfgPosts] = await Promise.all([
+  const [explainerEntries, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
-    getCurrentUser(),
     getOpenLfgPostsForBoardGame(game.boardGameId),
   ]);
   const myLevel =

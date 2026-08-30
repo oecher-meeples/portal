@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/lib/__mocks__/prisma";
+
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
@@ -50,24 +53,24 @@ const {
   hasPermissionInCurrentView,
 } = await import("./session");
 
-const ACTIVE = {
-  id: "meeple-1",
-  resignedAt: null,
-  membershipEndsAt: null,
-  anonymizedAt: null,
-};
+const ACTIVE = { id: "meeple-1", anonymizedAt: null };
+const ACTIVE_MEMBER = { resignedAt: null, membershipEndsAt: null };
 
-const RESIGNED_AND_GONE = {
-  id: "meeple-2",
+const RESIGNED_AND_GONE = { id: "meeple-2", anonymizedAt: null };
+const RESIGNED_AND_GONE_MEMBER = {
   resignedAt: new Date("2024-07-01T00:00:00Z"),
   membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
-  anonymizedAt: null,
 };
 
-function withUser(meeple: unknown, at: string) {
+function withUser(
+  meeple: unknown,
+  at: string,
+  member: unknown = ACTIVE_MEMBER,
+) {
   pathname = at;
   getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
   ensureMeepleMock.mockResolvedValue(meeple);
+  prismaMock.member.findUnique.mockResolvedValue(member as never);
 }
 
 describe("isSettlementPath", () => {
@@ -107,14 +110,10 @@ describe("requireMember", () => {
   });
 
   it("lets a member with a recorded resignation through on any route", async () => {
-    withUser(
-      {
-        ...ACTIVE,
-        resignedAt: new Date("2026-07-01T00:00:00Z"),
-        membershipEndsAt: new Date("2999-01-01T00:00:00Z"),
-      },
-      "/ludothek",
-    );
+    withUser(ACTIVE, "/ludothek", {
+      resignedAt: new Date("2026-07-01T00:00:00Z"),
+      membershipEndsAt: new Date("2999-01-01T00:00:00Z"),
+    });
 
     const session = await requireMember();
 
@@ -122,21 +121,21 @@ describe("requireMember", () => {
   });
 
   it("rejects a resigned member on a blocked route", async () => {
-    withUser(RESIGNED_AND_GONE, "/ludothek");
+    withUser(RESIGNED_AND_GONE, "/ludothek", RESIGNED_AND_GONE_MEMBER);
 
     await expect(requireMember()).rejects.toThrow(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 
   it("rejects a resigned member on the internal newsroom", async () => {
-    withUser(RESIGNED_AND_GONE, "/dashboard/news");
+    withUser(RESIGNED_AND_GONE, "/dashboard/news", RESIGNED_AND_GONE_MEMBER);
 
     await expect(requireMember()).rejects.toThrow(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 
   it("lets a resigned member through on a settlement route", async () => {
-    withUser(RESIGNED_AND_GONE, "/scan");
+    withUser(RESIGNED_AND_GONE, "/scan", RESIGNED_AND_GONE_MEMBER);
 
     const session = await requireMember();
 

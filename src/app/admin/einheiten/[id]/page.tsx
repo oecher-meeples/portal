@@ -48,7 +48,14 @@ export default async function AdminEinheitDetailPage({
   ]);
 
   const keeperOptions = meeples
-    .filter((m) => getMembershipState(m) !== "anonymisiert")
+    .filter(
+      (m) =>
+        getMembershipState({
+          resignedAt: null,
+          membershipEndsAt: null,
+          anonymizedAt: m.anonymizedAt,
+        }) !== "anonymisiert",
+    )
     .map((m) => ({ id: m.id, displayName: m.displayName }));
 
   return (

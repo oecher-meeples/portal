@@ -8,6 +8,7 @@ import { ensureMeeple } from "@/lib/members/meeples";
 import { createGameCopyTx } from "@/lib/ludothek/game-copies";
 import {
   resolveCopyPlacement,
+  resolveOwnVereinsmitgliedIdForPlacement,
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
@@ -114,7 +115,15 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     ensureMeeple(user),
   ]);
 
-  const placement = resolveCopyPlacement(input.placement, actor.id);
+  const resolvedOwn = await resolveOwnVereinsmitgliedIdForPlacement(
+    input.placement,
+    actor.id,
+  );
+  if ("error" in resolvedOwn) return { error: resolvedOwn.error };
+  const placement = resolveCopyPlacement(
+    input.placement,
+    resolvedOwn.vereinsmitgliedId,
+  );
 
   const { copy, boardGameId, boardGameSlug } = await prisma.$transaction(
     async (tx) => {

@@ -10,20 +10,22 @@ import {
   updateOwnBankDetails,
 } from "@/components/feature/profil/actions";
 
+/** #330: Änderungen laufen seit dem PendingChange-Umbau nicht mehr sofort —
+ * der aktuelle (freigegebene) Stand bleibt unverändert sichtbar, bis der
+ * Kassenwart den Antrag freigibt. */
 export function BankDetailsForm({
-  accountHolder: initialAccountHolder,
-  ibanLast4: initialIbanLast4,
+  accountHolder,
+  ibanLast4: storedLast4,
   maskedIban,
 }: {
   accountHolder: string | null;
   ibanLast4: string | null;
   maskedIban: string;
 }) {
-  const [accountHolder, setAccountHolder] = useState(
-    initialAccountHolder ?? "",
-  );
   const [iban, setIban] = useState("");
-  const [storedLast4, setStoredLast4] = useState(initialIbanLast4);
+  const [pendingAccountHolder, setPendingAccountHolder] = useState(
+    accountHolder ?? "",
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,16 +36,20 @@ export function BankDetailsForm({
     setError(null);
     setMessage(null);
 
-    const result = await updateOwnBankDetails({ accountHolder, iban });
+    const result = await updateOwnBankDetails({
+      accountHolder: pendingAccountHolder,
+      iban,
+    });
     setIsSaving(false);
 
     if (result.error) {
       setError(result.error);
       return;
     }
-    setStoredLast4(result.ibanLast4 ?? null);
     setIban("");
-    setMessage("Bankdaten verschlüsselt gespeichert.");
+    setMessage(
+      "Änderungsantrag eingereicht — wirksam, sobald der Kassenwart ihn freigegeben hat.",
+    );
   }
 
   async function handleClear() {
@@ -51,11 +57,13 @@ export function BankDetailsForm({
     setError(null);
     setMessage(null);
 
-    await clearOwnBankDetails();
+    const result = await clearOwnBankDetails();
     setIsSaving(false);
-    setStoredLast4(null);
-    setAccountHolder("");
-    setIban("");
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
     setMessage("Bankdaten gelöscht.");
   }
 
@@ -65,8 +73,8 @@ export function BankDetailsForm({
         <Label htmlFor="accountHolder">Kontoinhaber</Label>
         <Input
           id="accountHolder"
-          value={accountHolder}
-          onChange={(event) => setAccountHolder(event.target.value)}
+          value={pendingAccountHolder}
+          onChange={(event) => setPendingAccountHolder(event.target.value)}
           required
         />
       </div>
@@ -85,8 +93,8 @@ export function BankDetailsForm({
         />
         <p className="text-muted-foreground text-sm">
           Gespeichert wird die IBAN verschlüsselt. Angezeigt werden nur die
-          letzten vier Stellen — auch dir gegenüber. Zum Ändern die vollständige
-          IBAN neu eingeben.
+          letzten vier Stellen — auch dir gegenüber. Eine Änderung braucht die
+          Freigabe des Kassenwarts, bevor sie wirksam wird.
         </p>
       </div>
 
@@ -95,7 +103,7 @@ export function BankDetailsForm({
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={isSaving} className="w-fit">
-          {isSaving ? "Speichere…" : "Bankdaten speichern"}
+          {isSaving ? "Sende…" : "Änderung beantragen"}
         </Button>
         {storedLast4 && (
           <Button

@@ -7,6 +7,13 @@ import { maskIban } from "@/lib/utils/crypto";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
 import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 import { listInvites } from "@/lib/members/invites";
+import { listMembersWithoutLogin } from "@/lib/members/members-without-login";
+import { getDefaultInviteDays } from "@/lib/members/invite-settings";
+import { listOpenPendingChanges } from "@/lib/members/pending-changes";
+import { memberDisplayName } from "@/lib/members/member-display-name";
+import { listMembersEligibleForStufe3 } from "@/lib/members/anonymisation";
+import { determineContribution } from "@/lib/members/contribution";
+import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
   const session = await requireAdminPermission(MITGLIEDER_PERMISSIONS);
@@ -14,6 +21,7 @@ export default async function AdminMitgliederPage() {
   const now = new Date();
 
   const [
+    members,
     meeples,
     userRoles,
     roles,
@@ -22,19 +30,55 @@ export default async function AdminMitgliederPage() {
     storageUnitCounts,
     deletionRequests,
     invites,
+    membersWithoutLogin,
+    defaultInviteDays,
+    pendingChanges,
+    stufe3Candidates,
     canReadBankData,
     canManageRoles,
+    canCreateSystemkonto,
   ] = await Promise.all([
-    prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
-    prisma.userRole.findMany({ include: { role: true } }),
+    prisma.member.findMany({
+      orderBy: { memberNumber: "asc" },
+      include: {
+        meeple: {
+          select: {
+            id: true,
+            displayName: true,
+            joinedAt: true,
+            anonymizedAt: true,
+          },
+        },
+      },
+    }),
+    prisma.meeple.findMany({
+      orderBy: { memberNumber: "asc" },
+      include: {
+        member: {
+          select: {
+            id: true,
+            email: true,
+            resignedAt: true,
+            membershipEndsAt: true,
+            accountHolder: true,
+            ibanEncrypted: true,
+            ibanLast4: true,
+          },
+        },
+      },
+    }),
+    prisma.userRole.findMany({
+      include: { role: { select: { id: true, name: true } } },
+      orderBy: { startsAt: "desc" },
+    }),
     prisma.role.findMany({
       orderBy: { name: "asc" },
       include: { permissions: true },
     }),
     prisma.permission.findMany({ orderBy: { key: "asc" } }),
     prisma.gameHolding.groupBy({
-      by: ["meepleId"],
-      where: { endedAt: null, meepleId: { not: null } },
+      by: ["vereinsmitgliedId"],
+      where: { endedAt: null, vereinsmitgliedId: { not: null } },
       _count: { _all: true },
     }),
     prisma.storageUnit.groupBy({
@@ -44,25 +88,46 @@ export default async function AdminMitgliederPage() {
     }),
     listPendingDeletionRequests(now),
     listInvites(now),
+    listMembersWithoutLogin(),
+    getDefaultInviteDays(),
+    listOpenPendingChanges(),
+    listMembersEligibleForStufe3(now),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
+    hasPermission(session.user.id, "admin:access"),
   ]);
 
-  // A Meeple holds exactly one role (see redeemInvite's DEFAULT_ROLE) — the
-  // first match is enough even if a data inconsistency left more than one.
-  const roleIdByUserId = new Map<string, string>();
+  // A Meeple can hold several roles at once (#335), each with its own
+  // (possibly expired, #264) time window — group all assignments per user.
+  const roleAssignmentsByUserId = new Map<
+    string,
+    {
+      id: string;
+      roleId: string;
+      roleName: string;
+      startsAt: Date;
+      endsAt: Date | null;
+    }[]
+  >();
   for (const userRole of userRoles) {
-    if (!roleIdByUserId.has(userRole.neonAuthUserId)) {
-      roleIdByUserId.set(userRole.neonAuthUserId, userRole.roleId);
-    }
+    const list = roleAssignmentsByUserId.get(userRole.neonAuthUserId) ?? [];
+    list.push({
+      id: userRole.id,
+      roleId: userRole.roleId,
+      roleName: userRole.role.name,
+      startsAt: userRole.startsAt,
+      endsAt: userRole.endsAt,
+    });
+    roleAssignmentsByUserId.set(userRole.neonAuthUserId, list);
   }
 
-  const openGamesByMeepleId = new Map(
-    gameHoldingCounts.map((row) => [row.meepleId!, row._count._all]),
+  const openGamesByVereinsmitgliedId = new Map(
+    gameHoldingCounts.map((row) => [row.vereinsmitgliedId!, row._count._all]),
   );
   const openUnitsByMeepleId = new Map(
     storageUnitCounts.map((row) => [row.keeperMeepleId!, row._count._all]),
   );
+  const stufe3EligibleIds = new Set(stufe3Candidates.map((m) => m.id));
 
   return (
     <AdminMitgliederView
@@ -89,24 +154,65 @@ export default async function AdminMitgliederPage() {
       }))}
       canManageRoles={canManageRoles}
       canReadBankData={canReadBankData}
+      members={members.map((member) => ({
+        id: member.id,
+        memberNumber: member.memberNumber,
+        displayName: memberDisplayName(member),
+        email: member.email,
+        meepleId: member.meepleId,
+        joinedAt: member.meeple?.joinedAt.toISOString() ?? null,
+        resignedAt: member.resignedAt?.toISOString() ?? null,
+        membershipEndsAt: member.membershipEndsAt?.toISOString() ?? null,
+        membershipState: getMembershipState(
+          {
+            resignedAt: member.resignedAt,
+            membershipEndsAt: member.membershipEndsAt,
+            anonymizedAt: member.meeple?.anonymizedAt ?? null,
+          },
+          now,
+        ),
+        contributionCategory: determineContribution(member, now).category,
+        openGames: openGamesByVereinsmitgliedId.get(member.id) ?? 0,
+        openUnits: member.meepleId
+          ? (openUnitsByMeepleId.get(member.meepleId) ?? 0)
+          : 0,
+        stufe3Eligible: stufe3EligibleIds.has(member.id),
+      }))}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,
         displayName: meeple.displayName,
-        email: meeple.email,
+        email: meeple.member?.email ?? null,
         hasAccount: meeple.neonAuthUserId !== null,
-        roleId: meeple.neonAuthUserId
-          ? (roleIdByUserId.get(meeple.neonAuthUserId) ?? null)
-          : null,
-        membershipState: getMembershipState(meeple, now),
+        roleAssignments: (meeple.neonAuthUserId
+          ? (roleAssignmentsByUserId.get(meeple.neonAuthUserId) ?? [])
+          : []
+        ).map((a) => ({
+          id: a.id,
+          roleId: a.roleId,
+          roleName: a.roleName,
+          startsAt: a.startsAt.toISOString(),
+          endsAt: a.endsAt?.toISOString() ?? null,
+        })),
+        membershipState: getMembershipState(
+          {
+            resignedAt: meeple.member?.resignedAt ?? null,
+            membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
+            anonymizedAt: meeple.anonymizedAt,
+          },
+          now,
+        ),
         joinedAt: meeple.joinedAt.toISOString(),
-        resignedAt: meeple.resignedAt?.toISOString() ?? null,
-        membershipEndsAt: meeple.membershipEndsAt?.toISOString() ?? null,
-        openGames: openGamesByMeepleId.get(meeple.id) ?? 0,
+        resignedAt: meeple.member?.resignedAt?.toISOString() ?? null,
+        membershipEndsAt:
+          meeple.member?.membershipEndsAt?.toISOString() ?? null,
+        openGames: meeple.member
+          ? (openGamesByVereinsmitgliedId.get(meeple.member.id) ?? 0)
+          : 0,
         openUnits: openUnitsByMeepleId.get(meeple.id) ?? 0,
-        accountHolder: meeple.accountHolder,
-        maskedIban: maskIban(meeple.ibanLast4),
-        hasIban: meeple.ibanEncrypted !== null,
+        accountHolder: meeple.member?.accountHolder ?? null,
+        maskedIban: maskIban(meeple.member?.ibanLast4 ?? null),
+        hasIban: (meeple.member?.ibanEncrypted ?? null) !== null,
       }))}
       invites={invites.map((invite) => ({
         id: invite.id,
@@ -117,6 +223,25 @@ export default async function AdminMitgliederPage() {
         expiresAt: invite.expiresAt.toISOString(),
         redeemedAt: invite.redeemedAt?.toISOString() ?? null,
         status: invite.status,
+      }))}
+      membersWithoutLogin={membersWithoutLogin}
+      defaultInviteDays={defaultInviteDays}
+      canCreateSystemkonto={canCreateSystemkonto}
+      pendingEmailChanges={pendingChanges
+        .filter((change) => change.kind === PendingChangeKind.MEMBER_EMAIL)
+        .map((change) => ({
+          id: change.id,
+          memberDisplayName: memberDisplayName(change.member),
+          memberNumber: change.member.memberNumber,
+          displayValue: change.newValue,
+          requestedAt: change.requestedAt.toISOString(),
+          confirmed: change.confirmedAt !== null,
+        }))}
+      stufe3Candidates={stufe3Candidates.map((member) => ({
+        id: member.id,
+        memberNumber: member.memberNumber,
+        displayName: memberDisplayName(member),
+        membershipEndsAt: member.membershipEndsAt!.toISOString(),
       }))}
     />
   );

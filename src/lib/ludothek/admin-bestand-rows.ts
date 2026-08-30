@@ -18,6 +18,7 @@ import {
   type AdminBestandFilter,
 } from "@/lib/ludothek/admin-bestand-filters";
 import { formatDatePlain } from "@/lib/utils/format";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 
 /** One row per physical `GameCopy` for `/admin/bestand` (#121/#198). */
 export type AdminBoardGameRow = {
@@ -81,7 +82,18 @@ export async function buildAdminBoardGameRows({
         boardGame: { include: { alternateNames: { select: { name: true } } } },
         holdings: {
           where: { endedAt: null },
-          include: { unit: true, meeple: { select: { displayName: true } } },
+          include: {
+            unit: true,
+            vereinsmitglied: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                meeple: { select: { displayName: true, neonAuthUserId: true } },
+              },
+            },
+          },
         },
       },
     }),
@@ -100,7 +112,12 @@ export async function buildAdminBoardGameRows({
   return copies.map((copy) => {
     const holding = copy.holdings[0] ?? null;
     const zustand = holding
-      ? zustandFromHoldingAndUnit(holding, holding.unit, copy.status)
+      ? zustandFromHoldingAndUnit(
+          holding,
+          holding.unit,
+          copy.status,
+          holding.vereinsmitglied,
+        )
       : "nicht-erfasst";
     const boardGame = copy.boardGame;
 
@@ -137,9 +154,11 @@ export async function buildAdminBoardGameRows({
       ruleBookLanguages: copy.ruleBookLanguages,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       locationChain: (() => {
-        if (holding?.meepleId) {
+        if (holding?.vereinsmitgliedId) {
           return formatLocationChain({
-            responsibleName: holding.meeple?.displayName ?? "Meeple",
+            responsibleName: holding.vereinsmitglied
+              ? memberDisplayName(holding.vereinsmitglied)
+              : "Vereinsmitglied",
             unitChain: "",
           });
         }
