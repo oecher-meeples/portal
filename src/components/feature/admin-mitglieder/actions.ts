@@ -14,7 +14,12 @@ import {
   removeMeepleRole as removeMeepleRoleRecord,
   listMeepleRoleAssignments,
 } from "@/lib/auth/user-roles";
-import { anonymiseMeepleRecord } from "@/lib/members/anonymisation";
+import {
+  anonymiseMeepleStufe1,
+  anonymiseMeepleStufe2,
+  anonymiseMemberStufe3,
+} from "@/lib/members/anonymisation";
+import { removeAusgetretenRole } from "@/lib/auth/ausgetreten-role";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
 import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
@@ -70,19 +75,39 @@ export async function revokeResignation(meepleId: string) {
     where: { meepleId },
     data: { resignedAt: null, membershipEndsAt: null },
   });
+  // Falls der Jahreswechsel-Cron zwischenzeitlich schon die "Ausgetreten"-Rolle
+  // gesetzt hatte (#332) — sonst bliebe die Einschränkung trotz Widerruf bestehen.
+  await removeAusgetretenRole(meepleId);
 
   revalidatePath("/admin/mitglieder");
   return { success: true as const };
 }
 
+/** Stufe 1 + Stufe 2 zusammen — der bisherige Ein-Klick-Admin-Flow (#331).
+ * Stufe 3 (Member-Zeile hart löschen) ist eine eigene Aktion, siehe unten. */
 export async function anonymiseMeeple(meepleId: string) {
   await requireMembersManage();
 
-  const result = await anonymiseMeepleRecord(meepleId);
-  if ("error" in result) return result;
+  const stufe1 = await anonymiseMeepleStufe1(meepleId);
+  if ("error" in stufe1) return stufe1;
+
+  const stufe2 = await anonymiseMeepleStufe2(meepleId);
+  if ("error" in stufe2) return stufe2;
 
   revalidatePath("/admin/mitglieder");
   revalidatePath("/markt");
+  return { success: true as const };
+}
+
+/** Löscht die Vereinsmitglied-Zeile endgültig (Stufe 3, #331) — frühestens
+ * 12 Monate nach Austritt, ohne offene Ausleihen. */
+export async function deleteMemberPermanently(memberId: string) {
+  await requireMembersManage();
+
+  const result = await anonymiseMemberStufe3(memberId);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
   return { success: true as const };
 }
 

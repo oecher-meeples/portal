@@ -9,7 +9,13 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
-const { anonymiseMeepleRecord } = await import("@/lib/members/anonymisation");
+const {
+  anonymiseMeepleStufe1,
+  anonymiseMeepleStufe2,
+  anonymiseMemberStufe3,
+  stufe3EligibleFrom,
+  listMembersEligibleForStufe3,
+} = await import("@/lib/members/anonymisation");
 
 const NOW = new Date("2026-08-03T00:00:00Z");
 
@@ -21,6 +27,7 @@ const RESIGNED_AND_GONE = {
 };
 
 const RESIGNED_MEMBER = {
+  id: "member-1",
   resignedAt: new Date("2024-07-01T00:00:00Z"),
   membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
 };
@@ -44,11 +51,69 @@ beforeEach(() => {
   );
 });
 
-describe("anonymiseMeepleRecord preconditions", () => {
+describe("anonymiseMeepleStufe1", () => {
   it("rejects an unknown meeple", async () => {
     prismaMock.meeple.findUnique.mockResolvedValue(null);
 
-    expect(await anonymiseMeepleRecord("nope", NOW)).toEqual({
+    expect(await anonymiseMeepleStufe1("nope")).toEqual({
+      error: "Mitglied nicht gefunden.",
+    });
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects an already Stufe-2-anonymised meeple", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      ...RESIGNED_AND_GONE,
+      anonymizedAt: new Date(),
+    } as never);
+
+    const result = await anonymiseMeepleStufe1("meeple-1");
+
+    expect("error" in result && result.error).toMatch(/Stufe 2/);
+  });
+
+  it("clears optional fields, the generic display name and post authorship — no membership precondition", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+    prismaMock.marketListing.findMany.mockResolvedValue([] as never);
+
+    expect(await anonymiseMeepleStufe1("meeple-1")).toEqual({ success: true });
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: {
+        displayName: "(anonymisiert)",
+        bggUsername: null,
+        bgaUsername: null,
+        telegramHandle: null,
+        signalHandle: null,
+        discordHandle: null,
+        address: null,
+        shareAddress: false,
+        doorbellNote: null,
+      },
+    });
+    expect(prismaMock.post.updateMany).toHaveBeenCalledWith({
+      where: { author: "Lea Beispiel" },
+      data: { author: null },
+    });
+  });
+
+  it("deletes uploaded images before touching the database", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+    prismaMock.marketListing.findMany.mockResolvedValue([
+      { id: "l-1", imageUrls: ["https://blob/a.jpg"] },
+    ] as never);
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/a.jpg"]);
+  });
+});
+
+describe("anonymiseMeepleStufe2", () => {
+  it("rejects an unknown meeple", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(null);
+
+    expect(await anonymiseMeepleStufe2("nope", NOW)).toEqual({
       error: "Mitglied nicht gefunden.",
     });
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
@@ -60,7 +125,7 @@ describe("anonymiseMeepleRecord preconditions", () => {
       anonymizedAt: new Date(),
     } as never);
 
-    expect(await anonymiseMeepleRecord("meeple-1", NOW)).toEqual({
+    expect(await anonymiseMeepleStufe2("meeple-1", NOW)).toEqual({
       error: "Dieses Mitglied ist bereits anonymisiert.",
     });
   });
@@ -72,116 +137,42 @@ describe("anonymiseMeepleRecord preconditions", () => {
       membershipEndsAt: null,
     } as never);
 
-    expect(await anonymiseMeepleRecord("meeple-1", NOW)).toEqual({
+    expect(await anonymiseMeepleStufe2("meeple-1", NOW)).toEqual({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
   });
 
-  it("rejects a meeple without a linked Vereinsmitglied", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
-    prismaMock.member.findUnique.mockResolvedValue(null);
-
-    expect(await anonymiseMeepleRecord("meeple-1", NOW)).toEqual({
-      error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
-    });
-  });
-
-  it("rejects a meeple that still holds a club game", async () => {
+  it("rejects a meeple that still holds a club game or unit", async () => {
     givenAnonymisableMeeple();
     prismaMock.gameHolding.count.mockResolvedValue(2);
-    prismaMock.storageUnit.count.mockResolvedValue(0);
 
-    const result = await anonymiseMeepleRecord("meeple-1", NOW);
-
-    expect("error" in result && result.error).toMatch(/Erst zurückholen/);
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("rejects a meeple that still keeps a storage unit", async () => {
-    givenAnonymisableMeeple();
-    prismaMock.gameHolding.count.mockResolvedValue(0);
-    prismaMock.storageUnit.count.mockResolvedValue(1);
-
-    const result = await anonymiseMeepleRecord("meeple-1", NOW);
+    const result = await anonymiseMeepleStufe2("meeple-1", NOW);
 
     expect("error" in result && result.error).toMatch(/Erst zurückholen/);
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
-});
 
-describe("anonymiseMeepleRecord", () => {
-  it("clears exactly the identifying fields and keeps the row", async () => {
+  it("runs Stufe 1, then hard-deletes the login and unlinks the Member", async () => {
     givenAnonymisableMeeple();
 
-    expect(await anonymiseMeepleRecord("meeple-1", NOW)).toEqual({
+    expect(await anonymiseMeepleStufe2("meeple-1", NOW)).toEqual({
       success: true,
     });
-    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
     expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(3);
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { id: "member-1" },
+      data: { meepleId: null },
+    });
     expect(prismaMock.meeple.update).toHaveBeenCalledWith({
       where: { id: "meeple-1" },
-      data: {
-        displayName: "(anonymisiert)",
-        neonAuthUserId: null,
-        bggUsername: null,
-        bgaUsername: null,
-        telegramHandle: null,
-        signalHandle: null,
-        discordHandle: null,
-        address: null,
-        shareAddress: false,
-        doorbellNote: null,
-        anonymizedAt: NOW,
-      },
-    });
-    expect(prismaMock.meeple.delete).not.toHaveBeenCalled();
-  });
-
-  it("deletes the member's uploaded images before touching the database", async () => {
-    givenAnonymisableMeeple([
-      { id: "l-1", imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"] },
-      { id: "l-2", imageUrls: ["https://blob/c.jpg"] },
-    ]);
-
-    await anonymiseMeepleRecord("meeple-1", NOW);
-
-    expect(deleteBlobsMock).toHaveBeenCalledWith([
-      "https://blob/a.jpg",
-      "https://blob/b.jpg",
-      "https://blob/c.jpg",
-    ]);
-    expect(prismaMock.marketListing.updateMany).toHaveBeenCalledWith({
-      where: { sellerMeepleId: "meeple-1" },
-      data: { imageUrls: [] },
-    });
-  });
-
-  it("leaves the member un-anonymised when blob deletion fails", async () => {
-    givenAnonymisableMeeple([{ id: "l-1", imageUrls: ["https://blob/a.jpg"] }]);
-    deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
-
-    await expect(anonymiseMeepleRecord("meeple-1", NOW)).rejects.toThrow(
-      "blob boom",
-    );
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
-    expect(prismaMock.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("clears the free-text author name on the member's posts", async () => {
-    givenAnonymisableMeeple();
-
-    await anonymiseMeepleRecord("meeple-1", NOW);
-
-    expect(prismaMock.post.updateMany).toHaveBeenCalledWith({
-      where: { author: "Lea Beispiel" },
-      data: { author: null },
+      data: { neonAuthUserId: null, anonymizedAt: NOW },
     });
   });
 
   it("closes an open deletion request in the same transaction", async () => {
     givenAnonymisableMeeple();
 
-    await anonymiseMeepleRecord("meeple-1", NOW);
+    await anonymiseMeepleStufe2("meeple-1", NOW);
 
     expect(prismaMock.deletionRequest.updateMany).toHaveBeenCalledWith({
       where: { meepleId: "meeple-1", handledAt: null },
@@ -189,13 +180,112 @@ describe("anonymiseMeepleRecord", () => {
     });
   });
 
-  it("rolls back the meeple update when the raw sql fails", async () => {
+  it("leaves the member un-anonymised when blob deletion fails", async () => {
+    givenAnonymisableMeeple([{ id: "l-1", imageUrls: ["https://blob/a.jpg"] }]);
+    deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
+
+    await expect(anonymiseMeepleStufe2("meeple-1", NOW)).rejects.toThrow(
+      "blob boom",
+    );
+    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+  });
+
+  it("rolls back when the raw sql fails", async () => {
     givenAnonymisableMeeple();
     prismaMock.$executeRaw.mockRejectedValueOnce(new Error("db boom"));
 
-    await expect(anonymiseMeepleRecord("meeple-1", NOW)).rejects.toThrow(
+    await expect(anonymiseMeepleStufe2("meeple-1", NOW)).rejects.toThrow(
       "db boom",
     );
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(prismaMock.meeple.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ anonymizedAt: NOW }),
+      }),
+    );
+  });
+});
+
+describe("stufe3EligibleFrom", () => {
+  it("adds 12 months to the given date", () => {
+    expect(stufe3EligibleFrom(new Date("2025-01-01T00:00:00Z"))).toEqual(
+      new Date("2026-01-01T00:00:00Z"),
+    );
+  });
+});
+
+describe("anonymiseMemberStufe3", () => {
+  it("rejects an unknown member", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    expect(await anonymiseMemberStufe3("nope", NOW)).toEqual({
+      error: "Vereinsmitglied nicht gefunden.",
+    });
+  });
+
+  it("rejects a member without a membershipEndsAt", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: "member-1",
+      membershipEndsAt: null,
+    } as never);
+
+    const result = await anonymiseMemberStufe3("member-1", NOW);
+
+    expect("error" in result && result.error).toMatch(/Austrittsdatum/);
+  });
+
+  it("rejects before the 12-month mark", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: "member-1",
+      membershipEndsAt: new Date("2026-01-01T00:00:00Z"),
+    } as never);
+
+    const result = await anonymiseMemberStufe3("member-1", NOW);
+
+    expect("error" in result && result.error).toMatch(/12 Monate/);
+    expect(prismaMock.member.delete).not.toHaveBeenCalled();
+  });
+
+  it("rejects a member with an open holding", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: "member-1",
+      membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
+    } as never);
+    prismaMock.gameHolding.count.mockResolvedValue(1);
+
+    const result = await anonymiseMemberStufe3("member-1", NOW);
+
+    expect("error" in result && result.error).toMatch(/Vereinsspiele/);
+    expect(prismaMock.member.delete).not.toHaveBeenCalled();
+  });
+
+  it("deletes the member row once eligible", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: "member-1",
+      membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
+    } as never);
+    prismaMock.gameHolding.count.mockResolvedValue(0);
+
+    expect(await anonymiseMemberStufe3("member-1", NOW)).toEqual({
+      success: true,
+    });
+    expect(prismaMock.member.delete).toHaveBeenCalledWith({
+      where: { id: "member-1" },
+    });
+  });
+});
+
+describe("listMembersEligibleForStufe3", () => {
+  it("excludes members that still hold a club game", async () => {
+    prismaMock.member.findMany.mockResolvedValue([
+      { id: "member-1", membershipEndsAt: new Date("2025-01-01T00:00:00Z") },
+      { id: "member-2", membershipEndsAt: new Date("2025-01-01T00:00:00Z") },
+    ] as never);
+    prismaMock.gameHolding.count
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
+
+    const result = await listMembersEligibleForStufe3(NOW);
+
+    expect(result.map((m) => m.id)).toEqual(["member-2"]);
   });
 });

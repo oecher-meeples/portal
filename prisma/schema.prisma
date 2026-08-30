@@ -771,7 +771,11 @@ model GameHolding {
 
   gameCopy        GameCopy     @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
   unit            StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  vereinsmitglied Member?      @relation("GameHoldingMember", fields: [vereinsmitgliedId], references: [id], onDelete: Restrict)
+  // SetNull statt Restrict (Stand Paket 5): Stufe 3 der Anonymisierung (#331)
+  // löscht die `Member`-Zeile 12 Monate nach Austritt hart — die Historie
+  // (auch abgeschlossene Aufenthalte) bleibt lesbar, nur der Personenbezug
+  // fällt weg, exakt wie bei `Post.author` in `anonymisation.ts`.
+  vereinsmitglied Member?      @relation("GameHoldingMember", fields: [vereinsmitgliedId], references: [id], onDelete: SetNull)
   recordedBy      Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
 
   @@index([gameCopyId, endedAt])

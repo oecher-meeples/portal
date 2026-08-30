@@ -12,10 +12,22 @@ vi.mock("@/lib/auth/permissions", () => ({
 
 // The anonymisation rules themselves live in the lib layer and are tested in
 // src/lib/members/anonymisation.test.ts — here only the action wrapper matters.
-const anonymiseMeepleRecordMock = vi.fn();
+const anonymiseMeepleStufe1Mock = vi.fn();
+const anonymiseMeepleStufe2Mock = vi.fn();
+const anonymiseMemberStufe3Mock = vi.fn();
 vi.mock("@/lib/members/anonymisation", () => ({
-  anonymiseMeepleRecord: (...args: unknown[]) =>
-    anonymiseMeepleRecordMock(...args),
+  anonymiseMeepleStufe1: (...args: unknown[]) =>
+    anonymiseMeepleStufe1Mock(...args),
+  anonymiseMeepleStufe2: (...args: unknown[]) =>
+    anonymiseMeepleStufe2Mock(...args),
+  anonymiseMemberStufe3: (...args: unknown[]) =>
+    anonymiseMemberStufe3Mock(...args),
+}));
+
+const removeAusgetretenRoleMock = vi.fn();
+vi.mock("@/lib/auth/ausgetreten-role", () => ({
+  removeAusgetretenRole: (...args: unknown[]) =>
+    removeAusgetretenRoleMock(...args),
 }));
 
 // Ditto for the bank-reveal and Selbstauskunft-mail rules — those are tested in
@@ -61,6 +73,7 @@ vi.mock("@/lib/auth/user-roles", () => ({
 
 const {
   anonymiseMeeple,
+  deleteMemberPermanently,
   assignMeepleRole,
   createRole,
   deleteRole,
@@ -80,8 +93,13 @@ class ForbiddenError extends Error {}
 
 beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
-  anonymiseMeepleRecordMock.mockReset();
-  anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe1Mock.mockReset();
+  anonymiseMeepleStufe1Mock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe2Mock.mockReset();
+  anonymiseMeepleStufe2Mock.mockResolvedValue({ success: true });
+  anonymiseMemberStufe3Mock.mockReset();
+  anonymiseMemberStufe3Mock.mockResolvedValue({ success: true });
+  removeAusgetretenRoleMock.mockReset();
   requireBankReaderMock.mockReset().mockResolvedValue({ id: "meeple-admin" });
   revealMeepleIbanMock.mockReset();
   sendSelbstauskunftMailMock.mockReset().mockResolvedValue({ success: true });
@@ -108,6 +126,9 @@ describe("without the members:manage permission", () => {
     );
     await expect(revokeResignation("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(anonymiseMeeple("meeple-1")).rejects.toThrow(ForbiddenError);
+    await expect(deleteMemberPermanently("member-1")).rejects.toThrow(
+      ForbiddenError,
+    );
     await expect(getOpenHoldingsSummary("meeple-1")).rejects.toThrow(
       ForbiddenError,
     );
@@ -136,7 +157,7 @@ describe("without the members:manage permission", () => {
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
-    expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
+    expect(anonymiseMeepleStufe1Mock).not.toHaveBeenCalled();
     expect(createRoleRecordMock).not.toHaveBeenCalled();
     expect(updateRoleRecordMock).not.toHaveBeenCalled();
     expect(deleteRoleRecordMock).not.toHaveBeenCalled();
@@ -172,31 +193,61 @@ describe("recordResignation", () => {
 });
 
 describe("revokeResignation", () => {
-  it("clears both date fields on the linked Member", async () => {
+  it("clears both date fields on the linked Member and any Ausgetreten-Rolle", async () => {
     await revokeResignation("meeple-1");
 
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { meepleId: "meeple-1" },
       data: { resignedAt: null, membershipEndsAt: null },
     });
+    expect(removeAusgetretenRoleMock).toHaveBeenCalledWith("meeple-1");
   });
 });
 
 describe("anonymiseMeeple", () => {
-  it("delegates to the shared anonymisation rules and revalidates on success", async () => {
-    anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
-
+  it("runs Stufe 1 then Stufe 2 and revalidates on success", async () => {
     expect(await anonymiseMeeple("meeple-1")).toEqual({ success: true });
-    expect(anonymiseMeepleRecordMock).toHaveBeenCalledWith("meeple-1");
+    expect(anonymiseMeepleStufe1Mock).toHaveBeenCalledWith("meeple-1");
+    expect(anonymiseMeepleStufe2Mock).toHaveBeenCalledWith("meeple-1");
   });
 
-  it("passes a rule violation straight back without revalidating", async () => {
-    anonymiseMeepleRecordMock.mockResolvedValue({
+  it("passes a Stufe-1 violation straight back without attempting Stufe 2", async () => {
+    anonymiseMeepleStufe1Mock.mockResolvedValue({
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
+    });
+
+    expect(await anonymiseMeeple("meeple-1")).toEqual({
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
+    });
+    expect(anonymiseMeepleStufe2Mock).not.toHaveBeenCalled();
+  });
+
+  it("passes a Stufe-2 violation straight back without revalidating", async () => {
+    anonymiseMeepleStufe2Mock.mockResolvedValue({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
 
     expect(await anonymiseMeeple("meeple-1")).toEqual({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
+    });
+  });
+});
+
+describe("deleteMemberPermanently", () => {
+  it("delegates to Stufe 3 and revalidates on success", async () => {
+    expect(await deleteMemberPermanently("member-1")).toEqual({
+      success: true,
+    });
+    expect(anonymiseMemberStufe3Mock).toHaveBeenCalledWith("member-1");
+  });
+
+  it("passes a rule violation straight back", async () => {
+    anonymiseMemberStufe3Mock.mockResolvedValue({
+      error: "Seit dem Austritt sind noch keine 12 Monate vergangen.",
+    });
+
+    expect(await deleteMemberPermanently("member-1")).toEqual({
+      error: "Seit dem Austritt sind noch keine 12 Monate vergangen.",
     });
   });
 });

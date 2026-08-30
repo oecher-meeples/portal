@@ -129,6 +129,8 @@ widgets/
 │   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
 ├── bringbuy/
 │   └── register-external-seller-dialog.tsx  Self-Service-Anmeldung externer Bring & Buy-Verkäufer:innen (#266) — vom Gäste-Bereich (`feature/guest-area`) genutzt, darf aber nicht aus `feature/bringbuy` importieren (Layer-Regel), deshalb hier
+├── pending-changes/
+│   └── pending-changes-panel.tsx  Offene IBAN-/E-Mail-Änderungsanträge freigeben/ablehnen (#330) — von `/admin/bank` (kind: IBAN) **und** `/admin/mitglieder` (kind: MEMBER_EMAIL) eingebunden, deshalb hier statt in einem der beiden Features
 └── board-game/
     ├── board-game-form-values.ts        Form-State ↔ Titel-/Exemplar-Input (`BoardGameFormValues`, `boardGameFormTo…`) — geteilt von allen Formularen unten
     ├── edit-board-game-title.tsx        Titel-Stammdaten-Formularfelder (Titel, EAN, `kind`, BGG-Felder, Spieleranzahl, Beschreibung, …)

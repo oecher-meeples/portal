@@ -31,3 +31,18 @@ export async function countOpenHoldings(
 export function hasOpenHoldings({ games, units }: OpenHoldingsSummary) {
   return games > 0 || units > 0;
 }
+
+/**
+ * Wie `countOpenHoldings`, aber direkt über die `Member`-Id — für Stufe 3 der
+ * Anonymisierung (#331): Stufe 2 hat `Member.meepleId` da schon getrennt, ein
+ * `Meeple`-Lookup findet das Vereinsmitglied dann nicht mehr. `units`
+ * (Karton-/Regal-Verwahrer) bleibt ein direkter Meeple-Bezug und ist in
+ * Stufe 3 irrelevant — das Login existiert zu dem Zeitpunkt nicht mehr.
+ */
+export async function countOpenHoldingsByMemberId(
+  memberId: string,
+): Promise<number> {
+  return prisma.gameHolding.count({
+    where: { vereinsmitgliedId: memberId, endedAt: null },
+  });
+}

@@ -11,6 +11,7 @@ import { listMembersWithoutLogin } from "@/lib/members/members-without-login";
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 import { listOpenPendingChanges } from "@/lib/members/pending-changes";
 import { memberDisplayName } from "@/lib/members/member-display-name";
+import { listMembersEligibleForStufe3 } from "@/lib/members/anonymisation";
 import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
@@ -30,6 +31,7 @@ export default async function AdminMitgliederPage() {
     membersWithoutLogin,
     defaultInviteDays,
     pendingChanges,
+    stufe3Candidates,
     canReadBankData,
     canManageRoles,
     canCreateSystemkonto,
@@ -74,6 +76,7 @@ export default async function AdminMitgliederPage() {
     listMembersWithoutLogin(),
     getDefaultInviteDays(),
     listOpenPendingChanges(),
+    listMembersEligibleForStufe3(now),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
     hasPermission(session.user.id, "admin:access"),
@@ -194,6 +197,12 @@ export default async function AdminMitgliederPage() {
           requestedAt: change.requestedAt.toISOString(),
           confirmed: change.confirmedAt !== null,
         }))}
+      stufe3Candidates={stufe3Candidates.map((member) => ({
+        id: member.id,
+        memberNumber: member.memberNumber,
+        displayName: memberDisplayName(member),
+        membershipEndsAt: member.membershipEndsAt!.toISOString(),
+      }))}
     />
   );
 }

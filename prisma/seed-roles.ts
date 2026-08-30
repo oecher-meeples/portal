@@ -80,6 +80,21 @@ export const REGULAR_MEEPLE_PERMISSION_KEYS = [
   "market:participate",
 ];
 
+/** #332: der volle Meeple-Katalog abzüglich Ludothek-/interner-News-/
+ * Spielergesuch-Rechte — `market:participate` bleibt (der Marktplatz ist kein
+ * Vereinsspiel-Zugang). Wird nur vom Jahreswechsel-Cron gesetzt/entfernt,
+ * nie manuell im UI (siehe `year-turn-cron.ts`). */
+export const AUSGETRETEN_PERMISSION_KEYS =
+  REGULAR_MEEPLE_PERMISSION_KEYS.filter(
+    (key) =>
+      ![
+        "ludothek:view",
+        "ludothek:borrow",
+        "news:internal:view",
+        "lfg:participate",
+      ].includes(key),
+  );
+
 const ROLES = [
   {
     name: "sysadmin",
@@ -120,6 +135,12 @@ const ROLES = [
     name: "Meeple",
     description: "Standardrolle nach Registrierung",
     permissionKeys: REGULAR_MEEPLE_PERMISSION_KEYS,
+  },
+  {
+    name: "Ausgetreten",
+    description:
+      "Nur vom Jahreswechsel-Cron vergeben (#332) — kein manuelles Zuweisen im UI",
+    permissionKeys: AUSGETRETEN_PERMISSION_KEYS,
   },
 ];
 

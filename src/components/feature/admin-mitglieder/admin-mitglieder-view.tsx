@@ -12,6 +12,7 @@ import {
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
+import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import {
   RoleManagementSection,
   type RoleManagementRow,
@@ -54,6 +55,7 @@ export function AdminMitgliederView({
   defaultInviteDays,
   canCreateSystemkonto,
   pendingEmailChanges,
+  stufe3Candidates,
 }: {
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
@@ -68,6 +70,12 @@ export function AdminMitgliederView({
   defaultInviteDays: number;
   canCreateSystemkonto: boolean;
   pendingEmailChanges: PendingChangeRow[];
+  stufe3Candidates: {
+    id: string;
+    memberNumber: number;
+    displayName: string;
+    membershipEndsAt: string;
+  }[];
 }) {
   const withOpenHoldings = meeples.filter(
     (m) =>
@@ -190,6 +198,33 @@ export function AdminMitgliederView({
         title="Offene E-Mail-Änderungsanträge"
         changes={pendingEmailChanges}
       />
+
+      {stufe3Candidates.length > 0 && (
+        <div className="bg-card rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">
+            Bereit zur endgültigen Löschung (Stufe 3)
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
+          </p>
+          <ul className="mt-3 flex flex-col divide-y text-sm">
+            {stufe3Candidates.map((member) => (
+              <li
+                key={member.id}
+                className="flex items-center justify-between py-2"
+              >
+                <span>
+                  #{member.memberNumber} {member.displayName}
+                </span>
+                <DeleteMemberDialog
+                  memberId={member.id}
+                  displayName={member.displayName}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {canManageRoles && (
         <RoleManagementSection roles={roles} permissions={permissions} />

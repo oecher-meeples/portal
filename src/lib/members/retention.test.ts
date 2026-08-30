@@ -3,10 +3,10 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const anonymiseMeepleRecordMock = vi.fn();
+const anonymiseMeepleStufe2Mock = vi.fn();
 vi.mock("@/lib/members/anonymisation", () => ({
-  anonymiseMeepleRecord: (...args: unknown[]) =>
-    anonymiseMeepleRecordMock(...args),
+  anonymiseMeepleStufe2: (...args: unknown[]) =>
+    anonymiseMeepleStufe2Mock(...args),
 }));
 
 const {
@@ -18,8 +18,8 @@ const {
 const NOW = new Date("2026-08-03T00:00:00Z");
 
 beforeEach(() => {
-  anonymiseMeepleRecordMock.mockReset();
-  anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe2Mock.mockReset();
+  anonymiseMeepleStufe2Mock.mockResolvedValue({ success: true });
   prismaMock.member.findMany.mockResolvedValue([] as never);
 });
 
@@ -35,12 +35,12 @@ describe("anonymiseExpiredMeeples with no retention period configured", () => {
 
     expect(summary).toEqual({ skipped: true, anonymised: 0, failed: [] });
     expect(prismaMock.member.findMany).not.toHaveBeenCalled();
-    expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
+    expect(anonymiseMeepleStufe2Mock).not.toHaveBeenCalled();
   });
 
   it("stays off even when called without arguments at all", async () => {
     expect((await anonymiseExpiredMeeples()).skipped).toBe(true);
-    expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
+    expect(anonymiseMeepleStufe2Mock).not.toHaveBeenCalled();
   });
 });
 
@@ -93,8 +93,8 @@ describe("anonymiseExpiredMeeples with a test retention period", () => {
     });
 
     expect(summary).toEqual({ skipped: false, anonymised: 2, failed: [] });
-    expect(anonymiseMeepleRecordMock).toHaveBeenCalledWith("meeple-1", NOW);
-    expect(anonymiseMeepleRecordMock).toHaveBeenCalledWith("meeple-2", NOW);
+    expect(anonymiseMeepleStufe2Mock).toHaveBeenCalledWith("meeple-1", NOW);
+    expect(anonymiseMeepleStufe2Mock).toHaveBeenCalledWith("meeple-2", NOW);
   });
 
   it("keeps going past a member that cannot be anonymised yet and reports it", async () => {
@@ -102,7 +102,7 @@ describe("anonymiseExpiredMeeples with a test retention period", () => {
       { meepleId: "still-holding" },
       { meepleId: "clean" },
     ] as never);
-    anonymiseMeepleRecordMock.mockResolvedValueOnce({
+    anonymiseMeepleStufe2Mock.mockResolvedValueOnce({
       error: "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten.",
     });
 
