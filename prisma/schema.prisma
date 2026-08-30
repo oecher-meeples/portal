@@ -177,21 +177,23 @@ model UserRole {
   @@map("user_roles")
 }
 
-/// Mitgliedsprofil, 1:1 zum Login-Konto (siehe docs/adr/0002).
-/// Der Mitgliedschaftszustand wird aus resignedAt/membershipEndsAt/anonymizedAt abgeleitet.
+/// Mitgliedsprofil, 1:1 zum Login-Konto (siehe docs/adr/0002). Seit dem
+/// Vereinsmitglied/Meeple-Split (ADR 0013, #328) ist das die reine
+/// Portal-Account-Ebene — die offizielle Vereinsmitgliedschaft (Mitgliedsnummer,
+/// Kontaktdaten für den Verein, Bankdaten, Kündigung) lebt auf `Member`, hier
+/// verknüpft über `Member.meepleId`. `memberNumber` hier ist eine reine
+/// Konto-Zählnummer, unabhängig von `Member.memberNumber` (der eigentlichen
+/// Mitgliedsnummer) — die beiden Werte fallen im heutigen 1:1-Bestand
+/// zufällig zusammen, sind aber zwei getrennte Zähler.
+/// Der Mitgliedschaftszustand wird aus dem verknüpften `Member`
+/// (resignedAt/membershipEndsAt) plus `anonymizedAt` hier abgeleitet.
 model Meeple {
   id                        String    @id @default(cuid())
   neonAuthUserId            String?   @unique
   memberNumber              Int       @unique @default(autoincrement())
   displayName               String
-  email                     String?
   joinedAt                  DateTime  @default(now())
-  resignedAt                DateTime?
-  membershipEndsAt          DateTime?
   anonymizedAt              DateTime?
-  ibanEncrypted             String?
-  ibanLast4                 String?
-  accountHolder             String?
   bggUsername               String?
   bgaUsername               String?
   telegramHandle            String?
@@ -232,7 +234,6 @@ model Meeple {
   keptUnits                StorageUnit[]                @relation("StorageUnitKeeper")
   recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
   movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
-  holdings                 GameHolding[]                @relation("GameHoldingMeeple")
   recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
   lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
@@ -247,8 +248,46 @@ model Meeple {
   privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
   deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
   newsletterSubscription   NewsletterSubscriber?
+  member                   Member?
 
   @@map("meeples")
+}
+
+/// Die offizielle Vereinsmitgliedschaft — getrennt vom Portal-Account
+/// (`Meeple`), seit dem Vereinsmitglied/Meeple-Split (ADR 0013, #328). Kann
+/// ohne `Meeple` existieren (noch kein Login) und ein `Meeple` kann ohne
+/// `Member` existieren (Systemkonto, anonymisierter Alt-Meeple). Nur
+/// `memberNumber` und `email` sind Pflicht — alle übrigen Personenfelder sind
+/// bewusst nullable, kein Platzhalter-Backfill (siehe Migration).
+model Member {
+  id                      String    @id @default(cuid())
+  memberNumber            Int       @unique
+  lastName                String?
+  firstName               String?
+  birthDate               DateTime?
+  birthPlace              String?
+  street                  String?
+  postalCode              String?
+  city                    String?
+  phone                   String?
+  email                   String    @unique
+  /// Individuell gewählter Mitgliedsbeitrag — überstimmt die aus `birthDate`
+  /// abgeleitete Beitragsart, wenn gesetzt (siehe `lib/members/contribution.ts`).
+  selbstgewaehlterBeitrag Decimal?
+  ibanEncrypted           String?
+  ibanLast4               String?
+  accountHolder           String?
+  resignedAt              DateTime?
+  membershipEndsAt        DateTime?
+  meepleId                String?   @unique
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  meeple         Meeple?         @relation(fields: [meepleId], references: [id], onDelete: SetNull)
+  holdings       GameHolding[]   @relation("GameHoldingMember")
+  pendingChanges PendingChange[]
+
+  @@map("members")
 }
 
 /// A member's Art.-17 deletion request. Deliberately has no free-text field: the
@@ -407,10 +446,10 @@ model NewsletterDispatchJob {
 model Invite {
   id              String    @id @default(cuid())
   token           String    @unique
-  /// null = ungebunden: beliebig oft einlösbar, keine Protokollierung.
-  /// Gesetzt = gebunden: genau einmal einlösbar, muss beim Einlösen exakt
-  /// (case-insensitiv) übereinstimmen. Immer lowercased gespeichert.
-  email           String?
+  /// Immer gesetzt (seit #329 — keine ungebundenen Einladungen mehr): genau
+  /// einmal einlösbar, muss beim Einlösen exakt (case-insensitiv)
+  /// übereinstimmen. Immer lowercased gespeichert, entspricht `Member.email`.
+  email           String
   createdByUserId String
   createdAt       DateTime  @default(now())
   /// Gewählte Gültigkeitsdauer in Minuten (aufgerundet) — Offset, nicht
@@ -423,6 +462,48 @@ model Invite {
   revokedAt       DateTime?
 
   @@map("invites")
+}
+
+/// Singleton row for global invite defaults (#329) — always exactly one row,
+/// fixed id so `upsert({ where: { id: "singleton" } })` never creates a second.
+model InviteSettings {
+  id          String   @id @default("singleton")
+  defaultDays Float    @default(7)
+  updatedAt   DateTime @updatedAt
+
+  @@map("invite_settings")
+}
+
+/// A member-initiated change to sensitive `Member` data that needs a second
+/// pair of eyes before it takes effect (#330). Distinct from the login email
+/// (`Meeple`/Neon Auth), which changes directly via a confirmation link, no
+/// board approval. Only one open `PendingChange` per (member, kind) — a new
+/// request replaces the old one (see `pending-changes.ts`).
+model PendingChange {
+  id               String             @id @default(cuid())
+  memberId         String
+  kind             PendingChangeKind
+  /// New value the member proposes — IBAN in the clear here (only until
+  /// approved, then re-encrypted like `Member.ibanEncrypted`) or the new email.
+  newValue         String
+  requestedAt      DateTime           @default(now())
+  /// Set once the member confirms via emailed link — only relevant for
+  /// MEMBER_EMAIL, which additionally needs board approval afterwards.
+  confirmedAt      DateTime?
+  approvedAt       DateTime?
+  approvedByUserId String?
+  rejectedAt       DateTime?
+  rejectedByUserId String?
+  rejectionReason  String?
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("pending_changes")
+}
+
+enum PendingChangeKind {
+  IBAN
+  MEMBER_EMAIL
 }
 
 /// A game title — BGG/product metadata, one row per title regardless of how many
@@ -664,11 +745,17 @@ model StorageUnitMove {
 
 /// Where a game was during a period. Exactly one target (unit or meeple) and exactly
 /// one open holding per game — both enforced by hand-written constraints, see ADR 0001.
+/// `vereinsmitgliedId` (bis #333: `meepleId`) referenziert seit dem
+/// Vereinsmitglied/Meeple-Split (ADR 0013) `Member`, nicht mehr `Meeple` — ein
+/// Aufenthalt bei einer Person ist fachlich immer bei einem Vereinsmitglied,
+/// unabhängig davon, ob dieses ein Portal-Konto (`Member.meepleId`) hat. Die
+/// erfassende Person (`recordedByMeepleId`) bleibt unverändert ein `Meeple`
+/// (Handlungs-/Login-Identität, nicht Ziel des Aufenthalts).
 model GameHolding {
   id                 String        @id @default(cuid())
   gameCopyId         String
   unitId             String?
-  meepleId           String?
+  vereinsmitgliedId  String?
   origin             HoldingOrigin
   startedAt          DateTime      @default(now())
   endedAt            DateTime?
@@ -677,14 +764,14 @@ model GameHolding {
   recordedByMeepleId String
   note               String?
 
-  gameCopy   GameCopy     @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
-  unit       StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  meeple     Meeple?      @relation("GameHoldingMeeple", fields: [meepleId], references: [id], onDelete: Restrict)
-  recordedBy Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
+  gameCopy        GameCopy     @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
+  unit            StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  vereinsmitglied Member?      @relation("GameHoldingMember", fields: [vereinsmitgliedId], references: [id], onDelete: Restrict)
+  recordedBy      Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
 
   @@index([gameCopyId, endedAt])
   @@index([unitId])
-  @@index([meepleId])
+  @@index([vereinsmitgliedId])
   @@map("game_holdings")
 }
 

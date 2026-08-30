@@ -19,15 +19,25 @@ import type {
 
 /** Ein person-gehaltenes Exemplar ist per Definition "ausgeliehen" — kein
  * Standort-Baum wie bei `admin-bestand-rows.ts` zu walken. */
-function actionsMenuCopy(holding: ActiveMeepleHolding) {
+function actionsMenuCopy(holding: ActiveMeepleHolding, verfuegbar: boolean) {
   return {
     id: holding.gameCopyId,
-    zustand: "ausgeliehen" as const,
+    zustand: verfuegbar
+      ? ("ausgeliehen-verfuegbar" as const)
+      : ("ausgeliehen-nicht-verfuegbar" as const),
     locationChain: holding.locationChain,
     condition: holding.condition,
     ruleBookLanguages: holding.ruleBookLanguages,
     inventoryNumber: holding.inventoryNumber,
   };
+}
+
+/** Private Kontaktdaten eines Vereinsmitglieds — nur für `games:manage`
+ * sichtbar, in beiden "ausgeliehen"-Unterfällen (#333). */
+function memberAddress(meeple: MeepleWithActiveHoldings) {
+  const line = [meeple.postalCode, meeple.city].filter(Boolean).join(" ");
+  const parts = [meeple.street, line].filter(Boolean);
+  return { address: parts.join(", "), phone: meeple.phone };
 }
 
 /** Ausleihe-Übersicht nach Mitglied (#272) — eine Accordion-Zeile je Meeple
@@ -81,43 +91,63 @@ export function BorrowedGamesByMeepleView({
           key={search}
           className="bg-card rounded-lg border"
           defaultValue={
-            search.trim() ? filtered.map((meeple) => meeple.meepleId) : []
+            search.trim()
+              ? filtered.map((meeple) => meeple.vereinsmitgliedId)
+              : []
           }
           multiple
         >
-          {filtered.map((meeple) => (
-            <AccordionItem key={meeple.meepleId} value={meeple.meepleId}>
-              <AccordionTrigger className="px-5">
-                <span className="flex items-center gap-2">
-                  <span className="font-medium">{meeple.meepleName}</span>
-                  <Badge>{meeple.holdings.length}</Badge>
-                </span>
-              </AccordionTrigger>
-              <AccordionPanel className="px-5">
-                <ul className="flex flex-col divide-y">
-                  {meeple.holdings.map((holding) => (
-                    <li
-                      key={holding.gameCopyId}
-                      className="flex items-center justify-between gap-2 py-2 text-sm"
-                    >
-                      <span>{holding.boardGameTitle}</span>
-                      <span className="flex items-center gap-2">
-                        <span className="text-muted-foreground text-xs">
-                          seit {formatDatePlain(holding.startedAt)}
+          {filtered.map((meeple) => {
+            const { address, phone } = memberAddress(meeple);
+            return (
+              <AccordionItem
+                key={meeple.vereinsmitgliedId}
+                value={meeple.vereinsmitgliedId}
+              >
+                <AccordionTrigger className="px-5">
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium">{meeple.memberName}</span>
+                    {!meeple.verfuegbar && (
+                      <Badge variant="outline">nicht verfügbar</Badge>
+                    )}
+                    <Badge>{meeple.holdings.length}</Badge>
+                  </span>
+                </AccordionTrigger>
+                <AccordionPanel className="px-5">
+                  {canManageGames && (address || phone) && (
+                    <p className="text-muted-foreground mb-2 text-xs">
+                      {address}
+                      {address && phone ? " · " : ""}
+                      {phone}
+                    </p>
+                  )}
+                  <ul className="flex flex-col divide-y">
+                    {meeple.holdings.map((holding) => (
+                      <li
+                        key={holding.gameCopyId}
+                        className="flex items-center justify-between gap-2 py-2 text-sm"
+                      >
+                        <span>{holding.boardGameTitle}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-xs">
+                            seit {formatDatePlain(holding.startedAt)}
+                          </span>
+                          <GameActionsMenu
+                            copies={[
+                              actionsMenuCopy(holding, meeple.verfuegbar),
+                            ]}
+                            boardGameId={holding.boardGameId}
+                            boardGameTitle={holding.boardGameTitle}
+                            canManageGames={canManageGames}
+                          />
                         </span>
-                        <GameActionsMenu
-                          copies={[actionsMenuCopy(holding)]}
-                          boardGameId={holding.boardGameId}
-                          boardGameTitle={holding.boardGameTitle}
-                          canManageGames={canManageGames}
-                        />
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionPanel>
-            </AccordionItem>
-          ))}
+                      </li>
+                    ))}
+                  </ul>
+                </AccordionPanel>
+              </AccordionItem>
+            );
+          })}
         </Accordion>
       )}
     </div>

@@ -4,6 +4,7 @@ import {
   hasPermissionInCurrentView,
 } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { meepleEmail } from "@/lib/members/contact";
 import { toMarketListingView } from "@/lib/markt/market-listings";
 import { MarketListingDetailView } from "@/components/feature/markt/market-listing-detail-view";
 
@@ -18,7 +19,7 @@ export default async function MarketListingPage({
   const listing = await prisma.marketListing.findUnique({
     where: { id },
     include: {
-      seller: true,
+      seller: { include: { member: { select: { email: true } } } },
       boardGame: { select: { slug: true, bggId: true } },
     },
   });
@@ -30,7 +31,10 @@ export default async function MarketListingPage({
 
   return (
     <MarketListingDetailView
-      listing={toMarketListingView(listing, listing.seller)}
+      listing={toMarketListingView(listing, {
+        ...listing.seller,
+        email: meepleEmail(listing.seller),
+      })}
       canEdit={canEdit}
     />
   );

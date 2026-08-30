@@ -8,7 +8,7 @@ import {
   isValidIban,
   normaliseIban,
 } from "@/lib/utils/crypto";
-import { nextTurnOfTheYear, requireMeeple } from "@/lib/members/meeples";
+import { computeMembershipEndsAt, requireMeeple } from "@/lib/members/meeples";
 import {
   collectMeeplePersonalData,
   type MeepleDataExport,
@@ -76,6 +76,24 @@ export async function updateOwnProfile(input: OwnProfileInput) {
   return { success: true as const };
 }
 
+/**
+ * Vereinsmitglied-Zeile eines Meeples (#328) — Bankdaten/Kündigung leben dort.
+ * Fehlt sie (noch keine Migration/Einladung verknüpft, siehe Paket 3), gibt
+ * es bewusst keinen automatischen Anlage-Versuch hier: das eigenständige
+ * Anlegen einer Vereinsmitglied-Zeile für einen bestehenden Meeple ist erst
+ * Teil des Einladungs-Redeem-Flows (#329).
+ */
+async function requireOwnMember(meepleId: string) {
+  const member = await prisma.member.findUnique({ where: { meepleId } });
+  if (!member) {
+    return {
+      error:
+        "Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende dich an den Vorstand.",
+    };
+  }
+  return { success: true as const, member };
+}
+
 export async function updateOwnBankDetails(input: OwnBankDetailsInput) {
   const meeple = await requireMeeple();
 
@@ -89,8 +107,11 @@ export async function updateOwnBankDetails(input: OwnBankDetailsInput) {
     return { error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe." };
   }
 
-  await prisma.meeple.update({
-    where: { id: meeple.id },
+  const ownMember = await requireOwnMember(meeple.id);
+  if (!ownMember.success) return { error: ownMember.error };
+
+  await prisma.member.update({
+    where: { meepleId: meeple.id },
     data: {
       accountHolder,
       ibanEncrypted: encryptSecret(iban),
@@ -105,8 +126,11 @@ export async function updateOwnBankDetails(input: OwnBankDetailsInput) {
 export async function clearOwnBankDetails() {
   const meeple = await requireMeeple();
 
-  await prisma.meeple.update({
-    where: { id: meeple.id },
+  const ownMember = await requireOwnMember(meeple.id);
+  if (!ownMember.success) return { error: ownMember.error };
+
+  await prisma.member.update({
+    where: { meepleId: meeple.id },
     data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
   });
 
@@ -174,21 +198,25 @@ export async function updateNewsletterPreference(input: {
   return { success: true as const };
 }
 
-/** Records the resignation; the membership itself runs until the turn of the year. */
+/** Records the resignation; the membership itself runs until the turn of the year
+ * (with a 4-week minimum-notice rule, see computeMembershipEndsAt). */
 export async function resignOwnMembership() {
   const meeple = await requireMeeple();
 
-  if (meeple.resignedAt) {
+  const ownMember = await requireOwnMember(meeple.id);
+  if (!ownMember.success) return { error: ownMember.error };
+
+  if (ownMember.member.resignedAt) {
     return {
       error: "Für diese Mitgliedschaft liegt bereits eine Kündigung vor.",
     };
   }
 
   const now = new Date();
-  const membershipEndsAt = nextTurnOfTheYear(now);
+  const membershipEndsAt = computeMembershipEndsAt(now);
 
-  await prisma.meeple.update({
-    where: { id: meeple.id },
+  await prisma.member.update({
+    where: { meepleId: meeple.id },
     data: { resignedAt: now, membershipEndsAt },
   });
 

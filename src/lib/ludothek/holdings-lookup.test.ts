@@ -21,7 +21,7 @@ function openHolding(overrides: Partial<Record<string, unknown>> = {}) {
     id: "holding-1",
     gameCopyId: GAME_ID,
     unitId: null,
-    meepleId: null,
+    vereinsmitgliedId: null,
     origin: "INITIAL",
     startedAt: new Date(),
     endedAt: null,
@@ -51,7 +51,7 @@ beforeEach(() => {
 describe("getResponsibleMeeple", () => {
   it("is the borrower for a direct loan", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEEPLE_A }) as never,
     );
 
     expect(await getResponsibleMeeple({ id: GAME_ID })).toBe(MEEPLE_A);
@@ -115,15 +115,28 @@ describe("getGameZustand", () => {
     ).toBe("frei");
   });
 
-  it("is ausgeliehen when a person holds it", async () => {
+  it("is ausgeliehen-verfuegbar when the holding Member has a Meeple with a login", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue({
-      ...openHolding({ meepleId: MEEPLE_A }),
+      ...openHolding({ vereinsmitgliedId: MEEPLE_A }),
       unit: null,
+      vereinsmitglied: { meeple: { neonAuthUserId: "auth-1" } },
     } as never);
 
     expect(
       await getGameZustand({ id: GAME_ID, status: "ACTIVE" as never }),
-    ).toBe("ausgeliehen");
+    ).toBe("ausgeliehen-verfuegbar");
+  });
+
+  it("is ausgeliehen-nicht-verfuegbar when the holding Member has no Meeple login", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue({
+      ...openHolding({ vereinsmitgliedId: MEEPLE_A }),
+      unit: null,
+      vereinsmitglied: null,
+    } as never);
+
+    expect(
+      await getGameZustand({ id: GAME_ID, status: "ACTIVE" as never }),
+    ).toBe("ausgeliehen-nicht-verfuegbar");
   });
 
   it("is wartung when the completeness check failed", async () => {

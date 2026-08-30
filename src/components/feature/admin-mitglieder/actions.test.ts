@@ -145,13 +145,13 @@ describe("without the members:manage permission", () => {
 });
 
 describe("recordResignation", () => {
-  it("sets both resignedAt and membershipEndsAt", async () => {
+  it("sets both resignedAt and membershipEndsAt on the linked Member", async () => {
     vi.setSystemTime(new Date("2026-07-29T12:00:00Z"));
 
     await recordResignation("meeple-1", new Date("2027-01-01T00:00:00Z"));
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: {
         resignedAt: new Date("2026-07-29T12:00:00Z"),
         membershipEndsAt: new Date("2027-01-01T00:00:00Z"),
@@ -172,11 +172,11 @@ describe("recordResignation", () => {
 });
 
 describe("revokeResignation", () => {
-  it("clears both date fields", async () => {
+  it("clears both date fields on the linked Member", async () => {
     await revokeResignation("meeple-1");
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: { resignedAt: null, membershipEndsAt: null },
     });
   });

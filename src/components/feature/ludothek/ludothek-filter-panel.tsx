@@ -29,7 +29,11 @@ const MAX_LANGUAGE_DEPENDENCE = LANGUAGE_DEPENDENCE_BY_LEVEL.length;
 
 const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Frei", value: "frei" },
-  { label: "Ausgeliehen", value: "ausgeliehen" },
+  { label: "Ausgeliehen", value: "ausgeliehen-verfuegbar" },
+  {
+    label: "Ausgeliehen (nicht verfügbar)",
+    value: "ausgeliehen-nicht-verfuegbar",
+  },
   { label: "Wartung", value: "wartung" },
   { label: "Nicht erfasst", value: "nicht-erfasst" },
 ];

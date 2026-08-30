@@ -40,12 +40,14 @@ export async function getOpenHoldingsSummary(meepleId: string) {
   return countOpenHoldings(meepleId);
 }
 
+/** `meepleId` weiterhin, weil die Admin-UI Meeples auflistet — die Kündigung
+ * selbst wird seit #328 auf der verknüpften `Member`-Zeile vermerkt. */
 export async function recordResignation(meepleId: string, endsAt: Date) {
   await requireMembersManage();
 
   await prisma.$transaction([
-    prisma.meeple.update({
-      where: { id: meepleId },
+    prisma.member.update({
+      where: { meepleId },
       data: { resignedAt: new Date(), membershipEndsAt: endsAt },
     }),
     // No cron marks the exact turn-of-year moment, so this is the closest
@@ -64,8 +66,8 @@ export async function recordResignation(meepleId: string, endsAt: Date) {
 export async function revokeResignation(meepleId: string) {
   await requireMembersManage();
 
-  await prisma.meeple.update({
-    where: { id: meepleId },
+  await prisma.member.update({
+    where: { meepleId },
     data: { resignedAt: null, membershipEndsAt: null },
   });
 

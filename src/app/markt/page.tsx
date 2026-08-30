@@ -5,6 +5,7 @@ import {
 import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { toSparePartListingView } from "@/lib/inventory/spare-parts";
+import { meepleEmail } from "@/lib/members/contact";
 import {
   filterMarketListings,
   parseMarketListingSearchParams,
@@ -29,25 +30,31 @@ export default async function MarktPage({
   const [marketListings, sparePartListings] = await Promise.all([
     prisma.marketListing.findMany({
       include: {
-        seller: true,
+        seller: { include: { member: { select: { email: true } } } },
         boardGame: { select: { slug: true, bggId: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
     prisma.sparePartListing.findMany({
-      include: { keeper: true },
+      include: { keeper: { include: { member: { select: { email: true } } } } },
       orderBy: { createdAt: "desc" },
     }),
   ]);
 
   const listings = filterMarketListings(
     marketListings.map((listing) =>
-      toMarketListingView(listing, listing.seller),
+      toMarketListingView(listing, {
+        ...listing.seller,
+        email: meepleEmail(listing.seller),
+      }),
     ),
     filters,
   );
   const spareParts = sparePartListings.map((listing) =>
-    toSparePartListingView(listing, listing.keeper),
+    toSparePartListingView(listing, {
+      ...listing.keeper,
+      email: meepleEmail(listing.keeper),
+    }),
   );
 
   return (

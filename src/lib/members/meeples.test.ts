@@ -30,11 +30,10 @@ describe("ensureMeeple", () => {
 
     expect(prismaMock.meeple.upsert).toHaveBeenCalledWith({
       where: { neonAuthUserId: "user-1" },
-      update: { displayName: "Lea", email: "lea@example.org" },
+      update: { displayName: "Lea" },
       create: {
         neonAuthUserId: "user-1",
         displayName: "Lea",
-        email: "lea@example.org",
       },
     });
   });
@@ -60,7 +59,7 @@ describe("ensureMeeple", () => {
 
     expect(prismaMock.meeple.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { displayName: "Lea Neuer Name", email: "lea@example.org" },
+        update: { displayName: "Lea Neuer Name" },
       }),
     );
   });
@@ -72,7 +71,7 @@ describe("ensureMeeple", () => {
 
     expect(prismaMock.meeple.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { displayName: "lea", email: "lea@example.org" },
+        update: { displayName: "lea" },
       }),
     );
   });

@@ -40,8 +40,8 @@ describe("without the bank:read permission", () => {
     await expect(revealIban("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(exportBankDataCsv()).rejects.toThrow(ForbiddenError);
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
-    expect(prismaMock.meeple.findUnique).not.toHaveBeenCalled();
-    expect(prismaMock.meeple.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.member.findMany).not.toHaveBeenCalled();
   });
 });
 
@@ -49,8 +49,7 @@ describe("revealIban", () => {
   // The decrypt/log rules themselves live in the lib layer and are tested in
   // src/lib/members/bank-access-log.test.ts — here only the permission gate matters.
   it("checks the bank:read permission and delegates to the shared reveal logic", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       ibanEncrypted: encryptSecret(IBAN),
     } as never);
 
@@ -70,18 +69,24 @@ describe("revealIban", () => {
 
 describe("exportBankDataCsv", () => {
   beforeEach(() => {
-    prismaMock.meeple.findMany.mockResolvedValue([
+    prismaMock.member.findMany.mockResolvedValue([
       {
         memberNumber: 1,
-        displayName: "Lea Beispiel",
+        firstName: null,
+        lastName: null,
+        email: "lea@example.org",
         accountHolder: "Lea Beispiel",
         ibanEncrypted: encryptSecret(IBAN),
+        meeple: { displayName: "Lea Beispiel" },
       },
       {
         memberNumber: 2,
-        displayName: "Ben; Muster",
+        firstName: null,
+        lastName: null,
+        email: "ben@example.org",
         accountHolder: null,
         ibanEncrypted: encryptSecret("AT611904300234573201"),
+        meeple: { displayName: "Ben; Muster" },
       },
     ] as never);
   });
@@ -122,9 +127,12 @@ describe("exportBankDataCsv", () => {
   it("skips anonymised meeples and those without stored bank data", async () => {
     await exportBankDataCsv();
 
-    expect(prismaMock.meeple.findMany).toHaveBeenCalledWith(
+    expect(prismaMock.member.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { ibanEncrypted: { not: null }, anonymizedAt: null },
+        where: {
+          ibanEncrypted: { not: null },
+          OR: [{ meepleId: null }, { meeple: { anonymizedAt: null } }],
+        },
       }),
     );
   });

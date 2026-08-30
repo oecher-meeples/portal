@@ -11,6 +11,19 @@ export type ContactLinks = {
   address: string | null;
 };
 
+/**
+ * A Meeple no longer carries `email` directly — it moved to the linked
+ * `Member` (#328). Every contact-surface query joins `member: { select:
+ * { email: true } }` and flattens it back with this helper before calling
+ * `getContactLinks`, so the join stays in one place instead of repeated
+ * per call site.
+ */
+export function meepleEmail(meeple: {
+  member: { email: string | null } | null;
+}): string | null {
+  return meeple.member?.email ?? null;
+}
+
 /** `telegramHandle`/`signalHandle`/`discordHandle` are assumed already
  * normalised (no leading `@`), see profil actions. */
 export function getContactLinks(meeple: {

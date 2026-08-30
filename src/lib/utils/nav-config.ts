@@ -87,7 +87,11 @@ export const ADMIN_PERMISSIONS = [
 ] as const;
 
 export const MITGLIEDER_PERMISSIONS = ["members:manage", "invites:manage"];
-export const EINSTELLUNGEN_PERMISSIONS = ["games:manage", "instagram:connect"];
+export const EINSTELLUNGEN_PERMISSIONS = [
+  "games:manage",
+  "instagram:connect",
+  "invites:manage",
+];
 
 export const NAV_GROUPS: NavGroup[] = [
   {

@@ -1,0 +1,104 @@
+import { describe, expect, it } from "vitest";
+import { determineContribution } from "./contribution";
+
+const NOW = new Date("2026-07-29T12:00:00Z");
+
+describe("determineContribution", () => {
+  it("is unbestimmt without a birth date and without a chosen amount", () => {
+    expect(
+      determineContribution(
+        { birthDate: null, selbstgewaehlterBeitrag: null },
+        NOW,
+      ),
+    ).toEqual({ category: null, amountEuros: null, source: null });
+  });
+
+  it("is the ermäßigter Kinderbeitrag (0 €) for a member under 13", () => {
+    expect(
+      determineContribution(
+        {
+          birthDate: new Date("2014-01-01T00:00:00Z"), // 12 on NOW
+          selbstgewaehlterBeitrag: null,
+        },
+        NOW,
+      ),
+    ).toEqual({ category: "mini", amountEuros: 0, source: "birthDate" });
+  });
+
+  it("treats the 13th birthday itself as JungMeeple, not MiniMeeple", () => {
+    expect(
+      determineContribution(
+        {
+          birthDate: new Date("2013-07-29T00:00:00Z"), // turns 13 exactly on NOW
+          selbstgewaehlterBeitrag: null,
+        },
+        NOW,
+      ),
+    ).toEqual({ category: "jung", amountEuros: null, source: "birthDate" });
+  });
+
+  it("is JungMeeple for ages 13 to 17", () => {
+    expect(
+      determineContribution(
+        {
+          birthDate: new Date("2010-01-01T00:00:00Z"),
+          selbstgewaehlterBeitrag: null,
+        }, // 16
+        NOW,
+      ),
+    ).toEqual({ category: "jung", amountEuros: null, source: "birthDate" });
+  });
+
+  it("treats the 18th birthday itself as Meeple, not JungMeeple", () => {
+    expect(
+      determineContribution(
+        {
+          birthDate: new Date("2008-07-29T00:00:00Z"), // turns 18 exactly on NOW
+          selbstgewaehlterBeitrag: null,
+        },
+        NOW,
+      ),
+    ).toEqual({ category: "meeple", amountEuros: null, source: "birthDate" });
+  });
+
+  it("is Meeple (regulärer Beitrag) for adults, amount unspecified without a chosen value", () => {
+    expect(
+      determineContribution(
+        {
+          birthDate: new Date("1990-01-01T00:00:00Z"),
+          selbstgewaehlterBeitrag: null,
+        },
+        NOW,
+      ),
+    ).toEqual({ category: "meeple", amountEuros: null, source: "birthDate" });
+  });
+
+  it("lets selbstgewaehlterBeitrag override the age-derived category", () => {
+    expect(
+      determineContribution(
+        {
+          birthDate: new Date("2014-01-01T00:00:00Z"), // would be "mini"
+          selbstgewaehlterBeitrag: 15,
+        },
+        NOW,
+      ),
+    ).toEqual({
+      category: "individuell",
+      amountEuros: 15,
+      source: "selbstgewaehlterBeitrag",
+    });
+  });
+
+  it("is determined (individuell) from a chosen amount alone, without a birth date", () => {
+    expect(
+      determineContribution(
+        { birthDate: null, selbstgewaehlterBeitrag: 20 },
+        NOW,
+      ),
+    ).toEqual({
+      category: "individuell",
+      amountEuros: 20,
+      source: "selbstgewaehlterBeitrag",
+    });
+  });
+});

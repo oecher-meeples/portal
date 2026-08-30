@@ -13,7 +13,12 @@ import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
-import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
+import {
+  getContactLinks,
+  meepleEmail,
+  type ContactLinks,
+} from "@/lib/members/contact";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
@@ -90,7 +95,14 @@ export default async function GameDetailPage({
     orderBy: { startedAt: "desc" },
     include: {
       unit: { select: { label: true, code: true } },
-      meeple: { select: { displayName: true } },
+      vereinsmitglied: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          meeple: { select: { displayName: true } },
+        },
+      },
       recordedBy: { select: { displayName: true } },
     },
   });
@@ -100,8 +112,8 @@ export default async function GameDetailPage({
     const entry: HoldingHistoryEntry = {
       id: holding.id,
       origin: ORIGIN_LABELS[holding.origin] ?? holding.origin,
-      target: holding.meeple
-        ? holding.meeple.displayName
+      target: holding.vereinsmitglied
+        ? memberDisplayName(holding.vereinsmitglied)
         : (holding.unit?.label ?? holding.unit?.code ?? "—"),
       startedAt: formatDateTime(holding.startedAt),
       endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
@@ -128,7 +140,7 @@ export default async function GameDetailPage({
         where: { id: { in: responsibleIds } },
         select: {
           id: true,
-          email: true,
+          member: { select: { email: true } },
           telegramHandle: true,
           signalHandle: true,
           discordHandle: true,
@@ -138,7 +150,10 @@ export default async function GameDetailPage({
       })
     : [];
   const contactById = new Map(
-    responsibleMeeples.map((m) => [m.id, getContactLinks(m)]),
+    responsibleMeeples.map((m) => [
+      m.id,
+      getContactLinks({ ...m, email: meepleEmail(m) }),
+    ]),
   );
   const NO_CONTACT: ContactLinks = {
     mailHref: null,

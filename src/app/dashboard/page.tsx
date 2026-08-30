@@ -14,6 +14,7 @@ export default async function DashboardPage() {
   const { user, meeple, membershipState } = await requireMember();
 
   const [
+    member,
     internalNews,
     holdings,
     units,
@@ -24,6 +25,10 @@ export default async function DashboardPage() {
     importantLinks,
     openHelperRequestEvent,
   ] = await Promise.all([
+    prisma.member.findUnique({
+      where: { meepleId: meeple.id },
+      select: { id: true, membershipEndsAt: true },
+    }),
     getInternalContent(),
     prisma.gameHolding.findMany({
       where: { endedAt: null },
@@ -60,12 +65,17 @@ export default async function DashboardPage() {
   const gameTitleByHoldingId = new Map(
     holdings.map((h) => [h.id, h.gameCopy.boardGame.title]),
   );
-  const summary = summariseMemberHoldings(meeple.id, holdings, units);
+  const summary = summariseMemberHoldings(
+    meeple.id,
+    member?.id ?? null,
+    holdings,
+    units,
+  );
 
   const resignationNotice =
-    membershipState === "gekuendigt" && meeple.membershipEndsAt
+    membershipState === "gekuendigt" && member?.membershipEndsAt
       ? {
-          endsAt: formatDatePlain(meeple.membershipEndsAt),
+          endsAt: formatDatePlain(member.membershipEndsAt),
           openHoldingsCount:
             summary.ownLoans.length + summary.ownUnitContents.length,
         }

@@ -16,9 +16,22 @@ type Tx = PrismaClient | Prisma.TransactionClient;
 
 const MAX_UNIT_CHAIN_DEPTH = 20;
 
+/**
+ * "ausgeliehen" hat seit dem Vereinsmitglied/Meeple-Split (#333) zwei
+ * Unterfälle: **verfügbar** (das haltende Vereinsmitglied hat ein
+ * Portal-Konto — `Member.meepleId` verweist auf ein `Meeple` mit
+ * `neonAuthUserId`, ist also über den Scan-Flow selbst erreichbar) vs.
+ * **nicht verfügbar** (kein erreichbares Portal-Konto — eine rein extern
+ * geführte Person, ein Systemkonto ohne Login, oder das Sammelkonto
+ * "Anonymer Meeple"). Bewusste Verschärfung gegenüber der Plan-Formulierung
+ * "Member.meepleId !== null": das Sammelkonto HAT ein verknüpftes Meeple,
+ * aber ohne Login (`neonAuthUserId: null`) ist es nicht wirklich erreichbar —
+ * daher zählt zusätzlich, ob dieses Meeple ein Login hat.
+ */
 export type GameZustand =
   | "frei"
-  | "ausgeliehen"
+  | "ausgeliehen-verfuegbar"
+  | "ausgeliehen-nicht-verfuegbar"
   | "wartung"
   | "nicht-erfasst"
   /** Privatbesitz-Pseudo-Zustand (#255-Folge) — nie von
@@ -187,7 +200,10 @@ export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
   return { kind: "unknown", raw };
 }
 
-/** Walks Exemplar → Karton → Regal → Meeple, stopping at the first keeper found. */
+/** Walks Exemplar → Karton → Regal → Meeple, stopping at the first keeper
+ * found. NB: the returned id is a `Member` id when a person holds the copy
+ * directly, but a `Meeple` id when a unit's keeper is returned — callers that
+ * need one specific kind should resolve it themselves instead of using this. */
 export async function getResponsibleMeeple(
   copy: Pick<GameCopy, "id">,
 ): Promise<string | null> {
@@ -195,7 +211,7 @@ export async function getResponsibleMeeple(
     where: { gameCopyId: copy.id, endedAt: null },
   });
   if (!holding) return null;
-  if (holding.meepleId) return holding.meepleId;
+  if (holding.vereinsmitgliedId) return holding.vereinsmitgliedId;
   if (!holding.unitId) return null;
 
   let unitId: string | null = holding.unitId;
@@ -211,13 +227,29 @@ export async function getResponsibleMeeple(
   return null;
 }
 
+/** Whether the `Member` behind a holding has a reachable portal account —
+ * shared by `zustandFromHoldingAndUnit()` and every caller that resolves this
+ * itself, so the "verfügbar" rule lives in exactly one place. */
+export function isVerfuegbarerVereinsmitglied(
+  member: { meeple: { neonAuthUserId: string | null } | null } | null,
+): boolean {
+  return Boolean(member?.meeple?.neonAuthUserId);
+}
+
 /** Pure so bulk views (e.g. admin-bestand) can reuse it without a query per game. */
 export function zustandFromHoldingAndUnit(
-  holding: Pick<GameHolding, "meepleId">,
+  holding: Pick<GameHolding, "vereinsmitgliedId">,
   unit: Pick<StorageUnit, "code"> | null,
   gameStatus: GameInventoryStatus,
+  vereinsmitglied?: {
+    meeple: { neonAuthUserId: string | null } | null;
+  } | null,
 ): GameZustand {
-  if (holding.meepleId) return "ausgeliehen";
+  if (holding.vereinsmitgliedId) {
+    return isVerfuegbarerVereinsmitglied(vereinsmitglied ?? null)
+      ? "ausgeliehen-verfuegbar"
+      : "ausgeliehen-nicht-verfuegbar";
+  }
   if (unit?.code === UNSORTIERT_CODE) return "nicht-erfasst";
   if (gameStatus === GameInventoryStatus.MAINTENANCE) return "wartung";
   return "frei";
@@ -228,7 +260,12 @@ export async function getGameZustand(
 ): Promise<GameZustand> {
   const holding = await prisma.gameHolding.findFirst({
     where: { gameCopyId: copy.id, endedAt: null },
-    include: { unit: true },
+    include: {
+      unit: true,
+      vereinsmitglied: {
+        include: { meeple: { select: { neonAuthUserId: true } } },
+      },
+    },
   });
 
   if (!holding) {
@@ -236,5 +273,10 @@ export async function getGameZustand(
       `Exemplar ${copy.id} hat keinen offenen Aufenthalt — das darf laut Datenmodell nicht vorkommen.`,
     );
   }
-  return zustandFromHoldingAndUnit(holding, holding.unit, copy.status);
+  return zustandFromHoldingAndUnit(
+    holding,
+    holding.unit,
+    copy.status,
+    holding.vereinsmitglied,
+  );
 }

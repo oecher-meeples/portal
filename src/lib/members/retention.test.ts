@@ -20,7 +20,7 @@ const NOW = new Date("2026-08-03T00:00:00Z");
 beforeEach(() => {
   anonymiseMeepleRecordMock.mockReset();
   anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
-  prismaMock.meeple.findMany.mockResolvedValue([] as never);
+  prismaMock.member.findMany.mockResolvedValue([] as never);
 });
 
 describe("MEMBER_DATA_RETENTION_MONTHS", () => {
@@ -34,7 +34,7 @@ describe("anonymiseExpiredMeeples with no retention period configured", () => {
     const summary = await anonymiseExpiredMeeples({ now: NOW });
 
     expect(summary).toEqual({ skipped: true, anonymised: 0, failed: [] });
-    expect(prismaMock.meeple.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.member.findMany).not.toHaveBeenCalled();
     expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
   });
 
@@ -68,22 +68,23 @@ describe("anonymiseExpiredMeeples with a test retention period", () => {
   it("only selects members whose membership ended before the cutoff", async () => {
     await anonymiseExpiredMeeples({ retentionMonths: 24, now: NOW });
 
-    expect(prismaMock.meeple.findMany).toHaveBeenCalledWith({
+    expect(prismaMock.member.findMany).toHaveBeenCalledWith({
       where: {
-        anonymizedAt: null,
+        meepleId: { not: null },
+        meeple: { anonymizedAt: null },
         membershipEndsAt: {
           not: null,
           lt: new Date("2024-08-03T00:00:00Z"),
         },
       },
-      select: { id: true },
+      select: { meepleId: true },
     });
   });
 
   it("anonymises every candidate through the shared record function", async () => {
-    prismaMock.meeple.findMany.mockResolvedValue([
-      { id: "meeple-1" },
-      { id: "meeple-2" },
+    prismaMock.member.findMany.mockResolvedValue([
+      { meepleId: "meeple-1" },
+      { meepleId: "meeple-2" },
     ] as never);
 
     const summary = await anonymiseExpiredMeeples({
@@ -97,9 +98,9 @@ describe("anonymiseExpiredMeeples with a test retention period", () => {
   });
 
   it("keeps going past a member that cannot be anonymised yet and reports it", async () => {
-    prismaMock.meeple.findMany.mockResolvedValue([
-      { id: "still-holding" },
-      { id: "clean" },
+    prismaMock.member.findMany.mockResolvedValue([
+      { meepleId: "still-holding" },
+      { meepleId: "clean" },
     ] as never);
     anonymiseMeepleRecordMock.mockResolvedValueOnce({
       error: "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten.",

@@ -168,7 +168,7 @@ describe("getFreeGamesInRoom", () => {
         minPlayers: 2,
         maxPlayers: 4,
       }),
-      ludothekGame({ id: "game-2", zustand: "ausgeliehen" }),
+      ludothekGame({ id: "game-2", zustand: "ausgeliehen-verfuegbar" }),
       ludothekGame({
         id: "game-3",
         zustand: "frei",
@@ -246,7 +246,7 @@ describe("getGuestFleaMarketItems", () => {
 describe("getGuestCopyAvailability (#273)", () => {
   const COPIES = [
     { id: "copy-1", zustand: "frei" as const },
-    { id: "copy-2", zustand: "ausgeliehen" as const },
+    { id: "copy-2", zustand: "ausgeliehen-verfuegbar" as const },
   ];
 
   it("returns a plain count without an event", async () => {

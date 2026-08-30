@@ -11,6 +11,7 @@ export type {
 export {
   getMembershipState,
   nextTurnOfTheYear,
+  computeMembershipEndsAt,
 } from "@/lib/members/membership-state";
 
 export type AuthUser = {
@@ -29,12 +30,11 @@ function displayNameFor(user: AuthUser) {
  */
 export async function ensureMeeple(user: AuthUser) {
   const displayName = displayNameFor(user);
-  const email = user.email ?? null;
 
   return prisma.meeple.upsert({
     where: { neonAuthUserId: user.id },
-    update: { displayName, email },
-    create: { neonAuthUserId: user.id, displayName, email },
+    update: { displayName },
+    create: { neonAuthUserId: user.id, displayName },
   });
 }
 

@@ -17,15 +17,19 @@ const RESIGNED_AND_GONE = {
   id: "meeple-1",
   displayName: "Lea Beispiel",
   neonAuthUserId: "11111111-1111-1111-1111-111111111111",
+  anonymizedAt: null,
+};
+
+const RESIGNED_MEMBER = {
   resignedAt: new Date("2024-07-01T00:00:00Z"),
   membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
-  anonymizedAt: null,
 };
 
 function givenAnonymisableMeeple(
   listings: { id: string; imageUrls: string[] }[] = [],
 ) {
   prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+  prismaMock.member.findUnique.mockResolvedValue(RESIGNED_MEMBER as never);
   prismaMock.gameHolding.count.mockResolvedValue(0);
   prismaMock.storageUnit.count.mockResolvedValue(0);
   prismaMock.marketListing.findMany.mockResolvedValue(listings as never);
@@ -62,8 +66,8 @@ describe("anonymiseMeepleRecord preconditions", () => {
   });
 
   it("rejects a meeple that has not left yet", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      ...RESIGNED_AND_GONE,
+    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+    prismaMock.member.findUnique.mockResolvedValue({
       resignedAt: null,
       membershipEndsAt: null,
     } as never);
@@ -73,8 +77,17 @@ describe("anonymiseMeepleRecord preconditions", () => {
     });
   });
 
-  it("rejects a meeple that still holds a club game", async () => {
+  it("rejects a meeple without a linked Vereinsmitglied", async () => {
     prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    expect(await anonymiseMeepleRecord("meeple-1", NOW)).toEqual({
+      error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
+    });
+  });
+
+  it("rejects a meeple that still holds a club game", async () => {
+    givenAnonymisableMeeple();
     prismaMock.gameHolding.count.mockResolvedValue(2);
     prismaMock.storageUnit.count.mockResolvedValue(0);
 
@@ -85,7 +98,7 @@ describe("anonymiseMeepleRecord preconditions", () => {
   });
 
   it("rejects a meeple that still keeps a storage unit", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+    givenAnonymisableMeeple();
     prismaMock.gameHolding.count.mockResolvedValue(0);
     prismaMock.storageUnit.count.mockResolvedValue(1);
 
@@ -110,10 +123,6 @@ describe("anonymiseMeepleRecord", () => {
       data: {
         displayName: "(anonymisiert)",
         neonAuthUserId: null,
-        email: null,
-        accountHolder: null,
-        ibanEncrypted: null,
-        ibanLast4: null,
         bggUsername: null,
         bgaUsername: null,
         telegramHandle: null,

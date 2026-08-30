@@ -34,7 +34,13 @@ export async function sendSelbstauskunftMail(
 ): Promise<SendSelbstauskunftResult> {
   const meeple = await prisma.meeple.findUnique({ where: { id: meepleId } });
   if (!meeple) return { error: "Mitglied nicht gefunden." };
-  if (!meeple.email) {
+
+  // Die E-Mail-Adresse lebt seit #328 auf dem verknüpften Vereinsmitglied.
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
+    select: { email: true },
+  });
+  if (!member?.email) {
     return {
       error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
     };
@@ -46,7 +52,7 @@ export async function sendSelbstauskunftMail(
 
   try {
     await sendTransactionalEmail({
-      to: meeple.email,
+      to: member.email,
       subject: "Deine Selbstauskunft (Art. 15/20 DSGVO)",
       html: selbstauskunftHtml(meeple.displayName, data),
     });

@@ -1,4 +1,4 @@
-import type { Meeple, NewsletterCategory } from "@prisma/client";
+import type { Meeple, Member, NewsletterCategory } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { maskIban } from "@/lib/utils/crypto";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
@@ -31,6 +31,7 @@ function germanDate(value: Date | null) {
 
 export function ProfilView({
   meeple,
+  member,
   membershipState,
   deletionRequestedAt,
   openHoldings,
@@ -40,6 +41,9 @@ export function ProfilView({
   canForceImportCollection,
 }: {
   meeple: Meeple;
+  /** Die verknüpfte Vereinsmitgliedschaft (#328) — `null`, solange noch keine
+   * existiert (z. B. vor dem Einladungs-Redeem-Flow aus Paket 3). */
+  member: Member | null;
   membershipState: MembershipState;
   deletionRequestedAt: Date | null;
   openHoldings: OpenHoldingsSummary;
@@ -82,11 +86,11 @@ export function ProfilView({
               </div>
               <div>
                 <dt className="text-muted-foreground">E-Mail</dt>
-                <dd className="break-all">{meeple.email ?? "—"}</dd>
+                <dd className="break-all">{member?.email ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Kündigung vermerkt</dt>
-                <dd>{germanDate(meeple.resignedAt)}</dd>
+                <dd>{germanDate(member?.resignedAt ?? null)}</dd>
               </div>
             </dl>
             <p className="text-muted-foreground text-xs">
@@ -144,9 +148,9 @@ export function ProfilView({
             </h2>
             <div className="mt-4">
               <BankDetailsForm
-                accountHolder={meeple.accountHolder}
-                ibanLast4={meeple.ibanLast4}
-                maskedIban={maskIban(meeple.ibanLast4)}
+                accountHolder={member?.accountHolder ?? null}
+                ibanLast4={member?.ibanLast4 ?? null}
+                maskedIban={maskIban(member?.ibanLast4 ?? null)}
               />
             </div>
           </div>
@@ -183,9 +187,9 @@ export function ProfilView({
             </h2>
             <div className="mt-3">
               <ResignMembershipPanel
-                resignedAt={meeple.resignedAt?.toISOString() ?? null}
+                resignedAt={member?.resignedAt?.toISOString() ?? null}
                 membershipEndsAt={
-                  meeple.membershipEndsAt?.toISOString() ?? null
+                  member?.membershipEndsAt?.toISOString() ?? null
                 }
               />
             </div>

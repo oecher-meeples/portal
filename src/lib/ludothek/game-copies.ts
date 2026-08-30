@@ -15,6 +15,7 @@ import { toSparePartListingData } from "@/lib/inventory/spare-part-listings";
 import { uniqueSlug } from "@/lib/utils/slug";
 import {
   resolveCopyPlacement,
+  resolveOwnVereinsmitgliedIdForPlacement,
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
 import {
@@ -75,7 +76,7 @@ export async function createGameCopyTx(
     ruleBookLanguages?: RuleBookLanguage[];
     inventoryNumber?: string | null;
     actorId: string;
-    placement?: { unitId?: string; meepleId?: string };
+    placement?: { unitId?: string; vereinsmitgliedId?: string };
   },
 ) {
   if (inventoryNumber) {
@@ -94,7 +95,7 @@ export async function createGameCopyTx(
   });
 
   const target =
-    placement?.unitId || placement?.meepleId
+    placement?.unitId || placement?.vereinsmitgliedId
       ? placement
       : { unitId: (await ensureUnsortiertUnit(tx)).id };
 
@@ -102,7 +103,7 @@ export async function createGameCopyTx(
     data: {
       gameCopyId: created.id,
       unitId: target.unitId ?? null,
-      meepleId: target.meepleId ?? null,
+      vereinsmitgliedId: target.vereinsmitgliedId ?? null,
       origin: "INITIAL",
       confirmedAt: new Date(),
       recordedByMeepleId: actorId,
@@ -131,7 +132,16 @@ export async function createGameCopy(
   }
 
   const actor = await ensureMeeple(user);
-  const placement = resolveCopyPlacement(input.placement, actor.id);
+
+  const resolvedOwn = await resolveOwnVereinsmitgliedIdForPlacement(
+    input.placement,
+    actor.id,
+  );
+  if ("error" in resolvedOwn) return { error: resolvedOwn.error };
+  const placement = resolveCopyPlacement(
+    input.placement,
+    resolvedOwn.vereinsmitgliedId,
+  );
   let copy;
   try {
     copy = await prisma.$transaction((tx) =>

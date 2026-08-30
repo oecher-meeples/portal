@@ -9,6 +9,7 @@ import {
 } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
 import { escapeCsvField } from "@/lib/utils/csv";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 
 /** The only columns the export ever contains. */
 export const BANK_CSV_COLUMNS = [
@@ -30,27 +31,34 @@ export async function revealIban(meepleId: string) {
 export async function exportBankDataCsv() {
   const actor = await requireBankReader();
 
-  const meeples = await prisma.meeple.findMany({
-    where: { ibanEncrypted: { not: null }, anonymizedAt: null },
+  const members = await prisma.member.findMany({
+    where: {
+      ibanEncrypted: { not: null },
+      OR: [{ meepleId: null }, { meeple: { anonymizedAt: null } }],
+    },
     orderBy: { memberNumber: "asc" },
     select: {
       memberNumber: true,
-      displayName: true,
+      firstName: true,
+      lastName: true,
+      email: true,
       accountHolder: true,
       ibanEncrypted: true,
+      meeple: { select: { displayName: true } },
     },
   });
 
-  const rows = meeples.map((meeple) =>
-    [
-      meeple.memberNumber,
-      meeple.displayName,
-      meeple.accountHolder ?? meeple.displayName,
-      decryptSecret(meeple.ibanEncrypted!),
+  const rows = members.map((member) => {
+    const name = memberDisplayName(member);
+    return [
+      member.memberNumber,
+      name,
+      member.accountHolder ?? name,
+      decryptSecret(member.ibanEncrypted!),
     ]
       .map(csvCell)
-      .join(";"),
-  );
+      .join(";");
+  });
 
   await logBankDataAccess({
     accessedByMeepleId: actor.id,

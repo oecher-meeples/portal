@@ -29,7 +29,21 @@ export async function anonymiseMeepleRecord(
   if (meeple.anonymizedAt) {
     return { error: "Dieses Mitglied ist bereits anonymisiert." };
   }
-  if (getMembershipState(meeple, now) !== "ausgetreten") {
+  // resignedAt/membershipEndsAt moved to Member since #328 — anonymizedAt
+  // itself stays on Meeple.
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
+    select: { resignedAt: true, membershipEndsAt: true },
+  });
+  const membershipState = getMembershipState(
+    {
+      resignedAt: member?.resignedAt ?? null,
+      membershipEndsAt: member?.membershipEndsAt ?? null,
+      anonymizedAt: meeple.anonymizedAt,
+    },
+    now,
+  );
+  if (membershipState !== "ausgetreten") {
     return { error: "Nur ausgetretene Mitglieder können anonymisiert werden." };
   }
   if (hasOpenHoldings(await countOpenHoldings(meepleId))) {
@@ -83,10 +97,6 @@ export async function anonymiseMeepleRecord(
       data: {
         displayName: "(anonymisiert)",
         neonAuthUserId: null,
-        email: null,
-        accountHolder: null,
-        ibanEncrypted: null,
-        ibanLast4: null,
         bggUsername: null,
         bgaUsername: null,
         telegramHandle: null,

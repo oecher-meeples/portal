@@ -53,24 +53,28 @@ export async function requireBankReader() {
  * Decrypts one Meeple's IBAN and logs the access. Shared by the dedicated
  * Bankdaten admin page and the Bankdaten section of the Mitglieder-edit
  * dialog — one implementation so both log identically.
+ *
+ * The IBAN itself lives on the linked `Member` since #328 — the log's
+ * subject is still the `Meeple` (`meepleId`), the identity an admin actually
+ * picks in the UI.
  */
 export async function revealMeepleIban(
   meepleId: string,
   actorMeepleId: string,
 ): Promise<{ error: string } | { success: true; iban: string }> {
-  const subject = await prisma.meeple.findUnique({
-    where: { id: meepleId },
-    select: { id: true, ibanEncrypted: true },
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
+    select: { ibanEncrypted: true },
   });
 
-  if (!subject?.ibanEncrypted) {
+  if (!member?.ibanEncrypted) {
     return { error: "Für dieses Mitglied ist keine IBAN gespeichert." };
   }
 
-  const iban = decryptSecret(subject.ibanEncrypted);
+  const iban = decryptSecret(member.ibanEncrypted);
   await logBankDataAccess({
     accessedByMeepleId: actorMeepleId,
-    subjectMeepleId: subject.id,
+    subjectMeepleId: meepleId,
     kind: BankDataAccessKind.SINGLE_REVEAL,
   });
 

@@ -19,6 +19,7 @@ import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
 import { DEMO_LEGAL_DOCUMENTS } from "./seed-data/demo-legal-documents";
 import { DEMO_POSTS } from "./seed-data/demo-posts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
+import { ANONYMER_MEEPLE_NAME } from "../src/lib/ludothek/anonymer-meeple";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
  * manually testable without a real second purchase. */
@@ -106,6 +107,48 @@ async function ensureMeeple(neonAuthUserId: string, displayName: string) {
     update: {},
     create: { neonAuthUserId, displayName },
   });
+}
+
+/** Kein Unique-Feld erlaubt hier ein Upsert: `neonAuthUserId` ist `null` (kein
+ * Login), und mehrere `NULL`-Zeilen sind in Postgres zulässig — also
+ * find-or-create über den Displaynamen, statt (fälschlich) auf `neonAuthUserId`
+ * zu upserten und dabei bei jedem Lauf eine weitere Zeile anzulegen. */
+/**
+ * Dauerhaftes Sammelkonto "Anonymer Meeple" (#333) — Ziel jeder "an extern
+ * weitergegeben"-Aktion, deren Empfänger:in kein eigenes Vereinsmitglied ist.
+ * Kein Login (`neonAuthUserId: null`), keine echten Personendaten. Bekommt
+ * trotzdem eine begleitende `Member`-Zeile (bewusste Modellierungs-
+ * entscheidung, siehe Kommentar in `holdings.ts` bei `handOverToExternal()`):
+ * `GameHolding.vereinsmitgliedId` ist nicht nullable-für-Freitext gebaut,
+ * daher braucht auch dieses Sammelkonto ein `Member`-Ziel — ohne
+ * `firstName`/`lastName`/Adresse, nur zum Halten der Fremdschlüssel-Referenz.
+ */
+async function ensureAnonymerMeeple() {
+  const meeple =
+    (await prisma.meeple.findFirst({
+      where: { displayName: ANONYMER_MEEPLE_NAME, neonAuthUserId: null },
+    })) ??
+    (await prisma.meeple.create({
+      data: { displayName: ANONYMER_MEEPLE_NAME },
+    }));
+
+  const existingMember = await prisma.member.findUnique({
+    where: { meepleId: meeple.id },
+  });
+  if (existingMember) return { meeple, member: existingMember };
+
+  const highestNumber = await prisma.member.aggregate({
+    _max: { memberNumber: true },
+  });
+  const member = await prisma.member.create({
+    data: {
+      memberNumber: (highestNumber._max.memberNumber ?? 0) + 1,
+      email: "anonymer-meeple@oecher-meeples.invalid",
+      meepleId: meeple.id,
+    },
+  });
+
+  return { meeple, member };
 }
 
 /**
@@ -387,6 +430,7 @@ async function main() {
   }
   await seedDemoGames(adminMeeple.id, spielewartMeepleId);
   await seedDemoMeeples();
+  await ensureAnonymerMeeple();
   await seedDemoPosts();
   await seedDemoDownloads();
   await seedDemoLegalDocuments();

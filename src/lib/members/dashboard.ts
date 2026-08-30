@@ -4,7 +4,7 @@ import { isLoanHolding } from "@/lib/ludothek/holdings";
 export type DashboardHolding = {
   id: string;
   gameCopyId: string;
-  meepleId: string | null;
+  vereinsmitgliedId: string | null;
   unitId: string | null;
   origin: HoldingOrigin;
   confirmedAt: Date | null;
@@ -25,12 +25,15 @@ export type MemberHoldingsSummary = {
 };
 
 /**
- * Splits a Meeple's stake in the ludothek into the categories the member
- * dashboard shows. Only ever looks at open holdings (`endedAt: null`) — a
- * closed one never counts, regardless of what the caller passed in.
+ * Splits a Vereinsmitglied's stake in the ludothek into the categories the
+ * member dashboard shows (#333). Only ever looks at open holdings
+ * (`endedAt: null`) — a closed one never counts, regardless of what the
+ * caller passed in. `meepleId` is still used for the kept-units lookup
+ * (`StorageUnit.keeperMeepleId` stays a Meeple reference).
  */
 export function summariseMemberHoldings(
   meepleId: string,
+  vereinsmitgliedId: string | null,
   holdings: DashboardHolding[],
   units: DashboardUnit[],
 ): MemberHoldingsSummary {
@@ -42,19 +45,19 @@ export function summariseMemberHoldings(
       .map((u) => u.id),
   );
 
+  const isOwn = (h: DashboardHolding) =>
+    vereinsmitgliedId !== null && h.vereinsmitgliedId === vereinsmitgliedId;
+
   return {
-    ownLoans: openHoldings.filter(
-      (h) => h.meepleId === meepleId && isLoanHolding(h),
-    ),
+    ownLoans: openHoldings.filter((h) => isOwn(h) && isLoanHolding(h)),
     ownUnitContents: openHoldings.filter(
       (h) => h.unitId !== null && keptUnitIds.has(h.unitId),
     ),
     unconfirmedHandovers: openHoldings.filter(
-      (h) =>
-        h.meepleId === meepleId && h.origin === "HANDOVER" && !h.confirmedAt,
+      (h) => isOwn(h) && h.origin === "HANDOVER" && !h.confirmedAt,
     ),
     unconfirmedReturns: openHoldings.filter(
-      (h) => h.meepleId === meepleId && h.origin === "RETURN" && !h.confirmedAt,
+      (h) => isOwn(h) && h.origin === "RETURN" && !h.confirmedAt,
     ),
   };
 }

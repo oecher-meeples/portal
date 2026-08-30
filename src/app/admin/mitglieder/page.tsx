@@ -7,6 +7,8 @@ import { maskIban } from "@/lib/utils/crypto";
 import { AdminMitgliederView } from "@/components/feature/admin-mitglieder/admin-mitglieder-view";
 import { listPendingDeletionRequests } from "@/lib/members/deletion-requests";
 import { listInvites } from "@/lib/members/invites";
+import { listMembersWithoutLogin } from "@/lib/members/members-without-login";
+import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export default async function AdminMitgliederPage() {
   const session = await requireAdminPermission(MITGLIEDER_PERMISSIONS);
@@ -22,10 +24,28 @@ export default async function AdminMitgliederPage() {
     storageUnitCounts,
     deletionRequests,
     invites,
+    membersWithoutLogin,
+    defaultInviteDays,
     canReadBankData,
     canManageRoles,
+    canCreateSystemkonto,
   ] = await Promise.all([
-    prisma.meeple.findMany({ orderBy: { memberNumber: "asc" } }),
+    prisma.meeple.findMany({
+      orderBy: { memberNumber: "asc" },
+      include: {
+        member: {
+          select: {
+            id: true,
+            email: true,
+            resignedAt: true,
+            membershipEndsAt: true,
+            accountHolder: true,
+            ibanEncrypted: true,
+            ibanLast4: true,
+          },
+        },
+      },
+    }),
     prisma.userRole.findMany({
       include: { role: { select: { id: true, name: true } } },
       orderBy: { startsAt: "desc" },
@@ -36,8 +56,8 @@ export default async function AdminMitgliederPage() {
     }),
     prisma.permission.findMany({ orderBy: { key: "asc" } }),
     prisma.gameHolding.groupBy({
-      by: ["meepleId"],
-      where: { endedAt: null, meepleId: { not: null } },
+      by: ["vereinsmitgliedId"],
+      where: { endedAt: null, vereinsmitgliedId: { not: null } },
       _count: { _all: true },
     }),
     prisma.storageUnit.groupBy({
@@ -47,8 +67,11 @@ export default async function AdminMitgliederPage() {
     }),
     listPendingDeletionRequests(now),
     listInvites(now),
+    listMembersWithoutLogin(),
+    getDefaultInviteDays(),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
+    hasPermission(session.user.id, "admin:access"),
   ]);
 
   // A Meeple can hold several roles at once (#335), each with its own
@@ -75,8 +98,8 @@ export default async function AdminMitgliederPage() {
     roleAssignmentsByUserId.set(userRole.neonAuthUserId, list);
   }
 
-  const openGamesByMeepleId = new Map(
-    gameHoldingCounts.map((row) => [row.meepleId!, row._count._all]),
+  const openGamesByVereinsmitgliedId = new Map(
+    gameHoldingCounts.map((row) => [row.vereinsmitgliedId!, row._count._all]),
   );
   const openUnitsByMeepleId = new Map(
     storageUnitCounts.map((row) => [row.keeperMeepleId!, row._count._all]),
@@ -111,7 +134,7 @@ export default async function AdminMitgliederPage() {
         id: meeple.id,
         memberNumber: meeple.memberNumber,
         displayName: meeple.displayName,
-        email: meeple.email,
+        email: meeple.member?.email ?? null,
         hasAccount: meeple.neonAuthUserId !== null,
         roleAssignments: (meeple.neonAuthUserId
           ? (roleAssignmentsByUserId.get(meeple.neonAuthUserId) ?? [])
@@ -123,15 +146,25 @@ export default async function AdminMitgliederPage() {
           startsAt: a.startsAt.toISOString(),
           endsAt: a.endsAt?.toISOString() ?? null,
         })),
-        membershipState: getMembershipState(meeple, now),
+        membershipState: getMembershipState(
+          {
+            resignedAt: meeple.member?.resignedAt ?? null,
+            membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
+            anonymizedAt: meeple.anonymizedAt,
+          },
+          now,
+        ),
         joinedAt: meeple.joinedAt.toISOString(),
-        resignedAt: meeple.resignedAt?.toISOString() ?? null,
-        membershipEndsAt: meeple.membershipEndsAt?.toISOString() ?? null,
-        openGames: openGamesByMeepleId.get(meeple.id) ?? 0,
+        resignedAt: meeple.member?.resignedAt?.toISOString() ?? null,
+        membershipEndsAt:
+          meeple.member?.membershipEndsAt?.toISOString() ?? null,
+        openGames: meeple.member
+          ? (openGamesByVereinsmitgliedId.get(meeple.member.id) ?? 0)
+          : 0,
         openUnits: openUnitsByMeepleId.get(meeple.id) ?? 0,
-        accountHolder: meeple.accountHolder,
-        maskedIban: maskIban(meeple.ibanLast4),
-        hasIban: meeple.ibanEncrypted !== null,
+        accountHolder: meeple.member?.accountHolder ?? null,
+        maskedIban: maskIban(meeple.member?.ibanLast4 ?? null),
+        hasIban: (meeple.member?.ibanEncrypted ?? null) !== null,
       }))}
       invites={invites.map((invite) => ({
         id: invite.id,
@@ -143,6 +176,9 @@ export default async function AdminMitgliederPage() {
         redeemedAt: invite.redeemedAt?.toISOString() ?? null,
         status: invite.status,
       }))}
+      membersWithoutLogin={membersWithoutLogin}
+      defaultInviteDays={defaultInviteDays}
+      canCreateSystemkonto={canCreateSystemkonto}
     />
   );
 }

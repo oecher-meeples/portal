@@ -41,7 +41,8 @@ const {
   withdrawOwnDeletionRequest,
 } = await import("./actions");
 
-const OWN = { id: "meeple-1", resignedAt: null };
+const OWN = { id: "meeple-1" };
+const OWN_MEMBER = { resignedAt: null };
 const IBAN = "DE89 3704 0044 0532 0130 00";
 
 class RedirectError extends Error {}
@@ -53,6 +54,7 @@ beforeEach(() => {
   requireMeepleMock.mockResolvedValue(OWN);
   findOpenDeletionRequestMock.mockReset();
   findOpenDeletionRequestMock.mockResolvedValue(null);
+  prismaMock.member.findUnique.mockResolvedValue(OWN_MEMBER as never);
 });
 
 describe("without a session", () => {
@@ -226,7 +228,7 @@ describe("updateOwnBankDetails", () => {
     expect(result).toEqual({ success: true, ibanLast4: "3000" });
     expect(JSON.stringify(result)).not.toContain("370400440532");
 
-    const { data } = prismaMock.meeple.update.mock.calls[0][0] as {
+    const { data } = prismaMock.member.update.mock.calls[0][0] as {
       data: { ibanEncrypted: string; ibanLast4: string; accountHolder: string };
     };
     expect(data.accountHolder).toBe("Lea Beispiel");
@@ -244,7 +246,7 @@ describe("updateOwnBankDetails", () => {
     expect(result).toEqual({
       error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe.",
     });
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
   });
 
   it("rejects a missing account holder", async () => {
@@ -254,7 +256,22 @@ describe("updateOwnBankDetails", () => {
     });
 
     expect(result).toEqual({ error: "Bitte den Kontoinhaber angeben." });
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
+  });
+
+  it("reports a member without a Vereinsmitglied row instead of throwing", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    const result = await updateOwnBankDetails({
+      accountHolder: "Lea",
+      iban: IBAN,
+    });
+
+    expect(result).toEqual({
+      error:
+        "Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende dich an den Vorstand.",
+    });
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
   });
 });
 
@@ -262,8 +279,8 @@ describe("clearOwnBankDetails", () => {
   it("empties every bank field", async () => {
     await clearOwnBankDetails();
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
     });
   });
@@ -279,8 +296,8 @@ describe("resignOwnMembership", () => {
       success: true,
       membershipEndsAt: new Date("2027-01-01T00:00:00.000Z"),
     });
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: {
         resignedAt: new Date("2026-07-29T12:00:00Z"),
         membershipEndsAt: new Date("2027-01-01T00:00:00.000Z"),
@@ -291,16 +308,27 @@ describe("resignOwnMembership", () => {
   });
 
   it("does not overwrite an existing resignation", async () => {
-    requireMeepleMock.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       resignedAt: new Date("2026-02-01T00:00:00Z"),
-    });
+    } as never);
 
     const result = await resignOwnMembership();
 
     expect(result).toEqual({
       error: "Für diese Mitgliedschaft liegt bereits eine Kündigung vor.",
     });
-    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
+  });
+
+  it("reports a member without a Vereinsmitglied row instead of throwing", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    const result = await resignOwnMembership();
+
+    expect(result).toEqual({
+      error:
+        "Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende dich an den Vorstand.",
+    });
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
   });
 });

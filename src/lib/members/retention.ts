@@ -47,24 +47,25 @@ export async function anonymiseExpiredMeeples({
     return { skipped: true, anonymised: 0, failed: [] };
   }
 
-  const candidates = await prisma.meeple.findMany({
+  const candidates = await prisma.member.findMany({
     where: {
-      anonymizedAt: null,
+      meepleId: { not: null },
+      meeple: { anonymizedAt: null },
       membershipEndsAt: {
         not: null,
         lt: retentionCutoff(retentionMonths, now),
       },
     },
-    select: { id: true },
+    select: { meepleId: true },
   });
 
   const failed: RetentionRunSummary["failed"] = [];
   let anonymised = 0;
 
   for (const candidate of candidates) {
-    const result = await anonymiseMeepleRecord(candidate.id, now);
+    const result = await anonymiseMeepleRecord(candidate.meepleId!, now);
     if ("error" in result) {
-      failed.push({ meepleId: candidate.id, error: result.error });
+      failed.push({ meepleId: candidate.meepleId!, error: result.error });
       continue;
     }
     anonymised += 1;

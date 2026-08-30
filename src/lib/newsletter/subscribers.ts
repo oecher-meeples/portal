@@ -169,11 +169,12 @@ export async function setMeepleNewsletterPreference(
     return { success: true };
   }
 
-  const meeple = await prisma.meeple.findUniqueOrThrow({
-    where: { id: meepleId },
+  // Die E-Mail-Adresse lebt seit #328 auf dem verknüpften Vereinsmitglied.
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
     select: { email: true },
   });
-  const email = meeple.email?.trim().toLowerCase();
+  const email = member?.email?.trim().toLowerCase();
   if (!email) {
     return { success: true };
   }

@@ -36,13 +36,13 @@ Ebenfalls vorhanden und Ausgangspunkt für die jeweiligen Pakete: `getMembership
 - Datenmigration: bestehende `UserRole`-Zeilen bekommen `startsAt = now()` (oder `createdAt`, falls sinnvoll ergänzt), `endsAt = null`.
 
 **Aufgaben:**
-- [ ] Permission-Katalog um reguläre Meeple-Rechte erweitern (`ludothek:view`, `news:internal:view`, `lfg:participate`, `market:participate`, …) — vorher Bestandsaufnahme: welche Portal-Elemente heute nur implizit "eingeloggt" statt permission-gated sind (Ludothek-Seiten, interne News, LFG, Marktplatz).
-- [ ] Standardrolle "Meeple" bekommt den vollen neuen Katalog zugewiesen (`seed-roles.ts`).
-- [ ] Betroffene Seiten/Server Actions auf `requirePermission("ludothek:view")` etc. umstellen statt impliziten Login-Checks (Umfang aus der Bestandsaufnahme).
-- [ ] `setMeepleRole` durch mehrfachrollenfähigen Nachfolger ersetzen (z. B. `assignMeepleRole(meepleId, roleId, { startsAt, endsAt })` + `removeMeepleRole`), erfordert `admin:access` für die Zeitfenster-Variante (#264-Vorgabe).
-- [ ] Aktive-Rollen-Abfrage (`getUserPermissionKeys`, `hasPermission`) filtert `endsAt` in der Vergangenheit heraus, aber löscht/versteckt den Datensatz nicht (Query-Filter, kein Cron).
-- [ ] `MeepleRoleSelect` UI auf Mehrfachauswahl umstellen (Multi-Select statt `<select>`), inkl. Anzeige von `startsAt`/`endsAt` pro Zuweisung.
-- [ ] Audit-/Historien-Ansicht für abgelaufene Zuweisungen (auch abgelaufene sichtbar) — im selben Rollen-Akkordeon wie Paket 6, UI-Feinschliff dort.
+- [x] Permission-Katalog um reguläre Meeple-Rechte erweitern (`ludothek:view`, `ludothek:borrow`, `news:internal:view`, `lfg:participate`, `market:participate`) — Bestandsaufnahme erledigt (Ludothek-Seiten, interne News, LFG, Marktplatz, jeweils Seite + Server Actions).
+- [x] Standardrolle "Meeple" bekommt den vollen neuen Katalog zugewiesen (`seed-roles.ts`, `REGULAR_MEEPLE_PERMISSION_KEYS` exportiert für Paket 4).
+- [x] Betroffene Seiten/Server Actions auf `requirePermission`/`requireAdminPermission`/`requireMeeplePermission` umgestellt statt impliziten Login-Checks.
+- [x] `setMeepleRole` durch `assignMeepleRole`/`removeMeepleRole` (`src/lib/auth/user-roles.ts`) ersetzt, erfordert `admin:access` für die Zeitfenster-Variante (#264-Vorgabe), sonst `members:manage`.
+- [x] Aktive-Rollen-Abfrage (`getUserPermissionKeys`, `hasPermission`) filtert `endsAt` in der Vergangenheit heraus, aber löscht/versteckt den Datensatz nicht (Query-Filter, kein Cron).
+- [x] `MeepleRoleSelect` UI auf Mehrfachauswahl umgestellt (Badges + Add-Select statt `<select>`), inkl. Anzeige von `startsAt`/`endsAt` pro abgelaufener Zuweisung.
+- [x] Audit-/Historien-Ansicht für abgelaufene Zuweisungen (`<details>` je Meeple-Zeile) — UI-Feinschliff bleibt Paket 6 vorbehalten.
 
 **Test-Scope:** `src/lib/auth/permissions.test.ts`, `roles.test.ts` (Ablauf-Filterung, Mehrfachrollen-Zuweisung, Permission-Gate für Zeitfenster-Vergabe), Coverage-Pflicht laut `vitest.config.ts` (`src/lib/**`).
 
@@ -59,13 +59,13 @@ Ebenfalls vorhanden und Ausgangspunkt für die jeweiligen Pakete: `getMembership
 - Datenmigration: jede bestehende `Meeple`-Zeile bekommt eine begleitende `Vereinsmitglied`-Zeile (1:1 im heutigen Bestand), befüllt nur mit tatsächlich vorhandenen Werten (E-Mail, IBAN, `memberNumber`, `resignedAt`, `membershipEndsAt`).
 
 **Aufgaben:**
-- [ ] Schema wie oben.
-- [ ] `getMembershipState()` von `Meeple`- auf `Vereinsmitglied`-Felder umstellen (Signatur/Aufrufer in `membership-state.ts` anpassen).
-- [ ] `resignOwnMembership`/`recordResignation`/`revokeResignation` (`actions.ts`) auf `Vereinsmitglied` umstellen.
-- [ ] Dashboard-31-Tage-Warnung (`src/lib/members/dashboard.ts`) auf `Vereinsmitglied.membershipEndsAt` umstellen.
-- [ ] Beitragsart-Ableitung (`MiniMeeple`/`JungMeeple`/`Meeple`-Kategorie) aus `birthDate`, `selbstgewaehlterBeitrag` überstimmt; ohne `birthDate` und ohne `selbstgewaehlterBeitrag` → unbestimmt (kein Rateversuch). Neue Funktion, z. B. `src/lib/members/contribution.ts`.
-- [ ] `membershipEndsAt`-Berechnung mit 4-Wochen-Mindestfrist vor dem 31.12. (`nextTurnOfTheYear`-Nachfolger in `membership-state.ts` erweitern).
-- [ ] Bank-Zugriffs-Log (`bank-access-log.ts`) und `revealMemberIban`-Action auf `Vereinsmitglied` umstellen (IBAN wandert dorthin).
+- [x] Schema wie oben.
+- [x] `getMembershipState()` von `Meeple`- auf `Vereinsmitglied`-Felder umstellen (Signatur/Aufrufer in `membership-state.ts` anpassen).
+- [x] `resignOwnMembership`/`recordResignation`/`revokeResignation` (`actions.ts`) auf `Vereinsmitglied` umstellen.
+- [x] Dashboard-31-Tage-Warnung (`src/lib/members/dashboard.ts`) auf `Vereinsmitglied.membershipEndsAt` umstellen.
+- [x] Beitragsart-Ableitung (`MiniMeeple`/`JungMeeple`/`Meeple`-Kategorie) aus `birthDate`, `selbstgewaehlterBeitrag` überstimmt; ohne `birthDate` und ohne `selbstgewaehlterBeitrag` → unbestimmt (kein Rateversuch). Neue Funktion, z. B. `src/lib/members/contribution.ts`.
+- [x] `membershipEndsAt`-Berechnung mit 4-Wochen-Mindestfrist vor dem 31.12. (`nextTurnOfTheYear`-Nachfolger in `membership-state.ts` erweitern).
+- [x] Bank-Zugriffs-Log (`bank-access-log.ts`) und `revealMemberIban`-Action auf `Vereinsmitglied` umstellen (IBAN wandert dorthin).
 
 **Test-Scope:** `membership-state.test.ts` (neu, ersetzt/ergänzt bestehende Tests), Beitragsart-Ableitung, 4-Wochen-Regel-Grenzfälle (10. Dezember → übernächster 31.12.), Migrationsskript-Verifikation (kein Fake-Backfill).
 
@@ -126,16 +126,16 @@ Ebenfalls vorhanden und Ausgangspunkt für die jeweiligen Pakete: `getMembership
 - Neues dauerhaftes Sammelkonto-`Meeple` "Anonymer Meeple" (Seed-Ergänzung, kein Login, keine Vereinsmitglied-Referenz).
 
 **Aufgaben:**
-- [ ] Zustand "ausgeliehen" bekommt Unterfälle **verfügbar** (haltendes Vereinsmitglied hat `meepleId`) / **nicht verfügbar** (keins) — Ableitung in der bestehenden Zustands-Funktion ergänzen.
-- [ ] Spielewart-Ansicht zeigt in beiden Fällen private Adresse/Telefon des haltenden Vereinsmitglieds.
-- [ ] Ausleihe/Rückgabe/Weitergabe-Aktionen auf `vereinsmitgliedId` umstellen.
-- [ ] **(a) "An extern ausgeben"** (`games:manage`): Ausleihe mit Ziel aus `Vereinsmitglied`-Tabelle statt `Meeple`-Tabelle.
-- [ ] **(b) "An extern weitergegeben"** (jedes Meeple): Freitextfeld Name, schließt eigenen Aufenthalt, öffnet neuen auf "Anonymer Meeple", kein Ablehnen-Pfad.
-- [ ] Spielewart-Ansicht zum manuellen Umbuchen vom Sammelkonto auf ein echtes `Vereinsmitglied`.
-- [ ] **(c)/(d)** einseitige "Ich habe das Spiel erhalten"-Bestätigung für Rückgabe von extern (Meeple bzw. Spielewart), kein Handshake.
-- [ ] Anonymisierte Alt-Meeples (`anonymizedAt` gesetzt) aus jedem Picker filtern; Suffix-Unterscheidung (`games:manage`) für Sammelkonto-Zeilen ("Anonymer Meeple #4").
+- [x] Zustand "ausgeliehen" bekommt Unterfälle **verfügbar** (haltendes Vereinsmitglied hat `meepleId`) / **nicht verfügbar** (keins) — Ableitung in der bestehenden Zustands-Funktion ergänzen.
+- [x] Spielewart-Ansicht zeigt in beiden Fällen private Adresse/Telefon des haltenden Vereinsmitglieds.
+- [x] Ausleihe/Rückgabe/Weitergabe-Aktionen auf `vereinsmitgliedId` umstellen.
+- [x] **(a) "An extern ausgeben"** (`games:manage`): Ausleihe mit Ziel aus `Vereinsmitglied`-Tabelle statt `Meeple`-Tabelle.
+- [x] **(b) "An extern weitergegeben"** (jedes Meeple): Freitextfeld Name, schließt eigenen Aufenthalt, öffnet neuen auf "Anonymer Meeple", kein Ablehnen-Pfad.
+- [x] Spielewart-Ansicht zum manuellen Umbuchen vom Sammelkonto auf ein echtes `Vereinsmitglied`.
+- [x] **(c)/(d)** einseitige "Ich habe das Spiel erhalten"-Bestätigung für Rückgabe von extern (Meeple bzw. Spielewart), kein Handshake.
+- [x] Anonymisierte Alt-Meeples (`anonymizedAt` gesetzt) aus jedem Picker filtern; Suffix-Unterscheidung (`games:manage`) für Sammelkonto-Zeilen — bewusst ohne Nummerierung ("Anonymer Meeple #4"), siehe Abweichungs-Kommentar in `holding-actions-external.ts::scanListMembers`: es gibt genau ein dauerhaftes Sammelkonto.
 
-**Test-Scope:** bestehende Holding-Tests auf `vereinsmitgliedId` umstellen, neue Tests für verfügbar/nicht-verfügbar-Ableitung, Freitext-Weitergabe-Flow, Umbuchen-Flow, Picker-Filterung.
+**Test-Scope:** bestehende Holding-Tests auf `vereinsmitgliedId` umstellen (erledigt), neue Tests für verfügbar/nicht-verfügbar-Ableitung, Freitext-Weitergabe-Flow, Umbuchen-Flow, Picker-Filterung (erledigt).
 
 ---
 

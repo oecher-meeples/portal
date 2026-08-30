@@ -18,10 +18,14 @@ vi.mock("@/lib/events/shift-rights", () => ({
 }));
 
 const gameHoldingFindFirstMock = vi.fn();
+const memberFindUniqueMock = vi.fn();
 vi.mock("@/lib/utils/prisma", () => ({
   prisma: {
     gameHolding: {
       findFirst: (...args: unknown[]) => gameHoldingFindFirstMock(...args),
+    },
+    member: {
+      findUnique: (...args: unknown[]) => memberFindUniqueMock(...args),
     },
   },
 }));
@@ -52,6 +56,7 @@ const MEEPLE = { id: "meeple-1" };
 
 beforeEach(() => {
   requireMeepleMock.mockResolvedValue(MEEPLE);
+  memberFindUniqueMock.mockResolvedValue({ id: "member-1" });
 });
 
 describe("without an active Ausleihe shift", () => {
@@ -85,7 +90,7 @@ describe("with an active Ausleihe shift", () => {
 
   it("ausleiheGetAvailability returns available for a copy currently in a unit", async () => {
     gameHoldingFindFirstMock.mockResolvedValue({
-      meepleId: null,
+      vereinsmitgliedId: null,
       unitId: "unit-1",
     } as never);
 
@@ -96,7 +101,9 @@ describe("with an active Ausleihe shift", () => {
 
   it("ausleiheGetAvailability returns on-loan with the previous unit for a checked-out copy", async () => {
     gameHoldingFindFirstMock
-      .mockResolvedValueOnce({ meepleId: "some-guest-stand-in" } as never)
+      .mockResolvedValueOnce({
+        vereinsmitgliedId: "some-guest-stand-in",
+      } as never)
       .mockResolvedValueOnce({
         unit: {
           id: "unit-1",
@@ -116,7 +123,9 @@ describe("with an active Ausleihe shift", () => {
 
   it("ausleiheGetAvailability omits a retired previous unit", async () => {
     gameHoldingFindFirstMock
-      .mockResolvedValueOnce({ meepleId: "some-guest-stand-in" } as never)
+      .mockResolvedValueOnce({
+        vereinsmitgliedId: "some-guest-stand-in",
+      } as never)
       .mockResolvedValueOnce({
         unit: {
           id: "unit-1",
@@ -147,8 +156,9 @@ describe("with an active Ausleihe shift", () => {
     expect(result).toEqual({ success: true });
     expect(borrowGameMock).toHaveBeenCalledWith({
       gameCopyId: "copy-1",
-      meepleId: "meeple-1",
+      vereinsmitgliedId: "member-1",
       recordedByMeepleId: "meeple-1",
+      isSelf: true,
     });
   });
 

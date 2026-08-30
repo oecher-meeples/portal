@@ -8,6 +8,7 @@ import { prisma } from "@/lib/utils/prisma";
  */
 export const MEEPLE_RELATED_MODELS = [
   "Meeple",
+  "Member",
   "BankDataAccessLog",
   "DeletionRequest",
   "ExplainerAttendance",
@@ -57,13 +58,8 @@ export async function collectMeeplePersonalData(
       id: true,
       memberNumber: true,
       displayName: true,
-      email: true,
       joinedAt: true,
-      resignedAt: true,
-      membershipEndsAt: true,
       anonymizedAt: true,
-      ibanLast4: true,
-      accountHolder: true,
       bggUsername: true,
       bgaUsername: true,
       telegramHandle: true,
@@ -80,6 +76,32 @@ export async function collectMeeplePersonalData(
   if (!meeple) return null;
 
   const { neonAuthUserId, ...meepleFields } = meeple;
+
+  // Member (die Vereinsmitgliedschaft, seit #328 von Meeple getrennt) — die
+  // volle IBAN bleibt aus demselben Grund draußen wie zuvor bei Meeple.
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
+    select: {
+      id: true,
+      memberNumber: true,
+      lastName: true,
+      firstName: true,
+      birthDate: true,
+      birthPlace: true,
+      street: true,
+      postalCode: true,
+      city: true,
+      phone: true,
+      email: true,
+      selbstgewaehlterBeitrag: true,
+      ibanLast4: true,
+      accountHolder: true,
+      resignedAt: true,
+      membershipEndsAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
   const [
     bankDataAccessLogs,
@@ -127,7 +149,10 @@ export async function collectMeeplePersonalData(
     }),
     prisma.gameHolding.findMany({
       where: {
-        OR: [{ meepleId }, { recordedByMeepleId: meepleId }],
+        OR: [
+          ...(member ? [{ vereinsmitgliedId: member.id }] : []),
+          { recordedByMeepleId: meepleId },
+        ],
       },
       orderBy: { startedAt: "desc" },
       include: {
@@ -190,6 +215,7 @@ export async function collectMeeplePersonalData(
     hinweise: EXPORT_NOTES,
     daten: {
       Meeple: meepleFields,
+      Member: member,
       BankDataAccessLog: bankDataAccessLogs,
       DeletionRequest: deletionRequests,
       ExplainerAttendance: explainerAttendances,

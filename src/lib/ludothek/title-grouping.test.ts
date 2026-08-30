@@ -36,7 +36,7 @@ describe("groupGamesByTitle", () => {
   it("counts how many copies share the representative's zustand (#125)", () => {
     const rows = groupGamesByTitle([
       copy({ id: "copy-1", zustand: "frei" }),
-      copy({ id: "copy-2", zustand: "ausgeliehen" }),
+      copy({ id: "copy-2", zustand: "ausgeliehen-verfuegbar" }),
       copy({ id: "copy-3", zustand: "frei" }),
     ]);
 
@@ -58,7 +58,7 @@ describe("groupGamesByTitle", () => {
     const rows = groupGamesByTitle([
       copy({ id: "copy-1", zustand: "wartung" }),
       copy({ id: "copy-2", zustand: "frei" }),
-      copy({ id: "copy-3", zustand: "ausgeliehen" }),
+      copy({ id: "copy-3", zustand: "ausgeliehen-verfuegbar" }),
     ]);
 
     expect(rows[0].zustand).toBe("frei");
@@ -69,10 +69,10 @@ describe("groupGamesByTitle", () => {
     const rows = groupGamesByTitle([
       copy({ id: "copy-1", zustand: "nicht-erfasst" }),
       copy({ id: "copy-2", zustand: "wartung" }),
-      copy({ id: "copy-3", zustand: "ausgeliehen" }),
+      copy({ id: "copy-3", zustand: "ausgeliehen-verfuegbar" }),
     ]);
 
-    expect(rows[0].zustand).toBe("ausgeliehen");
+    expect(rows[0].zustand).toBe("ausgeliehen-verfuegbar");
   });
 
   it("preserves first-seen title order", () => {

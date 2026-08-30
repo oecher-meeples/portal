@@ -7,17 +7,23 @@ import { formatDateTime } from "@/lib/utils/format";
 export default async function AdminBankPage() {
   await requirePermission("bank:read");
 
-  const [meeples, logs] = await Promise.all([
-    prisma.meeple.findMany({
-      where: { anonymizedAt: null },
+  const [members, logs] = await Promise.all([
+    // `revealIban` looks a Member up by its linked Meeple (#328), so this
+    // overview is scoped to members with a portal account for now — a Member
+    // without one can't exist yet outside this package's data migration.
+    prisma.member.findMany({
+      where: { meepleId: { not: null }, meeple: { anonymizedAt: null } },
       orderBy: { memberNumber: "asc" },
       select: {
-        id: true,
+        meepleId: true,
         memberNumber: true,
-        displayName: true,
+        firstName: true,
+        lastName: true,
+        email: true,
         accountHolder: true,
         ibanLast4: true,
         ibanEncrypted: true,
+        meeple: { select: { displayName: true } },
       },
     }),
     prisma.bankDataAccessLog.findMany({
@@ -32,13 +38,16 @@ export default async function AdminBankPage() {
 
   return (
     <AdminBankView
-      rows={meeples.map((meeple) => ({
-        id: meeple.id,
-        memberNumber: meeple.memberNumber,
-        displayName: meeple.displayName,
-        accountHolder: meeple.accountHolder,
-        maskedIban: maskIban(meeple.ibanLast4),
-        hasIban: meeple.ibanEncrypted !== null,
+      rows={members.map((member) => ({
+        id: member.meepleId!,
+        memberNumber: member.memberNumber,
+        displayName:
+          [member.firstName, member.lastName].filter(Boolean).join(" ") ||
+          member.meeple?.displayName ||
+          member.email,
+        accountHolder: member.accountHolder,
+        maskedIban: maskIban(member.ibanLast4),
+        hasIban: member.ibanEncrypted !== null,
       }))}
       logs={logs.map((log) => ({
         id: log.id,

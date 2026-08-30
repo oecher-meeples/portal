@@ -213,7 +213,11 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup first (Plan-Schritt 12)", () => {
   const TWO_COPIES = [
     copy({ id: "copy-1", zustand: "frei", locationChain: "Regal A" }),
-    copy({ id: "copy-2", zustand: "ausgeliehen", locationChain: "bei Alex" }),
+    copy({
+      id: "copy-2",
+      zustand: "ausgeliehen-verfuegbar",
+      locationChain: "bei Alex",
+    }),
   ];
 
   it("opens the picker instead of the mini-dialog directly for an exemplar-bound action", async () => {

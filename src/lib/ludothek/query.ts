@@ -12,6 +12,7 @@ import {
 import { getExplainerCountsForGames } from "@/lib/explainer/queries";
 import { getBoardGameIdsWithOpenLfgPosts } from "@/lib/content/lfg";
 import type { LudothekGame } from "@/lib/ludothek/browser";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 
 /**
  * Everything the Ludothek browser and detail page need, in one bulk query —
@@ -50,7 +51,20 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         },
         holdings: {
           where: { endedAt: null },
-          include: { unit: true, meeple: { select: { displayName: true } } },
+          include: {
+            unit: true,
+            vereinsmitglied: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                meeple: {
+                  select: { id: true, displayName: true, neonAuthUserId: true },
+                },
+              },
+            },
+          },
         },
       },
     }),
@@ -121,13 +135,23 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       };
     }
 
-    if (holding.meepleId) {
-      const responsibleName = holding.meeple?.displayName ?? "Meeple";
+    if (holding.vereinsmitgliedId) {
+      const responsibleName = holding.vereinsmitglied
+        ? memberDisplayName(holding.vereinsmitglied)
+        : "Vereinsmitglied";
       return {
         ...base,
-        zustand: zustandFromHoldingAndUnit(holding, null, copy.status),
+        zustand: zustandFromHoldingAndUnit(
+          holding,
+          null,
+          copy.status,
+          holding.vereinsmitglied,
+        ),
         isLoanedOut: isLoanHolding(holding),
-        responsibleMeepleId: holding.meepleId,
+        // Nur ein erreichbares (verfügbares) Vereinsmitglied hat eine
+        // kontaktierbare Meeple-Id — sonst gibt es niemanden, den der
+        // ContactDialog anschreiben könnte (#333).
+        responsibleMeepleId: holding.vereinsmitglied?.meeple?.id ?? null,
         responsibleName,
         unitChain: "",
         locationChain: formatLocationChain({ responsibleName, unitChain: "" }),

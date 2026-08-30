@@ -11,11 +11,13 @@ import {
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
 import {
   RoleManagementSection,
   type RoleManagementRow,
 } from "@/components/feature/admin-mitglieder/role-management-section";
 import type { PermissionOption } from "@/components/feature/admin-mitglieder/role-permissions-editor";
+import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
@@ -44,6 +46,9 @@ export function AdminMitgliederView({
   isDecemberOrLater,
   deletionRequests,
   invites,
+  membersWithoutLogin,
+  defaultInviteDays,
+  canCreateSystemkonto,
 }: {
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
@@ -54,6 +59,9 @@ export function AdminMitgliederView({
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
+  membersWithoutLogin: MemberWithoutLoginRow[];
+  defaultInviteDays: number;
+  canCreateSystemkonto: boolean;
 }) {
   const withOpenHoldings = meeples.filter(
     (m) =>
@@ -176,13 +184,23 @@ export function AdminMitgliederView({
         <RoleManagementSection roles={roles} permissions={permissions} />
       )}
 
+      {canCreateSystemkonto && (
+        <div className="flex justify-end">
+          <SystemkontoDialog />
+        </div>
+      )}
+
       <MitgliederTable
         meeples={meeples}
         roles={roles}
         canReadBankData={canReadBankData}
       />
 
-      <InvitesSection invites={invites} />
+      <InvitesSection
+        invites={invites}
+        membersWithoutLogin={membersWithoutLogin}
+        defaultDays={defaultInviteDays}
+      />
     </div>
   );
 }
