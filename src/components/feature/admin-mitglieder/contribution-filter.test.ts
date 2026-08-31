@@ -16,7 +16,10 @@ describe("nextContributionFilter (#340)", () => {
 
   it("treats the combined meeple/individuell filter as one unit", () => {
     expect(
-      nextContributionFilter(["meeple", "individuell"], ["meeple", "individuell"]),
+      nextContributionFilter(
+        ["meeple", "individuell"],
+        ["meeple", "individuell"],
+      ),
     ).toBeNull();
   });
 });

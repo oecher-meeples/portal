@@ -39,9 +39,7 @@ describe("without the bank:read permission", () => {
     requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
     await expect(revealIban("meeple-1")).rejects.toThrow(ForbiddenError);
-    await expect(revealPendingIban("change-1")).rejects.toThrow(
-      ForbiddenError,
-    );
+    await expect(revealPendingIban("change-1")).rejects.toThrow(ForbiddenError);
     await expect(exportBankDataCsv()).rejects.toThrow(ForbiddenError);
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
     expect(prismaMock.member.findUnique).not.toHaveBeenCalled();

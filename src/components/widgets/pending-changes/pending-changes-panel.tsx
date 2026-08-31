@@ -14,7 +14,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { TextAreaField } from "@/components/ui/field";
-import { PressHoldReveal, type RevealResult } from "@/components/ui/press-hold-reveal";
+import {
+  PressHoldReveal,
+  type RevealResult,
+} from "@/components/ui/press-hold-reveal";
 import { useAction } from "@/components/ui/use-action";
 import { formatDatePlain } from "@/lib/utils/format";
 import {
@@ -83,9 +86,7 @@ export function PendingChangesPanel({
   revealIban?: (changeId: string) => Promise<RevealResult>;
 }) {
   const { run, pending, error } = useAction();
-  const [inviteConflictId, setInviteConflictId] = useState<string | null>(
-    null,
-  );
+  const [inviteConflictId, setInviteConflictId] = useState<string | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [revealError, setRevealError] = useState<string | null>(null);
 
@@ -169,10 +170,10 @@ export function PendingChangesPanel({
           <DialogHeader>
             <DialogTitle>Es existiert eine offene Einladung</DialogTitle>
             <DialogDescription>
-              Für dieses Mitglied liegt noch eine offene Einladung an der
-              alten E-Mail-Adresse vor. Diese widerrufen und mit der neuen
-              Adresse neu erstellen? Ohne Bestätigung bleibt die alte
-              Einladung unverändert bestehen.
+              Für dieses Mitglied liegt noch eine offene Einladung an der alten
+              E-Mail-Adresse vor. Diese widerrufen und mit der neuen Adresse neu
+              erstellen? Ohne Bestätigung bleibt die alte Einladung unverändert
+              bestehen.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row">

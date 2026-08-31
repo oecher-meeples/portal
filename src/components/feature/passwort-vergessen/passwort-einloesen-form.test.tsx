@@ -11,7 +11,9 @@ vi.mock("next/navigation", () => ({
 
 const resetPasswordMock = vi.fn();
 vi.mock("@/lib/auth/client", () => ({
-  authClient: { resetPassword: (...args: unknown[]) => resetPasswordMock(...args) },
+  authClient: {
+    resetPassword: (...args: unknown[]) => resetPasswordMock(...args),
+  },
 }));
 
 afterEach(() => {
@@ -23,7 +25,9 @@ describe("PasswortEinloesenForm (#363, classic token-link flow)", () => {
   it("shows an error instead of a form without a token", () => {
     render(<PasswortEinloesenForm token={null} />);
 
-    expect(screen.getByText(/Dieser Link ist unvollständig/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Dieser Link ist unvollständig/),
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("Neues Passwort")).toBeNull();
   });
 
@@ -37,7 +41,9 @@ describe("PasswortEinloesenForm (#363, classic token-link flow)", () => {
       screen.getByLabelText("Neues Passwort wiederholen"),
       "supersecret1",
     );
-    await user.click(screen.getByRole("button", { name: "Passwort festlegen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Passwort festlegen" }),
+    );
 
     expect(resetPasswordMock).toHaveBeenCalledWith({
       newPassword: "supersecret1",
@@ -58,7 +64,9 @@ describe("PasswortEinloesenForm (#363, classic token-link flow)", () => {
       screen.getByLabelText("Neues Passwort wiederholen"),
       "supersecret1",
     );
-    await user.click(screen.getByRole("button", { name: "Passwort festlegen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Passwort festlegen" }),
+    );
 
     expect(screen.getByText(/ungültig oder abgelaufen/)).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
@@ -73,7 +81,9 @@ describe("PasswortEinloesenForm (#363, classic token-link flow)", () => {
       screen.getByLabelText("Neues Passwort wiederholen"),
       "different",
     );
-    await user.click(screen.getByRole("button", { name: "Passwort festlegen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Passwort festlegen" }),
+    );
 
     expect(
       screen.getByText("Die eingegebenen Passwörter stimmen nicht überein."),

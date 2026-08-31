@@ -122,7 +122,11 @@ export async function revealPendingIbanChange(
 
   const change = await prisma.pendingChange.findUnique({
     where: { id: changeId },
-    select: { kind: true, newValue: true, member: { select: { meepleId: true } } },
+    select: {
+      kind: true,
+      newValue: true,
+      member: { select: { meepleId: true } },
+    },
   });
   if (!change || change.kind !== PendingChangeKind.IBAN) {
     return { error: "Änderungsantrag nicht gefunden." };

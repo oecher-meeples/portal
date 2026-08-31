@@ -16,10 +16,9 @@ vi.mock("@/lib/members/invite-settings", () => ({
 
 const findOpenInviteByEmailMock = vi.fn();
 vi.mock("@/lib/members/invites", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/members/invites")>(
-      "@/lib/members/invites",
-    );
+  const actual = await vi.importActual<typeof import("@/lib/members/invites")>(
+    "@/lib/members/invites",
+  );
   return {
     ...actual,
     findOpenInviteByEmail: (...args: unknown[]) =>

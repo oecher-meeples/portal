@@ -80,7 +80,8 @@ export function MeepleRoleSelect({
         )}
         {active.map((assignment) => {
           const canRemove =
-            canManageAdminAccess || !roleById.get(assignment.roleId)?.isSystemRole;
+            canManageAdminAccess ||
+            !roleById.get(assignment.roleId)?.isSystemRole;
           return (
             <span
               key={assignment.id}

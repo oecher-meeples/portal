@@ -96,14 +96,18 @@ async function hasOtherActiveAdminAccess(
     select: {
       endsAt: true,
       role: {
-        select: { permissions: { select: { permission: { select: { key: true } } } } },
+        select: {
+          permissions: { select: { permission: { select: { key: true } } } },
+        },
       },
     },
   });
   return assignments.some(
     (a) =>
       isActiveWindow(a.endsAt, now) &&
-      a.role.permissions.some((p) => p.permission.key === ADMIN_ACCESS_PERMISSION_KEY),
+      a.role.permissions.some(
+        (p) => p.permission.key === ADMIN_ACCESS_PERMISSION_KEY,
+      ),
   );
 }
 
@@ -127,7 +131,9 @@ export async function removeMeepleRole(
     where: { id: userRoleId },
     include: {
       role: {
-        select: { permissions: { select: { permission: { select: { key: true } } } } },
+        select: {
+          permissions: { select: { permission: { select: { key: true } } } },
+        },
       },
     },
   });

@@ -261,4 +261,3 @@ describe("revealMemberIban", () => {
     expect(revealMeepleIbanMock).not.toHaveBeenCalled();
   });
 });
-

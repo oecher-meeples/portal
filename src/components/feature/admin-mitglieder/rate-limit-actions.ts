@@ -30,7 +30,8 @@ export async function getMeepleLoginRateLimitStatus(
   await requirePermission("members:manage");
 
   const key = await loginKeyForMeeple(meepleId);
-  if (!key) return { error: "Für dieses Mitglied ist keine E-Mail hinterlegt." };
+  if (!key)
+    return { error: "Für dieses Mitglied ist keine E-Mail hinterlegt." };
   return getLoginBackoffStatus(key);
 }
 
@@ -38,7 +39,8 @@ export async function resetMeepleLoginRateLimit(meepleId: string) {
   await requirePermission("members:manage");
 
   const key = await loginKeyForMeeple(meepleId);
-  if (!key) return { error: "Für dieses Mitglied ist keine E-Mail hinterlegt." };
+  if (!key)
+    return { error: "Für dieses Mitglied ist keine E-Mail hinterlegt." };
   await adminResetLoginBackoff(key);
   return { success: true as const };
 }
@@ -47,7 +49,8 @@ export async function lockMeepleLogin(meepleId: string) {
   await requirePermission("members:manage");
 
   const key = await loginKeyForMeeple(meepleId);
-  if (!key) return { error: "Für dieses Mitglied ist keine E-Mail hinterlegt." };
+  if (!key)
+    return { error: "Für dieses Mitglied ist keine E-Mail hinterlegt." };
   await setManualLoginLock(key);
   return { success: true as const };
 }

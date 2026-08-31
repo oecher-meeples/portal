@@ -23,9 +23,8 @@ vi.mock("@/lib/members/selbstauskunft-mail", () => ({
     sendSelbstauskunftMailMock(...args),
 }));
 
-const { createMember, updateMember, sendSelbstauskunft } = await import(
-  "./member-actions"
-);
+const { createMember, updateMember, sendSelbstauskunft } =
+  await import("./member-actions");
 
 class ForbiddenError extends Error {}
 
@@ -43,9 +42,9 @@ describe("createMember", () => {
   it("requires members:manage", async () => {
     requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
-    await expect(
-      createMember({ email: "erika@example.com" }),
-    ).rejects.toThrow(ForbiddenError);
+    await expect(createMember({ email: "erika@example.com" })).rejects.toThrow(
+      ForbiddenError,
+    );
     expect(createMemberRecordMock).not.toHaveBeenCalled();
   });
 
@@ -92,13 +91,15 @@ describe("updateMember", () => {
 
   it("passes a rule violation straight back", async () => {
     updateMemberRecordMock.mockResolvedValue({
-      error: "Für erika@example.com existiert bereits ein anderes Vereinsmitglied.",
+      error:
+        "Für erika@example.com existiert bereits ein anderes Vereinsmitglied.",
     });
 
     expect(
       await updateMember("member-1", { email: "erika@example.com" }),
     ).toEqual({
-      error: "Für erika@example.com existiert bereits ein anderes Vereinsmitglied.",
+      error:
+        "Für erika@example.com existiert bereits ein anderes Vereinsmitglied.",
     });
   });
 });

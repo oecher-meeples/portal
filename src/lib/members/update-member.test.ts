@@ -27,7 +27,8 @@ describe("updateMember", () => {
     });
 
     expect(result).toEqual({
-      error: "Für taken@example.com existiert bereits ein anderes Vereinsmitglied.",
+      error:
+        "Für taken@example.com existiert bereits ein anderes Vereinsmitglied.",
     });
     expect(prismaMock.member.update).not.toHaveBeenCalled();
   });

@@ -99,9 +99,8 @@ export function PasswortVergessenForm() {
       className="bg-card flex flex-col gap-4 rounded-lg border p-6"
     >
       <p className="text-muted-foreground text-sm">
-        Falls für <strong>{email}</strong> ein Konto besteht, wurde ein Code
-        per E-Mail versendet. Trage ihn hier zusammen mit deinem neuen
-        Passwort ein.
+        Falls für <strong>{email}</strong> ein Konto besteht, wurde ein Code per
+        E-Mail versendet. Trage ihn hier zusammen mit deinem neuen Passwort ein.
       </p>
       <TextField
         id="forgot-otp"

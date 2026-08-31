@@ -4,7 +4,10 @@ import { useState } from "react";
 import { Copy } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PageHeading } from "@/components/ui/page-heading";
-import { PressHoldReveal, type RevealResult } from "@/components/ui/press-hold-reveal";
+import {
+  PressHoldReveal,
+  type RevealResult,
+} from "@/components/ui/press-hold-reveal";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
   Table,

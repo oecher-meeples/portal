@@ -42,6 +42,7 @@ Der Zustand nach Ablauf von `membershipEndsAt`. Der Zugang beschränkt sich auf 
 _Avoid_: Inaktiv, gesperrt, ehemalig, Login-Verlust gleichzeitig mit Austritt annehmen, unbeschränkte manuelle Rollenzuweisung
 
 **Anonymisierung** (3 Stufen, löst die bisherige Sanft/Hart-Unterscheidung ab):
+
 1. **DSGVO-Löschung optionaler Daten**: alle optionalen Meeple-Daten (Kontakt, Spiele, LFG, Marktplatz) werden gelöscht, `displayName` generisch überschrieben; Login bleibt aktiv. Auslösbar vom Meeple selbst oder von Vorstand/Datenschutzbeauftragtem.
 2. **Kontodeaktivierung**: zusätzlich wird das Login-Konto deaktiviert/gelöscht, `Meeple` und `Vereinsmitglied` werden getrennt (keine Verbindung mehr herstellbar). Ausgelöst durch Selbst-Löschung des Kontos, oder automatisch durch denselben Cron am 2.1. 02:00 (siehe **Ausgetreten**) für alle Ausgetretenen ohne offene Ausleihen. Wer zu dem Zeitpunkt noch offene Ausleihen hat, erscheint stattdessen als Warn-Infocard im Admin-Dashboard für Vorstand/Spielewart — die lösen das Problem (Spiele eintreiben) und starten Stufe 2 danach manuell, kein fortlaufender Hintergrund-Check bei jeder Rückgabe.
 3. **Löschung des Vereinsmitglieds**: 12 Monate nach `membershipEndsAt` **und** keine Spiele mehr ausgeliehen (beide Bedingungen), wird der `Vereinsmitglied`-Datensatz selbst gelöscht (nicht nur überschrieben) — die 12-Monats-Uhr beginnt exakt mit `membershipEndsAt`, nicht mit einer vorzeitigen Selbst-Kontolöschung. Der anonymisierte `Meeple`-Rest bleibt für die Historie bestehen.

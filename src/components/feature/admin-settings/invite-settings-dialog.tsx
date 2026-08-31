@@ -8,17 +8,18 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { InviteSettingsForm } from "@/components/feature/admin-settings/invite-settings-form";
 
 /** "Einladungen"-Karte auf /admin/einstellungen öffnet seit #350 einen
  * Popup-Dialog statt zu einer eigenen Seite zu navigieren — die bisherige
  * Route (/admin/einstellungen/einladungen) redirected jetzt hierher. */
-export function InviteSettingsDialog({
-  defaultDays,
-}: {
-  defaultDays: number;
-}) {
+export function InviteSettingsDialog({ defaultDays }: { defaultDays: number }) {
   return (
     <Dialog>
       <DialogTrigger

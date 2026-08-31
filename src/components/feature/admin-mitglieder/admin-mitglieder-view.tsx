@@ -161,7 +161,8 @@ export function AdminMitgliederView({
             ).map(({ key, categories }) => {
               const count =
                 key === "meeple"
-                  ? activeByContribution.meeple + activeByContribution.individuell
+                  ? activeByContribution.meeple +
+                    activeByContribution.individuell
                   : activeByContribution[key];
               const active =
                 contributionFilter?.join(",") === categories.join(",");
@@ -176,7 +177,7 @@ export function AdminMitgliederView({
                       ?.scrollIntoView({ block: "nearest" });
                   }}
                   className={cn(
-                    "hover:text-foreground flex items-center justify-between gap-2 rounded-sm px-1 -mx-1 text-left",
+                    "hover:text-foreground -mx-1 flex items-center justify-between gap-2 rounded-sm px-1 text-left",
                     active
                       ? "bg-primary/10 text-foreground"
                       : "text-muted-foreground",
@@ -188,10 +189,7 @@ export function AdminMitgliederView({
               );
             })}
           </dl>
-          <a
-            href="#vereinsmitglieder"
-            className="hover:text-foreground block"
-          >
+          <a href="#vereinsmitglieder" className="hover:text-foreground block">
             <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Vereinsmitglieder
             </p>

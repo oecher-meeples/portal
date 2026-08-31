@@ -176,7 +176,8 @@ export async function approvePendingChange(
   // Außerhalb der Transaktion gelesen — reine Konfiguration, kein
   // Konsistenzrisiko, wenn sie sich zwischen Lesen und Commit ändert.
   const defaultInviteDays =
-    options?.revokeAndReissueInvite && change.kind === PendingChangeKind.MEMBER_EMAIL
+    options?.revokeAndReissueInvite &&
+    change.kind === PendingChangeKind.MEMBER_EMAIL
       ? await getDefaultInviteDays()
       : null;
 

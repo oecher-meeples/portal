@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/utils/prisma";
 
 export type RateLimitResult =
-  | { allowed: true }
-  | { allowed: false; retryAfterSeconds: number };
+  { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
 /** Fixer Cooldown zwischen zwei Aufrufen desselben Keys (#326, Mechanismus 1)
  * — reiner Spam-/Lastschutz, kein Brute-Force-Schutz für sich genommen. */

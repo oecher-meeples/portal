@@ -8,12 +8,18 @@ import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/v
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
-vi.mock("@/components/feature/admin-mitglieder/resign-membership-dialog", () => ({
-  ResignMembershipDialog: () => null,
-}));
-vi.mock("@/components/feature/admin-mitglieder/anonymise-meeple-dialog", () => ({
-  AnonymiseMeepleDialog: () => null,
-}));
+vi.mock(
+  "@/components/feature/admin-mitglieder/resign-membership-dialog",
+  () => ({
+    ResignMembershipDialog: () => null,
+  }),
+);
+vi.mock(
+  "@/components/feature/admin-mitglieder/anonymise-meeple-dialog",
+  () => ({
+    AnonymiseMeepleDialog: () => null,
+  }),
+);
 vi.mock("@/components/feature/admin-mitglieder/delete-member-dialog", () => ({
   DeleteMemberDialog: () => null,
 }));
@@ -34,7 +40,9 @@ afterEach(() => {
   cleanup();
 });
 
-function member(overrides: Partial<VereinsmitgliedRow> = {}): VereinsmitgliedRow {
+function member(
+  overrides: Partial<VereinsmitgliedRow> = {},
+): VereinsmitgliedRow {
   return {
     id: "member-1",
     memberNumber: 1,
@@ -154,7 +162,9 @@ describe("VereinsmitgliederTable invites:manage gate (#365)", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Einladen/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Einladen/ }),
+    ).toBeInTheDocument();
   });
 
   it("hides the Einladen button without invites:manage", () => {

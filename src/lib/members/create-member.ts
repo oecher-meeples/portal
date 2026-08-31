@@ -13,8 +13,7 @@ export type CreateMemberInput = {
 };
 
 export type CreateMemberResult =
-  | { error: string }
-  | { success: true; memberId: string };
+  { error: string } | { success: true; memberId: string };
 
 /**
  * Legt ein neues `Member` an (#342) — bislang entstanden Zeilen nur per

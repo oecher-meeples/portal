@@ -92,7 +92,9 @@ describe("assignMeepleRole", () => {
   });
 });
 
-const NON_ADMIN_ROLE = { permissions: [{ permission: { key: "posts:write" } }] };
+const NON_ADMIN_ROLE = {
+  permissions: [{ permission: { key: "posts:write" } }],
+};
 const ADMIN_ACCESS_ROLE = {
   permissions: [{ permission: { key: "admin:access" } }],
 };

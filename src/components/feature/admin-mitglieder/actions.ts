@@ -154,7 +154,6 @@ export async function revealMemberIban(meepleId: string) {
   return revealMeepleIban(meepleId, actor.id);
 }
 
-
 /**
  * A Meeple can hold several roles at once (#335) — this adds one rather than
  * replacing the set. A `window` (explicit startsAt/endsAt, a term of office

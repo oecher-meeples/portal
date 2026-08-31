@@ -117,9 +117,9 @@ describe("assignMeepleRole", () => {
   it("checks members:manage before reading the role, so a caller without any permission never triggers the DB read", async () => {
     requirePermissionMock.mockRejectedValueOnce(new ForbiddenError("/403"));
 
-    await expect(
-      assignMeepleRole("meeple-1", "role-vorstand"),
-    ).rejects.toThrow(ForbiddenError);
+    await expect(assignMeepleRole("meeple-1", "role-vorstand")).rejects.toThrow(
+      ForbiddenError,
+    );
     expect(prismaMock.role.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 });

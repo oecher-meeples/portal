@@ -56,7 +56,9 @@ describe("CopyButton", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Kopieren" }));
 
-    await vi.waitFor(() => expect(onError).toHaveBeenCalledWith("Zu viele Abrufe."));
+    await vi.waitFor(() =>
+      expect(onError).toHaveBeenCalledWith("Zu viele Abrufe."),
+    );
     expect(writeTextMock).not.toHaveBeenCalled();
     expect(screen.queryByText("Kopiert!")).toBeNull();
   });

@@ -12,7 +12,9 @@ describe("PressHoldReveal (#356)", () => {
   it("shows the value only while held, and reveals again on the next press", async () => {
     const reveal = vi.fn().mockResolvedValue({ success: true, value: "1234" });
     render(<PressHoldReveal reveal={reveal} />);
-    const button = screen.getByRole("button", { name: "Aufdecken (gedrückt halten)" });
+    const button = screen.getByRole("button", {
+      name: "Aufdecken (gedrückt halten)",
+    });
 
     fireEvent.mouseDown(button);
     expect(await screen.findByText("1234")).toBeInTheDocument();
@@ -28,7 +30,9 @@ describe("PressHoldReveal (#356)", () => {
   it("hides the value again on mouse leave, not just mouse up", async () => {
     const reveal = vi.fn().mockResolvedValue({ success: true, value: "1234" });
     render(<PressHoldReveal reveal={reveal} />);
-    const button = screen.getByRole("button", { name: "Aufdecken (gedrückt halten)" });
+    const button = screen.getByRole("button", {
+      name: "Aufdecken (gedrückt halten)",
+    });
 
     fireEvent.mouseDown(button);
     await screen.findByText("1234");
@@ -41,11 +45,15 @@ describe("PressHoldReveal (#356)", () => {
     const reveal = vi.fn().mockResolvedValue({ error: "Zu viele Abrufe." });
     const onError = vi.fn();
     render(<PressHoldReveal reveal={reveal} onError={onError} />);
-    const button = screen.getByRole("button", { name: "Aufdecken (gedrückt halten)" });
+    const button = screen.getByRole("button", {
+      name: "Aufdecken (gedrückt halten)",
+    });
 
     fireEvent.mouseDown(button);
 
-    await vi.waitFor(() => expect(onError).toHaveBeenCalledWith("Zu viele Abrufe."));
+    await vi.waitFor(() =>
+      expect(onError).toHaveBeenCalledWith("Zu viele Abrufe."),
+    );
     expect(screen.queryByText(/./, { selector: "span.font-mono" })).toBeNull();
   });
 });

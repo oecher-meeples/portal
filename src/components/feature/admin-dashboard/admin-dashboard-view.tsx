@@ -1,4 +1,10 @@
-import { Tag, Mail, ClipboardCheck, Landmark, AlertTriangle } from "lucide-react";
+import {
+  Tag,
+  Mail,
+  ClipboardCheck,
+  Landmark,
+  AlertTriangle,
+} from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
@@ -133,7 +139,8 @@ export function AdminDashboardView({
           <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
             {recentAdminLogins.map((entry) => (
               <li key={entry.id}>
-                {formatDateTime(entry.at)} — {entry.ipAddress ?? "unbekannte IP"}
+                {formatDateTime(entry.at)} —{" "}
+                {entry.ipAddress ?? "unbekannte IP"}
                 {entry.userAgent ? ` — ${entry.userAgent}` : ""}
               </li>
             ))}

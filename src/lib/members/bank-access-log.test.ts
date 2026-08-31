@@ -134,7 +134,11 @@ describe("revealPendingIbanChange", () => {
 
     expect(prismaMock.pendingChange.findUnique).toHaveBeenCalledWith({
       where: { id: "change-1" },
-      select: { kind: true, newValue: true, member: { select: { meepleId: true } } },
+      select: {
+        kind: true,
+        newValue: true,
+        member: { select: { meepleId: true } },
+      },
     });
     expect(result).toEqual({ success: true, iban: IBAN });
     expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
