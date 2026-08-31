@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
@@ -10,7 +11,11 @@ import {
   VereinsmitgliederTable,
   type VereinsmitgliedRow,
 } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
-import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
+import {
+  CONTRIBUTION_CATEGORY_LABELS,
+  type ContributionCategory,
+} from "@/lib/members/contribution";
+import { nextContributionFilter } from "@/components/feature/admin-mitglieder/contribution-filter";
 import {
   InvitesSection,
   type InviteRow,
@@ -85,6 +90,19 @@ export function AdminMitgliederView({
     membershipEndsAt: string;
   }[];
 }) {
+  // Klick auf eine Beitragsart-Zahl filtert die Vereinsmitglieder-Tabelle
+  // (#340, Verifikations-Kommentar zu #334) — "Meeple" bündelt meeple +
+  // individuell (Eigenbetrag), da beide in derselben Zeile angezeigt werden.
+  const [contributionFilter, setContributionFilter] = useState<
+    ContributionCategory[] | null
+  >(null);
+
+  function toggleContributionFilter(categories: ContributionCategory[]) {
+    setContributionFilter((current) =>
+      nextContributionFilter(current, categories),
+    );
+  }
+
   const withOpenHoldings = meeples.filter(
     (m) =>
       m.membershipState === "gekuendigt" &&
@@ -121,11 +139,57 @@ export function AdminMitgliederView({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile
-          label="Vereinsmitglieder"
-          value={members.length}
-          hint="insgesamt"
-        />
+        <div className="bg-card grid grid-cols-2 gap-4 rounded-lg border p-5">
+          <dl className="flex flex-col gap-1 text-sm">
+            {(
+              [
+                { key: "mini", categories: ["mini"] },
+                { key: "jung", categories: ["jung"] },
+                { key: "meeple", categories: ["meeple", "individuell"] },
+              ] as const
+            ).map(({ key, categories }) => {
+              const count =
+                key === "meeple"
+                  ? activeByContribution.meeple + activeByContribution.individuell
+                  : activeByContribution[key];
+              const active =
+                contributionFilter?.join(",") === categories.join(",");
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    toggleContributionFilter([...categories]);
+                    document
+                      .getElementById("vereinsmitglieder")
+                      ?.scrollIntoView({ block: "nearest" });
+                  }}
+                  className={cn(
+                    "hover:text-foreground flex items-center justify-between gap-2 rounded-sm px-1 -mx-1 text-left",
+                    active
+                      ? "bg-primary/10 text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <dt>{CONTRIBUTION_CATEGORY_LABELS[key]}</dt>
+                  <dd className="font-mono">{count}</dd>
+                </button>
+              );
+            })}
+          </dl>
+          <a
+            href="#vereinsmitglieder"
+            className="hover:text-foreground block"
+          >
+            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              Vereinsmitglieder
+            </p>
+            <p className="mt-2 font-serif text-3xl font-bold">
+              {members.length}
+            </p>
+            <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
+          </a>
+        </div>
         <StatTile
           label="Kündigungen mit Bestand"
           value={withOpenHoldings.length}
@@ -137,41 +201,6 @@ export function AdminMitgliederView({
           hint="ausgetreten, ohne Bestand"
         />
       </div>
-
-      <a
-        href="#vereinsmitglieder"
-        className="bg-card hover:bg-muted/50 block rounded-lg border p-5 transition-colors"
-      >
-        <h2 className="font-serif text-lg font-bold">
-          Aktive Mitglieder — {activeMembers.length}
-        </h2>
-        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.mini}
-            </dt>
-            <dd className="font-mono">{activeByContribution.mini}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.jung}
-            </dt>
-            <dd className="font-mono">{activeByContribution.jung}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.meeple}
-            </dt>
-            <dd className="font-mono">{activeByContribution.meeple}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.individuell}
-            </dt>
-            <dd className="font-mono">{activeByContribution.individuell}</dd>
-          </div>
-        </dl>
-      </a>
 
       {deletionRequests.length > 0 && (
         <div
@@ -296,6 +325,8 @@ export function AdminMitgliederView({
         members={members}
         defaultInviteDays={defaultInviteDays}
         canManageMembers={canManageRoles}
+        contributionFilter={contributionFilter}
+        onClearContributionFilter={() => setContributionFilter(null)}
       />
 
       <MitgliederTable

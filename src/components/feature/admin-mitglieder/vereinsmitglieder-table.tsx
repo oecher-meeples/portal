@@ -27,7 +27,10 @@ import { CreateMemberDialog } from "@/components/feature/admin-mitglieder/create
 import { MemberEditDialog } from "@/components/feature/admin-mitglieder/member-edit-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
-import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
+import {
+  CONTRIBUTION_CATEGORY_LABELS,
+  type ContributionCategory,
+} from "@/lib/members/contribution";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
 
@@ -43,6 +46,8 @@ export function VereinsmitgliederTable({
   members,
   defaultInviteDays,
   canManageMembers,
+  contributionFilter,
+  onClearContributionFilter,
 }: {
   members: VereinsmitgliedRow[];
   defaultInviteDays: number;
@@ -50,19 +55,32 @@ export function VereinsmitgliederTable({
    * Betrachter mit nur `invites:manage` den "Vereinsmitglied
    * erstellen"-Button, bekommt beim Klick aber nur einen Server-Fehler. */
   canManageMembers: boolean;
+  /** Von der Beitragsart-Stat-Tile gesteuert (#340) — `null` heißt "kein Filter". */
+  contributionFilter?: ContributionCategory[] | null;
+  onClearContributionFilter?: () => void;
 }) {
   const [search, setSearch] = useState("");
 
   const filteredMembers = useMemo(() => {
-    if (!search) return members;
-    const needle = search.toLowerCase();
-    return members.filter(
-      (member) =>
-        member.displayName.toLowerCase().includes(needle) ||
-        member.email.toLowerCase().includes(needle) ||
-        String(member.memberNumber).includes(needle),
-    );
-  }, [members, search]);
+    let result = members;
+    if (contributionFilter) {
+      result = result.filter(
+        (member) =>
+          member.contributionCategory &&
+          contributionFilter.includes(member.contributionCategory),
+      );
+    }
+    if (search) {
+      const needle = search.toLowerCase();
+      result = result.filter(
+        (member) =>
+          member.displayName.toLowerCase().includes(needle) ||
+          member.email.toLowerCase().includes(needle) ||
+          String(member.memberNumber).includes(needle),
+      );
+    }
+    return result;
+  }, [members, search, contributionFilter]);
 
   return (
     <Accordion
@@ -91,6 +109,23 @@ export function VereinsmitgliederTable({
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
+              {contributionFilter && (
+                <Badge variant="secondary" className="gap-1">
+                  Beitragsart:{" "}
+                  {contributionFilter
+                    .map((c) => CONTRIBUTION_CATEGORY_LABELS[c])
+                    .join(" / ")}
+                  {onClearContributionFilter && (
+                    <button
+                      type="button"
+                      onClick={onClearContributionFilter}
+                      aria-label="Beitragsart-Filter entfernen"
+                    >
+                      ×
+                    </button>
+                  )}
+                </Badge>
+              )}
               {canManageMembers && (
                 <div className="ml-auto">
                   <CreateMemberDialog />
