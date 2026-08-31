@@ -37,6 +37,7 @@ const INPUT = {
   postalCode: null,
   city: null,
   phone: null,
+  tshirtSizeId: null,
 };
 
 beforeEach(() => {

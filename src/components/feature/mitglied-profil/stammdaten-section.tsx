@@ -28,7 +28,10 @@ export type StammdatenMember = {
   postalCode: string | null;
   city: string | null;
   phone: string | null;
+  tshirtSizeId: string | null;
 };
+
+export type TshirtSizeOption = { id: string; label: string };
 
 const FIELD_KEYS = Object.keys(
   STAMMDATEN_FIELD_LABELS,
@@ -44,6 +47,7 @@ function toForm(member: StammdatenMember): StammdatenInput {
     postalCode: member.postalCode,
     city: member.city,
     phone: member.phone,
+    tshirtSizeId: member.tshirtSizeId,
   };
 }
 
@@ -71,12 +75,14 @@ export function StammdatenSection({
   canRequestChange,
   isAdmin,
   openChanges,
+  tshirtSizeOptions = [],
 }: {
   member: StammdatenMember;
   canManage: boolean;
   canRequestChange: boolean;
   isAdmin: boolean;
   openChanges: PendingChangeRow[];
+  tshirtSizeOptions?: TshirtSizeOption[];
 }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<StammdatenInput>(() => toForm(member));
@@ -119,18 +125,47 @@ export function StammdatenSection({
       {editing ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            {FIELD_KEYS.map((key) => (
-              <TextField
-                key={key}
-                id={`stammdaten-${key}`}
-                label={STAMMDATEN_FIELD_LABELS[key]}
-                type={key === "birthDate" ? "date" : "text"}
-                value={form[key] ?? ""}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, [key]: event.target.value }))
-                }
-              />
-            ))}
+            {FIELD_KEYS.map((key) =>
+              key === "tshirtSizeId" ? (
+                <div key={key} className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="stammdaten-tshirtSizeId"
+                    className="text-sm font-medium"
+                  >
+                    {STAMMDATEN_FIELD_LABELS.tshirtSizeId}
+                  </label>
+                  <select
+                    id="stammdaten-tshirtSizeId"
+                    value={form.tshirtSizeId ?? ""}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        tshirtSizeId: event.target.value || null,
+                      }))
+                    }
+                    className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+                  >
+                    <option value="">— keine Angabe —</option>
+                    {tshirtSizeOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <TextField
+                  key={key}
+                  id={`stammdaten-${key}`}
+                  label={STAMMDATEN_FIELD_LABELS[key]}
+                  type={key === "birthDate" ? "date" : "text"}
+                  value={form[key] ?? ""}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, [key]: event.target.value }))
+                  }
+                />
+              ),
+            )}
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <div className="flex gap-2">
@@ -162,7 +197,11 @@ export function StammdatenSection({
                   ? member.birthDate
                     ? formatDatePlain(member.birthDate)
                     : "—"
-                  : (member[key] ?? "—")}
+                  : key === "tshirtSizeId"
+                    ? (tshirtSizeOptions.find(
+                        (option) => option.id === member.tshirtSizeId,
+                      )?.label ?? "—")
+                    : (member[key] ?? "—")}
               </dd>
             </div>
           ))}

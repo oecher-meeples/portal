@@ -37,6 +37,7 @@ const MEMBER = {
   postalCode: null,
   city: null,
   phone: null,
+  tshirtSizeId: null,
 };
 
 describe("StammdatenSection (#380)", () => {
@@ -134,5 +135,37 @@ describe("StammdatenSection (#380)", () => {
 
     expect(screen.getByText(/Offene Änderungsanträge/)).toBeInTheDocument();
     expect(screen.getByText(/Vorname: Neu/)).toBeInTheDocument();
+  });
+
+  it("edits the tshirt size via a dropdown and shows its label read-only (#388)", async () => {
+    updateMemberStammdatenMock.mockResolvedValue({ success: true });
+
+    render(
+      <StammdatenSection
+        member={{ ...MEMBER, tshirtSizeId: "size-s" }}
+        canManage
+        canRequestChange={false}
+        isAdmin={false}
+        openChanges={[]}
+        tshirtSizeOptions={[
+          { id: "size-s", label: "S" },
+          { id: "size-m", label: "M" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("S")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /bearbeiten/i }));
+    fireEvent.change(screen.getByLabelText("T-Shirt-Größe"), {
+      target: { value: "size-m" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await screen.findByRole("button", { name: /bearbeiten/i });
+    expect(updateMemberStammdatenMock).toHaveBeenCalledWith(
+      "member-1",
+      expect.objectContaining({ tshirtSizeId: "size-m" }),
+    );
   });
 });

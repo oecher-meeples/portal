@@ -22,6 +22,7 @@ import { NewsletterPreferencePanel } from "@/components/widgets/profil-panels/ne
 import { DataExportPanel } from "@/components/widgets/profil-panels/data-export-panel";
 import { DeletionRequestPanel } from "@/components/widgets/profil-panels/deletion-request-panel";
 import { ResignMembershipPanel } from "@/components/widgets/profil-panels/resign-membership-panel";
+import { listTshirtSizes } from "@/lib/members/tshirt-sizes";
 import {
   formatStammdatenDiffSummary,
   listOpenStammdatenChanges,
@@ -60,6 +61,10 @@ export async function MitgliedProfilView({
   const openStammdatenChanges = viewer.isAdmin
     ? await listOpenStammdatenChanges(member.id)
     : [];
+  const tshirtSizes = await listTshirtSizes();
+  const tshirtSizeLabelById = Object.fromEntries(
+    tshirtSizes.map((size) => [size.id, size.label]),
+  );
 
   const bankSectionVisible =
     canViewBankSection(member, viewer) && !isMiniMeeple(member);
@@ -115,11 +120,15 @@ export async function MitgliedProfilView({
         canManage={viewer.canManageMembers}
         canRequestChange={canRequestChange}
         isAdmin={viewer.isAdmin}
+        tshirtSizeOptions={tshirtSizes}
         openChanges={openStammdatenChanges.map((change) => ({
           id: change.id,
           memberDisplayName: memberDisplayName(member),
           memberNumber: member.memberNumber,
-          displayValue: formatStammdatenDiffSummary(change.fieldsJson),
+          displayValue: formatStammdatenDiffSummary(
+            change.fieldsJson,
+            tshirtSizeLabelById,
+          ),
           requestedAt: change.requestedAt.toISOString(),
           confirmed: true,
         }))}

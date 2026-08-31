@@ -19,8 +19,13 @@ export async function listOpenStammdatenChanges(memberId: string) {
 }
 
 /** Menschenlesbare Zusammenfassung eines Stammdaten-Diffs für die
- * `PendingChangesPanel`-`displayValue` (mehrere Felder auf einen Blick). */
-export function formatStammdatenDiffSummary(fieldsJson: string | null) {
+ * `PendingChangesPanel`-`displayValue` (mehrere Felder auf einen Blick).
+ * `tshirtSizeLabelById` löst die #388-`tshirtSizeId` zu ihrem Label auf —
+ * ohne Eintrag (Größe zwischenzeitlich gelöscht) bleibt die rohe id stehen. */
+export function formatStammdatenDiffSummary(
+  fieldsJson: string | null,
+  tshirtSizeLabelById: Record<string, string> = {},
+) {
   const diff = JSON.parse(fieldsJson ?? "{}") as StammdatenDiff;
   return (
     Object.entries(diff)
@@ -33,7 +38,9 @@ export function formatStammdatenDiffSummary(fieldsJson: string | null) {
         const value =
           field === "birthDate" && typeof change.new === "string"
             ? new Date(change.new).toLocaleDateString("de-DE")
-            : (change.new ?? "—");
+            : field === "tshirtSizeId" && typeof change.new === "string"
+              ? (tshirtSizeLabelById[change.new] ?? change.new)
+              : (change.new ?? "—");
         return `${label}: ${value}`;
       })
       .join(", ") || "—"

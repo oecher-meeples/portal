@@ -53,4 +53,24 @@ describe("formatStammdatenDiffSummary (#380)", () => {
   it("falls back to an em dash for an empty diff", () => {
     expect(formatStammdatenDiffSummary(null)).toBe("—");
   });
+
+  it("resolves a tshirtSizeId field to its label (#388)", () => {
+    const fieldsJson = JSON.stringify({
+      tshirtSizeId: { old: null, new: "size-s" },
+    });
+
+    expect(formatStammdatenDiffSummary(fieldsJson, { "size-s": "S" })).toBe(
+      "T-Shirt-Größe: S",
+    );
+  });
+
+  it("falls back to the raw id when the tshirtSizeId lookup misses (#388)", () => {
+    const fieldsJson = JSON.stringify({
+      tshirtSizeId: { old: null, new: "size-deleted" },
+    });
+
+    expect(formatStammdatenDiffSummary(fieldsJson, {})).toBe(
+      "T-Shirt-Größe: size-deleted",
+    );
+  });
 });

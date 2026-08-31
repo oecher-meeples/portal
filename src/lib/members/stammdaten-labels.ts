@@ -13,6 +13,8 @@ export const STAMMDATEN_FIELD_LABELS = {
   postalCode: "PLZ",
   city: "Ort",
   phone: "Telefon",
+  /** #388 — eigene Tabelle statt Enum, siehe `lib/members/tshirt-sizes.ts`. */
+  tshirtSizeId: "T-Shirt-Größe",
 } as const;
 
 export type StammdatenField = keyof typeof STAMMDATEN_FIELD_LABELS;

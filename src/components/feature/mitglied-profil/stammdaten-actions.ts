@@ -23,6 +23,8 @@ export type StammdatenInput = {
   postalCode: string | null;
   city: string | null;
   phone: string | null;
+  /** #388 — `TshirtSize.id` oder `null`, kein Freitext. */
+  tshirtSizeId: string | null;
 };
 
 function toUpdateData(input: StammdatenInput) {
@@ -35,6 +37,7 @@ function toUpdateData(input: StammdatenInput) {
     postalCode: input.postalCode?.trim() || null,
     city: input.city?.trim() || null,
     phone: input.phone?.trim() || null,
+    tshirtSizeId: input.tshirtSizeId || null,
   };
 }
 

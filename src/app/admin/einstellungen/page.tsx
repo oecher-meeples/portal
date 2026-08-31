@@ -4,6 +4,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { SettingsCard } from "@/components/feature/admin-settings/settings-card";
 import { InviteSettingsDialog } from "@/components/feature/admin-settings/invite-settings-dialog";
+import { TshirtSizeDialog } from "@/components/feature/admin-settings/tshirt-size-dialog";
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export default async function AdminSettingsPage() {
@@ -40,6 +41,7 @@ export default async function AdminSettingsPage() {
           <SettingsCard key={module.href} {...module} />
         ))}
         <InviteSettingsDialog defaultDays={defaultInviteDays} />
+        <TshirtSizeDialog />
       </div>
     </div>
   );
