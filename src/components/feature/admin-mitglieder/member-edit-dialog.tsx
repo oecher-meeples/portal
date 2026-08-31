@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Pencil } from "lucide-react";
 import {
   Dialog,
@@ -80,6 +81,13 @@ export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          <Link
+            href={`/mitglied/${member.slug}`}
+            className="text-primary w-fit text-sm underline underline-offset-2"
+          >
+            Volle Profilseite öffnen
+          </Link>
+
           <MemberPersonendatenFields
             idPrefix={`edit-member-${member.id}`}
             form={form}

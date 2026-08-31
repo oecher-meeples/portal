@@ -46,6 +46,7 @@ function member(
   return {
     id: "member-1",
     memberNumber: 1,
+    slug: "mitglied-1",
     displayName: "Erika Musterfrau",
     email: "erika@example.com",
     firstName: "Erika",

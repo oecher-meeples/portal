@@ -16,6 +16,8 @@ import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 export type VereinsmitgliedRow = {
   id: string;
   memberNumber: number;
+  /** Für den Link zur vollen Profilseite (#387), `/mitglied/{slug}`. */
+  slug: string;
   displayName: string;
   /** `null` seit #373 — ein MiniMeeple hat keine eigene E-Mail-Adresse. */
   email: string | null;
@@ -50,6 +52,7 @@ export type VereinsmitgliedRow = {
 export type VereinsmitgliedSourceRow = {
   id: string;
   memberNumber: number;
+  slug: string;
   firstName: string | null;
   lastName: string | null;
   email: string | null;
@@ -95,6 +98,7 @@ export function buildVereinsmitgliedRows(
     .map((member) => ({
       id: member.id,
       memberNumber: member.memberNumber,
+      slug: member.slug,
       displayName: memberDisplayName(member),
       email: member.email,
       firstName: member.firstName,

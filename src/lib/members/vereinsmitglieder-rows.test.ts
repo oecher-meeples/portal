@@ -12,6 +12,7 @@ function member(
   return {
     id: "member-1",
     memberNumber: 1,
+    slug: "mitglied-1",
     firstName: "Erika",
     lastName: "Musterfrau",
     email: "erika@example.com",
