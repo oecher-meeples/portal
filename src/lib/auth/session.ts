@@ -1,8 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentSession, getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
+import { logAdminLoginOnce } from "@/lib/auth/login-log";
 import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
@@ -135,6 +136,38 @@ export async function requireMember() {
 }
 
 /**
+ * Zwangs-Logout für `admin:access`-Konten (#231): keine langlebige,
+ * still weiterlaufende Session — nach 12h ab Login (`session.createdAt`,
+ * unabhängig von fortgesetzter Aktivität) wird eine erneute Anmeldung
+ * verlangt. Der eigentliche Cookie-Löschvorgang läuft über einen Redirect
+ * auf einen Route Handler (`/api/auth/force-logout`), weil Server
+ * Components selbst keine Cookies schreiben dürfen (#242).
+ *
+ * Bewusst hier statt in `src/proxy.ts` verankert: `auth.getSession()`
+ * braucht den `next/headers`-Request-Context, den Middleware nicht hat —
+ * dieser Check greift dafür bei jedem Zugriff auf eine `/admin`-Seite,
+ * was für ein praktisch admin-only genutztes Konto ausreicht.
+ */
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
+  if (!(await hasPermission(neonAuthUserId, ADMIN_ACCESS_PERMISSION))) return;
+
+  const session = await getCurrentSession();
+  if (!session) return;
+
+  await logAdminLoginOnce(neonAuthUserId, session.session.createdAt);
+
+  const ageMs = Date.now() - session.session.createdAt.getTime();
+  if (ageMs > ADMIN_SESSION_MAX_AGE_MS) {
+    const pathname = await currentPathname();
+    redirect(
+      `/api/auth/force-logout?next=${encodeURIComponent(`/login?next=${pathname}`)}`,
+    );
+  }
+}
+
+/**
  * Guard for an admin-area route gated by one or more specific permissions
  * (any match is enough) — unlike `requirePermission` this also enforces the
  * membership-state check from `requireMember`, matching `requireAdmin`'s
@@ -144,6 +177,8 @@ export async function requireMember() {
  */
 export async function requireAdminPermission(permissionKey: string | string[]) {
   const session = await requireMember();
+  await enforceAdminAccessSessionFreshness(session.user.id);
+
   const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
   const results = await Promise.all(
     keys.map((key) => hasPermission(session.user.id, key)),

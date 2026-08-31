@@ -4,11 +4,20 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
-vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+const getCurrentSessionMock = vi.fn();
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUser: getCurrentUserMock,
+  getCurrentSession: getCurrentSessionMock,
+}));
 
 const hasPermissionMock = vi.fn();
 vi.mock("@/lib/auth/permissions", () => ({
   hasPermission: hasPermissionMock,
+}));
+
+const logAdminLoginOnceMock = vi.fn();
+vi.mock("@/lib/auth/login-log", () => ({
+  logAdminLoginOnce: (...args: unknown[]) => logAdminLoginOnceMock(...args),
 }));
 
 /** Stubs hasPermission by key — everything not listed resolves to false. */
@@ -47,6 +56,7 @@ vi.mock("next/headers", () => ({
 const {
   isSettlementPath,
   requireMember,
+  requireAdminPermission,
   getRealSessionTier,
   getPreviewTier,
   getSessionTier,
@@ -140,6 +150,65 @@ describe("requireMember", () => {
     const session = await requireMember();
 
     expect(session.membershipState).toBe("ausgetreten");
+  });
+});
+
+describe("requireAdminPermission — admin:access forced-relogin (#231)", () => {
+  it("does not check session freshness for a non-admin:access permission", async () => {
+    withUser(ACTIVE, "/admin/bestand");
+    mockPermissions({ "admin:access": false, "games:manage": true });
+
+    await requireAdminPermission("games:manage");
+
+    expect(getCurrentSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("logs the login and lets a fresh admin:access session through", async () => {
+    redirectMock.mockClear();
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    const createdAt = new Date(Date.now() - 60 * 1000);
+    getCurrentSessionMock.mockResolvedValue({
+      user: { id: "user-1" },
+      session: { createdAt },
+    });
+
+    await requireAdminPermission("admin:access");
+
+    expect(logAdminLoginOnceMock).toHaveBeenCalledWith("user-1", createdAt);
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("force-logout"),
+    );
+  });
+
+  it("forces a re-login once the admin:access session is older than 12h", async () => {
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    const createdAt = new Date(Date.now() - 13 * 60 * 60 * 1000);
+    getCurrentSessionMock.mockResolvedValue({
+      user: { id: "user-1" },
+      session: { createdAt },
+    });
+
+    await expect(requireAdminPermission("admin:access")).rejects.toThrow(
+      RedirectError,
+    );
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/auth/force-logout?next="),
+    );
+  });
+
+  it("lets the request through when there is no resolvable session (degraded render)", async () => {
+    redirectMock.mockClear();
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    getCurrentSessionMock.mockResolvedValue(null);
+
+    await requireAdminPermission("admin:access");
+
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("force-logout"),
+    );
   });
 });
 

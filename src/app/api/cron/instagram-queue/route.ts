@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
 import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
+import { deleteExpiredLoginLogs } from "@/lib/auth/login-log";
 import { anonymiseExpiredMeeples } from "@/lib/members/retention";
 import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
 import { isAuthorizedCronRequest } from "@/lib/utils/cron-auth";
@@ -26,12 +27,14 @@ export async function GET(request: Request) {
   const summary = await processQueue();
   const newsletter = await processNewsletterQueue(NEWSLETTER_DAILY_LIMIT);
   const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
+  const loginLogCleanup = await deleteExpiredLoginLogs();
   // Reports `skipped: true` until the retention period is decided (see #49).
   const retention = await anonymiseExpiredMeeples();
   return NextResponse.json({
     ...summary,
     newsletter,
     bankLogCleanup,
+    loginLogCleanup,
     retention,
   });
 }

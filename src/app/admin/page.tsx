@@ -1,4 +1,5 @@
 import { requireAdminPermission } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
 import { ADMIN_PERMISSIONS } from "@/lib/utils/nav-config";
 import { prisma } from "@/lib/utils/prisma";
 import { getMembershipState } from "@/lib/members/meeples";
@@ -7,10 +8,18 @@ import { UNSORTIERT_CODE } from "@/lib/inventory/codes";
 import { countActiveEvents } from "@/lib/members/dashboard";
 import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
 import { getRateLimitAlerts } from "@/lib/auth/rate-limit-alerts";
+import { getRecentAdminLogins } from "@/lib/auth/login-log";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
 
 export default async function AdminDashboardPage() {
-  await requireAdminPermission([...ADMIN_PERMISSIONS]);
+  const session = await requireAdminPermission([...ADMIN_PERMISSIONS]);
+  // Login-Historie ist sensibel (IP/User-Agent privilegierter Konten) — nur
+  // für admin:access selbst einsehbar, nicht für jede andere Admin-Permission
+  // (#231).
+  const canViewLoginHistory = await hasPermission(
+    session.user.id,
+    "admin:access",
+  );
 
   const [
     meeples,
@@ -21,6 +30,7 @@ export default async function AdminDashboardPage() {
     events,
     blobStorageUsage,
     rateLimitAlerts,
+    recentAdminLogins,
   ] = await Promise.all([
     prisma.meeple.findMany({
       select: {
@@ -58,6 +68,7 @@ export default async function AdminDashboardPage() {
     // to `null` and the card simply doesn't render (see AdminDashboardView).
     getBlobStorageUsage().catch(() => null),
     getRateLimitAlerts(),
+    canViewLoginHistory ? getRecentAdminLogins() : Promise.resolve([]),
   ]);
 
   const activeMembers = meeples.filter(
@@ -86,6 +97,7 @@ export default async function AdminDashboardPage() {
       }}
       blobStorageUsage={blobStorageUsage}
       rateLimitAlerts={rateLimitAlerts}
+      recentAdminLogins={canViewLoginHistory ? recentAdminLogins : null}
     />
   );
 }

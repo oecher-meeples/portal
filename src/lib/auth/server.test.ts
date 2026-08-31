@@ -8,7 +8,7 @@ vi.mock("@neondatabase/auth/next/server", () => ({
   createNeonAuth: () => ({ getSession: getSessionMock }),
 }));
 
-const { getCurrentUser } = await import("./server");
+const { getCurrentUser, getCurrentSession } = await import("./server");
 
 describe("getCurrentUser", () => {
   it("disables the session refresh, since it runs during Server Component render where cookies can't be written", async () => {
@@ -47,5 +47,35 @@ describe("getCurrentUser", () => {
     getSessionMock.mockRejectedValue(new Error("upstream is on fire"));
 
     await expect(getCurrentUser()).rejects.toThrow("upstream is on fire");
+  });
+});
+
+describe("getCurrentSession", () => {
+  it("returns the full session incl. createdAt", async () => {
+    const createdAt = new Date("2026-08-01T00:00:00Z");
+    getSessionMock.mockResolvedValue({
+      data: { user: { id: "user-1" }, session: { createdAt } },
+    });
+
+    expect(await getCurrentSession()).toEqual({
+      user: { id: "user-1" },
+      session: { createdAt },
+    });
+  });
+
+  it("returns null without a session", async () => {
+    getSessionMock.mockResolvedValue({ data: null });
+
+    expect(await getCurrentSession()).toBeNull();
+  });
+
+  it("returns null when the cache cookie can't be refreshed during render", async () => {
+    getSessionMock.mockRejectedValue(
+      new Error(
+        "Cookies can only be modified in a Server Action or Route Handler.",
+      ),
+    );
+
+    expect(await getCurrentSession()).toBeNull();
   });
 });

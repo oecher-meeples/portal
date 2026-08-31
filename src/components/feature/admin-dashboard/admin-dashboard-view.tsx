@@ -5,6 +5,15 @@ import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
 import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
 import type { RateLimitAlert } from "@/lib/auth/rate-limit-alerts";
+import { formatDateTime } from "@/lib/utils/format";
+
+export type AdminLoginLogEntry = {
+  id: string;
+  neonAuthUserId: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  at: Date;
+};
 
 const QUICK_ACTIONS = [
   {
@@ -31,10 +40,15 @@ export function AdminDashboardView({
   stats,
   blobStorageUsage,
   rateLimitAlerts,
+  recentAdminLogins,
 }: {
   stats: AdminDashboardStats;
   blobStorageUsage: BlobStorageUsage | null;
   rateLimitAlerts: RateLimitAlert[];
+  /** `null`, wenn der Betrachter kein `admin:access` hat (#231) — die
+   * Login-Historie ist sensibel und nicht Teil des sonstigen
+   * Admin-Dashboards. */
+  recentAdminLogins: AdminLoginLogEntry[] | null;
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -110,6 +124,22 @@ export function AdminDashboardView({
           ))}
         </div>
       </div>
+
+      {recentAdminLogins && recentAdminLogins.length > 0 && (
+        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">
+            Login-Historie (admin:access)
+          </h2>
+          <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
+            {recentAdminLogins.map((entry) => (
+              <li key={entry.id}>
+                {formatDateTime(entry.at)} — {entry.ipAddress ?? "unbekannte IP"}
+                {entry.userAgent ? ` — ${entry.userAgent}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
