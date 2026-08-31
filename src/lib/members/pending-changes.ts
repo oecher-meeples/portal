@@ -224,7 +224,15 @@ export async function approvePendingChange(
     } else if (change.kind === PendingChangeKind.MEMBER_STAMMDATEN) {
       const diff = JSON.parse(change.fieldsJson ?? "{}") as StammdatenDiff;
       const data = Object.fromEntries(
-        Object.entries(diff).map(([field, { new: value }]) => [field, value]),
+        Object.entries(diff).map(([field, { new: value }]) => [
+          field,
+          // `fieldsJson` ist einmal durch JSON durch — ein `birthDate` als
+          // Date wird dabei zum ISO-String, hier für Prisma zurück in ein
+          // echtes Date-Objekt.
+          field === "birthDate" && typeof value === "string"
+            ? new Date(value)
+            : value,
+        ]),
       ) as Prisma.MemberUpdateInput;
       await tx.member.update({ where: { id: change.memberId }, data });
     } else {

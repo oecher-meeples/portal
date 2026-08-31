@@ -1,0 +1,180 @@
+"use client";
+
+import { useState } from "react";
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/field";
+import { useAction } from "@/components/ui/use-action";
+import { formatDatePlain } from "@/lib/utils/format";
+import { STAMMDATEN_FIELD_LABELS } from "@/lib/members/stammdaten-labels";
+import type { StammdatenDiff } from "@/lib/members/pending-changes";
+import {
+  PendingChangesPanel,
+  type PendingChangeRow,
+} from "@/components/widgets/pending-changes/pending-changes-panel";
+import {
+  requestMemberStammdatenChange,
+  updateMemberStammdaten,
+  type StammdatenInput,
+} from "@/components/feature/mitglied-profil/stammdaten-actions";
+
+export type StammdatenMember = {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  birthDate: Date | null;
+  birthPlace: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
+};
+
+const FIELD_KEYS = Object.keys(
+  STAMMDATEN_FIELD_LABELS,
+) as (keyof StammdatenInput)[];
+
+function toForm(member: StammdatenMember): StammdatenInput {
+  return {
+    firstName: member.firstName,
+    lastName: member.lastName,
+    birthDate: member.birthDate?.toISOString().slice(0, 10) ?? null,
+    birthPlace: member.birthPlace,
+    street: member.street,
+    postalCode: member.postalCode,
+    city: member.city,
+    phone: member.phone,
+  };
+}
+
+function diffOf(original: StammdatenInput, next: StammdatenInput) {
+  const diff: StammdatenDiff = {};
+  for (const key of FIELD_KEYS) {
+    const oldValue = original[key] ?? null;
+    const newValue = next[key]?.trim() || null;
+    if (oldValue === newValue) continue;
+    diff[key] = {
+      old: oldValue,
+      new: key === "birthDate" && newValue ? new Date(newValue) : newValue,
+    };
+  }
+  return diff;
+}
+
+/** Stammdaten-Bereich der Profilseite (#380) — Readonly-Anzeige für alle mit
+ * Seitenzugriff; `members:manage` bearbeitet direkt, Meeple-selbst/
+ * Erziehungsberechtigte stellen stattdessen einen `MEMBER_STAMMDATEN`-Antrag
+ * (#379). Offene Anträge werden darunter nur für `admin:access` gezeigt. */
+export function StammdatenSection({
+  member,
+  canManage,
+  canRequestChange,
+  isAdmin,
+  openChanges,
+}: {
+  member: StammdatenMember;
+  canManage: boolean;
+  canRequestChange: boolean;
+  isAdmin: boolean;
+  openChanges: PendingChangeRow[];
+}) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<StammdatenInput>(() => toForm(member));
+  const { run, pending, error } = useAction({
+    onSuccess: () => setEditing(false),
+  });
+
+  function startEdit() {
+    setForm(toForm(member));
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (canManage) {
+      await run(() => updateMemberStammdaten(member.id, form));
+      return;
+    }
+    const diff = diffOf(toForm(member), form);
+    if (Object.keys(diff).length === 0) {
+      setEditing(false);
+      return;
+    }
+    await run(() => requestMemberStammdatenChange(member.id, diff));
+  }
+
+  const canEdit = canManage || canRequestChange;
+
+  return (
+    <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="font-serif text-lg font-bold">Stammdaten</h2>
+        {canEdit && !editing && (
+          <Button variant="outline" size="sm" onClick={startEdit}>
+            <Pencil className="size-3.5" />
+            Bearbeiten
+          </Button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {FIELD_KEYS.map((key) => (
+              <TextField
+                key={key}
+                id={`stammdaten-${key}`}
+                label={STAMMDATEN_FIELD_LABELS[key]}
+                type={key === "birthDate" ? "date" : "text"}
+                value={form[key] ?? ""}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, [key]: event.target.value }))
+                }
+              />
+            ))}
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={pending}>
+              {pending
+                ? "Speichere…"
+                : canManage
+                  ? "Speichern"
+                  : "Änderung beantragen"}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={pending}
+              onClick={() => setEditing(false)}
+            >
+              Abbrechen
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          {FIELD_KEYS.map((key) => (
+            <div key={key}>
+              <dt className="text-muted-foreground">
+                {STAMMDATEN_FIELD_LABELS[key]}
+              </dt>
+              <dd>
+                {key === "birthDate"
+                  ? member.birthDate
+                    ? formatDatePlain(member.birthDate)
+                    : "—"
+                  : (member[key] ?? "—")}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {isAdmin && openChanges.length > 0 && (
+        <PendingChangesPanel
+          title="Offene Änderungsanträge"
+          changes={openChanges}
+        />
+      )}
+    </div>
+  );
+}
