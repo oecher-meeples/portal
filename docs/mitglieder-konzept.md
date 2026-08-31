@@ -116,7 +116,7 @@ In den letzten 31 Tagen der Mitgliedschaft erscheint im Dashboard eine Warnung m
 
 Nach Ablauf der Mitgliedschaft (`membershipEndsAt` erreicht) gilt die Person als **Ausgetreten**: Login bleibt möglich, Zugriff beschränkt sich aber aufs Abwickeln — eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Kalender, Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt, annehmen darf die Person nichts mehr.
 
-Technisch ist "Ausgetreten" eine echte `Role` mit eigenem Rechte-Satz, aber nie manuell zuweisbar. Da alle Mitgliedschaften zum selben festen Datum enden, genügt ein einziger jährlicher Cron-Job (2.1., 02:00), der die Rolle für alle betroffenen Vereinsmitglieder in einem Rutsch setzt.
+Technisch ist "Ausgetreten" eine echte `Role` mit eigenem Rechte-Satz, aber nur mit `admin:access` manuell zuweisbar (Korrekturfälle). Da alle Mitgliedschaften zum selben festen Datum enden, genügt ein einziger jährlicher Cron-Job (2.1., 02:00), der die Rolle für alle betroffenen Vereinsmitglieder in einem Rutsch setzt.
 
 **Voraussetzung, die noch fehlt:** Ein echter, granularer Rechte-Satz für "Ausgetreten" braucht zuerst einen Permission-Katalog für reguläre Meeple-Funktionen (z. B. `ludothek:view`, `news:internal:view`, `lfg:participate`), gebunden an die bestehende Standardrolle "Meeple" — heute ist "eingeloggter Meeple ohne Sonderrolle" weitgehend ein impliziter Zustand ohne granulare Rechte. Zusätzlich braucht es Mehrfachrollen pro Meeple (strukturell in `UserRole` schon möglich, `setMeepleRole` erzwingt aber noch genau eine Rolle) — deckt sich mit dem bereits offenen #264. Beides ist ein eigenes, dieser Migration vorgeschaltetes Arbeitspaket.
 
