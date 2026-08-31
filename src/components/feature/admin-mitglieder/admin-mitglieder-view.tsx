@@ -295,6 +295,7 @@ export function AdminMitgliederView({
       <VereinsmitgliederTable
         members={members}
         defaultInviteDays={defaultInviteDays}
+        canManageMembers={canManageRoles}
       />
 
       <MitgliederTable

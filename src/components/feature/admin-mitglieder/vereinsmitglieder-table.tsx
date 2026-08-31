@@ -23,6 +23,7 @@ import { MembershipStatePill } from "@/components/entities/membership-state-pill
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
+import { CreateMemberDialog } from "@/components/feature/admin-mitglieder/create-member-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
@@ -40,9 +41,14 @@ function germanDate(value: string | null) {
 export function VereinsmitgliederTable({
   members,
   defaultInviteDays,
+  canManageMembers,
 }: {
   members: VereinsmitgliedRow[];
   defaultInviteDays: number;
+  /** = `members:manage` — gated hier zusätzlich in der UI, sonst sieht ein
+   * Betrachter mit nur `invites:manage` den "Vereinsmitglied
+   * erstellen"-Button, bekommt beim Klick aber nur einen Server-Fehler. */
+  canManageMembers: boolean;
 }) {
   const [search, setSearch] = useState("");
 
@@ -74,14 +80,21 @@ export function VereinsmitgliederTable({
         </AccordionTrigger>
         <AccordionPanel className="px-5">
           <div className="flex flex-col gap-4">
-            <div className="relative w-full max-w-sm">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-              <Input
-                placeholder="Vereinsmitglied suchen …"
-                className="pl-9"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative w-full max-w-sm">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+                <Input
+                  placeholder="Vereinsmitglied suchen …"
+                  className="pl-9"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+              {canManageMembers && (
+                <div className="ml-auto">
+                  <CreateMemberDialog />
+                </div>
+              )}
             </div>
 
             <div className="overflow-hidden rounded-lg border">
