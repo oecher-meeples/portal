@@ -7,7 +7,7 @@ import {
   NEWSLETTER_CATEGORIES,
   NEWSLETTER_CATEGORY_LABELS,
 } from "@/lib/newsletter/labels";
-import { updateNewsletterPreference } from "@/components/feature/profil/actions";
+import { updateNewsletterPreference } from "@/lib/members/own-profile-actions";
 
 export function NewsletterPreferencePanel({
   initialEnabled,

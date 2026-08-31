@@ -2,7 +2,7 @@ import { ActionButton } from "@/components/ui/action-button";
 import {
   requestOwnDeletion,
   withdrawOwnDeletionRequest,
-} from "@/components/feature/profil/actions";
+} from "@/lib/members/own-profile-actions";
 import { deletionRequestStatus } from "@/lib/members/deletion-requests";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { OpenHoldingsSummary } from "@/lib/members/open-holdings";

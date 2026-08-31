@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { resignOwnMembership } from "@/components/feature/profil/actions";
+import { resignOwnMembership } from "@/lib/members/own-profile-actions";
 import { formatDatePlain } from "@/lib/utils/format";
 
 export function ResignMembershipPanel({

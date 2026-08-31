@@ -1,7 +1,7 @@
 "use client";
 
 import { ActionButton } from "@/components/ui/action-button";
-import { exportOwnPersonalData } from "@/components/feature/profil/actions";
+import { exportOwnPersonalData } from "@/lib/members/own-profile-actions";
 
 function downloadJson(filename: string, payload: unknown) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {

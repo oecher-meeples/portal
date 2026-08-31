@@ -15,6 +15,13 @@ import {
 } from "@/lib/ludothek/private-collection";
 import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import { PrivateSpieleSection } from "@/components/feature/mitglied-profil/private-spiele-section";
+import { findMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
+import { countOpenHoldings } from "@/lib/members/open-holdings";
+import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
+import { NewsletterPreferencePanel } from "@/components/widgets/profil-panels/newsletter-preference-panel";
+import { DataExportPanel } from "@/components/widgets/profil-panels/data-export-panel";
+import { DeletionRequestPanel } from "@/components/widgets/profil-panels/deletion-request-panel";
+import { ResignMembershipPanel } from "@/components/widgets/profil-panels/resign-membership-panel";
 import {
   formatStammdatenDiffSummary,
   listOpenStammdatenChanges,
@@ -73,6 +80,19 @@ export async function MitgliedProfilView({
           entries: await getOwnPrivateCollection(member.meeple.id),
           cooldownEndsAt: await getImportCooldownEndsAt(member.meeple),
           canForceImport: await canForceImport(member.meeple.neonAuthUserId),
+        }
+      : null;
+
+  const selfServiceData =
+    isSelf && member.meeple
+      ? {
+          newsletterPreference: await findMeepleNewsletterPreference(
+            member.meeple.id,
+          ),
+          openHoldings: await countOpenHoldings(member.meeple.id),
+          deletionRequestedAt:
+            (await findOpenDeletionRequest(member.meeple.id))?.requestedAt ??
+            null,
         }
       : null;
 
@@ -147,6 +167,43 @@ export async function MitgliedProfilView({
       )}
       {!isSelf && member.meeple?.privateCollectionVisible && (
         <PrivateSpieleSection meepleId={member.meeple.id} />
+      )}
+
+      {selfServiceData && (
+        <>
+          {member.email && (
+            <div className="bg-card rounded-lg border p-5">
+              <h2 className="font-serif text-lg font-bold">Newsletter</h2>
+              <div className="mt-4">
+                <NewsletterPreferencePanel
+                  initialEnabled={selfServiceData.newsletterPreference.enabled}
+                  initialCategories={
+                    selfServiceData.newsletterPreference.categories
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+            <h2 className="font-serif text-lg font-bold">Datenschutz</h2>
+            <DataExportPanel />
+            <DeletionRequestPanel
+              requestedAt={selfServiceData.deletionRequestedAt}
+              openHoldings={selfServiceData.openHoldings}
+            />
+          </div>
+
+          <div className="border-destructive/40 flex flex-col gap-3 rounded-lg border p-5">
+            <h2 className="font-serif text-lg font-bold">
+              Mitgliedschaft beenden
+            </h2>
+            <ResignMembershipPanel
+              resignedAt={member.resignedAt?.toISOString() ?? null}
+              membershipEndsAt={member.membershipEndsAt?.toISOString() ?? null}
+            />
+          </div>
+        </>
       )}
     </div>
   );

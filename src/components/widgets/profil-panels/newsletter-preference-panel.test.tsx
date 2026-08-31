@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const updateNewsletterPreferenceMock = vi.fn();
-vi.mock("@/components/feature/profil/actions", () => ({
+vi.mock("@/lib/members/own-profile-actions", () => ({
   updateNewsletterPreference: (...args: unknown[]) =>
     updateNewsletterPreferenceMock(...args),
 }));
