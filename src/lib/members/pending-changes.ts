@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { PendingChangeKind } from "@prisma/client";
+import { PendingChangeKind, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import {
   decryptSecret,
@@ -137,9 +137,37 @@ export async function hasOpenInviteForMemberEmail(
     where: { id: memberId },
     select: { email: true },
   });
-  if (!member) return false;
+  if (!member?.email) return false;
   const invite = await findOpenInviteByEmail(member.email);
   return invite !== null;
+}
+
+/** Ein Feld-Diff für einen `MEMBER_STAMMDATEN`-Antrag (#379) — mehrere
+ * geänderte Felder auf einmal, ein Freigeben/Ablehnen für den ganzen Antrag.
+ * Die Werte sind bereits die roh zu speichernden Spaltenwerte (z. B.
+ * `tshirtSizeId` statt eines Labels). */
+export type StammdatenDiff = Record<string, { old: unknown; new: unknown }>;
+
+export async function requestStammdatenChange(
+  memberId: string,
+  diff: StammdatenDiff,
+) {
+  if (Object.keys(diff).length === 0) {
+    return { error: "Keine Änderung ausgewählt." };
+  }
+
+  await replaceOpenPendingChange(memberId, PendingChangeKind.MEMBER_STAMMDATEN);
+  await prisma.pendingChange.create({
+    data: {
+      memberId,
+      kind: PendingChangeKind.MEMBER_STAMMDATEN,
+      // Ungenutzt für diesen Kind — der eigentliche Inhalt steht in fieldsJson.
+      newValue: "",
+      fieldsJson: JSON.stringify(diff),
+    },
+  });
+
+  return { success: true as const };
 }
 
 /**
@@ -193,6 +221,12 @@ export async function approvePendingChange(
           ibanLast4: ibanLast4(decryptSecret(change.newValue)),
         },
       });
+    } else if (change.kind === PendingChangeKind.MEMBER_STAMMDATEN) {
+      const diff = JSON.parse(change.fieldsJson ?? "{}") as StammdatenDiff;
+      const data = Object.fromEntries(
+        Object.entries(diff).map(([field, { new: value }]) => [field, value]),
+      ) as Prisma.MemberUpdateInput;
+      await tx.member.update({ where: { id: change.memberId }, data });
     } else {
       const previousMember =
         defaultInviteDays !== null
@@ -207,7 +241,7 @@ export async function approvePendingChange(
         data: { email: change.newValue },
       });
 
-      if (defaultInviteDays !== null && previousMember) {
+      if (defaultInviteDays !== null && previousMember?.email) {
         const openInvite = await tx.invite.findFirst({
           where: {
             email: previousMember.email,

@@ -27,7 +27,7 @@ import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/v
 
 function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
   return {
-    email: member.email,
+    email: member.email ?? "",
     firstName: member.firstName ?? "",
     lastName: member.lastName ?? "",
     birthDate: member.birthDate?.slice(0, 10) ?? "",
@@ -100,7 +100,7 @@ export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
                 refresh={false}
                 variant="outline"
                 size="sm"
-                confirm={`Selbstauskunft an ${member.email} senden?`}
+                confirm={`Selbstauskunft an ${member.email ?? "dieses Mitglied"} senden?`}
                 pendingLabel="Sende…"
               >
                 Selbstauskunft senden

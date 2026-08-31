@@ -45,6 +45,7 @@ describe("createMember", () => {
     expect(prismaMock.member.create).toHaveBeenCalledWith({
       data: {
         memberNumber: 42,
+        slug: "erika-musterfrau",
         email: "erika@example.com",
         firstName: "Erika",
         lastName: "Musterfrau",
@@ -56,6 +57,39 @@ describe("createMember", () => {
         phone: null,
       },
     });
+  });
+
+  it("falls back to a memberNumber-based slug without a name (#379)", async () => {
+    await createMember({ email: "erika@example.com" });
+
+    expect(prismaMock.member.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ slug: "mitglied-42" }),
+      }),
+    );
+  });
+
+  it("appends a numeric suffix when the base slug is already taken (#379)", async () => {
+    prismaMock.member.findUnique.mockImplementation(((args: {
+      where: Record<string, unknown>;
+    }) => {
+      if (args.where.slug === "erika-musterfrau") {
+        return Promise.resolve({ id: "other" });
+      }
+      return Promise.resolve(null);
+    }) as never);
+
+    await createMember({
+      email: "erika@example.com",
+      firstName: "Erika",
+      lastName: "Musterfrau",
+    });
+
+    expect(prismaMock.member.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ slug: "erika-musterfrau-2" }),
+      }),
+    );
   });
 
   it("starts at member number 1 when no members exist yet", async () => {

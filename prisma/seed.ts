@@ -158,6 +158,7 @@ async function ensureAnonymerMeeple() {
   const member = await prisma.member.create({
     data: {
       memberNumber: (highestNumber._max.memberNumber ?? 0) + 1,
+      slug: slugify(ANONYMER_MEEPLE_NAME),
       email: "anonymer-meeple@oecher-meeples.invalid",
       meepleId: meeple.id,
     },

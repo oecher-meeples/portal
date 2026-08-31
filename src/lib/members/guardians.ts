@@ -1,16 +1,17 @@
 import { prisma } from "@/lib/utils/prisma";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 
 /** Reused by the admin guardian picker and the "Meine Kinder" section (#376). */
 export type GuardianLinkOption = { id: string; displayName: string };
 
-function displayName(member: {
-  firstName: string | null;
-  lastName: string | null;
-  memberNumber: number;
-}) {
-  const name = [member.firstName, member.lastName].filter(Boolean).join(" ");
-  return name || `Mitglied Nr. ${member.memberNumber}`;
-}
+const MEMBER_DISPLAY_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  memberNumber: true,
+  meeple: { select: { displayName: true } },
+} as const;
 
 /** Serverseitige Berechtigungsprüfung (#372) — niemals einem
  * client-übergebenen `memberId` blind vertrauen: jede Aktion, die ein
@@ -36,21 +37,13 @@ export async function listChildrenOf(
   const links = await prisma.memberGuardian.findMany({
     where: { guardianMemberId: memberId },
     include: {
-      child: {
-        select: {
-          id: true,
-          slug: true,
-          firstName: true,
-          lastName: true,
-          memberNumber: true,
-        },
-      },
+      child: { select: { ...MEMBER_DISPLAY_SELECT, slug: true } },
     },
   });
   return links.map((link) => ({
     id: link.child.id,
     slug: link.child.slug,
-    displayName: displayName(link.child),
+    displayName: memberDisplayName(link.child),
   }));
 }
 
@@ -60,20 +53,11 @@ export async function listGuardiansOf(
 ): Promise<GuardianLinkOption[]> {
   const links = await prisma.memberGuardian.findMany({
     where: { childMemberId: memberId },
-    include: {
-      guardian: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          memberNumber: true,
-        },
-      },
-    },
+    include: { guardian: { select: MEMBER_DISPLAY_SELECT } },
   });
   return links.map((link) => ({
     id: link.guardian.id,
-    displayName: displayName(link.guardian),
+    displayName: memberDisplayName(link.guardian),
   }));
 }
 
@@ -84,12 +68,12 @@ export async function listGuardianCandidates(
 ): Promise<GuardianLinkOption[]> {
   const members = await prisma.member.findMany({
     where: { id: { not: excludeMemberId } },
-    select: { id: true, firstName: true, lastName: true, memberNumber: true },
+    select: MEMBER_DISPLAY_SELECT,
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
   return members.map((member) => ({
     id: member.id,
-    displayName: displayName(member),
+    displayName: memberDisplayName(member),
   }));
 }
 

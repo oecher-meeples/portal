@@ -108,7 +108,7 @@ export function VereinsmitgliederTable({
       result = result.filter(
         (member) =>
           member.displayName.toLowerCase().includes(needle) ||
-          member.email.toLowerCase().includes(needle) ||
+          (member.email?.toLowerCase().includes(needle) ?? false) ||
           String(member.memberNumber).includes(needle),
       );
     }

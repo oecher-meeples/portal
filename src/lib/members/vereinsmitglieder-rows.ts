@@ -17,7 +17,8 @@ export type VereinsmitgliedRow = {
   id: string;
   memberNumber: number;
   displayName: string;
-  email: string;
+  /** `null` seit #373 — ein MiniMeeple hat keine eigene E-Mail-Adresse. */
+  email: string | null;
   /** Rohe Personendaten für den Edit-Dialog (#343) — `displayName` ist nur
    * die Anzeige-Ableitung (`memberDisplayName()`), kein Rückweg zu den
    * einzelnen Feldern. */
@@ -51,7 +52,7 @@ export type VereinsmitgliedSourceRow = {
   memberNumber: number;
   firstName: string | null;
   lastName: string | null;
-  email: string;
+  email: string | null;
   meepleId: string | null;
   birthDate: Date | null;
   birthPlace: string | null;

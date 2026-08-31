@@ -28,6 +28,7 @@ const {
   rejectPendingChange,
   requestEmailChange,
   requestIbanChange,
+  requestStammdatenChange,
 } = await import("@/lib/members/pending-changes");
 
 const IBAN = "DE89 3704 0044 0532 0130 00";
@@ -318,9 +319,75 @@ describe("approvePendingChange", () => {
   });
 });
 
+describe("requestStammdatenChange (#379)", () => {
+  it("rejects an empty diff", async () => {
+    const result = await requestStammdatenChange("member-1", {});
+
+    expect(result).toEqual({ error: "Keine Änderung ausgewählt." });
+    expect(prismaMock.pendingChange.create).not.toHaveBeenCalled();
+  });
+
+  it("replaces an open request and stores the diff as fieldsJson", async () => {
+    const diff = { firstName: { old: "Alt", new: "Neu" } };
+
+    const result = await requestStammdatenChange("member-1", diff);
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.pendingChange.deleteMany).toHaveBeenCalledWith({
+      where: {
+        memberId: "member-1",
+        kind: PendingChangeKind.MEMBER_STAMMDATEN,
+        approvedAt: null,
+        rejectedAt: null,
+      },
+    });
+    expect(prismaMock.pendingChange.create).toHaveBeenCalledWith({
+      data: {
+        memberId: "member-1",
+        kind: PendingChangeKind.MEMBER_STAMMDATEN,
+        newValue: "",
+        fieldsJson: JSON.stringify(diff),
+      },
+    });
+  });
+});
+
+describe("approvePendingChange — MEMBER_STAMMDATEN (#379)", () => {
+  it("applies every changed field from the diff in one update", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue({
+      id: "pc-1",
+      memberId: "member-1",
+      kind: PendingChangeKind.MEMBER_STAMMDATEN,
+      approvedAt: null,
+      rejectedAt: null,
+      confirmedAt: null,
+      fieldsJson: JSON.stringify({
+        firstName: { old: "Alt", new: "Neu" },
+        phone: { old: null, new: "0123" },
+      }),
+    } as never);
+
+    const result = await approvePendingChange("pc-1", "admin-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { id: "member-1" },
+      data: { firstName: "Neu", phone: "0123" },
+    });
+  });
+});
+
 describe("hasOpenInviteForMemberEmail (#362)", () => {
   it("is false when the member does not exist", async () => {
     prismaMock.member.findUnique.mockResolvedValue(null);
+
+    expect(await hasOpenInviteForMemberEmail("member-1")).toBe(false);
+  });
+
+  it("is false when the member has no email (#373 MiniMeeple)", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      email: null,
+    } as never);
 
     expect(await hasOpenInviteForMemberEmail("member-1")).toBe(false);
   });
@@ -377,5 +444,25 @@ describe("rejectPendingChange", () => {
 
     expect(result.error).toBeDefined();
     expect(sendPendingChangeRejectedMailMock).not.toHaveBeenCalled();
+  });
+
+  it("passes a null member email through unchanged (#373 MiniMeeple)", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue({
+      id: "pc-1",
+      memberId: "member-1",
+      kind: PendingChangeKind.MEMBER_STAMMDATEN,
+      approvedAt: null,
+      rejectedAt: null,
+      member: { email: null },
+    } as never);
+
+    const result = await rejectPendingChange("pc-1", "admin-1", "Unklar");
+
+    expect(result).toEqual({ success: true, memberId: "member-1" });
+    expect(sendPendingChangeRejectedMailMock).toHaveBeenCalledWith(
+      null,
+      PendingChangeKind.MEMBER_STAMMDATEN,
+      "Unklar",
+    );
   });
 });

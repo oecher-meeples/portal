@@ -45,10 +45,7 @@ export default async function AdminBankPage() {
       rows={members.map((member) => ({
         id: member.meepleId!,
         memberNumber: member.memberNumber,
-        displayName:
-          [member.firstName, member.lastName].filter(Boolean).join(" ") ||
-          member.meeple?.displayName ||
-          member.email,
+        displayName: memberDisplayName(member),
         accountHolder: member.accountHolder,
         maskedIban: maskIban(member.ibanLast4),
         hasIban: member.ibanEncrypted !== null,
