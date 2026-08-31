@@ -23,6 +23,8 @@ import { DataExportPanel } from "@/components/widgets/profil-panels/data-export-
 import { DeletionRequestPanel } from "@/components/widgets/profil-panels/deletion-request-panel";
 import { ResignMembershipPanel } from "@/components/widgets/profil-panels/resign-membership-panel";
 import { listTshirtSizes } from "@/lib/members/tshirt-sizes";
+import { listChildrenOf } from "@/lib/members/guardians";
+import { MeineKinderSection } from "@/components/feature/mitglied-profil/meine-kinder-section";
 import {
   formatStammdatenDiffSummary,
   listOpenStammdatenChanges,
@@ -88,6 +90,10 @@ export async function MitgliedProfilView({
         }
       : null;
 
+  // #376: strikt auf das eigene Profil begrenzt — niemals auf einer fremden
+  // Profilseite geladen, auch nicht für admin:access/members:manage.
+  const myChildren = isSelf ? await listChildrenOf(member.id) : [];
+
   const selfServiceData =
     isSelf && member.meeple
       ? {
@@ -152,6 +158,8 @@ export async function MitgliedProfilView({
           }))}
         />
       )}
+
+      {isSelf && <MeineKinderSection guardianChildren={myChildren} />}
 
       {canViewVereinsspiele && <VereinsspieleSection holdings={holdings} />}
 
