@@ -117,7 +117,7 @@ export async function requireMember() {
   // anonymizedAt stays on Meeple.
   const member = await prisma.member.findUnique({
     where: { meepleId: meeple.id },
-    select: { resignedAt: true, membershipEndsAt: true },
+    select: { slug: true, resignedAt: true, membershipEndsAt: true },
   });
   const membershipState = getMembershipState({
     meepleId: meeple.id,
@@ -128,7 +128,12 @@ export async function requireMember() {
 
   if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
-    if (!isSettlementPath(pathname)) {
+    // #386: `/profil` leitet auf die eigene `/mitglied/[slug]`-Seite weiter
+    // — die muss für den Abwicklungs-Zustand ebenso erreichbar bleiben wie
+    // `/profil` selbst, aber nur die *eigene*, nicht jede beliebige.
+    const isOwnMitgliedPath =
+      member?.slug !== undefined && pathname === `/mitglied/${member.slug}`;
+    if (!isSettlementPath(pathname) && !isOwnMitgliedPath) {
       redirect("/403");
     }
   }

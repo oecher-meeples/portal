@@ -1,49 +1,30 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMember } from "@/lib/auth/session";
-import { ProfilView } from "@/components/feature/profil/profil-view";
-import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
-import { countOpenHoldings } from "@/lib/members/open-holdings";
-import { findMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
-import {
-  canForceImport,
-  getImportCooldownEndsAt,
-  getOwnPrivateCollection,
-} from "@/lib/ludothek/private-collection";
+import { PageHeading } from "@/components/ui/page-heading";
 
+/** `/profil` zeigt seit #386 keine eigene Implementierung mehr — es löst den
+ * eigenen `Member.slug` auf und leitet auf `/mitglied/[slug]` weiter,
+ * dieselbe Seite, die auch für andere Profile gilt (#379 ff.). */
 export default async function ProfilPage() {
-  const { meeple, membershipState } = await requireMember();
+  const session = await requireMember();
 
-  const [
-    member,
-    openDeletionRequest,
-    openHoldings,
-    newsletterPreference,
-    privateCollection,
-    privateCollectionImportCooldownEndsAt,
-    canForceImportCollection,
-  ] = await Promise.all([
-    prisma.member.findUnique({ where: { meepleId: meeple.id } }),
-    findOpenDeletionRequest(meeple.id),
-    countOpenHoldings(meeple.id),
-    findMeepleNewsletterPreference(meeple.id),
-    getOwnPrivateCollection(meeple.id),
-    getImportCooldownEndsAt(meeple),
-    canForceImport(meeple.neonAuthUserId),
-  ]);
+  const ownMember = await prisma.member.findUnique({
+    where: { meepleId: session.meeple.id },
+    select: { slug: true },
+  });
 
-  return (
-    <ProfilView
-      meeple={meeple}
-      member={member}
-      membershipState={membershipState}
-      deletionRequestedAt={openDeletionRequest?.requestedAt ?? null}
-      openHoldings={openHoldings}
-      newsletterPreference={newsletterPreference}
-      privateCollection={privateCollection}
-      privateCollectionImportCooldownEndsAt={
-        privateCollectionImportCooldownEndsAt
-      }
-      canForceImportCollection={canForceImportCollection}
-    />
-  );
+  if (!ownMember) {
+    return (
+      <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
+        <PageHeading eyebrow="Self-Service" title="Mein Profil" />
+        <p className="text-muted-foreground text-sm">
+          Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende
+          dich an den Vorstand.
+        </p>
+      </div>
+    );
+  }
+
+  redirect(`/mitglied/${ownMember.slug}`);
 }

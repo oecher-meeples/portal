@@ -151,6 +151,27 @@ describe("requireMember", () => {
 
     expect(session.membershipState).toBe("ausgetreten");
   });
+
+  it("lets a resigned member through on their own /mitglied/[slug] page (#386)", async () => {
+    withUser(RESIGNED_AND_GONE, "/mitglied/mitglied-2", {
+      ...RESIGNED_AND_GONE_MEMBER,
+      slug: "mitglied-2",
+    });
+
+    const session = await requireMember();
+
+    expect(session.membershipState).toBe("ausgetreten");
+  });
+
+  it("still blocks a resigned member from a different member's /mitglied/[slug] page (#386)", async () => {
+    withUser(RESIGNED_AND_GONE, "/mitglied/mitglied-3", {
+      ...RESIGNED_AND_GONE_MEMBER,
+      slug: "mitglied-2",
+    });
+
+    await expect(requireMember()).rejects.toThrow(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith("/403");
+  });
 });
 
 describe("requireAdminPermission — admin:access forced-relogin (#231)", () => {
