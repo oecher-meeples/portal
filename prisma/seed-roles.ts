@@ -100,6 +100,7 @@ const ROLES = [
     name: "sysadmin",
     description: "Vollzugriff",
     permissionKeys: PERMISSIONS.map((p) => p.key),
+    isSystemRole: true,
   },
   {
     name: "Vorstand",
@@ -141,6 +142,7 @@ const ROLES = [
     description:
       "Nur vom Jahreswechsel-Cron vergeben (#332) — kein manuelles Zuweisen im UI",
     permissionKeys: AUSGETRETEN_PERMISSION_KEYS,
+    isSystemRole: true,
   },
 ];
 
@@ -156,10 +158,11 @@ export async function seedPermissions() {
 
 export async function seedRoles() {
   for (const role of ROLES) {
+    const isSystemRole = "isSystemRole" in role ? role.isSystemRole : false;
     await prisma.role.upsert({
       where: { name: role.name },
-      update: { description: role.description },
-      create: { name: role.name, description: role.description },
+      update: { description: role.description, isSystemRole },
+      create: { name: role.name, description: role.description, isSystemRole },
     });
 
     for (const permissionKey of role.permissionKeys) {

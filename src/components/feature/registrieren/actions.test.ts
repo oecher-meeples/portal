@@ -27,7 +27,12 @@ const BOUND_INVITE = {
   revokedAt: null,
 };
 
-const ROLE = { id: "role-1", name: "Meeple", description: null };
+const ROLE = {
+  id: "role-1",
+  name: "Meeple",
+  description: null,
+  isSystemRole: false,
+};
 const MEMBER = {
   id: "member-1",
   email: "member@example.com",
