@@ -31,10 +31,23 @@ import {
   CONTRIBUTION_CATEGORY_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
-import { formatDatePlain } from "@/lib/utils/format";
+import { MEMBERSHIP_STATE_LABELS, formatDatePlain } from "@/lib/utils/format";
+import type { MembershipState } from "@/lib/members/meeples";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
 
 export type { VereinsmitgliedRow };
+
+type ZustandFilter = MembershipState | "alle";
+type PortalLoginFilter = "alle" | "vorhanden" | "fehlt";
+
+const ZUSTAND_FILTERS: { value: ZustandFilter; label: string }[] = [
+  { value: "alle", label: "Alle" },
+  { value: "unregistriert", label: MEMBERSHIP_STATE_LABELS.unregistriert },
+  { value: "registriert", label: MEMBERSHIP_STATE_LABELS.registriert },
+  { value: "gekuendigt", label: MEMBERSHIP_STATE_LABELS.gekuendigt },
+  { value: "ausgetreten", label: MEMBERSHIP_STATE_LABELS.ausgetreten },
+  { value: "anonymisiert", label: MEMBERSHIP_STATE_LABELS.anonymisiert },
+];
 
 function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
@@ -60,6 +73,9 @@ export function VereinsmitgliederTable({
   onClearContributionFilter?: () => void;
 }) {
   const [search, setSearch] = useState("");
+  const [zustandFilter, setZustandFilter] = useState<ZustandFilter>("alle");
+  const [portalLoginFilter, setPortalLoginFilter] =
+    useState<PortalLoginFilter>("alle");
 
   const filteredMembers = useMemo(() => {
     let result = members;
@@ -68,6 +84,18 @@ export function VereinsmitgliederTable({
         (member) =>
           member.contributionCategory &&
           contributionFilter.includes(member.contributionCategory),
+      );
+    }
+    if (zustandFilter !== "alle") {
+      result = result.filter(
+        (member) => member.membershipState === zustandFilter,
+      );
+    }
+    if (portalLoginFilter !== "alle") {
+      result = result.filter((member) =>
+        portalLoginFilter === "vorhanden"
+          ? member.hasPortalLogin
+          : !member.hasPortalLogin,
       );
     }
     if (search) {
@@ -80,7 +108,7 @@ export function VereinsmitgliederTable({
       );
     }
     return result;
-  }, [members, search, contributionFilter]);
+  }, [members, search, contributionFilter, zustandFilter, portalLoginFilter]);
 
   return (
     <Accordion
@@ -109,6 +137,32 @@ export function VereinsmitgliederTable({
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
+              <select
+                value={zustandFilter}
+                onChange={(event) =>
+                  setZustandFilter(event.target.value as ZustandFilter)
+                }
+                aria-label="Nach Zustand filtern"
+                className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+              >
+                {ZUSTAND_FILTERS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={portalLoginFilter}
+                onChange={(event) =>
+                  setPortalLoginFilter(event.target.value as PortalLoginFilter)
+                }
+                aria-label="Nach Portal-Login filtern"
+                className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+              >
+                <option value="alle">Portal-Login: alle</option>
+                <option value="vorhanden">Portal-Login: vorhanden</option>
+                <option value="fehlt">Portal-Login: fehlt</option>
+              </select>
               {contributionFilter && (
                 <Badge variant="secondary" className="gap-1">
                   Beitragsart:{" "}

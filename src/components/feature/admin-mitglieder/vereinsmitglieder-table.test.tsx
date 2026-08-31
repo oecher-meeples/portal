@@ -5,6 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { VereinsmitgliederTable } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 vi.mock("@/components/feature/admin-mitglieder/resign-membership-dialog", () => ({
   ResignMembershipDialog: () => null,
 }));
@@ -132,5 +135,78 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
 
     expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
     expect(screen.getByText("Jonas Jung")).toBeInTheDocument();
+  });
+});
+
+describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
+  const ANONYMISIERT_MEMBER = member({
+    id: "member-anon",
+    displayName: "Anonymer Meeple",
+    membershipState: "anonymisiert",
+    hasPortalLogin: false,
+  });
+
+  it("filters by Zustand", async () => {
+    const user = userEvent.setup();
+    render(
+      <VereinsmitgliederTable
+        members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
+        defaultInviteDays={30}
+        canManageMembers={false}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Nach Zustand filtern" }),
+      "anonymisiert",
+    );
+
+    expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
+    expect(screen.getByText("Anonymer Meeple")).toBeInTheDocument();
+  });
+
+  it("filters by Portal-Login vorhanden/fehlt", async () => {
+    const user = userEvent.setup();
+    render(
+      <VereinsmitgliederTable
+        members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
+        defaultInviteDays={30}
+        canManageMembers={false}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Nach Portal-Login filtern" }),
+      "fehlt",
+    );
+
+    expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
+    expect(screen.getByText("Anonymer Meeple")).toBeInTheDocument();
+  });
+
+  it("combines Zustand and Portal-Login filters", async () => {
+    const user = userEvent.setup();
+    render(
+      <VereinsmitgliederTable
+        members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
+        defaultInviteDays={30}
+        canManageMembers={false}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Nach Zustand filtern" }),
+      "registriert",
+    );
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Nach Portal-Login filtern" }),
+      "fehlt",
+    );
+
+    expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anonymer Meeple")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Keine Vereinsmitglieder gefunden."),
+    ).toBeInTheDocument();
   });
 });
