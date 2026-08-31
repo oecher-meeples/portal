@@ -12,7 +12,7 @@ import {
   type VereinsmitgliedRow,
 } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
 import {
-  CONTRIBUTION_CATEGORY_LABELS,
+  CONTRIBUTION_CATEGORY_SHORT_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
 import { nextContributionFilter } from "@/components/feature/admin-mitglieder/contribution-filter";
@@ -150,54 +150,57 @@ export function AdminMitgliederView({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="bg-card grid grid-cols-2 gap-4 rounded-lg border p-5">
-          <dl className="flex flex-col gap-1 text-sm">
-            {(
-              [
-                { key: "mini", categories: ["mini"] },
-                { key: "jung", categories: ["jung"] },
-                { key: "meeple", categories: ["meeple", "individuell"] },
-              ] as const
-            ).map(({ key, categories }) => {
-              const count =
-                key === "meeple"
-                  ? activeByContribution.meeple +
-                    activeByContribution.individuell
-                  : activeByContribution[key];
-              const active =
-                contributionFilter?.join(",") === categories.join(",");
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    toggleContributionFilter([...categories]);
-                    document
-                      .getElementById("vereinsmitglieder")
-                      ?.scrollIntoView({ block: "nearest" });
-                  }}
-                  className={cn(
-                    "hover:text-foreground -mx-1 flex items-center justify-between gap-2 rounded-sm px-1 text-left",
-                    active
-                      ? "bg-primary/10 text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  <dt>{CONTRIBUTION_CATEGORY_LABELS[key]}</dt>
-                  <dd className="font-mono">{count}</dd>
-                </button>
-              );
-            })}
-          </dl>
-          <a href="#vereinsmitglieder" className="hover:text-foreground block">
-            <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-              Vereinsmitglieder
-            </p>
-            <p className="mt-2 font-serif text-3xl font-bold">
-              {members.length}
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
-          </a>
+        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+            Vereinsmitglieder
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <dl className="flex flex-col gap-1 text-sm">
+              {(
+                [
+                  { key: "mini", categories: ["mini"] },
+                  { key: "jung", categories: ["jung"] },
+                  { key: "meeple", categories: ["meeple", "individuell"] },
+                ] as const
+              ).map(({ key, categories }) => {
+                const count =
+                  key === "meeple"
+                    ? activeByContribution.meeple +
+                      activeByContribution.individuell
+                    : activeByContribution[key];
+                const active =
+                  contributionFilter?.join(",") === categories.join(",");
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      toggleContributionFilter([...categories]);
+                      document
+                        .getElementById("vereinsmitglieder")
+                        ?.scrollIntoView({ block: "nearest" });
+                    }}
+                    className={cn(
+                      "hover:text-foreground -mx-1 flex items-center justify-between gap-2 rounded-sm px-1 text-left",
+                      active
+                        ? "bg-primary/10 text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    <dt>{CONTRIBUTION_CATEGORY_SHORT_LABELS[key]}</dt>
+                    <dd className="font-mono">{count}</dd>
+                  </button>
+                );
+              })}
+            </dl>
+            <a
+              href="#vereinsmitglieder"
+              className="hover:text-foreground block"
+            >
+              <p className="font-serif text-3xl font-bold">{members.length}</p>
+              <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
+            </a>
+          </div>
         </div>
         <StatTile
           label="Kündigungen mit Bestand"
