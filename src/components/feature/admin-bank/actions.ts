@@ -6,6 +6,7 @@ import {
   logBankDataAccess,
   requireBankReader,
   revealMeepleIban,
+  revealPendingIbanChange,
 } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
 import { escapeCsvField } from "@/lib/utils/csv";
@@ -19,6 +20,11 @@ function csvCell(value: string | number) {
 export async function revealIban(meepleId: string) {
   const actor = await requireBankReader();
   return revealMeepleIban(meepleId, actor.id);
+}
+
+export async function revealPendingIban(changeId: string) {
+  const actor = await requireBankReader();
+  return revealPendingIbanChange(changeId, actor.id);
 }
 
 export async function exportBankDataCsv() {

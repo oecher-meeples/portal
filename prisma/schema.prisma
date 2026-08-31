@@ -530,8 +530,8 @@ model PendingChange {
   id               String            @id @default(cuid())
   memberId         String
   kind             PendingChangeKind
-  /// New value the member proposes — IBAN in the clear here (only until
-  /// approved, then re-encrypted like `Member.ibanEncrypted`) or the new email.
+  /// New value the member proposes — IBAN encrypted here (#357, same as
+  /// `Member.ibanEncrypted`) or the new email in the clear.
   newValue         String
   /// Nur `kind: IBAN` — der neue Kontoinhaber, geht mit der IBAN zusammen ein.
   newAccountHolder String?

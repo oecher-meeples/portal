@@ -23,6 +23,7 @@ const {
   deleteExpiredBankDataAccessLogs,
   requireBankReader,
   revealMeepleIban,
+  revealPendingIbanChange,
 } = await import("./bank-access-log");
 
 class ForbiddenError extends Error {}
@@ -114,6 +115,70 @@ describe("revealMeepleIban", () => {
         "Zu viele IBAN-Abrufe in kurzer Zeit. Bitte versuche es später erneut.",
     });
     expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("revealPendingIbanChange", () => {
+  it("returns the decrypted pending iban and writes exactly one log entry", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue({
+      kind: "IBAN",
+      newValue: encryptSecret(IBAN),
+      member: { meepleId: "meeple-1" },
+    } as never);
+
+    const result = await revealPendingIbanChange(
+      "change-1",
+      "meeple-kassenwart",
+    );
+
+    expect(prismaMock.pendingChange.findUnique).toHaveBeenCalledWith({
+      where: { id: "change-1" },
+      select: { kind: true, newValue: true, member: { select: { meepleId: true } } },
+    });
+    expect(result).toEqual({ success: true, iban: IBAN });
+    expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
+      data: {
+        accessedByMeepleId: "meeple-kassenwart",
+        subjectMeepleId: "meeple-1",
+        kind: "SINGLE_REVEAL",
+      },
+    });
+  });
+
+  it("reports a missing or non-IBAN change without writing a log entry", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue(null);
+
+    const result = await revealPendingIbanChange(
+      "change-1",
+      "meeple-kassenwart",
+    );
+
+    expect(result).toEqual({ error: "Änderungsantrag nicht gefunden." });
+    expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
+  });
+
+  it("blocks the 21st call within 10 minutes for the same actor (#326)", async () => {
+    prismaMock.rateLimitAttempt.findUnique.mockResolvedValue({
+      id: "1",
+      key: "iban-reveal:meeple-kassenwart",
+      failCount: 20,
+      currentCooldownSecs: 0,
+      lastFailedAt: new Date(),
+      lastFailedIp: null,
+      manuallyLockedAt: null,
+    });
+
+    const result = await revealPendingIbanChange(
+      "change-1",
+      "meeple-kassenwart",
+    );
+
+    expect(result).toEqual({
+      error:
+        "Zu viele IBAN-Abrufe in kurzer Zeit. Bitte versuche es später erneut.",
+    });
+    expect(prismaMock.pendingChange.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
   });
 });
