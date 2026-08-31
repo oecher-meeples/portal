@@ -59,6 +59,13 @@ const DEMO_ROLE_ACCOUNTS = [
   password: process.env.SEED_DEMO_PASSWORD ?? "demo1234",
 }));
 
+/**
+ * #370: ein bereits existierender User bricht hier NICHT früh ab, sondern
+ * synct den Passwort-Hash auf den aktuell übergebenen Wert — sonst bleibt
+ * nach einer Passwort-Änderung in `.env.local` (z. B. `SEED_ADMIN_PASSWORD`)
+ * der alte Hash bestehen und der Login schlägt trotz "korrektem" Passwort
+ * fehl, ohne dass Rate-Limiting oder ein Code-Bug beteiligt wäre.
+ */
 async function upsertNeonAuthUser({
   email,
   password,
@@ -68,15 +75,23 @@ async function upsertNeonAuthUser({
   password: string;
   name: string;
 }) {
+  const hashedPassword = await hashPassword(password);
+
   const existing = await prisma.$queryRaw<{ id: string }[]>`
     SELECT id FROM neon_auth."user" WHERE email = ${email}
   `;
   if (existing.length > 0) {
-    console.log(`Neon-Auth-User "${email}" existiert bereits, überspringe.`);
-    return existing[0].id;
+    const userId = existing[0].id;
+    await prisma.$executeRaw`
+      UPDATE neon_auth."account"
+      SET password = ${hashedPassword}, "updatedAt" = now()
+      WHERE "userId" = ${userId}::uuid AND "providerId" = 'credential'
+    `;
+    console.log(
+      `Neon-Auth-User "${email}" existiert bereits, Passwort synchronisiert.`,
+    );
+    return userId;
   }
-
-  const hashedPassword = await hashPassword(password);
 
   const [user] = await prisma.$queryRaw<{ id: string }[]>`
     INSERT INTO neon_auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
