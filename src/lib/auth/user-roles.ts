@@ -25,7 +25,9 @@ export async function listMeepleRoleAssignments(
   const rows = await prisma.userRole.findMany({
     where: { neonAuthUserId },
     include: { role: { select: { name: true } } },
-    orderBy: { startsAt: "desc" },
+    // #391: kanonische Rollen-Reihenfolge statt Zuweisungsdatum, damit
+    // dieselbe Rollenkombination überall gleich sortiert erscheint.
+    orderBy: { role: { sortOrder: "asc" } },
   });
   return rows.map((row) => ({
     id: row.id,

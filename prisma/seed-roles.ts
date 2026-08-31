@@ -162,12 +162,17 @@ export async function seedPermissions() {
 }
 
 export async function seedRoles() {
-  for (const role of ROLES) {
+  for (const [sortOrder, role] of ROLES.entries()) {
     const isSystemRole = "isSystemRole" in role ? role.isSystemRole : false;
     await prisma.role.upsert({
       where: { name: role.name },
-      update: { description: role.description, isSystemRole },
-      create: { name: role.name, description: role.description, isSystemRole },
+      update: { description: role.description, isSystemRole, sortOrder },
+      create: {
+        name: role.name,
+        description: role.description,
+        isSystemRole,
+        sortOrder,
+      },
     });
 
     for (const permissionKey of role.permissionKeys) {

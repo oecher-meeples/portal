@@ -72,10 +72,12 @@ export default async function AdminMitgliederPage() {
     }),
     prisma.userRole.findMany({
       include: { role: { select: { id: true, name: true } } },
-      orderBy: { startsAt: "desc" },
+      // #391: kanonische Rollen-Reihenfolge statt Zuweisungsdatum, damit
+      // die Badges in mitglieder-table.tsx überall gleich sortiert erscheinen.
+      orderBy: { role: { sortOrder: "asc" } },
     }),
     prisma.role.findMany({
-      orderBy: { name: "asc" },
+      orderBy: { sortOrder: "asc" },
       include: { permissions: true },
     }),
     prisma.permission.findMany({ orderBy: { key: "asc" } }),
@@ -162,6 +164,7 @@ export default async function AdminMitgliederPage() {
         description: role.description,
         permissionIds: role.permissions.map((entry) => entry.permissionId),
         isSystemRole: role.isSystemRole,
+        sortOrder: role.sortOrder,
       }))}
       permissions={permissions.map((permission) => ({
         id: permission.id,

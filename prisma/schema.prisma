@@ -150,6 +150,10 @@ model Role {
   /// nur `members:manage` — unabhängig vom Konzept "Systemkonto"
   /// (`createSystemkonto()`, ein technisches Meeple ohne Person dahinter).
   isSystemRole Boolean          @default(false)
+  /// Kanonische, per Drag-and-Drop änderbare Anzeigereihenfolge (#391) —
+  /// reine Ordnungszahl, kein Verlauf. Backfill über die bisherige
+  /// `ROLES`-Array-Reihenfolge in prisma/seed-roles.ts.
+  sortOrder    Int              @default(0)
   permissions  RolePermission[]
   users        UserRole[]
 

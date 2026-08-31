@@ -8,6 +8,7 @@ import {
   updateRole as updateRoleRecord,
   deleteRole as deleteRoleRecord,
   setRolePermissions as setRolePermissionsRecord,
+  reorderRoles as reorderRolesRecord,
 } from "@/lib/auth/roles";
 import {
   assignMeepleRole as assignMeepleRoleRecord,
@@ -255,6 +256,16 @@ export async function setRolePermissions(
   await requireRolesManage();
 
   const result = await setRolePermissionsRecord(roleId, permissionIds);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function reorderRoles(roleIds: string[]) {
+  await requireRolesManage();
+
+  const result = await reorderRolesRecord(roleIds);
   if ("error" in result) return result;
 
   revalidatePath("/admin/mitglieder");

@@ -16,12 +16,14 @@ const createRoleRecordMock = vi.fn();
 const updateRoleRecordMock = vi.fn();
 const deleteRoleRecordMock = vi.fn();
 const setRolePermissionsRecordMock = vi.fn();
+const reorderRolesRecordMock = vi.fn();
 vi.mock("@/lib/auth/roles", () => ({
   createRole: (...args: unknown[]) => createRoleRecordMock(...args),
   updateRole: (...args: unknown[]) => updateRoleRecordMock(...args),
   deleteRole: (...args: unknown[]) => deleteRoleRecordMock(...args),
   setRolePermissions: (...args: unknown[]) =>
     setRolePermissionsRecordMock(...args),
+  reorderRoles: (...args: unknown[]) => reorderRolesRecordMock(...args),
 }));
 
 // The assignment rules themselves live in the lib layer and are tested in
@@ -41,6 +43,7 @@ const {
   createRole,
   deleteRole,
   removeMeepleRole,
+  reorderRoles,
   setRolePermissions,
   updateRole,
 } = await import("./actions");
@@ -55,6 +58,7 @@ beforeEach(() => {
   setRolePermissionsRecordMock.mockReset().mockResolvedValue({
     success: true,
   });
+  reorderRolesRecordMock.mockReset().mockResolvedValue({ success: true });
   assignMeepleRoleRecordMock.mockReset().mockResolvedValue({ success: true });
   removeMeepleRoleRecordMock.mockReset().mockResolvedValue({ success: true });
   listMeepleRoleAssignmentsMock.mockReset().mockResolvedValue([]);
@@ -233,5 +237,23 @@ describe("setRolePermissions", () => {
       error:
         "Diese Rolle gewährt Systemzugriff und behält deshalb immer alle Rechte — sie können nicht einzeln entzogen werden.",
     });
+  });
+});
+
+describe("reorderRoles (#391)", () => {
+  it("delegates to the shared role rules and revalidates on success", async () => {
+    expect(await reorderRoles(["role-1", "role-2"])).toEqual({
+      success: true,
+    });
+    expect(reorderRolesRecordMock).toHaveBeenCalledWith(["role-1", "role-2"]);
+  });
+
+  it("requires roles:manage, not just members:manage", async () => {
+    requirePermissionMock.mockClear();
+
+    await reorderRoles(["role-1"]);
+
+    expect(requirePermissionMock).toHaveBeenCalledWith("roles:manage");
+    expect(requirePermissionMock).not.toHaveBeenCalledWith("members:manage");
   });
 });

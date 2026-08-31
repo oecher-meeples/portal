@@ -37,6 +37,7 @@ const ROLE = {
   name: "Meeple",
   description: null,
   isSystemRole: false,
+  sortOrder: 0,
 };
 const MEMBER = {
   id: "member-1",
