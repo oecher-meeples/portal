@@ -3,13 +3,16 @@ import { EINSTELLUNGEN_PERMISSIONS } from "@/lib/utils/nav-config";
 import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { SettingsCard } from "@/components/feature/admin-settings/settings-card";
+import { InviteSettingsDialog } from "@/components/feature/admin-settings/invite-settings-dialog";
+import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export default async function AdminSettingsPage() {
   await requireAdminPermission(EINSTELLUNGEN_PERMISSIONS);
 
-  const [connection, storageUnitCount] = await Promise.all([
+  const [connection, storageUnitCount, defaultInviteDays] = await Promise.all([
     prisma.instagramConnection.findFirst(),
     prisma.storageUnit.count(),
+    getDefaultInviteDays(),
   ]);
 
   const modules = [
@@ -27,11 +30,6 @@ export default async function AdminSettingsPage() {
       href: "/admin/einheiten",
       count: storageUnitCount,
     },
-    {
-      title: "Einladungen",
-      description: "Gültigkeitsdauer für neue Einladungen festlegen.",
-      href: "/admin/einstellungen/einladungen",
-    },
   ];
 
   return (
@@ -41,6 +39,7 @@ export default async function AdminSettingsPage() {
         {modules.map((module) => (
           <SettingsCard key={module.href} {...module} />
         ))}
+        <InviteSettingsDialog defaultDays={defaultInviteDays} />
       </div>
     </div>
   );
