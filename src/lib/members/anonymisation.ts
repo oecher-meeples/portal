@@ -6,6 +6,7 @@ import {
   hasOpenHoldings,
 } from "@/lib/members/open-holdings";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 
 export type AnonymisationResult = { error: string } | { success: true };
 
@@ -71,7 +72,10 @@ export async function anonymiseMeepleStufe1(
     await tx.meeple.update({
       where: { id: meepleId },
       data: {
-        displayName: "(anonymisiert)",
+        // Gleicher Basisname wie das Sammelkonto "Anonymer Meeple" (#364) —
+        // für alle außer `games:manage` ununterscheidbar, siehe
+        // `anonymisedMeepleDisplayName()`.
+        displayName: ANONYMER_MEEPLE_NAME,
         bggUsername: null,
         bgaUsername: null,
         telegramHandle: null,
