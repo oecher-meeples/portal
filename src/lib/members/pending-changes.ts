@@ -323,6 +323,19 @@ export async function rejectPendingChange(
   return { success: true as const, memberId: change.memberId };
 }
 
+/** Offene Anträge genau eines Members und einer Art, für die Bereichs-Panels
+ * der Profilseite (#380 Stammdaten, #381 Bankverbindung) — geteilt statt pro
+ * Bereich dieselbe Query nachzubauen. */
+export async function listOpenPendingChangesForMember(
+  memberId: string,
+  kind: PendingChangeKind,
+) {
+  return prisma.pendingChange.findMany({
+    where: { memberId, kind, approvedAt: null, rejectedAt: null },
+    orderBy: { requestedAt: "asc" },
+  });
+}
+
 export async function listOpenPendingChanges() {
   return prisma.pendingChange.findMany({
     where: { approvedAt: null, rejectedAt: null },

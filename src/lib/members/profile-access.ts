@@ -39,6 +39,19 @@ export function canAccessMemberProfile(
   return context.isGuardianOfTarget;
 }
 
+/** Enger als `canAccessMemberProfile` (#381) — der Bankverbindungs-Bereich
+ * ist bewusst nicht für jeden mit Seitenzugriff sichtbar: ein Spielewart
+ * (`games:manage`) darf die Profilseite öffnen, aber keine Bankdaten sehen.
+ * Nicht `isAdmin`: `admin:access` allein ist keine der im Issue genannten
+ * Berechtigungen für diesen Bereich. */
+export function canViewBankSection(
+  target: { meepleId: string | null },
+  context: ProfileViewerContext,
+): boolean {
+  if (context.canReadBank || context.canManageMembers) return true;
+  return !!target.meepleId && target.meepleId === context.currentMeepleId;
+}
+
 /** Lädt alle für `canAccessMemberProfile` und die Bereichs-Sichtbarkeit
  * (#380 ff.) nötigen Berechtigungen für die aktuelle Session, bezogen auf
  * genau einen Ziel-`Member`. */

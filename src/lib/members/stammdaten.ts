@@ -1,7 +1,9 @@
 import "server-only";
 import { PendingChangeKind } from "@prisma/client";
-import { prisma } from "@/lib/utils/prisma";
-import type { StammdatenDiff } from "@/lib/members/pending-changes";
+import {
+  listOpenPendingChangesForMember,
+  type StammdatenDiff,
+} from "@/lib/members/pending-changes";
 import {
   STAMMDATEN_FIELD_LABELS,
   type StammdatenField,
@@ -10,15 +12,10 @@ import {
 /** Noch offene `MEMBER_STAMMDATEN`-Anträge genau eines Members, für die
  * Anzeige unterhalb des Stammdaten-Bereichs (#380, nur `admin:access`). */
 export async function listOpenStammdatenChanges(memberId: string) {
-  return prisma.pendingChange.findMany({
-    where: {
-      memberId,
-      kind: PendingChangeKind.MEMBER_STAMMDATEN,
-      approvedAt: null,
-      rejectedAt: null,
-    },
-    orderBy: { requestedAt: "asc" },
-  });
+  return listOpenPendingChangesForMember(
+    memberId,
+    PendingChangeKind.MEMBER_STAMMDATEN,
+  );
 }
 
 /** Menschenlesbare Zusammenfassung eines Stammdaten-Diffs für die

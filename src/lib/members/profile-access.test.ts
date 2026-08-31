@@ -13,7 +13,7 @@ vi.mock("@/lib/members/guardians", () => ({
   isGuardianOf: (...args: unknown[]) => isGuardianOfMock(...args),
 }));
 
-const { canAccessMemberProfile, loadProfileViewerContext } =
+const { canAccessMemberProfile, canViewBankSection, loadProfileViewerContext } =
   await import("./profile-access");
 
 function context(
@@ -85,6 +85,47 @@ describe("canAccessMemberProfile (#379)", () => {
       canAccessMemberProfile(
         { meepleId: null },
         context({ isGuardianOfTarget: true }),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("canViewBankSection (#381)", () => {
+  it("denies a Spielewart despite page access via games:manage", () => {
+    expect(
+      canViewBankSection(
+        { meepleId: "other" },
+        context({ canManageGames: true }),
+      ),
+    ).toBe(false);
+  });
+
+  it("denies admin:access alone", () => {
+    expect(
+      canViewBankSection({ meepleId: "other" }, context({ isAdmin: true })),
+    ).toBe(false);
+  });
+
+  it("grants access via bank:read", () => {
+    expect(
+      canViewBankSection({ meepleId: "other" }, context({ canReadBank: true })),
+    ).toBe(true);
+  });
+
+  it("grants access via members:manage", () => {
+    expect(
+      canViewBankSection(
+        { meepleId: "other" },
+        context({ canManageMembers: true }),
+      ),
+    ).toBe(true);
+  });
+
+  it("grants access to the profile's own meeple", () => {
+    expect(
+      canViewBankSection(
+        { meepleId: "meeple-1" },
+        context({ currentMeepleId: "meeple-1" }),
       ),
     ).toBe(true);
   });

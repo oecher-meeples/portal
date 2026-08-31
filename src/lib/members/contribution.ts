@@ -68,6 +68,21 @@ function decimalToNumber(value: number | Prisma.Decimal): number {
   return typeof value === "number" ? value : Number(value);
 }
 
+/** Ob ein Mitglied laut Alters-Kategorie ein MiniMeeple ist (#380/#381) —
+ * z. B. um Bankdaten auf der Profilseite komplett auszublenden
+ * (beitragsbefreit, keine IBAN nötig). Ein `selbstgewaehlterBeitrag`
+ * überstimmt die Alters-Kategorie wie bei `determineContribution()` — ein
+ * MiniMeeple mit individuellem Beitrag gilt dann nicht mehr als MiniMeeple. */
+export function isMiniMeeple(
+  member: {
+    birthDate: Date | null;
+    selbstgewaehlterBeitrag: number | Prisma.Decimal | null;
+  },
+  now: Date = new Date(),
+): boolean {
+  return determineContribution(member, now).category === "mini";
+}
+
 /**
  * Bestimmt die Beitragsart eines Vereinsmitglieds. `selbstgewaehlterBeitrag`
  * überstimmt immer die aus `birthDate` abgeleitete Alters-Kategorie (#328) —

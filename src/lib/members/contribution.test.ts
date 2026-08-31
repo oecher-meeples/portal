@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { determineContribution } from "./contribution";
+import { determineContribution, isMiniMeeple } from "./contribution";
 
 const NOW = new Date("2026-07-29T12:00:00Z");
 
@@ -100,5 +100,40 @@ describe("determineContribution", () => {
       amountEuros: 20,
       source: "selbstgewaehlterBeitrag",
     });
+  });
+});
+
+describe("isMiniMeeple (#380, #381)", () => {
+  it("is true under age 13", () => {
+    expect(
+      isMiniMeeple(
+        { birthDate: new Date("2015-01-01"), selbstgewaehlterBeitrag: null },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false at or above age 13", () => {
+    expect(
+      isMiniMeeple(
+        { birthDate: new Date("2010-01-01"), selbstgewaehlterBeitrag: null },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false once a chosen amount overrides the age category", () => {
+    expect(
+      isMiniMeeple(
+        { birthDate: new Date("2015-01-01"), selbstgewaehlterBeitrag: 5 },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false without a birth date", () => {
+    expect(
+      isMiniMeeple({ birthDate: null, selbstgewaehlterBeitrag: null }, NOW),
+    ).toBe(false);
   });
 });
