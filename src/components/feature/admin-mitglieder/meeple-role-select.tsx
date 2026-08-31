@@ -20,9 +20,9 @@ function isActive(assignment: MeepleRoleAssignment, now: Date) {
 /**
  * A Meeple can hold several roles at once (#335) — each assignment can be
  * removed independently (ends it now, history stays visible, see #264).
- * Adding a role is a plain "starts now, never ends" assignment; a term of
- * office with an explicit window isn't editable here (admin:access-Vorgabe,
- * bewusst kein UI-Feinschliff in Paket 1 — siehe Ausführungsplan Paket 6).
+ * Adding a role is a plain "starts now, never ends" assignment by default;
+ * with `admin:access` an explicit Amtszeit-Zeitfenster (Start-/Enddatum,
+ * #264/#352) can be set before picking the role.
  */
 export function MeepleRoleSelect({
   meepleId,
@@ -36,12 +36,15 @@ export function MeepleRoleSelect({
   roles: RoleOption[];
   /** Viewer hält `admin:access` (#353) — sonst bleiben Systemrollen
    * ("Ausgetreten"/"sysadmin") read-only sichtbar, aber nicht zuweisbar
-   * oder entfernbar. */
+   * oder entfernbar; auch das Amtszeit-Datumsfeld (#352) bleibt dann
+   * ausgeblendet. */
   canManageAdminAccess: boolean;
   /** Der seed-erzeugte Fallback-Admin (displayName "Admin") — Rollen bleiben fest. */
   protected?: boolean;
 }) {
   const [pendingRoleId, setPendingRoleId] = useState("");
+  const [windowStartsAt, setWindowStartsAt] = useState("");
+  const [windowEndsAt, setWindowEndsAt] = useState("");
   const { run, pending, error } = useAction();
   const now = new Date();
 
@@ -97,24 +100,66 @@ export function MeepleRoleSelect({
         })}
       </div>
       {assignableRoles.length > 0 && (
-        <select
-          value={pendingRoleId}
-          disabled={pending}
-          onChange={(event) => {
-            const roleId = event.target.value;
-            if (!roleId) return;
-            setPendingRoleId("");
-            run(() => assignMeepleRole(meepleId, roleId));
-          }}
-          className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
-        >
-          <option value="">+ Rolle hinzufügen …</option>
-          {assignableRoles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
+        <>
+          {canManageAdminAccess && (
+            <div className="flex items-center gap-1 text-xs">
+              <label className="text-muted-foreground">
+                Amtszeit (optional):
+              </label>
+              <input
+                type="date"
+                value={windowStartsAt}
+                disabled={pending}
+                onChange={(event) => setWindowStartsAt(event.target.value)}
+                className="border-input h-7 rounded-md border bg-transparent px-1.5 disabled:opacity-60"
+                aria-label="Amtszeit-Start"
+              />
+              <span className="text-muted-foreground">–</span>
+              <input
+                type="date"
+                value={windowEndsAt}
+                disabled={pending}
+                onChange={(event) => setWindowEndsAt(event.target.value)}
+                className="border-input h-7 rounded-md border bg-transparent px-1.5 disabled:opacity-60"
+                aria-label="Amtszeit-Ende"
+              />
+            </div>
+          )}
+          <select
+            value={pendingRoleId}
+            disabled={pending}
+            onChange={(event) => {
+              const roleId = event.target.value;
+              if (!roleId) return;
+              setPendingRoleId("");
+              const window =
+                canManageAdminAccess && (windowStartsAt || windowEndsAt)
+                  ? {
+                      startsAt: windowStartsAt
+                        ? new Date(windowStartsAt)
+                        : new Date(),
+                      endsAt: windowEndsAt ? new Date(windowEndsAt) : null,
+                    }
+                  : undefined;
+              run(() => assignMeepleRole(meepleId, roleId, window)).then(
+                (succeeded) => {
+                  if (succeeded) {
+                    setWindowStartsAt("");
+                    setWindowEndsAt("");
+                  }
+                },
+              );
+            }}
+            className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
+          >
+            <option value="">+ Rolle hinzufügen …</option>
+            {assignableRoles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </>
       )}
       {expired.length > 0 && (
         <details className="text-muted-foreground text-xs">
