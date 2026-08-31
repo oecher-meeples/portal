@@ -28,6 +28,7 @@ import {
   type RoleOption,
 } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import { MeepleEditDialog } from "@/components/feature/admin-mitglieder/meeple-edit-dialog";
+import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
 import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
@@ -55,11 +56,13 @@ export function MitgliederTable({
   roles,
   canReadBankData,
   canManageAdminAccess,
+  canCreateSystemkonto,
 }: {
   meeples: MeepleRow[];
   roles: RoleOption[];
   canReadBankData: boolean;
   canManageAdminAccess: boolean;
+  canCreateSystemkonto: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] =
@@ -85,7 +88,7 @@ export function MitgliederTable({
       <AccordionItem value="mitglieder" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">
-            <span className="font-serif text-lg font-bold">Mitglieder</span>
+            <span className="font-serif text-lg font-bold">Benutzer</span>
             <Badge>{meeples.length}</Badge>
           </span>
         </AccordionTrigger>
@@ -119,6 +122,11 @@ export function MitgliederTable({
                   </Button>
                 ))}
               </div>
+              {canCreateSystemkonto && (
+                <div className="ml-auto">
+                  <SystemkontoDialog />
+                </div>
+              )}
             </div>
 
             <div className="overflow-hidden rounded-lg border">
@@ -141,7 +149,7 @@ export function MitgliederTable({
                         colSpan={7}
                         className="text-muted-foreground py-6 text-center"
                       >
-                        Keine Mitglieder gefunden.
+                        Keine Benutzer gefunden.
                       </TableCell>
                     </TableRow>
                   )}

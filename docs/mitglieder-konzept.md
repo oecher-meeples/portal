@@ -55,7 +55,7 @@ Die IBAN wandert vollständig von Meeple zu Vereinsmitglied (siehe [3.2](#32-ban
 
 **Ausnahmen von der Vereinsmitglied-Referenz** — bewusst zugelassen:
 
-- **Systemkonto**: Meeple ohne Vereinsmitglied-Referenz, aber mit Login. Für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` über einen Button "Systemkonto anlegen" oberhalb der Meeple-Tabelle — legt `Meeple` **und** den Neon-Auth-User in einem Schritt an, kein Einladungs-Umweg (Details in [2.2](#22-systemkonto-anlegen)).
+- **Systemkonto**: Meeple ohne Vereinsmitglied-Referenz, aber mit Login. Für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` über einen Button "Systemkonto anlegen" im Meeple-/Benutzer-Akkordeon-Panel — legt `Meeple` **und** den Neon-Auth-User in einem Schritt an, kein Einladungs-Umweg (Details in [2.2](#22-systemkonto-anlegen)).
 - **Anonymes Konto**: Meeple ohne Vereinsmitglied-Referenz *und* ohne Login. Entsteht ausschließlich durch harte Anonymisierung (Stufe 2/3, siehe [4](#4-anonymisierung-3-stufen)) und dient nur der lesbaren Historie (Aufenthalte, Gesuche). Einbahnstraße — ein anonymes Konto bekommt nie wieder ein Login. Erscheint deshalb in keiner Auswahlliste/keinem Formular mehr, in dem ein Meeple ausgewählt werden kann (Filter auf `anonymizedAt: null`).
   Ein einziges, dauerhaftes **Sammelkonto "Anonymer Meeple"** ist ein Sonderfall davon: kein Login, keine Vereinsmitglied-Referenz, aber bewusst als **Platzhalter für ungeklärte externe Interaktionspartner** angelegt (nicht aus einer echten Anonymisierung entstanden, kein `anonymizedAt`). Trägt denselben generischen Displaynamen wie echte anonymisierte Alt-Meeples — das ist gewollt (zusätzliche Anonymität für ausgeschiedene Mitglieder): für jeden außer `games:manage` sind beide identisch "Anonymer Meeple", nicht unterscheidbar (#364), und beide ohnehin aus jeder Auswahlliste ausgeblendet. Nur `games:manage` sieht bei einem **echten** anonymisierten Alt-Meeple zusätzlich einen 6-stelligen Hex-Suffix, aus dessen Meeple-ID abgeleitet (kein Jahresbezug, kein Zähler — bewusst keine Nummerierung, siehe Kollisionsanalyse im Issue), z. B. "Anonymer Meeple #a3f9c2" — für die Klärung ungeklärter Ludothek-Übergaben (siehe [5](#5-spiel-ausleihe)). Das Sammelkonto selbst bekommt nie einen Suffix, unabhängig vom Betrachter.
 
@@ -75,7 +75,7 @@ Wird aus einem `Vereinsmitglied`-Datensatz heraus erstellt ("Einladung erstellen
 
 **Kein Invite-Mechanismus** — das Systemkonto ist beim Anlegen bereits vollständig fertig, die Einladung würde nur eine unnötige Zwischenstufe schaffen (in der ein Meeple ohne Vereinsmitglied und ohne Login strukturell nicht von einem Anonymen Konto unterscheidbar wäre).
 
-Button oberhalb der Meeple-Tabelle, erfordert `admin:access`. Popup fragt E-Mail-Adresse **und** Displayname ab. Der Server-Vorgang legt in einem Schritt an:
+Button im Meeple-/Benutzer-Akkordeon-Panel (#348), erfordert `admin:access`. Popup fragt E-Mail-Adresse **und** Displayname ab. Der Server-Vorgang legt in einem Schritt an:
 
 1. den Neon-Auth-User über `auth.admin.createUser({ email, name })` (offizielle Admin-API von `@neondatabase/auth`/better-auth — kein Raw-SQL wie im Seed-Script),
 2. das `Meeple` mit dem vorgegebenen Displaynamen, sofort verknüpft mit dem neuen `neonAuthUserId`, ohne Vereinsmitglied-Referenz,
@@ -175,7 +175,7 @@ Die Infocard "Aktive Mitglieder" gliedert zusätzlich nach Beitragsart-Kategorie
 
 **Vereinsmitglieder** (default auf): Mitgliedsnummer, voller Name, Beitrittsdatum, Austrittsdatum, Zustand, **Beitragsart**, Link zum Meeple-Profil *oder* Einladen/Verlängern-Button (erfordert `invites:manage`), Button "Kündigung vermerken"/"Kündigung widerrufen", Button "Anonymisieren".
 
-**Meeple-Tabelle** (default zu): Displayname, Rollen (Badges), Status (Aktives Mitglied, Gekündigt, Anonymisiert), Beigetreten am, Button "Kündigung vermerken". Oberhalb: "Systemkonto anlegen"-Button (`admin:access`, siehe [2.2](#22-systemkonto-anlegen)).
+**Meeple-Tabelle** (default zu): Displayname, Rollen (Badges), Status (Aktives Mitglied, Gekündigt, Anonymisiert), Beigetreten am, Button "Kündigung vermerken". Im Panel: "Systemkonto anlegen"-Button (`admin:access`, siehe [2.2](#22-systemkonto-anlegen)).
 
 ### 6.2 `/admin/einstellungen`
 

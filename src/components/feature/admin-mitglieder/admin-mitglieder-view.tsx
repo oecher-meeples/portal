@@ -16,7 +16,6 @@ import {
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
-import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
 import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import {
   RoleManagementSection,
@@ -298,17 +297,12 @@ export function AdminMitgliederView({
         defaultInviteDays={defaultInviteDays}
       />
 
-      {canCreateSystemkonto && (
-        <div className="flex justify-end">
-          <SystemkontoDialog />
-        </div>
-      )}
-
       <MitgliederTable
         meeples={meeples}
         roles={roles}
         canReadBankData={canReadBankData}
         canManageAdminAccess={canCreateSystemkonto}
+        canCreateSystemkonto={canCreateSystemkonto}
       />
 
       <InvitesSection
