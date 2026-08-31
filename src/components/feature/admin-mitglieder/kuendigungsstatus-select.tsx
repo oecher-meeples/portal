@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { nextTurnOfTheYear } from "@/lib/members/membership-state";
+import { computeMembershipEndsAt } from "@/lib/members/membership-state";
 import type { MembershipState } from "@/lib/members/membership-state";
 import { useAction } from "@/components/ui/use-action";
 import {
@@ -12,7 +12,8 @@ import {
 type EditableState = "aktiv" | "gekuendigt";
 
 const STATE_LABELS: Record<MembershipState, string> = {
-  aktiv: "Aktiv",
+  unregistriert: "Aktiv",
+  registriert: "Aktiv",
   gekuendigt: "Gekündigt",
   ausgetreten: "Ausgetreten",
   anonymisiert: "Anonymisiert",
@@ -53,13 +54,13 @@ export function KuendigungsstatusSelect({
           setValue(next);
           run(() =>
             next === "gekuendigt"
-              ? recordResignation(meepleId, nextTurnOfTheYear())
+              ? recordResignation(meepleId, computeMembershipEndsAt())
               : revokeResignation(meepleId),
           );
         }}
         className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
       >
-        <option value="aktiv">{STATE_LABELS.aktiv}</option>
+        <option value="aktiv">{STATE_LABELS.registriert}</option>
         <option value="gekuendigt">{STATE_LABELS.gekuendigt}</option>
       </select>
       {error && <span className="text-destructive text-xs">{error}</span>}
