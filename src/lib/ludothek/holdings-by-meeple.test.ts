@@ -3,7 +3,8 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getActiveHoldingsByMeeple } = await import("./holdings-by-meeple");
+const { getActiveHoldingsByMeeple, getActiveHoldingsForMember } =
+  await import("./holdings-by-meeple");
 
 function member(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -147,5 +148,48 @@ describe("getActiveHoldingsByMeeple", () => {
     const result = await getActiveHoldingsByMeeple();
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("getActiveHoldingsForMember (#383)", () => {
+  it("scopes the query to a single member and its open holdings", async () => {
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      {
+        gameCopyId: "copy-1",
+        startedAt: new Date("2026-08-01"),
+        gameCopy: {
+          condition: null,
+          ruleBookLanguages: [],
+          inventoryNumber: null,
+          boardGame: { id: "bg-ark-nova", title: "Ark Nova" },
+        },
+      },
+    ] as never);
+
+    const result = await getActiveHoldingsForMember("member-1");
+
+    expect(prismaMock.gameHolding.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { vereinsmitgliedId: "member-1", endedAt: null },
+      }),
+    );
+    expect(result).toEqual([
+      {
+        gameCopyId: "copy-1",
+        boardGameId: "bg-ark-nova",
+        boardGameTitle: "Ark Nova",
+        startedAt: new Date("2026-08-01"),
+        locationChain: "",
+        condition: null,
+        ruleBookLanguages: [],
+        inventoryNumber: null,
+      },
+    ]);
+  });
+
+  it("returns an empty list without open holdings", async () => {
+    prismaMock.gameHolding.findMany.mockResolvedValue([]);
+
+    expect(await getActiveHoldingsForMember("member-1")).toEqual([]);
   });
 });

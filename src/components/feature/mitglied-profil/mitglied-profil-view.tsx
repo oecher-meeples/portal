@@ -7,6 +7,7 @@ import {
 } from "@/lib/members/profile-access";
 import { isMiniMeeple } from "@/lib/members/contribution";
 import { listOpenPendingChangesForMember } from "@/lib/members/pending-changes";
+import { getActiveHoldingsForMember } from "@/lib/ludothek/holdings-by-meeple";
 import {
   formatStammdatenDiffSummary,
   listOpenStammdatenChanges,
@@ -14,6 +15,7 @@ import {
 import { decryptSecret, ibanLast4, maskIban } from "@/lib/utils/crypto";
 import { StammdatenSection } from "@/components/feature/mitglied-profil/stammdaten-section";
 import { BankverbindungSection } from "@/components/feature/mitglied-profil/bankverbindung-section";
+import { VereinsspieleSection } from "@/components/feature/mitglied-profil/vereinsspiele-section";
 import {
   MeepleDatenSection,
   type MeepleDatenMeeple,
@@ -44,6 +46,12 @@ export async function MitgliedProfilView({
     bankSectionVisible && viewer.canReadBank
       ? await listOpenPendingChangesForMember(member.id, PendingChangeKind.IBAN)
       : [];
+
+  const canViewVereinsspiele =
+    viewer.canManageGames || isSelf || viewer.isGuardianOfTarget;
+  const holdings = canViewVereinsspiele
+    ? await getActiveHoldingsForMember(member.id)
+    : [];
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-8">
@@ -92,6 +100,8 @@ export async function MitgliedProfilView({
           }))}
         />
       )}
+
+      {canViewVereinsspiele && <VereinsspieleSection holdings={holdings} />}
 
       {member.meeple && (
         <MeepleDatenSection

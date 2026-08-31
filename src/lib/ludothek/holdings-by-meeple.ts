@@ -120,3 +120,38 @@ export async function countActiveMeepleHoldings(): Promise<number> {
     where: { vereinsmitgliedId: { not: null }, endedAt: null },
   });
 }
+
+/** Aktive Ausleihen genau eines Vereinsmitglieds, für den
+ * Vereinsspiele-Bereich der Profilseite (#383) — dieselbe Zeilenform wie
+ * {@link getActiveHoldingsByMeeple}, nur schon auf ein Mitglied gefiltert. */
+export async function getActiveHoldingsForMember(
+  memberId: string,
+): Promise<ActiveMeepleHolding[]> {
+  const holdings = await prisma.gameHolding.findMany({
+    where: { vereinsmitgliedId: memberId, endedAt: null },
+    orderBy: { startedAt: "asc" },
+    select: {
+      gameCopyId: true,
+      startedAt: true,
+      gameCopy: {
+        select: {
+          condition: true,
+          ruleBookLanguages: true,
+          inventoryNumber: true,
+          boardGame: { select: { id: true, title: true } },
+        },
+      },
+    },
+  });
+
+  return holdings.map((holding) => ({
+    gameCopyId: holding.gameCopyId,
+    boardGameId: holding.gameCopy.boardGame.id,
+    boardGameTitle: holding.gameCopy.boardGame.title,
+    startedAt: holding.startedAt,
+    locationChain: "",
+    condition: holding.gameCopy.condition,
+    ruleBookLanguages: holding.gameCopy.ruleBookLanguages,
+    inventoryNumber: holding.gameCopy.inventoryNumber,
+  }));
+}
