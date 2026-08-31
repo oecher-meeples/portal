@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PrivateCollectionCard } from "@/components/feature/profil/private-collection-card";
+import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
 
 afterEach(() => {

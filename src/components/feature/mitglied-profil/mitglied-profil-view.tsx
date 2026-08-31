@@ -9,6 +9,13 @@ import { isMiniMeeple } from "@/lib/members/contribution";
 import { listOpenPendingChangesForMember } from "@/lib/members/pending-changes";
 import { getActiveHoldingsForMember } from "@/lib/ludothek/holdings-by-meeple";
 import {
+  canForceImport,
+  getImportCooldownEndsAt,
+  getOwnPrivateCollection,
+} from "@/lib/ludothek/private-collection";
+import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
+import { PrivateSpieleSection } from "@/components/feature/mitglied-profil/private-spiele-section";
+import {
   formatStammdatenDiffSummary,
   listOpenStammdatenChanges,
 } from "@/lib/members/stammdaten";
@@ -29,7 +36,14 @@ export async function MitgliedProfilView({
   viewer,
 }: {
   member: Member & {
-    meeple: (MeepleDatenMeeple & { displayName: string }) | null;
+    meeple:
+      | (MeepleDatenMeeple & {
+          displayName: string;
+          neonAuthUserId: string | null;
+          privateCollectionVisible: boolean;
+          privateCollectionSyncedAt: Date | null;
+        })
+      | null;
   };
   viewer: ProfileViewerContext;
 }) {
@@ -52,6 +66,15 @@ export async function MitgliedProfilView({
   const holdings = canViewVereinsspiele
     ? await getActiveHoldingsForMember(member.id)
     : [];
+
+  const ownPrivateCollection =
+    isSelf && member.meeple
+      ? {
+          entries: await getOwnPrivateCollection(member.meeple.id),
+          cooldownEndsAt: await getImportCooldownEndsAt(member.meeple),
+          canForceImport: await canForceImport(member.meeple.neonAuthUserId),
+        }
+      : null;
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-8">
@@ -111,6 +134,19 @@ export async function MitgliedProfilView({
             member.meeple.shareAddress || isSelf || viewer.canManageMembers
           }
         />
+      )}
+
+      {ownPrivateCollection && member.meeple && (
+        <PrivateCollectionCard
+          bggUsername={member.meeple.bggUsername}
+          entries={ownPrivateCollection.entries}
+          cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
+          canForceImport={ownPrivateCollection.canForceImport}
+          visibleToOthers={member.meeple.privateCollectionVisible}
+        />
+      )}
+      {!isSelf && member.meeple?.privateCollectionVisible && (
+        <PrivateSpieleSection meepleId={member.meeple.id} />
       )}
     </div>
   );

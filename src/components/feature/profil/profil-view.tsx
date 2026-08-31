@@ -6,7 +6,7 @@ import type { MembershipState } from "@/lib/members/meeples";
 import { BankDetailsForm } from "@/components/feature/profil/bank-details-form";
 import { MemberEmailChangeDialog } from "@/components/feature/profil/member-email-change-dialog";
 import { ProfileDetailsForm } from "@/components/feature/profil/profile-details-form";
-import { PrivateCollectionCard } from "@/components/feature/profil/private-collection-card";
+import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import { ResignMembershipPanel } from "@/components/feature/profil/resign-membership-panel";
 import { DataExportPanel } from "@/components/feature/profil/data-export-panel";
 import { DeletionRequestPanel } from "@/components/feature/profil/deletion-request-panel";
