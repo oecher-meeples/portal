@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PendingChangeKind } from "@prisma/client";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { decryptSecret, encryptSecret } from "@/lib/utils/crypto";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -84,10 +85,22 @@ describe("requestIbanChange", () => {
       data: {
         memberId: "member-1",
         kind: PendingChangeKind.IBAN,
-        newValue: "DE89370400440532013000",
+        newValue: expect.any(String),
         newAccountHolder: "Lea Beispiel",
       },
     });
+  });
+
+  it("never stores newValue as plaintext (#357)", async () => {
+    await requestIbanChange("member-1", {
+      accountHolder: "Lea Beispiel",
+      iban: IBAN,
+    });
+
+    const stored = prismaMock.pendingChange.create.mock.calls[0][0].data
+      .newValue as string;
+    expect(stored).not.toBe("DE89370400440532013000");
+    expect(decryptSecret(stored)).toBe("DE89370400440532013000");
   });
 });
 
@@ -220,12 +233,13 @@ describe("approvePendingChange", () => {
     expect(result.error).toBeDefined();
   });
 
-  it("applies an IBAN change and marks it approved", async () => {
+  it("applies an IBAN change and marks it approved (#357: newValue already encrypted)", async () => {
+    const encryptedIban = encryptSecret("DE89370400440532013000");
     prismaMock.pendingChange.findUnique.mockResolvedValue({
       id: "pc-1",
       memberId: "member-1",
       kind: PendingChangeKind.IBAN,
-      newValue: "DE89370400440532013000",
+      newValue: encryptedIban,
       newAccountHolder: "Lea Beispiel",
       approvedAt: null,
       rejectedAt: null,
@@ -237,7 +251,11 @@ describe("approvePendingChange", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { id: "member-1" },
-      data: expect.objectContaining({ accountHolder: "Lea Beispiel" }),
+      data: {
+        accountHolder: "Lea Beispiel",
+        ibanEncrypted: encryptedIban,
+        ibanLast4: "3000",
+      },
     });
     expect(prismaMock.pendingChange.update).toHaveBeenCalledWith({
       where: { id: "pc-1" },

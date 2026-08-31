@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { PendingChangeKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import {
+  decryptSecret,
   encryptSecret,
   ibanLast4,
   isValidIban,
@@ -63,7 +64,9 @@ export async function requestIbanChange(
     data: {
       memberId,
       kind: PendingChangeKind.IBAN,
-      newValue: normalised,
+      // Verschlüsselt wie Member.ibanEncrypted (#357) — vorher lag die neue
+      // IBAN zwischen Antragstellung und Kassenwart-Freigabe im Klartext.
+      newValue: encryptSecret(normalised),
       newAccountHolder: trimmedHolder,
     },
   });
@@ -201,12 +204,14 @@ export async function approvePendingChange(
 
   await prisma.$transaction(async (tx) => {
     if (change.kind === PendingChangeKind.IBAN) {
+      // `newValue` ist seit #357 bereits verschlüsselt (wie
+      // `Member.ibanEncrypted`) — nur für `ibanLast4` kurz entschlüsseln.
       await tx.member.update({
         where: { id: change.memberId },
         data: {
           accountHolder: change.newAccountHolder,
-          ibanEncrypted: encryptSecret(change.newValue),
-          ibanLast4: ibanLast4(change.newValue),
+          ibanEncrypted: change.newValue,
+          ibanLast4: ibanLast4(decryptSecret(change.newValue)),
         },
       });
     } else {
