@@ -54,10 +54,12 @@ export function MitgliederTable({
   meeples,
   roles,
   canReadBankData,
+  canManageAdminAccess,
 }: {
   meeples: MeepleRow[];
   roles: RoleOption[];
   canReadBankData: boolean;
+  canManageAdminAccess: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] =
@@ -150,6 +152,7 @@ export function MitgliederTable({
                           meeple={meeple}
                           roles={roles}
                           canReadBankData={canReadBankData}
+                          canManageAdminAccess={canManageAdminAccess}
                         />
                       </TableCell>
                       <TableCell className="font-mono">
@@ -170,6 +173,7 @@ export function MitgliederTable({
                             meepleId={meeple.id}
                             assignments={meeple.roleAssignments}
                             roles={roles}
+                            canManageAdminAccess={canManageAdminAccess}
                             protected={meeple.displayName === "Admin"}
                           />
                         ) : (

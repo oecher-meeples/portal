@@ -146,6 +146,7 @@ export default async function AdminMitgliederPage() {
         name: role.name,
         description: role.description,
         permissionIds: role.permissions.map((entry) => entry.permissionId),
+        isSystemRole: role.isSystemRole,
       }))}
       permissions={permissions.map((permission) => ({
         id: permission.id,

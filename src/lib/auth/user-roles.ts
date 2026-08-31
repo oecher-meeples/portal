@@ -77,24 +77,83 @@ export async function assignMeepleRole(
   return { success: true };
 }
 
+const ADMIN_ACCESS_PERMISSION_KEY = "admin:access";
+
+/** True if the given active-assignment window is currently active. */
+function isActiveWindow(endsAt: Date | null, now: Date): boolean {
+  return !endsAt || endsAt > now;
+}
+
+/** Does this neonAuthUserId hold an active admin:access grant through any
+ * assignment other than `excludingUserRoleId` (#354)? */
+async function hasOtherActiveAdminAccess(
+  neonAuthUserId: string,
+  excludingUserRoleId: string,
+  now: Date,
+): Promise<boolean> {
+  const assignments = await prisma.userRole.findMany({
+    where: { neonAuthUserId, id: { not: excludingUserRoleId } },
+    select: {
+      endsAt: true,
+      role: {
+        select: { permissions: { select: { permission: { select: { key: true } } } } },
+      },
+    },
+  });
+  return assignments.some(
+    (a) =>
+      isActiveWindow(a.endsAt, now) &&
+      a.role.permissions.some((p) => p.permission.key === ADMIN_ACCESS_PERMISSION_KEY),
+  );
+}
+
 /**
  * Ends a role assignment now rather than deleting it — an expired
  * assignment stays visible in the audit/history view (#264), it just no
  * longer counts as active. Does not check permissions — that is the
  * caller's job.
+ *
+ * `actorNeonAuthUserId` is used only for the self-lockout guard (#354): an
+ * actor may not remove their own currently-active admin:access-granting
+ * assignment if it would leave them with no other active admin:access
+ * grant. Other admins may still remove each other's admin:access freely —
+ * only self-removal of the *last* one is blocked.
  */
 export async function removeMeepleRole(
   userRoleId: string,
+  actorNeonAuthUserId: string,
 ): Promise<UserRoleActionResult> {
   const assignment = await prisma.userRole.findUnique({
     where: { id: userRoleId },
+    include: {
+      role: {
+        select: { permissions: { select: { permission: { select: { key: true } } } } },
+      },
+    },
   });
   if (!assignment) {
     return { error: "Rollenzuweisung nicht gefunden." };
   }
 
   const now = new Date();
-  if (!assignment.endsAt || assignment.endsAt > now) {
+  const isActive = isActiveWindow(assignment.endsAt, now);
+  const grantsAdminAccess = assignment.role.permissions.some(
+    (p) => p.permission.key === ADMIN_ACCESS_PERMISSION_KEY,
+  );
+
+  if (
+    isActive &&
+    grantsAdminAccess &&
+    assignment.neonAuthUserId === actorNeonAuthUserId &&
+    !(await hasOtherActiveAdminAccess(actorNeonAuthUserId, userRoleId, now))
+  ) {
+    return {
+      error:
+        "Du kannst dir deine letzte aktive admin:access-Rollenzuweisung nicht selbst entziehen.",
+    };
+  }
+
+  if (isActive) {
     await prisma.userRole.update({
       where: { id: userRoleId },
       data: { endsAt: now },

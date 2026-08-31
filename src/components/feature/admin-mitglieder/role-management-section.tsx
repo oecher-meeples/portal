@@ -28,6 +28,9 @@ export type RoleManagementRow = {
   name: string;
   description: string | null;
   permissionIds: string[];
+  /** Systemrolle (#353) — Zuweisen/Entfernen erfordert admin:access statt
+   * nur members:manage, s. `MeepleRoleSelect`. */
+  isSystemRole: boolean;
 };
 
 /** Muss zum in prisma/seed-roles.ts gepflegten Permission-Key passen. */

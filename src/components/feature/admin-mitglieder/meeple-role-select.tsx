@@ -9,7 +9,7 @@ import {
 import type { MeepleRoleAssignment } from "@/lib/auth/user-roles";
 import { formatDatePlain } from "@/lib/utils/format";
 
-export type RoleOption = { id: string; name: string };
+export type RoleOption = { id: string; name: string; isSystemRole: boolean };
 
 function isActive(assignment: MeepleRoleAssignment, now: Date) {
   const startsAt = new Date(assignment.startsAt);
@@ -28,11 +28,16 @@ export function MeepleRoleSelect({
   meepleId,
   assignments,
   roles,
+  canManageAdminAccess,
   protected: isProtected = false,
 }: {
   meepleId: string;
   assignments: MeepleRoleAssignment[];
   roles: RoleOption[];
+  /** Viewer hält `admin:access` (#353) — sonst bleiben Systemrollen
+   * ("Ausgetreten"/"sysadmin") read-only sichtbar, aber nicht zuweisbar
+   * oder entfernbar. */
+  canManageAdminAccess: boolean;
   /** Der seed-erzeugte Fallback-Admin (displayName "Admin") — Rollen bleiben fest. */
   protected?: boolean;
 }) {
@@ -43,7 +48,12 @@ export function MeepleRoleSelect({
   const active = assignments.filter((a) => isActive(a, now));
   const expired = assignments.filter((a) => !isActive(a, now));
   const activeRoleIds = new Set(active.map((a) => a.roleId));
-  const assignableRoles = roles.filter((role) => !activeRoleIds.has(role.id));
+  const roleById = new Map(roles.map((role) => [role.id, role]));
+  const assignableRoles = roles.filter(
+    (role) =>
+      !activeRoleIds.has(role.id) &&
+      (canManageAdminAccess || !role.isSystemRole),
+  );
 
   if (isProtected) {
     return (
@@ -62,23 +72,29 @@ export function MeepleRoleSelect({
         {active.length === 0 && (
           <span className="text-muted-foreground text-sm">— keine Rolle —</span>
         )}
-        {active.map((assignment) => (
-          <span
-            key={assignment.id}
-            className="border-input inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-          >
-            {assignment.roleName}
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => run(() => removeMeepleRole(assignment.id))}
-              className="text-muted-foreground hover:text-destructive disabled:opacity-60"
-              aria-label={`Rolle ${assignment.roleName} entfernen`}
+        {active.map((assignment) => {
+          const canRemove =
+            canManageAdminAccess || !roleById.get(assignment.roleId)?.isSystemRole;
+          return (
+            <span
+              key={assignment.id}
+              className="border-input inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
             >
-              ×
-            </button>
-          </span>
-        ))}
+              {assignment.roleName}
+              {canRemove && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run(() => removeMeepleRole(assignment.id))}
+                  className="text-muted-foreground hover:text-destructive disabled:opacity-60"
+                  aria-label={`Rolle ${assignment.roleName} entfernen`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          );
+        })}
       </div>
       {assignableRoles.length > 0 && (
         <select

@@ -160,16 +160,25 @@ export async function sendSelbstauskunft(meepleId: string) {
  * replacing the set. A `window` (explicit startsAt/endsAt, a term of office
  * per #264) requires admin:access; a plain assignment (starts now, never
  * ends) only requires members:manage, same as the old single-role setter.
+ * A **Systemrolle** (#353, e.g. "Ausgetreten"/"sysadmin") always requires
+ * admin:access, window or not — `members:manage` alone may never assign one.
  */
 export async function assignMeepleRole(
   meepleId: string,
   roleId: string,
   window?: { startsAt: Date; endsAt: Date | null },
 ) {
-  if (window) {
+  // Base gate first, before the DB read decides whether to escalate — a
+  // caller without any role-management permission at all must never reach
+  // the escalation check (and its own DB read) in the first place.
+  await requireMembersManage();
+
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { id: roleId },
+    select: { isSystemRole: true },
+  });
+  if (window || role.isSystemRole) {
     await requireAdminAccess();
-  } else {
-    await requireMembersManage();
   }
 
   const result = await assignMeepleRoleRecord(meepleId, roleId, window);
@@ -179,11 +188,20 @@ export async function assignMeepleRole(
   return { success: true as const };
 }
 
-/** Beendet eine Rollenzuweisung ab jetzt (Historie bleibt erhalten, siehe #264). */
+/** Beendet eine Rollenzuweisung ab jetzt (Historie bleibt erhalten, siehe #264).
+ * Systemrollen (#353) erfordern admin:access statt nur members:manage. */
 export async function removeMeepleRole(userRoleId: string) {
-  await requireMembersManage();
+  const actor = await requireMembersManage();
 
-  const result = await removeMeepleRoleRecord(userRoleId);
+  const assignment = await prisma.userRole.findUniqueOrThrow({
+    where: { id: userRoleId },
+    select: { role: { select: { isSystemRole: true } } },
+  });
+  if (assignment.role.isSystemRole) {
+    await requireAdminAccess();
+  }
+
+  const result = await removeMeepleRoleRecord(userRoleId, actor.id);
   if ("error" in result) return result;
 
   revalidatePath("/admin/mitglieder");

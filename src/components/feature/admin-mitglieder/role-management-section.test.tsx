@@ -45,12 +45,14 @@ const ROLES = [
     name: "Vorstand",
     description: "Leitung des Vereins",
     permissionIds: ["perm-manage"],
+    isSystemRole: false,
   },
   {
     id: "role-admin",
     name: "Admin",
     description: null,
     permissionIds: ["perm-manage", "perm-admin"],
+    isSystemRole: false,
   },
 ];
 

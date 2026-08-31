@@ -39,10 +39,12 @@ export function MeepleEditDialog({
   meeple,
   roles,
   canReadBankData,
+  canManageAdminAccess,
 }: {
   meeple: MeepleRow;
   roles: RoleOption[];
   canReadBankData: boolean;
+  canManageAdminAccess: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [memberNumber, setMemberNumberValue] = useState(
@@ -149,6 +151,7 @@ export function MeepleEditDialog({
                 meepleId={meeple.id}
                 assignments={meeple.roleAssignments}
                 roles={roles}
+                canManageAdminAccess={canManageAdminAccess}
               />
             ) : (
               <span className="text-muted-foreground text-sm">Kein Konto</span>

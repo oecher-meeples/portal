@@ -55,5 +55,7 @@ export async function removeAusgetretenRole(meepleId: string) {
   });
   if (!active) return;
 
-  await removeMeepleRole(active.id);
+  // "Ausgetreten" never grants admin:access, so the self-lockout guard in
+  // removeMeepleRole() is a no-op here regardless of the actor id passed.
+  await removeMeepleRole(active.id, meeple.neonAuthUserId);
 }

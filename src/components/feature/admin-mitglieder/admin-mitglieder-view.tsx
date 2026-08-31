@@ -75,6 +75,8 @@ export function AdminMitgliederView({
   invites: InviteRow[];
   membersWithoutLogin: MemberWithoutLoginRow[];
   defaultInviteDays: number;
+  /** = `admin:access` — reused as-is for the Systemrollen-Gate in
+   * `MeepleRoleSelect` (#353), not just for the Systemkonto button. */
   canCreateSystemkonto: boolean;
   pendingEmailChanges: PendingChangeRow[];
   stufe3Candidates: {
@@ -306,6 +308,7 @@ export function AdminMitgliederView({
         meeples={meeples}
         roles={roles}
         canReadBankData={canReadBankData}
+        canManageAdminAccess={canCreateSystemkonto}
       />
 
       <InvitesSection
