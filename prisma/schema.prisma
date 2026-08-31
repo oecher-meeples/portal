@@ -380,20 +380,24 @@ model BankDataAccessLog {
 /// Schlüssel, z. B. `"login:ip:<ip>"`, `"login:email:<email>"`,
 /// `"invite:ip:<ip>"`, `"iban-reveal:<meepleId>"`.
 model RateLimitAttempt {
-  id                  String   @id @default(cuid())
-  key                 String   @unique
-  failCount           Int      @default(0)
+  id                  String    @id @default(cuid())
+  key                 String    @unique
+  failCount           Int       @default(0)
   /// Aktueller Cooldown in Sekunden, direkt gespeichert statt bei jedem
   /// Request aus `failCount` neu berechnet — O(1)-Verdopplung pro
   /// Fehlversuch. `Int` reicht: der 8h-Deckel begrenzt den Maximalwert auf
   /// 28.800, weit unter jeder Int32-Grenze.
-  currentCooldownSecs Int      @default(0)
+  currentCooldownSecs Int       @default(0)
   /// Bei Fix-Cooldown-/Zähl-Keys: Zeitpunkt des letzten Versuchs. Bei
   /// `"login:email:<email>"`: Zeitpunkt des letzten *Fehl*versuchs.
-  lastFailedAt        DateTime @default(now())
+  lastFailedAt        DateTime  @default(now())
   /// Nur für `"login:email:<email>"` befüllt — IP des letzten Fehlversuchs,
   /// für den Reset-Trigger "erfolgreicher Login von derselben IP" (#326).
   lastFailedIp        String?
+  /// Harte, manuell gesetzte Sperre (#327) — im Unterschied zu
+  /// `currentCooldownSecs` NICHT durch den 10h-Idle-Reset aufgehoben, nur
+  /// durch eine explizite Admin-Aktion (`members:manage`).
+  manuallyLockedAt    DateTime?
 
   @@map("rate_limit_attempts")
 }

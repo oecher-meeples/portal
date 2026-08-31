@@ -82,7 +82,10 @@ function computeCooldownSecs(failCount: number): number {
 }
 
 /** Exponentielles Backoff pro E-Mail-Schlüssel für den Login (#326,
- * Mechanismus 2) — nur lesend, konsumiert keinen Versuch. */
+ * Mechanismus 2) — nur lesend, konsumiert keinen Versuch. Eine harte,
+ * manuell gesetzte Sperre (#327) blockt unabhängig vom Zähler und wird
+ * NICHT durch den 10h-Idle-Reset aufgehoben — nur durch eine explizite
+ * Admin-Aktion (`clearManualLoginLock`). */
 export async function checkLoginBackoff(
   emailKey: string,
 ): Promise<RateLimitResult> {
@@ -90,6 +93,10 @@ export async function checkLoginBackoff(
     where: { key: emailKey },
   });
   if (!row) return { allowed: true };
+
+  if (row.manuallyLockedAt) {
+    return { allowed: false, retryAfterSeconds: Infinity };
+  }
 
   const idleSecs = (Date.now() - row.lastFailedAt.getTime()) / 1000;
   if (idleSecs >= LOGIN_BACKOFF_IDLE_RESET_SECONDS) return { allowed: true };
@@ -167,4 +174,49 @@ export async function hasReachedLoginBackoffCap(
     where: { key: emailKey },
   });
   return row?.currentCooldownSecs === LOGIN_BACKOFF_CAP_SECONDS;
+}
+
+export type LoginBackoffStatus = {
+  failCount: number;
+  currentCooldownSecs: number;
+  atCap: boolean;
+  manuallyLockedAt: Date | null;
+  lastFailedAt: Date | null;
+};
+
+/** Für die Rate-Limit-Verwaltung in `/admin/mitglieder` (#327). */
+export async function getLoginBackoffStatus(
+  emailKey: string,
+): Promise<LoginBackoffStatus> {
+  const row = await prisma.rateLimitAttempt.findUnique({
+    where: { key: emailKey },
+  });
+  return {
+    failCount: row?.failCount ?? 0,
+    currentCooldownSecs: row?.currentCooldownSecs ?? 0,
+    atCap: row?.currentCooldownSecs === LOGIN_BACKOFF_CAP_SECONDS,
+    manuallyLockedAt: row?.manuallyLockedAt ?? null,
+    lastFailedAt: row?.lastFailedAt ?? null,
+  };
+}
+
+/** Admin-Reset (#327) — im Unterschied zu `resetLoginBackoffIfSameIp` auch
+ * ohne IP-Übereinstimmung, und hebt zusätzlich eine harte Sperre auf. */
+export async function adminResetLoginBackoff(emailKey: string): Promise<void> {
+  await prisma.rateLimitAttempt.upsert({
+    where: { key: emailKey },
+    create: { key: emailKey },
+    update: { failCount: 0, currentCooldownSecs: 0, manuallyLockedAt: null },
+  });
+}
+
+/** Harte Sperre (#327) — unabhängig vom Fibonacci-artigen Zähler, bleibt
+ * bestehen, bis sie explizit per `adminResetLoginBackoff` aufgehoben wird. */
+export async function setManualLoginLock(emailKey: string): Promise<void> {
+  const now = new Date();
+  await prisma.rateLimitAttempt.upsert({
+    where: { key: emailKey },
+    create: { key: emailKey, manuallyLockedAt: now },
+    update: { manuallyLockedAt: now },
+  });
 }

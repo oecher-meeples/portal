@@ -104,6 +104,7 @@ describe("revealMeepleIban", () => {
       currentCooldownSecs: 0,
       lastFailedAt: new Date(),
       lastFailedIp: null,
+      manuallyLockedAt: null,
     });
 
     const result = await revealMeepleIban("meeple-1", "meeple-kassenwart");

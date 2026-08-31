@@ -73,6 +73,7 @@ describe("redeemInvite", () => {
       currentCooldownSecs: 0,
       lastFailedAt: new Date(),
       lastFailedIp: null,
+      manuallyLockedAt: null,
     });
 
     const result = await redeemInvite({

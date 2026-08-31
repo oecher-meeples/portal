@@ -20,6 +20,7 @@ import {
 } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import { KuendigungsstatusSelect } from "@/components/feature/admin-mitglieder/kuendigungsstatus-select";
 import { MeepleBankDetailsSection } from "@/components/feature/admin-mitglieder/meeple-bank-details-section";
+import { LoginRateLimitSection } from "@/components/feature/admin-mitglieder/login-rate-limit-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import {
   renameMeeple,
@@ -169,6 +170,8 @@ export function MeepleEditDialog({
             hasIban={meeple.hasIban}
             canReadBankData={canReadBankData}
           />
+
+          <LoginRateLimitSection meepleId={meeple.id} />
 
           <div className="flex flex-col gap-1.5 border-t pt-4">
             <span className="text-sm font-medium">Datenschutz</span>
