@@ -37,6 +37,13 @@ async function requireAdminAccess() {
   return requirePermission("admin:access");
 }
 
+/** #365: Rollen-CRUD/-Rechte-Bearbeitung erfordert die eigene `roles:manage`,
+ * nicht `members:manage` — nicht jeder Mitglieder-Admin darf sonst auch die
+ * Rollenverwaltung selbst ändern. */
+async function requireRolesManage() {
+  return requirePermission("roles:manage");
+}
+
 /** How many games and units currently sit with this Meeple, for the confirmation dialog. */
 export async function getOpenHoldingsSummary(meepleId: string) {
   await requireMembersManage();
@@ -209,7 +216,7 @@ export async function getMeepleRoleAssignments(neonAuthUserId: string) {
 }
 
 export async function createRole(name: string, description: string | null) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await createRoleRecord(name, description);
   if ("error" in result) return result;
@@ -223,7 +230,7 @@ export async function updateRole(
   name: string,
   description: string | null,
 ) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await updateRoleRecord(roleId, name, description);
   if ("error" in result) return result;
@@ -233,7 +240,7 @@ export async function updateRole(
 }
 
 export async function deleteRole(roleId: string) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await deleteRoleRecord(roleId);
   if ("error" in result) return result;
@@ -246,7 +253,7 @@ export async function setRolePermissions(
   roleId: string,
   permissionIds: string[],
 ) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await setRolePermissionsRecord(roleId, permissionIds);
   if ("error" in result) return result;

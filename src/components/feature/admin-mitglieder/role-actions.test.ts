@@ -172,6 +172,15 @@ describe("createRole", () => {
       error: "Eine Rolle mit dem Namen „Vorstand“ existiert bereits.",
     });
   });
+
+  it("requires roles:manage, not just members:manage (#365)", async () => {
+    requirePermissionMock.mockClear();
+
+    await createRole("Vorstand", "Leitung");
+
+    expect(requirePermissionMock).toHaveBeenCalledWith("roles:manage");
+    expect(requirePermissionMock).not.toHaveBeenCalledWith("members:manage");
+  });
 });
 
 describe("updateRole", () => {

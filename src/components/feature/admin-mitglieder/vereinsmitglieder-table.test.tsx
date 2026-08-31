@@ -76,6 +76,7 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
         members={[MINI_MEMBER, JUNG_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
       />,
     );
 
@@ -89,6 +90,7 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
         members={[MINI_MEMBER, JUNG_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
         contributionFilter={["mini"]}
       />,
     );
@@ -105,6 +107,7 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
         members={[MINI_MEMBER, JUNG_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
         contributionFilter={["mini"]}
         onClearContributionFilter={onClear}
       />,
@@ -124,6 +127,7 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
         members={[MINI_MEMBER, JUNG_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
         contributionFilter={["mini", "jung"]}
       />,
     );
@@ -135,6 +139,58 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
 
     expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
     expect(screen.getByText("Jonas Jung")).toBeInTheDocument();
+  });
+});
+
+describe("VereinsmitgliederTable invites:manage gate (#365)", () => {
+  const NO_LOGIN_MEMBER = member({
+    id: "member-no-login",
+    hasPortalLogin: false,
+    meepleId: null,
+  });
+
+  it("shows the Einladen button with invites:manage", () => {
+    render(
+      <VereinsmitgliederTable
+        members={[NO_LOGIN_MEMBER]}
+        defaultInviteDays={30}
+        canManageMembers={false}
+        canManageInvites={true}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Einladen/ })).toBeInTheDocument();
+  });
+
+  it("hides the Einladen button without invites:manage", () => {
+    render(
+      <VereinsmitgliederTable
+        members={[NO_LOGIN_MEMBER]}
+        defaultInviteDays={30}
+        canManageMembers={false}
+        canManageInvites={false}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /Einladen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("links the Portal-Login status to the Meeple profile when a login exists", () => {
+    render(
+      <VereinsmitgliederTable
+        members={[MINI_MEMBER]}
+        defaultInviteDays={30}
+        canManageMembers={false}
+        canManageInvites={true}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "vorhanden" })).toHaveAttribute(
+      "href",
+      "/admin/mitglieder#mitglieder",
+    );
   });
 });
 
@@ -153,6 +209,7 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
         members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
       />,
     );
 
@@ -172,6 +229,7 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
         members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
       />,
     );
 
@@ -191,6 +249,7 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
         members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
         defaultInviteDays={30}
         canManageMembers={false}
+        canManageInvites={true}
       />,
     );
 

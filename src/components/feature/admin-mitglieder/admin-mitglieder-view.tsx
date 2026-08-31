@@ -56,7 +56,9 @@ export function AdminMitgliederView({
   meeples,
   roles,
   permissions,
+  canManageMembers,
   canManageRoles,
+  canManageInvites,
   canReadBankData,
   isDecemberOrLater,
   deletionRequests,
@@ -71,8 +73,17 @@ export function AdminMitgliederView({
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
   permissions: PermissionOption[];
-  /** Blendet die Rollenverwaltung aus — die Actions selbst sind zusätzlich serverseitig gegated (#216). */
+  /** = `members:manage` — Vereinsmitglied-CRUD (Erstellen-Button,
+   * Einladen bleibt separat auf `invites:manage` gegated, #365). */
+  canManageMembers: boolean;
+  /** = `roles:manage` (#365) — bewusst getrennt von `members:manage`, blendet
+   * die Rollenverwaltung aus. Die Actions selbst sind zusätzlich
+   * serverseitig gegated (#216). */
   canManageRoles: boolean;
+  /** = `invites:manage` (#365) — blendet den "Einladen"-Button aus, sonst
+   * sieht ihn ein `members:manage`-only-Admin und bekommt beim Klick nur
+   * einen Server-Fehler. */
+  canManageInvites: boolean;
   canReadBankData: boolean;
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
@@ -324,7 +335,8 @@ export function AdminMitgliederView({
       <VereinsmitgliederTable
         members={members}
         defaultInviteDays={defaultInviteDays}
-        canManageMembers={canManageRoles}
+        canManageMembers={canManageMembers}
+        canManageInvites={canManageInvites}
         contributionFilter={contributionFilter}
         onClearContributionFilter={() => setContributionFilter(null)}
       />

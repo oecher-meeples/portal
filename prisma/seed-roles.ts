@@ -14,6 +14,11 @@ const PERMISSIONS = [
   },
   { key: "members:manage", description: "Mitgliederverwaltung" },
   {
+    key: "roles:manage",
+    description:
+      "Rollen und deren Rechte bearbeiten (#365) — bewusst getrennt von members:manage, damit nicht jeder Mitglieder-Admin auch die Rollenverwaltung selbst ändern kann",
+  },
+  {
     key: "instagram:connect",
     description: "Instagram-Verbindung verwalten (OAuth verbinden/trennen)",
   },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { RotateCcw, Search, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +60,7 @@ export function VereinsmitgliederTable({
   members,
   defaultInviteDays,
   canManageMembers,
+  canManageInvites,
   contributionFilter,
   onClearContributionFilter,
 }: {
@@ -68,6 +70,11 @@ export function VereinsmitgliederTable({
    * Betrachter mit nur `invites:manage` den "Vereinsmitglied
    * erstellen"-Button, bekommt beim Klick aber nur einen Server-Fehler. */
   canManageMembers: boolean;
+  /** = `invites:manage` (#365) — blendet den "Einladen"-Button aus, sonst
+   * sieht ihn ein `members:manage`-only-Admin und bekommt beim Klick nur
+   * einen Server-Fehler (die Server Action selbst war schon korrekt
+   * gegated, nur die UI nicht). */
+  canManageInvites: boolean;
   /** Von der Beitragsart-Stat-Tile gesteuert (#340) — `null` heißt "kein Filter". */
   contributionFilter?: ContributionCategory[] | null;
   onClearContributionFilter?: () => void;
@@ -250,22 +257,34 @@ export function VereinsmitgliederTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {member.hasPortalLogin ? (
-                          "vorhanden"
+                          member.meepleId ? (
+                            <Link
+                              href="/admin/mitglieder#mitglieder"
+                              className="text-primary hover:underline"
+                              title="Zum Meeple-Profil im Benutzer-Akkordeon"
+                            >
+                              vorhanden
+                            </Link>
+                          ) : (
+                            "vorhanden"
+                          )
                         ) : (
-                          <ActionButton
-                            size="sm"
-                            variant="outline"
-                            action={async () => {
-                              await createInvite({
-                                memberId: member.id,
-                                days: defaultInviteDays,
-                              });
-                            }}
-                            pendingLabel="Lade ein…"
-                          >
-                            <UserPlus />
-                            Einladen
-                          </ActionButton>
+                          canManageInvites && (
+                            <ActionButton
+                              size="sm"
+                              variant="outline"
+                              action={async () => {
+                                await createInvite({
+                                  memberId: member.id,
+                                  days: defaultInviteDays,
+                                });
+                              }}
+                              pendingLabel="Lade ein…"
+                            >
+                              <UserPlus />
+                              Einladen
+                            </ActionButton>
+                          )
                         )}
                       </TableCell>
                       <TableCell className="text-right">

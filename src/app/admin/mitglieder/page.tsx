@@ -35,7 +35,9 @@ export default async function AdminMitgliederPage() {
     pendingChanges,
     stufe3Candidates,
     canReadBankData,
+    canManageMembers,
     canManageRoles,
+    canManageInvites,
     canCreateSystemkonto,
   ] = await Promise.all([
     prisma.member.findMany({
@@ -95,6 +97,8 @@ export default async function AdminMitgliederPage() {
     listMembersEligibleForStufe3(now),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
+    hasPermission(session.user.id, "roles:manage"),
+    hasPermission(session.user.id, "invites:manage"),
     hasPermission(session.user.id, "admin:access"),
   ]);
 
@@ -164,7 +168,9 @@ export default async function AdminMitgliederPage() {
         key: permission.key,
         description: permission.description,
       }))}
+      canManageMembers={canManageMembers}
       canManageRoles={canManageRoles}
+      canManageInvites={canManageInvites}
       canReadBankData={canReadBankData}
       members={vereinsmitgliedRows}
       meeples={meeples.map((meeple) => ({
