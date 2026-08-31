@@ -15,6 +15,11 @@ export { GET };
  * Mechanismus 1). */
 const LOGIN_IP_COOLDOWN_SECONDS = 2;
 
+/** Missbrauchsschutz für die "Passwort vergessen"-Anfrage (#324) — verhindert
+ * E-Mail-Enumeration durch Masse-Anfragen, ohne dass die Antwort selbst
+ * (immer `{success:true}`, unabhängig vom Konto-Zustand) sich unterscheidet. */
+const FORGOT_PASSWORD_IP_COOLDOWN_SECONDS = 30;
+
 /**
  * Selbe Fehlermeldung wie Better Auth für ungültige Zugangsdaten — damit ein
  * Client (und ein Angreifer) den Rate-Limit-Fall nicht von "Passwort falsch"
@@ -48,7 +53,12 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ) {
-  if (!request.nextUrl.pathname.endsWith("/sign-in/email")) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname.endsWith("/forget-password/email-otp")) {
+    return handleForgotPasswordRequest(request, context);
+  }
+  if (!pathname.endsWith("/sign-in/email")) {
     return authPost(request, context);
   }
 
@@ -82,4 +92,21 @@ export async function POST(
   }
 
   return response;
+}
+
+async function handleForgotPasswordRequest(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+) {
+  const ip = await getRequestIp();
+  const cooldown = await checkFixedCooldown(
+    `forgot-password:ip:${ip ?? "unknown"}`,
+    FORGOT_PASSWORD_IP_COOLDOWN_SECONDS,
+  );
+  if (!cooldown.allowed) {
+    // Gleiche Antwort wie ein echter Erfolg — Neon Auth meldet hier ohnehin
+    // immer `{success:true}`, unabhängig davon, ob das Konto existiert.
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
+  return authPost(request, context);
 }

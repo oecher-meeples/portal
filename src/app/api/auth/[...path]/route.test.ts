@@ -126,6 +126,40 @@ describe("POST /api/auth/sign-in/email", () => {
     expect(recordLoginFailureMock).not.toHaveBeenCalled();
   });
 
+  it("blocks a forget-password request while its IP cooldown is running, with the same generic success shape", async () => {
+    checkFixedCooldownMock.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 30,
+    });
+    const request = new NextRequest(
+      "https://example.com/api/auth/forget-password/email-otp",
+      { method: "POST", body: JSON.stringify({ email: "a@b.de" }) },
+    );
+    const context = {
+      params: Promise.resolve({ path: ["forget-password", "email-otp"] }),
+    };
+
+    const response = await POST(request, context);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true });
+    expect(upstreamPost).not.toHaveBeenCalled();
+  });
+
+  it("forwards a forget-password request once the cooldown has elapsed", async () => {
+    const request = new NextRequest(
+      "https://example.com/api/auth/forget-password/email-otp",
+      { method: "POST", body: JSON.stringify({ email: "a@b.de" }) },
+    );
+    const context = {
+      params: Promise.resolve({ path: ["forget-password", "email-otp"] }),
+    };
+
+    await POST(request, context);
+
+    expect(upstreamPost).toHaveBeenCalledWith(request, context);
+  });
+
   it("still applies the IP cooldown even when the body carries no email", async () => {
     const request = new NextRequest(
       "https://example.com/api/auth/sign-in/email",

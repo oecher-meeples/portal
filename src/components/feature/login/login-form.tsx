@@ -78,6 +78,12 @@ export function LoginForm() {
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Anmelden…" : "Anmelden"}
         </Button>
+        <Link
+          href="/passwort-vergessen"
+          className="text-primary text-center text-sm hover:underline"
+        >
+          Passwort vergessen?
+        </Link>
       </form>
       <p className="text-muted-foreground text-center text-sm">
         Einladung erhalten?{" "}
