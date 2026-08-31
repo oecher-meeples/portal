@@ -21,8 +21,8 @@ describe("MeineKinderSection (#376)", () => {
     );
 
     const annaLink = screen.getByRole("link", { name: "Anna Muster" });
-    expect(annaLink).toHaveAttribute("href", "/mitglied/mitglied-1");
+    expect(annaLink).toHaveAttribute("href", "/profil/mitglied-1");
     const benLink = screen.getByRole("link", { name: "Ben Muster" });
-    expect(benLink).toHaveAttribute("href", "/mitglied/mitglied-2");
+    expect(benLink).toHaveAttribute("href", "/profil/mitglied-2");
   });
 });

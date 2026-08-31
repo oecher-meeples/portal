@@ -1,20 +1,19 @@
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/utils/prisma";
 import { requireMember } from "@/lib/auth/session";
+import { loadMemberProfileData } from "@/lib/members/profile-access";
 import { PageHeading } from "@/components/ui/page-heading";
+import { MitgliedProfilView } from "@/components/feature/mitglied-profil/mitglied-profil-view";
 
-/** `/profil` zeigt seit #386 keine eigene Implementierung mehr — es löst den
- * eigenen `Member.slug` auf und leitet auf `/mitglied/[slug]` weiter,
- * dieselbe Seite, die auch für andere Profile gilt (#379 ff.). */
+/** `/profil` zeigt das eigene Profil direkt (kein Redirect mehr auf einen
+ * Slug-Pfad, Nutzerentscheidung) — dieselbe `MitgliedProfilView` wie
+ * `/profil/[slug]` für fremde Profile, hier per `meepleId` statt `slug`
+ * geladen (`loadMemberProfileData`). */
 export default async function ProfilPage() {
   const session = await requireMember();
 
-  const ownMember = await prisma.member.findUnique({
-    where: { meepleId: session.meeple.id },
-    select: { slug: true },
+  const data = await loadMemberProfileData(session, {
+    meepleId: session.meeple.id,
   });
-
-  if (!ownMember) {
+  if (!data) {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-8">
         <PageHeading eyebrow="Self-Service" title="Mein Profil" />
@@ -26,5 +25,5 @@ export default async function ProfilPage() {
     );
   }
 
-  redirect(`/mitglied/${ownMember.slug}`);
+  return <MitgliedProfilView member={data.member} viewer={data.viewer} />;
 }

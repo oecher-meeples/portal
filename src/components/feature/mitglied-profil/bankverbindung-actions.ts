@@ -61,6 +61,6 @@ export async function updateMemberIban(
     select: { slug: true },
   });
 
-  revalidatePath(`/mitglied/${member.slug}`);
+  revalidatePath(`/profil/${member.slug}`);
   return { success: true as const };
 }

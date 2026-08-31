@@ -14,7 +14,7 @@ export function buildEmailChangeConfirmationLink(
   origin: string,
   token: string,
 ): string {
-  return `${origin}/mitglied/e-mail-bestaetigen?token=${encodeURIComponent(token)}`;
+  return `${origin}/profil/e-mail-bestaetigen?token=${encodeURIComponent(token)}`;
 }
 
 export async function sendEmailChangeConfirmationMail(

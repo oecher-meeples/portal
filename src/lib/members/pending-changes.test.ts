@@ -8,7 +8,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 const sendEmailChangeConfirmationMailMock = vi.fn();
 vi.mock("@/lib/members/pending-change-mail", () => ({
   buildEmailChangeConfirmationLink: (origin: string, token: string) =>
-    `${origin}/mitglied/e-mail-bestaetigen?token=${token}`,
+    `${origin}/profil/e-mail-bestaetigen?token=${token}`,
   sendEmailChangeConfirmationMail: (...args: unknown[]) =>
     sendEmailChangeConfirmationMailMock(...args),
   sendPendingChangeRejectedMail: vi.fn(),

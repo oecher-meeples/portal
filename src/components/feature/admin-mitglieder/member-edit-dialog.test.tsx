@@ -64,6 +64,6 @@ describe("MemberEditDialog — profile page link (#387)", () => {
     const link = await screen.findByRole("link", {
       name: /volle profilseite/i,
     });
-    expect(link).toHaveAttribute("href", "/mitglied/erika-musterfrau");
+    expect(link).toHaveAttribute("href", "/profil/erika-musterfrau");
   });
 });

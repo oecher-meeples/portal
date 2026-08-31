@@ -39,7 +39,10 @@ export const PATHNAME_HEADER = "x-pathname";
 export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   { path: "/dashboard", exact: true },
   { path: "/dashboard/kalender" },
-  { path: "/profil" },
+  // exact: /profil/[slug] wäre sonst für JEDEN Slug erreichbar — die eigene
+  // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
+  // gezielt über isOwnProfilPath durch, nicht über diese Liste.
+  { path: "/profil", exact: true },
   { path: "/scan" },
   { path: "/mitglieder" },
 ];
@@ -128,12 +131,12 @@ export async function requireMember() {
 
   if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
-    // #386: `/profil` leitet auf die eigene `/mitglied/[slug]`-Seite weiter
-    // — die muss für den Abwicklungs-Zustand ebenso erreichbar bleiben wie
-    // `/profil` selbst, aber nur die *eigene*, nicht jede beliebige.
-    const isOwnMitgliedPath =
-      member?.slug !== undefined && pathname === `/mitglied/${member.slug}`;
-    if (!isSettlementPath(pathname) && !isOwnMitgliedPath) {
+    // #386: die eigene `/profil/[slug]`-Seite muss für den
+    // Abwicklungs-Zustand ebenso erreichbar bleiben wie `/profil` selbst,
+    // aber nur die *eigene*, nicht jede beliebige.
+    const isOwnProfilPath =
+      member?.slug !== undefined && pathname === `/profil/${member.slug}`;
+    if (!isSettlementPath(pathname) && !isOwnProfilPath) {
       redirect("/403");
     }
   }

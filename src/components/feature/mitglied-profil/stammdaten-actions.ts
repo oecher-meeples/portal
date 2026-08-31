@@ -46,7 +46,7 @@ async function revalidateProfile(memberId: string) {
     where: { id: memberId },
     select: { slug: true },
   });
-  revalidatePath(`/mitglied/${member.slug}`);
+  revalidatePath(`/profil/${member.slug}`);
 }
 
 /** Direktbearbeitung für `members:manage` (#380) — kein Änderungsantrag. */

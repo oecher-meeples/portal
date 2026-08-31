@@ -82,7 +82,7 @@ export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
 
         <div className="flex flex-col gap-4">
           <Link
-            href={`/mitglied/${member.slug}`}
+            href={`/profil/${member.slug}`}
             className="text-primary w-fit text-sm underline underline-offset-2"
           >
             Volle Profilseite öffnen

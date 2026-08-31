@@ -23,7 +23,7 @@ async function revalidateProfilePage(memberId: string) {
     where: { id: memberId },
     select: { slug: true },
   });
-  if (member) revalidatePath(`/mitglied/${member.slug}`);
+  if (member) revalidatePath(`/profil/${member.slug}`);
 }
 
 export async function approvePendingChange(

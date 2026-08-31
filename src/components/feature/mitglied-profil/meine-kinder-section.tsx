@@ -19,7 +19,7 @@ export function MeineKinderSection({
         {guardianChildren.map((child) => (
           <li key={child.id}>
             <Link
-              href={`/mitglied/${child.slug}`}
+              href={`/profil/${child.slug}`}
               className="text-primary underline underline-offset-2"
             >
               {child.displayName}

@@ -13,7 +13,7 @@ import { setMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
 
 /**
  * Self-service actions shared by the old `/profil` (`feature/profil/`, gone
- * after step 13) and the new `/mitglied/[slug]` (`feature/mitglied-profil/`)
+ * after step 13) and the new `/profil`/`/profil/[slug]` (`feature/mitglied-profil/`)
  * while both exist — moved out of `feature/profil/actions.ts` into `lib/`
  * (#385) so neither feature imports from the other
  * (`import/no-restricted-paths`). Deliberately still only ever acts on the

@@ -1,9 +1,10 @@
 import "server-only";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
 import { isGuardianOf } from "@/lib/members/guardians";
 
-/** Which permission keys grant unconditional access to `/mitglied/[slug]`
+/** Which permission keys grant unconditional access to `/profil`/`/profil/[slug]`
  * (#379) — admin, Vorstand (`members:manage`), Kassenwart (`bank:read`),
  * Spielewart (`games:manage`). Kept as an object below, not this array
  * alone, so each flag stays individually usable for section-level gating
@@ -84,4 +85,50 @@ export async function loadProfileViewerContext(
     canManageGames,
     isGuardianOfTarget,
   };
+}
+
+/** Fields both `/profil` (eigenes Profil, `where: {meepleId}`) und
+ * `/profil/[slug]` (fremdes Profil, `where: {slug}`) für die
+ * `MitgliedProfilView` brauchen — an einer Stelle gepflegt, damit beide
+ * Routen dieselbe Member-Form laden. */
+const MEMBER_PROFILE_INCLUDE = {
+  meeple: {
+    select: {
+      id: true,
+      displayName: true,
+      bggUsername: true,
+      bgaUsername: true,
+      telegramHandle: true,
+      signalHandle: true,
+      discordHandle: true,
+      address: true,
+      shareAddress: true,
+      doorbellNote: true,
+      neonAuthUserId: true,
+      privateCollectionVisible: true,
+      privateCollectionSyncedAt: true,
+      profilePictureUrl: true,
+      profilePictureVisibility: true,
+    },
+  },
+} satisfies Prisma.MemberInclude;
+
+/** Lädt `Member` + Zugriffskontext für `/profil`/`/profil/[slug]` und prüft
+ * `canAccessMemberProfile` gleich mit — `null`, wenn der Member nicht
+ * existiert oder die Session keinen Zugriff hat (beides führt im Aufrufer
+ * zu `notFound()`, unterscheidet sich für die Anzeige nicht). */
+export async function loadMemberProfileData(
+  session: Parameters<typeof loadProfileViewerContext>[0],
+  where: Prisma.MemberWhereUniqueInput,
+) {
+  const member = await prisma.member.findUnique({
+    where,
+    include: MEMBER_PROFILE_INCLUDE,
+  });
+  if (!member) return null;
+
+  const viewer = await loadProfileViewerContext(session, member.id);
+  if (!canAccessMemberProfile(member, viewer)) return null;
+
+  return { member, viewer };
 }

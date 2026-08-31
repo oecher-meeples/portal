@@ -52,6 +52,6 @@ export async function updateMeepleDaten(
     where: { meepleId },
     select: { slug: true },
   });
-  if (member) revalidatePath(`/mitglied/${member.slug}`);
+  if (member) revalidatePath(`/profil/${member.slug}`);
   return { success: true as const };
 }

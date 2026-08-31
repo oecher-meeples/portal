@@ -38,7 +38,8 @@ import {
   type MeepleDatenMeeple,
 } from "@/components/feature/mitglied-profil/meeple-daten-section";
 
-/** Route-Einstieg für `/mitglied/[slug]` (#379 ff.) — setzt die einzelnen
+/** Route-Einstieg für `/profil` (eigenes Profil) und `/profil/[slug]`
+ * (fremdes Profil) (#379 ff.) — setzt die einzelnen
  * Bereiche der Epic (#380–#385, #388, #389, #376) zusammen. Zugriffsschutz
  * läuft bereits vollständig in `page.tsx`/`profile-access.ts`. */
 export async function MitgliedProfilView({
