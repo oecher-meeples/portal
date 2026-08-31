@@ -1,9 +1,10 @@
-import { Tag, Mail, ClipboardCheck, Landmark } from "lucide-react";
+import { Tag, Mail, ClipboardCheck, Landmark, AlertTriangle } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
 import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
+import type { RateLimitAlert } from "@/lib/auth/rate-limit-alerts";
 
 const QUICK_ACTIONS = [
   {
@@ -29,9 +30,11 @@ export type AdminDashboardStats = {
 export function AdminDashboardView({
   stats,
   blobStorageUsage,
+  rateLimitAlerts,
 }: {
   stats: AdminDashboardStats;
   blobStorageUsage: BlobStorageUsage | null;
+  rateLimitAlerts: RateLimitAlert[];
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -40,6 +43,20 @@ export function AdminDashboardView({
         title="Verwaltung"
         description="Überblick über Bestand, Ausleihen und laufende Vorgänge."
       />
+
+      {rateLimitAlerts.length > 0 && (
+        <div className="border-destructive/50 bg-card flex flex-col gap-2 rounded-lg border p-5">
+          <h2 className="text-destructive flex items-center gap-2 font-serif text-lg font-bold">
+            <AlertTriangle className="size-5" aria-hidden />
+            Rate-Limit-Warnungen
+          </h2>
+          <ul className="text-muted-foreground list-inside list-disc text-sm">
+            {rateLimitAlerts.map((alert) => (
+              <li key={alert.label}>{alert.label}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatTile

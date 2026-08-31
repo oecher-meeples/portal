@@ -95,6 +95,26 @@ describe("revealMeepleIban", () => {
     });
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
   });
+
+  it("blocks the 21st call within 10 minutes for the same actor (#326)", async () => {
+    prismaMock.rateLimitAttempt.findUnique.mockResolvedValue({
+      id: "1",
+      key: "iban-reveal:meeple-kassenwart",
+      failCount: 20,
+      currentCooldownSecs: 0,
+      lastFailedAt: new Date(),
+      lastFailedIp: null,
+    });
+
+    const result = await revealMeepleIban("meeple-1", "meeple-kassenwart");
+
+    expect(result).toEqual({
+      error:
+        "Zu viele IBAN-Abrufe in kurzer Zeit. Bitte versuche es später erneut.",
+    });
+    expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("bankLogCutoff", () => {

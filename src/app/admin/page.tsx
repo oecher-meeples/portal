@@ -6,6 +6,7 @@ import { isLoanHolding } from "@/lib/ludothek/holdings";
 import { UNSORTIERT_CODE } from "@/lib/inventory/codes";
 import { countActiveEvents } from "@/lib/members/dashboard";
 import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
+import { getRateLimitAlerts } from "@/lib/auth/rate-limit-alerts";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
 
 export default async function AdminDashboardPage() {
@@ -19,6 +20,7 @@ export default async function AdminDashboardPage() {
     uncheckedGames,
     events,
     blobStorageUsage,
+    rateLimitAlerts,
   ] = await Promise.all([
     prisma.meeple.findMany({
       select: {
@@ -55,6 +57,7 @@ export default async function AdminDashboardPage() {
     // hiccup) must not break the rest of the admin dashboard, so it degrades
     // to `null` and the card simply doesn't render (see AdminDashboardView).
     getBlobStorageUsage().catch(() => null),
+    getRateLimitAlerts(),
   ]);
 
   const activeMembers = meeples.filter(
@@ -82,6 +85,7 @@ export default async function AdminDashboardPage() {
         activeEvents: countActiveEvents(events),
       }}
       blobStorageUsage={blobStorageUsage}
+      rateLimitAlerts={rateLimitAlerts}
     />
   );
 }

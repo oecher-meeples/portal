@@ -4,8 +4,14 @@ import { prisma } from "@/lib/utils/prisma";
 import { auth } from "@/lib/auth/server";
 import { validateInviteToken } from "@/lib/members/invites";
 import { translateAuthError, validatePassword } from "@/lib/auth/password";
+import { checkFixedCooldown } from "@/lib/utils/rate-limit";
+import { getRequestIp } from "@/lib/utils/request-ip";
 
 const DEFAULT_ROLE = "Meeple";
+
+/** IP-Fix-Cooldown (#326) — reiner Spam-/Lastschutz, keine Eskalation: die
+ * Brute-Force-Schwierigkeit ist durch Token+E-Mail-Pflicht bereits hoch. */
+const INVITE_IP_COOLDOWN_SECONDS = 2;
 
 export async function redeemInvite({
   token,
@@ -18,6 +24,15 @@ export async function redeemInvite({
   password: string;
   name: string;
 }) {
+  const ip = await getRequestIp();
+  const cooldown = await checkFixedCooldown(
+    `invite:ip:${ip ?? "unknown"}`,
+    INVITE_IP_COOLDOWN_SECONDS,
+  );
+  if (!cooldown.allowed) {
+    return { error: "Bitte versuche es in Kürze erneut." };
+  }
+
   const validation = await validateInviteToken(token);
   if (!validation.valid) {
     return { error: "Token ungültig oder abgelaufen." };

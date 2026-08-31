@@ -3,6 +3,11 @@ import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { decryptSecret } from "@/lib/utils/crypto";
+import { checkAndRecordCountLimit } from "@/lib/utils/rate-limit";
+import {
+  IBAN_REVEAL_MAX_CALLS,
+  IBAN_REVEAL_WINDOW_SECONDS,
+} from "@/lib/auth/rate-limit-alerts";
 
 /** Retention agreed in docs/adr/0003. */
 export const BANK_LOG_RETENTION_MONTHS = 24;
@@ -62,6 +67,18 @@ export async function revealMeepleIban(
   meepleId: string,
   actorMeepleId: string,
 ): Promise<{ error: string } | { success: true; iban: string }> {
+  const limit = await checkAndRecordCountLimit(
+    `iban-reveal:${actorMeepleId}`,
+    IBAN_REVEAL_MAX_CALLS,
+    IBAN_REVEAL_WINDOW_SECONDS,
+  );
+  if (!limit.allowed) {
+    return {
+      error:
+        "Zu viele IBAN-Abrufe in kurzer Zeit. Bitte versuche es später erneut.",
+    };
+  }
+
   const member = await prisma.member.findUnique({
     where: { meepleId },
     select: { ibanEncrypted: true },
