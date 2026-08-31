@@ -33,6 +33,8 @@ export default async function MitgliedProfilPage({
           neonAuthUserId: true,
           privateCollectionVisible: true,
           privateCollectionSyncedAt: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
         },
       },
     },

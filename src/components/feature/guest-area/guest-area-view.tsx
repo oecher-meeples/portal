@@ -148,9 +148,23 @@ export function GuestAreaView({
               <p className="text-sm font-medium">Anwesende Erklärbären</p>
               <ul className="text-muted-foreground text-sm">
                 {state.detail.attendingExplainers.map((explainer) => (
-                  <li key={explainer.meepleId}>
-                    {explainer.displayName} ·{" "}
-                    {EXPLAINER_LEVEL_LABELS[explainer.level] ?? explainer.level}
+                  <li
+                    key={explainer.meepleId}
+                    className="flex items-center gap-2 py-0.5"
+                  >
+                    {explainer.profilePictureUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- Blob-URL, kein next/image nötig für ein kleines Avatar
+                      <img
+                        src={explainer.profilePictureUrl}
+                        alt=""
+                        className="size-6 shrink-0 rounded-full object-cover"
+                      />
+                    )}
+                    <span>
+                      {explainer.displayName} ·{" "}
+                      {EXPLAINER_LEVEL_LABELS[explainer.level] ??
+                        explainer.level}
+                    </span>
                   </li>
                 ))}
               </ul>

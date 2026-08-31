@@ -119,6 +119,8 @@ describe("getAttendingExplainers", () => {
         meeple: {
           id: "meeple-1",
           displayName: "Lea",
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
           explainerGames: [{ level: "BY_HEART" }],
         },
       },
@@ -127,7 +129,12 @@ describe("getAttendingExplainers", () => {
     const result = await getAttendingExplainers("game-1", "event-1");
 
     expect(result).toEqual([
-      { meepleId: "meeple-1", displayName: "Lea", level: "BY_HEART" },
+      {
+        meepleId: "meeple-1",
+        displayName: "Lea",
+        level: "BY_HEART",
+        profilePictureUrl: null,
+      },
     ]);
     expect(prismaMock.explainerAttendance.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -137,6 +144,34 @@ describe("getAttendingExplainers", () => {
         },
       }),
     );
+  });
+
+  it("shows the profile picture only when EVENTS/IMMER visibility allows it (#389)", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      {
+        meeple: {
+          id: "meeple-1",
+          displayName: "Lea",
+          profilePictureUrl: "https://blob.example/lea.jpg",
+          profilePictureVisibility: "EVENTS",
+          explainerGames: [{ level: "BY_HEART" }],
+        },
+      },
+      {
+        meeple: {
+          id: "meeple-2",
+          displayName: "Ben",
+          profilePictureUrl: "https://blob.example/ben.jpg",
+          profilePictureVisibility: "INTERN",
+          explainerGames: [{ level: "WITH_MANUAL" }],
+        },
+      },
+    ] as never);
+
+    const result = await getAttendingExplainers("game-1", "event-1");
+
+    expect(result[0].profilePictureUrl).toBe("https://blob.example/lea.jpg");
+    expect(result[1].profilePictureUrl).toBeNull();
   });
 });
 

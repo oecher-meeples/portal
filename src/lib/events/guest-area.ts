@@ -9,6 +9,7 @@ import {
   type LudothekFilters,
   type LudothekGame,
 } from "@/lib/ludothek/browser";
+import { resolveVisibleProfilePictureUrl } from "@/lib/members/profile-picture-visibility";
 
 const MAX_UNIT_CHAIN_DEPTH = 20;
 
@@ -140,6 +141,11 @@ export type AttendingExplainer = {
   meepleId: string;
   displayName: string;
   level: ExplainerExperienceLevel;
+  /** Nur gesetzt, wenn laut Freigabe (#389) für den Gast-Bereich sichtbar —
+   * `getAttendingExplainers()` wird ausschließlich für ein laufendes Event
+   * aufgerufen (`isEventCurrentlyRunning()` beim Aufrufer), jede Zeile hier
+   * ist also automatisch "gerade aktiv anwesend". */
+  profilePictureUrl: string | null;
 };
 
 /** Erklärbären present at this event who can explain this specific game. */
@@ -154,6 +160,8 @@ export async function getAttendingExplainers(
         select: {
           id: true,
           displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
           explainerGames: {
             where: { boardGameId },
             select: { level: true },
@@ -169,6 +177,10 @@ export async function getAttendingExplainers(
       meepleId: a.meeple.id,
       displayName: a.meeple.displayName,
       level: a.meeple.explainerGames[0].level,
+      profilePictureUrl: resolveVisibleProfilePictureUrl(a.meeple, {
+        kind: "guest",
+        isAttendingExplainerNow: true,
+      }),
     }));
 }
 

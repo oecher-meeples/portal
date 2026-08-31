@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { Pencil } from "lucide-react";
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/components/ui/use-action";
 import { updateMeepleDaten } from "@/components/feature/mitglied-profil/meeple-daten-actions";
+import { ProfilePictureUpload } from "@/components/feature/mitglied-profil/profile-picture-upload";
 
 export type MeepleDatenMeeple = {
   id: string;
@@ -19,6 +21,8 @@ export type MeepleDatenMeeple = {
   address: string | null;
   shareAddress: boolean;
   doorbellNote: string | null;
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
 };
 
 type MeepleDatenForm = {
@@ -91,6 +95,13 @@ export function MeepleDatenSection({
           </Button>
         )}
       </div>
+
+      <ProfilePictureUpload
+        meepleId={meeple.id}
+        profilePictureUrl={meeple.profilePictureUrl}
+        visibility={meeple.profilePictureVisibility}
+        canEdit={canEdit}
+      />
 
       {editing ? (
         <div className="flex flex-col gap-4">

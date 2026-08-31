@@ -57,6 +57,7 @@ export type GuestGameDetail = {
     meepleId: string;
     displayName: string;
     level: string;
+    profilePictureUrl: string | null;
   }[];
 };
 

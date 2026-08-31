@@ -12,6 +12,16 @@ vi.mock("@/components/feature/mitglied-profil/meeple-daten-actions", () => ({
   updateMeepleDaten: (...args: unknown[]) => updateMeepleDatenMock(...args),
 }));
 
+vi.mock(
+  "@/components/feature/mitglied-profil/meeple-profile-picture-actions",
+  () => ({
+    getMeepleProfilePictureUploadToken: vi.fn(),
+    saveMeepleProfilePicture: vi.fn(),
+    updateMeepleProfilePictureVisibility: vi.fn(),
+    deleteMeepleProfilePicture: vi.fn(),
+  }),
+);
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -27,6 +37,8 @@ const MEEPLE = {
   address: "Musterstraße 1",
   shareAddress: false,
   doorbellNote: null,
+  profilePictureUrl: null,
+  profilePictureVisibility: "INTERN" as const,
 };
 
 describe("MeepleDatenSection (#382)", () => {
