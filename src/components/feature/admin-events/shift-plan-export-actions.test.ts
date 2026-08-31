@@ -8,8 +8,8 @@ vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
-const { SHIFT_PLAN_CSV_COLUMNS, exportShiftPlanDayCsv } =
-  await import("./shift-plan-export-actions");
+const { SHIFT_PLAN_CSV_COLUMNS } = await import("./shift-plan-csv-columns");
+const { exportShiftPlanDayCsv } = await import("./shift-plan-export-actions");
 
 class ForbiddenError extends Error {}
 

@@ -4,15 +4,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { formatTimePlain } from "@/lib/utils/format";
-
-/** The only columns this export ever contains (#296). */
-export const SHIFT_PLAN_CSV_COLUMNS = [
-  "Rolle",
-  "Von",
-  "Bis",
-  "Person",
-  "Status",
-] as const;
+import { SHIFT_PLAN_CSV_COLUMNS } from "@/components/feature/admin-events/shift-plan-csv-columns";
 
 function csvCell(value: string) {
   return escapeCsvField(value, ";");

@@ -18,8 +18,8 @@ vi.mock("@/lib/members/meeples", async () => {
 });
 
 const { encryptSecret } = await import("@/lib/utils/crypto");
-const { BANK_CSV_COLUMNS, exportBankDataCsv, revealIban } =
-  await import("./actions");
+const { BANK_CSV_COLUMNS } = await import("./csv-columns");
+const { exportBankDataCsv, revealIban } = await import("./actions");
 
 class ForbiddenError extends Error {}
 

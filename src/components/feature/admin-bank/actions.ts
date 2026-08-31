@@ -10,14 +10,7 @@ import {
 import { decryptSecret } from "@/lib/utils/crypto";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { memberDisplayName } from "@/lib/members/member-display-name";
-
-/** The only columns the export ever contains. */
-export const BANK_CSV_COLUMNS = [
-  "Mitgliedsnummer",
-  "Name",
-  "Kontoinhaber",
-  "IBAN",
-] as const;
+import { BANK_CSV_COLUMNS } from "@/components/feature/admin-bank/csv-columns";
 
 function csvCell(value: string | number) {
   return escapeCsvField(value, ";");
