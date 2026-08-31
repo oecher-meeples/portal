@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildResignationNotice,
   countActiveEvents,
   countUpcomingShiftBookings,
   summariseMemberHoldings,
@@ -153,5 +154,53 @@ describe("countActiveEvents", () => {
     ];
 
     expect(countActiveEvents(events, NOW)).toBe(2);
+  });
+});
+
+describe("buildResignationNotice (#360)", () => {
+  const now = new Date("2026-07-29T12:00:00Z");
+
+  it("is null for a non-gekuendigt state", () => {
+    expect(
+      buildResignationNotice(
+        "registriert",
+        new Date("2026-08-01T00:00:00Z"),
+        0,
+        now,
+      ),
+    ).toBeNull();
+  });
+
+  it("is null without a membershipEndsAt", () => {
+    expect(buildResignationNotice("gekuendigt", null, 0, now)).toBeNull();
+  });
+
+  it("is null more than 31 days before membershipEndsAt", () => {
+    expect(
+      buildResignationNotice(
+        "gekuendigt",
+        new Date("2026-09-01T00:00:00Z"),
+        2,
+        now,
+      ),
+    ).toBeNull();
+  });
+
+  it("appears exactly at the 31-day mark", () => {
+    const endsAt = new Date(now.getTime() + 31 * 24 * 60 * 60 * 1000);
+
+    expect(buildResignationNotice("gekuendigt", endsAt, 2, now)).toEqual({
+      endsAt,
+      openHoldingsCount: 2,
+    });
+  });
+
+  it("appears within the 31-day window", () => {
+    const endsAt = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+
+    expect(buildResignationNotice("gekuendigt", endsAt, 0, now)).toEqual({
+      endsAt,
+      openHoldingsCount: 0,
+    });
   });
 });

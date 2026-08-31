@@ -3,6 +3,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { getInternalContent } from "@/lib/content/content";
 import { listImportantLinks } from "@/lib/links/links";
 import {
+  buildResignationNotice,
   countUpcomingShiftBookings,
   summariseMemberHoldings,
 } from "@/lib/members/dashboard";
@@ -72,14 +73,17 @@ export default async function DashboardPage() {
     units,
   );
 
-  const resignationNotice =
-    membershipState === "gekuendigt" && member?.membershipEndsAt
-      ? {
-          endsAt: formatDatePlain(member.membershipEndsAt),
-          openHoldingsCount:
-            summary.ownLoans.length + summary.ownUnitContents.length,
-        }
-      : null;
+  const resignationNotice = buildResignationNotice(
+    membershipState,
+    member?.membershipEndsAt ?? null,
+    summary.ownLoans.length + summary.ownUnitContents.length,
+  );
+  const resignationNoticeView = resignationNotice
+    ? {
+        endsAt: formatDatePlain(resignationNotice.endsAt),
+        openHoldingsCount: resignationNotice.openHoldingsCount,
+      }
+    : null;
 
   return (
     <DashboardView
@@ -102,7 +106,7 @@ export default async function DashboardPage() {
       activeMarketListingCount={activeMarketListingCount}
       importantLinks={importantLinks}
       canManageLinks={canManageLinks}
-      resignationNotice={resignationNotice}
+      resignationNotice={resignationNoticeView}
       openHelperRequestEvent={openHelperRequestEvent}
     />
   );
