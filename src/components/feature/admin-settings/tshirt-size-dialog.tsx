@@ -11,18 +11,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/components/ui/action-button";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { useAction } from "@/components/ui/use-action";
+import { SettingsCardButton } from "@/components/feature/admin-settings/settings-card-button";
 import type { TshirtSizeRow } from "@/lib/members/tshirt-sizes";
 import {
   createTshirtSize,
@@ -282,8 +276,7 @@ function TshirtSizeManagement() {
 /** T-Shirt-Größen-Verwaltung in /admin/einstellungen (#388) — analog
  * `InviteSettingsDialog`: Karte öffnet einen Popup-Dialog statt einer
  * eigenen Route. `count` (Anzahl angelegter Größen) analog dem
- * Count-Badge auf der "Aufbewahrungseinheiten"-Karte (`SettingsCard`),
- * hier separat, weil diese Karte einen Dialog statt einen Link öffnet;
+ * Count-Badge auf der "Aufbewahrungseinheiten"-Karte (`SettingsCard`);
  * 0 Größen ist ein Warnzustand — das Stammdatenfeld hätte dann keine
  * Auswahl. */
 export function TshirtSizeDialog({ count }: { count: number }) {
@@ -291,20 +284,11 @@ export function TshirtSizeDialog({ count }: { count: number }) {
     <Dialog>
       <DialogTrigger
         render={
-          <button type="button" className="w-full text-left">
-            <Card className="hover:bg-muted/50 relative transition-colors">
-              <Badge
-                variant={count === 0 ? "warning" : "default"}
-                className="absolute top-1/2 right-4 h-7 min-w-7 -translate-y-1/2 px-2.5 text-sm"
-              >
-                {count}
-              </Badge>
-              <CardHeader className="pr-14">
-                <CardTitle>T-Shirt-Größen</CardTitle>
-                <CardDescription>Verfügbare Größen verwalten.</CardDescription>
-              </CardHeader>
-            </Card>
-          </button>
+          <SettingsCardButton
+            title="T-Shirt-Größen"
+            description="Verfügbare Größen verwalten."
+            badge={{ count, variant: count === 0 ? "warning" : "default" }}
+          />
         }
       />
       <DialogContent>
