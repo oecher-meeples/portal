@@ -142,7 +142,7 @@ export function VereinsmitgliederTable({
                           : "—"}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {member.meepleId ? (
+                        {member.hasPortalLogin ? (
                           "vorhanden"
                         ) : (
                           <ActionButton
