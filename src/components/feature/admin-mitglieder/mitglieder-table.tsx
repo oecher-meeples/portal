@@ -24,7 +24,7 @@ import { MembershipStatePill } from "@/components/entities/membership-state-pill
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import {
-  MeepleRoleSelect,
+  isActive as isActiveRoleAssignment,
   type RoleOption,
 } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import { MeepleEditDialog } from "@/components/feature/admin-mitglieder/meeple-edit-dialog";
@@ -64,6 +64,7 @@ export function MitgliederTable({
   const [search, setSearch] = useState("");
   const [quickFilter, setQuickFilter] =
     useState<MeepleQuickFilter>("registriert");
+  const now = new Date();
 
   const searchedMeeples = useMemo(() => {
     if (!search) return meeples;
@@ -125,7 +126,6 @@ export function MitgliederTable({
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead />
-                    <TableHead>Nr.</TableHead>
                     <TableHead>Mitglied</TableHead>
                     <TableHead>Rollen</TableHead>
                     <TableHead>Status</TableHead>
@@ -138,7 +138,7 @@ export function MitgliederTable({
                   {filteredMeeples.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={7}
                         className="text-muted-foreground py-6 text-center"
                       >
                         Keine Mitglieder gefunden.
@@ -155,9 +155,6 @@ export function MitgliederTable({
                           canManageAdminAccess={canManageAdminAccess}
                         />
                       </TableCell>
-                      <TableCell className="font-mono">
-                        {meeple.memberNumber}
-                      </TableCell>
                       <TableCell
                         className={
                           meeple.membershipState === "anonymisiert"
@@ -169,13 +166,21 @@ export function MitgliederTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {meeple.hasAccount ? (
-                          <MeepleRoleSelect
-                            meepleId={meeple.id}
-                            assignments={meeple.roleAssignments}
-                            roles={roles}
-                            canManageAdminAccess={canManageAdminAccess}
-                            protected={meeple.displayName === "Admin"}
-                          />
+                          <div className="flex flex-wrap gap-1">
+                            {meeple.roleAssignments.filter((a) =>
+                              isActiveRoleAssignment(a, now),
+                            ).length === 0 ? (
+                              <span>— keine Rolle —</span>
+                            ) : (
+                              meeple.roleAssignments
+                                .filter((a) => isActiveRoleAssignment(a, now))
+                                .map((a) => (
+                                  <Badge key={a.id} variant="outline">
+                                    {a.roleName}
+                                  </Badge>
+                                ))
+                            )}
+                          </div>
                         ) : (
                           "Kein Konto"
                         )}

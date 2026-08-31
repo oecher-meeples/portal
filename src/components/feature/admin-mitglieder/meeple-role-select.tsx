@@ -11,7 +11,10 @@ import { formatDatePlain } from "@/lib/utils/format";
 
 export type RoleOption = { id: string; name: string; isSystemRole: boolean };
 
-function isActive(assignment: MeepleRoleAssignment, now: Date) {
+/** Shared with the read-only badge display in `mitglieder-table.tsx`
+ * (#346) — a table row shows the same "active now" set, just without the
+ * assign/remove controls. */
+export function isActive(assignment: MeepleRoleAssignment, now: Date) {
   const startsAt = new Date(assignment.startsAt);
   const endsAt = assignment.endsAt ? new Date(assignment.endsAt) : null;
   return startsAt <= now && (!endsAt || endsAt > now);
