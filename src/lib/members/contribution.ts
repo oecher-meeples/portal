@@ -18,6 +18,20 @@ export const CONTRIBUTION_CATEGORY_LABELS: Record<
   individuell: "Individueller Beitrag",
 };
 
+/** Kurzform ohne Beitrags-Erklärung — für die kompakte Statistik-Kachel in
+ * `admin-mitglieder-view.tsx`, wo der Beitrag ohnehin schon im Kartentitel
+ * "Vereinsmitglieder" steht. Tabelle/Filter-Badge nutzen weiterhin die
+ * ausführliche Variante oben. */
+export const CONTRIBUTION_CATEGORY_SHORT_LABELS: Record<
+  ContributionCategory,
+  string
+> = {
+  mini: "MiniMeeple",
+  jung: "JungMeeple",
+  meeple: "Meeple",
+  individuell: "Individueller Beitrag",
+};
+
 /** Unter 13 ist der Beitrag laut Vorstandsbeschluss immer 0 € (#328-Akzeptanzkriterium). */
 const MINI_MEEPLE_CONTRIBUTION_EUROS = 0;
 

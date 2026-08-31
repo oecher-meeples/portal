@@ -6,18 +6,12 @@ import {
   logBankDataAccess,
   requireBankReader,
   revealMeepleIban,
+  revealPendingIbanChange,
 } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { memberDisplayName } from "@/lib/members/member-display-name";
-
-/** The only columns the export ever contains. */
-export const BANK_CSV_COLUMNS = [
-  "Mitgliedsnummer",
-  "Name",
-  "Kontoinhaber",
-  "IBAN",
-] as const;
+import { BANK_CSV_COLUMNS } from "@/components/feature/admin-bank/csv-columns";
 
 function csvCell(value: string | number) {
   return escapeCsvField(value, ";");
@@ -26,6 +20,11 @@ function csvCell(value: string | number) {
 export async function revealIban(meepleId: string) {
   const actor = await requireBankReader();
   return revealMeepleIban(meepleId, actor.id);
+}
+
+export async function revealPendingIban(changeId: string) {
+  const actor = await requireBankReader();
+  return revealPendingIbanChange(changeId, actor.id);
 }
 
 export async function exportBankDataCsv() {

@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { PendingChangeKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import {
+  decryptSecret,
   encryptSecret,
   ibanLast4,
   isValidIban,
@@ -14,6 +15,12 @@ import {
   sendEmailChangeConfirmationMail,
   sendPendingChangeRejectedMail,
 } from "@/lib/members/pending-change-mail";
+import {
+  computeExpiresAt,
+  daysToMinutes,
+  findOpenInviteByEmail,
+} from "@/lib/members/invites";
+import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 
 function siteUrl(): string {
   return process.env.PUBLIC_SITE_URL ?? "";
@@ -57,31 +64,11 @@ export async function requestIbanChange(
     data: {
       memberId,
       kind: PendingChangeKind.IBAN,
-      newValue: normalised,
+      // Verschlüsselt wie Member.ibanEncrypted (#357) — vorher lag die neue
+      // IBAN zwischen Antragstellung und Kassenwart-Freigabe im Klartext.
+      newValue: encryptSecret(normalised),
       newAccountHolder: trimmedHolder,
     },
-  });
-
-  return { success: true as const };
-}
-
-/** Löschen der IBAN ohne Ersatzwert ist nur nach Kündigung erlaubt — ein
- * aktives Mitglied braucht immer eine hinterlegte IBAN für den Beitragseinzug. */
-export async function requestIbanClearing(memberId: string) {
-  const member = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-  });
-  if (!member.resignedAt) {
-    return {
-      error:
-        "Die IBAN kann nur gelöscht werden, wenn die Mitgliedschaft gekündigt ist — sonst bitte eine neue IBAN hinterlegen.",
-    };
-  }
-
-  await replaceOpenPendingChange(memberId, PendingChangeKind.IBAN);
-  await prisma.member.update({
-    where: { id: memberId },
-    data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
   });
 
   return { success: true as const };
@@ -138,13 +125,40 @@ export async function confirmEmailChange(token: string) {
   return { success: true as const };
 }
 
+/** #362: ob für die *aktuell* hinterlegte E-Mail-Adresse eines Mitglieds noch
+ * eine offene Einladung existiert — die Grundlage für das
+ * Widerrufen-und-neu-erstellen-Popup vor der Freigabe einer
+ * MEMBER_EMAIL-Änderung. Kein automatisches Kaskadieren des
+ * E-Mail+Token-Doppelschlüssels, nur eine informierte Entscheidung. */
+export async function hasOpenInviteForMemberEmail(
+  memberId: string,
+): Promise<boolean> {
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { email: true },
+  });
+  if (!member) return false;
+  const invite = await findOpenInviteByEmail(member.email);
+  return invite !== null;
+}
+
 /**
  * Kassenwart (IBAN) bzw. Vorstand (MEMBER_EMAIL) — welche Berechtigung das
  * konkret voraussetzt, gated die aufrufende Server Action, nicht diese
  * Funktion (die kennt nur die fachliche Reihenfolge: E-Mail-Änderungen erst
  * nach Bestätigung durch das Mitglied freigebbar).
  */
-export async function approvePendingChange(id: string, approverId: string) {
+export async function approvePendingChange(
+  id: string,
+  approverId: string,
+  options?: {
+    /** #362: bei MEMBER_EMAIL zusätzlich eine noch offene Einladung für die
+     * *alte* Adresse widerrufen und sofort eine neue für die neue Adresse
+     * ausstellen. Nur wirksam, wenn eine solche Einladung tatsächlich
+     * existiert — sonst ein No-op. */
+    revokeAndReissueInvite?: boolean;
+  },
+) {
   const change = await prisma.pendingChange.findUnique({ where: { id } });
   if (!change) {
     return { error: "Änderungsantrag nicht gefunden." };
@@ -159,21 +173,66 @@ export async function approvePendingChange(id: string, approverId: string) {
     };
   }
 
+  // Außerhalb der Transaktion gelesen — reine Konfiguration, kein
+  // Konsistenzrisiko, wenn sie sich zwischen Lesen und Commit ändert.
+  const defaultInviteDays =
+    options?.revokeAndReissueInvite &&
+    change.kind === PendingChangeKind.MEMBER_EMAIL
+      ? await getDefaultInviteDays()
+      : null;
+
   await prisma.$transaction(async (tx) => {
     if (change.kind === PendingChangeKind.IBAN) {
+      // `newValue` ist seit #357 bereits verschlüsselt (wie
+      // `Member.ibanEncrypted`) — nur für `ibanLast4` kurz entschlüsseln.
       await tx.member.update({
         where: { id: change.memberId },
         data: {
           accountHolder: change.newAccountHolder,
-          ibanEncrypted: encryptSecret(change.newValue),
-          ibanLast4: ibanLast4(change.newValue),
+          ibanEncrypted: change.newValue,
+          ibanLast4: ibanLast4(decryptSecret(change.newValue)),
         },
       });
     } else {
+      const previousMember =
+        defaultInviteDays !== null
+          ? await tx.member.findUniqueOrThrow({
+              where: { id: change.memberId },
+              select: { email: true },
+            })
+          : null;
+
       await tx.member.update({
         where: { id: change.memberId },
         data: { email: change.newValue },
       });
+
+      if (defaultInviteDays !== null && previousMember) {
+        const openInvite = await tx.invite.findFirst({
+          where: {
+            email: previousMember.email,
+            redeemedAt: null,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+        });
+        if (openInvite) {
+          await tx.invite.update({
+            where: { id: openInvite.id },
+            data: { revokedAt: new Date() },
+          });
+          const expiresIn = daysToMinutes(defaultInviteDays);
+          await tx.invite.create({
+            data: {
+              token: randomBytes(24).toString("hex"),
+              createdByUserId: approverId,
+              email: change.newValue,
+              expiresIn,
+              expiresAt: computeExpiresAt(expiresIn),
+            },
+          });
+        }
+      }
     }
 
     await tx.pendingChange.update({

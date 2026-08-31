@@ -1,5 +1,6 @@
 import type { HoldingOrigin } from "@prisma/client";
 import { isLoanHolding } from "@/lib/ludothek/holdings";
+import type { MembershipState } from "@/lib/members/membership-state";
 
 export type DashboardHolding = {
   id: string;
@@ -95,4 +96,32 @@ export function countActiveEvents(
   return events.filter(
     (e) => e.endsAt === null || e.endsAt.getTime() >= now.getTime(),
   ).length;
+}
+
+/** Dashboard-Rückgabewarnung nur in den letzten 31 Tagen vor `membershipEndsAt`
+ * (#360) — bei "gekündigt" allein wäre das bis zu ~2 Jahre lang (4-Wochen-
+ * Mindestfrist, #258), was das Konzept (`docs/mitglieder-konzept.md`
+ * Abschnitt 3.4) ausdrücklich nicht will. */
+export const RESIGNATION_NOTICE_WINDOW_DAYS = 31;
+
+export type ResignationNotice = {
+  endsAt: Date;
+  openHoldingsCount: number;
+};
+
+export function buildResignationNotice(
+  membershipState: MembershipState,
+  membershipEndsAt: Date | null,
+  openHoldingsCount: number,
+  now: Date = new Date(),
+): ResignationNotice | null {
+  if (membershipState !== "gekuendigt" || !membershipEndsAt) return null;
+
+  const windowStart = new Date(
+    membershipEndsAt.getTime() -
+      RESIGNATION_NOTICE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+  if (now.getTime() < windowStart.getTime()) return null;
+
+  return { endsAt: membershipEndsAt, openHoldingsCount };
 }

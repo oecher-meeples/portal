@@ -12,7 +12,7 @@ import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 import { listOpenPendingChanges } from "@/lib/members/pending-changes";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { listMembersEligibleForStufe3 } from "@/lib/members/anonymisation";
-import { determineContribution } from "@/lib/members/contribution";
+import { buildVereinsmitgliedRows } from "@/lib/members/vereinsmitglieder-rows";
 import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
@@ -35,7 +35,9 @@ export default async function AdminMitgliederPage() {
     pendingChanges,
     stufe3Candidates,
     canReadBankData,
+    canManageMembers,
     canManageRoles,
+    canManageInvites,
     canCreateSystemkonto,
   ] = await Promise.all([
     prisma.member.findMany({
@@ -47,6 +49,7 @@ export default async function AdminMitgliederPage() {
             displayName: true,
             joinedAt: true,
             anonymizedAt: true,
+            neonAuthUserId: true,
           },
         },
       },
@@ -69,10 +72,12 @@ export default async function AdminMitgliederPage() {
     }),
     prisma.userRole.findMany({
       include: { role: { select: { id: true, name: true } } },
-      orderBy: { startsAt: "desc" },
+      // #391: kanonische Rollen-Reihenfolge statt Zuweisungsdatum, damit
+      // die Badges in mitglieder-table.tsx überall gleich sortiert erscheinen.
+      orderBy: { role: { sortOrder: "asc" } },
     }),
     prisma.role.findMany({
-      orderBy: { name: "asc" },
+      orderBy: { sortOrder: "asc" },
       include: { permissions: true },
     }),
     prisma.permission.findMany({ orderBy: { key: "asc" } }),
@@ -94,6 +99,8 @@ export default async function AdminMitgliederPage() {
     listMembersEligibleForStufe3(now),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
+    hasPermission(session.user.id, "roles:manage"),
+    hasPermission(session.user.id, "invites:manage"),
     hasPermission(session.user.id, "admin:access"),
   ]);
 
@@ -129,6 +136,16 @@ export default async function AdminMitgliederPage() {
   );
   const stufe3EligibleIds = new Set(stufe3Candidates.map((m) => m.id));
 
+  const vereinsmitgliedRows = buildVereinsmitgliedRows(
+    members,
+    {
+      openGamesByMemberId: openGamesByVereinsmitgliedId,
+      openUnitsByMeepleId,
+      stufe3EligibleIds,
+    },
+    now,
+  );
+
   return (
     <AdminMitgliederView
       isDecemberOrLater={now.getUTCMonth() === 11}
@@ -146,38 +163,19 @@ export default async function AdminMitgliederPage() {
         name: role.name,
         description: role.description,
         permissionIds: role.permissions.map((entry) => entry.permissionId),
+        isSystemRole: role.isSystemRole,
+        sortOrder: role.sortOrder,
       }))}
       permissions={permissions.map((permission) => ({
         id: permission.id,
         key: permission.key,
         description: permission.description,
       }))}
+      canManageMembers={canManageMembers}
       canManageRoles={canManageRoles}
+      canManageInvites={canManageInvites}
       canReadBankData={canReadBankData}
-      members={members.map((member) => ({
-        id: member.id,
-        memberNumber: member.memberNumber,
-        displayName: memberDisplayName(member),
-        email: member.email,
-        meepleId: member.meepleId,
-        joinedAt: member.meeple?.joinedAt.toISOString() ?? null,
-        resignedAt: member.resignedAt?.toISOString() ?? null,
-        membershipEndsAt: member.membershipEndsAt?.toISOString() ?? null,
-        membershipState: getMembershipState(
-          {
-            resignedAt: member.resignedAt,
-            membershipEndsAt: member.membershipEndsAt,
-            anonymizedAt: member.meeple?.anonymizedAt ?? null,
-          },
-          now,
-        ),
-        contributionCategory: determineContribution(member, now).category,
-        openGames: openGamesByVereinsmitgliedId.get(member.id) ?? 0,
-        openUnits: member.meepleId
-          ? (openUnitsByMeepleId.get(member.meepleId) ?? 0)
-          : 0,
-        stufe3Eligible: stufe3EligibleIds.has(member.id),
-      }))}
+      members={vereinsmitgliedRows}
       meeples={meeples.map((meeple) => ({
         id: meeple.id,
         memberNumber: meeple.memberNumber,
@@ -196,6 +194,7 @@ export default async function AdminMitgliederPage() {
         })),
         membershipState: getMembershipState(
           {
+            meepleId: meeple.id,
             resignedAt: meeple.member?.resignedAt ?? null,
             membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
             anonymizedAt: meeple.anonymizedAt,

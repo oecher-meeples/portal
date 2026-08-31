@@ -143,11 +143,19 @@ model Permission {
 }
 
 model Role {
-  id          String           @id @default(cuid())
-  name        String           @unique
-  description String?
-  permissions RolePermission[]
-  users       UserRole[]
+  id           String           @id @default(cuid())
+  name         String           @unique
+  description  String?
+  /// "Systemrolle" (#353): Zuweisen/Entfernen erfordert `admin:access` statt
+  /// nur `members:manage` — unabhängig vom Konzept "Systemkonto"
+  /// (`createSystemkonto()`, ein technisches Meeple ohne Person dahinter).
+  isSystemRole Boolean          @default(false)
+  /// Kanonische, per Drag-and-Drop änderbare Anzeigereihenfolge (#391) —
+  /// reine Ordnungszahl, kein Verlauf. Backfill über die bisherige
+  /// `ROLES`-Array-Reihenfolge in prisma/seed-roles.ts.
+  sortOrder    Int              @default(0)
+  permissions  RolePermission[]
+  users        UserRole[]
 
   @@map("roles")
 }
@@ -371,6 +379,49 @@ model BankDataAccessLog {
   @@map("bank_data_access_logs")
 }
 
+/// Generischer Rate-Limiter-Zustand (#326) — Postgres statt eines eigenen
+/// Redis/KV-Diensts (siehe Issue für Begründung). `key` kodiert Zweck +
+/// Schlüssel, z. B. `"login:ip:<ip>"`, `"login:email:<email>"`,
+/// `"invite:ip:<ip>"`, `"iban-reveal:<meepleId>"`.
+model RateLimitAttempt {
+  id                  String    @id @default(cuid())
+  key                 String    @unique
+  failCount           Int       @default(0)
+  /// Aktueller Cooldown in Sekunden, direkt gespeichert statt bei jedem
+  /// Request aus `failCount` neu berechnet — O(1)-Verdopplung pro
+  /// Fehlversuch. `Int` reicht: der 8h-Deckel begrenzt den Maximalwert auf
+  /// 28.800, weit unter jeder Int32-Grenze.
+  currentCooldownSecs Int       @default(0)
+  /// Bei Fix-Cooldown-/Zähl-Keys: Zeitpunkt des letzten Versuchs. Bei
+  /// `"login:email:<email>"`: Zeitpunkt des letzten *Fehl*versuchs.
+  lastFailedAt        DateTime  @default(now())
+  /// Nur für `"login:email:<email>"` befüllt — IP des letzten Fehlversuchs,
+  /// für den Reset-Trigger "erfolgreicher Login von derselben IP" (#326).
+  lastFailedIp        String?
+  /// Harte, manuell gesetzte Sperre (#327) — im Unterschied zu
+  /// `currentCooldownSecs` NICHT durch den 10h-Idle-Reset aufgehoben, nur
+  /// durch eine explizite Admin-Aktion (`members:manage`).
+  manuallyLockedAt    DateTime?
+
+  @@map("rate_limit_attempts")
+}
+
+/// Login-Audit-Trail für privilegierte Konten (#231) — protokolliert wird
+/// nur, wer zum Login-Zeitpunkt `admin:access` besitzt (Credentials- **und**
+/// Google-SSO-Logins). Aufbewahrung: 24 Monate, analog zu
+/// `BankDataAccessLog` (docs/adr/0003).
+model LoginLog {
+  id             String   @id @default(cuid())
+  neonAuthUserId String
+  ipAddress      String?
+  userAgent      String?
+  at             DateTime @default(now())
+
+  @@index([neonAuthUserId])
+  @@index([at])
+  @@map("login_logs")
+}
+
 model Post {
   id                 String           @id @default(cuid())
   slug               String           @unique
@@ -480,18 +531,18 @@ model InviteSettings {
 /// board approval. Only one open `PendingChange` per (member, kind) — a new
 /// request replaces the old one (see `pending-changes.ts`).
 model PendingChange {
-  id               String             @id @default(cuid())
+  id               String            @id @default(cuid())
   memberId         String
   kind             PendingChangeKind
-  /// New value the member proposes — IBAN in the clear here (only until
-  /// approved, then re-encrypted like `Member.ibanEncrypted`) or the new email.
+  /// New value the member proposes — IBAN encrypted here (#357, same as
+  /// `Member.ibanEncrypted`) or the new email in the clear.
   newValue         String
   /// Nur `kind: IBAN` — der neue Kontoinhaber, geht mit der IBAN zusammen ein.
   newAccountHolder String?
-  requestedAt      DateTime           @default(now())
+  requestedAt      DateTime          @default(now())
   /// Reachability-Token für den Bestätigungslink (nur MEMBER_EMAIL) — null,
   /// solange kein Link nötig war (IBAN) oder nach Bestätigung verbraucht.
-  confirmToken     String?            @unique
+  confirmToken     String?           @unique
   /// Set once the member confirms via emailed link — only relevant for
   /// MEMBER_EMAIL, which additionally needs board approval afterwards.
   confirmedAt      DateTime?

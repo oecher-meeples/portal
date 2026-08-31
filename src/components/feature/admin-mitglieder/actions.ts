@@ -8,6 +8,7 @@ import {
   updateRole as updateRoleRecord,
   deleteRole as deleteRoleRecord,
   setRolePermissions as setRolePermissionsRecord,
+  reorderRoles as reorderRolesRecord,
 } from "@/lib/auth/roles";
 import {
   assignMeepleRole as assignMeepleRoleRecord,
@@ -22,7 +23,6 @@ import {
 import { removeAusgetretenRole } from "@/lib/auth/ausgetreten-role";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
-import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
 import {
   requireBankReader,
   revealMeepleIban,
@@ -36,6 +36,13 @@ async function requireMembersManage() {
  * admin:access, keine eigene feingranulare Permission. */
 async function requireAdminAccess() {
   return requirePermission("admin:access");
+}
+
+/** #365: Rollen-CRUD/-Rechte-Bearbeitung erfordert die eigene `roles:manage`,
+ * nicht `members:manage` — nicht jeder Mitglieder-Admin darf sonst auch die
+ * Rollenverwaltung selbst ändern. */
+async function requireRolesManage() {
+  return requirePermission("roles:manage");
 }
 
 /** How many games and units currently sit with this Meeple, for the confirmation dialog. */
@@ -148,28 +155,30 @@ export async function revealMemberIban(meepleId: string) {
   return revealMeepleIban(meepleId, actor.id);
 }
 
-/** Art. 15/20 self-disclosure, sent to the Meeple's stored email on an admin's request. */
-export async function sendSelbstauskunft(meepleId: string) {
-  await requireMembersManage();
-
-  return sendSelbstauskunftMail(meepleId);
-}
-
 /**
  * A Meeple can hold several roles at once (#335) — this adds one rather than
  * replacing the set. A `window` (explicit startsAt/endsAt, a term of office
  * per #264) requires admin:access; a plain assignment (starts now, never
  * ends) only requires members:manage, same as the old single-role setter.
+ * A **Systemrolle** (#353, e.g. "Ausgetreten"/"sysadmin") always requires
+ * admin:access, window or not — `members:manage` alone may never assign one.
  */
 export async function assignMeepleRole(
   meepleId: string,
   roleId: string,
   window?: { startsAt: Date; endsAt: Date | null },
 ) {
-  if (window) {
+  // Base gate first, before the DB read decides whether to escalate — a
+  // caller without any role-management permission at all must never reach
+  // the escalation check (and its own DB read) in the first place.
+  await requireMembersManage();
+
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { id: roleId },
+    select: { isSystemRole: true },
+  });
+  if (window || role.isSystemRole) {
     await requireAdminAccess();
-  } else {
-    await requireMembersManage();
   }
 
   const result = await assignMeepleRoleRecord(meepleId, roleId, window);
@@ -179,11 +188,20 @@ export async function assignMeepleRole(
   return { success: true as const };
 }
 
-/** Beendet eine Rollenzuweisung ab jetzt (Historie bleibt erhalten, siehe #264). */
+/** Beendet eine Rollenzuweisung ab jetzt (Historie bleibt erhalten, siehe #264).
+ * Systemrollen (#353) erfordern admin:access statt nur members:manage. */
 export async function removeMeepleRole(userRoleId: string) {
-  await requireMembersManage();
+  const actor = await requireMembersManage();
 
-  const result = await removeMeepleRoleRecord(userRoleId);
+  const assignment = await prisma.userRole.findUniqueOrThrow({
+    where: { id: userRoleId },
+    select: { role: { select: { isSystemRole: true } } },
+  });
+  if (assignment.role.isSystemRole) {
+    await requireAdminAccess();
+  }
+
+  const result = await removeMeepleRoleRecord(userRoleId, actor.id);
   if ("error" in result) return result;
 
   revalidatePath("/admin/mitglieder");
@@ -198,7 +216,7 @@ export async function getMeepleRoleAssignments(neonAuthUserId: string) {
 }
 
 export async function createRole(name: string, description: string | null) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await createRoleRecord(name, description);
   if ("error" in result) return result;
@@ -212,7 +230,7 @@ export async function updateRole(
   name: string,
   description: string | null,
 ) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await updateRoleRecord(roleId, name, description);
   if ("error" in result) return result;
@@ -222,7 +240,7 @@ export async function updateRole(
 }
 
 export async function deleteRole(roleId: string) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await deleteRoleRecord(roleId);
   if ("error" in result) return result;
@@ -235,9 +253,19 @@ export async function setRolePermissions(
   roleId: string,
   permissionIds: string[],
 ) {
-  await requireMembersManage();
+  await requireRolesManage();
 
   const result = await setRolePermissionsRecord(roleId, permissionIds);
+  if ("error" in result) return result;
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function reorderRoles(roleIds: string[]) {
+  await requireRolesManage();
+
+  const result = await reorderRolesRecord(roleIds);
   if ("error" in result) return result;
 
   revalidatePath("/admin/mitglieder");

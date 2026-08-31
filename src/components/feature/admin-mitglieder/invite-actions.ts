@@ -7,20 +7,12 @@ import {
   computeExpiresAt,
   daysToMinutes,
   findOpenInviteByEmail,
-  MAX_INVITE_DAYS,
 } from "@/lib/members/invites";
+import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 import { prisma } from "@/lib/utils/prisma";
 
 async function requireInvitesManage() {
   return requirePermission("invites:manage");
-}
-
-function assertValidDays(days: number) {
-  if (!(days > 0) || days > MAX_INVITE_DAYS) {
-    throw new Error(
-      `Die Gültigkeitsdauer muss zwischen 0 und ${MAX_INVITE_DAYS} Tagen liegen.`,
-    );
-  }
 }
 
 /** Shared by the duplicate-email path in `createInvite` and the
@@ -36,16 +28,14 @@ async function applyExpiresIn(id: string, expiresIn?: number) {
 
 /** Einladungen sind seit #329 immer an ein bestehendes `Member` gebunden —
  * `memberId` statt einer frei eingegebenen E-Mail-Adresse, damit die
- * Einladung nie an eine Adresse geht, die zu keinem Mitglied gehört. */
-export async function createInvite({
-  memberId,
-  days,
-}: {
-  memberId: string;
-  days: number;
-}) {
+ * Einladung nie an eine Adresse geht, die zu keinem Mitglied gehört.
+ *
+ * Die Gültigkeitsdauer ist seit #349 nicht mehr pro Einladung wählbar —
+ * `createInvite` liest sie selbst aus `/admin/einstellungen/einladungen`
+ * (`getDefaultInviteDays()`), ein Aufrufer kann sie nicht überschreiben. */
+export async function createInvite({ memberId }: { memberId: string }) {
   const admin = await requireInvitesManage();
-  assertValidDays(days);
+  const days = await getDefaultInviteDays();
   const expiresIn = daysToMinutes(days);
 
   const member = await prisma.member.findUniqueOrThrow({

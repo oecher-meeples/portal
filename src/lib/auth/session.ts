@@ -1,8 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getCurrentSession, getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
+import { logAdminLoginOnce } from "@/lib/auth/login-log";
 import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
@@ -119,12 +120,13 @@ export async function requireMember() {
     select: { resignedAt: true, membershipEndsAt: true },
   });
   const membershipState = getMembershipState({
+    meepleId: meeple.id,
     resignedAt: member?.resignedAt ?? null,
     membershipEndsAt: member?.membershipEndsAt ?? null,
     anonymizedAt: meeple.anonymizedAt,
   });
 
-  if (membershipState !== "aktiv" && membershipState !== "gekuendigt") {
+  if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
     if (!isSettlementPath(pathname)) {
       redirect("/403");
@@ -132,6 +134,47 @@ export async function requireMember() {
   }
 
   return { user, meeple, membershipState };
+}
+
+/**
+ * Zwangs-Logout für `admin:access`-Konten (#231): keine langlebige,
+ * still weiterlaufende Session — nach 12h ab Login (`session.createdAt`,
+ * unabhängig von fortgesetzter Aktivität) wird eine erneute Anmeldung
+ * verlangt. Der eigentliche Cookie-Löschvorgang läuft über einen Redirect
+ * auf einen Route Handler (`/api/auth/force-logout`), weil Server
+ * Components selbst keine Cookies schreiben dürfen (#242).
+ *
+ * Bewusst hier statt in `src/proxy.ts` verankert: `auth.getSession()`
+ * braucht den `next/headers`-Request-Context, den Middleware nicht hat —
+ * dieser Check greift dafür bei jedem Zugriff auf eine `/admin`-Seite,
+ * was für ein praktisch admin-only genutztes Konto ausreicht.
+ */
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
+  if (!(await hasPermission(neonAuthUserId, ADMIN_ACCESS_PERMISSION))) return;
+
+  const session = await getCurrentSession();
+  if (!session) return;
+
+  // #371: `auth.getSession()` normalisiert `createdAt` nur auf seinem
+  // Cache-Hit-Pfad zu einem echten `Date` — im Fallback-Pfad (Cache-Cookie
+  // fehlt/abgelaufen, z. B. direkt nach einem Server-Neustart) kommt ein
+  // roher ISO-String durch, obwohl die SDK-Typen immer `Date` versprechen.
+  const createdAt =
+    session.session.createdAt instanceof Date
+      ? session.session.createdAt
+      : new Date(session.session.createdAt);
+
+  await logAdminLoginOnce(neonAuthUserId, createdAt);
+
+  const ageMs = Date.now() - createdAt.getTime();
+  if (ageMs > ADMIN_SESSION_MAX_AGE_MS) {
+    const pathname = await currentPathname();
+    redirect(
+      `/api/auth/force-logout?next=${encodeURIComponent(`/login?next=${pathname}`)}`,
+    );
+  }
 }
 
 /**
@@ -144,6 +187,8 @@ export async function requireMember() {
  */
 export async function requireAdminPermission(permissionKey: string | string[]) {
   const session = await requireMember();
+  await enforceAdminAccessSessionFreshness(session.user.id);
+
   const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
   const results = await Promise.all(
     keys.map((key) => hasPermission(session.user.id, key)),

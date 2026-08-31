@@ -30,16 +30,13 @@ vi.mock("@/lib/newsletter/subscribers", () => ({
 }));
 
 const requestIbanChangeMock = vi.fn();
-const requestIbanClearingMock = vi.fn();
 const requestEmailChangeMock = vi.fn();
 vi.mock("@/lib/members/pending-changes", () => ({
   requestIbanChange: (...args: unknown[]) => requestIbanChangeMock(...args),
-  requestIbanClearing: (...args: unknown[]) => requestIbanClearingMock(...args),
   requestEmailChange: (...args: unknown[]) => requestEmailChangeMock(...args),
 }));
 
 const {
-  clearOwnBankDetails,
   exportOwnPersonalData,
   requestOwnDeletion,
   requestOwnEmailChange,
@@ -64,7 +61,6 @@ beforeEach(() => {
   findOpenDeletionRequestMock.mockReset();
   findOpenDeletionRequestMock.mockResolvedValue(null);
   requestIbanChangeMock.mockReset();
-  requestIbanClearingMock.mockReset();
   requestEmailChangeMock.mockReset();
   prismaMock.member.findUnique.mockResolvedValue(OWN_MEMBER as never);
 });
@@ -79,7 +75,6 @@ describe("without a session", () => {
     await expect(
       updateOwnBankDetails({ accountHolder: "Lea", iban: IBAN }),
     ).rejects.toThrow(RedirectError);
-    await expect(clearOwnBankDetails()).rejects.toThrow(RedirectError);
     await expect(requestOwnEmailChange("neu@example.com")).rejects.toThrow(
       RedirectError,
     );
@@ -280,17 +275,6 @@ describe("updateOwnBankDetails", () => {
         "Für dein Konto liegt noch keine Vereinsmitgliedschaft vor. Bitte wende dich an den Vorstand.",
     });
     expect(requestIbanChangeMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("clearOwnBankDetails", () => {
-  it("delegates to requestIbanClearing for the caller's own Member", async () => {
-    requestIbanClearingMock.mockResolvedValue({ success: true });
-
-    const result = await clearOwnBankDetails();
-
-    expect(result).toEqual({ success: true });
-    expect(requestIbanClearingMock).toHaveBeenCalledWith("member-1");
   });
 });
 

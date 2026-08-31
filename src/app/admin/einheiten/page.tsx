@@ -65,6 +65,7 @@ export default async function AdminEinheitenPage() {
 
   function membershipStateOf(meeple: (typeof meeples)[number]) {
     return getMembershipState({
+      meepleId: meeple.id,
       resignedAt: meeple.member?.resignedAt ?? null,
       membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
       anonymizedAt: meeple.anonymizedAt,

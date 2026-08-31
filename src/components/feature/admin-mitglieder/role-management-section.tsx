@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TextField, TextAreaField } from "@/components/ui/field";
 import { ActionDialog } from "@/components/ui/action-dialog";
+import { useAction } from "@/components/ui/use-action";
 import {
   Accordion,
   AccordionItem,
@@ -21,6 +22,7 @@ import {
   updateRole,
   deleteRole,
   setRolePermissions,
+  reorderRoles,
 } from "@/components/feature/admin-mitglieder/actions";
 
 export type RoleManagementRow = {
@@ -28,7 +30,15 @@ export type RoleManagementRow = {
   name: string;
   description: string | null;
   permissionIds: string[];
+  /** Systemrolle (#353) — Zuweisen/Entfernen erfordert admin:access statt
+   * nur members:manage, s. `MeepleRoleSelect`. */
+  isSystemRole: boolean;
+  /** Kanonische Anzeigereihenfolge (#391), per Drag-and-Drop änderbar. */
+  sortOrder: number;
 };
+
+/** Eigener MIME-Typ für den Drag-Payload — analog role-permissions-editor.tsx. */
+const REORDER_DRAG_MIME = "application/x-role-id";
 
 /** Muss zum in prisma/seed-roles.ts gepflegten Permission-Key passen. */
 const ADMIN_ACCESS_PERMISSION_KEY = "admin:access";
@@ -36,7 +46,7 @@ const ADMIN_ACCESS_PERMISSION_KEY = "admin:access";
 /**
  * Rollenverwaltung — nur sichtbar mit `members:manage` (Gate liegt beim
  * Aufrufer, siehe AdminMitgliederView). Server Actions kommen aus #216,
- * die Dual-Listbox aus #217/#218.
+ * die Dual-Listbox aus #217/#218, die Drag-and-Drop-Reihenfolge aus #391.
  */
 export function RoleManagementSection({
   roles,
@@ -45,12 +55,48 @@ export function RoleManagementSection({
   roles: RoleManagementRow[];
   permissions: PermissionOption[];
 }) {
-  const sortedRoles = [...roles].sort(
-    (a, b) => b.permissionIds.length - a.permissionIds.length,
+  // Während eines laufenden Drags/Speicherns überschreibt eine lokale
+  // Reihenfolge (nur die IDs) die Serverdaten; danach (Erfolg oder Fehler)
+  // übernimmt wieder `roles` — nach Erfolg per router.refresh() (useAction)
+  // bereits in der neuen Reihenfolge, nach Fehler unverändert in der alten.
+  const [pendingOrderIds, setPendingOrderIds] = useState<string[] | null>(null);
+  const [draggedRoleId, setDraggedRoleId] = useState<string | null>(null);
+  const { run: runReorder, error: reorderError } = useAction();
+
+  const serverOrderedRoles = [...roles].sort(
+    (a, b) => a.sortOrder - b.sortOrder,
   );
+  const rolesById = new Map(serverOrderedRoles.map((role) => [role.id, role]));
+  const orderedRoles = pendingOrderIds
+    ? pendingOrderIds
+        .map((id) => rolesById.get(id))
+        .filter((role) => role !== undefined)
+    : serverOrderedRoles;
+
   const adminAccessPermissionId = permissions.find(
     (permission) => permission.key === ADMIN_ACCESS_PERMISSION_KEY,
   )?.id;
+
+  function moveDraggedRoleBefore(targetRoleId: string) {
+    if (!draggedRoleId || draggedRoleId === targetRoleId) return;
+    const dragged = orderedRoles.find((role) => role.id === draggedRoleId);
+    if (!dragged) return;
+
+    const withoutDragged = orderedRoles.filter(
+      (role) => role.id !== draggedRoleId,
+    );
+    const targetIndex = withoutDragged.findIndex(
+      (role) => role.id === targetRoleId,
+    );
+    const next = [...withoutDragged];
+    next.splice(targetIndex, 0, dragged);
+    const nextIds = next.map((role) => role.id);
+
+    setPendingOrderIds(nextIds);
+    runReorder(() => reorderRoles(nextIds)).then(() => {
+      setPendingOrderIds(null);
+    });
+  }
 
   return (
     <Accordion className="bg-card rounded-lg border">
@@ -65,8 +111,11 @@ export function RoleManagementSection({
           <div className="flex justify-end">
             <CreateRoleDialog />
           </div>
+          {reorderError && (
+            <p className="text-destructive mt-2 text-xs">{reorderError}</p>
+          )}
           <ul className="mt-3 flex flex-col divide-y text-sm">
-            {sortedRoles.map((role) => {
+            {orderedRoles.map((role) => {
               const isSystemAdminRole = Boolean(
                 adminAccessPermissionId &&
                 role.permissionIds.includes(adminAccessPermissionId),
@@ -74,26 +123,50 @@ export function RoleManagementSection({
               return (
                 <li
                   key={role.id}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    if (event.dataTransfer.getData(REORDER_DRAG_MIME)) {
+                      moveDraggedRoleBefore(role.id);
+                    }
+                  }}
                   className="flex flex-wrap items-center justify-between gap-2 py-2"
                 >
-                  <div className="flex flex-col">
-                    <span className="flex items-center gap-2">
-                      <span className="font-medium">{role.name}</span>
-                      <Badge variant="secondary">
-                        {role.permissionIds.length}
-                      </Badge>
-                      {isSystemAdminRole && (
-                        <Lock
-                          className="text-muted-foreground size-3.5"
-                          aria-label="Systemzugriff — Rechte fest verdrahtet"
-                        />
-                      )}
+                  <div className="flex items-center gap-2">
+                    <span
+                      draggable
+                      onDragStart={(event) => {
+                        setDraggedRoleId(role.id);
+                        event.dataTransfer.setData(REORDER_DRAG_MIME, role.id);
+                        event.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnd={() => setDraggedRoleId(null)}
+                      className="text-muted-foreground hover:text-foreground cursor-grab touch-none active:cursor-grabbing"
+                      aria-label={`Rolle „${role.name}“ per Drag-and-Drop verschieben`}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <GripVertical className="size-4" />
                     </span>
-                    {role.description && (
-                      <span className="text-muted-foreground text-xs">
-                        {role.description}
+                    <div className="flex flex-col">
+                      <span className="flex items-center gap-2">
+                        <span className="font-medium">{role.name}</span>
+                        <Badge variant="secondary">
+                          {role.permissionIds.length}
+                        </Badge>
+                        {isSystemAdminRole && (
+                          <Lock
+                            className="text-muted-foreground size-3.5"
+                            aria-label="Systemzugriff — Rechte fest verdrahtet"
+                          />
+                        )}
                       </span>
-                    )}
+                      {role.description && (
+                        <span className="text-muted-foreground text-xs">
+                          {role.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <EditRoleDialog

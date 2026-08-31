@@ -1,6 +1,6 @@
 import { PendingChangeKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { ibanLast4, maskIban } from "@/lib/utils/crypto";
+import { decryptSecret, ibanLast4, maskIban } from "@/lib/utils/crypto";
 import { requirePermission } from "@/lib/auth/permissions";
 import { AdminBankView } from "@/components/feature/admin-bank/admin-bank-view";
 import { formatDateTime } from "@/lib/utils/format";
@@ -66,7 +66,8 @@ export default async function AdminBankPage() {
           id: change.id,
           memberDisplayName: memberDisplayName(change.member),
           memberNumber: change.member.memberNumber,
-          displayValue: maskIban(ibanLast4(change.newValue)),
+          // #357: newValue ist seit der Antragstellung verschlüsselt.
+          displayValue: maskIban(ibanLast4(decryptSecret(change.newValue))),
           requestedAt: change.requestedAt.toISOString(),
           confirmed: true,
         }))}

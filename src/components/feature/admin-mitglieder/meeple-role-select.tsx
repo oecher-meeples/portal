@@ -9,9 +9,12 @@ import {
 import type { MeepleRoleAssignment } from "@/lib/auth/user-roles";
 import { formatDatePlain } from "@/lib/utils/format";
 
-export type RoleOption = { id: string; name: string };
+export type RoleOption = { id: string; name: string; isSystemRole: boolean };
 
-function isActive(assignment: MeepleRoleAssignment, now: Date) {
+/** Shared with the read-only badge display in `mitglieder-table.tsx`
+ * (#346) — a table row shows the same "active now" set, just without the
+ * assign/remove controls. */
+export function isActive(assignment: MeepleRoleAssignment, now: Date) {
   const startsAt = new Date(assignment.startsAt);
   const endsAt = assignment.endsAt ? new Date(assignment.endsAt) : null;
   return startsAt <= now && (!endsAt || endsAt > now);
@@ -20,30 +23,43 @@ function isActive(assignment: MeepleRoleAssignment, now: Date) {
 /**
  * A Meeple can hold several roles at once (#335) — each assignment can be
  * removed independently (ends it now, history stays visible, see #264).
- * Adding a role is a plain "starts now, never ends" assignment; a term of
- * office with an explicit window isn't editable here (admin:access-Vorgabe,
- * bewusst kein UI-Feinschliff in Paket 1 — siehe Ausführungsplan Paket 6).
+ * Adding a role is a plain "starts now, never ends" assignment by default;
+ * with `admin:access` an explicit Amtszeit-Zeitfenster (Start-/Enddatum,
+ * #264/#352) can be set before picking the role.
  */
 export function MeepleRoleSelect({
   meepleId,
   assignments,
   roles,
+  canManageAdminAccess,
   protected: isProtected = false,
 }: {
   meepleId: string;
   assignments: MeepleRoleAssignment[];
   roles: RoleOption[];
+  /** Viewer hält `admin:access` (#353) — sonst bleiben Systemrollen
+   * ("Ausgetreten"/"sysadmin") read-only sichtbar, aber nicht zuweisbar
+   * oder entfernbar; auch das Amtszeit-Datumsfeld (#352) bleibt dann
+   * ausgeblendet. */
+  canManageAdminAccess: boolean;
   /** Der seed-erzeugte Fallback-Admin (displayName "Admin") — Rollen bleiben fest. */
   protected?: boolean;
 }) {
   const [pendingRoleId, setPendingRoleId] = useState("");
+  const [windowStartsAt, setWindowStartsAt] = useState("");
+  const [windowEndsAt, setWindowEndsAt] = useState("");
   const { run, pending, error } = useAction();
   const now = new Date();
 
   const active = assignments.filter((a) => isActive(a, now));
   const expired = assignments.filter((a) => !isActive(a, now));
   const activeRoleIds = new Set(active.map((a) => a.roleId));
-  const assignableRoles = roles.filter((role) => !activeRoleIds.has(role.id));
+  const roleById = new Map(roles.map((role) => [role.id, role]));
+  const assignableRoles = roles.filter(
+    (role) =>
+      !activeRoleIds.has(role.id) &&
+      (canManageAdminAccess || !role.isSystemRole),
+  );
 
   if (isProtected) {
     return (
@@ -62,43 +78,92 @@ export function MeepleRoleSelect({
         {active.length === 0 && (
           <span className="text-muted-foreground text-sm">— keine Rolle —</span>
         )}
-        {active.map((assignment) => (
-          <span
-            key={assignment.id}
-            className="border-input inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-          >
-            {assignment.roleName}
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => run(() => removeMeepleRole(assignment.id))}
-              className="text-muted-foreground hover:text-destructive disabled:opacity-60"
-              aria-label={`Rolle ${assignment.roleName} entfernen`}
+        {active.map((assignment) => {
+          const canRemove =
+            canManageAdminAccess ||
+            !roleById.get(assignment.roleId)?.isSystemRole;
+          return (
+            <span
+              key={assignment.id}
+              className="border-input inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
             >
-              ×
-            </button>
-          </span>
-        ))}
+              {assignment.roleName}
+              {canRemove && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run(() => removeMeepleRole(assignment.id))}
+                  className="text-muted-foreground hover:text-destructive disabled:opacity-60"
+                  aria-label={`Rolle ${assignment.roleName} entfernen`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          );
+        })}
       </div>
       {assignableRoles.length > 0 && (
-        <select
-          value={pendingRoleId}
-          disabled={pending}
-          onChange={(event) => {
-            const roleId = event.target.value;
-            if (!roleId) return;
-            setPendingRoleId("");
-            run(() => assignMeepleRole(meepleId, roleId));
-          }}
-          className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
-        >
-          <option value="">+ Rolle hinzufügen …</option>
-          {assignableRoles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
-            </option>
-          ))}
-        </select>
+        <>
+          {canManageAdminAccess && (
+            <div className="flex items-center gap-1 text-xs">
+              <label className="text-muted-foreground">
+                Amtszeit (optional):
+              </label>
+              <input
+                type="date"
+                value={windowStartsAt}
+                disabled={pending}
+                onChange={(event) => setWindowStartsAt(event.target.value)}
+                className="border-input h-7 rounded-md border bg-transparent px-1.5 disabled:opacity-60"
+                aria-label="Amtszeit-Start"
+              />
+              <span className="text-muted-foreground">–</span>
+              <input
+                type="date"
+                value={windowEndsAt}
+                disabled={pending}
+                onChange={(event) => setWindowEndsAt(event.target.value)}
+                className="border-input h-7 rounded-md border bg-transparent px-1.5 disabled:opacity-60"
+                aria-label="Amtszeit-Ende"
+              />
+            </div>
+          )}
+          <select
+            value={pendingRoleId}
+            disabled={pending}
+            onChange={(event) => {
+              const roleId = event.target.value;
+              if (!roleId) return;
+              setPendingRoleId("");
+              const window =
+                canManageAdminAccess && (windowStartsAt || windowEndsAt)
+                  ? {
+                      startsAt: windowStartsAt
+                        ? new Date(windowStartsAt)
+                        : new Date(),
+                      endsAt: windowEndsAt ? new Date(windowEndsAt) : null,
+                    }
+                  : undefined;
+              run(() => assignMeepleRole(meepleId, roleId, window)).then(
+                (succeeded) => {
+                  if (succeeded) {
+                    setWindowStartsAt("");
+                    setWindowEndsAt("");
+                  }
+                },
+              );
+            }}
+            className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
+          >
+            <option value="">+ Rolle hinzufügen …</option>
+            {assignableRoles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </>
       )}
       {expired.length > 0 && (
         <details className="text-muted-foreground text-xs">

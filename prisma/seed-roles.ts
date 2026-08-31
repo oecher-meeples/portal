@@ -14,6 +14,11 @@ const PERMISSIONS = [
   },
   { key: "members:manage", description: "Mitgliederverwaltung" },
   {
+    key: "roles:manage",
+    description:
+      "Rollen und deren Rechte bearbeiten (#365) — bewusst getrennt von members:manage, damit nicht jeder Mitglieder-Admin auch die Rollenverwaltung selbst ändern kann",
+  },
+  {
     key: "instagram:connect",
     description: "Instagram-Verbindung verwalten (OAuth verbinden/trennen)",
   },
@@ -100,6 +105,7 @@ const ROLES = [
     name: "sysadmin",
     description: "Vollzugriff",
     permissionKeys: PERMISSIONS.map((p) => p.key),
+    isSystemRole: true,
   },
   {
     name: "Vorstand",
@@ -141,6 +147,7 @@ const ROLES = [
     description:
       "Nur vom Jahreswechsel-Cron vergeben (#332) — kein manuelles Zuweisen im UI",
     permissionKeys: AUSGETRETEN_PERMISSION_KEYS,
+    isSystemRole: true,
   },
 ];
 
@@ -155,11 +162,17 @@ export async function seedPermissions() {
 }
 
 export async function seedRoles() {
-  for (const role of ROLES) {
+  for (const [sortOrder, role] of ROLES.entries()) {
+    const isSystemRole = "isSystemRole" in role ? role.isSystemRole : false;
     await prisma.role.upsert({
       where: { name: role.name },
-      update: { description: role.description },
-      create: { name: role.name, description: role.description },
+      update: { description: role.description, isSystemRole, sortOrder },
+      create: {
+        name: role.name,
+        description: role.description,
+        isSystemRole,
+        sortOrder,
+      },
     });
 
     for (const permissionKey of role.permissionKeys) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
@@ -10,13 +11,16 @@ import {
   VereinsmitgliederTable,
   type VereinsmitgliedRow,
 } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
-import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
+import {
+  CONTRIBUTION_CATEGORY_SHORT_LABELS,
+  type ContributionCategory,
+} from "@/lib/members/contribution";
+import { nextContributionFilter } from "@/components/feature/admin-mitglieder/contribution-filter";
 import {
   InvitesSection,
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
-import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
 import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import {
   RoleManagementSection,
@@ -52,7 +56,9 @@ export function AdminMitgliederView({
   meeples,
   roles,
   permissions,
+  canManageMembers,
   canManageRoles,
+  canManageInvites,
   canReadBankData,
   isDecemberOrLater,
   deletionRequests,
@@ -67,14 +73,25 @@ export function AdminMitgliederView({
   meeples: MeepleRow[];
   roles: RoleManagementRow[];
   permissions: PermissionOption[];
-  /** Blendet die Rollenverwaltung aus — die Actions selbst sind zusätzlich serverseitig gegated (#216). */
+  /** = `members:manage` — Vereinsmitglied-CRUD (Erstellen-Button,
+   * Einladen bleibt separat auf `invites:manage` gegated, #365). */
+  canManageMembers: boolean;
+  /** = `roles:manage` (#365) — bewusst getrennt von `members:manage`, blendet
+   * die Rollenverwaltung aus. Die Actions selbst sind zusätzlich
+   * serverseitig gegated (#216). */
   canManageRoles: boolean;
+  /** = `invites:manage` (#365) — blendet den "Einladen"-Button aus, sonst
+   * sieht ihn ein `members:manage`-only-Admin und bekommt beim Klick nur
+   * einen Server-Fehler. */
+  canManageInvites: boolean;
   canReadBankData: boolean;
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
   membersWithoutLogin: MemberWithoutLoginRow[];
   defaultInviteDays: number;
+  /** = `admin:access` — reused as-is for the Systemrollen-Gate in
+   * `MeepleRoleSelect` (#353), not just for the Systemkonto button. */
   canCreateSystemkonto: boolean;
   pendingEmailChanges: PendingChangeRow[];
   stufe3Candidates: {
@@ -84,6 +101,19 @@ export function AdminMitgliederView({
     membershipEndsAt: string;
   }[];
 }) {
+  // Klick auf eine Beitragsart-Zahl filtert die Vereinsmitglieder-Tabelle
+  // (#340, Verifikations-Kommentar zu #334) — "Meeple" bündelt meeple +
+  // individuell (Eigenbetrag), da beide in derselben Zeile angezeigt werden.
+  const [contributionFilter, setContributionFilter] = useState<
+    ContributionCategory[] | null
+  >(null);
+
+  function toggleContributionFilter(categories: ContributionCategory[]) {
+    setContributionFilter((current) =>
+      nextContributionFilter(current, categories),
+    );
+  }
+
   const withOpenHoldings = meeples.filter(
     (m) =>
       m.membershipState === "gekuendigt" &&
@@ -96,7 +126,11 @@ export function AdminMitgliederView({
       m.openUnits === 0,
   );
 
-  const activeMembers = members.filter((m) => m.membershipState === "aktiv");
+  const activeMembers = members.filter(
+    (m) =>
+      m.membershipState === "unregistriert" ||
+      m.membershipState === "registriert",
+  );
   const activeByContribution = {
     mini: activeMembers.filter((m) => m.contributionCategory === "mini").length,
     jung: activeMembers.filter((m) => m.contributionCategory === "jung").length,
@@ -116,11 +150,58 @@ export function AdminMitgliederView({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile
-          label="Vereinsmitglieder"
-          value={members.length}
-          hint="insgesamt"
-        />
+        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+            Vereinsmitglieder
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <dl className="flex flex-col gap-1 text-sm">
+              {(
+                [
+                  { key: "mini", categories: ["mini"] },
+                  { key: "jung", categories: ["jung"] },
+                  { key: "meeple", categories: ["meeple", "individuell"] },
+                ] as const
+              ).map(({ key, categories }) => {
+                const count =
+                  key === "meeple"
+                    ? activeByContribution.meeple +
+                      activeByContribution.individuell
+                    : activeByContribution[key];
+                const active =
+                  contributionFilter?.join(",") === categories.join(",");
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      toggleContributionFilter([...categories]);
+                      document
+                        .getElementById("vereinsmitglieder")
+                        ?.scrollIntoView({ block: "nearest" });
+                    }}
+                    className={cn(
+                      "hover:text-foreground -mx-1 flex items-center justify-between gap-2 rounded-sm px-1 text-left",
+                      active
+                        ? "bg-primary/10 text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    <dt>{CONTRIBUTION_CATEGORY_SHORT_LABELS[key]}</dt>
+                    <dd className="font-mono">{count}</dd>
+                  </button>
+                );
+              })}
+            </dl>
+            <a
+              href="#vereinsmitglieder"
+              className="hover:text-foreground flex flex-col items-center justify-center text-center"
+            >
+              <p className="font-serif text-3xl font-bold">{members.length}</p>
+              <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
+            </a>
+          </div>
+        </div>
         <StatTile
           label="Kündigungen mit Bestand"
           value={withOpenHoldings.length}
@@ -132,41 +213,6 @@ export function AdminMitgliederView({
           hint="ausgetreten, ohne Bestand"
         />
       </div>
-
-      <a
-        href="#vereinsmitglieder"
-        className="bg-card hover:bg-muted/50 block rounded-lg border p-5 transition-colors"
-      >
-        <h2 className="font-serif text-lg font-bold">
-          Aktive Mitglieder — {activeMembers.length}
-        </h2>
-        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.mini}
-            </dt>
-            <dd className="font-mono">{activeByContribution.mini}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.jung}
-            </dt>
-            <dd className="font-mono">{activeByContribution.jung}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.meeple}
-            </dt>
-            <dd className="font-mono">{activeByContribution.meeple}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">
-              {CONTRIBUTION_CATEGORY_LABELS.individuell}
-            </dt>
-            <dd className="font-mono">{activeByContribution.individuell}</dd>
-          </div>
-        </dl>
-      </a>
 
       {deletionRequests.length > 0 && (
         <div
@@ -254,6 +300,7 @@ export function AdminMitgliederView({
       <PendingChangesPanel
         title="Offene E-Mail-Änderungsanträge"
         changes={pendingEmailChanges}
+        isEmailChangePanel
       />
 
       {stufe3Candidates.length > 0 && (
@@ -289,19 +336,18 @@ export function AdminMitgliederView({
 
       <VereinsmitgliederTable
         members={members}
-        defaultInviteDays={defaultInviteDays}
+        canManageMembers={canManageMembers}
+        canManageInvites={canManageInvites}
+        contributionFilter={contributionFilter}
+        onClearContributionFilter={() => setContributionFilter(null)}
       />
-
-      {canCreateSystemkonto && (
-        <div className="flex justify-end">
-          <SystemkontoDialog />
-        </div>
-      )}
 
       <MitgliederTable
         meeples={meeples}
         roles={roles}
         canReadBankData={canReadBankData}
+        canManageAdminAccess={canCreateSystemkonto}
+        canCreateSystemkonto={canCreateSystemkonto}
       />
 
       <InvitesSection

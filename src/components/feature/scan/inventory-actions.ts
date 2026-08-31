@@ -4,6 +4,10 @@ import { GameInventoryStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
 import { requirePermission } from "@/lib/auth/permissions";
+import {
+  GAME_ISSUE_LABELS,
+  type GameIssueKind,
+} from "@/components/feature/scan/game-issue-labels";
 
 export async function confirmGameCondition(
   gameCopyId: string,
@@ -22,18 +26,6 @@ export async function confirmGameCondition(
 
   return { success: true as const };
 }
-
-/** Die drei "nicht vollständig spielbar"-Zustände im Prüfbogen (#273) —
- * jeweils eigenes Label als Präfix im freien `condition`-Text, da das
- * Datenmodell keine eigene Spielbarkeits-Spalte hat (bewusst kein
- * Schema-Zuwachs für reine UI-Kategorien). */
-export type GameIssueKind = "unvollstaendig" | "nicht_spielbar" | "beschaedigt";
-
-export const GAME_ISSUE_LABELS: Record<GameIssueKind, string> = {
-  unvollstaendig: "Unvollständig spielbar",
-  nicht_spielbar: "Nicht spielbar",
-  beschaedigt: "Beschädigt",
-};
 
 export async function reportGameDefect(
   gameCopyId: string,

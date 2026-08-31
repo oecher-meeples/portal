@@ -88,7 +88,7 @@ const OWN_MEMBER = { id: "member-self" };
 beforeEach(() => {
   vi.clearAllMocks();
   requireMeeplePermissionMock.mockResolvedValue(SELF);
-  getMembershipStateMock.mockReturnValue("aktiv");
+  getMembershipStateMock.mockReturnValue("registriert");
   // Own-Member lookup (requireActingMeeple) resolves by default; individual
   // tests override for a target-Meeple lookup (requireMemberForMeeple).
   memberFindUniqueMock.mockImplementation(

@@ -19,6 +19,7 @@ import {
   type ContactLinks,
 } from "@/lib/members/contact";
 import { memberDisplayName } from "@/lib/members/member-display-name";
+import { anonymisedMeepleDisplayName } from "@/lib/members/anonymised-display-name";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
@@ -50,6 +51,11 @@ export default async function GameDetailPage({
   const internal =
     tier !== "gast" &&
     (user ? await hasPermission(user.id, "ludothek:view") : false);
+  // Vorgezogen (statt erst kurz vor dem Render): der Aufenthalts-Verlauf
+  // unten braucht es schon, um anonymisierten Alt-Meeples nur hier den
+  // 6-Hex-Suffix zu zeigen (#364).
+  const canManageGames =
+    !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
 
   const clubGames = await buildLudothekGames();
   // One title can have several physical copies (same boardGameSlug) — the
@@ -103,7 +109,9 @@ export default async function GameDetailPage({
           meeple: { select: { displayName: true } },
         },
       },
-      recordedBy: { select: { displayName: true } },
+      recordedBy: {
+        select: { id: true, displayName: true, anonymizedAt: true },
+      },
     },
   });
 
@@ -118,7 +126,10 @@ export default async function GameDetailPage({
       startedAt: formatDateTime(holding.startedAt),
       endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
       confirmedAt: holding.confirmedAt?.toISOString() ?? null,
-      recordedByName: holding.recordedBy.displayName,
+      recordedByName: anonymisedMeepleDisplayName(
+        holding.recordedBy,
+        canManageGames,
+      ),
     };
     const existing = historyByCopyId.get(holding.gameCopyId) ?? [];
     existing.push(entry);
@@ -201,8 +212,6 @@ export default async function GameDetailPage({
     explainerEntries.find((entry) => entry.meepleId === currentMeeple?.id)
       ?.level ?? null;
 
-  const canManageGames =
-    !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
   const linkedIds = new Set([
     ...game.baseGames.map((g) => g.id),
     ...game.expansions.map((g) => g.id),

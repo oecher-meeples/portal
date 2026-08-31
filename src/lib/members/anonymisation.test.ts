@@ -80,7 +80,7 @@ describe("anonymiseMeepleStufe1", () => {
     expect(prismaMock.meeple.update).toHaveBeenCalledWith({
       where: { id: "meeple-1" },
       data: {
-        displayName: "(anonymisiert)",
+        displayName: "Anonymer Meeple",
         bggUsername: null,
         bgaUsername: null,
         telegramHandle: null,

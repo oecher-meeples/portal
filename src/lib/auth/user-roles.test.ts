@@ -92,15 +92,27 @@ describe("assignMeepleRole", () => {
   });
 });
 
+const NON_ADMIN_ROLE = {
+  permissions: [{ permission: { key: "posts:write" } }],
+};
+const ADMIN_ACCESS_ROLE = {
+  permissions: [{ permission: { key: "admin:access" } }],
+};
+
 describe("removeMeepleRole", () => {
   it("ends an open-ended assignment now instead of deleting it", async () => {
     prismaMock.userRole.findUnique.mockResolvedValue({
       id: "user-role-1",
       endsAt: null,
+      neonAuthUserId: "user-1",
+      role: NON_ADMIN_ROLE,
     } as never);
+    prismaMock.userRole.findMany.mockResolvedValue([]);
     vi.setSystemTime(new Date("2026-08-30T10:00:00Z"));
 
-    expect(await removeMeepleRole("user-role-1")).toEqual({ success: true });
+    expect(await removeMeepleRole("user-role-1", "actor-1")).toEqual({
+      success: true,
+    });
 
     expect(prismaMock.userRole.delete).not.toHaveBeenCalled();
     expect(prismaMock.userRole.update).toHaveBeenCalledWith({
@@ -113,17 +125,73 @@ describe("removeMeepleRole", () => {
     prismaMock.userRole.findUnique.mockResolvedValue({
       id: "user-role-1",
       endsAt: new Date("2020-01-01T00:00:00Z"),
+      neonAuthUserId: "user-1",
+      role: NON_ADMIN_ROLE,
     } as never);
 
-    expect(await removeMeepleRole("user-role-1")).toEqual({ success: true });
+    expect(await removeMeepleRole("user-role-1", "actor-1")).toEqual({
+      success: true,
+    });
     expect(prismaMock.userRole.update).not.toHaveBeenCalled();
   });
 
   it("reports a missing assignment", async () => {
     prismaMock.userRole.findUnique.mockResolvedValue(null);
 
-    expect(await removeMeepleRole("user-role-1")).toEqual({
+    expect(await removeMeepleRole("user-role-1", "actor-1")).toEqual({
       error: "Rollenzuweisung nicht gefunden.",
+    });
+  });
+
+  describe("self-lockout guard (#354)", () => {
+    it("blocks removing your own last active admin:access assignment", async () => {
+      prismaMock.userRole.findUnique.mockResolvedValue({
+        id: "user-role-1",
+        endsAt: null,
+        neonAuthUserId: "actor-1",
+        role: ADMIN_ACCESS_ROLE,
+      } as never);
+      prismaMock.userRole.findMany.mockResolvedValue([]);
+
+      const result = await removeMeepleRole("user-role-1", "actor-1");
+
+      expect(result).toEqual({
+        error:
+          "Du kannst dir deine letzte aktive admin:access-Rollenzuweisung nicht selbst entziehen.",
+      });
+      expect(prismaMock.userRole.update).not.toHaveBeenCalled();
+    });
+
+    it("allows removing your own admin:access assignment when another active one remains", async () => {
+      prismaMock.userRole.findUnique.mockResolvedValue({
+        id: "user-role-1",
+        endsAt: null,
+        neonAuthUserId: "actor-1",
+        role: ADMIN_ACCESS_ROLE,
+      } as never);
+      prismaMock.userRole.findMany.mockResolvedValue([
+        { endsAt: null, role: ADMIN_ACCESS_ROLE },
+      ] as never);
+
+      const result = await removeMeepleRole("user-role-1", "actor-1");
+
+      expect(result).toEqual({ success: true });
+      expect(prismaMock.userRole.update).toHaveBeenCalled();
+    });
+
+    it("allows an admin to remove another admin's admin:access assignment", async () => {
+      prismaMock.userRole.findUnique.mockResolvedValue({
+        id: "user-role-1",
+        endsAt: null,
+        neonAuthUserId: "other-user",
+        role: ADMIN_ACCESS_ROLE,
+      } as never);
+      prismaMock.userRole.findMany.mockResolvedValue([]);
+
+      const result = await removeMeepleRole("user-role-1", "actor-1");
+
+      expect(result).toEqual({ success: true });
+      expect(prismaMock.userRole.update).toHaveBeenCalled();
     });
   });
 });

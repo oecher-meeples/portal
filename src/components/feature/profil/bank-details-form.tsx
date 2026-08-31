@@ -1,14 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  clearOwnBankDetails,
-  updateOwnBankDetails,
-} from "@/components/feature/profil/actions";
+import { updateOwnBankDetails } from "@/components/feature/profil/actions";
 
 /** #330: Änderungen laufen seit dem PendingChange-Umbau nicht mehr sofort —
  * der aktuelle (freigegebene) Stand bleibt unverändert sichtbar, bis der
@@ -52,21 +48,6 @@ export function BankDetailsForm({
     );
   }
 
-  async function handleClear() {
-    setIsSaving(true);
-    setError(null);
-    setMessage(null);
-
-    const result = await clearOwnBankDetails();
-    setIsSaving(false);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setMessage("Bankdaten gelöscht.");
-  }
-
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
@@ -105,17 +86,6 @@ export function BankDetailsForm({
         <Button type="submit" disabled={isSaving} className="w-fit">
           {isSaving ? "Sende…" : "Änderung beantragen"}
         </Button>
-        {storedLast4 && (
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={isSaving}
-            onClick={handleClear}
-          >
-            <Trash2 className="size-4" />
-            Bankdaten löschen
-          </Button>
-        )}
       </div>
     </form>
   );

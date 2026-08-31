@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  PressHoldReveal,
+  type RevealResult,
+} from "@/components/ui/press-hold-reveal";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
   Table,
@@ -12,7 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { revealIban } from "@/components/feature/admin-bank/actions";
+import {
+  revealIban,
+  revealPendingIban,
+} from "@/components/feature/admin-bank/actions";
 import { BankCsvExportDialog } from "@/components/feature/admin-bank/bank-csv-export-dialog";
 import {
   PendingChangesPanel,
@@ -50,22 +58,13 @@ export function AdminBankView({
   logs: BankAccessLogRow[];
   pendingIbanChanges: PendingChangeRow[];
 }) {
-  const [revealed, setRevealed] = useState<Record<string, string>>({});
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleReveal(id: string) {
-    setBusyId(id);
-    setError(null);
-
+  async function revealRowIban(id: string): Promise<RevealResult> {
     const result = await revealIban(id);
-    setBusyId(null);
-
-    if ("error" in result) {
-      setError(result.error);
-      return;
-    }
-    setRevealed((current) => ({ ...current, [id]: result.iban }));
+    return "error" in result
+      ? result
+      : { success: true as const, value: result.iban };
   }
 
   const withIban = rows.filter((row) => row.hasIban).length;
@@ -91,6 +90,12 @@ export function AdminBankView({
       <PendingChangesPanel
         title="Offene IBAN-Änderungsanträge"
         changes={pendingIbanChanges}
+        revealIban={async (changeId) => {
+          const result = await revealPendingIban(changeId);
+          return "error" in result
+            ? result
+            : { success: true as const, value: result.iban };
+        }}
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -118,19 +123,21 @@ export function AdminBankView({
               <TableCell className="font-mono">{row.memberNumber}</TableCell>
               <TableCell>{row.displayName}</TableCell>
               <TableCell>{row.accountHolder ?? "—"}</TableCell>
-              <TableCell className="font-mono">
-                {revealed[row.id] ?? row.maskedIban}
-              </TableCell>
+              <TableCell className="font-mono">{row.maskedIban}</TableCell>
               <TableCell className="text-right">
-                {row.hasIban && !revealed[row.id] && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId === row.id}
-                    onClick={() => handleReveal(row.id)}
-                  >
-                    {busyId === row.id ? "Decke auf…" : "IBAN aufdecken"}
-                  </Button>
+                {row.hasIban && (
+                  <span className="inline-flex items-center gap-2">
+                    <PressHoldReveal
+                      reveal={() => revealRowIban(row.id)}
+                      onError={setError}
+                    />
+                    <CopyButton
+                      value={() => revealRowIban(row.id)}
+                      onError={setError}
+                      label="Kopieren"
+                      icon={Copy}
+                    />
+                  </span>
                 )}
               </TableCell>
             </TableRow>

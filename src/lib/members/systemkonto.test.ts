@@ -18,6 +18,10 @@ vi.mock("@/lib/auth/server", () => ({
   },
 }));
 
+vi.mock("@/lib/utils/request-origin", () => ({
+  getRequestOrigin: () => Promise.resolve("https://example.com"),
+}));
+
 const { createSystemkonto } = await import("@/lib/members/systemkonto");
 
 describe("createSystemkonto", () => {
@@ -79,6 +83,7 @@ describe("createSystemkonto", () => {
     });
     expect(requestPasswordResetMock).toHaveBeenCalledWith({
       email: "bot@example.com",
+      redirectTo: "https://example.com/passwort-vergessen/einloesen",
     });
   });
 });

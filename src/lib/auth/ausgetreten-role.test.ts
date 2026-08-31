@@ -84,6 +84,6 @@ describe("removeAusgetretenRole", () => {
 
     await removeAusgetretenRole("meeple-1");
 
-    expect(removeMeepleRoleMock).toHaveBeenCalledWith("ur-1");
+    expect(removeMeepleRoleMock).toHaveBeenCalledWith("ur-1", "user-1");
   });
 });

@@ -1,11 +1,23 @@
 /**
- * Derived from a Member's resignedAt/membershipEndsAt (moved off Meeple in
- * #328) plus the Meeple's own anonymizedAt — never stored.
+ * Derived from a Member's meepleId/resignedAt/membershipEndsAt (moved off
+ * Meeple in #328) plus the Meeple's own anonymizedAt — never stored.
+ *
+ * "unregistriert" and "registriert" are both "active" in the everyday sense
+ * — split only by whether a portal account (`meepleId`) exists yet, so
+ * `members:manage` can target still-unregistered members for a (repeat)
+ * invite (#361).
  */
 export type MembershipState =
-  "aktiv" | "gekuendigt" | "ausgetreten" | "anonymisiert";
+  | "unregistriert"
+  | "registriert"
+  | "gekuendigt"
+  | "ausgetreten"
+  | "anonymisiert";
 
 export type MembershipDates = {
+  /** `Member.meepleId` — or the Meeple's own id when called from a
+   * Meeple-first query, where a portal account trivially exists. */
+  meepleId: string | null;
   resignedAt: Date | null;
   membershipEndsAt: Date | null;
   anonymizedAt: Date | null;
@@ -16,7 +28,9 @@ export function getMembershipState(
   now: Date = new Date(),
 ): MembershipState {
   if (member.anonymizedAt) return "anonymisiert";
-  if (!member.resignedAt) return "aktiv";
+  if (!member.resignedAt) {
+    return member.meepleId ? "registriert" : "unregistriert";
+  }
   if (
     member.membershipEndsAt &&
     member.membershipEndsAt.getTime() <= now.getTime()

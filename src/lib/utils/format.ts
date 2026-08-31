@@ -11,7 +11,8 @@ import type { InviteStatus } from "@/lib/members/invites";
  * src/components/entities/*-pill.tsx instead.
  */
 export const MEMBERSHIP_STATE_LABELS: Record<MembershipState, string> = {
-  aktiv: "Aktives Mitglied",
+  unregistriert: "Unregistriert",
+  registriert: "Registriert",
   gekuendigt: "Kündigung vorliegend",
   ausgetreten: "Ausgetreten",
   anonymisiert: "Anonymisiert",

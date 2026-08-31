@@ -13,6 +13,11 @@ vi.mock("@/lib/auth/server", () => ({
   auth: { signUp: { email: (...args: unknown[]) => signUpEmail(...args) } },
 }));
 
+const getRequestIpMock = vi.fn();
+vi.mock("@/lib/utils/request-ip", () => ({
+  getRequestIp: () => getRequestIpMock(),
+}));
+
 const { redeemInvite } = await import("./actions");
 
 const BOUND_INVITE = {
@@ -27,7 +32,13 @@ const BOUND_INVITE = {
   revokedAt: null,
 };
 
-const ROLE = { id: "role-1", name: "Meeple", description: null };
+const ROLE = {
+  id: "role-1",
+  name: "Meeple",
+  description: null,
+  isSystemRole: false,
+  sortOrder: 0,
+};
 const MEMBER = {
   id: "member-1",
   email: "member@example.com",
@@ -40,6 +51,8 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
+  getRequestIpMock.mockResolvedValue("1.2.3.4");
+  prismaMock.rateLimitAttempt.findUnique.mockResolvedValue(null);
 });
 
 function mockHappyPath() {
@@ -52,6 +65,29 @@ function mockHappyPath() {
 }
 
 describe("redeemInvite", () => {
+  it("rejects a request while the IP fix-cooldown is still running (#326)", async () => {
+    mockHappyPath();
+    prismaMock.rateLimitAttempt.findUnique.mockResolvedValue({
+      id: "1",
+      key: "invite:ip:1.2.3.4",
+      failCount: 0,
+      currentCooldownSecs: 0,
+      lastFailedAt: new Date(),
+      lastFailedIp: null,
+      manuallyLockedAt: null,
+    });
+
+    const result = await redeemInvite({
+      token: "abc123",
+      email: "member@example.com",
+      password: "supersecret",
+      name: "Member",
+    });
+
+    expect(result).toEqual({ error: "Bitte versuche es in Kürze erneut." });
+    expect(validateInviteToken).not.toHaveBeenCalled();
+  });
+
   it("rejects an invalid or expired token before touching the account", async () => {
     validateInviteToken.mockResolvedValue({ valid: false, reason: "expired" });
 

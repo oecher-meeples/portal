@@ -86,7 +86,14 @@ export function DashboardView({
             <>
               {" "}
               Bei dir liegen noch {resignationNotice.openHoldingsCount}{" "}
-              Vereinsspiele/-einheiten — bitte rechtzeitig zurückgeben.
+              Vereinsspiele/-einheiten — bitte rechtzeitig zurückgeben:{" "}
+              <Link
+                href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}
+                className="text-primary font-medium hover:underline"
+              >
+                zur Ludothek-Rückgabe
+              </Link>
+              , oder wende dich an den Spielewart.
             </>
           )}
         </div>

@@ -1,14 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
+import { CopyButton } from "@/components/ui/copy-button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { TextAreaField } from "@/components/ui/field";
+import {
+  PressHoldReveal,
+  type RevealResult,
+} from "@/components/ui/press-hold-reveal";
 import { useAction } from "@/components/ui/use-action";
 import { formatDatePlain } from "@/lib/utils/format";
 import {
   approvePendingChange,
+  checkOpenInviteBeforeApproval,
   rejectPendingChange,
 } from "@/lib/members/pending-change-actions";
 
@@ -53,22 +67,51 @@ function RejectDialog({ id }: { id: string }) {
 }
 
 /** Von /admin/bank (kind: IBAN) und /admin/mitglieder (kind: MEMBER_EMAIL)
- * genutzt — deshalb `components/widgets/`, nicht in einem der beiden Features. */
+ * genutzt — deshalb `components/widgets/`, nicht in einem der beiden Features.
+ * `isEmailChangePanel` gilt für die ganze Instanz (beide Aufrufer zeigen
+ * jeweils nur eine Art von Änderung), nicht pro Zeile.
+ *
+ * `revealIban` (nur von /admin/bank gesetzt, #356): Kassenwart soll die
+ * beantragte IBAN vor der Freigabe sehen können, statt nur die maskierte
+ * `displayValue` — Klartext-IBAN geht nie ungefragt an den Client. */
 export function PendingChangesPanel({
   title,
   changes,
+  isEmailChangePanel = false,
+  revealIban,
 }: {
   title: string;
   changes: PendingChangeRow[];
+  isEmailChangePanel?: boolean;
+  revealIban?: (changeId: string) => Promise<RevealResult>;
 }) {
   const { run, pending, error } = useAction();
+  const [inviteConflictId, setInviteConflictId] = useState<string | null>(null);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [revealError, setRevealError] = useState<string | null>(null);
 
   if (changes.length === 0) return null;
+
+  async function handleApproveClick(changeId: string) {
+    if (!isEmailChangePanel) {
+      run(() => approvePendingChange(changeId));
+      return;
+    }
+    setCheckingId(changeId);
+    const hasOpenInvite = await checkOpenInviteBeforeApproval(changeId);
+    setCheckingId(null);
+    if (hasOpenInvite) {
+      setInviteConflictId(changeId);
+      return;
+    }
+    run(() => approvePendingChange(changeId));
+  }
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
       <h2 className="font-serif text-lg font-bold">{title}</h2>
       {error && <p className="text-destructive text-sm">{error}</p>}
+      {revealError && <p className="text-destructive text-sm">{revealError}</p>}
       <ul className="flex flex-col divide-y text-sm">
         {changes.map((change) => (
           <li
@@ -79,27 +122,91 @@ export function PendingChangesPanel({
               <p className="font-medium">
                 #{change.memberNumber} {change.memberDisplayName}
               </p>
-              <p className="text-muted-foreground">
-                neu: {change.displayValue} · beantragt{" "}
-                {formatDatePlain(change.requestedAt)}
-                {!change.confirmed &&
-                  " · wartet noch auf Bestätigung durch das Mitglied"}
+              <p className="text-muted-foreground flex flex-wrap items-center gap-2">
+                <span>
+                  neu: {change.displayValue} · beantragt{" "}
+                  {formatDatePlain(change.requestedAt)}
+                  {!change.confirmed &&
+                    " · wartet noch auf Bestätigung durch das Mitglied"}
+                </span>
+                {revealIban && (
+                  <span className="inline-flex items-center gap-2">
+                    <PressHoldReveal
+                      reveal={() => revealIban(change.id)}
+                      onError={setRevealError}
+                    />
+                    <CopyButton
+                      value={() => revealIban(change.id)}
+                      onError={setRevealError}
+                      label="Kopieren"
+                      icon={Copy}
+                    />
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-2">
               <Button
                 size="sm"
-                disabled={pending || !change.confirmed}
-                onClick={() => run(() => approvePendingChange(change.id))}
+                disabled={
+                  pending || !change.confirmed || checkingId === change.id
+                }
+                onClick={() => handleApproveClick(change.id)}
               >
                 <Check className="size-3.5" />
-                Freigeben
+                {checkingId === change.id ? "Prüfe…" : "Freigeben"}
               </Button>
               <RejectDialog id={change.id} />
             </div>
           </li>
         ))}
       </ul>
+
+      <Dialog
+        open={inviteConflictId !== null}
+        onOpenChange={(open) => !open && setInviteConflictId(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Es existiert eine offene Einladung</DialogTitle>
+            <DialogDescription>
+              Für dieses Mitglied liegt noch eine offene Einladung an der alten
+              E-Mail-Adresse vor. Diese widerrufen und mit der neuen Adresse neu
+              erstellen? Ohne Bestätigung bleibt die alte Einladung unverändert
+              bestehen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={async () => {
+                if (inviteConflictId) {
+                  await run(() => approvePendingChange(inviteConflictId));
+                }
+                setInviteConflictId(null);
+              }}
+            >
+              Nur freigeben, Einladung unverändert lassen
+            </Button>
+            <Button
+              disabled={pending}
+              onClick={async () => {
+                if (inviteConflictId) {
+                  await run(() =>
+                    approvePendingChange(inviteConflictId, {
+                      revokeAndReissueInvite: true,
+                    }),
+                  );
+                }
+                setInviteConflictId(null);
+              }}
+            >
+              Freigeben, Einladung widerrufen und neu erstellen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

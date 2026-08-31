@@ -14,6 +14,12 @@ vi.mock("@/lib/members/bank-access-log", () => ({
     deleteExpiredBankDataAccessLogsMock(...args),
 }));
 
+const deleteExpiredLoginLogsMock = vi.fn();
+vi.mock("@/lib/auth/login-log", () => ({
+  deleteExpiredLoginLogs: (...args: unknown[]) =>
+    deleteExpiredLoginLogsMock(...args),
+}));
+
 const anonymiseExpiredMeeplesMock = vi.fn();
 vi.mock("@/lib/members/retention", () => ({
   anonymiseExpiredMeeples: (...args: unknown[]) =>
@@ -34,6 +40,8 @@ describe("GET /api/cron/instagram-queue", () => {
     refreshConnectionIfNeededMock.mockReset();
     deleteExpiredBankDataAccessLogsMock.mockReset();
     deleteExpiredBankDataAccessLogsMock.mockResolvedValue({ deleted: 0 });
+    deleteExpiredLoginLogsMock.mockReset();
+    deleteExpiredLoginLogsMock.mockResolvedValue({ deleted: 0 });
     anonymiseExpiredMeeplesMock.mockReset();
     anonymiseExpiredMeeplesMock.mockResolvedValue({
       skipped: true,
@@ -106,6 +114,7 @@ describe("GET /api/cron/instagram-queue", () => {
       failed: 1,
       newsletter: { processed: 0, succeeded: 0, failed: 0 },
       bankLogCleanup: { deleted: 0 },
+      loginLogCleanup: { deleted: 0 },
       retention: { skipped: true, anonymised: 0, failed: [] },
     });
   });
@@ -160,7 +169,22 @@ describe("GET /api/cron/instagram-queue", () => {
     await GET(request);
 
     expect(deleteExpiredBankDataAccessLogsMock).not.toHaveBeenCalled();
+    expect(deleteExpiredLoginLogsMock).not.toHaveBeenCalled();
     expect(anonymiseExpiredMeeplesMock).not.toHaveBeenCalled();
+  });
+
+  it("prunes expired login logs on every run (#231)", async () => {
+    processQueueMock.mockResolvedValue({ processed: 0 });
+    deleteExpiredLoginLogsMock.mockResolvedValue({ deleted: 5 });
+    const request = new Request(
+      "https://example.com/api/cron/instagram-queue",
+      { headers: { authorization: "Bearer test-secret" } },
+    );
+
+    const body = await (await GET(request)).json();
+
+    expect(deleteExpiredLoginLogsMock).toHaveBeenCalledTimes(1);
+    expect(body.loginLogCleanup).toEqual({ deleted: 5 });
   });
 
   it("runs the retention job and reports it as skipped while unconfigured", async () => {

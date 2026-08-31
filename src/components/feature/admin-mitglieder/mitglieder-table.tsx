@@ -24,10 +24,11 @@ import { MembershipStatePill } from "@/components/entities/membership-state-pill
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import {
-  MeepleRoleSelect,
+  isActive as isActiveRoleAssignment,
   type RoleOption,
 } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import { MeepleEditDialog } from "@/components/feature/admin-mitglieder/meeple-edit-dialog";
+import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemkonto-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
 import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
@@ -36,9 +37,11 @@ export type { MeepleRow };
 
 type MeepleQuickFilter = MembershipState | "alle";
 
+// Meeple-Tabelle listet nur bestehende Konten — "unregistriert" (kein
+// Konto) kann hier nie vorkommen, deshalb kein eigener Filter dafür (#361).
 const MEEPLE_QUICK_FILTERS: { value: MeepleQuickFilter; label: string }[] = [
   { value: "alle", label: "Alle" },
-  { value: "aktiv", label: "Aktiv" },
+  { value: "registriert", label: "Aktiv" },
   { value: "gekuendigt", label: "Gekündigt" },
   { value: "ausgetreten", label: "Ausgetreten" },
   { value: "anonymisiert", label: "Anonymisiert" },
@@ -52,13 +55,19 @@ export function MitgliederTable({
   meeples,
   roles,
   canReadBankData,
+  canManageAdminAccess,
+  canCreateSystemkonto,
 }: {
   meeples: MeepleRow[];
   roles: RoleOption[];
   canReadBankData: boolean;
+  canManageAdminAccess: boolean;
+  canCreateSystemkonto: boolean;
 }) {
   const [search, setSearch] = useState("");
-  const [quickFilter, setQuickFilter] = useState<MeepleQuickFilter>("aktiv");
+  const [quickFilter, setQuickFilter] =
+    useState<MeepleQuickFilter>("registriert");
+  const now = new Date();
 
   const searchedMeeples = useMemo(() => {
     if (!search) return meeples;
@@ -79,7 +88,7 @@ export function MitgliederTable({
       <AccordionItem value="mitglieder" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">
-            <span className="font-serif text-lg font-bold">Mitglieder</span>
+            <span className="font-serif text-lg font-bold">Benutzer</span>
             <Badge>{meeples.length}</Badge>
           </span>
         </AccordionTrigger>
@@ -113,6 +122,11 @@ export function MitgliederTable({
                   </Button>
                 ))}
               </div>
+              {canCreateSystemkonto && (
+                <div className="ml-auto">
+                  <SystemkontoDialog />
+                </div>
+              )}
             </div>
 
             <div className="overflow-hidden rounded-lg border">
@@ -120,7 +134,6 @@ export function MitgliederTable({
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead />
-                    <TableHead>Nr.</TableHead>
                     <TableHead>Mitglied</TableHead>
                     <TableHead>Rollen</TableHead>
                     <TableHead>Status</TableHead>
@@ -133,10 +146,10 @@ export function MitgliederTable({
                   {filteredMeeples.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={7}
                         className="text-muted-foreground py-6 text-center"
                       >
-                        Keine Mitglieder gefunden.
+                        Keine Benutzer gefunden.
                       </TableCell>
                     </TableRow>
                   )}
@@ -147,10 +160,8 @@ export function MitgliederTable({
                           meeple={meeple}
                           roles={roles}
                           canReadBankData={canReadBankData}
+                          canManageAdminAccess={canManageAdminAccess}
                         />
-                      </TableCell>
-                      <TableCell className="font-mono">
-                        {meeple.memberNumber}
                       </TableCell>
                       <TableCell
                         className={
@@ -163,12 +174,21 @@ export function MitgliederTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {meeple.hasAccount ? (
-                          <MeepleRoleSelect
-                            meepleId={meeple.id}
-                            assignments={meeple.roleAssignments}
-                            roles={roles}
-                            protected={meeple.displayName === "Admin"}
-                          />
+                          <div className="flex flex-wrap gap-1">
+                            {meeple.roleAssignments.filter((a) =>
+                              isActiveRoleAssignment(a, now),
+                            ).length === 0 ? (
+                              <span>— keine Rolle —</span>
+                            ) : (
+                              meeple.roleAssignments
+                                .filter((a) => isActiveRoleAssignment(a, now))
+                                .map((a) => (
+                                  <Badge key={a.id} variant="outline">
+                                    {a.roleName}
+                                  </Badge>
+                                ))
+                            )}
+                          </div>
                         ) : (
                           "Kein Konto"
                         )}

@@ -4,12 +4,10 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   buildRegistrationLink,
   formatInviteMessage,
-  MAX_INVITE_DAYS,
 } from "@/lib/members/invites";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
@@ -18,10 +16,11 @@ export function InviteForm({
   defaultDays,
 }: {
   membersWithoutLogin: MemberWithoutLoginRow[];
+  /** Zentraler Wert aus `/admin/einstellungen/einladungen` (#349) — hier nur
+   * noch angezeigt, nicht mehr pro Einladung überschreibbar. */
   defaultDays: number;
 }) {
   const [memberId, setMemberId] = useState<string>("");
-  const [days, setDays] = useState<number>(defaultDays);
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<{
     token: string;
@@ -40,7 +39,7 @@ export function InviteForm({
     setError(null);
 
     try {
-      const created = await createInvite({ memberId, days });
+      const created = await createInvite({ memberId });
       setResult(created);
     } catch (caught) {
       setError(
@@ -71,10 +70,12 @@ export function InviteForm({
       <h2 className="font-serif text-lg font-bold">Einladung erstellen</h2>
       <p className="text-muted-foreground text-sm">
         Eine Einladung ist immer an ein bestehendes Vereinsmitglied gebunden —
-        die E-Mail-Adresse kommt aus dessen Stammdaten.
+        die E-Mail-Adresse kommt aus dessen Stammdaten. Gültigkeitsdauer:{" "}
+        {defaultDays} {defaultDays === 1 ? "Tag" : "Tage"} (zentral in den
+        Einladungseinstellungen hinterlegt).
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-[2fr_1fr_auto]">
+      <div className="grid gap-4 sm:grid-cols-[2fr_auto]">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-member">Mitglied</Label>
           <select
@@ -94,18 +95,6 @@ export function InviteForm({
               </option>
             ))}
           </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-days">Gültigkeit (Tage)</Label>
-          <Input
-            id="invite-days"
-            type="number"
-            min={0}
-            max={MAX_INVITE_DAYS}
-            step={0.5}
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value))}
-          />
         </div>
         <Button
           onClick={handleCreateInvite}
@@ -128,7 +117,8 @@ export function InviteForm({
             </p>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Registrierungslink ({days} {days === 1 ? "Tag" : "Tage"} gültig):
+              Registrierungslink ({defaultDays}{" "}
+              {defaultDays === 1 ? "Tag" : "Tage"} gültig):
             </p>
           )}
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">

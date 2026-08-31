@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   confirmGameCondition,
-  GAME_ISSUE_LABELS,
   reportGameDefect,
-  type GameIssueKind,
 } from "@/components/feature/scan/inventory-actions";
+import {
+  GAME_ISSUE_LABELS,
+  type GameIssueKind,
+} from "@/components/feature/scan/game-issue-labels";
 
 const ISSUE_KINDS = Object.keys(GAME_ISSUE_LABELS) as GameIssueKind[];
 
