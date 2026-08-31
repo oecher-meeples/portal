@@ -12,7 +12,6 @@ import { setMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
 import {
   requestEmailChange,
   requestIbanChange,
-  requestIbanClearing,
 } from "@/lib/members/pending-changes";
 import type { NewsletterCategory } from "@prisma/client";
 
@@ -102,19 +101,6 @@ export async function updateOwnBankDetails(input: OwnBankDetailsInput) {
   if (!ownMember.success) return { error: ownMember.error };
 
   const result = await requestIbanChange(ownMember.member.id, input);
-  if ("error" in result) return result;
-
-  revalidatePath("/profil");
-  return { success: true as const };
-}
-
-export async function clearOwnBankDetails() {
-  const meeple = await requireMeeple();
-
-  const ownMember = await requireOwnMember(meeple.id);
-  if (!ownMember.success) return { error: ownMember.error };
-
-  const result = await requestIbanClearing(ownMember.member.id);
   if ("error" in result) return result;
 
   revalidatePath("/profil");

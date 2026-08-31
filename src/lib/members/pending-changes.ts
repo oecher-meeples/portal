@@ -74,28 +74,6 @@ export async function requestIbanChange(
   return { success: true as const };
 }
 
-/** Löschen der IBAN ohne Ersatzwert ist nur nach Kündigung erlaubt — ein
- * aktives Mitglied braucht immer eine hinterlegte IBAN für den Beitragseinzug. */
-export async function requestIbanClearing(memberId: string) {
-  const member = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-  });
-  if (!member.resignedAt) {
-    return {
-      error:
-        "Die IBAN kann nur gelöscht werden, wenn die Mitgliedschaft gekündigt ist — sonst bitte eine neue IBAN hinterlegen.",
-    };
-  }
-
-  await replaceOpenPendingChange(memberId, PendingChangeKind.IBAN);
-  await prisma.member.update({
-    where: { id: memberId },
-    data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
-  });
-
-  return { success: true as const };
-}
-
 export async function requestEmailChange(memberId: string, newEmail: string) {
   const normalised = newEmail.trim().toLowerCase();
   if (!isValidEmail(normalised)) {

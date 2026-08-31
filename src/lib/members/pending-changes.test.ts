@@ -28,7 +28,6 @@ const {
   rejectPendingChange,
   requestEmailChange,
   requestIbanChange,
-  requestIbanClearing,
 } = await import("@/lib/members/pending-changes");
 
 const IBAN = "DE89 3704 0044 0532 0130 00";
@@ -101,33 +100,6 @@ describe("requestIbanChange", () => {
       .newValue as string;
     expect(stored).not.toBe("DE89370400440532013000");
     expect(decryptSecret(stored)).toBe("DE89370400440532013000");
-  });
-});
-
-describe("requestIbanClearing", () => {
-  it("rejects clearing for an active membership", async () => {
-    prismaMock.member.findUniqueOrThrow.mockResolvedValue({
-      resignedAt: null,
-    } as never);
-
-    const result = await requestIbanClearing("member-1");
-
-    expect(result.error).toMatch(/gekündigt/);
-    expect(prismaMock.member.update).not.toHaveBeenCalled();
-  });
-
-  it("clears bank fields for a resigned membership", async () => {
-    prismaMock.member.findUniqueOrThrow.mockResolvedValue({
-      resignedAt: new Date(),
-    } as never);
-
-    const result = await requestIbanClearing("member-1");
-
-    expect(result).toEqual({ success: true });
-    expect(prismaMock.member.update).toHaveBeenCalledWith({
-      where: { id: "member-1" },
-      data: { accountHolder: null, ibanEncrypted: null, ibanLast4: null },
-    });
   });
 });
 
