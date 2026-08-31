@@ -12,20 +12,27 @@ vi.mock("@/lib/auth/permissions", () => ({
 
 const approvePendingChangeRecordMock = vi.fn();
 const rejectPendingChangeRecordMock = vi.fn();
+const hasOpenInviteForMemberEmailMock = vi.fn();
 vi.mock("@/lib/members/pending-changes", () => ({
   approvePendingChange: (...args: unknown[]) =>
     approvePendingChangeRecordMock(...args),
   rejectPendingChange: (...args: unknown[]) =>
     rejectPendingChangeRecordMock(...args),
+  hasOpenInviteForMemberEmail: (...args: unknown[]) =>
+    hasOpenInviteForMemberEmailMock(...args),
 }));
 
-const { approvePendingChange, rejectPendingChange } =
-  await import("./pending-change-actions");
+const {
+  approvePendingChange,
+  checkOpenInviteBeforeApproval,
+  rejectPendingChange,
+} = await import("./pending-change-actions");
 
 beforeEach(() => {
   requirePermissionMock.mockReset();
   approvePendingChangeRecordMock.mockReset();
   rejectPendingChangeRecordMock.mockReset();
+  hasOpenInviteForMemberEmailMock.mockReset();
 });
 
 describe("approvePendingChange", () => {
@@ -44,6 +51,7 @@ describe("approvePendingChange", () => {
     expect(approvePendingChangeRecordMock).toHaveBeenCalledWith(
       "pc-1",
       "admin-1",
+      undefined,
     );
   });
 
@@ -67,6 +75,40 @@ describe("approvePendingChange", () => {
 
     expect(result).toEqual({ error: "Änderungsantrag nicht gefunden." });
     expect(requirePermissionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("checkOpenInviteBeforeApproval (#362)", () => {
+  it("is false for an IBAN change without checking anything else", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue({
+      id: "pc-1",
+      memberId: "member-1",
+      kind: PendingChangeKind.IBAN,
+    } as never);
+
+    expect(await checkOpenInviteBeforeApproval("pc-1")).toBe(false);
+    expect(requirePermissionMock).not.toHaveBeenCalled();
+    expect(hasOpenInviteForMemberEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("requires members:manage before checking a MEMBER_EMAIL change", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue({
+      id: "pc-1",
+      memberId: "member-1",
+      kind: PendingChangeKind.MEMBER_EMAIL,
+    } as never);
+    requirePermissionMock.mockResolvedValue({ id: "admin-1" });
+    hasOpenInviteForMemberEmailMock.mockResolvedValue(true);
+
+    expect(await checkOpenInviteBeforeApproval("pc-1")).toBe(true);
+    expect(requirePermissionMock).toHaveBeenCalledWith("members:manage");
+    expect(hasOpenInviteForMemberEmailMock).toHaveBeenCalledWith("member-1");
+  });
+
+  it("is false without a matching change", async () => {
+    prismaMock.pendingChange.findUnique.mockResolvedValue(null);
+
+    expect(await checkOpenInviteBeforeApproval("pc-1")).toBe(false);
   });
 });
 

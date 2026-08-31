@@ -15,9 +15,15 @@ vi.mock("@/lib/members/pending-change-mail", () => ({
     sendPendingChangeRejectedMailMock(...args),
 }));
 
+const getDefaultInviteDaysMock = vi.fn();
+vi.mock("@/lib/members/invite-settings", () => ({
+  getDefaultInviteDays: () => getDefaultInviteDaysMock(),
+}));
+
 const {
   approvePendingChange,
   confirmEmailChange,
+  hasOpenInviteForMemberEmail,
   rejectPendingChange,
   requestEmailChange,
   requestIbanChange,
@@ -257,6 +263,94 @@ describe("approvePendingChange", () => {
       where: { id: "member-1" },
       data: { email: "neu@example.com" },
     });
+  });
+
+  describe("revokeAndReissueInvite (#362)", () => {
+    beforeEach(() => {
+      prismaMock.pendingChange.findUnique.mockResolvedValue({
+        id: "pc-1",
+        memberId: "member-1",
+        kind: PendingChangeKind.MEMBER_EMAIL,
+        newValue: "neu@example.com",
+        approvedAt: null,
+        rejectedAt: null,
+        confirmedAt: new Date(),
+      } as never);
+      getDefaultInviteDaysMock.mockResolvedValue(7);
+      prismaMock.member.findUniqueOrThrow.mockResolvedValue({
+        email: "alt@example.com",
+      } as never);
+    });
+
+    it("revokes the open invite for the old email and issues a new one for the new email", async () => {
+      prismaMock.invite.findFirst.mockResolvedValue({
+        id: "invite-1",
+      } as never);
+
+      await approvePendingChange("pc-1", "admin-1", {
+        revokeAndReissueInvite: true,
+      });
+
+      expect(prismaMock.invite.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ email: "alt@example.com" }),
+        }),
+      );
+      expect(prismaMock.invite.update).toHaveBeenCalledWith({
+        where: { id: "invite-1" },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(prismaMock.invite.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ email: "neu@example.com" }),
+        }),
+      );
+    });
+
+    it("does nothing to invites when there is no open one for the old email", async () => {
+      prismaMock.invite.findFirst.mockResolvedValue(null);
+
+      await approvePendingChange("pc-1", "admin-1", {
+        revokeAndReissueInvite: true,
+      });
+
+      expect(prismaMock.invite.update).not.toHaveBeenCalled();
+      expect(prismaMock.invite.create).not.toHaveBeenCalled();
+    });
+
+    it("leaves the invite untouched when revokeAndReissueInvite is not requested", async () => {
+      await approvePendingChange("pc-1", "admin-1");
+
+      expect(prismaMock.invite.findFirst).not.toHaveBeenCalled();
+      expect(prismaMock.invite.update).not.toHaveBeenCalled();
+      expect(prismaMock.invite.create).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("hasOpenInviteForMemberEmail (#362)", () => {
+  it("is false when the member does not exist", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    expect(await hasOpenInviteForMemberEmail("member-1")).toBe(false);
+  });
+
+  it("is false without an open invite for the current email", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      email: "aktuell@example.com",
+    } as never);
+    prismaMock.invite.findFirst.mockResolvedValue(null);
+
+    expect(await hasOpenInviteForMemberEmail("member-1")).toBe(false);
+  });
+
+  it("is true with an open invite for the current email", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      email: "aktuell@example.com",
+    } as never);
+    prismaMock.invite.findFirst.mockResolvedValue({ id: "invite-1" } as never);
+
+    expect(await hasOpenInviteForMemberEmail("member-1")).toBe(true);
   });
 });
 

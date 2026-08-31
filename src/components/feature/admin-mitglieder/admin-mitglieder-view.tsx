@@ -299,6 +299,7 @@ export function AdminMitgliederView({
       <PendingChangesPanel
         title="Offene E-Mail-Änderungsanträge"
         changes={pendingEmailChanges}
+        isEmailChangePanel
       />
 
       {stufe3Candidates.length > 0 && (
