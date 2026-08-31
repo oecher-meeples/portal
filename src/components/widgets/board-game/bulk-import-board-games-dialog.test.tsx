@@ -382,8 +382,16 @@ describe("BulkImportBoardGamesDialog", () => {
       resolveImport({ success: true, results: [] });
     });
 
+    // Der Dialog hat seit der deutschsprachigen Beschriftung des generischen
+    // "X"-Schließen-Buttons (`ui/dialog.tsx`) zwei gleichnamige "Schließen"-
+    // Buttons — auf den Footer-Button scopen, um den hier gemeinten (der erst
+    // nach Abschluss des Imports erscheint) eindeutig zu treffen.
+    const footer = document.querySelector('[data-slot="dialog-footer"]');
+    expect(footer).not.toBeNull();
     expect(
-      await screen.findByRole("button", { name: "Schließen" }),
+      await within(footer as HTMLElement).findByRole("button", {
+        name: "Schließen",
+      }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Importiere …")).not.toBeInTheDocument();
   });
