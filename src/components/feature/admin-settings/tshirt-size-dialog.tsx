@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/components/ui/action-button";
@@ -68,16 +70,52 @@ function DeleteSizeButton({ size }: { size: TshirtSizeRow }) {
   );
 }
 
+/** Eigener MIME-Typ für den Drag-Payload — analog role-management-section.tsx. */
+const REORDER_DRAG_MIME = "application/x-tshirt-size-id";
+
+/** Eine einzelne, gemeinsame Drop-Zone zwischen zwei Zeilen (bzw. vor der
+ * ersten/nach der letzten) — bewusst nicht pro Zeile eine eigene
+ * Vorher/Nachher-Hälfte, das erzeugte zwei sich überlappende Zonen an
+ * jeder Grenze und war verwirrend. */
+function DropGap({
+  active,
+  onDragOverGap,
+  onDropGap,
+}: {
+  active: boolean;
+  onDragOverGap: () => void;
+  onDropGap: () => void;
+}) {
+  return (
+    <div
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOverGap();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        if (event.dataTransfer.getData(REORDER_DRAG_MIME)) onDropGap();
+      }}
+      className="relative h-3"
+    >
+      <div
+        className={cn(
+          "absolute inset-x-1 top-1/2 h-0.5 -translate-y-1/2 rounded-full transition-colors",
+          active ? "bg-primary" : "bg-transparent",
+        )}
+      />
+    </div>
+  );
+}
+
 function SizeRow({
   size,
-  isFirst,
-  isLast,
-  onMove,
+  onDragStart,
+  onDragEnd,
 }: {
   size: TshirtSizeRow;
-  isFirst: boolean;
-  isLast: boolean;
-  onMove: (direction: -1 | 1) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const [label, setLabel] = useState(size.label);
   const { run, pending, error } = useAction({ refresh: false });
@@ -85,26 +123,21 @@ function SizeRow({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1.5">
-        <div className="flex flex-col">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={isFirst}
-            onClick={() => onMove(-1)}
-            aria-label={`„${size.label}“ nach oben verschieben`}
-          >
-            <ArrowUp className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={isLast}
-            onClick={() => onMove(1)}
-            aria-label={`„${size.label}“ nach unten verschieben`}
-          >
-            <ArrowDown className="size-3.5" />
-          </Button>
-        </div>
+        <span
+          draggable
+          onDragStart={(event) => {
+            onDragStart();
+            event.dataTransfer.setData(REORDER_DRAG_MIME, size.id);
+            event.dataTransfer.effectAllowed = "move";
+          }}
+          onDragEnd={onDragEnd}
+          className="text-muted-foreground hover:text-foreground cursor-grab touch-none active:cursor-grabbing"
+          aria-label={`„${size.label}“ per Drag-and-Drop verschieben`}
+          role="button"
+          tabIndex={0}
+        >
+          <GripVertical className="size-4" />
+        </span>
         <Input
           value={label}
           onChange={(event) => setLabel(event.target.value)}
@@ -129,6 +162,8 @@ function SizeRow({
 function TshirtSizeManagement() {
   const [sizes, setSizes] = useState<TshirtSizeRow[] | null>(null);
   const [newLabel, setNewLabel] = useState("");
+  const [draggedSizeId, setDraggedSizeId] = useState<string | null>(null);
+  const [dragOverGapIndex, setDragOverGapIndex] = useState<number | null>(null);
   const {
     run: runCreate,
     pending: creating,
@@ -160,12 +195,21 @@ function TshirtSizeManagement() {
     }
   }
 
-  async function handleMove(index: number, direction: -1 | 1) {
-    if (!sizes) return;
-    const next = [...sizes];
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= next.length) return;
-    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+  /** `gapIndex` bezieht sich auf die Lücke *vor* `sizes[gapIndex]` in der
+   * aktuellen Reihenfolge (Länge = ans Ende anhängen). Nach dem
+   * Herausnehmen der gedraggten Größe verschieben sich alle Indizes
+   * dahinter um eins nach vorn — das gleicht `adjustedIndex` aus. */
+  async function moveDraggedSizeToGap(gapIndex: number) {
+    if (!sizes || !draggedSizeId) return;
+    const draggedIndex = sizes.findIndex((size) => size.id === draggedSizeId);
+    if (draggedIndex === -1) return;
+
+    const dragged = sizes[draggedIndex];
+    const withoutDragged = sizes.filter((size) => size.id !== draggedSizeId);
+    const adjustedIndex = gapIndex > draggedIndex ? gapIndex - 1 : gapIndex;
+    const next = [...withoutDragged];
+    next.splice(adjustedIndex, 0, dragged);
+
     setSizes(next);
     await reorderTshirtSizes(next.map((size) => size.id));
   }
@@ -181,16 +225,35 @@ function TshirtSizeManagement() {
           Noch keine T-Shirt-Größen angelegt.
         </p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {sizes.map((size, index) => (
+        <div className="flex flex-col">
+          {sizes.flatMap((size, index) => [
+            <DropGap
+              key={`gap-${index}`}
+              active={dragOverGapIndex === index}
+              onDragOverGap={() => setDragOverGapIndex(index)}
+              onDropGap={() => {
+                moveDraggedSizeToGap(index);
+                setDragOverGapIndex(null);
+              }}
+            />,
             <SizeRow
               key={size.id}
               size={size}
-              isFirst={index === 0}
-              isLast={index === sizes.length - 1}
-              onMove={(direction) => handleMove(index, direction)}
-            />
-          ))}
+              onDragStart={() => setDraggedSizeId(size.id)}
+              onDragEnd={() => {
+                setDraggedSizeId(null);
+                setDragOverGapIndex(null);
+              }}
+            />,
+          ])}
+          <DropGap
+            active={dragOverGapIndex === sizes.length}
+            onDragOverGap={() => setDragOverGapIndex(sizes.length)}
+            onDropGap={() => {
+              moveDraggedSizeToGap(sizes.length);
+              setDragOverGapIndex(null);
+            }}
+          />
         </div>
       )}
 
@@ -218,19 +281,27 @@ function TshirtSizeManagement() {
 
 /** T-Shirt-Größen-Verwaltung in /admin/einstellungen (#388) — analog
  * `InviteSettingsDialog`: Karte öffnet einen Popup-Dialog statt einer
- * eigenen Route. */
-export function TshirtSizeDialog() {
+ * eigenen Route. `count` (Anzahl angelegter Größen) analog dem
+ * Count-Badge auf der "Aufbewahrungseinheiten"-Karte (`SettingsCard`),
+ * hier separat, weil diese Karte einen Dialog statt einen Link öffnet;
+ * 0 Größen ist ein Warnzustand — das Stammdatenfeld hätte dann keine
+ * Auswahl. */
+export function TshirtSizeDialog({ count }: { count: number }) {
   return (
     <Dialog>
       <DialogTrigger
         render={
           <button type="button" className="w-full text-left">
-            <Card className="hover:bg-muted/50 transition-colors">
-              <CardHeader>
+            <Card className="hover:bg-muted/50 relative transition-colors">
+              <Badge
+                variant={count === 0 ? "warning" : "default"}
+                className="absolute top-1/2 right-4 h-7 min-w-7 -translate-y-1/2 px-2.5 text-sm"
+              >
+                {count}
+              </Badge>
+              <CardHeader className="pr-14">
                 <CardTitle>T-Shirt-Größen</CardTitle>
-                <CardDescription>
-                  Verfügbare Größen für das Stammdatenfeld verwalten.
-                </CardDescription>
+                <CardDescription>Verfügbare Größen verwalten.</CardDescription>
               </CardHeader>
             </Card>
           </button>
