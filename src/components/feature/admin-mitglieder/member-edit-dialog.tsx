@@ -22,6 +22,7 @@ import {
   sendSelbstauskunft,
   updateMember,
 } from "@/components/feature/admin-mitglieder/member-actions";
+import { GuardianManagementSection } from "@/components/feature/admin-mitglieder/guardian-management-section";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
 
 function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
@@ -106,6 +107,8 @@ export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
               </ActionButton>
             </div>
           )}
+
+          {open && <GuardianManagementSection childMemberId={member.id} />}
         </div>
 
         <DialogFooter showCloseButton />

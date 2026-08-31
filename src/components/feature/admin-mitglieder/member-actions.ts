@@ -11,6 +11,12 @@ import {
   type UpdateMemberInput,
 } from "@/lib/members/update-member";
 import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
+import {
+  addGuardianLink,
+  listGuardianCandidates,
+  listGuardiansOf,
+  removeGuardianLink,
+} from "@/lib/members/guardians";
 
 async function requireMembersManage() {
   return requirePermission("members:manage");
@@ -47,4 +53,39 @@ export async function sendSelbstauskunft(meepleId: string) {
   await requireMembersManage();
 
   return sendSelbstauskunftMail(meepleId);
+}
+
+/** Guardian-Verwaltung (#372) — `members:manage`-gated wie andere Kernfelder
+ * auf `Member`. Liefert die aktuell verknüpften Erziehungsberechtigten plus
+ * alle übrigen Members als Auswahlkandidaten in einem Aufruf. */
+export async function listGuardianManagement(childMemberId: string) {
+  await requireMembersManage();
+
+  const [guardians, candidates] = await Promise.all([
+    listGuardiansOf(childMemberId),
+    listGuardianCandidates(childMemberId),
+  ]);
+  return { guardians, candidates };
+}
+
+export async function addGuardian(
+  childMemberId: string,
+  guardianMemberId: string,
+) {
+  await requireMembersManage();
+
+  await addGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function removeGuardian(
+  childMemberId: string,
+  guardianMemberId: string,
+) {
+  await requireMembersManage();
+
+  await removeGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
 }

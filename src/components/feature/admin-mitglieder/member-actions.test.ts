@@ -23,8 +23,26 @@ vi.mock("@/lib/members/selbstauskunft-mail", () => ({
     sendSelbstauskunftMailMock(...args),
 }));
 
-const { createMember, updateMember, sendSelbstauskunft } =
-  await import("./member-actions");
+const listGuardiansOfMock = vi.fn();
+const listGuardianCandidatesMock = vi.fn();
+const addGuardianLinkMock = vi.fn();
+const removeGuardianLinkMock = vi.fn();
+vi.mock("@/lib/members/guardians", () => ({
+  listGuardiansOf: (...args: unknown[]) => listGuardiansOfMock(...args),
+  listGuardianCandidates: (...args: unknown[]) =>
+    listGuardianCandidatesMock(...args),
+  addGuardianLink: (...args: unknown[]) => addGuardianLinkMock(...args),
+  removeGuardianLink: (...args: unknown[]) => removeGuardianLinkMock(...args),
+}));
+
+const {
+  createMember,
+  updateMember,
+  sendSelbstauskunft,
+  listGuardianManagement,
+  addGuardian,
+  removeGuardian,
+} = await import("./member-actions");
 
 class ForbiddenError extends Error {}
 
@@ -36,6 +54,10 @@ beforeEach(() => {
   });
   updateMemberRecordMock.mockReset().mockResolvedValue({ success: true });
   sendSelbstauskunftMailMock.mockReset().mockResolvedValue({ success: true });
+  listGuardiansOfMock.mockReset().mockResolvedValue([]);
+  listGuardianCandidatesMock.mockReset().mockResolvedValue([]);
+  addGuardianLinkMock.mockReset().mockResolvedValue(undefined);
+  removeGuardianLinkMock.mockReset().mockResolvedValue(undefined);
 });
 
 describe("createMember", () => {
@@ -127,5 +149,70 @@ describe("sendSelbstauskunft", () => {
     expect(await sendSelbstauskunft("meeple-1")).toEqual({
       error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
     });
+  });
+});
+
+describe("listGuardianManagement (#372)", () => {
+  it("requires members:manage", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(listGuardianManagement("child-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+  });
+
+  it("returns guardians and candidates for the child", async () => {
+    listGuardiansOfMock.mockResolvedValue([
+      { id: "guardian-1", displayName: "Erika Muster" },
+    ]);
+    listGuardianCandidatesMock.mockResolvedValue([
+      { id: "guardian-2", displayName: "Max Muster" },
+    ]);
+
+    const result = await listGuardianManagement("child-1");
+
+    expect(result).toEqual({
+      guardians: [{ id: "guardian-1", displayName: "Erika Muster" }],
+      candidates: [{ id: "guardian-2", displayName: "Max Muster" }],
+    });
+    expect(listGuardiansOfMock).toHaveBeenCalledWith("child-1");
+    expect(listGuardianCandidatesMock).toHaveBeenCalledWith("child-1");
+  });
+});
+
+describe("addGuardian / removeGuardian (#372)", () => {
+  it("requires members:manage for add", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(addGuardian("child-1", "guardian-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect(addGuardianLinkMock).not.toHaveBeenCalled();
+  });
+
+  it("adds the link", async () => {
+    expect(await addGuardian("child-1", "guardian-1")).toEqual({
+      success: true,
+    });
+    expect(addGuardianLinkMock).toHaveBeenCalledWith("child-1", "guardian-1");
+  });
+
+  it("requires members:manage for remove", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(removeGuardian("child-1", "guardian-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect(removeGuardianLinkMock).not.toHaveBeenCalled();
+  });
+
+  it("removes the link", async () => {
+    expect(await removeGuardian("child-1", "guardian-1")).toEqual({
+      success: true,
+    });
+    expect(removeGuardianLinkMock).toHaveBeenCalledWith(
+      "child-1",
+      "guardian-1",
+    );
   });
 });
