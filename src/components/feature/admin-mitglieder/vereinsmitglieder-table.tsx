@@ -58,14 +58,12 @@ function germanDate(value: string | null) {
  * offen (im Gegensatz zum Meeple-Akkordeon in `mitglieder-table.tsx`). */
 export function VereinsmitgliederTable({
   members,
-  defaultInviteDays,
   canManageMembers,
   canManageInvites,
   contributionFilter,
   onClearContributionFilter,
 }: {
   members: VereinsmitgliedRow[];
-  defaultInviteDays: number;
   /** = `members:manage` — gated hier zusätzlich in der UI, sonst sieht ein
    * Betrachter mit nur `invites:manage` den "Vereinsmitglied
    * erstellen"-Button, bekommt beim Klick aber nur einen Server-Fehler. */
@@ -274,10 +272,7 @@ export function VereinsmitgliederTable({
                               size="sm"
                               variant="outline"
                               action={async () => {
-                                await createInvite({
-                                  memberId: member.id,
-                                  days: defaultInviteDays,
-                                });
+                                await createInvite({ memberId: member.id });
                               }}
                               pendingLabel="Lade ein…"
                             >

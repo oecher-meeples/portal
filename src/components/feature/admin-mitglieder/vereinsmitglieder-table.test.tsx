@@ -74,7 +74,6 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, JUNG_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
       />,
@@ -88,7 +87,6 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, JUNG_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
         contributionFilter={["mini"]}
@@ -105,7 +103,6 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, JUNG_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
         contributionFilter={["mini"]}
@@ -125,7 +122,6 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, JUNG_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
         contributionFilter={["mini", "jung"]}
@@ -153,7 +149,6 @@ describe("VereinsmitgliederTable invites:manage gate (#365)", () => {
     render(
       <VereinsmitgliederTable
         members={[NO_LOGIN_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
       />,
@@ -166,7 +161,6 @@ describe("VereinsmitgliederTable invites:manage gate (#365)", () => {
     render(
       <VereinsmitgliederTable
         members={[NO_LOGIN_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={false}
       />,
@@ -181,7 +175,6 @@ describe("VereinsmitgliederTable invites:manage gate (#365)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
       />,
@@ -207,7 +200,6 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
       />,
@@ -227,7 +219,6 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
       />,
@@ -247,7 +238,6 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, ANONYMISIERT_MEMBER]}
-        defaultInviteDays={30}
         canManageMembers={false}
         canManageInvites={true}
       />,
