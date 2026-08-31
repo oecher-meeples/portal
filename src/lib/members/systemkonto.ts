@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/server";
 import { prisma } from "@/lib/utils/prisma";
 import { requirePermission } from "@/lib/auth/permissions";
 import { isValidEmail } from "@/lib/utils/validate-email";
+import { getRequestOrigin } from "@/lib/utils/request-origin";
 
 /**
  * `@neondatabase/auth`s Typen für `auth.admin`/`auth.requestPasswordReset`
@@ -23,7 +24,10 @@ type AdminAuth = {
       error?: { message?: string } | null;
     }>;
   };
-  requestPasswordReset: (args: { email: string }) => Promise<unknown>;
+  requestPasswordReset: (args: {
+    email: string;
+    redirectTo?: string;
+  }) => Promise<unknown>;
 };
 
 /**
@@ -58,8 +62,7 @@ export async function createSystemkonto({
     email: trimmedEmail,
     name: trimmedName,
     // Zufälliges Passwort statt keins — der Reset-Link direkt danach ist der
-    // einzige Weg, wie das Konto je ein nutzbares Passwort bekommt (#324 ist
-    // noch offen, siehe Plan-Blocker).
+    // einzige Weg, wie das Konto je ein nutzbares Passwort bekommt.
     password: randomBytes(24).toString("hex"),
   });
   if (error || !data?.user) {
@@ -74,7 +77,15 @@ export async function createSystemkonto({
     data: { neonAuthUserId: data.user.id, displayName: trimmedName },
   });
 
-  await adminAuth.requestPasswordReset({ email: trimmedEmail });
+  // #363: `redirectTo` steuert, wohin der Link in der Reset-Mail zeigt —
+  // ohne diesen Wert lief er ins Leere, weil das Portal keine Route für den
+  // klassischen Token-Link-Flow hatte. `/passwort-vergessen/einloesen` liest
+  // den Token aus der URL und ruft `authClient.resetPassword()` auf.
+  const origin = await getRequestOrigin();
+  await adminAuth.requestPasswordReset({
+    email: trimmedEmail,
+    redirectTo: `${origin}/passwort-vergessen/einloesen`,
+  });
 
   return { success: true as const, meepleId: meeple.id };
 }
