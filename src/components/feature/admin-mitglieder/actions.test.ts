@@ -39,12 +39,6 @@ vi.mock("@/lib/members/bank-access-log", () => ({
   revealMeepleIban: (...args: unknown[]) => revealMeepleIbanMock(...args),
 }));
 
-const sendSelbstauskunftMailMock = vi.fn();
-vi.mock("@/lib/members/selbstauskunft-mail", () => ({
-  sendSelbstauskunftMail: (...args: unknown[]) =>
-    sendSelbstauskunftMailMock(...args),
-}));
-
 // The role CRUD and role-assignment wrappers have their own test file
 // (role-actions.test.ts) — kept separate purely to stay under the 400-line
 // file-size limit (CLAUDE.md), not a fachliche Grenze.
@@ -68,7 +62,6 @@ const {
   renameMeeple,
   revealMemberIban,
   revokeResignation,
-  sendSelbstauskunft,
   setMemberNumber,
 } = await import("./actions");
 
@@ -85,7 +78,6 @@ beforeEach(() => {
   removeAusgetretenRoleMock.mockReset();
   requireBankReaderMock.mockReset().mockResolvedValue({ id: "meeple-admin" });
   revealMeepleIbanMock.mockReset();
-  sendSelbstauskunftMailMock.mockReset().mockResolvedValue({ success: true });
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -110,9 +102,6 @@ describe("without the members:manage permission", () => {
       ForbiddenError,
     );
     await expect(renameMeeple("meeple-1", "Neuer Name")).rejects.toThrow(
-      ForbiddenError,
-    );
-    await expect(sendSelbstauskunft("meeple-1")).rejects.toThrow(
       ForbiddenError,
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
@@ -273,21 +262,3 @@ describe("revealMemberIban", () => {
   });
 });
 
-describe("sendSelbstauskunft", () => {
-  it("delegates to the shared mail rules", async () => {
-    sendSelbstauskunftMailMock.mockResolvedValue({ success: true });
-
-    expect(await sendSelbstauskunft("meeple-1")).toEqual({ success: true });
-    expect(sendSelbstauskunftMailMock).toHaveBeenCalledWith("meeple-1");
-  });
-
-  it("passes a rule violation straight back", async () => {
-    sendSelbstauskunftMailMock.mockResolvedValue({
-      error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
-    });
-
-    expect(await sendSelbstauskunft("meeple-1")).toEqual({
-      error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
-    });
-  });
-});

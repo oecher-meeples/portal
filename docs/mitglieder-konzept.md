@@ -173,7 +173,7 @@ Die Infocard "Aktive Mitglieder" gliedert zusätzlich nach Beitragsart-Kategorie
 
 **Einladungen** (default zu, sichtbar nur mit `invites:manage`): Ansicht zum Verlängern/Widerrufen bleibt erhalten. Die separate Ansicht "Neues Mitglied einladen" entfällt ersatzlos — Einladen passiert jetzt ausschließlich aus der Vereinsmitglieder-Tabelle heraus.
 
-**Vereinsmitglieder** (default auf): Mitgliedsnummer, voller Name, Beitrittsdatum, Austrittsdatum, Zustand, **Beitragsart**, Link zum Meeple-Profil *oder* Einladen/Verlängern-Button (erfordert `invites:manage`), Button "Kündigung vermerken"/"Kündigung widerrufen", Button "Anonymisieren".
+**Vereinsmitglieder** (default auf): Mitgliedsnummer, voller Name, Beitrittsdatum, Austrittsdatum, Zustand, **Beitragsart**, Link zum Meeple-Profil *oder* Einladen/Verlängern-Button (erfordert `invites:manage`), Button "Kündigung vermerken"/"Kündigung widerrufen", Button "Anonymisieren". Button "Vereinsmitglied erstellen" (#342, erfordert `members:manage`) legt eine neue Zeile mit eigener Mitgliedsnummer an. Pro Zeile ein Edit-Dialog (#343) für die vollen Personendaten sowie den Button "Selbstauskunft senden" (aus der Meeple-Tabelle hierher verschoben — nur verfügbar, solange ein Portal-Konto verknüpft ist).
 
 **Meeple-Tabelle** (default zu): Displayname, Rollen (Badges), Status (Aktives Mitglied, Gekündigt, Anonymisiert), Beigetreten am, Button "Kündigung vermerken". Im Panel: "Systemkonto anlegen"-Button (`admin:access`, siehe [2.2](#22-systemkonto-anlegen)).
 

@@ -18,6 +18,17 @@ export type VereinsmitgliedRow = {
   memberNumber: number;
   displayName: string;
   email: string;
+  /** Rohe Personendaten für den Edit-Dialog (#343) — `displayName` ist nur
+   * die Anzeige-Ableitung (`memberDisplayName()`), kein Rückweg zu den
+   * einzelnen Feldern. */
+  firstName: string | null;
+  lastName: string | null;
+  birthDate: string | null;
+  birthPlace: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
   meepleId: string | null;
   /** `Meeple.neonAuthUserId !== null` — nicht mit `meepleId !== null`
    * verwechseln: ein verknüpftes Meeple kann theoretisch ohne aktives Login
@@ -43,6 +54,11 @@ export type VereinsmitgliedSourceRow = {
   email: string;
   meepleId: string | null;
   birthDate: Date | null;
+  birthPlace: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
   selbstgewaehlterBeitrag: Prisma.Decimal | null;
   resignedAt: Date | null;
   membershipEndsAt: Date | null;
@@ -80,6 +96,14 @@ export function buildVereinsmitgliedRows(
       memberNumber: member.memberNumber,
       displayName: memberDisplayName(member),
       email: member.email,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      birthDate: member.birthDate?.toISOString() ?? null,
+      birthPlace: member.birthPlace,
+      street: member.street,
+      postalCode: member.postalCode,
+      city: member.city,
+      phone: member.phone,
       meepleId: member.meepleId,
       hasPortalLogin: member.meeple?.neonAuthUserId != null,
       joinedAt: member.meeple?.joinedAt.toISOString() ?? null,

@@ -24,6 +24,7 @@ import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/re
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
 import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import { CreateMemberDialog } from "@/components/feature/admin-mitglieder/create-member-dialog";
+import { MemberEditDialog } from "@/components/feature/admin-mitglieder/member-edit-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
@@ -101,6 +102,7 @@ export function VereinsmitgliederTable({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
+                    <TableHead />
                     <TableHead>Nr.</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Beitragsart</TableHead>
@@ -115,7 +117,7 @@ export function VereinsmitgliederTable({
                   {filteredMembers.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={9}
                         className="text-muted-foreground py-6 text-center"
                       >
                         Keine Vereinsmitglieder gefunden.
@@ -124,6 +126,9 @@ export function VereinsmitgliederTable({
                   )}
                   {filteredMembers.map((member) => (
                     <TableRow key={member.id}>
+                      <TableCell>
+                        <MemberEditDialog member={member} />
+                      </TableCell>
                       <TableCell className="font-mono">
                         {member.memberNumber}
                       </TableCell>

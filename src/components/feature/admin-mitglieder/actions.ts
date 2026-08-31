@@ -22,7 +22,6 @@ import {
 import { removeAusgetretenRole } from "@/lib/auth/ausgetreten-role";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
-import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
 import {
   requireBankReader,
   revealMeepleIban,
@@ -148,12 +147,6 @@ export async function revealMemberIban(meepleId: string) {
   return revealMeepleIban(meepleId, actor.id);
 }
 
-/** Art. 15/20 self-disclosure, sent to the Meeple's stored email on an admin's request. */
-export async function sendSelbstauskunft(meepleId: string) {
-  await requireMembersManage();
-
-  return sendSelbstauskunftMail(meepleId);
-}
 
 /**
  * A Meeple can hold several roles at once (#335) — this adds one rather than
