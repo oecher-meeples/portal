@@ -21,8 +21,19 @@ export const auth = createNeonAuth({
  * refresh), auth.getSession() falls through to an upstream fetch that still
  * tries to mint a fresh cache cookie — and throws the same error. Catch that
  * specific case and degrade to "logged out" for this render rather than
- * crashing the whole page; see issue for the proper fix (refresh coverage
- * for non-/admin routes too).
+ * crashing the whole page.
+ *
+ * Decision (#242, needs-refinement): this degrade-to-"logged out" flicker
+ * on non-/admin routes (an already-logged-in member briefly renders as
+ * "Gast" on public pages roughly every ~5min, until the cache cookie is
+ * next minted) is accepted deliberately, not fixed by widening
+ * `src/proxy.ts`'s session refresh to every route. That would trade a
+ * rare, harmless render-glitch for an upstream get-session call on *every*
+ * page view from *every* visitor, including anonymous ones — the
+ * Middleware/Route-Handler-cookie-write constraint means the refresh can
+ * only happen there, not here. For this site's size, that permanent
+ * latency/request-volume cost outweighs the flicker it would remove.
+ * Revisit if the flicker turns out more visible in practice than expected.
  */
 async function getSessionData() {
   try {
