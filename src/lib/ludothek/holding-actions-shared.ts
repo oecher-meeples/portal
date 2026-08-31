@@ -20,6 +20,7 @@ export async function requireActingMeeple() {
     select: { id: true, resignedAt: true, membershipEndsAt: true },
   });
   const membershipState = getMembershipState({
+    meepleId: meeple.id,
     resignedAt: member?.resignedAt ?? null,
     membershipEndsAt: member?.membershipEndsAt ?? null,
     anonymizedAt: meeple.anonymizedAt,

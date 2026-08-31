@@ -82,7 +82,7 @@ const OWN_MEMBER = { id: "member-self" };
 beforeEach(() => {
   vi.clearAllMocks();
   requireMeeplePermissionMock.mockResolvedValue(SELF);
-  getMembershipStateMock.mockReturnValue("aktiv");
+  getMembershipStateMock.mockReturnValue("registriert");
   memberFindUniqueMock.mockResolvedValue(OWN_MEMBER);
   gameCopyFindUniqueMock.mockResolvedValue({
     boardGame: { slug: "arche-nova" },

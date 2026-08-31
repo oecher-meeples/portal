@@ -36,9 +36,11 @@ export type { MeepleRow };
 
 type MeepleQuickFilter = MembershipState | "alle";
 
+// Meeple-Tabelle listet nur bestehende Konten — "unregistriert" (kein
+// Konto) kann hier nie vorkommen, deshalb kein eigener Filter dafür (#361).
 const MEEPLE_QUICK_FILTERS: { value: MeepleQuickFilter; label: string }[] = [
   { value: "alle", label: "Alle" },
-  { value: "aktiv", label: "Aktiv" },
+  { value: "registriert", label: "Aktiv" },
   { value: "gekuendigt", label: "Gekündigt" },
   { value: "ausgetreten", label: "Ausgetreten" },
   { value: "anonymisiert", label: "Anonymisiert" },
@@ -58,7 +60,8 @@ export function MitgliederTable({
   canReadBankData: boolean;
 }) {
   const [search, setSearch] = useState("");
-  const [quickFilter, setQuickFilter] = useState<MeepleQuickFilter>("aktiv");
+  const [quickFilter, setQuickFilter] =
+    useState<MeepleQuickFilter>("registriert");
 
   const searchedMeeples = useMemo(() => {
     if (!search) return meeples;

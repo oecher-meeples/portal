@@ -34,6 +34,7 @@ export default async function AdminDashboardPage() {
   ] = await Promise.all([
     prisma.meeple.findMany({
       select: {
+        id: true,
         anonymizedAt: true,
         member: { select: { resignedAt: true, membershipEndsAt: true } },
       },
@@ -74,10 +75,11 @@ export default async function AdminDashboardPage() {
   const activeMembers = meeples.filter(
     (m) =>
       getMembershipState({
+        meepleId: m.id,
         resignedAt: m.member?.resignedAt ?? null,
         membershipEndsAt: m.member?.membershipEndsAt ?? null,
         anonymizedAt: m.anonymizedAt,
-      }) === "aktiv",
+      }) === "registriert",
   ).length;
   const openLoans = openLoanHoldings.filter((h) => isLoanHolding(h)).length;
   const unregisteredGames = games.filter(

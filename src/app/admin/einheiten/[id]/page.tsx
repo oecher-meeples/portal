@@ -51,6 +51,7 @@ export default async function AdminEinheitDetailPage({
     .filter(
       (m) =>
         getMembershipState({
+          meepleId: m.id,
           resignedAt: null,
           membershipEndsAt: null,
           anonymizedAt: m.anonymizedAt,

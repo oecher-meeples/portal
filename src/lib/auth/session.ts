@@ -120,12 +120,13 @@ export async function requireMember() {
     select: { resignedAt: true, membershipEndsAt: true },
   });
   const membershipState = getMembershipState({
+    meepleId: meeple.id,
     resignedAt: member?.resignedAt ?? null,
     membershipEndsAt: member?.membershipEndsAt ?? null,
     anonymizedAt: meeple.anonymizedAt,
   });
 
-  if (membershipState !== "aktiv" && membershipState !== "gekuendigt") {
+  if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
     if (!isSettlementPath(pathname)) {
       redirect("/403");

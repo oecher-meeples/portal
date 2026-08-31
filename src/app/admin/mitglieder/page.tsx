@@ -165,6 +165,7 @@ export default async function AdminMitgliederPage() {
         membershipEndsAt: member.membershipEndsAt?.toISOString() ?? null,
         membershipState: getMembershipState(
           {
+            meepleId: member.meepleId,
             resignedAt: member.resignedAt,
             membershipEndsAt: member.membershipEndsAt,
             anonymizedAt: member.meeple?.anonymizedAt ?? null,
@@ -196,6 +197,7 @@ export default async function AdminMitgliederPage() {
         })),
         membershipState: getMembershipState(
           {
+            meepleId: meeple.id,
             resignedAt: meeple.member?.resignedAt ?? null,
             membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
             anonymizedAt: meeple.anonymizedAt,

@@ -35,14 +35,17 @@ Optional referenziert ein Vereinsmitglied ein `Meeple` (`meepleId`, nullable) �
 
 **Vereinsmitgliedschafts-Zustand** wird abgeleitet, nie gespeichert:
 
-| Zustand | `meepleId` | `resignedAt` | `membershipEndsAt` |
-| --- | --- | --- | --- |
-| Unregistriert | nicht gesetzt | nicht gesetzt | – |
-| Registriert | gesetzt | nicht gesetzt | – |
-| Gekündigt | *(egal)* | gesetzt | in der Zukunft |
-| Ausgetreten | *(egal)* | gesetzt | in der Vergangenheit |
+| Zustand | `meepleId` | `resignedAt` | `membershipEndsAt` | `Meeple.anonymizedAt` |
+| --- | --- | --- | --- | --- |
+| Unregistriert | nicht gesetzt | nicht gesetzt | – | – |
+| Registriert | gesetzt | nicht gesetzt | – | – |
+| Gekündigt | *(egal)* | gesetzt | in der Zukunft | – |
+| Ausgetreten | *(egal)* | gesetzt | in der Vergangenheit | – |
+| Anonymisiert | *(egal)* | *(egal)* | *(egal)* | gesetzt |
 
-Sobald `resignedAt` gesetzt ist, entscheidet nur noch das Datum zwischen Gekündigt und Ausgetreten — `meepleId` spielt dann keine Rolle mehr.
+Sobald `resignedAt` gesetzt ist, entscheidet nur noch das Datum zwischen Gekündigt und Ausgetreten — `meepleId` spielt dann keine Rolle mehr. `anonymizedAt` sticht alle anderen Felder: sobald gesetzt, ist der Zustand immer Anonymisiert, unabhängig davon, was `resignedAt`/`membershipEndsAt` sagen.
+
+**Warum Anonymisiert ein eigener, fünfter Zustand bleibt** statt in "Unregistriert" aufzugehen (Stufe-2-Anonymisierung trennt `Vereinsmitglied.meepleId`, siehe [4](#4-datenschutz-anonymisierung-loeschung)): erstens für Statistiken (Unregistriert = "braucht noch eine Einladung", Anonymisiert = "war mal Mitglied, jetzt Historie" — fachlich verschiedene Dinge, die dieselbe Zahl verfälschen würden). Zweitens bleibt `Vereinsmitglied.email` bis zur Stufe-3-Löschung (12 Monate nach `membershipEndsAt`) erhalten, auch wenn das Meeple-Profil bereits anonymisiert/getrennt ist — Kontaktaufnahme (z. B. für Feedback) bleibt darüber möglich, obwohl kein Portal-Profil mehr existiert.
 
 ### 1.2 Meeple
 

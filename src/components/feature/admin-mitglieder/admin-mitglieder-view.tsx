@@ -96,7 +96,11 @@ export function AdminMitgliederView({
       m.openUnits === 0,
   );
 
-  const activeMembers = members.filter((m) => m.membershipState === "aktiv");
+  const activeMembers = members.filter(
+    (m) =>
+      m.membershipState === "unregistriert" ||
+      m.membershipState === "registriert",
+  );
   const activeByContribution = {
     mini: activeMembers.filter((m) => m.contributionCategory === "mini").length,
     jung: activeMembers.filter((m) => m.contributionCategory === "jung").length,

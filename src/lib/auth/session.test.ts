@@ -115,7 +115,7 @@ describe("requireMember", () => {
 
     const session = await requireMember();
 
-    expect(session.membershipState).toBe("aktiv");
+    expect(session.membershipState).toBe("registriert");
     expect(session.meeple).toEqual(ACTIVE);
   });
 
