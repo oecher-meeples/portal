@@ -157,9 +157,18 @@ async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
   const session = await getCurrentSession();
   if (!session) return;
 
-  await logAdminLoginOnce(neonAuthUserId, session.session.createdAt);
+  // #371: `auth.getSession()` normalisiert `createdAt` nur auf seinem
+  // Cache-Hit-Pfad zu einem echten `Date` — im Fallback-Pfad (Cache-Cookie
+  // fehlt/abgelaufen, z. B. direkt nach einem Server-Neustart) kommt ein
+  // roher ISO-String durch, obwohl die SDK-Typen immer `Date` versprechen.
+  const createdAt =
+    session.session.createdAt instanceof Date
+      ? session.session.createdAt
+      : new Date(session.session.createdAt);
 
-  const ageMs = Date.now() - session.session.createdAt.getTime();
+  await logAdminLoginOnce(neonAuthUserId, createdAt);
+
+  const ageMs = Date.now() - createdAt.getTime();
   if (ageMs > ADMIN_SESSION_MAX_AGE_MS) {
     const pathname = await currentPathname();
     redirect(

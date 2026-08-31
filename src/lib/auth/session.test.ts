@@ -198,6 +198,28 @@ describe("requireAdminPermission — admin:access forced-relogin (#231)", () => 
     );
   });
 
+  it("handles createdAt as an ISO string, matching the SDK's cache-miss fallback path (#371)", async () => {
+    redirectMock.mockClear();
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    const createdAt = new Date(Date.now() - 60 * 1000);
+    getCurrentSessionMock.mockResolvedValue({
+      user: { id: "user-1" },
+      // `auth.getSession()` only normalises `createdAt` to a `Date` on its
+      // cache-hit path — the cache-miss fallback (e.g. right after a
+      // server restart, before any session-data cache cookie exists)
+      // passes the raw JSON response through, leaving it a string.
+      session: { createdAt: createdAt.toISOString() },
+    });
+
+    await requireAdminPermission("admin:access");
+
+    expect(logAdminLoginOnceMock).toHaveBeenCalledWith("user-1", createdAt);
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("force-logout"),
+    );
+  });
+
   it("lets the request through when there is no resolvable session (degraded render)", async () => {
     redirectMock.mockClear();
     withUser(ACTIVE, "/admin");
