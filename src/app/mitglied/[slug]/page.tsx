@@ -17,7 +17,22 @@ export default async function MitgliedProfilPage({
 
   const member = await prisma.member.findUnique({
     where: { slug },
-    include: { meeple: { select: { displayName: true } } },
+    include: {
+      meeple: {
+        select: {
+          id: true,
+          displayName: true,
+          bggUsername: true,
+          bgaUsername: true,
+          telegramHandle: true,
+          signalHandle: true,
+          discordHandle: true,
+          address: true,
+          shareAddress: true,
+          doorbellNote: true,
+        },
+      },
+    },
   });
   if (!member) notFound();
 

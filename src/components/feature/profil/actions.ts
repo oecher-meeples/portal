@@ -14,6 +14,7 @@ import {
   requestIbanChange,
 } from "@/lib/members/pending-changes";
 import type { NewsletterCategory } from "@prisma/client";
+import { optionalHandle, optionalText } from "@/lib/utils/optional-text";
 
 export type OwnProfileInput = {
   displayName: string;
@@ -34,16 +35,6 @@ export type OwnBankDetailsInput = {
   accountHolder: string;
   iban: string;
 };
-
-function optionalText(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function optionalHandle(value: string | null | undefined) {
-  const trimmed = value?.trim().replace(/^@+/, "");
-  return trimmed ? trimmed : null;
-}
 
 export async function updateOwnProfile(input: OwnProfileInput) {
   const meeple = await requireMeeple();

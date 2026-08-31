@@ -14,6 +14,10 @@ import {
 import { decryptSecret, ibanLast4, maskIban } from "@/lib/utils/crypto";
 import { StammdatenSection } from "@/components/feature/mitglied-profil/stammdaten-section";
 import { BankverbindungSection } from "@/components/feature/mitglied-profil/bankverbindung-section";
+import {
+  MeepleDatenSection,
+  type MeepleDatenMeeple,
+} from "@/components/feature/mitglied-profil/meeple-daten-section";
 
 /** Route-Einstieg für `/mitglied/[slug]` (#379 ff.) — setzt die einzelnen
  * Bereiche der Epic (#380–#385, #388, #389, #376) zusammen. Zugriffsschutz
@@ -22,7 +26,9 @@ export async function MitgliedProfilView({
   member,
   viewer,
 }: {
-  member: Member & { meeple: { displayName: string } | null };
+  member: Member & {
+    meeple: (MeepleDatenMeeple & { displayName: string }) | null;
+  };
   viewer: ProfileViewerContext;
 }) {
   const isSelf = member.meepleId === viewer.currentMeepleId;
@@ -84,6 +90,16 @@ export async function MitgliedProfilView({
             requestedAt: change.requestedAt.toISOString(),
             confirmed: true,
           }))}
+        />
+      )}
+
+      {member.meeple && (
+        <MeepleDatenSection
+          meeple={member.meeple}
+          canEdit={isSelf || viewer.canManageMembers}
+          showAddress={
+            member.meeple.shareAddress || isSelf || viewer.canManageMembers
+          }
         />
       )}
     </div>
