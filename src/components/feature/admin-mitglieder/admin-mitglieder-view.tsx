@@ -195,7 +195,7 @@ export function AdminMitgliederView({
             </dl>
             <a
               href="#vereinsmitglieder"
-              className="hover:text-foreground block"
+              className="hover:text-foreground flex flex-col items-center justify-center text-center"
             >
               <p className="font-serif text-3xl font-bold">{members.length}</p>
               <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
