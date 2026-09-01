@@ -115,7 +115,8 @@ export async function MitgliedProfilView({
   // für Vorstand und die verknüpften Erziehungsberechtigten selbst, nie für
   // das MiniMeeple/JungMeeple auf dem eigenen Profil (kein `isSelf`-Fall).
   const guardiansOfMember =
-    !isSelf && (viewer.isAdmin || viewer.canManageMembers || viewer.isGuardianOfTarget)
+    !isSelf &&
+    (viewer.isAdmin || viewer.canManageMembers || viewer.isGuardianOfTarget)
       ? await listGuardiansOf(member.id)
       : [];
 

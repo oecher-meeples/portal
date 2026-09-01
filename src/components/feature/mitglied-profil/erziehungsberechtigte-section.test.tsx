@@ -16,7 +16,11 @@ describe("ErziehungsberechtigteSection (#385)", () => {
     render(
       <ErziehungsberechtigteSection
         guardians={[
-          { id: "guardian-1", slug: "erika-muster", displayName: "Erika Muster" },
+          {
+            id: "guardian-1",
+            slug: "erika-muster",
+            displayName: "Erika Muster",
+          },
           { id: "guardian-2", slug: "max-muster", displayName: "Max Muster" },
         ]}
       />,

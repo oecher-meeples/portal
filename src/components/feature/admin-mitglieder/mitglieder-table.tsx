@@ -55,7 +55,9 @@ function germanDate(value: string | null) {
 /** Voller Vereinsmitglied-Name mit dem frei wählbaren Meeple-`displayName`
  * dahinter in Klammern — nur wenn beide vorhanden UND unterschiedlich sind,
  * sonst genügt der eine Name (kein "X (X)"). */
-function memberColumnLabel(meeple: Pick<MeepleRow, "displayName" | "memberFullName">) {
+function memberColumnLabel(
+  meeple: Pick<MeepleRow, "displayName" | "memberFullName">,
+) {
   if (meeple.memberFullName && meeple.memberFullName !== meeple.displayName) {
     return `${meeple.memberFullName} (${meeple.displayName})`;
   }

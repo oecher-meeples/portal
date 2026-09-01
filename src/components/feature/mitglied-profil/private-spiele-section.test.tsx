@@ -17,9 +17,7 @@ describe("PrivateSpieleSection (#384, Live-Review F13)", () => {
       "/ludothek?privatbesitz=1&bei=meeple-1",
     );
     // Card-Inhalt (Überschrift/Text) liegt innerhalb desselben Links.
-    expect(link).toContainElement(
-      screen.getByText("Private Spiele"),
-    );
+    expect(link).toContainElement(screen.getByText("Private Spiele"));
   });
 
   it("shows a link icon next to the label", () => {

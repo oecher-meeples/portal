@@ -108,7 +108,10 @@ export function PrivateCollectionCard({
 
   return (
     <div
-      className={cn("bg-card rounded-lg border p-6", clickable && CARD_HOVER_CLASS)}
+      className={cn(
+        "bg-card rounded-lg border p-6",
+        clickable && CARD_HOVER_CLASS,
+      )}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={clickable ? () => setOpen(true) : undefined}

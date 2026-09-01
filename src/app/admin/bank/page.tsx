@@ -72,10 +72,7 @@ export default async function AdminBankPage() {
             id: change.id,
             memberDisplayName: memberDisplayName(change.member),
             memberNumber: change.member.memberNumber,
-            displayValue: maskIban(
-              ibanFirst2(decrypted),
-              ibanLast4(decrypted),
-            ),
+            displayValue: maskIban(ibanFirst2(decrypted), ibanLast4(decrypted)),
             requestedAt: change.requestedAt.toISOString(),
             confirmed: true,
           };

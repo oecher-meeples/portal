@@ -280,9 +280,9 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
 describe("VereinsmitgliederTable memberId deep-link (vice versa zu mitglieder-table.tsx)", () => {
   it("prefills the search with the member linked via ?memberId=", () => {
     vi.mocked(useSearchParams).mockReturnValue(
-      new URLSearchParams(
-        "memberId=member-jung",
-      ) as ReturnType<typeof useSearchParams>,
+      new URLSearchParams("memberId=member-jung") as ReturnType<
+        typeof useSearchParams
+      >,
     );
 
     render(

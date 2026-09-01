@@ -6,7 +6,8 @@ import { formatDatePlain } from "@/lib/utils/format";
  * `lib/utils/`, weil aktuell nur `date-picker.tsx` sie konsumiert; bei einem
  * zweiten, komponentenfremden Verwender wäre `lib/utils/` der bessere Ort.
  */
-export type ValidationResult = { valid: true } | { valid: false; reason: string };
+export type ValidationResult =
+  { valid: true } | { valid: false; reason: string };
 export type Validator = (date: Date) => ValidationResult;
 
 function stripTime(date: Date): Date {

@@ -17,7 +17,10 @@ import { createMember } from "@/components/feature/admin-mitglieder/member-actio
  * demselben Schema wie Bestandsmitglieder (höchste + 1), steht danach für
  * eine Einladung zur Verfügung. */
 function emptyFormWithTodayAsJoinedAt() {
-  return { ...EMPTY_MEMBER_PERSONENDATEN_FORM, joinedAt: todayAsDateInputValue() };
+  return {
+    ...EMPTY_MEMBER_PERSONENDATEN_FORM,
+    joinedAt: todayAsDateInputValue(),
+  };
 }
 
 export function CreateMemberDialog({ isAdmin }: { isAdmin: boolean }) {

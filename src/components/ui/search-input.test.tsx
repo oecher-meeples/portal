@@ -32,9 +32,7 @@ describe("SearchInput", () => {
   it("forwards typed input via onChange", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(
-      <SearchInput value="" onChange={onChange} placeholder="Suchen …" />,
-    );
+    render(<SearchInput value="" onChange={onChange} placeholder="Suchen …" />);
 
     await user.type(screen.getByPlaceholderText("Suchen …"), "a");
 

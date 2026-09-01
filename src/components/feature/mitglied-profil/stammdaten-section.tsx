@@ -182,7 +182,9 @@ export function StammdatenSection({
                   onChange={(value) =>
                     setForm((prev) => ({ ...prev, [key]: value }))
                   }
-                  validate={key === "birthDate" ? birthDateValidator() : undefined}
+                  validate={
+                    key === "birthDate" ? birthDateValidator() : undefined
+                  }
                 />
               ) : (
                 <TextField
