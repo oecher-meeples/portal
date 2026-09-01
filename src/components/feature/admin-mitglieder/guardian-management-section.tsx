@@ -4,83 +4,100 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
+import type { ActionResult } from "@/components/ui/use-action";
 import {
   MemberCombobox,
   type MemberOption,
 } from "@/components/entities/member-combobox";
 import {
   addGuardian,
+  addWard,
   listGuardianManagement,
+  listWardManagement,
   removeGuardian,
+  removeWard,
 } from "@/components/feature/admin-mitglieder/member-actions";
 
-/** Erziehungsberechtigten-Verwaltung (#372) für einen Member als Kind — nur
- * mit `members:manage` sichtbar (gate liegt in den aufgerufenen Server
- * Actions). Lädt lazy erst bei geöffnetem Dialog, kein Prop-Drilling der
- * gesamten Mitgliederliste in jede Tabellenzeile. */
-export function GuardianManagementSection({
-  childMemberId,
+type LinkDirectionConfig = {
+  title: string;
+  emptyLabel: string;
+  placeholder: string;
+  removeAriaLabel: (name: string) => string;
+  list: (memberId: string) => Promise<{
+    items: MemberOption[];
+    candidates: MemberOption[];
+  }>;
+  add: (memberId: string, otherId: string) => Promise<ActionResult>;
+  remove: (memberId: string, otherId: string) => Promise<ActionResult>;
+};
+
+/** Ein Verwaltungs-Widget für beide Richtungen derselben `MemberGuardian`-
+ * Verknüpfung (#372) — Erziehungsberechtigte eines Kindes und, vice versa,
+ * Schutzbefohlene eines Erziehungsberechtigten. Lädt lazy erst bei
+ * geöffnetem Dialog, kein Prop-Drilling der gesamten Mitgliederliste in
+ * jede Tabellenzeile. */
+function LinkManagementSection({
+  memberId,
+  config,
 }: {
-  childMemberId: string;
+  memberId: string;
+  config: LinkDirectionConfig;
 }) {
-  const [guardians, setGuardians] = useState<MemberOption[] | null>(null);
+  const [items, setItems] = useState<MemberOption[] | null>(null);
   const [candidates, setCandidates] = useState<MemberOption[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    listGuardianManagement(childMemberId).then((data) => {
+    config.list(memberId).then((data) => {
       if (cancelled) return;
-      setGuardians(data.guardians);
+      setItems(data.items);
       setCandidates(data.candidates);
     });
     return () => {
       cancelled = true;
     };
-  }, [childMemberId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `config` ist ein stabiles Modul-Literal je Aufrufer.
+  }, [memberId]);
 
   async function handleAdd() {
     if (!selected) return;
-    await addGuardian(childMemberId, selected);
-    const data = await listGuardianManagement(childMemberId);
-    setGuardians(data.guardians);
+    await config.add(memberId, selected);
+    const data = await config.list(memberId);
+    setItems(data.items);
     setCandidates(data.candidates);
     setSelected(null);
   }
 
-  async function handleRemoved(guardianId: string) {
-    setGuardians(
-      (prev) => prev?.filter((guardian) => guardian.id !== guardianId) ?? null,
-    );
-    const data = await listGuardianManagement(childMemberId);
+  async function handleRemoved(otherId: string) {
+    setItems((prev) => prev?.filter((item) => item.id !== otherId) ?? null);
+    const data = await config.list(memberId);
     setCandidates(data.candidates);
   }
 
   return (
     <div className="flex flex-col gap-1.5 border-t pt-4">
-      <span className="text-sm font-medium">Erziehungsberechtigte</span>
+      <span className="text-sm font-medium">{config.title}</span>
 
-      {guardians === null ? (
+      {items === null ? (
         <p className="text-muted-foreground text-sm">Lade…</p>
-      ) : guardians.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          Keine Erziehungsberechtigten verknüpft.
-        </p>
+      ) : items.length === 0 ? (
+        <p className="text-muted-foreground text-sm">{config.emptyLabel}</p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {guardians.map((guardian) => (
+          {items.map((item) => (
             <li
-              key={guardian.id}
+              key={item.id}
               className="flex items-center justify-between gap-2 text-sm"
             >
-              <span>{guardian.displayName}</span>
+              <span>{item.displayName}</span>
               <ActionButton
-                action={() => removeGuardian(childMemberId, guardian.id)}
-                onSuccess={() => handleRemoved(guardian.id)}
+                action={() => config.remove(memberId, item.id)}
+                onSuccess={() => handleRemoved(item.id)}
                 refresh={false}
                 variant="ghost"
                 size="icon-sm"
-                aria-label={`${guardian.displayName} als Erziehungsberechtigte:n entfernen`}
+                aria-label={config.removeAriaLabel(item.displayName)}
               >
                 <X />
               </ActionButton>
@@ -94,7 +111,7 @@ export function GuardianManagementSection({
           options={candidates}
           value={selected}
           onValueChange={setSelected}
-          placeholder="Erziehungsberechtigte:n hinzufügen …"
+          placeholder={config.placeholder}
         />
         <Button
           type="button"
@@ -107,5 +124,59 @@ export function GuardianManagementSection({
         </Button>
       </div>
     </div>
+  );
+}
+
+/** Erziehungsberechtigten-Verwaltung für einen Member als Kind — nur mit
+ * `members:manage` sichtbar (gate liegt in den aufgerufenen Server Actions). */
+export function GuardianManagementSection({
+  childMemberId,
+}: {
+  childMemberId: string;
+}) {
+  return (
+    <LinkManagementSection
+      memberId={childMemberId}
+      config={{
+        title: "Erziehungsberechtigte",
+        emptyLabel: "Keine Erziehungsberechtigten verknüpft.",
+        placeholder: "Erziehungsberechtigte:n hinzufügen …",
+        removeAriaLabel: (name) =>
+          `${name} als Erziehungsberechtigte:n entfernen`,
+        list: async (memberId) => {
+          const data = await listGuardianManagement(memberId);
+          return { items: data.guardians, candidates: data.candidates };
+        },
+        add: addGuardian,
+        remove: removeGuardian,
+      }}
+    />
+  );
+}
+
+/** Vice versa (#372-Folgeticket): Schutzbefohlenen-Verwaltung für einen
+ * Member als Erziehungsberechtigte:n — dieselbe `MemberGuardian`-Kante, nur
+ * von der anderen Seite gepflegt. */
+export function WardManagementSection({
+  guardianMemberId,
+}: {
+  guardianMemberId: string;
+}) {
+  return (
+    <LinkManagementSection
+      memberId={guardianMemberId}
+      config={{
+        title: "Schutzbefohlene",
+        emptyLabel: "Keine Schutzbefohlenen verknüpft.",
+        placeholder: "Schutzbefohlene:n hinzufügen …",
+        removeAriaLabel: (name) => `${name} als Schutzbefohlene:n entfernen`,
+        list: async (memberId) => {
+          const data = await listWardManagement(memberId);
+          return { items: data.wards, candidates: data.candidates };
+        },
+        add: addWard,
+        remove: removeWard,
+      }}
+    />
   );
 }

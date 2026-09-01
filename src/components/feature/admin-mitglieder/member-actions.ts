@@ -13,6 +13,7 @@ import {
 import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
 import {
   addGuardianLink,
+  listChildrenOf,
   listGuardianCandidates,
   listGuardiansOf,
   removeGuardianLink,
@@ -82,6 +83,39 @@ export async function addGuardian(
 export async function removeGuardian(
   childMemberId: string,
   guardianMemberId: string,
+) {
+  await requireMembersManage();
+
+  await removeGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+/** Vice-versa-Verwaltung derselben `MemberGuardian`-Verknüpfung (#372) — hier
+ * ausgehend vom Erziehungsberechtigten: seine Schutzbefohlenen (Kinder) samt
+ * Auswahlkandidaten. `addWard`/`removeWard` rufen dieselben
+ * `*GuardianLink()`-Funktionen wie oben, nur mit vertauschten Parametern. */
+export async function listWardManagement(guardianMemberId: string) {
+  await requireMembersManage();
+
+  const [wards, candidates] = await Promise.all([
+    listChildrenOf(guardianMemberId),
+    listGuardianCandidates(guardianMemberId),
+  ]);
+  return { wards, candidates };
+}
+
+export async function addWard(guardianMemberId: string, childMemberId: string) {
+  await requireMembersManage();
+
+  await addGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function removeWard(
+  guardianMemberId: string,
+  childMemberId: string,
 ) {
   await requireMembersManage();
 

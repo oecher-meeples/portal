@@ -16,6 +16,7 @@ import { ActionButton } from "@/components/ui/action-button";
 import { useAction } from "@/components/ui/use-action";
 import {
   MemberPersonendatenFields,
+  personendatenFormCanSubmit,
   personendatenFormToInput,
   type MemberPersonendatenForm,
 } from "@/components/feature/admin-mitglieder/member-personendaten-fields";
@@ -23,7 +24,10 @@ import {
   sendSelbstauskunft,
   updateMember,
 } from "@/components/feature/admin-mitglieder/member-actions";
-import { GuardianManagementSection } from "@/components/feature/admin-mitglieder/guardian-management-section";
+import {
+  GuardianManagementSection,
+  WardManagementSection,
+} from "@/components/feature/admin-mitglieder/guardian-management-section";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
 
 function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
@@ -36,6 +40,7 @@ function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
     postalCode: member.postalCode ?? "",
     city: member.city ?? "",
     phone: member.phone ?? "",
+    joinedAt: member.joinedAt.slice(0, 10),
   };
 }
 
@@ -43,7 +48,13 @@ function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
  * Personendaten-Bearbeitung plus "Selbstauskunft senden" (hierher verschoben
  * aus der Meeple-Tabelle, siehe `meeple-edit-dialog.tsx`). IBAN/Bankdaten und
  * Kündigungsstatus bleiben eigene Dialoge in `vereinsmitglieder-table.tsx`. */
-export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
+export function MemberEditDialog({
+  member,
+  isAdmin,
+}: {
+  member: VereinsmitgliedRow;
+  isAdmin: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<MemberPersonendatenForm>(() =>
     toForm(member),
@@ -94,11 +105,18 @@ export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
             onChange={(key, value) =>
               setForm((prev) => ({ ...prev, [key]: value }))
             }
+            isAdmin={isAdmin}
           />
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button onClick={handleSave} disabled={pending}>
+          <Button
+            onClick={handleSave}
+            disabled={pending || !personendatenFormCanSubmit(form)}
+          >
             {pending ? "Speichere…" : "Speichern"}
           </Button>
+
+          {open && <GuardianManagementSection childMemberId={member.id} />}
+          {open && <WardManagementSection guardianMemberId={member.id} />}
 
           {member.meepleId && (
             <div className="flex flex-col gap-1.5 border-t pt-4">
@@ -115,8 +133,6 @@ export function MemberEditDialog({ member }: { member: VereinsmitgliedRow }) {
               </ActionButton>
             </div>
           )}
-
-          {open && <GuardianManagementSection childMemberId={member.id} />}
         </div>
 
         <DialogFooter showCloseButton />

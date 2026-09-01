@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/utils/prisma";
 import { uniqueSlug } from "@/lib/utils/slug";
+import { requiresEmail } from "@/lib/members/contribution";
 
 export type CreateMemberInput = {
   email: string;
@@ -11,6 +12,8 @@ export type CreateMemberInput = {
   postalCode?: string | null;
   city?: string | null;
   phone?: string | null;
+  /** Vereinsbeitritt (Live-Review F1) — ohne Angabe `now()` (Prisma-Default). */
+  joinedAt?: Date | null;
 };
 
 export type CreateMemberResult =
@@ -28,15 +31,32 @@ export async function createMember(
   input: CreateMemberInput,
 ): Promise<CreateMemberResult> {
   const email = input.email.trim().toLowerCase();
-  if (!email) {
+  // MiniMeeple/JungMeeple (< 18, aus birthDate) dürfen ohne eigene E-Mail
+  // angelegt werden — ein:e Erziehungsberechtigte:r handelt für sie.
+  if (
+    !email &&
+    requiresEmail({
+      birthDate: input.birthDate ?? null,
+      selbstgewaehlterBeitrag: null,
+    })
+  ) {
     return { error: "Bitte eine E-Mail-Adresse angeben." };
   }
+  if (
+    !input.street?.trim() ||
+    !input.postalCode?.trim() ||
+    !input.city?.trim()
+  ) {
+    return { error: "Bitte eine vollständige Adresse angeben." };
+  }
 
-  const existing = await prisma.member.findUnique({ where: { email } });
-  if (existing) {
-    return {
-      error: `Für ${email} existiert bereits ein Vereinsmitglied.`,
-    };
+  if (email) {
+    const existing = await prisma.member.findUnique({ where: { email } });
+    if (existing) {
+      return {
+        error: `Für ${email} existiert bereits ein Vereinsmitglied.`,
+      };
+    }
   }
 
   const highestNumber = await prisma.member.aggregate({
@@ -57,7 +77,7 @@ export async function createMember(
     data: {
       memberNumber,
       slug,
-      email,
+      email: email || null,
       firstName: input.firstName?.trim() || null,
       lastName: input.lastName?.trim() || null,
       birthDate: input.birthDate ?? null,
@@ -66,6 +86,7 @@ export async function createMember(
       postalCode: input.postalCode?.trim() || null,
       city: input.city?.trim() || null,
       phone: input.phone?.trim() || null,
+      ...(input.joinedAt ? { joinedAt: input.joinedAt } : {}),
     },
   });
 

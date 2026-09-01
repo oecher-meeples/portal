@@ -17,6 +17,9 @@ vi.mock("@/components/feature/admin-mitglieder/member-actions", () => ({
     .mockResolvedValue({ guardians: [], candidates: [] }),
   addGuardian: vi.fn(),
   removeGuardian: vi.fn(),
+  listWardManagement: vi.fn().mockResolvedValue({ wards: [], candidates: [] }),
+  addWard: vi.fn(),
+  removeWard: vi.fn(),
 }));
 
 afterEach(() => {
@@ -40,7 +43,7 @@ const MEMBER: VereinsmitgliedRow = {
   phone: null,
   meepleId: null,
   hasPortalLogin: false,
-  joinedAt: null,
+  joinedAt: "2024-01-01T00:00:00.000Z",
   resignedAt: null,
   membershipEndsAt: null,
   membershipState: "registriert",
@@ -48,12 +51,13 @@ const MEMBER: VereinsmitgliedRow = {
   openGames: 0,
   openUnits: 0,
   stufe3Eligible: false,
+  openInviteToken: null,
 };
 
 describe("MemberEditDialog — profile page link (#387)", () => {
-  it("links to the full profile page under /mitglied/{slug}", async () => {
+  it("links to the full profile page under /profil/{slug}", async () => {
     const user = userEvent.setup();
-    render(<MemberEditDialog member={MEMBER} />);
+    render(<MemberEditDialog member={MEMBER} isAdmin={false} />);
 
     await user.click(
       screen.getByRole("button", {

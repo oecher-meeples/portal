@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { determineContribution, isMiniMeeple } from "./contribution";
+import {
+  determineContribution,
+  isMiniMeeple,
+  requiresEmail,
+} from "./contribution";
 
 const NOW = new Date("2026-07-29T12:00:00Z");
 
@@ -135,5 +139,49 @@ describe("isMiniMeeple (#380, #381)", () => {
     expect(
       isMiniMeeple({ birthDate: null, selbstgewaehlterBeitrag: null }, NOW),
     ).toBe(false);
+  });
+});
+
+describe("requiresEmail", () => {
+  it("is false for a MiniMeeple (< 13)", () => {
+    expect(
+      requiresEmail(
+        { birthDate: new Date("2014-01-01"), selbstgewaehlterBeitrag: null },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false for a JungMeeple (13–17)", () => {
+    expect(
+      requiresEmail(
+        { birthDate: new Date("2011-01-01"), selbstgewaehlterBeitrag: null },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is true for an adult Meeple (18+)", () => {
+    expect(
+      requiresEmail(
+        { birthDate: new Date("2000-01-01"), selbstgewaehlterBeitrag: null },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is true without a birth date (safe default)", () => {
+    expect(
+      requiresEmail({ birthDate: null, selbstgewaehlterBeitrag: null }, NOW),
+    ).toBe(true);
+  });
+
+  it("is true once a chosen amount overrides a child's age category", () => {
+    expect(
+      requiresEmail(
+        { birthDate: new Date("2015-01-01"), selbstgewaehlterBeitrag: 5 },
+        NOW,
+      ),
+    ).toBe(true);
   });
 });
