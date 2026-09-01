@@ -217,7 +217,12 @@ export function AdminBestandView({
                     {game.locationChain || "—"}
                   </TableCell>
                   <TableCell>
-                    <GameZustandPill zustand={game.zustand} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <GameZustandPill zustand={game.zustand} />
+                      {game.isUnconfirmed && (
+                        <StatusPill label="unbestätigt" tone="warning" />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {game.lastCheckedAt ?? "—"}

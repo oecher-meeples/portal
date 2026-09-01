@@ -25,6 +25,7 @@ function holding(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     gameCopyId: "copy-1",
     startedAt: new Date("2026-08-01"),
+    confirmedAt: new Date("2026-08-01"),
     vereinsmitglied: member(),
     gameCopy: {
       condition: null,
@@ -84,6 +85,7 @@ describe("getActiveHoldingsByMeeple", () => {
             condition: null,
             ruleBookLanguages: [],
             inventoryNumber: null,
+            isUnconfirmed: false,
           },
           {
             gameCopyId: "copy-2",
@@ -94,10 +96,21 @@ describe("getActiveHoldingsByMeeple", () => {
             condition: null,
             ruleBookLanguages: [],
             inventoryNumber: null,
+            isUnconfirmed: false,
           },
         ],
       },
     ]);
+  });
+
+  it("flags a holding as unbestätigt (#406)", async () => {
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      holding({ confirmedAt: null }),
+    ] as never);
+
+    const result = await getActiveHoldingsByMeeple();
+
+    expect(result[0].holdings[0].isUnconfirmed).toBe(true);
   });
 
   it("keeps distinct members separate, sorted by name", async () => {
@@ -157,6 +170,7 @@ describe("getActiveHoldingsForMember (#383)", () => {
       {
         gameCopyId: "copy-1",
         startedAt: new Date("2026-08-01"),
+        confirmedAt: new Date("2026-08-01"),
         gameCopy: {
           condition: null,
           ruleBookLanguages: [],
@@ -183,6 +197,7 @@ describe("getActiveHoldingsForMember (#383)", () => {
         condition: null,
         ruleBookLanguages: [],
         inventoryNumber: null,
+        isUnconfirmed: false,
       },
     ]);
   });

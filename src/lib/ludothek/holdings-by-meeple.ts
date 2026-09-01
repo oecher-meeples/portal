@@ -18,6 +18,9 @@ export type ActiveMeepleHolding = {
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
   inventoryNumber: string | null;
+  /** Offene Weitergabe/Ausleihe, die die empfangende Person noch nicht
+   * bestätigt hat (#406). */
+  isUnconfirmed: boolean;
 };
 
 /** All active holdings for one Vereinsmitglied, for the accordion in #272's
@@ -52,6 +55,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
     select: {
       gameCopyId: true,
       startedAt: true,
+      confirmedAt: true,
       vereinsmitglied: {
         select: {
           id: true,
@@ -104,6 +108,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
       condition: holding.gameCopy.condition,
       ruleBookLanguages: holding.gameCopy.ruleBookLanguages,
       inventoryNumber: holding.gameCopy.inventoryNumber,
+      isUnconfirmed: !holding.confirmedAt,
     });
     byMember.set(member.id, entry);
   }
@@ -133,6 +138,7 @@ export async function getActiveHoldingsForMember(
     select: {
       gameCopyId: true,
       startedAt: true,
+      confirmedAt: true,
       gameCopy: {
         select: {
           condition: true,
@@ -153,5 +159,6 @@ export async function getActiveHoldingsForMember(
     condition: holding.gameCopy.condition,
     ruleBookLanguages: holding.gameCopy.ruleBookLanguages,
     inventoryNumber: holding.gameCopy.inventoryNumber,
+    isUnconfirmed: !holding.confirmedAt,
   }));
 }

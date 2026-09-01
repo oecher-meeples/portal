@@ -9,6 +9,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { StatusPill } from "@/components/ui/status-pill";
 import { Input } from "@/components/ui/input";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import { formatDatePlain } from "@/lib/utils/format";
@@ -128,7 +129,12 @@ export function BorrowedGamesByMeepleView({
                         key={holding.gameCopyId}
                         className="flex items-center justify-between gap-2 py-2 text-sm"
                       >
-                        <span>{holding.boardGameTitle}</span>
+                        <span className="flex items-center gap-1.5">
+                          {holding.boardGameTitle}
+                          {holding.isUnconfirmed && (
+                            <StatusPill label="unbestätigt" tone="warning" />
+                          )}
+                        </span>
                         <span className="flex items-center gap-2">
                           <span className="text-muted-foreground text-xs">
                             seit {formatDatePlain(holding.startedAt)}

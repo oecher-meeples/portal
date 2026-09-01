@@ -34,6 +34,10 @@ export type AdminBoardGameRow = {
   lastCheckedAt: string | null;
   archivedReason: string | null;
   zustand: GameZustand;
+  /** Offene Weitergabe/Ausleihe, die die empfangende Person noch nicht
+   * bestätigt hat (#406) — analog der "unbestätigt"-`StatusPill` in
+   * `GameHoldingPanel`. */
+  isUnconfirmed: boolean;
   locationChain: string;
   bggId: number | null;
   minPlayers: number | null;
@@ -135,6 +139,8 @@ export async function buildAdminBoardGameRows({
         : null,
       archivedReason: copy.archivedReason,
       zustand,
+      isUnconfirmed:
+        Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
       bggId: boardGame.bggId,
       minPlayers: boardGame.minPlayers,
       maxPlayers: boardGame.maxPlayers,
