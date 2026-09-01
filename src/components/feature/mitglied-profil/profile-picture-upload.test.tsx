@@ -21,6 +21,15 @@ vi.mock(
   }),
 );
 
+const uploadFilesMock = vi.fn();
+vi.mock("@/lib/utils/use-blob-upload", () => ({
+  useBlobUpload: () => ({
+    uploadFiles: uploadFilesMock,
+    isUploading: false,
+    error: null,
+  }),
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -92,5 +101,27 @@ describe("ProfilePictureUpload (#389)", () => {
 
     // No picture yet — nothing to persist, but no crash either.
     expect(updateMeepleProfilePictureVisibilityMock).not.toHaveBeenCalled();
+  });
+
+  it("opens the crop dialog on file selection instead of uploading immediately", () => {
+    render(
+      <ProfilePictureUpload
+        meepleId="meeple-1"
+        profilePictureUrl={null}
+        visibility="INTERN"
+        canEdit
+      />,
+    );
+
+    const file = new File(["x"], "avatar.png", { type: "image/png" });
+    const input = document.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(
+      screen.getByRole("dialog", { name: "Profilbild zuschneiden" }),
+    ).toBeInTheDocument();
+    expect(uploadFilesMock).not.toHaveBeenCalled();
   });
 });

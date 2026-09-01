@@ -4,8 +4,10 @@ import { useState } from "react";
 import type { ProfilePictureVisibility } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { FileField } from "@/components/ui/file-field";
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { useAction } from "@/components/ui/use-action";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
+import { compressImage } from "@/lib/utils/compress-image";
 import { PROFILE_PICTURE_VISIBILITY_LABELS } from "@/lib/members/profile-picture-visibility";
 import {
   deleteMeepleProfilePicture,
@@ -31,6 +33,7 @@ export function ProfilePictureUpload({
 }) {
   const [selectedVisibility, setSelectedVisibility] =
     useState<ProfilePictureVisibility>(visibility);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const {
     uploadFiles,
     isUploading,
@@ -40,10 +43,16 @@ export function ProfilePictureUpload({
   );
   const { run, pending, error } = useAction();
 
-  async function handleFiles(files: File[]) {
+  function handleFiles(files: File[]) {
     const file = files[0];
     if (!file) return;
-    const [url] = await uploadFiles([file]);
+    setCropFile(file);
+  }
+
+  async function handleCropped(file: File) {
+    setCropFile(null);
+    const compressed = await compressImage(file);
+    const [url] = await uploadFiles([compressed]);
     if (!url) return;
     await run(() =>
       saveMeepleProfilePicture(meepleId, url, selectedVisibility),
@@ -121,6 +130,16 @@ export function ProfilePictureUpload({
       {(uploadError || error) && (
         <p className="text-destructive text-sm">{uploadError ?? error}</p>
       )}
+
+      <ImageCropDialog
+        open={cropFile !== null}
+        onOpenChange={(open) => {
+          if (!open) setCropFile(null);
+        }}
+        file={cropFile}
+        onCropped={(file) => void handleCropped(file)}
+        title="Profilbild zuschneiden"
+      />
     </div>
   );
 }

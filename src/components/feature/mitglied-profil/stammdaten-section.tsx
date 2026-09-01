@@ -4,8 +4,11 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
+import { DatePicker } from "@/components/ui/date-picker";
+import { birthDateValidator } from "@/components/ui/constraints";
 import { useAction } from "@/components/ui/use-action";
 import { formatDatePlain } from "@/lib/utils/format";
+import { ageInYears } from "@/lib/members/contribution";
 import { STAMMDATEN_FIELD_LABELS } from "@/lib/members/stammdaten-labels";
 import type { StammdatenDiff } from "@/lib/members/pending-changes";
 import {
@@ -17,6 +20,7 @@ import {
   updateMemberStammdaten,
   type StammdatenInput,
 } from "@/components/feature/mitglied-profil/stammdaten-actions";
+import { OwnPendingChangeNotice } from "@/components/feature/mitglied-profil/own-pending-change-notice";
 
 export type StammdatenMember = {
   id: string;
@@ -29,6 +33,9 @@ export type StammdatenMember = {
   city: string | null;
   phone: string | null;
   tshirtSizeId: string | null;
+  /** Vereinsbeitritt (Live-Review F1) — getrennt vom
+   * Portal-Konto-Anlagedatum (`Meeple.joinedAt`). */
+  joinedAt: Date;
 };
 
 export type TshirtSizeOption = { id: string; label: string };
@@ -48,6 +55,7 @@ function toForm(member: StammdatenMember): StammdatenInput {
     city: member.city,
     phone: member.phone,
     tshirtSizeId: member.tshirtSizeId,
+    joinedAt: member.joinedAt.toISOString().slice(0, 10),
   };
 }
 
@@ -59,7 +67,10 @@ function diffOf(original: StammdatenInput, next: StammdatenInput) {
     if (oldValue === newValue) continue;
     diff[key] = {
       old: oldValue,
-      new: key === "birthDate" && newValue ? new Date(newValue) : newValue,
+      new:
+        (key === "birthDate" || key === "joinedAt") && newValue
+          ? new Date(newValue)
+          : newValue,
     };
   }
   return diff;
@@ -74,6 +85,7 @@ export function StammdatenSection({
   canManage,
   canRequestChange,
   isAdmin,
+  ownPendingChange = null,
   openChanges,
   tshirtSizeOptions = [],
 }: {
@@ -81,6 +93,9 @@ export function StammdatenSection({
   canManage: boolean;
   canRequestChange: boolean;
   isAdmin: boolean;
+  /** Eigener noch offener Antrag der aktuellen Session — für den "wartet auf
+   * Freigabe"-Hinweis, unabhängig von `isAdmin`. */
+  ownPendingChange?: { requestedAt: string } | null;
   openChanges: PendingChangeRow[];
   tshirtSizeOptions?: TshirtSizeOption[];
 }) {
@@ -153,12 +168,27 @@ export function StammdatenSection({
                     ))}
                   </select>
                 </div>
+              ) : key === "birthDate" || key === "joinedAt" ? (
+                <DatePicker
+                  key={key}
+                  id={`stammdaten-${key}`}
+                  label={STAMMDATEN_FIELD_LABELS[key]}
+                  labelHint={
+                    key === "birthDate" && form.birthDate
+                      ? `(${ageInYears(new Date(form.birthDate), new Date())} Jahre)`
+                      : undefined
+                  }
+                  value={form[key] ?? ""}
+                  onChange={(value) =>
+                    setForm((prev) => ({ ...prev, [key]: value }))
+                  }
+                  validate={key === "birthDate" ? birthDateValidator() : undefined}
+                />
               ) : (
                 <TextField
                   key={key}
                   id={`stammdaten-${key}`}
                   label={STAMMDATEN_FIELD_LABELS[key]}
-                  type={key === "birthDate" ? "date" : "text"}
                   value={form[key] ?? ""}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, [key]: event.target.value }))
@@ -197,15 +227,21 @@ export function StammdatenSection({
                   ? member.birthDate
                     ? formatDatePlain(member.birthDate)
                     : "—"
-                  : key === "tshirtSizeId"
-                    ? (tshirtSizeOptions.find(
-                        (option) => option.id === member.tshirtSizeId,
-                      )?.label ?? "—")
-                    : (member[key] ?? "—")}
+                  : key === "joinedAt"
+                    ? formatDatePlain(member.joinedAt)
+                    : key === "tshirtSizeId"
+                      ? (tshirtSizeOptions.find(
+                          (option) => option.id === member.tshirtSizeId,
+                        )?.label ?? "—")
+                      : (member[key] ?? "—")}
               </dd>
             </div>
           ))}
         </dl>
+      )}
+
+      {!isAdmin && ownPendingChange && (
+        <OwnPendingChangeNotice requestedAt={ownPendingChange.requestedAt} />
       )}
 
       {isAdmin && openChanges.length > 0 && (

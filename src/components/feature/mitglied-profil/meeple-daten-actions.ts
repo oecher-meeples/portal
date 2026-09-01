@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/permissions";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
@@ -23,6 +24,14 @@ async function assertMayEdit(meepleId: string) {
   const session = await requireMember();
   if (session.meeple.id === meepleId) return;
   await requirePermission("members:manage");
+}
+
+async function revalidateOwnerProfile(meepleId: string) {
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
+    select: { slug: true },
+  });
+  if (member) revalidatePath(`/profil/${member.slug}`);
 }
 
 /** Direktes Speichern, kein Änderungsantrag (#382 — anders als der
@@ -48,10 +57,25 @@ export async function updateMeepleDaten(
     },
   });
 
-  const member = await prisma.member.findUnique({
-    where: { meepleId },
-    select: { slug: true },
+  await revalidateOwnerProfile(meepleId);
+  return { success: true as const };
+}
+
+/** Sichtbarkeit der freiwilligen Meeple-Angaben (Live-Review F2) — eigene
+ * Action analog `updateMeepleProfilePictureVisibility` (#389): sofort
+ * gespeichert beim Ändern der Kopfzeilen-Auswahl, nicht erst beim
+ * "Speichern" des restlichen Formulars. */
+export async function updateMeepleDatenVisibility(
+  meepleId: string,
+  visibility: ProfilePictureVisibility,
+) {
+  await assertMayEdit(meepleId);
+
+  await prisma.meeple.update({
+    where: { id: meepleId },
+    data: { meepleDatenVisibility: visibility },
   });
-  if (member) revalidatePath(`/profil/${member.slug}`);
+
+  await revalidateOwnerProfile(meepleId);
   return { success: true as const };
 }

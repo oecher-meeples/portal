@@ -15,6 +15,9 @@ export const STAMMDATEN_FIELD_LABELS = {
   phone: "Telefon",
   /** #388 — eigene Tabelle statt Enum, siehe `lib/members/tshirt-sizes.ts`. */
   tshirtSizeId: "T-Shirt-Größe",
+  /** Vereinsbeitritt (Live-Review F1) — getrennt vom Portal-Konto-Anlagedatum
+   * (`Meeple.joinedAt`). */
+  joinedAt: "Beigetreten",
 } as const;
 
 export type StammdatenField = keyof typeof STAMMDATEN_FIELD_LABELS;

@@ -109,6 +109,7 @@ const MEMBER_PROFILE_INCLUDE = {
       privateCollectionSyncedAt: true,
       profilePictureUrl: true,
       profilePictureVisibility: true,
+      meepleDatenVisibility: true,
     },
   },
 } satisfies Prisma.MemberInclude;

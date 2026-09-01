@@ -10,6 +10,18 @@ export const PROFILE_PICTURE_VISIBILITY_LABELS: Record<
   IMMER: "Immer (öffentlich, auch außerhalb von Events)",
 };
 
+/** Kurzform ohne Erklärtext — für enge Layout-Slots wie das
+ * Sichtbarkeits-Dropdown in der Kopfzeile von `meeple-daten-section.tsx`
+ * (Live-Review F2), wo die Langform zu Textumbruch führt. */
+export const PROFILE_PICTURE_VISIBILITY_SHORT_LABELS: Record<
+  ProfilePictureVisibility,
+  string
+> = {
+  INTERN: "Intern",
+  EVENTS: "Events",
+  IMMER: "Immer",
+};
+
 /** Wer das Profilbild gerade anfragt (#389) — für einen Gast zählt nur, ob
  * er es an genau dieser Stelle im Gast-Bereich sieht, während das
  * betreffende Meeple aktiv als Erklärbär bei einem laufenden Event

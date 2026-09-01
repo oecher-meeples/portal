@@ -37,8 +37,14 @@ export function VereinsspieleSection({
               </p>
             </div>
             <div className="flex gap-2">
-              <GiveToMeepleDialog gameCopyId={holding.gameCopyId} />
-              <AcceptReturnDialog gameCopyId={holding.gameCopyId} />
+              <GiveToMeepleDialog
+                gameCopyId={holding.gameCopyId}
+                triggerClassName="w-auto"
+              />
+              <AcceptReturnDialog
+                gameCopyId={holding.gameCopyId}
+                triggerClassName="w-auto"
+              />
             </div>
           </li>
         ))}

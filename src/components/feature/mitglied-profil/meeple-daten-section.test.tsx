@@ -8,8 +8,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 const updateMeepleDatenMock = vi.fn();
+const updateMeepleDatenVisibilityMock = vi.fn();
 vi.mock("@/components/feature/mitglied-profil/meeple-daten-actions", () => ({
   updateMeepleDaten: (...args: unknown[]) => updateMeepleDatenMock(...args),
+  updateMeepleDatenVisibility: (...args: unknown[]) =>
+    updateMeepleDatenVisibilityMock(...args),
 }));
 
 vi.mock(
@@ -39,6 +42,7 @@ const MEEPLE = {
   doorbellNote: null,
   profilePictureUrl: null,
   profilePictureVisibility: "INTERN" as const,
+  meepleDatenVisibility: "INTERN" as const,
 };
 
 describe("MeepleDatenSection (#382)", () => {
@@ -78,6 +82,22 @@ describe("MeepleDatenSection (#382)", () => {
     expect(updateMeepleDatenMock).toHaveBeenCalledWith(
       "meeple-1",
       expect.objectContaining({ bggUsername: "neu" }),
+    );
+  });
+
+  it("saves the visibility dropdown immediately (Live-Review F2)", async () => {
+    updateMeepleDatenVisibilityMock.mockResolvedValue({ success: true });
+
+    render(<MeepleDatenSection meeple={MEEPLE} canEdit showAddress />);
+
+    fireEvent.change(
+      screen.getByLabelText("Sichtbarkeit der freiwilligen Angaben"),
+      { target: { value: "IMMER" } },
+    );
+
+    expect(updateMeepleDatenVisibilityMock).toHaveBeenCalledWith(
+      "meeple-1",
+      "IMMER",
     );
   });
 });

@@ -8,7 +8,14 @@ import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/components/ui/use-action";
-import { updateMeepleDaten } from "@/components/feature/mitglied-profil/meeple-daten-actions";
+import {
+  PROFILE_PICTURE_VISIBILITY_LABELS,
+  PROFILE_PICTURE_VISIBILITY_SHORT_LABELS,
+} from "@/lib/members/profile-picture-visibility";
+import {
+  updateMeepleDaten,
+  updateMeepleDatenVisibility,
+} from "@/components/feature/mitglied-profil/meeple-daten-actions";
 import { ProfilePictureUpload } from "@/components/feature/mitglied-profil/profile-picture-upload";
 
 export type MeepleDatenMeeple = {
@@ -23,6 +30,11 @@ export type MeepleDatenMeeple = {
   doorbellNote: string | null;
   profilePictureUrl: string | null;
   profilePictureVisibility: ProfilePictureVisibility;
+  /** Sichtbarkeit der freiwilligen Angaben unten (Live-Review F2) — für die
+   * spätere Seite "Die Meeples stellen sich vor", aktuell ohne
+   * Konsumenten-Logik. Wiederverwendet dasselbe Enum wie
+   * `profilePictureVisibility` (#389). */
+  meepleDatenVisibility: ProfilePictureVisibility;
 };
 
 type MeepleDatenForm = {
@@ -66,9 +78,13 @@ export function MeepleDatenSection({
 }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<MeepleDatenForm>(() => toForm(meeple));
+  const [visibility, setVisibility] = useState<ProfilePictureVisibility>(
+    meeple.meepleDatenVisibility,
+  );
   const { run, pending, error } = useAction({
     onSuccess: () => setEditing(false),
   });
+  const { run: runVisibility, error: visibilityError } = useAction();
 
   function startEdit() {
     setForm(toForm(meeple));
@@ -77,6 +93,11 @@ export function MeepleDatenSection({
 
   async function handleSave() {
     await run(() => updateMeepleDaten(meeple.id, form));
+  }
+
+  async function handleVisibilityChange(next: ProfilePictureVisibility) {
+    setVisibility(next);
+    await runVisibility(() => updateMeepleDatenVisibility(meeple.id, next));
   }
 
   return (
@@ -88,13 +109,45 @@ export function MeepleDatenSection({
             Freiwillige Angaben für andere Meeple.
           </p>
         </div>
-        {canEdit && !editing && (
-          <Button variant="outline" size="sm" onClick={startEdit}>
-            <Pencil className="size-3.5" />
-            Bearbeiten
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            // Bewusst unabhängig vom Editing-Formular unten (eigenes,
+            // sofort speicherndes Feld, keine "Speichern"/"Abbrechen"-
+            // Zugehörigkeit) — bleibt an derselben Stelle in der Kopfzeile,
+            // egal ob `editing` gerade an oder aus ist, und wird nur
+            // *bearbeitbar* im Editmode (sonst reines Anzeigefeld).
+            <select
+              aria-label="Sichtbarkeit der freiwilligen Angaben"
+              title={PROFILE_PICTURE_VISIBILITY_LABELS[visibility]}
+              value={visibility}
+              disabled={!editing}
+              onChange={(event) =>
+                handleVisibilityChange(
+                  event.target.value as ProfilePictureVisibility,
+                )
+              }
+              className="border-input h-9 w-32 shrink-0 rounded-md border bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {Object.entries(PROFILE_PICTURE_VISIBILITY_SHORT_LABELS).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          )}
+          {canEdit && !editing && (
+            <Button variant="outline" size="sm" onClick={startEdit}>
+              <Pencil className="size-3.5" />
+              Bearbeiten
+            </Button>
+          )}
+        </div>
       </div>
+      {visibilityError && (
+        <p className="text-destructive text-sm">{visibilityError}</p>
+      )}
 
       <ProfilePictureUpload
         meepleId={meeple.id}
