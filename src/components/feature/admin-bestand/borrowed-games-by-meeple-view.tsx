@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import { formatDatePlain } from "@/lib/utils/format";
+import { PageContainer } from "@/components/ui/page-container";
 import type {
   ActiveMeepleHolding,
   MeepleWithActiveHoldings,
@@ -67,7 +68,7 @@ export function BorrowedGamesByMeepleView({
   }, [meeples, search]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <PageContainer className="gap-3">
       <div className="relative max-w-sm">
         <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <Input
@@ -150,6 +151,6 @@ export function BorrowedGamesByMeepleView({
           })}
         </Accordion>
       )}
-    </div>
+    </PageContainer>
   );
 }

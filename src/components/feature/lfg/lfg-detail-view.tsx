@@ -11,6 +11,7 @@ import {
 } from "@/components/feature/lfg/actions";
 import type { LfgStatus } from "@/lib/content/lfg";
 import type { ContactLinks } from "@/lib/members/contact";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type LfgParticipantRow = {
   /** Teilnehmer-Zeilen-ID, immer gesetzt — auch für Gäste. */
@@ -61,7 +62,7 @@ export function LfgDetailView({
     (isCreator || (guestsMayBringGuests && isParticipant));
 
   return (
-    <div className="flex max-w-2xl flex-col gap-5">
+    <PageContainer className="max-w-2xl gap-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-bold">{title}</h1>
@@ -162,6 +163,6 @@ export function LfgDetailView({
           </ActionButton>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { BulkRelocateScanView } from "@/components/feature/admin-bestand/bulk-relocate-scan-view";
 import { AssignShelfToEventView } from "@/components/feature/admin-bestand/assign-shelf-to-event-view";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type EventOption = { id: string; title: string };
 
@@ -44,7 +45,7 @@ export function EventScanPageView({
   const [mode, setMode] = useState<"spiele" | "regal">("spiele");
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Bestand & Inventur"
         title={title}
@@ -92,6 +93,6 @@ export function EventScanPageView({
       {targetUnitId && offerShelfAssignment && mode === "regal" && (
         <AssignShelfToEventView eventUnitId={targetUnitId} />
       )}
-    </div>
+    </PageContainer>
   );
 }

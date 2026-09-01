@@ -17,7 +17,7 @@ type PostDetailViewProps = {
 export async function PostDetailView({ item, canEdit }: PostDetailViewProps) {
   const origin = await getRequestOrigin();
   return (
-    <article className="flex max-w-3xl flex-col gap-5">
+    <article className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       <CoverMedia
         imageUrl={item.coverImageUrl}
         alt={item.title}

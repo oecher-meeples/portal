@@ -4,6 +4,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import type { LegalDoc } from "@/data/downloads";
 import type { LegalSection } from "@/data/legal";
+import { PageContainer } from "@/components/ui/page-container";
 
 type LegalDocViewProps = {
   doc: LegalDoc;
@@ -19,7 +20,7 @@ export function LegalDocView({
   canManage = false,
 }: LegalDocViewProps) {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <PageHeading eyebrow="Rechtliches" title={doc.title} />
         <div className="flex items-center gap-2">
@@ -86,6 +87,6 @@ export function LegalDocView({
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -32,6 +32,7 @@ import {
   type HelperRoleOption,
   type OwnAvailability,
 } from "@/components/feature/helfer/helper-availability-form";
+import { PageContainer } from "@/components/ui/page-container";
 import {
   formatDateMedium,
   formatWeekdayDateTimeRange,
@@ -75,7 +76,7 @@ export function HelferView({
   const { run, pending: isPending, error } = useAction();
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Event-Betrieb"
         title="Helferplan"
@@ -224,6 +225,6 @@ export function HelferView({
       )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
-    </div>
+    </PageContainer>
   );
 }

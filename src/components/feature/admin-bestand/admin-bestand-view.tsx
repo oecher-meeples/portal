@@ -26,6 +26,7 @@ import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/ad
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { AdminBestandCsvExportDialog } from "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog";
 import type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
 
@@ -80,7 +81,7 @@ export function AdminBestandView({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Bestandsverwaltung"
         title="Bestand & Vollständigkeitsprüfung"
@@ -257,6 +258,6 @@ export function AdminBestandView({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

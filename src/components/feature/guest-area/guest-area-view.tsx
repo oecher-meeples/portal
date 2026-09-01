@@ -19,6 +19,7 @@ import {
 import type { GuestFleaMarketItem } from "@/lib/events/guest-area";
 import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
 import { RegisterExternalSellerDialog } from "@/components/widgets/bringbuy/register-external-seller-dialog";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type SellerAccess =
   { kind: "meeple"; href: string } | { kind: "guest"; eventId: string };
@@ -74,7 +75,7 @@ export function GuestAreaView({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Gäste-Bereich"
         title={eventTitle}
@@ -218,6 +219,6 @@ export function GuestAreaView({
           </ul>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

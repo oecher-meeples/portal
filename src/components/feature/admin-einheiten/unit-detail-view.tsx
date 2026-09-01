@@ -22,6 +22,7 @@ import {
   AssignKeeperDialog,
   type KeeperOption,
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type UnitDetail = {
   id: string;
@@ -85,7 +86,7 @@ export function UnitDetailView({
   const error = save.error ?? retire.error;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow={unit.kind === "BOX" ? "Karton" : "Regal"}
         title={unit.code}
@@ -203,6 +204,6 @@ export function UnitDetailView({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

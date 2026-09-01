@@ -26,6 +26,7 @@ import {
   PendingChangesPanel,
   type PendingChangeRow,
 } from "@/components/widgets/pending-changes/pending-changes-panel";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type BankDataRow = {
   id: string;
@@ -75,7 +76,7 @@ export function AdminBankView({
   const withIban = rows.filter((row) => row.hasIban).length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Kassenwart"
         title="Beitragseinzug"
@@ -186,6 +187,6 @@ export function AdminBankView({
           </ul>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

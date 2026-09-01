@@ -1,5 +1,6 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/ui/page-container";
 import type {
   MostBorrowedGame,
   WeekdayCount,
@@ -26,7 +27,7 @@ export function StatistikenView({
   const maxBorrowCount = Math.max(1, ...mostBorrowed.map((g) => g.count));
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Anonymisiert"
         title="Statistiken"
@@ -89,6 +90,6 @@ export function StatistikenView({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }

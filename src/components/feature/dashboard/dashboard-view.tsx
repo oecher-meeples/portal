@@ -10,6 +10,7 @@ import { ActionButton } from "@/components/ui/action-button";
 import { scanConfirmHolding } from "@/lib/ludothek/holding-actions";
 import { ImportantLinksGrid } from "@/components/widgets/important-links-grid";
 import { ImportantLinksEditor } from "@/components/feature/dashboard/important-links-editor";
+import { PageContainer } from "@/components/ui/page-container";
 
 const QUICK_LINKS = [
   { href: "/ludothek", label: "Ludothek", icon: Dice5 },
@@ -62,7 +63,7 @@ export function DashboardView({
   openHelperRequestEvent,
 }: DashboardViewProps) {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Angemeldet als Mitglied"
         title={`Hallo, ${user.name}`}
@@ -247,6 +248,6 @@ export function DashboardView({
           )}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

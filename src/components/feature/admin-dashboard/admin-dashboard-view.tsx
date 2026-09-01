@@ -12,6 +12,7 @@ import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-c
 import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
 import type { RateLimitAlert } from "@/lib/auth/rate-limit-alerts";
 import { formatDateTime } from "@/lib/utils/format";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type AdminLoginLogEntry = {
   id: string;
@@ -57,7 +58,7 @@ export function AdminDashboardView({
   recentAdminLogins: AdminLoginLogEntry[] | null;
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Admin-Bereich"
         title="Verwaltung"
@@ -147,6 +148,6 @@ export function AdminDashboardView({
           </ul>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

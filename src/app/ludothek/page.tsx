@@ -1,3 +1,4 @@
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -90,7 +91,7 @@ export default async function LudothekPage({
     : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer variant="wide">
       <PageHeading
         eyebrow="Das Herzstück"
         title={`Ludothek – ${allGames.length} Spiele`}
@@ -109,6 +110,6 @@ export default async function LudothekPage({
         showExplainerFilter={showExplainerFilter}
         showPresentFilter={showPresentFilter}
       />
-    </div>
+    </PageContainer>
   );
 }

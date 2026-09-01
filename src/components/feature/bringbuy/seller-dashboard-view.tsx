@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAction, type ActionResult } from "@/components/ui/use-action";
 import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
 import type { OwnFleaMarketItemInput } from "@/lib/bringbuy/own-items";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type OwnFleaMarketItemRow = {
   id: string;
@@ -39,7 +40,7 @@ export function SellerDashboardView({
   ) => Promise<ActionResult>;
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Bring & Buy"
         title={eventTitle}
@@ -58,7 +59,7 @@ export function SellerDashboardView({
           <ItemRow key={item.id} item={item} updateItem={updateItem} />
         ))}
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

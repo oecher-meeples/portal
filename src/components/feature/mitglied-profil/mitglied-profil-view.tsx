@@ -44,6 +44,7 @@ import {
   MeepleDatenSection,
   type MeepleDatenMeeple,
 } from "@/components/feature/mitglied-profil/meeple-daten-section";
+import { PageContainer } from "@/components/ui/page-container";
 
 /** Route-Einstieg für `/profil` (eigenes Profil) und `/profil/[slug]`
  * (fremdes Profil) (#379 ff.) — setzt die einzelnen
@@ -141,7 +142,7 @@ export async function MitgliedProfilView({
     : null;
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8">
+    <PageContainer className="max-w-6xl gap-6 px-4 py-8">
       <PageHeading
         eyebrow={`Mitglied Nr. ${member.memberNumber}`}
         title={memberDisplayName(member)}
@@ -313,6 +314,6 @@ export async function MitgliedProfilView({
           </>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

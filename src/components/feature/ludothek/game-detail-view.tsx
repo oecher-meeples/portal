@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/ui/page-container";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { YoutubeIcon } from "@/components/ui/youtube-icon";
@@ -103,7 +104,7 @@ export function GameDetailView({
     // Zeile und den Mechaniken. Ab `lg` bekommt jedes Item eine explizite
     // Grid-Position, die wieder das klassische Bild-neben-Text-Layout
     // ergibt (Bild spannt beide Zeilen der rechten Spalte).
-    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
+    <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
       <div className="lg:col-start-2 lg:row-start-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3">
@@ -354,6 +355,6 @@ export function GameDetailView({
           />
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

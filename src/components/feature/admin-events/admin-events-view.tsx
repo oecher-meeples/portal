@@ -28,6 +28,7 @@ import {
 import { EventVisibilityPill } from "@/components/entities/event-visibility-pill";
 import { EVENT_VISIBILITY_LABELS } from "@/lib/events/visibility";
 import { formatDateRange } from "@/lib/utils/format";
+import { PageContainer } from "@/components/ui/page-container";
 
 type VisibilityFilter = EventVisibility | "alle";
 
@@ -83,7 +84,7 @@ export function AdminEventsView({
     );
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Event-Betrieb"
         title="Events & Schichten"
@@ -207,6 +208,6 @@ export function AdminEventsView({
         roles={helperRoles}
         permissions={permissions}
       />
-    </div>
+    </PageContainer>
   );
 }

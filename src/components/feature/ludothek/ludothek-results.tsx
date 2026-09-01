@@ -118,7 +118,7 @@ export function LudothekResults({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
       {rows.map((game) => (
         <GameCard
           key={game.boardGameSlug}
