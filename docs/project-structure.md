@@ -94,6 +94,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `page-heading`, `stat-tile`, `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
+| `page-container.tsx` | `PageContainer` — Seiten-Breitendeckel (`variant: "default" \| "wide"`); jede `*-view.tsx` legt ihre eigene Breite fest, statt dass `AppShell` global `max-w-6xl` erzwingt (#398) |
 
 ## `src/components/entities/` — Fachobjekte anzeigen
 
