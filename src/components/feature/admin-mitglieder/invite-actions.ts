@@ -44,6 +44,9 @@ export async function createInvite({ memberId }: { memberId: string }) {
   if (member.meepleId) {
     throw new Error("Dieses Mitglied hat bereits ein Portal-Login.");
   }
+  if (!member.email) {
+    throw new Error("Dieses Mitglied hat keine E-Mail-Adresse hinterlegt.");
+  }
   const email = member.email;
 
   const existing = await findOpenInviteByEmail(email);

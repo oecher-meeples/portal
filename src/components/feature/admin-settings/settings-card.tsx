@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import type { badgeVariants } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 
 export function SettingsCard({
   title,
@@ -26,8 +27,8 @@ export function SettingsCard({
   count?: number;
 }) {
   return (
-    <Link href={href}>
-      <Card className="hover:bg-muted/50 relative transition-colors">
+    <Link href={href} className="group">
+      <Card className={CARD_HOVER_CLASS}>
         {count !== undefined && (
           <Badge
             variant="default"

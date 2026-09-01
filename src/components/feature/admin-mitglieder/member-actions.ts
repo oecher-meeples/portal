@@ -11,6 +11,13 @@ import {
   type UpdateMemberInput,
 } from "@/lib/members/update-member";
 import { sendSelbstauskunftMail } from "@/lib/members/selbstauskunft-mail";
+import {
+  addGuardianLink,
+  listChildrenOf,
+  listGuardianCandidates,
+  listGuardiansOf,
+  removeGuardianLink,
+} from "@/lib/members/guardians";
 
 async function requireMembersManage() {
   return requirePermission("members:manage");
@@ -47,4 +54,72 @@ export async function sendSelbstauskunft(meepleId: string) {
   await requireMembersManage();
 
   return sendSelbstauskunftMail(meepleId);
+}
+
+/** Guardian-Verwaltung (#372) — `members:manage`-gated wie andere Kernfelder
+ * auf `Member`. Liefert die aktuell verknüpften Erziehungsberechtigten plus
+ * alle übrigen Members als Auswahlkandidaten in einem Aufruf. */
+export async function listGuardianManagement(childMemberId: string) {
+  await requireMembersManage();
+
+  const [guardians, candidates] = await Promise.all([
+    listGuardiansOf(childMemberId),
+    listGuardianCandidates(childMemberId),
+  ]);
+  return { guardians, candidates };
+}
+
+export async function addGuardian(
+  childMemberId: string,
+  guardianMemberId: string,
+) {
+  await requireMembersManage();
+
+  await addGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function removeGuardian(
+  childMemberId: string,
+  guardianMemberId: string,
+) {
+  await requireMembersManage();
+
+  await removeGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+/** Vice-versa-Verwaltung derselben `MemberGuardian`-Verknüpfung (#372) — hier
+ * ausgehend vom Erziehungsberechtigten: seine Schutzbefohlenen (Kinder) samt
+ * Auswahlkandidaten. `addWard`/`removeWard` rufen dieselben
+ * `*GuardianLink()`-Funktionen wie oben, nur mit vertauschten Parametern. */
+export async function listWardManagement(guardianMemberId: string) {
+  await requireMembersManage();
+
+  const [wards, candidates] = await Promise.all([
+    listChildrenOf(guardianMemberId),
+    listGuardianCandidates(guardianMemberId),
+  ]);
+  return { wards, candidates };
+}
+
+export async function addWard(guardianMemberId: string, childMemberId: string) {
+  await requireMembersManage();
+
+  await addGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+export async function removeWard(
+  guardianMemberId: string,
+  childMemberId: string,
+) {
+  await requireMembersManage();
+
+  await removeGuardianLink(childMemberId, guardianMemberId);
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
 }

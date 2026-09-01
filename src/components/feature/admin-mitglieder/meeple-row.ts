@@ -11,6 +11,15 @@ export type MeepleRow = {
   id: string;
   memberNumber: number;
   displayName: string;
+  /** `null` nur theoretisch (jeder reguläre Meeple hat laut #328 einen
+   * verknüpften `Member`) — Link zur Vereinsmitglieder-Tabelle
+   * (`/admin/mitglieder?memberId=…#vereinsmitglieder`), vice versa zum
+   * "vorhanden"-Link dort. */
+  memberId: string | null;
+  /** Vorname/Nachname des verknüpften Vereinsmitglieds, `null` wenn (noch)
+   * keins gepflegt ist — angezeigt neben `displayName` (dem frei wählbaren
+   * Portal-Namen), der davon abweichen kann. */
+  memberFullName: string | null;
   email: string | null;
   /** Alle Rollenzuweisungen (auch abgelaufene, siehe #264) — Mehrfachrollen (#335). */
   roleAssignments: MeepleRoleAssignment[];

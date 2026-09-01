@@ -1,6 +1,11 @@
 import { PendingChangeKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { decryptSecret, ibanLast4, maskIban } from "@/lib/utils/crypto";
+import {
+  decryptSecret,
+  ibanFirst2,
+  ibanLast4,
+  maskIban,
+} from "@/lib/utils/crypto";
 import { requirePermission } from "@/lib/auth/permissions";
 import { AdminBankView } from "@/components/feature/admin-bank/admin-bank-view";
 import { formatDateTime } from "@/lib/utils/format";
@@ -24,6 +29,7 @@ export default async function AdminBankPage() {
         lastName: true,
         email: true,
         accountHolder: true,
+        ibanFirst2: true,
         ibanLast4: true,
         ibanEncrypted: true,
         meeple: { select: { displayName: true } },
@@ -45,12 +51,9 @@ export default async function AdminBankPage() {
       rows={members.map((member) => ({
         id: member.meepleId!,
         memberNumber: member.memberNumber,
-        displayName:
-          [member.firstName, member.lastName].filter(Boolean).join(" ") ||
-          member.meeple?.displayName ||
-          member.email,
+        displayName: memberDisplayName(member),
         accountHolder: member.accountHolder,
-        maskedIban: maskIban(member.ibanLast4),
+        maskedIban: maskIban(member.ibanFirst2, member.ibanLast4),
         hasIban: member.ibanEncrypted !== null,
       }))}
       logs={logs.map((log) => ({
@@ -62,15 +65,18 @@ export default async function AdminBankPage() {
       }))}
       pendingIbanChanges={pendingChanges
         .filter((change) => change.kind === PendingChangeKind.IBAN)
-        .map((change) => ({
-          id: change.id,
-          memberDisplayName: memberDisplayName(change.member),
-          memberNumber: change.member.memberNumber,
+        .map((change) => {
           // #357: newValue ist seit der Antragstellung verschlüsselt.
-          displayValue: maskIban(ibanLast4(decryptSecret(change.newValue))),
-          requestedAt: change.requestedAt.toISOString(),
-          confirmed: true,
-        }))}
+          const decrypted = decryptSecret(change.newValue);
+          return {
+            id: change.id,
+            memberDisplayName: memberDisplayName(change.member),
+            memberNumber: change.member.memberNumber,
+            displayValue: maskIban(ibanFirst2(decrypted), ibanLast4(decrypted)),
+            requestedAt: change.requestedAt.toISOString(),
+            confirmed: true,
+          };
+        })}
     />
   );
 }

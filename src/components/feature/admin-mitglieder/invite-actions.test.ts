@@ -67,4 +67,15 @@ describe("createInvite (#349)", () => {
       "Dieses Mitglied hat bereits ein Portal-Login.",
     );
   });
+
+  it("refuses a member without an email address (#374)", async () => {
+    prismaMock.member.findUniqueOrThrow.mockResolvedValue({
+      ...MEMBER,
+      email: null,
+    } as never);
+
+    await expect(createInvite({ memberId: "member-1" })).rejects.toThrow(
+      "Dieses Mitglied hat keine E-Mail-Adresse hinterlegt.",
+    );
+  });
 });

@@ -48,7 +48,9 @@ export type ContributionDetermination =
     }
   | { category: null; amountEuros: null; source: null };
 
-function ageInYears(birthDate: Date, now: Date): number {
+/** Exportiert für Live-Review F5 (Alter neben dem Geburtsdatum-Label) —
+ * einzige Altersberechnung im Repo, nicht zweimal schreiben. */
+export function ageInYears(birthDate: Date, now: Date): number {
   let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
   const beforeBirthdayThisYear =
     now.getUTCMonth() < birthDate.getUTCMonth() ||
@@ -66,6 +68,38 @@ function categoryForAge(age: number): ContributionCategory {
 
 function decimalToNumber(value: number | Prisma.Decimal): number {
   return typeof value === "number" ? value : Number(value);
+}
+
+/** Ob ein Mitglied laut Alters-Kategorie ein MiniMeeple ist (#380/#381) —
+ * z. B. um Bankdaten auf der Profilseite komplett auszublenden
+ * (beitragsbefreit, keine IBAN nötig). Ein `selbstgewaehlterBeitrag`
+ * überstimmt die Alters-Kategorie wie bei `determineContribution()` — ein
+ * MiniMeeple mit individuellem Beitrag gilt dann nicht mehr als MiniMeeple. */
+export function isMiniMeeple(
+  member: {
+    birthDate: Date | null;
+    selbstgewaehlterBeitrag: number | Prisma.Decimal | null;
+  },
+  now: Date = new Date(),
+): boolean {
+  return determineContribution(member, now).category === "mini";
+}
+
+/** Ob beim Anlegen/Bearbeiten eines Vereinsmitglieds eine E-Mail-Adresse
+ * Pflicht ist — MiniMeeple/JungMeeple (Alters-Kategorie "mini"/"jung", also
+ * unter 18) dürfen ohne eigene E-Mail-Adresse angelegt werden, weil ein:e
+ * Erziehungsberechtigte:r für sie handelt; ohne bekanntes Geburtsdatum wird
+ * sicherheitshalber wie bei einem Erwachsenen verlangt. Die Adresse bleibt
+ * davon unberührt immer Pflicht (Nutzerentscheidung). */
+export function requiresEmail(
+  member: {
+    birthDate: Date | null;
+    selbstgewaehlterBeitrag: number | Prisma.Decimal | null;
+  },
+  now: Date = new Date(),
+): boolean {
+  const category = determineContribution(member, now).category;
+  return category !== "mini" && category !== "jung";
 }
 
 /**

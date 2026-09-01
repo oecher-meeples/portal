@@ -19,6 +19,7 @@ import {
   type RevealResult,
 } from "@/components/ui/press-hold-reveal";
 import { useAction } from "@/components/ui/use-action";
+import { cn } from "@/lib/utils/cn";
 import { formatDatePlain } from "@/lib/utils/format";
 import {
   approvePendingChange,
@@ -89,6 +90,11 @@ export function PendingChangesPanel({
   const [inviteConflictId, setInviteConflictId] = useState<string | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
   const [revealError, setRevealError] = useState<string | null>(null);
+  // Pro Antrag ein eigener Aufdeck-Zustand — der aufgedeckte Wert löst die
+  // maskierte `displayValue` direkt ab (siehe `press-hold-reveal.tsx`).
+  const [revealedByChangeId, setRevealedByChangeId] = useState<
+    Record<string, string | null>
+  >({});
 
   if (changes.length === 0) return null;
 
@@ -119,13 +125,28 @@ export function PendingChangesPanel({
             className="flex flex-wrap items-center justify-between gap-3 py-3"
           >
             <div>
+              {/* Live-Review F12: eigene Zeile über Mitgliedsnummer/Name statt
+               * mitten in der "neu: …"-Zeile. */}
+              <p className="text-muted-foreground text-xs">
+                beantragt {formatDatePlain(change.requestedAt)}
+              </p>
               <p className="font-medium">
                 #{change.memberNumber} {change.memberDisplayName}
               </p>
               <p className="text-muted-foreground flex flex-wrap items-center gap-2">
                 <span>
-                  neu: {change.displayValue} · beantragt{" "}
-                  {formatDatePlain(change.requestedAt)}
+                  neu:{" "}
+                  {/* Live-Review F11: feste Breite wie in
+                   * `bankverbindung-section.tsx`, nur für IBAN-Anträge (dort
+                   * `revealIban` gesetzt) — E-Mail-Anträge behalten Fließtext. */}
+                  <span
+                    className={cn(
+                      "font-mono",
+                      revealIban && "inline-block w-[22ch]",
+                    )}
+                  >
+                    {revealedByChangeId[change.id] ?? change.displayValue}
+                  </span>
                   {!change.confirmed &&
                     " · wartet noch auf Bestätigung durch das Mitglied"}
                 </span>
@@ -134,6 +155,12 @@ export function PendingChangesPanel({
                     <PressHoldReveal
                       reveal={() => revealIban(change.id)}
                       onError={setRevealError}
+                      onValueChange={(value) =>
+                        setRevealedByChangeId((prev) => ({
+                          ...prev,
+                          [change.id]: value,
+                        }))
+                      }
                     />
                     <CopyButton
                       value={() => revealIban(change.id)}

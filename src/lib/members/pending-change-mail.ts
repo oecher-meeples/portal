@@ -14,7 +14,7 @@ export function buildEmailChangeConfirmationLink(
   origin: string,
   token: string,
 ): string {
-  return `${origin}/mitglied/e-mail-bestaetigen?token=${encodeURIComponent(token)}`;
+  return `${origin}/profil/e-mail-bestaetigen?token=${encodeURIComponent(token)}`;
 }
 
 export async function sendEmailChangeConfirmationMail(
@@ -36,13 +36,19 @@ export async function sendEmailChangeConfirmationMail(
 const KIND_LABELS: Record<PendingChangeKind, string> = {
   [PendingChangeKind.IBAN]: "IBAN-Änderung",
   [PendingChangeKind.MEMBER_EMAIL]: "E-Mail-Änderung",
+  [PendingChangeKind.MEMBER_STAMMDATEN]: "Stammdaten-Änderung",
 };
 
 export async function sendPendingChangeRejectedMail(
-  memberEmail: string,
+  // `null` seit #373 (MiniMeeple ohne eigene E-Mail) — dessen
+  // Stammdaten-Anträge stellt ein:e Erziehungsberechtigte:r, die Ablehnung
+  // hat dann schlicht keinen Zustellweg und wird stillschweigend übersprungen.
+  memberEmail: string | null,
   kind: PendingChangeKind,
   reason: string | null,
 ) {
+  if (!memberEmail) return;
+
   await sendTransactionalEmail({
     to: memberEmail,
     subject: `Dein Änderungsantrag wurde abgelehnt (${KIND_LABELS[kind]})`,

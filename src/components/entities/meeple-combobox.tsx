@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Combobox,
   ComboboxEmpty,
@@ -9,6 +8,7 @@ import {
   ComboboxList,
   ComboboxPopup,
 } from "@/components/ui/combobox";
+import { useControlledComboboxInput } from "@/components/ui/use-controlled-combobox-input";
 
 export type MeepleOption = { id: string; displayName: string };
 
@@ -30,9 +30,9 @@ export function MeepleCombobox({
   onValueChange: (meepleId: string | null) => void;
   placeholder?: string;
 }) {
-  const [inputValue, setInputValue] = useState("");
   const selectedName =
     options.find((option) => option.id === value)?.displayName ?? null;
+  const [inputValue, setInputValue] = useControlledComboboxInput(selectedName);
 
   return (
     <Combobox

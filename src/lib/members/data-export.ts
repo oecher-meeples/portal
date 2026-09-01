@@ -94,6 +94,7 @@ export async function collectMeeplePersonalData(
       phone: true,
       email: true,
       selbstgewaehlterBeitrag: true,
+      ibanFirst2: true,
       ibanLast4: true,
       accountHolder: true,
       resignedAt: true,

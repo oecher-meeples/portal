@@ -8,12 +8,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { SettingsCardButton } from "@/components/feature/admin-settings/settings-card-button";
 import { InviteSettingsForm } from "@/components/feature/admin-settings/invite-settings-form";
 
 /** "Einladungen"-Karte auf /admin/einstellungen öffnet seit #350 einen
@@ -24,16 +19,10 @@ export function InviteSettingsDialog({ defaultDays }: { defaultDays: number }) {
     <Dialog>
       <DialogTrigger
         render={
-          <button type="button" className="w-full text-left">
-            <Card className="hover:bg-muted/50 transition-colors">
-              <CardHeader>
-                <CardTitle>Einladungen</CardTitle>
-                <CardDescription>
-                  Gültigkeitsdauer für neue Einladungen festlegen.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </button>
+          <SettingsCardButton
+            title="Einladungen"
+            description="Gültigkeitsdauer für neue Einladungen festlegen."
+          />
         }
       />
       <DialogContent>

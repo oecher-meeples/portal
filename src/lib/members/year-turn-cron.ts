@@ -195,5 +195,9 @@ async function listRecipientsWithAnyPermission(
     where: { meeple: { neonAuthUserId: { in: neonAuthUserIds } } },
     select: { email: true },
   });
-  return members.map((m) => m.email);
+  // #373: Member.email ist jetzt nullable (MiniMeeple ohne eigene Adresse) —
+  // für eine Board-Rolle unrealistisch, aber typsicher trotzdem gefiltert.
+  return members
+    .map((m) => m.email)
+    .filter((email): email is string => email !== null);
 }

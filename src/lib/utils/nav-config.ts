@@ -91,6 +91,9 @@ export const EINSTELLUNGEN_PERMISSIONS = [
   "games:manage",
   "instagram:connect",
   "invites:manage",
+  // #388: T-Shirt-Größen-Verwaltung braucht Seitenzugriff für den Vorstand,
+  // auch ohne eine der drei anderen Berechtigungen.
+  "members:manage",
 ];
 
 export const NAV_GROUPS: NavGroup[] = [

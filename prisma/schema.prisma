@@ -133,6 +133,16 @@ enum EventVisibility {
   DRAFT
 }
 
+/// Sichtbarkeit des Meeple-Profilbilds (#389): INTERN = für alle eingeloggten
+/// Meeple, EVENTS = zusätzlich für Gäste, solange eine aktive
+/// `ExplainerAttendance` bei einem laufenden Event besteht, IMMER = dauerhaft
+/// öffentlich, auch außerhalb von Events.
+enum ProfilePictureVisibility {
+  INTERN
+  EVENTS
+  IMMER
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -234,6 +244,19 @@ model Meeple {
   /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
   privateCollectionSyncedAt DateTime?
   doorbellNote              String?
+  /// Profilbild-URL im Blob-Storage (#389) — `null` solange kein Bild
+  /// hochgeladen wurde, unabhängig von `profilePictureVisibility`.
+  profilePictureUrl         String?
+  /// Freigabe-Einstellung für das Profilbild (#389), siehe
+  /// `ProfilePictureVisibility`. Default INTERN — bewusst nicht öffentlich,
+  /// bis das Meeple aktiv eine weitergehende Freigabe wählt.
+  profilePictureVisibility  ProfilePictureVisibility @default(INTERN)
+  /// Sichtbarkeit der freiwilligen Meeple-Angaben (Live-Review F2) — soll
+  /// später die Seite "Die Meeples stellen sich vor" befüllen, aktuell noch
+  /// ohne Konsumenten-Logik, reine Datenerfassung. Wiederverwendet dasselbe
+  /// Enum wie `profilePictureVisibility` (#389) statt einer zweiten,
+  /// parallelen Sichtbarkeits-Systematik.
+  meepleDatenVisibility     ProfilePictureVisibility @default(INTERN)
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
 
@@ -270,6 +293,9 @@ model Meeple {
 model Member {
   id                      String    @id @default(cuid())
   memberNumber            Int       @unique
+  /// Routing-Basis für `/mitglied/[slug]` (#379), analog `BoardGame.slug`
+  /// (`uniqueSlug()`-Pattern). Backfill für Altbestand: `mitglied-<memberNumber>`.
+  slug                    String    @unique
   lastName                String?
   firstName               String?
   birthDate               DateTime?
@@ -278,24 +304,70 @@ model Member {
   postalCode              String?
   city                    String?
   phone                   String?
-  email                   String    @unique
+  /// Nullable seit #373 (MiniMeeple/Erziehungsberechtigte ohne eigene
+  /// E-Mail) — Postgres erlaubt mehrere NULLs unter `@unique`, kollidiert
+  /// nicht mit bestehender Eindeutigkeit befüllter E-Mails.
+  email                   String?   @unique
   /// Individuell gewählter Mitgliedsbeitrag — überstimmt die aus `birthDate`
   /// abgeleitete Beitragsart, wenn gesetzt (siehe `lib/members/contribution.ts`).
   selbstgewaehlterBeitrag Decimal?
   ibanEncrypted           String?
+  /// Klartext gespeichert wie `ibanLast4` (nicht sensibel für sich genommen)
+  /// — die ISO-Ländercode-Präfix der IBAN, für eine vollständig lange
+  /// Maskierung (`maskIban()`, Live-Review) statt nur "**** 1234". `null`
+  /// bei Altbestand vor diesem Feld — `maskIban()` fällt dann auf die kurze
+  /// Form zurück, kein Backfill nötig.
+  ibanFirst2              String?
   ibanLast4               String?
   accountHolder           String?
+  /// Vereinsbeitritt (Live-Review F1) — fachlich getrennt von
+  /// `Meeple.joinedAt` (Anlagedatum des Portal-Kontos): fallen bei
+  /// Erwachsenen zufällig zusammen, nicht bei Kindern ohne eigenen Login
+  /// (#373). Backfill für Bestand: `createdAt` (siehe Migration).
+  joinedAt                DateTime  @default(now())
   resignedAt              DateTime?
   membershipEndsAt        DateTime?
   meepleId                String?   @unique
+  tshirtSizeId            String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
-  meeple         Meeple?         @relation(fields: [meepleId], references: [id], onDelete: SetNull)
-  holdings       GameHolding[]   @relation("GameHoldingMember")
+  meeple         Meeple?          @relation(fields: [meepleId], references: [id], onDelete: SetNull)
+  tshirtSize     TshirtSize?      @relation(fields: [tshirtSizeId], references: [id], onDelete: SetNull)
+  holdings       GameHolding[]    @relation("GameHoldingMember")
   pendingChanges PendingChange[]
+  asGuardianOf   MemberGuardian[] @relation("MemberGuardianGuardian")
+  guardians      MemberGuardian[] @relation("MemberGuardianChild")
 
   @@map("members")
+}
+
+/// Erziehungsberechtigten-Verknüpfung (#373) — m:n, ein Kind kann mehrere
+/// Erziehungsberechtigte haben, ein:e Erziehungsberechtigte:r mehrere Kinder.
+model MemberGuardian {
+  childMemberId    String
+  guardianMemberId String
+
+  child    Member @relation("MemberGuardianChild", fields: [childMemberId], references: [id], onDelete: Cascade)
+  guardian Member @relation("MemberGuardianGuardian", fields: [guardianMemberId], references: [id], onDelete: Cascade)
+
+  @@id([childMemberId, guardianMemberId])
+  @@map("member_guardians")
+}
+
+/// Admin-gepflegte T-Shirt-Größenliste (#388) — eigene Tabelle statt Enum,
+/// da die verfügbaren Größen vom Lieferanten abhängen und sich ändern
+/// können. `sortOrder` erlaubt eine fachliche statt alphabetische Reihenfolge
+/// (z. B. Kindergrößen vor Erwachsenengrößen).
+model TshirtSize {
+  id        String   @id @default(cuid())
+  label     String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  members Member[]
+
+  @@map("tshirt_sizes")
 }
 
 /// A member's Art.-17 deletion request. Deliberately has no free-text field: the
@@ -539,6 +611,10 @@ model PendingChange {
   newValue         String
   /// Nur `kind: IBAN` — der neue Kontoinhaber, geht mit der IBAN zusammen ein.
   newAccountHolder String?
+  /// Nur `kind: MEMBER_STAMMDATEN` (#379) — JSON-serialisiertes
+  /// `{ field: { old, new } }`-Diff über mehrere geänderte Stammdatenfelder
+  /// hinweg, ein Antrag, ein Freigeben/Ablehnen für alle Felder darin.
+  fieldsJson       String?
   requestedAt      DateTime          @default(now())
   /// Reachability-Token für den Bestätigungslink (nur MEMBER_EMAIL) — null,
   /// solange kein Link nötig war (IBAN) oder nach Bestätigung verbraucht.
@@ -560,6 +636,9 @@ model PendingChange {
 enum PendingChangeKind {
   IBAN
   MEMBER_EMAIL
+  /// Generischer Stammdaten-Änderungsantrag (#379) — Diff-Payload in
+  /// `fieldsJson`, `newValue` bleibt hierfür ungenutzt (leerer String).
+  MEMBER_STAMMDATEN
 }
 
 /// A game title — BGG/product metadata, one row per title regardless of how many

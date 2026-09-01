@@ -39,7 +39,10 @@ export const PATHNAME_HEADER = "x-pathname";
 export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   { path: "/dashboard", exact: true },
   { path: "/dashboard/kalender" },
-  { path: "/profil" },
+  // exact: /profil/[slug] wäre sonst für JEDEN Slug erreichbar — die eigene
+  // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
+  // gezielt über isOwnProfilPath durch, nicht über diese Liste.
+  { path: "/profil", exact: true },
   { path: "/scan" },
   { path: "/mitglieder" },
 ];
@@ -117,7 +120,7 @@ export async function requireMember() {
   // anonymizedAt stays on Meeple.
   const member = await prisma.member.findUnique({
     where: { meepleId: meeple.id },
-    select: { resignedAt: true, membershipEndsAt: true },
+    select: { slug: true, resignedAt: true, membershipEndsAt: true },
   });
   const membershipState = getMembershipState({
     meepleId: meeple.id,
@@ -128,7 +131,12 @@ export async function requireMember() {
 
   if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
-    if (!isSettlementPath(pathname)) {
+    // #386: die eigene `/profil/[slug]`-Seite muss für den
+    // Abwicklungs-Zustand ebenso erreichbar bleiben wie `/profil` selbst,
+    // aber nur die *eigene*, nicht jede beliebige.
+    const isOwnProfilPath =
+      member?.slug !== undefined && pathname === `/profil/${member.slug}`;
+    if (!isSettlementPath(pathname) && !isOwnProfilPath) {
       redirect("/403");
     }
   }

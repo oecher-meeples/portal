@@ -99,6 +99,13 @@ describe("isSettlementPath", () => {
     expect(isSettlementPath("/admin/bestand")).toBe(false);
     expect(isSettlementPath("")).toBe(false);
   });
+
+  // /profil ist exact (#386-Nachtrag) — /profil/[slug] zeigt fremde
+  // Profile, die dürfen für den Abwicklungs-Zustand nicht pauschal offen
+  // sein; nur die eigene Slug-Seite lässt requireMember() separat durch.
+  it("does not treat /profil/[slug] as a settlement route", () => {
+    expect(isSettlementPath("/profil/irgendein-slug")).toBe(false);
+  });
 });
 
 describe("requireMember", () => {
@@ -150,6 +157,27 @@ describe("requireMember", () => {
     const session = await requireMember();
 
     expect(session.membershipState).toBe("ausgetreten");
+  });
+
+  it("lets a resigned member through on their own /profil/[slug] page (#386)", async () => {
+    withUser(RESIGNED_AND_GONE, "/profil/mitglied-2", {
+      ...RESIGNED_AND_GONE_MEMBER,
+      slug: "mitglied-2",
+    });
+
+    const session = await requireMember();
+
+    expect(session.membershipState).toBe("ausgetreten");
+  });
+
+  it("still blocks a resigned member from a different member's /profil/[slug] page (#386)", async () => {
+    withUser(RESIGNED_AND_GONE, "/profil/mitglied-3", {
+      ...RESIGNED_AND_GONE_MEMBER,
+      slug: "mitglied-2",
+    });
+
+    await expect(requireMember()).rejects.toThrow(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 });
 

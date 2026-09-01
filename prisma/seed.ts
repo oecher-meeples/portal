@@ -19,6 +19,7 @@ import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
 import { DEMO_LEGAL_DOCUMENTS } from "./seed-data/demo-legal-documents";
 import { DEMO_POSTS } from "./seed-data/demo-posts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
+import { seedDemoFamily } from "./seed-family";
 import { ANONYMER_MEEPLE_NAME } from "../src/lib/ludothek/anonymer-meeple";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
@@ -66,7 +67,7 @@ const DEMO_ROLE_ACCOUNTS = [
  * der alte Hash bestehen und der Login schlägt trotz "korrektem" Passwort
  * fehl, ohne dass Rate-Limiting oder ein Code-Bug beteiligt wäre.
  */
-async function upsertNeonAuthUser({
+export async function upsertNeonAuthUser({
   email,
   password,
   name,
@@ -116,7 +117,10 @@ async function ensureAdminMeeple(neonAuthUserId: string) {
   });
 }
 
-async function ensureMeeple(neonAuthUserId: string, displayName: string) {
+export async function ensureMeeple(
+  neonAuthUserId: string,
+  displayName: string,
+) {
   return prisma.meeple.upsert({
     where: { neonAuthUserId },
     update: {},
@@ -138,6 +142,13 @@ async function ensureMeeple(neonAuthUserId: string, displayName: string) {
  * daher braucht auch dieses Sammelkonto ein `Member`-Ziel — ohne
  * `firstName`/`lastName`/Adresse, nur zum Halten der Fremdschlüssel-Referenz.
  */
+export async function nextMemberNumber(): Promise<number> {
+  const highestNumber = await prisma.member.aggregate({
+    _max: { memberNumber: true },
+  });
+  return (highestNumber._max.memberNumber ?? 0) + 1;
+}
+
 async function ensureAnonymerMeeple() {
   const meeple =
     (await prisma.meeple.findFirst({
@@ -152,12 +163,10 @@ async function ensureAnonymerMeeple() {
   });
   if (existingMember) return { meeple, member: existingMember };
 
-  const highestNumber = await prisma.member.aggregate({
-    _max: { memberNumber: true },
-  });
   const member = await prisma.member.create({
     data: {
-      memberNumber: (highestNumber._max.memberNumber ?? 0) + 1,
+      memberNumber: await nextMemberNumber(),
+      slug: slugify(ANONYMER_MEEPLE_NAME),
       email: "anonymer-meeple@oecher-meeples.invalid",
       meepleId: meeple.id,
     },
@@ -445,6 +454,7 @@ async function main() {
   }
   await seedDemoGames(adminMeeple.id, spielewartMeepleId);
   await seedDemoMeeples();
+  await seedDemoFamily();
   await ensureAnonymerMeeple();
   await seedDemoPosts();
   await seedDemoDownloads();

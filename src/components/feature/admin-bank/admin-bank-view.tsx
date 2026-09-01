@@ -59,6 +59,11 @@ export function AdminBankView({
   pendingIbanChanges: PendingChangeRow[];
 }) {
   const [error, setError] = useState<string | null>(null);
+  // Pro Zeile ein eigener Aufdeck-Zustand — der aufgedeckte Wert löst die
+  // maskierte IBAN direkt ab (siehe `press-hold-reveal.tsx`).
+  const [revealedIbanByRowId, setRevealedIbanByRowId] = useState<
+    Record<string, string | null>
+  >({});
 
   async function revealRowIban(id: string): Promise<RevealResult> {
     const result = await revealIban(id);
@@ -123,13 +128,23 @@ export function AdminBankView({
               <TableCell className="font-mono">{row.memberNumber}</TableCell>
               <TableCell>{row.displayName}</TableCell>
               <TableCell>{row.accountHolder ?? "—"}</TableCell>
-              <TableCell className="font-mono">{row.maskedIban}</TableCell>
+              <TableCell className="font-mono">
+                <span className="inline-block w-[22ch]">
+                  {revealedIbanByRowId[row.id] ?? row.maskedIban}
+                </span>
+              </TableCell>
               <TableCell className="text-right">
                 {row.hasIban && (
                   <span className="inline-flex items-center gap-2">
                     <PressHoldReveal
                       reveal={() => revealRowIban(row.id)}
                       onError={setError}
+                      onValueChange={(value) =>
+                        setRevealedIbanByRowId((prev) => ({
+                          ...prev,
+                          [row.id]: value,
+                        }))
+                      }
                     />
                     <CopyButton
                       value={() => revealRowIban(row.id)}

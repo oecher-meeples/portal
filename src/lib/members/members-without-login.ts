@@ -14,7 +14,10 @@ export async function listMembersWithoutLogin(): Promise<
   MemberWithoutLoginRow[]
 > {
   const members = await prisma.member.findMany({
-    where: { meepleId: null, resignedAt: null },
+    // #374: ein Member ohne E-Mail (z. B. MiniMeeple, #373) kann ohnehin
+    // nicht eingeladen werden — solche Zeilen tauchen in dieser Auswahl gar
+    // nicht erst auf, statt später mit einem Fehler abzubrechen.
+    where: { meepleId: null, resignedAt: null, email: { not: null } },
     orderBy: { memberNumber: "asc" },
     select: {
       id: true,
@@ -30,7 +33,7 @@ export async function listMembersWithoutLogin(): Promise<
     memberNumber: member.memberNumber,
     displayName:
       [member.firstName, member.lastName].filter(Boolean).join(" ") ||
-      member.email,
-    email: member.email,
+      member.email!,
+    email: member.email!,
   }));
 }

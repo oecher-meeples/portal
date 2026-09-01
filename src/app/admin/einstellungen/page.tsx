@@ -4,16 +4,19 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { prisma } from "@/lib/utils/prisma";
 import { SettingsCard } from "@/components/feature/admin-settings/settings-card";
 import { InviteSettingsDialog } from "@/components/feature/admin-settings/invite-settings-dialog";
+import { TshirtSizeDialog } from "@/components/feature/admin-settings/tshirt-size-dialog";
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export default async function AdminSettingsPage() {
   await requireAdminPermission(EINSTELLUNGEN_PERMISSIONS);
 
-  const [connection, storageUnitCount, defaultInviteDays] = await Promise.all([
-    prisma.instagramConnection.findFirst(),
-    prisma.storageUnit.count(),
-    getDefaultInviteDays(),
-  ]);
+  const [connection, storageUnitCount, defaultInviteDays, tshirtSizeCount] =
+    await Promise.all([
+      prisma.instagramConnection.findFirst(),
+      prisma.storageUnit.count(),
+      getDefaultInviteDays(),
+      prisma.tshirtSize.count(),
+    ]);
 
   const modules = [
     {
@@ -40,6 +43,7 @@ export default async function AdminSettingsPage() {
           <SettingsCard key={module.href} {...module} />
         ))}
         <InviteSettingsDialog defaultDays={defaultInviteDays} />
+        <TshirtSizeDialog count={tshirtSizeCount} />
       </div>
     </div>
   );

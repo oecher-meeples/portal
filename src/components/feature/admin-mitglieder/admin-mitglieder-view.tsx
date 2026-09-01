@@ -338,6 +338,7 @@ export function AdminMitgliederView({
         members={members}
         canManageMembers={canManageMembers}
         canManageInvites={canManageInvites}
+        isAdmin={canCreateSystemkonto}
         contributionFilter={contributionFilter}
         onClearContributionFilter={() => setContributionFilter(null)}
       />
