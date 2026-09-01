@@ -2,11 +2,13 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useSearchParams } from "next/navigation";
 import { VereinsmitgliederTable } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
 }));
 vi.mock(
   "@/components/feature/admin-mitglieder/resign-membership-dialog",
@@ -38,6 +40,9 @@ vi.mock("@/components/feature/admin-mitglieder/invite-actions", () => ({
 
 afterEach(() => {
   cleanup();
+  vi.mocked(useSearchParams).mockReturnValue(
+    new URLSearchParams() as ReturnType<typeof useSearchParams>,
+  );
 });
 
 function member(
@@ -59,7 +64,7 @@ function member(
     phone: null,
     meepleId: "meeple-1",
     hasPortalLogin: true,
-    joinedAt: null,
+    joinedAt: "2024-01-01T00:00:00.000Z",
     resignedAt: null,
     membershipEndsAt: null,
     membershipState: "registriert",
@@ -67,6 +72,7 @@ function member(
     openGames: 0,
     openUnits: 0,
     stufe3Eligible: false,
+    openInviteToken: null,
     ...overrides,
   };
 }
@@ -193,7 +199,7 @@ describe("VereinsmitgliederTable invites:manage gate (#365)", () => {
 
     expect(screen.getByRole("link", { name: "vorhanden" })).toHaveAttribute(
       "href",
-      "/admin/mitglieder#mitglieder",
+      "/admin/mitglieder?meepleId=meeple-1#mitglieder",
     );
   });
 });
@@ -268,5 +274,26 @@ describe("VereinsmitgliederTable Zustand/Portal-Login filters (#344)", () => {
     expect(
       screen.getByText("Keine Vereinsmitglieder gefunden."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("VereinsmitgliederTable memberId deep-link (vice versa zu mitglieder-table.tsx)", () => {
+  it("prefills the search with the member linked via ?memberId=", () => {
+    vi.mocked(useSearchParams).mockReturnValue(
+      new URLSearchParams(
+        "memberId=member-jung",
+      ) as ReturnType<typeof useSearchParams>,
+    );
+
+    render(
+      <VereinsmitgliederTable
+        members={[MINI_MEMBER, JUNG_MEMBER]}
+        canManageMembers={false}
+        canManageInvites={true}
+      />,
+    );
+
+    expect(screen.getByDisplayValue("Jonas Jung")).toBeInTheDocument();
+    expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
   });
 });

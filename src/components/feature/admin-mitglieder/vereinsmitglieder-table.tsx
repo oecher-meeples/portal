@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { RotateCcw, Search, UserPlus } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useSearchParams } from "next/navigation";
+import { RotateCcw, UserPlus } from "lucide-react";
+import { SearchInput } from "@/components/ui/search-input";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -30,6 +31,7 @@ import { revokeResignation } from "@/components/feature/admin-mitglieder/actions
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   CONTRIBUTION_CATEGORY_LABELS,
+  CONTRIBUTION_CATEGORY_SHORT_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
 import { MEMBERSHIP_STATE_LABELS, formatDatePlain } from "@/lib/utils/format";
@@ -60,6 +62,7 @@ export function VereinsmitgliederTable({
   members,
   canManageMembers,
   canManageInvites,
+  isAdmin = false,
   contributionFilter,
   onClearContributionFilter,
 }: {
@@ -73,14 +76,43 @@ export function VereinsmitgliederTable({
    * einen Server-Fehler (die Server Action selbst war schon korrekt
    * gegated, nur die UI nicht). */
   canManageInvites: boolean;
+  /** = `admin:access` — schaltet zusammen mit `NODE_ENV === "development"`
+   * den Demo-Adresse-Button in `MemberPersonendatenFields` frei. */
+  isAdmin?: boolean;
   /** Von der Beitragsart-Stat-Tile gesteuert (#340) — `null` heißt "kein Filter". */
   contributionFilter?: ContributionCategory[] | null;
   onClearContributionFilter?: () => void;
 }) {
-  const [search, setSearch] = useState("");
+  // Deep-Link von der Benutzer-Tabelle ("Mitglied"-Name-Link, siehe
+  // `mitglieder-table.tsx`) — filtert direkt auf das verlinkte
+  // Vereinsmitglied, vice versa zum `?meepleId=…#mitglieder`-Link dort. Das
+  // Akkordeon selbst ist bereits standardmäßig offen, muss hier also nicht
+  // wie im Gegenstück extra gesteuert werden.
+  const searchParams = useSearchParams();
+  const focusMemberId = searchParams.get("memberId");
+  const focusMember = members.find((member) => member.id === focusMemberId);
+
+  const [search, setSearch] = useState(focusMember?.displayName ?? "");
   const [zustandFilter, setZustandFilter] = useState<ZustandFilter>("alle");
   const [portalLoginFilter, setPortalLoginFilter] =
     useState<PortalLoginFilter>("alle");
+
+  // Zustand während des Renders anpassen (kein `useEffect`, siehe
+  // `use-controlled-combobox-input.ts`/`mitglieder-table.tsx`): bei einem
+  // neuen `focusMemberId` die Suche erneut auf das verlinkte Mitglied setzen
+  // — sonst bliebe `search` (nur einmal per `useState(initialValue)`
+  // gesetzt) beim allerersten Wert stehen, wenn sich `focusMemberId` ohne
+  // vollen Remount ändert (z. B. erneuter Klick auf den Deep-Link).
+  const [trackedFocusMemberId, setTrackedFocusMemberId] =
+    useState(focusMemberId);
+  if (focusMemberId !== trackedFocusMemberId) {
+    setTrackedFocusMemberId(focusMemberId);
+    if (focusMemberId) {
+      setSearch(focusMember?.displayName ?? "");
+      setZustandFilter("alle");
+      setPortalLoginFilter("alle");
+    }
+  }
 
   const filteredMembers = useMemo(() => {
     let result = members;
@@ -133,15 +165,12 @@ export function VereinsmitgliederTable({
         <AccordionPanel className="px-5">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="relative w-full max-w-sm">
-                <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  placeholder="Vereinsmitglied suchen …"
-                  className="pl-9"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
+              <SearchInput
+                placeholder="Vereinsmitglied suchen …"
+                value={search}
+                onChange={setSearch}
+                className="w-full max-w-sm"
+              />
               <select
                 value={zustandFilter}
                 onChange={(event) =>
@@ -187,7 +216,7 @@ export function VereinsmitgliederTable({
               )}
               {canManageMembers && (
                 <div className="ml-auto">
-                  <CreateMemberDialog />
+                  <CreateMemberDialog isAdmin={isAdmin} />
                 </div>
               )}
             </div>
@@ -221,7 +250,7 @@ export function VereinsmitgliederTable({
                   {filteredMembers.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell>
-                        <MemberEditDialog member={member} />
+                        <MemberEditDialog member={member} isAdmin={isAdmin} />
                       </TableCell>
                       <TableCell className="font-mono">
                         {member.memberNumber}
@@ -237,7 +266,7 @@ export function VereinsmitgliederTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {member.contributionCategory
-                          ? CONTRIBUTION_CATEGORY_LABELS[
+                          ? CONTRIBUTION_CATEGORY_SHORT_LABELS[
                               member.contributionCategory
                             ]
                           : "unbestimmt"}
@@ -257,7 +286,7 @@ export function VereinsmitgliederTable({
                         {member.hasPortalLogin ? (
                           member.meepleId ? (
                             <Link
-                              href="/admin/mitglieder#mitglieder"
+                              href={`/admin/mitglieder?meepleId=${member.meepleId}#mitglieder`}
                               className="text-primary hover:underline"
                               title="Zum Meeple-Profil im Benutzer-Akkordeon"
                             >
@@ -266,6 +295,21 @@ export function VereinsmitgliederTable({
                           ) : (
                             "vorhanden"
                           )
+                        ) : member.openInviteToken ? (
+                          <Link
+                            href="/admin/mitglieder#einladungen"
+                            className="text-primary hover:underline"
+                            title="Zur Einladungsverwaltung"
+                          >
+                            Eingeladen
+                          </Link>
+                        ) : canManageInvites && !member.email ? (
+                          <span
+                            className="text-muted-foreground"
+                            title="Ohne hinterlegte E-Mail-Adresse kann kein Einladungslink verschickt werden."
+                          >
+                            keine E-Mail-Adresse
+                          </span>
                         ) : (
                           canManageInvites && (
                             <ActionButton

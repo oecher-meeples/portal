@@ -13,6 +13,7 @@ import { listOpenPendingChanges } from "@/lib/members/pending-changes";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { listMembersEligibleForStufe3 } from "@/lib/members/anonymisation";
 import { buildVereinsmitgliedRows } from "@/lib/members/vereinsmitglieder-rows";
+import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
@@ -47,7 +48,6 @@ export default async function AdminMitgliederPage() {
           select: {
             id: true,
             displayName: true,
-            joinedAt: true,
             anonymizedAt: true,
             neonAuthUserId: true,
           },
@@ -60,11 +60,14 @@ export default async function AdminMitgliederPage() {
         member: {
           select: {
             id: true,
+            firstName: true,
+            lastName: true,
             email: true,
             resignedAt: true,
             membershipEndsAt: true,
             accountHolder: true,
             ibanEncrypted: true,
+            ibanFirst2: true,
             ibanLast4: true,
           },
         },
@@ -135,6 +138,11 @@ export default async function AdminMitgliederPage() {
     storageUnitCounts.map((row) => [row.keeperMeepleId!, row._count._all]),
   );
   const stufe3EligibleIds = new Set(stufe3Candidates.map((m) => m.id));
+  const openInviteTokenByEmail = new Map(
+    invites
+      .filter((invite) => invite.status === "offen")
+      .map((invite) => [invite.email, invite.token]),
+  );
 
   const vereinsmitgliedRows = buildVereinsmitgliedRows(
     members,
@@ -142,6 +150,7 @@ export default async function AdminMitgliederPage() {
       openGamesByMemberId: openGamesByVereinsmitgliedId,
       openUnitsByMeepleId,
       stufe3EligibleIds,
+      openInviteTokenByEmail,
     },
     now,
   );
@@ -180,6 +189,26 @@ export default async function AdminMitgliederPage() {
         id: meeple.id,
         memberNumber: meeple.memberNumber,
         displayName: meeple.displayName,
+        // Systemkonten (`createSystemkonto()`) haben laut Datenmodell nie
+        // ein `Member` — `member` ist für sie bereits `null`. Das Sammelkonto
+        // "Anonymer Meeple" hat zwar eine `Member`-Zeile (Pflicht-FK von
+        // `GameHolding.vereinsmitgliedId`), wird aber aus der
+        // Vereinsmitglieder-Tabelle ausgeschlossen (`buildVereinsmitgliedRows`)
+        // — ein Link dorthin würde ins Leere laufen, deshalb hier zusätzlich
+        // explizit ausgenommen.
+        memberId:
+          meeple.displayName === ANONYMER_MEEPLE_NAME
+            ? null
+            : (meeple.member?.id ?? null),
+        // Voller Name des verknüpften Vereinsmitglieds (Vorname/Nachname) —
+        // getrennt vom Meeple-`displayName` (frei wählbarer Portal-Name,
+        // kann vom bürgerlichen Namen abweichen). `null`, wenn (noch) keins
+        // gepflegt ist (#328: nullable, nicht bei jedem Bestand befüllt).
+        memberFullName:
+          [meeple.member?.firstName, meeple.member?.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() || null,
         email: meeple.member?.email ?? null,
         hasAccount: meeple.neonAuthUserId !== null,
         roleAssignments: (meeple.neonAuthUserId
@@ -210,7 +239,10 @@ export default async function AdminMitgliederPage() {
           : 0,
         openUnits: openUnitsByMeepleId.get(meeple.id) ?? 0,
         accountHolder: meeple.member?.accountHolder ?? null,
-        maskedIban: maskIban(meeple.member?.ibanLast4 ?? null),
+        maskedIban: maskIban(
+          meeple.member?.ibanFirst2 ?? null,
+          meeple.member?.ibanLast4 ?? null,
+        ),
         hasIban: (meeple.member?.ibanEncrypted ?? null) !== null,
       }))}
       invites={invites.map((invite) => ({
