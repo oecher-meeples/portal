@@ -73,7 +73,7 @@ export function GameListRow({
           title={game.title}
           aspect="aspect-[3/4]"
         />
-        {isExpansion && <RibbonCorner size="sm">Erweiterung</RibbonCorner>}
+        {isExpansion && <RibbonCorner size="xs">Erweiterung</RibbonCorner>}
         <CardCornerOverlay corner="top-right">
           <BggRatingBadge averageRating={game.averageRating} />
         </CardCornerOverlay>
