@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/utils/prisma";
 import { memberDisplayName } from "@/lib/members/member-display-name";
+import { requireMember } from "@/lib/auth/session";
 
 /** Reused by the admin guardian picker and the "Meine Kinder" section (#376). */
 export type GuardianLinkOption = { id: string; displayName: string };
@@ -47,16 +48,20 @@ export async function listChildrenOf(
   }));
 }
 
-/** Erziehungsberechtigte eines Members, für die Admin-Verwaltungs-UI. */
+/** Erziehungsberechtigte eines Members — für die Admin-Verwaltungs-UI und
+ * (mit `slug`) die Erziehungsberechtigten-Section auf dem Kind-Profil (#385). */
 export async function listGuardiansOf(
   memberId: string,
-): Promise<GuardianLinkOption[]> {
+): Promise<(GuardianLinkOption & { slug: string })[]> {
   const links = await prisma.memberGuardian.findMany({
     where: { childMemberId: memberId },
-    include: { guardian: { select: MEMBER_DISPLAY_SELECT } },
+    include: {
+      guardian: { select: { ...MEMBER_DISPLAY_SELECT, slug: true } },
+    },
   });
   return links.map((link) => ({
     id: link.guardian.id,
+    slug: link.guardian.slug,
     displayName: memberDisplayName(link.guardian),
   }));
 }
@@ -102,4 +107,28 @@ export async function removeGuardianLink(
   await prisma.memberGuardian.deleteMany({
     where: { childMemberId, guardianMemberId },
   });
+}
+
+/** Serverseitige Berechtigungsprüfung vor jedem Änderungsantrag auf ein
+ * fremdes `Member` (#372) — niemals einem client-übergebenen `memberId`
+ * blind vertrauen. Geteilt von Stammdaten- und Bankverbindungs-Anträgen
+ * (#380/#381), beide erlauben Meeple-selbst oder dessen
+ * Erziehungsberechtigte:n. */
+export async function assertMaySubmitChangeFor(memberId: string) {
+  const session = await requireMember();
+  const targetMember = await prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+    select: { meepleId: true },
+  });
+  if (targetMember.meepleId === session.meeple.id) return;
+
+  const ownMember = await prisma.member.findUnique({
+    where: { meepleId: session.meeple.id },
+    select: { id: true },
+  });
+  if (ownMember && (await isGuardianOf(ownMember.id, memberId))) return;
+
+  throw new Error(
+    "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
+  );
 }

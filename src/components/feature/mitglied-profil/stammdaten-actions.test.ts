@@ -9,14 +9,10 @@ vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
 }));
 
-const requireMemberMock = vi.fn();
-vi.mock("@/lib/auth/session", () => ({
-  requireMember: () => requireMemberMock(),
-}));
-
-const isGuardianOfMock = vi.fn();
+const assertMaySubmitChangeForMock = vi.fn();
 vi.mock("@/lib/members/guardians", () => ({
-  isGuardianOf: (...args: unknown[]) => isGuardianOfMock(...args),
+  assertMaySubmitChangeFor: (...args: unknown[]) =>
+    assertMaySubmitChangeForMock(...args),
 }));
 
 const requestStammdatenChangeMock = vi.fn();
@@ -38,12 +34,12 @@ const INPUT = {
   city: null,
   phone: null,
   tshirtSizeId: null,
+  joinedAt: null,
 };
 
 beforeEach(() => {
   requirePermissionMock.mockReset().mockResolvedValue({ id: "admin-1" });
-  requireMemberMock.mockReset();
-  isGuardianOfMock.mockReset().mockResolvedValue(false);
+  assertMaySubmitChangeForMock.mockReset().mockResolvedValue(undefined);
   requestStammdatenChangeMock.mockReset().mockResolvedValue({
     success: true,
   });
@@ -78,51 +74,24 @@ describe("updateMemberStammdaten (#380)", () => {
 });
 
 describe("requestMemberStammdatenChange (#372, #380)", () => {
-  it("allows the member themselves", async () => {
-    requireMemberMock.mockResolvedValue({
-      meeple: { id: "meeple-1" },
-    });
-    prismaMock.member.findUniqueOrThrow.mockResolvedValueOnce({
-      meepleId: "meeple-1",
-    } as never);
-
+  // Wer einen Antrag stellen darf, prüft `assertMaySubmitChangeFor` selbst
+  // (siehe `lib/members/guardians.test.ts`) — hier nur der Wrapper: leitet
+  // an `requestStammdatenChange` weiter bzw. propagiert dessen Ablehnung.
+  it("submits the diff once authorised", async () => {
     const diff = { firstName: { old: "Alt", new: "Neu" } };
     const result = await requestMemberStammdatenChange("member-1", diff);
 
+    expect(assertMaySubmitChangeForMock).toHaveBeenCalledWith("member-1");
     expect(result).toEqual({ success: true });
     expect(requestStammdatenChangeMock).toHaveBeenCalledWith("member-1", diff);
   });
 
-  it("allows a linked guardian", async () => {
-    requireMemberMock.mockResolvedValue({
-      meeple: { id: "meeple-guardian" },
-    });
-    prismaMock.member.findUniqueOrThrow.mockResolvedValueOnce({
-      meepleId: "meeple-child",
-    } as never);
-    prismaMock.member.findUnique.mockResolvedValueOnce({
-      id: "guardian-member-1",
-    } as never);
-    isGuardianOfMock.mockResolvedValue(true);
-
-    const diff = { firstName: { old: "Alt", new: "Neu" } };
-    const result = await requestMemberStammdatenChange("child-1", diff);
-
-    expect(result).toEqual({ success: true });
-    expect(isGuardianOfMock).toHaveBeenCalledWith(
-      "guardian-member-1",
-      "child-1",
+  it("propagates the authorisation error without submitting", async () => {
+    assertMaySubmitChangeForMock.mockRejectedValue(
+      new Error(
+        "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
+      ),
     );
-  });
-
-  it("refuses a stranger with no relationship to the target", async () => {
-    requireMemberMock.mockResolvedValue({
-      meeple: { id: "meeple-stranger" },
-    });
-    prismaMock.member.findUniqueOrThrow.mockResolvedValueOnce({
-      meepleId: "meeple-child",
-    } as never);
-    prismaMock.member.findUnique.mockResolvedValueOnce(null);
 
     await expect(
       requestMemberStammdatenChange("child-1", {

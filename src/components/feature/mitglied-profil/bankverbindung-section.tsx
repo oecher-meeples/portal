@@ -17,8 +17,10 @@ import {
 import {
   revealMemberIban,
   revealPendingMemberIban,
+  requestMemberIbanChange,
   updateMemberIban,
 } from "@/components/feature/mitglied-profil/bankverbindung-actions";
+import { OwnPendingChangeNotice } from "@/components/feature/mitglied-profil/own-pending-change-notice";
 
 /** Bankverbindungs-Bereich der Profilseite (#381) — sichtbar (maskiert) nur
  * für `bank:read`/`members:manage`/den Meeple selbst; demaskieren, kopieren
@@ -32,6 +34,8 @@ export function BankverbindungSection({
   maskedIban,
   hasIban,
   canEdit,
+  canRequestChange = false,
+  ownPendingChange = null,
   openChanges,
 }: {
   memberId: string;
@@ -39,17 +43,26 @@ export function BankverbindungSection({
   accountHolder: string | null;
   maskedIban: string;
   hasIban: boolean;
-  /** `bank:read` — Demaskieren/Kopieren/Bearbeiten. */
+  /** `bank:read` — Demaskieren/Kopieren/sofortige Bearbeitung. */
   canEdit: boolean;
+  /** Meeple-selbst/Erziehungsberechtigte:r — stellt statt direkter
+   * Bearbeitung einen Änderungsantrag (#381). */
+  canRequestChange?: boolean;
+  /** Eigener noch offener Antrag der aktuellen Session, unabhängig von
+   * `canEdit` — für den "wartet auf Freigabe"-Hinweis. */
+  ownPendingChange?: { requestedAt: string } | null;
   openChanges: PendingChangeRow[];
 }) {
   const [editing, setEditing] = useState(false);
   const [holder, setHolder] = useState(accountHolder ?? "");
   const [iban, setIban] = useState("");
+  const [revealedIban, setRevealedIban] = useState<string | null>(null);
   const [revealError, setRevealError] = useState<string | null>(null);
   const { run, pending, error } = useAction({
     onSuccess: () => setEditing(false),
   });
+
+  const canEditUi = canEdit || canRequestChange;
 
   async function reveal(): Promise<RevealResult> {
     if (!meepleId) return { error: "Für dieses Mitglied kein Portal-Login." };
@@ -60,8 +73,14 @@ export function BankverbindungSection({
   }
 
   async function handleSave() {
+    if (canEdit) {
+      await run(() =>
+        updateMemberIban(memberId, { accountHolder: holder, iban }),
+      );
+      return;
+    }
     await run(() =>
-      updateMemberIban(memberId, { accountHolder: holder, iban }),
+      requestMemberIbanChange(memberId, { accountHolder: holder, iban }),
     );
   }
 
@@ -69,7 +88,7 @@ export function BankverbindungSection({
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
       <div className="flex items-center justify-between">
         <h2 className="font-serif text-lg font-bold">Bankverbindung</h2>
-        {canEdit && !editing && (
+        {canEditUi && !editing && (
           <Button
             variant="outline"
             size="sm"
@@ -102,7 +121,11 @@ export function BankverbindungSection({
           {error && <p className="text-destructive text-sm">{error}</p>}
           <div className="flex gap-2">
             <Button onClick={handleSave} disabled={pending}>
-              {pending ? "Speichere…" : "Speichern"}
+              {pending
+                ? "Speichere…"
+                : canEdit
+                  ? "Speichern"
+                  : "Änderung beantragen"}
             </Button>
             <Button
               variant="ghost"
@@ -119,26 +142,40 @@ export function BankverbindungSection({
             <dt className="text-muted-foreground">Kontoinhaber</dt>
             <dd>{accountHolder ?? "—"}</dd>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <dt className="text-muted-foreground">IBAN</dt>
-            <dd className="flex items-center gap-2 font-mono">
-              {maskedIban}
+            <dd className="flex flex-wrap items-center gap-2 font-mono">
+              {/* Feste Breite in IBAN-Länge: die Maskierung wird beim
+               * Aufdecken direkt an derselben Stelle durch den Klartext
+               * abgelöst, statt dass ein zusätzliches Element danach
+               * erscheint und Button/Kopieren verschiebt. */}
+              <span className="inline-block w-[22ch]">
+                {revealedIban ?? maskedIban}
+              </span>
               {canEdit && hasIban && meepleId && (
-                <span className="inline-flex items-center gap-2">
-                  <PressHoldReveal reveal={reveal} onError={setRevealError} />
+                <>
+                  <PressHoldReveal
+                    reveal={reveal}
+                    onError={setRevealError}
+                    onValueChange={setRevealedIban}
+                  />
                   <CopyButton
                     value={reveal}
                     onError={setRevealError}
                     label="Kopieren"
                     icon={Copy}
                   />
-                </span>
+                </>
               )}
             </dd>
           </div>
         </dl>
       )}
       {revealError && <p className="text-destructive text-sm">{revealError}</p>}
+
+      {!canEdit && ownPendingChange && (
+        <OwnPendingChangeNotice requestedAt={ownPendingChange.requestedAt} />
+      )}
 
       {canEdit && openChanges.length > 0 && (
         <PendingChangesPanel

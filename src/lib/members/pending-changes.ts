@@ -5,6 +5,7 @@ import { prisma } from "@/lib/utils/prisma";
 import {
   decryptSecret,
   encryptSecret,
+  ibanFirst2,
   ibanLast4,
   isValidIban,
   normaliseIban,
@@ -212,13 +213,15 @@ export async function approvePendingChange(
   await prisma.$transaction(async (tx) => {
     if (change.kind === PendingChangeKind.IBAN) {
       // `newValue` ist seit #357 bereits verschlüsselt (wie
-      // `Member.ibanEncrypted`) — nur für `ibanLast4` kurz entschlüsseln.
+      // `Member.ibanEncrypted`) — nur für `ibanFirst2`/`ibanLast4` kurz entschlüsseln.
+      const decrypted = decryptSecret(change.newValue);
       await tx.member.update({
         where: { id: change.memberId },
         data: {
           accountHolder: change.newAccountHolder,
           ibanEncrypted: change.newValue,
-          ibanLast4: ibanLast4(decryptSecret(change.newValue)),
+          ibanFirst2: ibanFirst2(decrypted),
+          ibanLast4: ibanLast4(decrypted),
         },
       });
     } else if (change.kind === PendingChangeKind.MEMBER_STAMMDATEN) {

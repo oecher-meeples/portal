@@ -38,6 +38,7 @@ const MEMBER = {
   phone: null,
   email: "jan@example.org",
   selbstgewaehlterBeitrag: null,
+  ibanFirst2: "DE",
   ibanLast4: "1234",
   accountHolder: "Jan Herwig",
   resignedAt: null,

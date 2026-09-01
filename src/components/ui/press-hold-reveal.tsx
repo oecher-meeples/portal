@@ -7,20 +7,29 @@ import { Button } from "@/components/ui/button";
 export type RevealResult = { error: string } | { success: true; value: string };
 
 /**
- * Fachfrei: zeigt einen Wert nur, solange der Auge-Button gedrückt gehalten
- * wird — losgelassen, sofort wieder maskiert. Jedes Halten löst einen neuen
- * `reveal()`-Aufruf aus (kein Client-seitiges Zwischenspeichern), damit ein
- * serverseitiges Protokoll (z. B. `SINGLE_REVEAL`) jedes Aufdecken einzeln
- * erfasst — nicht nur das erste.
+ * Fachfrei: ein Button, der einen Wert nur aufdeckt, solange er gedrückt
+ * gehalten wird — losgelassen, sofort wieder maskiert. Jedes Halten löst
+ * einen neuen `reveal()`-Aufruf aus (kein Client-seitiges
+ * Zwischenspeichern), damit ein serverseitiges Protokoll (z. B.
+ * `SINGLE_REVEAL`) jedes Aufdecken einzeln erfasst — nicht nur das erste.
+ *
+ * Rendert bewusst NUR den Button, nicht den aufgedeckten Wert selbst — der
+ * soll das maskierte Feld beim Aufdecken direkt ablösen (gleiche Stelle,
+ * fixe Breite), nicht als zusätzliches Element danach erscheinen. Der
+ * Aufrufer hält den Wert per `onValueChange` selbst und rendert ihn an der
+ * gewünschten Stelle.
  */
 export function PressHoldReveal({
   reveal,
   onError,
+  onValueChange,
 }: {
   reveal: () => Promise<RevealResult>;
   onError?: (message: string) => void;
+  /** `value` beim Aufdecken, `null` beim Loslassen — der Aufrufer entscheidet
+   * selbst, wo/wie der Wert an Stelle der Maskierung angezeigt wird. */
+  onValueChange: (value: string | null) => void;
 }) {
-  const [value, setValue] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function handlePress() {
@@ -32,30 +41,27 @@ export function PressHoldReveal({
       onError?.(result.error);
       return;
     }
-    setValue(result.value);
+    onValueChange(result.value);
   }
 
   function handleRelease() {
-    setValue(null);
+    onValueChange(null);
   }
 
   return (
-    <span className="inline-flex items-center gap-2">
-      {value && <span className="font-mono">{value}</span>}
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        disabled={pending}
-        onMouseDown={handlePress}
-        onMouseUp={handleRelease}
-        onMouseLeave={handleRelease}
-        onTouchStart={handlePress}
-        onTouchEnd={handleRelease}
-        aria-label="Aufdecken (gedrückt halten)"
-      >
-        <Eye className="size-4" />
-      </Button>
-    </span>
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      disabled={pending}
+      onMouseDown={handlePress}
+      onMouseUp={handleRelease}
+      onMouseLeave={handleRelease}
+      onTouchStart={handlePress}
+      onTouchEnd={handleRelease}
+      aria-label="Aufdecken (gedrückt halten)"
+    >
+      <Eye className="size-4" />
+    </Button>
   );
 }

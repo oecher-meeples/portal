@@ -139,8 +139,32 @@ export function ibanLast4(raw: string) {
   return normaliseIban(raw).slice(-4);
 }
 
-/** Display form for lists and forms: never more than the last four digits. */
-export function maskIban(last4: string | null | undefined) {
+/** The first two characters (ISO country code), stored in clear text — not
+ * sensitive on its own, used by `maskIban()` for a full-length mask
+ * (Live-Review F6). */
+export function ibanFirst2(raw: string) {
+  return normaliseIban(raw).slice(0, 2);
+}
+
+/** Fallback when no full IBAN length is known for a country prefix — the
+ * most common length in `IBAN_LENGTHS_BY_COUNTRY` (DE). */
+const DEFAULT_IBAN_LENGTH = 22;
+
+/**
+ * Display form for lists and forms (Live-Review F6): with `first2` a
+ * full-length mask like "DE****************2051" (country prefix + stars up
+ * to the real IBAN length + last four digits). Without `first2` (records
+ * from before this field existed) falls back to the short "**** 1234" form
+ * — no forced backfill needed.
+ */
+export function maskIban(
+  first2: string | null | undefined,
+  last4: string | null | undefined,
+) {
   if (!last4) return "—";
-  return `**** ${last4}`;
+  if (!first2) return `**** ${last4}`;
+
+  const totalLength = IBAN_LENGTHS_BY_COUNTRY[first2] ?? DEFAULT_IBAN_LENGTH;
+  const starCount = Math.max(totalLength - first2.length - last4.length, 0);
+  return `${first2}${"*".repeat(starCount)}${last4}`;
 }

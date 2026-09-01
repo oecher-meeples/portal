@@ -7,12 +7,23 @@ import {
   revealPendingIbanChange,
 } from "@/lib/members/bank-access-log";
 import { prisma } from "@/lib/utils/prisma";
+import { assertMaySubmitChangeFor } from "@/lib/members/guardians";
+import { requestIbanChange } from "@/lib/members/pending-changes";
 import {
   encryptSecret,
+  ibanFirst2,
   ibanLast4,
   isValidIban,
   normaliseIban,
 } from "@/lib/utils/crypto";
+
+async function revalidateProfile(memberId: string) {
+  const member = await prisma.member.findUniqueOrThrow({
+    where: { id: memberId },
+    select: { slug: true },
+  });
+  revalidatePath(`/profil/${member.slug}`);
+}
 
 /** Dünner Wrapper um `revealMeepleIban` (#381) — auf der Profilseite eigens
  * gehalten statt aus `admin-bank/actions.ts` importiert: Feature-Ordner
@@ -51,16 +62,32 @@ export async function updateMemberIban(
     return { error: "Diese IBAN ist ungültig. Bitte prüfe die Eingabe." };
   }
 
-  const member = await prisma.member.update({
+  await prisma.member.update({
     where: { id: memberId },
     data: {
       accountHolder: trimmedHolder,
       ibanEncrypted: encryptSecret(normalised),
+      ibanFirst2: ibanFirst2(normalised),
       ibanLast4: ibanLast4(normalised),
     },
-    select: { slug: true },
   });
 
-  revalidatePath(`/profil/${member.slug}`);
+  await revalidateProfile(memberId);
+  return { success: true as const };
+}
+
+/** Meeple-selbst/Erziehungsberechtigte: "Änderung beantragen" statt direkter
+ * Bearbeitung (#381) — geht über `PendingChange`/Kassenwart-Freigabe, siehe
+ * {@link updateMemberIban}. */
+export async function requestMemberIbanChange(
+  memberId: string,
+  input: { accountHolder: string; iban: string },
+) {
+  await assertMaySubmitChangeFor(memberId);
+
+  const result = await requestIbanChange(memberId, input);
+  if ("error" in result) return result;
+
+  await revalidateProfile(memberId);
   return { success: true as const };
 }

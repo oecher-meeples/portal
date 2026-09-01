@@ -12,7 +12,18 @@ vi.mock("@/lib/members/bank-access-log", () => ({
   revealMeepleIban: (...args: unknown[]) => revealMeepleIbanMock(...args),
 }));
 
-const { revealMemberIban, updateMemberIban } =
+const assertMaySubmitChangeForMock = vi.fn();
+vi.mock("@/lib/members/guardians", () => ({
+  assertMaySubmitChangeFor: (...args: unknown[]) =>
+    assertMaySubmitChangeForMock(...args),
+}));
+
+const requestIbanChangeMock = vi.fn();
+vi.mock("@/lib/members/pending-changes", () => ({
+  requestIbanChange: (...args: unknown[]) => requestIbanChangeMock(...args),
+}));
+
+const { revealMemberIban, updateMemberIban, requestMemberIbanChange } =
   await import("./bankverbindung-actions");
 
 const IBAN = "DE89 3704 0044 0532 0130 00";
@@ -22,7 +33,12 @@ beforeEach(() => {
     "base64",
   );
   requireBankReaderMock.mockReset().mockResolvedValue({ id: "kassenwart-1" });
+  assertMaySubmitChangeForMock.mockReset().mockResolvedValue(undefined);
+  requestIbanChangeMock.mockReset().mockResolvedValue({ success: true });
   prismaMock.member.update.mockResolvedValue({ slug: "mitglied-1" } as never);
+  prismaMock.member.findUniqueOrThrow.mockResolvedValue({
+    slug: "mitglied-1",
+  } as never);
 });
 
 describe("updateMemberIban (#381)", () => {
@@ -68,11 +84,47 @@ describe("updateMemberIban (#381)", () => {
     const data = call.data as {
       accountHolder: string;
       ibanEncrypted: string;
+      ibanFirst2: string;
       ibanLast4: string;
     };
     expect(data.accountHolder).toBe("Lea Beispiel");
+    expect(data.ibanFirst2).toBe("DE");
     expect(data.ibanLast4).toBe("3000");
     expect(decryptSecret(data.ibanEncrypted)).toBe("DE89370400440532013000");
+  });
+});
+
+describe("requestMemberIbanChange (#381)", () => {
+  it("submits the request once authorised", async () => {
+    const result = await requestMemberIbanChange("member-1", {
+      accountHolder: "Lea Beispiel",
+      iban: IBAN,
+    });
+
+    expect(assertMaySubmitChangeForMock).toHaveBeenCalledWith("member-1");
+    expect(result).toEqual({ success: true });
+    expect(requestIbanChangeMock).toHaveBeenCalledWith("member-1", {
+      accountHolder: "Lea Beispiel",
+      iban: IBAN,
+    });
+  });
+
+  it("propagates the authorisation error without submitting", async () => {
+    assertMaySubmitChangeForMock.mockRejectedValue(
+      new Error(
+        "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
+      ),
+    );
+
+    await expect(
+      requestMemberIbanChange("member-1", {
+        accountHolder: "Lea Beispiel",
+        iban: IBAN,
+      }),
+    ).rejects.toThrow(
+      "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
+    );
+    expect(requestIbanChangeMock).not.toHaveBeenCalled();
   });
 });
 

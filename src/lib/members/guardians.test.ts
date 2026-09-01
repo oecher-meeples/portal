@@ -3,6 +3,11 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
+const requireMemberMock = vi.fn();
+vi.mock("@/lib/auth/session", () => ({
+  requireMember: () => requireMemberMock(),
+}));
+
 const {
   isGuardianOf,
   listChildrenOf,
@@ -10,6 +15,7 @@ const {
   listGuardianCandidates,
   addGuardianLink,
   removeGuardianLink,
+  assertMaySubmitChangeFor,
 } = await import("./guardians");
 
 describe("isGuardianOf (#372)", () => {
@@ -67,6 +73,7 @@ describe("listGuardiansOf (#372)", () => {
       {
         guardian: {
           id: "guardian-1",
+          slug: "erika",
           firstName: "Erika",
           lastName: null,
           memberNumber: 5,
@@ -75,6 +82,7 @@ describe("listGuardiansOf (#372)", () => {
       {
         guardian: {
           id: "guardian-2",
+          slug: "mitglied-6",
           firstName: null,
           lastName: null,
           memberNumber: 6,
@@ -84,9 +92,10 @@ describe("listGuardiansOf (#372)", () => {
 
     const result = await listGuardiansOf("child-1");
 
+    // slug (#385): fürs Verlinken auf `ErziehungsberechtigteSection` (Kind-Profil).
     expect(result).toEqual([
-      { id: "guardian-1", displayName: "Erika" },
-      { id: "guardian-2", displayName: "Mitglied Nr. 6" },
+      { id: "guardian-1", slug: "erika", displayName: "Erika" },
+      { id: "guardian-2", slug: "mitglied-6", displayName: "Mitglied Nr. 6" },
     ]);
   });
 });
@@ -142,5 +151,48 @@ describe("addGuardianLink / removeGuardianLink (#372)", () => {
     expect(prismaMock.memberGuardian.deleteMany).toHaveBeenCalledWith({
       where: { childMemberId: "child-1", guardianMemberId: "guardian-1" },
     });
+  });
+});
+
+describe("assertMaySubmitChangeFor (#372)", () => {
+  beforeEach(() => {
+    requireMemberMock.mockReset();
+  });
+
+  it("allows the member themselves", async () => {
+    requireMemberMock.mockResolvedValue({ meeple: { id: "meeple-1" } });
+    prismaMock.member.findUniqueOrThrow.mockResolvedValue({
+      meepleId: "meeple-1",
+    } as never);
+
+    await expect(assertMaySubmitChangeFor("member-1")).resolves.toBeUndefined();
+  });
+
+  it("allows a linked guardian", async () => {
+    requireMemberMock.mockResolvedValue({ meeple: { id: "meeple-guardian" } });
+    prismaMock.member.findUniqueOrThrow.mockResolvedValue({
+      meepleId: "meeple-child",
+    } as never);
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: "guardian-member-1",
+    } as never);
+    prismaMock.memberGuardian.findUnique.mockResolvedValue({
+      childMemberId: "child-1",
+      guardianMemberId: "guardian-member-1",
+    } as never);
+
+    await expect(assertMaySubmitChangeFor("child-1")).resolves.toBeUndefined();
+  });
+
+  it("refuses a stranger with no relationship to the target", async () => {
+    requireMemberMock.mockResolvedValue({ meeple: { id: "meeple-stranger" } });
+    prismaMock.member.findUniqueOrThrow.mockResolvedValue({
+      meepleId: "meeple-child",
+    } as never);
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    await expect(assertMaySubmitChangeFor("child-1")).rejects.toThrow(
+      "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
+    );
   });
 });

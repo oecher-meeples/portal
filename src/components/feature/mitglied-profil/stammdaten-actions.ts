@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/permissions";
-import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
-import { isGuardianOf } from "@/lib/members/guardians";
+import { assertMaySubmitChangeFor } from "@/lib/members/guardians";
 import {
   requestStammdatenChange,
   type StammdatenDiff,
@@ -25,6 +24,9 @@ export type StammdatenInput = {
   phone: string | null;
   /** #388 — `TshirtSize.id` oder `null`, kein Freitext. */
   tshirtSizeId: string | null;
+  /** yyyy-mm-dd (Live-Review F1) — Vereinsbeitritt, getrennt vom
+   * Portal-Konto-Anlagedatum. */
+  joinedAt: string | null;
 };
 
 function toUpdateData(input: StammdatenInput) {
@@ -38,6 +40,9 @@ function toUpdateData(input: StammdatenInput) {
     city: input.city?.trim() || null,
     phone: input.phone?.trim() || null,
     tshirtSizeId: input.tshirtSizeId || null,
+    // `joinedAt` ist NOT NULL — ein geleertes Feld lässt den bestehenden Wert
+    // unangetastet statt fälschlich `null` zu setzen.
+    ...(input.joinedAt ? { joinedAt: new Date(input.joinedAt) } : {}),
   };
 }
 
@@ -64,35 +69,13 @@ export async function updateMemberStammdaten(
   return { success: true as const };
 }
 
-/** Serverseitige Berechtigungsprüfung vor jedem Änderungsantrag auf ein
- * fremdes `Member` (#372) — niemals einem client-übergebenen `memberId`
- * blind vertrauen. */
-async function assertMaySubmitFor(memberId: string) {
-  const session = await requireMember();
-  const targetMember = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-    select: { meepleId: true },
-  });
-  if (targetMember.meepleId === session.meeple.id) return;
-
-  const ownMember = await prisma.member.findUnique({
-    where: { meepleId: session.meeple.id },
-    select: { id: true },
-  });
-  if (ownMember && (await isGuardianOf(ownMember.id, memberId))) return;
-
-  throw new Error(
-    "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
-  );
-}
-
 /** Meeple-selbst/Erziehungsberechtigte: "Änderung beantragen" statt direkter
  * Bearbeitung (#380). */
 export async function requestMemberStammdatenChange(
   memberId: string,
   diff: StammdatenDiff,
 ) {
-  await assertMaySubmitFor(memberId);
+  await assertMaySubmitChangeFor(memberId);
 
   const result = await requestStammdatenChange(memberId, diff);
   if ("error" in result) return result;
