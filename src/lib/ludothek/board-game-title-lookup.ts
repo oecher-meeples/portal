@@ -72,12 +72,20 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
   };
 }
 
-export function validateBoardGameTitleInput(input: BoardGameTitleInput) {
+/** `invalidEan: true` markiert speziell den EAN-Fall — der Aufrufer bietet
+ * dafür ein Recovery-Popup ("EAN löschen und speichern") statt eines reinen
+ * Blockier-Fehlers an (#322). */
+export function validateBoardGameTitleInput(
+  input: BoardGameTitleInput,
+): { message: string; invalidEan?: true } | null {
   if (!input.title) {
-    return "Bitte einen Titel angeben.";
+    return { message: "Bitte einen Titel angeben." };
   }
   if (input.ean && !isValidEan(input.ean)) {
-    return "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.";
+    return {
+      message: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
+    };
   }
   return null;
 }

@@ -85,7 +85,10 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 
   const validationError = validateBoardGameTitleInput(input);
   if (validationError) {
-    return { error: validationError };
+    return {
+      error: validationError.message,
+      invalidEan: validationError.invalidEan,
+    };
   }
 
   // Ein bekannter bggId reusest den vorhandenen Titel ohnehin (siehe
@@ -172,7 +175,10 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
 
   const validationError = validateBoardGameTitleInput(input);
   if (validationError) {
-    return { error: validationError };
+    return {
+      error: validationError.message,
+      invalidEan: validationError.invalidEan,
+    };
   }
 
   const hint = await duplicateEanHint(input.ean, id);

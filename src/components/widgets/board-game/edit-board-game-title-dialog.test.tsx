@@ -183,3 +183,54 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("EditBoardGameTitleDialog — ungültige EAN beim Speichern (#322)", () => {
+  it("asks for confirmation and resaves without the EAN when confirmed", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    updateBoardGameMock
+      .mockResolvedValueOnce({
+        error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+        invalidEan: true,
+      })
+      .mockResolvedValueOnce({ success: true });
+
+    render(
+      <EditBoardGameTitleDialog game={{ ...GAME_WITHOUT_BGG_ID, ean: "x" }} />,
+    );
+    await openDialog(user);
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(updateBoardGameMock).toHaveBeenCalledTimes(2);
+    expect(updateBoardGameMock).toHaveBeenLastCalledWith(
+      "title-1",
+      expect.objectContaining({ ean: "" }),
+    );
+    confirmSpy.mockRestore();
+  });
+
+  it("leaves the blocking error in place when the confirmation is declined", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    updateBoardGameMock.mockResolvedValue({
+      error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
+    });
+
+    render(
+      <EditBoardGameTitleDialog game={{ ...GAME_WITHOUT_BGG_ID, ean: "x" }} />,
+    );
+    await openDialog(user);
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(updateBoardGameMock).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(
+        "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      ),
+    ).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+});

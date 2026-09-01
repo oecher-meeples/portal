@@ -79,6 +79,7 @@ describe("createBoardGame", () => {
 
     expect(result).toEqual({
       error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
     });
     expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
   });
@@ -370,6 +371,7 @@ describe("updateBoardGame", () => {
 
     expect(result).toEqual({
       error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
     });
     expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
   });

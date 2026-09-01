@@ -95,6 +95,29 @@ export function EditBoardGameTitleDialog({
     ? compareBoardGameWithBgg(form, bggCompareData)
     : undefined;
 
+  /** Bei ungültiger EAN (#322) statt des reinen Blockier-Fehlers eine
+   * Rückfrage, ob ohne EAN gespeichert werden soll — bestätigt, speichert
+   * mit gelöschter EAN; abgebrochen, bleibt der Fehler stehen (Formular
+   * offen zur Korrektur). */
+  async function handleUpdate() {
+    const result = await updateBoardGame(
+      game.boardGameId,
+      boardGameFormToTitleInput(form),
+    );
+    if (
+      result &&
+      "invalidEan" in result &&
+      result.invalidEan &&
+      window.confirm(`${result.error}\n\nEAN löschen und speichern?`)
+    ) {
+      return updateBoardGame(game.boardGameId, {
+        ...boardGameFormToTitleInput(form),
+        ean: "",
+      });
+    }
+    return result;
+  }
+
   return (
     <ActionDialog
       trigger={
@@ -115,9 +138,7 @@ export function EditBoardGameTitleDialog({
       contentClassName="sm:max-w-4xl"
       submitLabel="Speichern"
       canSubmit={form.title.trim().length > 0}
-      action={() =>
-        updateBoardGame(game.boardGameId, boardGameFormToTitleInput(form))
-      }
+      action={handleUpdate}
       onReset={() => {
         setForm(toFormValues(game));
         resetCompare();
