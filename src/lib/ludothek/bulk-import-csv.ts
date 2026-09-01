@@ -32,13 +32,34 @@ function looksLikeHeaderRow(row: string[]): boolean {
  * list, a two-column EAN+Titel export, or any other layout, without
  * requiring a fixed column order; an optional header row is detected and
  * skipped automatically instead of being imported as a bogus entry.
+ *
+ * `joinCellsWith` (#289): when the Inventarnummer-Trennzeichen-Dropdown is
+ * set, a row's cells are joined with it instead of flattened independently —
+ * a two-column CSV (Inventarnummer + Name/EAN) then produces one
+ * `"Inventarnummer<Trennzeichen>Name"`-Eintrag per row, matching what
+ * `bulkImportBoardGames()` expects to split back apart. A single-cell row
+ * naturally ends up without the delimiter, i.e. as a plain entry.
  */
-export function parseBulkImportCsv(text: string): string[] {
+export function parseBulkImportCsv(
+  text: string,
+  joinCellsWith?: string,
+): string[] {
   const delimiter = detectCsvDelimiter(text);
   const rows = parseCsvRows(text, delimiter);
   if (rows.length === 0) return [];
 
   const dataRows = looksLikeHeaderRow(rows[0]) ? rows.slice(1) : rows;
+
+  if (joinCellsWith) {
+    return dataRows
+      .map((row) =>
+        row
+          .map((cell) => cell.trim())
+          .filter(Boolean)
+          .join(joinCellsWith),
+      )
+      .filter(Boolean);
+  }
 
   return dataRows
     .flatMap((row) => row.map((cell) => cell.trim()))

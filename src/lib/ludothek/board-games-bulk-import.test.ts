@@ -36,6 +36,11 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
 }));
 
+const getSuggestedInventoryNumberMock = vi.fn();
+vi.mock("@/lib/ludothek/game-copies", () => ({
+  getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
+}));
+
 const lookupEanTitleMock = vi.fn();
 vi.mock("@/lib/upc-lookup/client", async () => {
   const actual = await vi.importActual<
@@ -77,6 +82,7 @@ function beforeEachSetup() {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
   prismaMock.rolePermission.count.mockResolvedValue(1);
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
+  getSuggestedInventoryNumberMock.mockResolvedValue("1");
 }
 
 describe("bulkImportBoardGames", () => {

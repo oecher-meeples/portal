@@ -65,10 +65,10 @@ describe("BulkImportBoardGamesDialog", () => {
     );
     await user.click(screen.getByRole("button", { name: "Importieren" }));
 
-    expect(bulkImportBoardGamesMock).toHaveBeenCalledWith([
-      "Ark Nova",
-      "Unbekanntes Spiel",
-    ]);
+    expect(bulkImportBoardGamesMock).toHaveBeenCalledWith(
+      ["Ark Nova", "Unbekanntes Spiel"],
+      undefined,
+    );
     expect(
       await screen.findByRole("button", { name: "Erfolgreich importiert 1" }),
     ).toBeInTheDocument();
@@ -303,7 +303,11 @@ describe("BulkImportBoardGamesDialog", () => {
       within(candidateRow!).getByRole("button", { name: "Übernehmen" }),
     );
 
-    expect(resolveBulkImportCandidateMock).toHaveBeenCalledWith("Catan", 2);
+    expect(resolveBulkImportCandidateMock).toHaveBeenCalledWith(
+      "Catan",
+      2,
+      undefined,
+    );
     expect(
       await screen.findByRole("button", { name: "Erfolgreich importiert 1" }),
     ).toBeInTheDocument();
