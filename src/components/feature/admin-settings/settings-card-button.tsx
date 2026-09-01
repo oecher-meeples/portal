@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import type { badgeVariants } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
-import { SETTINGS_CARD_HOVER_CLASS } from "@/components/feature/admin-settings/settings-card-hover";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 
 /** Button-Variante von `SettingsCard` — für Karten in /admin/einstellungen,
  * die einen Popup-Dialog statt eine eigene Route öffnen (als `render`-Prop
@@ -39,7 +39,7 @@ export const SettingsCardButton = forwardRef<
       className={cn("group w-full cursor-pointer text-left", className)}
       {...props}
     >
-      <Card className={SETTINGS_CARD_HOVER_CLASS}>
+      <Card className={CARD_HOVER_CLASS}>
         {badge && (
           <Badge
             variant={badge.variant ?? "default"}

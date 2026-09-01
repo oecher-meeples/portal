@@ -52,4 +52,58 @@ describe("PrivateCollectionCard (#308)", () => {
     expect(link).toHaveAttribute("href", "/ludothek/ark-nova");
     expect(link.querySelector("svg")).toBeInTheDocument();
   });
+
+  it("opens the dialog when clicking anywhere on the card (#Live-Review F9)", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByRole("heading", { name: "Meine privaten Spiele (1)" }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not open the dialog when clicking the import button (#Live-Review F9)", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername="erika"
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "BGG-Collection importieren" }),
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: /Meine privaten Spiele \(/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("has no click/hover affordance on the card without any entries (#Live-Review F9)", () => {
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
 });

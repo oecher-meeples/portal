@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
+import { cn } from "@/lib/utils/cn";
 import { syncPrivateBggCollection } from "@/lib/ludothek/private-collection-sync";
 import { formatTimePlain } from "@/lib/utils/format";
 import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
@@ -101,22 +104,38 @@ export function PrivateCollectionCard({
     return result;
   }
 
+  const clickable = entries.length > 0;
+
   return (
-    <div className="bg-card rounded-lg border p-6">
+    <div
+      className={cn("bg-card rounded-lg border p-6", clickable && CARD_HOVER_CLASS)}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={clickable ? () => setOpen(true) : undefined}
+      onKeyDown={
+        clickable
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setOpen(true);
+              }
+            }
+          : undefined
+      }
+    >
       <h2 className="font-serif text-lg font-bold">Meine privaten Spiele</h2>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-4 block text-left"
-      >
+      <div className="mt-4">
         <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           Aus BGG importiert
         </p>
         <p className="mt-2 font-serif text-3xl font-bold">{entries.length}</p>
-      </button>
+      </div>
 
       {entries.length > 0 && !visibleToOthers && (
-        <p className="text-muted-foreground mt-2 text-xs">
+        <p
+          className="text-muted-foreground mt-2 text-xs"
+          onClick={(event) => event.stopPropagation()}
+        >
           Noch nicht in der Ludothek auffindbar —{" "}
           <Link
             href="#privateCollectionVisible"
@@ -131,7 +150,7 @@ export function PrivateCollectionCard({
 
       {bggUsername && (
         <div className="mt-4 flex flex-col gap-1.5 border-t pt-4">
-          <div className="flex items-center gap-1.5">
+          <StopRowNavigation className="flex items-center gap-1.5">
             <ActionButton
               action={() => runImport(false)}
               variant="outline"
@@ -153,7 +172,7 @@ export function PrivateCollectionCard({
                 !
               </ActionButton>
             )}
-          </div>
+          </StopRowNavigation>
           {cooldownEndsAt && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
               Import gerade nicht möglich — nächster Import ab{" "}

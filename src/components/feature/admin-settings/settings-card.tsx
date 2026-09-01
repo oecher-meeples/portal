@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import type { badgeVariants } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
-import { SETTINGS_CARD_HOVER_CLASS } from "@/components/feature/admin-settings/settings-card-hover";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 
 export function SettingsCard({
   title,
@@ -28,7 +28,7 @@ export function SettingsCard({
 }) {
   return (
     <Link href={href} className="group">
-      <Card className={SETTINGS_CARD_HOVER_CLASS}>
+      <Card className={CARD_HOVER_CLASS}>
         {count !== undefined && (
           <Badge
             variant="default"
