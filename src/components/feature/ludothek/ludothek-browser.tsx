@@ -115,7 +115,14 @@ export function LudothekBrowser({
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <form action={basePath} className="flex gap-2">
+        <form
+          action={basePath}
+          onSubmit={(event) => {
+            event.preventDefault();
+            router.replace(href({ q: search || undefined }));
+          }}
+          className="flex gap-2"
+        >
           {Object.entries(rawSearchParams)
             .filter(([key]) => key !== "q")
             .flatMap(([key, value]) =>

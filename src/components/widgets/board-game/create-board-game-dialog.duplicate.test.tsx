@@ -130,11 +130,13 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
 
     await submitBggInput(dialog, user, "342942");
 
-    await waitFor(() =>
-      expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
-        "Ark Nova",
-        342942,
-      ),
+    await waitFor(
+      () =>
+        expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
+          "Ark Nova",
+          342942,
+        ),
+      { timeout: 2000 },
     );
     expect(
       await within(dialog).findByText("existiert bereits im Bestand", {
@@ -182,11 +184,13 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
 
     await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
 
-    await waitFor(() =>
-      expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
-        "Arche Nova",
-        null,
-      ),
+    await waitFor(
+      () =>
+        expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
+          "Arche Nova",
+          null,
+        ),
+      { timeout: 2000 },
     );
     expect(
       await within(dialog).findByText("existiert bereits im Bestand", {
@@ -243,11 +247,13 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     await skipImportStep(dialog, user);
 
     await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
-    await waitFor(() =>
-      expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
-        "Arche Nova",
-        null,
-      ),
+    await waitFor(
+      () =>
+        expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
+          "Arche Nova",
+          null,
+        ),
+      { timeout: 2000 },
     );
 
     await user.click(
@@ -294,8 +300,13 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
 
     await user.type(within(dialog).getByLabelText("Titel"), "Ganz neu");
 
-    await waitFor(() =>
-      expect(findDuplicateBoardGameMock).toHaveBeenCalledWith("Ganz neu", null),
+    await waitFor(
+      () =>
+        expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
+          "Ganz neu",
+          null,
+        ),
+      { timeout: 2000 },
     );
     expect(
       screen.queryByText("existiert bereits im Bestand", { exact: false }),
@@ -319,7 +330,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     await skipImportStep(dialog, user);
 
     await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
-    await waitFor(() => expect(findDuplicateBoardGameMock).toHaveBeenCalled());
+    await waitFor(() => expect(findDuplicateBoardGameMock).toHaveBeenCalled(), {
+      timeout: 2000,
+    });
     await user.click(reviewNextButton(dialog));
     await user.click(
       within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),

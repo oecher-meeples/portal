@@ -114,7 +114,7 @@ describe("LudothekBrowser — live search", () => {
     expect(routerReplaceMock).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(1500);
     });
 
     expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?q=arche");
@@ -132,7 +132,7 @@ describe("LudothekBrowser — live search", () => {
 
       fireEvent.click(screen.getByText("simulate-scan"));
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(1500);
       });
 
       expect(routerReplaceMock).toHaveBeenCalledWith(
@@ -140,6 +140,39 @@ describe("LudothekBrowser — live search", () => {
       );
     },
   );
+});
+
+describe("LudothekBrowser — Enter im Suchfeld (#286)", () => {
+  it("submits via router.replace instead of native form navigation, even with an empty field", () => {
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    const form = document.querySelector("form");
+    expect(form).not.toBeNull();
+    const submitEvent = new Event("submit", {
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(form!, submitEvent);
+
+    expect(submitEvent.defaultPrevented).toBe(true);
+    expect(routerReplaceMock).toHaveBeenCalledTimes(1);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek");
+  });
+
+  it("submits the current (not-yet-debounced) search value immediately", () => {
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    const input = screen.getByPlaceholderText(
+      "Spiel, EAN oder BGG-ID suchen …",
+    );
+    fireEvent.change(input, { target: { value: "arche" } });
+
+    const form = document.querySelector("form");
+    fireEvent.submit(form!);
+
+    expect(routerReplaceMock).toHaveBeenCalledTimes(1);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?q=arche");
+  });
 });
 
 // Erstveröffentlichung-, Bewertung-, Dauer- und Spieler-Slider-Tests siehe

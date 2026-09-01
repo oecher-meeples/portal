@@ -34,6 +34,25 @@ describe("useDebouncedValue", () => {
     expect(result.current).toBe("abc");
   });
 
+  it("defaults to a 1500ms delay when none is given (#286)", () => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook(
+      ({ value }) => useDebouncedValue(value),
+      { initialProps: { value: "a" } },
+    );
+
+    rerender({ value: "ab" });
+    act(() => {
+      vi.advanceTimersByTime(1499);
+    });
+    expect(result.current).toBe("a");
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(result.current).toBe("ab");
+  });
+
   it("uses the given delay instead of the default", () => {
     vi.useFakeTimers();
     const { result, rerender } = renderHook(
