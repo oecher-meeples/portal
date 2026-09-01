@@ -183,7 +183,7 @@ export function TitleOverviewDialog({
           <p className="text-muted-foreground text-sm">Lade…</p>
         ) : (
           <ul className="flex max-h-80 flex-col gap-1.5 overflow-y-auto text-sm">
-            <li className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between">
+            <li className="flex flex-col gap-1.5 rounded-md border p-2">
               <span>
                 {title}
                 <span className="text-muted-foreground"> (Haupttitel)</span>
@@ -199,7 +199,7 @@ export function TitleOverviewDialog({
             </li>
 
             {secondaryTitle && (
-              <li className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between">
+              <li className="flex flex-col gap-1.5 rounded-md border p-2">
                 <span>
                   {secondaryTitle}
                   <span className="text-muted-foreground">
@@ -240,7 +240,7 @@ export function TitleOverviewDialog({
             {names.map((alt) => (
               <li
                 key={alt.id}
-                className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-1.5 rounded-md border p-2"
               >
                 <span>
                   {alt.name}
