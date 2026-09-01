@@ -107,6 +107,14 @@ export function GameDetailView({
           <CardCornerOverlay corner="top-right">
             <BggRatingBadge averageRating={game.averageRating} />
           </CardCornerOverlay>
+          {titleEdit && (
+            <CardCornerOverlay corner="bottom-right">
+              <EditBoardGameTitleDialog
+                game={titleEdit}
+                mechanicsOptions={mechanicsOptions}
+              />
+            </CardCornerOverlay>
+          )}
         </div>
       </div>
 
@@ -147,12 +155,6 @@ export function GameDetailView({
                   <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
                   <ExternalLink className="size-4" />
                 </Button>
-              )}
-              {titleEdit && (
-                <EditBoardGameTitleDialog
-                  game={titleEdit}
-                  mechanicsOptions={mechanicsOptions}
-                />
               )}
             </div>
           </div>
