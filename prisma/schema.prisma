@@ -251,6 +251,12 @@ model Meeple {
   /// `ProfilePictureVisibility`. Default INTERN — bewusst nicht öffentlich,
   /// bis das Meeple aktiv eine weitergehende Freigabe wählt.
   profilePictureVisibility  ProfilePictureVisibility @default(INTERN)
+  /// Sichtbarkeit der freiwilligen Meeple-Angaben (Live-Review F2) — soll
+  /// später die Seite "Die Meeples stellen sich vor" befüllen, aktuell noch
+  /// ohne Konsumenten-Logik, reine Datenerfassung. Wiederverwendet dasselbe
+  /// Enum wie `profilePictureVisibility` (#389) statt einer zweiten,
+  /// parallelen Sichtbarkeits-Systematik.
+  meepleDatenVisibility     ProfilePictureVisibility @default(INTERN)
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
 
@@ -306,8 +312,19 @@ model Member {
   /// abgeleitete Beitragsart, wenn gesetzt (siehe `lib/members/contribution.ts`).
   selbstgewaehlterBeitrag Decimal?
   ibanEncrypted           String?
+  /// Klartext gespeichert wie `ibanLast4` (nicht sensibel für sich genommen)
+  /// — die ISO-Ländercode-Präfix der IBAN, für eine vollständig lange
+  /// Maskierung (`maskIban()`, Live-Review) statt nur "**** 1234". `null`
+  /// bei Altbestand vor diesem Feld — `maskIban()` fällt dann auf die kurze
+  /// Form zurück, kein Backfill nötig.
+  ibanFirst2              String?
   ibanLast4               String?
   accountHolder           String?
+  /// Vereinsbeitritt (Live-Review F1) — fachlich getrennt von
+  /// `Meeple.joinedAt` (Anlagedatum des Portal-Kontos): fallen bei
+  /// Erwachsenen zufällig zusammen, nicht bei Kindern ohne eigenen Login
+  /// (#373). Backfill für Bestand: `createdAt` (siehe Migration).
+  joinedAt                DateTime  @default(now())
   resignedAt              DateTime?
   membershipEndsAt        DateTime?
   meepleId                String?   @unique
