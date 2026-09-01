@@ -10,6 +10,7 @@ import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-listing-dialog";
 import { cn } from "@/lib/utils/cn";
 import type { MarketListingView } from "@/lib/markt/market-listings";
+import { PageContainer } from "@/components/ui/page-container";
 
 export function MarketListingDetailView({
   listing,
@@ -32,7 +33,7 @@ export function MarketListingDetailView({
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-4">
+    <PageContainer className="max-w-3xl gap-4">
       {listing.boardGame && (
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
@@ -190,6 +191,6 @@ export function MarketListingDetailView({
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

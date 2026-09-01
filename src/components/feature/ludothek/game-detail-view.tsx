@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/ui/page-container";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { YoutubeIcon } from "@/components/ui/youtube-icon";
@@ -97,74 +98,80 @@ export function GameDetailView({
   marketListingSection?: ReactNode;
 }) {
   return (
-    <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-      <div className="flex flex-col gap-4">
-        <div className="relative overflow-hidden rounded-md">
-          <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
-          {game.kind === "BOARDGAME_EXPANSION" && (
-            <RibbonCorner>Erweiterung</RibbonCorner>
-          )}
-          <CardCornerOverlay corner="top-right">
-            <BggRatingBadge averageRating={game.averageRating} />
-          </CardCornerOverlay>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-6">
-        <div>
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-3">
-              <div>
-                <h1 className="font-serif text-3xl font-bold tracking-tight">
-                  {game.title}
-                </h1>
-                {game.secondaryTitle && (
-                  <p className="text-muted-foreground">{game.secondaryTitle}</p>
-                )}
-                <LanguageIndependentPill
-                  languageDependence={game.languageDependence}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {createLfgTrigger}
-              {marketListingSection}
-              {bggId && (
-                <Button
-                  variant="outline"
-                  className="gap-1.5 px-2.5"
-                  aria-label="Auf BoardGameGeek ansehen"
-                  render={
-                    <a
-                      href={`https://boardgamegeek.com/boardgame/${bggId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  }
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
-                  <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
-                  <ExternalLink className="size-4" />
-                </Button>
+    // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
+    // Displays stapeln sie in Quelltext-Reihenfolge — Titelblock, Bild,
+    // Rest —, das Bild landet damit zwischen der Spieler/Dauer/Gewichtung-
+    // Zeile und den Mechaniken. Ab `lg` bekommt jedes Item eine explizite
+    // Grid-Position, die wieder das klassische Bild-neben-Text-Layout
+    // ergibt (Bild spannt beide Zeilen der rechten Spalte).
+    <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
+      <div className="lg:col-start-2 lg:row-start-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-3">
+            <div>
+              <h1 className="font-serif text-3xl font-bold tracking-tight">
+                {game.title}
+              </h1>
+              {game.secondaryTitle && (
+                <p className="text-muted-foreground">{game.secondaryTitle}</p>
               )}
-              {titleEdit && (
-                <EditBoardGameTitleDialog
-                  game={titleEdit}
-                  mechanicsOptions={mechanicsOptions}
-                />
-              )}
+              <LanguageIndependentPill
+                languageDependence={game.languageDependence}
+                className="mt-1"
+              />
             </div>
           </div>
-          <p className="text-muted-foreground mt-1">
-            {game.minPlayers && game.maxPlayers
-              ? `${game.minPlayers}–${game.maxPlayers} Spieler`
-              : null}
-            {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
-            {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
-          </p>
+          <div className="flex items-center gap-2">
+            {createLfgTrigger}
+            {marketListingSection}
+            {bggId && (
+              <Button
+                variant="outline"
+                className="gap-1.5 px-2.5"
+                aria-label="Auf BoardGameGeek ansehen"
+                render={
+                  <a
+                    href={`https://boardgamegeek.com/boardgame/${bggId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
+                <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
+                <ExternalLink className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
+        <p className="text-muted-foreground mt-1">
+          {game.minPlayers && game.maxPlayers
+            ? `${game.minPlayers}–${game.maxPlayers} Spieler`
+            : null}
+          {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
+          {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
+        </p>
+      </div>
 
+      <div className="relative overflow-hidden rounded-md lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
+        {game.kind === "BOARDGAME_EXPANSION" && (
+          <RibbonCorner>Erweiterung</RibbonCorner>
+        )}
+        <CardCornerOverlay corner="top-right">
+          <BggRatingBadge averageRating={game.averageRating} />
+        </CardCornerOverlay>
+        {titleEdit && (
+          <CardCornerOverlay corner="bottom-right">
+            <EditBoardGameTitleDialog
+              game={titleEdit}
+              mechanicsOptions={mechanicsOptions}
+            />
+          </CardCornerOverlay>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-6 lg:col-start-2 lg:row-start-2">
         <div className="flex flex-wrap gap-2">
           {game.mechanics.map((mechanic) => (
             <span
@@ -172,6 +179,14 @@ export function GameDetailView({
               className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
             >
               {mechanic}
+            </span>
+          ))}
+          {game.categories.map((category) => (
+            <span
+              key={category}
+              className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
+            >
+              {category}
             </span>
           ))}
         </div>
@@ -348,6 +363,6 @@ export function GameDetailView({
           />
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 import { updateBoardGame } from "@/lib/ludothek/board-games";
 import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
 import { parseBggId } from "@/lib/ludothek/bgg-id";
@@ -38,11 +39,15 @@ function toFormValues(game: EditableBoardGameTitle) {
 export function EditBoardGameTitleDialog({
   game,
   mechanicsOptions,
+  triggerClassName,
 }: {
   game: EditableBoardGameTitle;
   /** Every distinct mechanic already in the Bestand — Autocomplete-Vorschläge
    * für das Mechaniken-Multiselect (#124). */
   mechanicsOptions?: string[];
+  /** Overrides the trigger's placement/appearance — e.g. icon-only with
+   * hover-revealed label in the cover image's corner (#399). */
+  triggerClassName?: string;
 }) {
   const [form, setForm] = useState<BoardGameFormValues>(() =>
     toFormValues(game),
@@ -90,12 +95,42 @@ export function EditBoardGameTitleDialog({
     ? compareBoardGameWithBgg(form, bggCompareData)
     : undefined;
 
+  /** Bei ungültiger EAN (#322) statt des reinen Blockier-Fehlers eine
+   * Rückfrage, ob ohne EAN gespeichert werden soll — bestätigt, speichert
+   * mit gelöschter EAN; abgebrochen, bleibt der Fehler stehen (Formular
+   * offen zur Korrektur). */
+  async function handleUpdate() {
+    const result = await updateBoardGame(
+      game.boardGameId,
+      boardGameFormToTitleInput(form),
+    );
+    if (
+      result &&
+      "invalidEan" in result &&
+      result.invalidEan &&
+      window.confirm(`${result.error}\n\nEAN löschen und speichern?`)
+    ) {
+      return updateBoardGame(game.boardGameId, {
+        ...boardGameFormToTitleInput(form),
+        ean: "",
+      });
+    }
+    return result;
+  }
+
   return (
     <ActionDialog
       trigger={
-        <Button size="sm" variant="outline">
+        <Button
+          size="sm"
+          variant="outline"
+          aria-label="Titel bearbeiten"
+          className={cn("group/edit-title gap-1.5", triggerClassName)}
+        >
           <Pencil className="size-4" />
-          Titel bearbeiten
+          <span className="hidden group-hover/edit-title:inline">
+            Titel bearbeiten
+          </span>
         </Button>
       }
       title="Titel bearbeiten"
@@ -103,9 +138,7 @@ export function EditBoardGameTitleDialog({
       contentClassName="sm:max-w-4xl"
       submitLabel="Speichern"
       canSubmit={form.title.trim().length > 0}
-      action={() =>
-        updateBoardGame(game.boardGameId, boardGameFormToTitleInput(form))
-      }
+      action={handleUpdate}
       onReset={() => {
         setForm(toFormValues(game));
         resetCompare();

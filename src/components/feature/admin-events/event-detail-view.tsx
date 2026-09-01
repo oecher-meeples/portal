@@ -23,6 +23,7 @@ import {
 import { ShiftPlanEditor } from "@/components/feature/admin-events/shift-plan-editor";
 import type { PlanShift, PlanBooking } from "@/lib/events/shift-plan-types";
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type { ShiftRow };
 
@@ -67,7 +68,7 @@ export function EventDetailView({
     targetEndsAt: shift.targetEndsAt,
   }));
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Event-Betrieb"
         title={eventTitle}
@@ -155,6 +156,6 @@ export function EventDetailView({
         assignedShelves={assignedShelves}
         availableShelves={availableShelves}
       />
-    </div>
+    </PageContainer>
   );
 }

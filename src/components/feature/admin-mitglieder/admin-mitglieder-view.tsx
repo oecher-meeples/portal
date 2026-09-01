@@ -34,6 +34,7 @@ import {
 } from "@/components/widgets/pending-changes/pending-changes-panel";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type { MeepleRow, InviteRow };
 
@@ -142,7 +143,7 @@ export function AdminMitgliederView({
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Onboarding & Lebenszyklus"
         title="Mitglieder & Einladungen"
@@ -356,6 +357,6 @@ export function AdminMitgliederView({
         membersWithoutLogin={membersWithoutLogin}
         defaultDays={defaultInviteDays}
       />
-    </div>
+    </PageContainer>
   );
 }

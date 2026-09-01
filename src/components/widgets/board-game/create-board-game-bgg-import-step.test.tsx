@@ -19,6 +19,7 @@ const BASE_PREVIEW: BggGameData = {
   imageUrl: null,
   description: null,
   mechanics: [],
+  categories: [],
   kind: "BOARDGAME" as never,
   languageDependence: null,
   author: [],

@@ -243,6 +243,7 @@ export default async function GameDetailPage({
         imageUrl: game.imageUrl,
         description: game.description,
         mechanics: game.mechanics,
+        categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
         publisher: game.publisher,

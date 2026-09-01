@@ -1,9 +1,11 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageContainer } from "@/components/ui/page-container";
 import type {
   MostBorrowedGame,
   WeekdayCount,
 } from "@/lib/statistics/loan-stats";
+import type { InventoryCounts } from "@/lib/statistics/inventory-stats";
 
 const WEEKDAY_LABELS = [
   "Sonntag",
@@ -15,18 +17,57 @@ const WEEKDAY_LABELS = [
   "Samstag",
 ];
 
+function InventoryCountRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 text-sm">
+      <span className="font-medium">{label}</span>
+      <span className="text-muted-foreground">{value}</span>
+    </div>
+  );
+}
+
+function InventoryCountCard({
+  title,
+  unit,
+  counts,
+}: {
+  title: string;
+  unit: string;
+  counts: InventoryCounts;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <InventoryCountRow label="Im Verein" value={counts.club} />
+        <InventoryCountRow label="Im Privatbesitz" value={counts.private} />
+        <InventoryCountRow
+          label={`${unit} insgesamt verfügbar`}
+          value={counts.total}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function StatistikenView({
   mostBorrowed,
   weekdays,
+  titleCounts,
+  copyCounts,
 }: {
   mostBorrowed: MostBorrowedGame[];
   weekdays: WeekdayCount[];
+  titleCounts: InventoryCounts;
+  copyCounts: InventoryCounts;
 }) {
   const maxWeekdayCount = Math.max(1, ...weekdays.map((d) => d.count));
   const maxBorrowCount = Math.max(1, ...mostBorrowed.map((g) => g.count));
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Anonymisiert"
         title="Statistiken"
@@ -34,6 +75,17 @@ export function StatistikenView({
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <InventoryCountCard
+          title="Spieletitel"
+          unit="Titel"
+          counts={titleCounts}
+        />
+        <InventoryCountCard
+          title="Exemplare"
+          unit="Exemplare"
+          counts={copyCounts}
+        />
+
         <Card>
           <CardHeader>
             <CardTitle>Beliebteste Spiele</CardTitle>
@@ -89,6 +141,6 @@ export function StatistikenView({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   );
 }

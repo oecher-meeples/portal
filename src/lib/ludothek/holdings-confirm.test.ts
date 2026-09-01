@@ -3,8 +3,12 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { confirmHolding, HoldingConflictError, moveStorageUnit } =
-  await import("./holdings");
+const {
+  confirmHolding,
+  confirmHoldingAsGamesManager,
+  HoldingConflictError,
+  moveStorageUnit,
+} = await import("./holdings");
 
 const UNIT_ID = "unit-1";
 const MEEPLE_A = "meeple-a";
@@ -93,6 +97,68 @@ describe("confirmHolding", () => {
         confirmingVereinsmitgliedId: MEMBER_B,
       }),
     ).rejects.toThrow(HoldingConflictError);
+  });
+});
+
+describe("confirmHoldingAsGamesManager (#290)", () => {
+  it("confirms a foreign open handover without the receiver's involvement", async () => {
+    prismaMock.gameHolding.findUnique.mockResolvedValue(
+      openHolding({
+        vereinsmitgliedId: MEMBER_B,
+        origin: "HANDOVER",
+        confirmedAt: null,
+      }) as never,
+    );
+    prismaMock.gameHolding.update.mockResolvedValue({} as never);
+
+    await confirmHoldingAsGamesManager("holding-1");
+
+    expect(prismaMock.gameHolding.update).toHaveBeenCalledWith({
+      where: { id: "holding-1" },
+      data: { confirmedAt: expect.any(Date) },
+    });
+  });
+
+  it("is a no-op when the holding is already confirmed", async () => {
+    const holding = openHolding({
+      vereinsmitgliedId: MEMBER_B,
+      origin: "HANDOVER",
+      confirmedAt: new Date(),
+    });
+    prismaMock.gameHolding.findUnique.mockResolvedValue(holding as never);
+
+    const result = await confirmHoldingAsGamesManager("holding-1");
+
+    expect(result).toEqual(holding);
+    expect(prismaMock.gameHolding.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects confirming a closed holding", async () => {
+    prismaMock.gameHolding.findUnique.mockResolvedValue(
+      openHolding({
+        vereinsmitgliedId: MEMBER_B,
+        origin: "HANDOVER",
+        endedAt: new Date(),
+      }) as never,
+    );
+
+    await expect(confirmHoldingAsGamesManager("holding-1")).rejects.toThrow(
+      HoldingConflictError,
+    );
+  });
+
+  it("a Rückgabe still can only be confirmed by einlagern, not by the games:manage bypass", async () => {
+    prismaMock.gameHolding.findUnique.mockResolvedValue(
+      openHolding({
+        vereinsmitgliedId: MEMBER_B,
+        origin: "RETURN",
+        confirmedAt: null,
+      }) as never,
+    );
+
+    await expect(confirmHoldingAsGamesManager("holding-1")).rejects.toThrow(
+      HoldingConflictError,
+    );
   });
 });
 

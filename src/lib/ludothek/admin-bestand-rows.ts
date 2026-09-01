@@ -34,6 +34,10 @@ export type AdminBoardGameRow = {
   lastCheckedAt: string | null;
   archivedReason: string | null;
   zustand: GameZustand;
+  /** Offene Weitergabe/Ausleihe, die die empfangende Person noch nicht
+   * bestätigt hat (#406) — analog der "unbestätigt"-`StatusPill` in
+   * `GameHoldingPanel`. */
+  isUnconfirmed: boolean;
   locationChain: string;
   bggId: number | null;
   minPlayers: number | null;
@@ -46,6 +50,7 @@ export type AdminBoardGameRow = {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  categories: string[];
   condition: string | null;
   /** Freie Inventarnummer des Exemplars (#270). */
   inventoryNumber: string | null;
@@ -134,6 +139,8 @@ export async function buildAdminBoardGameRows({
         : null,
       archivedReason: copy.archivedReason,
       zustand,
+      isUnconfirmed:
+        Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
       bggId: boardGame.bggId,
       minPlayers: boardGame.minPlayers,
       maxPlayers: boardGame.maxPlayers,
@@ -143,6 +150,7 @@ export async function buildAdminBoardGameRows({
       imageUrl: boardGame.imageUrl,
       description: boardGame.description,
       mechanics: boardGame.mechanics,
+      categories: boardGame.categories,
       condition: copy.condition,
       inventoryNumber: copy.inventoryNumber,
       kind: boardGame.kind,

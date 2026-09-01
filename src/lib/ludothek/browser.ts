@@ -42,6 +42,8 @@ export type LudothekGame = {
    * oder ohne BGG-ID (#214). */
   averageRating: number | null;
   mechanics: string[];
+  /** BGGs `boardgamecategory`-Links, analog `mechanics` (#404). */
+  categories: string[];
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
@@ -151,6 +153,8 @@ export type LudothekFilters = {
   durationTo?: number;
   maxWeight?: number;
   mechanics?: string[];
+  /** BGGs Categories (#404) — Filter analog `mechanics`, ODER-verknüpft. */
+  categories?: string[];
   hideExpansions?: boolean;
   /** Erstveröffentlichung von/bis (Jahr, inklusive) — beide unabhängig
    * voneinander setzbar (#205). */
@@ -245,6 +249,7 @@ export function parseLudothekSearchParams(
 ): LudothekFilters {
   const maxWeightRaw = firstString(searchParams.gewicht);
   const mechanikRaw = searchParams.mechanik;
+  const kategorieRaw = searchParams.kategorie;
   const view = firstString(searchParams.ansicht);
 
   const filters: LudothekFilters = {
@@ -263,6 +268,11 @@ export function parseLudothekSearchParams(
       ? Array.isArray(mechanikRaw)
         ? mechanikRaw
         : [mechanikRaw]
+      : undefined,
+    categories: kategorieRaw
+      ? Array.isArray(kategorieRaw)
+        ? kategorieRaw
+        : [kategorieRaw]
       : undefined,
     hideExpansions: firstString(searchParams.ohneErweiterungen) === "1",
     yearFrom: parseNumberParam(firstString(searchParams.jahrVon)),
@@ -354,6 +364,12 @@ export function filterLudothekGames(
       const hasAny = filters.mechanics.some((m) => game.mechanics.includes(m));
       if (!hasAny) return false;
     }
+    if (filters.categories && filters.categories.length > 0) {
+      const hasAny = filters.categories.some((c) =>
+        game.categories.includes(c),
+      );
+      if (!hasAny) return false;
+    }
     if (
       filters.hideExpansions &&
       game.kind === BoardGameKind.BOARDGAME_EXPANSION
@@ -427,6 +443,12 @@ export function filterLudothekGames(
  * dialog (#124). */
 export function listDistinctMechanics(games: { mechanics: string[] }[]) {
   return [...new Set(games.flatMap((game) => game.mechanics))].sort();
+}
+
+/** Every distinct category across the Bestand, sorted — Autocomplete-
+ * Vorschläge for the Kategorie-Filter (#404), analog `listDistinctMechanics`. */
+export function listDistinctCategories(games: { categories: string[] }[]) {
+  return [...new Set(games.flatMap((game) => game.categories))].sort();
 }
 
 /** Obergrenze für den Dauer-Slider (Minuten) — höchste im Bestand erfasste

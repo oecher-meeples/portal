@@ -14,6 +14,7 @@ import {
   scanResolveCode,
 } from "@/lib/ludothek/holding-actions";
 import type { ResolvedScan } from "@/lib/ludothek/holdings";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type SeriesMode =
   | { type: "einlagern"; unitId: string; unitCode: string }
@@ -201,7 +202,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <CodeScanner onDetected={handleCode} />
 
@@ -420,6 +421,6 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
           Zuletzt gescannt: <span className="font-mono">{lastRaw}</span>
         </p>
       )}
-    </div>
+    </PageContainer>
   );
 }

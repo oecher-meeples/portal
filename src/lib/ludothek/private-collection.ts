@@ -130,6 +130,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       weight: boardGame.weight,
       averageRating: boardGame.averageRating,
       mechanics: boardGame.mechanics,
+      categories: boardGame.categories,
       ean: null,
       condition: null,
       inventoryNumber: null,

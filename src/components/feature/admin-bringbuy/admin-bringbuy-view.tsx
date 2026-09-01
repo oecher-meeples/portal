@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScanLine } from "lucide-react";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Button } from "@/components/ui/button";
@@ -114,7 +115,7 @@ export function AdminBringBuyView({
   const selectedItems = items.filter((item) => selectedIds.has(item.id));
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <PageHeading
         eyebrow="Flohmarkt"
         title="Bring & Buy – Kassenansicht"
@@ -230,7 +231,7 @@ export function AdminBringBuyView({
           </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

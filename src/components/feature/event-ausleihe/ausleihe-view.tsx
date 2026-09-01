@@ -10,6 +10,7 @@ import {
   ausleiheReturnToUnit,
   ausleiheResolveCode,
 } from "@/components/feature/event-ausleihe/ausleihe-actions";
+import { PageContainer } from "@/components/ui/page-container";
 
 type ViewState =
   | { kind: "idle" }
@@ -135,7 +136,7 @@ export function AusleiheView() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <PageContainer className="grid gap-6 lg:grid-cols-[2fr_1fr]">
       <CodeScanner onDetected={handleCode} />
 
       <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
@@ -267,6 +268,6 @@ export function AusleiheView() {
           )}
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

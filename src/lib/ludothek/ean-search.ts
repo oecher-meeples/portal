@@ -1,5 +1,6 @@
 "use server";
 
+import { isValidEan } from "@/lib/inventory/ean";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
   searchEanByName,
@@ -34,10 +35,13 @@ function sortByPublisherMatch(
  * zu Schritt 2 ausgelöst (nur wenn das EAN-Feld leer ist) und manuell über
  * das Lupen-Icon neben dem EAN-Feld, unabhängig vom aktuellen Feldinhalt.
  *
- * Liegt ein eindeutiger BGG-Product-Code vor (`resolveProductCodeFromVersions()`),
- * hat er Vorrang vor UPCitemdb (#205) — der Code ist meist die echte
- * Verpackungs-EAN. Sonst bleibt UPCitemdb wie bisher die Quelle, deren
- * Kandidaten nach passendem Verlag sortiert werden.
+ * Liegt ein eindeutiger, **gültiger** BGG-Product-Code vor
+ * (`resolveProductCodeFromVersions()`), hat er Vorrang vor UPCitemdb (#205)
+ * — der Code ist meist die echte Verpackungs-EAN. Erweist er sich als
+ * ungültig (z. B. enthält Buchstaben, keine gültige Prüfziffer), fällt die
+ * Suche stattdessen auf UPCitemdb zurück, statt ihn ungeprüft zu übernehmen
+ * (#322). Ohne brauchbaren Product-Code bleibt UPCitemdb wie bisher die
+ * Quelle, deren Kandidaten nach passendem Verlag sortiert werden.
  */
 export async function searchEanForBoardGame(
   title: string,
@@ -48,7 +52,7 @@ export async function searchEanForBoardGame(
     return { success: false as const, error: "Keine Berechtigung." };
   }
 
-  if (options?.bggProductCode) {
+  if (options?.bggProductCode && isValidEan(options.bggProductCode)) {
     return {
       success: true as const,
       results: [

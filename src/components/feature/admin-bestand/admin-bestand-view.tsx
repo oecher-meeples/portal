@@ -26,6 +26,7 @@ import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/ad
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { AdminBestandCsvExportDialog } from "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog";
 import type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
 
@@ -38,6 +39,7 @@ export function AdminBestandView({
   defaultQuickFilter,
   canManageGames,
   activeLoanCount = 0,
+  unconfirmedCount = 0,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
@@ -46,6 +48,8 @@ export function AdminBestandView({
   defaultQuickFilter?: Exclude<QuickFilter, "all">;
   canManageGames: boolean;
   activeLoanCount?: number;
+  /** Offene, unbestätigte Übergaben (#290) — Link zur Antrags-Queue. */
+  unconfirmedCount?: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -80,7 +84,7 @@ export function AdminBestandView({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Bestandsverwaltung"
         title="Bestand & Vollständigkeitsprüfung"
@@ -93,11 +97,16 @@ export function AdminBestandView({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           label="Ausleihen"
           value={activeLoanCount}
           href="/admin/bestand/ausleihen"
+        />
+        <StatTile
+          label="Unbestätigt"
+          value={unconfirmedCount}
+          href="/admin/bestand/unbestaetigt"
         />
         <QuickActionCard
           href="/admin/bestand/event-ausgabe"
@@ -208,7 +217,12 @@ export function AdminBestandView({
                     {game.locationChain || "—"}
                   </TableCell>
                   <TableCell>
-                    <GameZustandPill zustand={game.zustand} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <GameZustandPill zustand={game.zustand} />
+                      {game.isUnconfirmed && (
+                        <StatusPill label="unbestätigt" tone="warning" />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {game.lastCheckedAt ?? "—"}
@@ -257,6 +271,6 @@ export function AdminBestandView({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -102,6 +102,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       weight: boardGame.weight,
       averageRating: boardGame.averageRating,
       mechanics: boardGame.mechanics,
+      categories: boardGame.categories,
       ean: boardGame.ean,
       condition: copy.condition,
       ruleBookLanguages: copy.ruleBookLanguages,

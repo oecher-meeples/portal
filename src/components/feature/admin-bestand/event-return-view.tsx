@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CodeScanner } from "@/components/ui/code-scanner";
 import { scanResolveCode } from "@/lib/ludothek/holding-actions";
 import { BulkRelocateScanView } from "@/components/feature/admin-bestand/bulk-relocate-scan-view";
+import { PageContainer } from "@/components/ui/page-container";
 
 /**
  * Event-Rückgabe (#273): Ziel-Lagereinheit einmal scannen/eingeben, danach
@@ -39,7 +40,7 @@ export function EventReturnView() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Bestand & Inventur"
         title="Event-Rückgabe"
@@ -85,6 +86,6 @@ export function EventReturnView() {
           />
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

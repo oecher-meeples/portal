@@ -33,6 +33,7 @@ import {
   type ContentType,
 } from "@/lib/content/content";
 import { deletePost } from "@/components/feature/admin-news/actions";
+import { PageContainer } from "@/components/ui/page-container";
 
 const TYPE_FILTER_OPTIONS: PillOption<ContentType | "alle">[] =
   CONTENT_TYPE_FILTERS.map((option) => ({
@@ -84,7 +85,7 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
     .filter((post) => matchesTriState(instagramFilter, post.instagram));
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Redaktion"
         title="Beiträge"
@@ -237,6 +238,6 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

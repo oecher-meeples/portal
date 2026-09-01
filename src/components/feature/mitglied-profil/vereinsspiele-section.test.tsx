@@ -33,6 +33,7 @@ describe("VereinsspieleSection (#383)", () => {
             condition: null,
             ruleBookLanguages: [],
             inventoryNumber: null,
+            isUnconfirmed: false,
           },
         ]}
       />,

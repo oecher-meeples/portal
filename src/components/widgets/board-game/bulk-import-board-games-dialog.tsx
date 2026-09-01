@@ -16,12 +16,14 @@ import { Button } from "@/components/ui/button";
 import { TextAreaField } from "@/components/ui/field";
 import { FileField } from "@/components/ui/file-field";
 import { BulkScanDialog } from "@/components/ui/bulk-scan-dialog";
+import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
 import { BulkImportResultReport } from "@/components/widgets/board-game/bulk-import-result-report";
 import {
   bulkImportBoardGames,
   fetchBulkImportCandidateDetails,
   resolveBulkImportCandidate,
   type BulkImportCandidateDetails,
+  type BulkImportDelimiter,
   type BulkImportRow,
 } from "@/lib/ludothek/board-games-bulk-import";
 import { parseBulkImportCsv } from "@/lib/ludothek/bulk-import-csv";
@@ -34,10 +36,19 @@ import { mergeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
  * bleibt dieser nach dem Import offen und zeigt die Ergebnisübersicht statt
  * sich zu schließen — es gibt keine Einzel-Vorschau zum Korrigieren.
  */
+const DELIMITER_OPTIONS: PillOption<"none" | BulkImportDelimiter>[] = [
+  { label: "Kein Trennzeichen", value: "none" },
+  { label: ";", value: ";" },
+  { label: "|", value: "|" },
+];
+
 export function BulkImportBoardGamesDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [namesText, setNamesText] = useState("");
+  const [delimiter, setDelimiter] = useState<"none" | BulkImportDelimiter>(
+    "none",
+  );
   const [fileFieldKey, setFileFieldKey] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const [results, setResults] = useState<BulkImportRow[] | null>(null);
@@ -51,6 +62,7 @@ export function BulkImportBoardGamesDialog() {
     setOpen(nextOpen);
     if (!nextOpen) {
       setNamesText("");
+      setDelimiter("none");
       setFileFieldKey((key) => key + 1);
       setResults(null);
       setError(null);
@@ -71,14 +83,19 @@ export function BulkImportBoardGamesDialog() {
 
   async function handleCsvFile(file: File) {
     const text = await file.text();
-    addEntries(parseBulkImportCsv(text));
+    addEntries(
+      parseBulkImportCsv(text, delimiter === "none" ? undefined : delimiter),
+    );
   }
 
   async function handleImport() {
     setIsImporting(true);
     setError(null);
     try {
-      const result = await bulkImportBoardGames(namesText.split("\n"));
+      const result = await bulkImportBoardGames(
+        namesText.split("\n"),
+        delimiter === "none" ? undefined : delimiter,
+      );
       if ("error" in result) {
         setError(result.error);
         return;
@@ -112,10 +129,18 @@ export function BulkImportBoardGamesDialog() {
 
   /** Resolves one "Nicht importiert"-row by hand once the admin picks a
    * candidate — replaces just that row in place, no full re-run (#186-Folge). */
-  async function handleResolveCandidate(name: string, bggId: number) {
+  async function handleResolveCandidate(
+    name: string,
+    bggId: number,
+    inventoryNumber?: string,
+  ) {
     setResolvingName(name);
     try {
-      const updated = await resolveBulkImportCandidate(name, bggId);
+      const updated = await resolveBulkImportCandidate(
+        name,
+        bggId,
+        inventoryNumber,
+      );
       setResults(
         (current) =>
           current?.map((row) => (row.name === name ? updated : row)) ?? current,
@@ -187,6 +212,22 @@ export function BulkImportBoardGamesDialog() {
                       Importiere …
                     </p>
                   </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  Trennzeichen für Inventarnummer
+                </span>
+                <PillToggle
+                  options={DELIMITER_OPTIONS}
+                  value={delimiter}
+                  onChange={setDelimiter}
+                />
+                {delimiter !== "none" && (
+                  <p className="text-muted-foreground text-xs">
+                    Jede Zeile: Inventarnummer{delimiter}Name-oder-EAN. Zeilen
+                    ohne „{delimiter}“ gelten als Name/EAN ohne Inventarnummer.
+                  </p>
                 )}
               </div>
             </>

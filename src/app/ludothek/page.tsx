@@ -1,17 +1,22 @@
+import Link from "next/link";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentMeeple } from "@/lib/members/meeples";
 import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
   findMaxDurationBound,
+  listDistinctCategories,
   listDistinctMechanics,
   parseLudothekSearchParams,
   toPublicGame,
 } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
+import { hasUnconfirmedHoldingsForMeeple } from "@/lib/ludothek/holdings";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
@@ -35,6 +40,15 @@ export default async function LudothekPage({
 
   const rawSearchParams = await searchParams;
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
+
+  // "Meine Ausleihen"-Filter (#290): kein eigener Bestätigen-Weg hier, nur
+  // ein Hinweis zurück zum Dashboard, wo die eigentliche Aktion sitzt.
+  const currentMeeple = internal ? await getCurrentMeeple() : null;
+  const showsOwnLoans =
+    currentMeeple !== null && filters.atMeepleId === currentMeeple.id;
+  const hasUnconfirmedOwnHoldings = showsOwnLoans
+    ? await hasUnconfirmedHoldingsForMeeple(currentMeeple.id)
+    : false;
 
   const clubGames = await buildLudothekGames();
   // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
@@ -69,6 +83,7 @@ export default async function LudothekPage({
   });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
+  const categoriesOptions = listDistinctCategories(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
 
   const meepleOptions = internal
@@ -90,12 +105,20 @@ export default async function LudothekPage({
     : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer variant="wide">
       <PageHeading
         eyebrow="Das Herzstück"
         title={`Ludothek – ${allGames.length} Spiele`}
         description="Durchstöbere den Vereinsbestand und filtere nach Spieleranzahl, Dauer oder Mechanik."
       />
+      {hasUnconfirmedOwnHoldings && (
+        <p className="bg-card rounded-lg border p-4 text-sm">
+          Du hast noch unbestätigte Spiele.{" "}
+          <Link href="/dashboard" className="text-primary hover:underline">
+            Zum Dashboard
+          </Link>
+        </p>
+      )}
       <LudothekBrowser
         games={internal ? filtered : filtered.map(toPublicGame)}
         internal={internal}
@@ -104,11 +127,12 @@ export default async function LudothekPage({
         rawSearchParams={rawSearchParams}
         filters={filters}
         mechanicsOptions={mechanicsOptions}
+        categoriesOptions={categoriesOptions}
         maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
         showExplainerFilter={showExplainerFilter}
         showPresentFilter={showPresentFilter}
       />
-    </div>
+    </PageContainer>
   );
 }

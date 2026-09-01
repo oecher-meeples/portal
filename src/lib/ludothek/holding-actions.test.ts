@@ -18,6 +18,12 @@ vi.mock("@/lib/members/meeples", async () => {
 });
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
+const requireGamesManagePermissionMock = vi.fn();
+vi.mock("@/lib/ludothek/permissions", () => ({
+  requireGamesManagePermission: (...args: unknown[]) =>
+    requireGamesManagePermissionMock(...args),
+}));
+
 const gameCopyFindUniqueMock = vi.fn();
 const gameHoldingFindFirstMock = vi.fn();
 const meepleFindManyMock = vi.fn();
@@ -47,6 +53,7 @@ const handOverGameMock = vi.fn();
 const returnGameMock = vi.fn();
 const relocateGameMock = vi.fn();
 const confirmHoldingMock = vi.fn();
+const confirmHoldingAsGamesManagerMock = vi.fn();
 const moveStorageUnitMock = vi.fn();
 const resolveScannedCodeMock = vi.fn();
 
@@ -61,12 +68,15 @@ vi.mock("@/lib/ludothek/holdings", async () => {
     returnGame: (...args: unknown[]) => returnGameMock(...args),
     relocateGame: (...args: unknown[]) => relocateGameMock(...args),
     confirmHolding: (...args: unknown[]) => confirmHoldingMock(...args),
+    confirmHoldingAsGamesManager: (...args: unknown[]) =>
+      confirmHoldingAsGamesManagerMock(...args),
     moveStorageUnit: (...args: unknown[]) => moveStorageUnitMock(...args),
     resolveScannedCode: (...args: unknown[]) => resolveScannedCodeMock(...args),
   };
 });
 
 const {
+  confirmHoldingForGamesManager,
   scanAcceptHandover,
   scanAcceptReturn,
   scanBorrowGame,
@@ -102,6 +112,11 @@ beforeEach(() => {
   returnGameMock.mockResolvedValue({ id: "holding-new" });
   relocateGameMock.mockResolvedValue({ id: "holding-new" });
   confirmHoldingMock.mockResolvedValue({ id: "holding-new" });
+  confirmHoldingAsGamesManagerMock.mockResolvedValue({
+    id: "holding-new",
+    gameCopyId: "game-1",
+  });
+  requireGamesManagePermissionMock.mockResolvedValue({ id: "admin-user" });
   moveStorageUnitMock.mockResolvedValue({ id: "unit-1" });
 });
 
@@ -147,6 +162,27 @@ describe("scanBorrowGame (Ausbuchen)", () => {
         "Dieses Konto ist mit keinem Vereinsmitglied verknüpft — Ausleihen/Rückgeben ist nur für Vereinsmitglieder möglich.",
     });
     expect(borrowGameMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("confirmHoldingForGamesManager (#290)", () => {
+  it("confirms a foreign open handover when the caller has games:manage", async () => {
+    const result = await confirmHoldingForGamesManager("holding-1");
+
+    expect(confirmHoldingAsGamesManagerMock).toHaveBeenCalledWith("holding-1");
+    expect(result).toEqual({
+      success: true,
+      value: { id: "holding-new", gameCopyId: "game-1" },
+    });
+  });
+
+  it("rejects without games:manage, without calling the domain layer", async () => {
+    requireGamesManagePermissionMock.mockResolvedValue(null);
+
+    const result = await confirmHoldingForGamesManager("holding-1");
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(confirmHoldingAsGamesManagerMock).not.toHaveBeenCalled();
   });
 });
 
@@ -388,6 +424,41 @@ describe("scanListMeeples", () => {
         where: { anonymizedAt: null, displayName: { not: "Anonymer Meeple" } },
       }),
     );
+  });
+
+  it("excludes an ausgetreten Meeple — it could never confirm a handover to itself (#405)", async () => {
+    meepleFindManyMock.mockResolvedValue([
+      {
+        id: "meeple-active",
+        displayName: "Aktiv",
+        member: { resignedAt: null, membershipEndsAt: null, meepleId: "m1" },
+      },
+      {
+        id: "meeple-gekuendigt",
+        displayName: "Gekündigt",
+        member: {
+          resignedAt: new Date("2026-01-01"),
+          membershipEndsAt: new Date("2099-01-01"),
+          meepleId: "m2",
+        },
+      },
+      {
+        id: "meeple-ausgetreten",
+        displayName: "Ausgetreten",
+        member: {
+          resignedAt: new Date("2020-01-01"),
+          membershipEndsAt: new Date("2020-12-31"),
+          meepleId: "m3",
+        },
+      },
+    ]);
+
+    const result = await scanListMeeples();
+
+    expect(result).toEqual([
+      { id: "meeple-active", displayName: "Aktiv" },
+      { id: "meeple-gekuendigt", displayName: "Gekündigt" },
+    ]);
   });
 });
 

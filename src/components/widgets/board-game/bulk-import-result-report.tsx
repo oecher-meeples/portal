@@ -52,7 +52,11 @@ export function BulkImportResultReport({
   results: BulkImportRow[];
   resolvingName: string | null;
   candidateDetails: Record<number, BulkImportCandidateDetails>;
-  onResolveCandidate: (name: string, bggId: number) => void;
+  onResolveCandidate: (
+    name: string,
+    bggId: number,
+    inventoryNumber?: string,
+  ) => void;
 }) {
   const { imported, duplicates, notImported } = groupResults(results);
 
@@ -201,7 +205,11 @@ function ResultRowList({
   rows: NotImportedRow[];
   resolvingName: string | null;
   candidateDetails: Record<number, BulkImportCandidateDetails>;
-  onResolveCandidate: (name: string, bggId: number) => void;
+  onResolveCandidate: (
+    name: string,
+    bggId: number,
+    inventoryNumber?: string,
+  ) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -260,7 +268,13 @@ function ResultRowList({
                       className="shrink-0"
                       disabled={resolvingName === row.name}
                       onClick={() =>
-                        onResolveCandidate(row.name, candidate.bggId)
+                        onResolveCandidate(
+                          row.name,
+                          candidate.bggId,
+                          row.status === "needs-review"
+                            ? row.inventoryNumber
+                            : undefined,
+                        )
                       }
                     >
                       {resolvingName === row.name

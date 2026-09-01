@@ -4,33 +4,44 @@ import { useRouter } from "next/navigation";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
 import { buildHref } from "@/lib/utils/query-string";
 
-export function MechanicsFilter({
+/** Generischer Mehrfachauswahl-Filter fürs Ludothek-Filterpanel — von
+ * Mechanik- und Kategorie-Filter geteilt (#404), sonst identischer Aufbau
+ * bis auf URL-Parameter und Beschriftung. */
+export function LudothekMultiSelectFilter({
+  id,
+  paramKey,
   basePath,
   rawSearchParams,
   options,
   selected,
+  placeholder,
+  emptyLabel,
 }: {
+  id: string;
+  paramKey: string;
   basePath: string;
   rawSearchParams: Record<string, string | string[] | undefined>;
   options: string[];
   selected: string[];
+  placeholder: string;
+  emptyLabel: string;
 }) {
   const router = useRouter();
 
   return (
     <MultiSelectCombobox
-      id="mechanik-filter"
+      id={id}
       options={options}
       value={selected}
       onValueChange={(next) => {
         router.push(
           buildHref(basePath, rawSearchParams, {
-            mechanik: next.length > 0 ? next : undefined,
+            [paramKey]: next.length > 0 ? next : undefined,
           }),
         );
       }}
-      placeholder="Mechanik suchen …"
-      emptyLabel="Keine passende Mechanik"
+      placeholder={placeholder}
+      emptyLabel={emptyLabel}
     />
   );
 }

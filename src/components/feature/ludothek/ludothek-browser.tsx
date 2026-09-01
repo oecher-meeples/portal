@@ -73,6 +73,7 @@ export function LudothekBrowser({
   rawSearchParams,
   filters,
   mechanicsOptions,
+  categoriesOptions,
   maxDurationBound = 120,
   meepleOptions,
   showExplainerFilter = true,
@@ -86,6 +87,8 @@ export function LudothekBrowser({
   rawSearchParams: Record<string, string | string[] | undefined>;
   filters: LudothekFilters;
   mechanicsOptions: string[];
+  /** BGGs Categories, analog `mechanicsOptions` — nur für den Filter (#404). */
+  categoriesOptions: string[];
   /** Obergrenze für den Dauer-Slider — höchster im Bestand erfasster Wert,
    * s. `findMaxDurationBound` (#214-Folge). Der Spieler-Slider hat eine feste
    * Obergrenze ("8+"), s. `MAX_PLAYERS_FILTER` (#214-Folge-Korrektur). */
@@ -115,7 +118,14 @@ export function LudothekBrowser({
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-        <form action={basePath} className="flex gap-2">
+        <form
+          action={basePath}
+          onSubmit={(event) => {
+            event.preventDefault();
+            router.replace(href({ q: search || undefined }));
+          }}
+          className="flex gap-2"
+        >
           {Object.entries(rawSearchParams)
             .filter(([key]) => key !== "q")
             .flatMap(([key, value]) =>
@@ -159,6 +169,7 @@ export function LudothekBrowser({
           filters={filters}
           internal={internal}
           mechanicsOptions={mechanicsOptions}
+          categoriesOptions={categoriesOptions}
           maxDurationBound={maxDurationBound}
           basePath={basePath}
           rawSearchParams={rawSearchParams}

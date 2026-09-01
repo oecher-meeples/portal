@@ -14,6 +14,7 @@ import {
   AssignKeeperDialog,
   type KeeperOption,
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type StorageUnitRow = {
   id: string;
@@ -47,7 +48,7 @@ export function AdminEinheitenView({
   keeperOptions: KeeperOption[];
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Ludothek"
         title="Aufbewahrungseinheiten"
@@ -146,6 +147,6 @@ export function AdminEinheitenView({
           Etiketten drucken →
         </Link>
       )}
-    </div>
+    </PageContainer>
   );
 }

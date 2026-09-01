@@ -39,6 +39,9 @@ export type CreateBoardGameInput = BoardGameTitleInput & {
    * Anlegen eines weiteren Exemplars eines bereits bekannten `bggId`-Titels
    * würden diese sonst bei jedem Mal dupliziert. */
   alternateNames?: string[];
+  /** Freie Inventarnummer (#270) — beim Massenimport direkt mitgegeben statt
+   * nur vorbelegt, siehe `bulkImportBoardGames()` (#289). */
+  inventoryNumber?: string | null;
 };
 
 /** Duplicate EANs are allowed by design (ADR 0001) — surfaced only as a hint. */
@@ -85,7 +88,10 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 
   const validationError = validateBoardGameTitleInput(input);
   if (validationError) {
-    return { error: validationError };
+    return {
+      error: validationError.message,
+      invalidEan: validationError.invalidEan,
+    };
   }
 
   // Ein bekannter bggId reusest den vorhandenen Titel ohnehin (siehe
@@ -145,6 +151,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
         ruleBookLanguages: input.ruleBookLanguages,
         actorId: actor.id,
         placement,
+        inventoryNumber: input.inventoryNumber,
       });
       return { copy, boardGameId: title.id, boardGameSlug: title.slug };
     },
@@ -172,7 +179,10 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
 
   const validationError = validateBoardGameTitleInput(input);
   if (validationError) {
-    return { error: validationError };
+    return {
+      error: validationError.message,
+      invalidEan: validationError.invalidEan,
+    };
   }
 
   const hint = await duplicateEanHint(input.ean, id);
@@ -215,6 +225,7 @@ export async function getBoardGameTitleForEdit(id: string) {
       imageUrl: true,
       description: true,
       mechanics: true,
+      categories: true,
       explainerVideoUrl: true,
       publisher: true,
       author: true,

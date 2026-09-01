@@ -50,6 +50,19 @@ enum BoardGameKind {
   BOARDGAME_EXPANSION
 }
 
+/// Regal-Kategorien für die feste Einteilung des Bestands (#276) — vom Admin
+/// manuell pro `StorageUnit` vergeben. Die Zuordnung Spiel→Kategorie selbst
+/// ist keine gespeicherte Relation, sondern eine reine Ableitungsfunktion
+/// (`deriveShelfCategories()`) aus den vorhandenen `BoardGame`-Feldern.
+enum ShelfCategory {
+  ZWEI_PERSONEN
+  KINDER_FAMILIE
+  KENNERSPIELE
+  EXPERTENSPIELE
+  KOOPERATIV
+  PARTY
+}
+
 /// BGGs 5-stufiges "Language Dependence"-Poll-Modell (#188) — Level 1 = kein
 /// notwendiger Text, Level 5 = unspielbar in einer anderen Sprache. Deutsche
 /// Labels in `src/lib/ludothek/language-dependence.ts`.
@@ -663,6 +676,10 @@ model BoardGame {
   imageUrl           String?
   description        String?
   mechanics          String[]
+  /// BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
+  /// analog `mechanics` importiert (#404) — Voraussetzung für die
+  /// Regal-Kategorisierung anhand BGG-Daten (#276).
+  categories         String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
   explainerVideoUrl  String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
@@ -842,6 +859,10 @@ model StorageUnit {
   keeperMeepleId String?
   /// Free text, only meaningful where no parent unit exists. Independent of the keeper.
   locationNote   String?
+  /// Feste Regal-Kategorie (#276), manuell vom Admin vergeben — `null`, bis
+  /// jemand sie setzt. Kein Bezug zu `kind`; auch eine `BOX` kann eine
+  /// Kategorie tragen.
+  category       ShelfCategory?
   retiredAt      DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

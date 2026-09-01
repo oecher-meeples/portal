@@ -34,6 +34,8 @@ export type BoardGameTitleInput = {
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
+  /** BGGs `boardgamecategory`-Links, analog `mechanics` importiert (#404). */
+  categories?: string[];
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
   kind?: BoardGameKind;
@@ -63,6 +65,7 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
+    categories: input.categories ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
     languageDependence: input.languageDependence ?? null,
     publisher: input.publisher ?? [],
@@ -72,12 +75,20 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
   };
 }
 
-export function validateBoardGameTitleInput(input: BoardGameTitleInput) {
+/** `invalidEan: true` markiert speziell den EAN-Fall — der Aufrufer bietet
+ * dafür ein Recovery-Popup ("EAN löschen und speichern") statt eines reinen
+ * Blockier-Fehlers an (#322). */
+export function validateBoardGameTitleInput(
+  input: BoardGameTitleInput,
+): { message: string; invalidEan?: true } | null {
   if (!input.title) {
-    return "Bitte einen Titel angeben.";
+    return { message: "Bitte einen Titel angeben." };
   }
   if (input.ean && !isValidEan(input.ean)) {
-    return "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.";
+    return {
+      message: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
+    };
   }
   return null;
 }

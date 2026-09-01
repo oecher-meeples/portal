@@ -12,6 +12,7 @@ import { reorderDownloads } from "@/lib/downloads/actions";
 import { DownloadRow } from "@/components/feature/downloads/download-row";
 import { DownloadUploadForm } from "@/components/feature/downloads/download-upload-form";
 import { PrivateDownloadsTable } from "@/components/feature/downloads/private-downloads-table";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type DownloadListItem = {
   id: string;
@@ -85,7 +86,7 @@ export function DownloadsView({
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Formales"
         title="Downloads & Rechtliches"
@@ -168,6 +169,6 @@ export function DownloadsView({
         </div>
       </div>
       {canManage && <PrivateDownloadsTable downloads={offlineDownloads} />}
-    </div>
+    </PageContainer>
   );
 }

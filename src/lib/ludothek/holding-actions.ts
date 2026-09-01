@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeplePermission } from "@/lib/members/meeples";
 import { memberDisplayName } from "@/lib/members/member-display-name";
+import { getMembershipState } from "@/lib/members/membership-state";
 import {
   borrowGame,
   confirmHolding,
+  confirmHoldingAsGamesManager,
   handOverGame,
   HoldingConflictError,
   moveStorageUnit,
@@ -15,6 +17,7 @@ import {
   returnGame,
   type ResolvedScan,
 } from "@/lib/ludothek/holdings";
+import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 import {
   assertCanReceive,
@@ -172,6 +175,18 @@ export async function scanConfirmHolding(holdingId: string) {
   });
 }
 
+/** "Der Spielewart ist von dieser Regel ausgenommen" (#290) — bestätigt eine
+ * fremde offene Übergabe direkt, ohne die empfangende Person. Dashboard,
+ * `/admin/bestand`-Antrags-Queue und `GameHoldingPanel` (dort zusätzlich zum
+ * bestehenden Bestätigen-Button für die empfangende Person selbst) nutzen
+ * dieselbe Action. */
+export async function confirmHoldingForGamesManager(holdingId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) return { error: "Keine Berechtigung." };
+
+  return toResultAndRevalidate(() => confirmHoldingAsGamesManager(holdingId));
+}
+
 export type ScannedGameContext = {
   game: {
     id: string;
@@ -256,16 +271,40 @@ export async function scanGetGameContext(
  * mit Portal-Konto. Das Sammelkonto "Anonymer Meeple" ist bewusst ausgeschlossen:
  * dorthin führt ausschließlich `scanHandOverToExternal()` (#333b), nicht diese
  * generische Auswahl. */
+/** Target list for handover/return-to-person pickers — excludes an
+ * "ausgetreten" Meeple (#405): they can no longer accept a game
+ * (`assertCanReceive()`), so picking one as a target would only create a
+ * holding nobody could ever confirm. "Gekündigt" (notice given, not yet
+ * effective) may still receive, matching `assertCanReceive()`. */
 export async function scanListMeeples() {
   await requireActingMeeple();
-  return prisma.meeple.findMany({
+  const meeples = await prisma.meeple.findMany({
     where: {
       anonymizedAt: null,
       displayName: { not: ANONYMER_MEEPLE_NAME },
     },
     orderBy: { displayName: "asc" },
-    select: { id: true, displayName: true },
+    select: {
+      id: true,
+      displayName: true,
+      member: {
+        select: {
+          resignedAt: true,
+          membershipEndsAt: true,
+          meepleId: true,
+        },
+      },
+    },
   });
+
+  return meeples
+    .filter(
+      ({ member }) =>
+        // The `where` above already guarantees anonymizedAt: null here.
+        !member ||
+        getMembershipState({ ...member, anonymizedAt: null }) !== "ausgetreten",
+    )
+    .map(({ id, displayName }) => ({ id, displayName }));
 }
 
 /** Target list for the Umlagern mini-dialog (#121/#122) — active units only. */

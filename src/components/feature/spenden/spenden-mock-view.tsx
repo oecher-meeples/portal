@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DonationAmountPicker } from "@/components/feature/spenden/donation-amount-picker";
+import { PageContainer } from "@/components/ui/page-container";
 
 const PAYPAL_DONATION_URL = "https://paypal.me/oechermeeples";
 const GAME_DONATION_MAIL = "spenden@oecher-meeples.org";
 
 export function SpendenMockView() {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Support"
         title="Unterstütze die Oecher Meeples"
@@ -83,6 +84,6 @@ export function SpendenMockView() {
           />
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

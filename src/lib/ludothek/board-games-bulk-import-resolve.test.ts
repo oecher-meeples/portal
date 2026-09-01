@@ -38,6 +38,11 @@ vi.mock("@/lib/ludothek/board-games", () => ({
   createBoardGame: (...args: unknown[]) => createBoardGameMock(...args),
 }));
 
+const getSuggestedInventoryNumberMock = vi.fn().mockResolvedValue("1");
+vi.mock("@/lib/ludothek/game-copies", () => ({
+  getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
+}));
+
 const { resolveBulkImportCandidate, fetchBulkImportCandidateDetails } =
   await import("./board-games-bulk-import");
 
