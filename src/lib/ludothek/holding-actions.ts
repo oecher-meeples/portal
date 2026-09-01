@@ -7,6 +7,7 @@ import { memberDisplayName } from "@/lib/members/member-display-name";
 import {
   borrowGame,
   confirmHolding,
+  confirmHoldingAsGamesManager,
   handOverGame,
   HoldingConflictError,
   moveStorageUnit,
@@ -15,6 +16,7 @@ import {
   returnGame,
   type ResolvedScan,
 } from "@/lib/ludothek/holdings";
+import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 import {
   assertCanReceive,
@@ -170,6 +172,18 @@ export async function scanConfirmHolding(holdingId: string) {
     const own = requireOwnMember(member);
     return confirmHolding({ holdingId, confirmingVereinsmitgliedId: own.id });
   });
+}
+
+/** "Der Spielewart ist von dieser Regel ausgenommen" (#290) — bestätigt eine
+ * fremde offene Übergabe direkt, ohne die empfangende Person. Dashboard,
+ * `/admin/bestand`-Antrags-Queue und `GameHoldingPanel` (dort zusätzlich zum
+ * bestehenden Bestätigen-Button für die empfangende Person selbst) nutzen
+ * dieselbe Action. */
+export async function confirmHoldingForGamesManager(holdingId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) return { error: "Keine Berechtigung." };
+
+  return toResultAndRevalidate(() => confirmHoldingAsGamesManager(holdingId));
 }
 
 export type ScannedGameContext = {

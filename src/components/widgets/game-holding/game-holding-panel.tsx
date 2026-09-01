@@ -8,6 +8,7 @@ import { useAction } from "@/components/ui/use-action";
 import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import { MemberCombobox } from "@/components/entities/member-combobox";
 import {
+  confirmHoldingForGamesManager,
   scanAcceptHandover,
   scanAcceptReturn,
   scanBorrowGame,
@@ -257,6 +258,22 @@ export function GameHoldingPanel({
             </Button>
           </>
         )}
+
+        {isWithOther &&
+          !holding?.confirmedAt &&
+          holding?.origin !== "RETURN" &&
+          canManageGames && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={pending}
+              onClick={() =>
+                perform(() => confirmHoldingForGamesManager(holding!.id))
+              }
+            >
+              Für {holding?.vereinsmitgliedName} bestätigen
+            </Button>
+          )}
 
         {isReturnFromExtern && (
           <Button

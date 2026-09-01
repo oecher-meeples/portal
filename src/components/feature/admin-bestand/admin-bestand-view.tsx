@@ -39,6 +39,7 @@ export function AdminBestandView({
   defaultQuickFilter,
   canManageGames,
   activeLoanCount = 0,
+  unconfirmedCount = 0,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
@@ -47,6 +48,8 @@ export function AdminBestandView({
   defaultQuickFilter?: Exclude<QuickFilter, "all">;
   canManageGames: boolean;
   activeLoanCount?: number;
+  /** Offene, unbestätigte Übergaben (#290) — Link zur Antrags-Queue. */
+  unconfirmedCount?: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -94,11 +97,16 @@ export function AdminBestandView({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           label="Ausleihen"
           value={activeLoanCount}
           href="/admin/bestand/ausleihen"
+        />
+        <StatTile
+          label="Unbestätigt"
+          value={unconfirmedCount}
+          href="/admin/bestand/unbestaetigt"
         />
         <QuickActionCard
           href="/admin/bestand/event-ausgabe"
