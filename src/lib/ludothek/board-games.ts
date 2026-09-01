@@ -221,6 +221,7 @@ export async function getBoardGameTitleForEdit(id: string) {
       imageUrl: true,
       description: true,
       mechanics: true,
+      categories: true,
       explainerVideoUrl: true,
       publisher: true,
       author: true,

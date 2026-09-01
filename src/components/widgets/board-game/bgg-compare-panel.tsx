@@ -4,7 +4,10 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { BoardGameKind } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { formatMechanics } from "@/lib/ludothek/bgg-id";
+import {
+  formatMechanics,
+  formatCommaSeparatedList,
+} from "@/lib/ludothek/bgg-id";
 import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import type { BggGameData } from "@/lib/bgg/client";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
@@ -119,6 +122,14 @@ export function BggComparePanel({
       oldValue: form.mechanics || "—",
       newValue: bggData.mechanics.join(", ") || "—",
       apply: () => onChange({ mechanics: formatMechanics(bggData.mechanics) }),
+    },
+    {
+      field: "categories",
+      label: "Kategorien",
+      oldValue: form.categories || "—",
+      newValue: bggData.categories.join(", ") || "—",
+      apply: () =>
+        onChange({ categories: formatCommaSeparatedList(bggData.categories) }),
     },
     {
       field: "description",

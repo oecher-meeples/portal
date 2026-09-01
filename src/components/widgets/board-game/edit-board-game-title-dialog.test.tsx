@@ -71,6 +71,7 @@ const GAME_WITHOUT_BGG_ID = {
   imageUrl: null,
   description: null,
   mechanics: [],
+  categories: [],
   explainerVideoUrl: null,
 };
 
@@ -86,6 +87,7 @@ const BGG_DATA = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel"],
+  categories: [],
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],

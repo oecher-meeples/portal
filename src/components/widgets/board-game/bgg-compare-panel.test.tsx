@@ -22,6 +22,7 @@ const BGG_DATA: BggGameData = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
+  categories: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,
   author: [],
@@ -48,6 +49,7 @@ const FORM: BoardGameFormValues = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: "Kartenspiel, Engine-Building",
+  categories: "",
   explainerVideoUrl: "",
   languageDependence: LanguageDependence.MODERATE_TEXT,
   ruleBookLanguages: [],
@@ -119,6 +121,23 @@ describe("BggComparePanel", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByText("Keine Abweichungen mehr.")).toBeInTheDocument();
+  });
+
+  it("shows and applies a categories diff (#404)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPanel({
+      onChange,
+      bggData: { ...BGG_DATA, title: "Arche Nova", categories: ["Party"] },
+    });
+
+    expect(screen.getByText("Party")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Kategorien: BGG-Wert übernehmen" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({ categories: "Party" });
   });
 
   it("shows a dash for fields BGG has no value for", () => {

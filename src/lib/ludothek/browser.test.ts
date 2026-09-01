@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   filterLudothekGames,
+  listDistinctCategories,
   parseLudothekSearchParams,
   toPublicGame,
   type LudothekGame,
@@ -21,6 +22,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: ["Engine-Building"],
+    categories: [],
     ean: null,
     condition: null,
     inventoryNumber: null,
@@ -76,6 +78,18 @@ describe("filterLudothekGames", () => {
     });
 
     expect(result).toEqual([tileLaying, both]);
+  });
+
+  it("filters by category with a multi-select OR match (#404)", () => {
+    const party = game({ categories: ["Partyspiel"] });
+    const strategy = game({ categories: ["Strategiespiel"] });
+    const both = game({ categories: ["Partyspiel", "Strategiespiel"] });
+
+    const result = filterLudothekGames([party, strategy, both], {
+      categories: ["Partyspiel"],
+    });
+
+    expect(result).toEqual([party, both]);
   });
 
   it("filters by maximum language dependence level (#188)", () => {
@@ -391,6 +405,24 @@ describe("parseLudothekSearchParams", () => {
       ).mechanics,
     ).toEqual(["Engine-Building"]);
   });
+
+  it("parses categories (#404)", () => {
+    expect(
+      parseLudothekSearchParams(
+        { kategorie: ["Partyspiel", "Strategiespiel"] },
+        { internal: false },
+      ).categories,
+    ).toEqual(["Partyspiel", "Strategiespiel"]);
+  });
+
+  it("normalises a single kategorie value to an array (#404)", () => {
+    expect(
+      parseLudothekSearchParams(
+        { kategorie: "Partyspiel" },
+        { internal: false },
+      ).categories,
+    ).toEqual(["Partyspiel"]);
+  });
 });
 
 describe("toPublicGame", () => {
@@ -402,5 +434,25 @@ describe("toPublicGame", () => {
     expect(publicGame).not.toHaveProperty("responsibleMeepleId");
     expect(publicGame).not.toHaveProperty("locationChain");
     expect(publicGame.title).toBe("Arche Nova");
+  });
+});
+
+describe("listDistinctCategories (#404)", () => {
+  it("returns every distinct category across the Bestand, sorted", () => {
+    const games = [
+      game({ categories: ["Strategiespiel", "Partyspiel"] }),
+      game({ categories: ["Familienspiel"] }),
+      game({ categories: ["Partyspiel"] }),
+    ];
+
+    expect(listDistinctCategories(games)).toEqual([
+      "Familienspiel",
+      "Partyspiel",
+      "Strategiespiel",
+    ]);
+  });
+
+  it("returns an empty array for no games", () => {
+    expect(listDistinctCategories([])).toEqual([]);
   });
 });

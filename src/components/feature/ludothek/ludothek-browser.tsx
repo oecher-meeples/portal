@@ -73,6 +73,7 @@ export function LudothekBrowser({
   rawSearchParams,
   filters,
   mechanicsOptions,
+  categoriesOptions,
   maxDurationBound = 120,
   meepleOptions,
   showExplainerFilter = true,
@@ -86,6 +87,8 @@ export function LudothekBrowser({
   rawSearchParams: Record<string, string | string[] | undefined>;
   filters: LudothekFilters;
   mechanicsOptions: string[];
+  /** BGGs Categories, analog `mechanicsOptions` — nur für den Filter (#404). */
+  categoriesOptions: string[];
   /** Obergrenze für den Dauer-Slider — höchster im Bestand erfasster Wert,
    * s. `findMaxDurationBound` (#214-Folge). Der Spieler-Slider hat eine feste
    * Obergrenze ("8+"), s. `MAX_PLAYERS_FILTER` (#214-Folge-Korrektur). */
@@ -166,6 +169,7 @@ export function LudothekBrowser({
           filters={filters}
           internal={internal}
           mechanicsOptions={mechanicsOptions}
+          categoriesOptions={categoriesOptions}
           maxDurationBound={maxDurationBound}
           basePath={basePath}
           rawSearchParams={rawSearchParams}

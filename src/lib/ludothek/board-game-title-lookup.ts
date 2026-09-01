@@ -34,6 +34,8 @@ export type BoardGameTitleInput = {
   imageUrl?: string | null;
   description?: string | null;
   mechanics?: string[];
+  /** BGGs `boardgamecategory`-Links, analog `mechanics` importiert (#404). */
+  categories?: string[];
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
   kind?: BoardGameKind;
@@ -63,6 +65,7 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
     imageUrl: input.imageUrl || null,
     description: input.description || null,
     mechanics: input.mechanics ?? [],
+    categories: input.categories ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
     languageDependence: input.languageDependence ?? null,
     publisher: input.publisher ?? [],

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { RangeSlider, SingleSlider } from "@/components/ui/range-slider";
 import { MeepleCombobox } from "@/components/entities/meeple-combobox";
-import { MechanicsFilter } from "@/components/feature/ludothek/mechanics-filter";
+import { LudothekMultiSelectFilter } from "@/components/feature/ludothek/ludothek-multi-select-filter";
 import { cn } from "@/lib/utils/cn";
 import {
   MAX_PLAYERS_FILTER,
@@ -74,6 +74,7 @@ export function LudothekFilterPanel({
   filters,
   internal,
   mechanicsOptions,
+  categoriesOptions,
   maxDurationBound,
   basePath,
   rawSearchParams,
@@ -85,6 +86,8 @@ export function LudothekFilterPanel({
   filters: LudothekFilters;
   internal: boolean;
   mechanicsOptions: string[];
+  /** BGGs Categories, analog `mechanicsOptions` (#404). */
+  categoriesOptions: string[];
   /** Obergrenze für den Dauer-Slider, s. `findMaxDurationBound` (#214-Folge). */
   maxDurationBound: number;
   basePath: string;
@@ -297,11 +300,33 @@ export function LudothekFilterPanel({
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Mechanik
             </span>
-            <MechanicsFilter
+            <LudothekMultiSelectFilter
+              id="mechanik-filter"
+              paramKey="mechanik"
               basePath={basePath}
               rawSearchParams={rawSearchParams}
               options={mechanicsOptions}
               selected={filters.mechanics ?? []}
+              placeholder="Mechanik suchen …"
+              emptyLabel="Keine passende Mechanik"
+            />
+          </div>
+        )}
+
+        {categoriesOptions.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              Kategorie
+            </span>
+            <LudothekMultiSelectFilter
+              id="kategorie-filter"
+              paramKey="kategorie"
+              basePath={basePath}
+              rawSearchParams={rawSearchParams}
+              options={categoriesOptions}
+              selected={filters.categories ?? []}
+              placeholder="Kategorie suchen …"
+              emptyLabel="Keine passende Kategorie"
             />
           </div>
         )}

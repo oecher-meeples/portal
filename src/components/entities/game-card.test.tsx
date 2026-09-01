@@ -23,6 +23,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: [],
+    categories: [],
     alternateNames: [],
     secondaryTitle: null,
     languageDependence: null,

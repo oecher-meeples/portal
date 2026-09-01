@@ -73,26 +73,44 @@ beforeEach(() => {
 
 const { CreateBoardGameDialog } = await import("./create-board-game-dialog");
 
+/** Shared by every `previewBggImportMock` fixture below — each test only
+ * overrides the handful of fields it actually cares about. */
+const BASE_PREVIEW_DATA = {
+  title: "Ark Nova",
+  minPlayers: 1,
+  maxPlayers: 4,
+  playTimeMinutes: 150,
+  weight: 3.7,
+  imageUrl: null as string | null,
+  description: null as string | null,
+  mechanics: [] as string[],
+  categories: [] as string[],
+  explainerVideoUrl: null as string | null,
+  germanExplainerVideos: [] as {
+    title: string;
+    url: string;
+    channel: string;
+  }[],
+  englishExplainerVideos: [] as {
+    title: string;
+    url: string;
+    channel: string;
+  }[],
+  author: [] as string[],
+  yearPublished: null as number | null,
+  versions: [] as unknown[],
+};
+
 describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
   it("imports directly, prefills the review step and submits the enriched data", async () => {
     const user = userEvent.setup();
     previewBggImportMock.mockResolvedValue({
       success: true,
       data: {
-        title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
+        ...BASE_PREVIEW_DATA,
         imageUrl: "https://example.com/ark-nova.png",
         description: "Zoo-Aufbauspiel",
         mechanics: ["Engine Building"],
-        explainerVideoUrl: null,
-        germanExplainerVideos: [],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
       },
     });
     createBoardGameMock.mockResolvedValue({
@@ -127,6 +145,7 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
         maxPlayers: 4,
         playTimeMinutes: 150,
         mechanics: ["Engine Building"],
+        categories: [],
       }),
     );
   });
@@ -136,20 +155,10 @@ describe("CreateBoardGameDialog — BGG-Import: numerische BGG-ID", () => {
     previewBggImportMock.mockResolvedValue({
       success: true,
       data: {
-        title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
+        ...BASE_PREVIEW_DATA,
         imageUrl: "https://example.com/ark-nova.png",
         description: "Zoo-Aufbauspiel",
         mechanics: ["Engine Building"],
-        explainerVideoUrl: null,
-        germanExplainerVideos: [],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
       },
     });
 
@@ -201,22 +210,7 @@ describe("CreateBoardGameDialog — BGG-Import: BGG-Link", () => {
     const user = userEvent.setup();
     previewBggImportMock.mockResolvedValue({
       success: true,
-      data: {
-        title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
-        imageUrl: null,
-        description: null,
-        mechanics: [],
-        explainerVideoUrl: null,
-        germanExplainerVideos: [],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
-      },
+      data: BASE_PREVIEW_DATA,
     });
 
     render(<CreateBoardGameDialog />);
@@ -275,22 +269,7 @@ describe("CreateBoardGameDialog — BGG-Import: Namenssuche (Fallback)", () => {
     });
     previewBggImportMock.mockResolvedValue({
       success: true,
-      data: {
-        title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
-        imageUrl: null,
-        description: null,
-        mechanics: [],
-        explainerVideoUrl: null,
-        germanExplainerVideos: [],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
-      },
+      data: BASE_PREVIEW_DATA,
     });
     createBoardGameMock.mockResolvedValue({
       success: true,
@@ -359,14 +338,7 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
     previewBggImportMock.mockResolvedValue({
       success: true,
       data: {
-        title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
-        imageUrl: null,
-        description: null,
-        mechanics: [],
+        ...BASE_PREVIEW_DATA,
         explainerVideoUrl: "https://www.youtube.com/watch?v=english-fallback",
         germanExplainerVideos: [
           {
@@ -380,10 +352,6 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
             channel: "ChannelB",
           },
         ],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
       },
     });
 
@@ -420,20 +388,8 @@ describe("CreateBoardGameDialog — Regelvideo-Auswahl (#185)", () => {
     previewBggImportMock.mockResolvedValue({
       success: true,
       data: {
-        title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
-        imageUrl: null,
-        description: null,
-        mechanics: [],
+        ...BASE_PREVIEW_DATA,
         explainerVideoUrl: "https://www.youtube.com/watch?v=english-fallback",
-        germanExplainerVideos: [],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
       },
     });
 

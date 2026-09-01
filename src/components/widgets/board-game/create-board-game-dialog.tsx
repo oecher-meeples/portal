@@ -192,6 +192,7 @@ export function CreateBoardGameDialog({
         imageUrl: result.data.imageUrl ?? "",
         description: result.data.description ?? "",
         mechanics: result.data.mechanics.join(", "),
+        categories: result.data.categories.join(", "),
         languageDependence: result.data.languageDependence,
         author: result.data.author.join(", "),
         yearPublished: result.data.yearPublished?.toString() ?? "",

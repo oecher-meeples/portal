@@ -51,6 +51,9 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
+   * analog `mechanics` geparst (#404). */
+  categories: string[];
   /** Direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item — anders als
    * `publisher` nicht versionsabhängig (#205). */
   author: string[];
@@ -358,6 +361,9 @@ function mapItem(item: BggItem): BggGameData {
   const mechanics = toArray(item.link)
     .filter((link) => link.type === "boardgamemechanic")
     .map((link) => link.value);
+  const categories = toArray(item.link)
+    .filter((link) => link.type === "boardgamecategory")
+    .map((link) => link.value);
 
   const rawWeight = parseNumber(item.statistics?.ratings?.averageweight?.value);
   const rawAverageRating = parseNumber(
@@ -381,6 +387,7 @@ function mapItem(item: BggItem): BggGameData {
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
+    categories,
     kind: parseKind(item.type),
     languageDependence: parseLanguageDependence(item.poll),
     author: parseAuthor(item.link),

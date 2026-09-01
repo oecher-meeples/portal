@@ -7,6 +7,7 @@ import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
   findMaxDurationBound,
+  listDistinctCategories,
   listDistinctMechanics,
   parseLudothekSearchParams,
   toPublicGame,
@@ -70,6 +71,7 @@ export default async function LudothekPage({
   });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
+  const categoriesOptions = listDistinctCategories(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
 
   const meepleOptions = internal
@@ -105,6 +107,7 @@ export default async function LudothekPage({
         rawSearchParams={rawSearchParams}
         filters={filters}
         mechanicsOptions={mechanicsOptions}
+        categoriesOptions={categoriesOptions}
         maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
         showExplainerFilter={showExplainerFilter}

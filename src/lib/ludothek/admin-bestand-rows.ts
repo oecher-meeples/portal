@@ -46,6 +46,7 @@ export type AdminBoardGameRow = {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  categories: string[];
   condition: string | null;
   /** Freie Inventarnummer des Exemplars (#270). */
   inventoryNumber: string | null;
@@ -143,6 +144,7 @@ export async function buildAdminBoardGameRows({
       imageUrl: boardGame.imageUrl,
       description: boardGame.description,
       mechanics: boardGame.mechanics,
+      categories: boardGame.categories,
       condition: copy.condition,
       inventoryNumber: copy.inventoryNumber,
       kind: boardGame.kind,

@@ -663,6 +663,10 @@ model BoardGame {
   imageUrl           String?
   description        String?
   mechanics          String[]
+  /// BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
+  /// analog `mechanics` importiert (#404) — Voraussetzung für die
+  /// Regal-Kategorisierung anhand BGG-Daten (#276).
+  categories         String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
   explainerVideoUrl  String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.

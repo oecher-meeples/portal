@@ -1,6 +1,6 @@
 import type { BoardGameKind, LanguageDependence } from "@prisma/client";
 import type { BggGameData } from "@/lib/bgg/client";
-import { parseMechanics } from "@/lib/ludothek/bgg-id";
+import { parseMechanics, parseCommaSeparatedList } from "@/lib/ludothek/bgg-id";
 
 /** Nur die vergleichbaren Felder, als eigener Typ statt eines Imports aus
  * `components/` — `src/lib` darf nicht aus der UI-Schicht importieren (siehe
@@ -17,6 +17,7 @@ type ComparableFormValues = {
   imageUrl: string;
   description: string;
   mechanics: string;
+  categories: string;
   languageDependence: LanguageDependence | null;
 };
 
@@ -36,17 +37,19 @@ export type BoardGameCompareField =
   | "imageUrl"
   | "description"
   | "mechanics"
+  | "categories"
   | "languageDependence";
 
 function parseFormNumber(value: string): number | null {
   return value.trim() ? Number(value) : null;
 }
 
-function sameMechanics(a: string[], b: string[]): boolean {
+/** Order-independent set comparison — shared by `mechanics` and `categories`. */
+function sameStringSet(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
   const sortedA = [...a].sort();
   const sortedB = [...b].sort();
-  return sortedA.every((mechanic, index) => mechanic === sortedB[index]);
+  return sortedA.every((value, index) => value === sortedB[index]);
 }
 
 /**
@@ -71,7 +74,11 @@ export function compareBoardGameWithBgg(
     imageUrl: (form.imageUrl.trim() || null) === bgg.imageUrl,
     description:
       (form.description.trim() || null) === (bgg.description ?? null),
-    mechanics: sameMechanics(parseMechanics(form.mechanics), bgg.mechanics),
+    mechanics: sameStringSet(parseMechanics(form.mechanics), bgg.mechanics),
+    categories: sameStringSet(
+      parseCommaSeparatedList(form.categories),
+      bgg.categories,
+    ),
     languageDependence: form.languageDependence === bgg.languageDependence,
   };
 }

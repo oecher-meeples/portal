@@ -19,6 +19,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: ["Engine-Building"],
+    categories: [],
     ean: null,
     condition: null,
     inventoryNumber: null,

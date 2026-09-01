@@ -23,6 +23,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: ["Engine-Building"],
+    categories: [],
     alternateNames: [],
     secondaryTitle: null,
     languageDependence: null,
@@ -198,11 +199,12 @@ describe("GameListRow", () => {
     expect(screen.getByText("Bearbeiten")).toBeInTheDocument();
   });
 
-  it("shows mechanics, weight and Erklärbären count in the hover overlay (#143)", () => {
+  it("shows mechanics, categories, weight and Erklärbären count in the hover overlay (#143, #404)", () => {
     render(
       <GameListRow
         game={game({
           mechanics: ["Engine-Building", "Tableau-Building"],
+          categories: ["Strategiespiel"],
           weight: 3.7,
           explainerCount: 2,
         })}
@@ -214,6 +216,7 @@ describe("GameListRow", () => {
 
     expect(screen.getByText("Engine-Building")).toBeInTheDocument();
     expect(screen.getByText("Tableau-Building")).toBeInTheDocument();
+    expect(screen.getByText("Strategiespiel")).toBeInTheDocument();
     expect(screen.getByText("Gewichtung 3.7/5")).toBeInTheDocument();
     expect(screen.getByText("2 Erklärbären")).toBeInTheDocument();
   });

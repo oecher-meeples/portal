@@ -181,6 +181,14 @@ export function GameDetailView({
               {mechanic}
             </span>
           ))}
+          {game.categories.map((category) => (
+            <span
+              key={category}
+              className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
+            >
+              {category}
+            </span>
+          ))}
         </div>
 
         {availability && (
