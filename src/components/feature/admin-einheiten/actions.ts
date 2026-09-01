@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { ShelfCategory } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
@@ -31,6 +32,8 @@ export async function findStorageUnitByCode(code: string) {
 export type UpdateStorageUnitInput = {
   label: string;
   locationNote?: string | null;
+  /** Feste Regal-Kategorie (#276) — `null`/`undefined` löscht sie wieder. */
+  category?: ShelfCategory | null;
 };
 
 export async function updateStorageUnit(
@@ -46,7 +49,11 @@ export async function updateStorageUnit(
 
   await prisma.storageUnit.update({
     where: { id },
-    data: { label, locationNote: input.locationNote ?? null },
+    data: {
+      label,
+      locationNote: input.locationNote ?? null,
+      category: input.category ?? null,
+    },
   });
 
   revalidatePath("/admin/einheiten");

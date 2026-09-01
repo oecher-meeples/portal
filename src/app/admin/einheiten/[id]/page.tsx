@@ -71,6 +71,7 @@ export default async function AdminEinheitDetailPage({
         kind: unit.kind as "BOX" | "SHELF",
         label: unit.label,
         locationNote: unit.locationNote,
+        category: unit.category,
         keeperMeepleId: unit.keeperMeepleId,
         keeperName: unit.keeper?.displayName ?? null,
         retired: unit.retiredAt !== null,

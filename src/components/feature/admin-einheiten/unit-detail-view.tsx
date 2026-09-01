@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { ShelfCategory } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  SHELF_CATEGORY_LABELS,
+  SHELF_CATEGORY_VALUES,
+} from "@/lib/ludothek/shelf-category";
 import { useAction } from "@/components/ui/use-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +35,8 @@ export type UnitDetail = {
   kind: "BOX" | "SHELF";
   label: string;
   locationNote: string | null;
+  /** Feste Regal-Kategorie (#276), manuell vergeben — `null` bis gesetzt. */
+  category: ShelfCategory | null;
   keeperMeepleId: string | null;
   keeperName: string | null;
   retired: boolean;
@@ -67,6 +74,9 @@ export function UnitDetailView({
 }) {
   const [label, setLabel] = useState(unit.label);
   const [locationNote, setLocationNote] = useState(unit.locationNote ?? "");
+  const [category, setCategory] = useState<ShelfCategory | "">(
+    unit.category ?? "",
+  );
   const save = useAction({ refresh: false });
   const retire = useAction();
 
@@ -75,6 +85,7 @@ export function UnitDetailView({
       updateStorageUnit(unit.id, {
         label,
         locationNote: locationNote || undefined,
+        category: category || null,
       }),
     );
   }
@@ -113,6 +124,25 @@ export function UnitDetailView({
               placeholder="z. B. Keller links"
               disabled={unit.retired || !isAdmin}
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="unit-category">Regal-Kategorie</Label>
+            <select
+              id="unit-category"
+              value={category}
+              onChange={(event) =>
+                setCategory(event.target.value as ShelfCategory | "")
+              }
+              disabled={unit.retired || !isAdmin}
+              className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
+            >
+              <option value="">Keine</option>
+              {SHELF_CATEGORY_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {SHELF_CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="flex items-center justify-between gap-2">
             <p className="text-muted-foreground text-sm">
