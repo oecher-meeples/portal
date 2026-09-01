@@ -229,4 +229,47 @@ describe("scanListMembers (#333a/Umbuchen picker, games:manage)", () => {
       { id: "member-erika", displayName: "Erika Musterfrau" },
     ]);
   });
+
+  it("excludes an ausgetreten member as a target, but keeps the collective account (#405)", async () => {
+    requireGamesManagePermissionMock.mockResolvedValue({ id: "user-1" });
+    memberFindManyMock.mockResolvedValue([
+      {
+        id: "member-active",
+        firstName: "Erika",
+        lastName: "Musterfrau",
+        email: "erika@example.com",
+        meepleId: "m1",
+        resignedAt: null,
+        membershipEndsAt: null,
+        meeple: { displayName: "Erika", anonymizedAt: null },
+      },
+      {
+        id: "member-ausgetreten",
+        firstName: "Max",
+        lastName: "Mustermann",
+        email: "max@example.com",
+        meepleId: "m2",
+        resignedAt: new Date("2020-01-01"),
+        membershipEndsAt: new Date("2020-12-31"),
+        meeple: { displayName: "Max", anonymizedAt: null },
+      },
+      {
+        id: "member-anonym",
+        firstName: null,
+        lastName: null,
+        email: "anonym@example.invalid",
+        meepleId: "m3",
+        resignedAt: new Date("2019-01-01"),
+        membershipEndsAt: new Date("2019-12-31"),
+        meeple: { displayName: "Anonymer Meeple", anonymizedAt: null },
+      },
+    ]);
+
+    const result = await scanListMembers();
+
+    expect(result).toEqual([
+      { id: "member-active", displayName: "Erika Musterfrau" },
+      { id: "member-anonym", displayName: "Anonymer Meeple (Sammelkonto)" },
+    ]);
+  });
 });

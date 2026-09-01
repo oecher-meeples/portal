@@ -425,6 +425,41 @@ describe("scanListMeeples", () => {
       }),
     );
   });
+
+  it("excludes an ausgetreten Meeple — it could never confirm a handover to itself (#405)", async () => {
+    meepleFindManyMock.mockResolvedValue([
+      {
+        id: "meeple-active",
+        displayName: "Aktiv",
+        member: { resignedAt: null, membershipEndsAt: null, meepleId: "m1" },
+      },
+      {
+        id: "meeple-gekuendigt",
+        displayName: "Gekündigt",
+        member: {
+          resignedAt: new Date("2026-01-01"),
+          membershipEndsAt: new Date("2099-01-01"),
+          meepleId: "m2",
+        },
+      },
+      {
+        id: "meeple-ausgetreten",
+        displayName: "Ausgetreten",
+        member: {
+          resignedAt: new Date("2020-01-01"),
+          membershipEndsAt: new Date("2020-12-31"),
+          meepleId: "m3",
+        },
+      },
+    ]);
+
+    const result = await scanListMeeples();
+
+    expect(result).toEqual([
+      { id: "meeple-active", displayName: "Aktiv" },
+      { id: "meeple-gekuendigt", displayName: "Gekündigt" },
+    ]);
+  });
 });
 
 describe("scanResolveCode", () => {

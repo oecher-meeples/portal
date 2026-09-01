@@ -14,6 +14,7 @@ import {
   findAnonymerMeepleMember,
 } from "@/lib/ludothek/anonymer-meeple";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
+import { getMembershipState } from "@/lib/members/membership-state";
 import {
   requireActingMeeple,
   requireOwnMember,
@@ -116,6 +117,9 @@ export type MemberOption = { id: string; displayName: string };
  * statt es auszublenden: für Umbuchen ist es gerade das erwartete Ziel/Quelle.
  * Bewusst keine Nummerierung ("Anonymer Meeple #4") wie im Plan-Wortlaut
  * angedeutet — es gibt genau ein dauerhaftes Sammelkonto, kein Kontingent.
+ * Ein "ausgetretenes" Mitglied wird ausgeblendet (#405) — es könnte eine so
+ * angelegte Ausleihe ohnehin nie selbst bestätigen; das Sammelkonto bleibt
+ * davon unberührt, es tritt nie aus.
  */
 export async function scanListMembers(): Promise<MemberOption[]> {
   const user = await requireGamesManagePermission();
@@ -129,15 +133,27 @@ export async function scanListMembers(): Promise<MemberOption[]> {
       firstName: true,
       lastName: true,
       email: true,
-      meeple: { select: { displayName: true } },
+      meepleId: true,
+      resignedAt: true,
+      membershipEndsAt: true,
+      meeple: { select: { displayName: true, anonymizedAt: true } },
     },
   });
 
-  return members.map((member) => ({
-    id: member.id,
-    displayName:
-      member.meeple?.displayName === ANONYMER_MEEPLE_NAME
-        ? `${ANONYMER_MEEPLE_NAME} (Sammelkonto)`
-        : memberDisplayName(member),
-  }));
+  return members
+    .filter(
+      (member) =>
+        member.meeple?.displayName === ANONYMER_MEEPLE_NAME ||
+        getMembershipState({
+          ...member,
+          anonymizedAt: member.meeple?.anonymizedAt ?? null,
+        }) !== "ausgetreten",
+    )
+    .map((member) => ({
+      id: member.id,
+      displayName:
+        member.meeple?.displayName === ANONYMER_MEEPLE_NAME
+          ? `${ANONYMER_MEEPLE_NAME} (Sammelkonto)`
+          : memberDisplayName(member),
+    }));
 }

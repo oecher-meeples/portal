@@ -66,6 +66,19 @@ const AUFENTHALT_ACTIONS: ActionKey[] = [
   "return",
   "relocate",
 ];
+
+/** "Weitergeben" setzt voraus, dass das Exemplar gerade bei einer Person
+ * liegt (#405) — sonst gibt es niemanden, der es weitergeben könnte. Ein
+ * normaler Meeple darf nur eigene Exemplare weitergeben (`isMine`);
+ * `games:manage` administrativ jedes gerade ausgeliehene, unabhängig davon,
+ * wer es hält (analog #274/#290, "sein Wort ist Gesetz"). */
+function canGiveAway(copy: GameActionsCopy, canManageGames: boolean): boolean {
+  const heldByPerson =
+    copy.zustand === "ausgeliehen-verfuegbar" ||
+    copy.zustand === "ausgeliehen-nicht-verfuegbar";
+  if (!heldByPerson) return false;
+  return canManageGames || (copy.isMine ?? true);
+}
 const VERWALTUNG_ACTIONS: ActionKey[] = [
   "completeness-check",
   "condition",
@@ -103,6 +116,9 @@ export function GameActionsMenu({
   } | null>(null);
   const ambiguous = copies.length > 1;
   const sole = copies[0];
+  const giveEligibleCopies = copies.filter((c) =>
+    canGiveAway(c, canManageGames),
+  );
 
   async function pickCopy(copyId: string) {
     const action = pendingPick;
@@ -140,7 +156,9 @@ export function GameActionsMenu({
             <DropdownMenuLabel>Aufenthalt</DropdownMenuLabel>
             <DropdownMenuItem disabled>Geprüft</DropdownMenuItem>
             {ambiguous ? (
-              AUFENTHALT_ACTIONS.map((key) => (
+              AUFENTHALT_ACTIONS.filter(
+                (key) => key !== "give" || giveEligibleCopies.length > 0,
+              ).map((key) => (
                 <DropdownMenuItem key={key} onClick={() => setPendingPick(key)}>
                   {ACTION_LABELS[key]}
                 </DropdownMenuItem>
@@ -150,7 +168,7 @@ export function GameActionsMenu({
                 <div className="px-1.5 py-1">
                   <BorrowGameDialog gameCopyId={sole.id} />
                 </div>
-                {(sole.isMine ?? true) && (
+                {canGiveAway(sole, canManageGames) && (
                   <div className="px-1.5 py-1">
                     <GiveToMeepleDialog gameCopyId={sole.id} />
                   </div>
@@ -227,7 +245,7 @@ export function GameActionsMenu({
           onOpenChange={(open) => {
             if (!open) setPendingPick(null);
           }}
-          copies={copies}
+          copies={pendingPick === "give" ? giveEligibleCopies : copies}
           onPick={pickCopy}
         />
       )}
