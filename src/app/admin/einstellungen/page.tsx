@@ -5,6 +5,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { SettingsCard } from "@/components/feature/admin-settings/settings-card";
 import { InviteSettingsDialog } from "@/components/feature/admin-settings/invite-settings-dialog";
 import { TshirtSizeDialog } from "@/components/feature/admin-settings/tshirt-size-dialog";
+import { InstagramSettingsDialog } from "@/components/feature/admin-settings/instagram-settings-dialog";
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export default async function AdminSettingsPage() {
@@ -20,14 +21,6 @@ export default async function AdminSettingsPage() {
 
   const modules = [
     {
-      title: "Instagram",
-      description: "Cross-Posting von Beiträgen nach Instagram verwalten.",
-      href: "/admin/einstellungen/instagram",
-      status: connection
-        ? { label: "Verbunden", variant: "default" as const }
-        : { label: "Nicht verbunden", variant: "outline" as const },
-    },
-    {
       title: "Aufbewahrungseinheiten",
       description: "Lagerorte für den Spielebestand verwalten.",
       href: "/admin/einheiten",
@@ -42,6 +35,10 @@ export default async function AdminSettingsPage() {
         {modules.map((module) => (
           <SettingsCard key={module.href} {...module} />
         ))}
+        <InstagramSettingsDialog
+          connected={!!connection}
+          expiresAt={connection?.expiresAt.toISOString() ?? null}
+        />
         <InviteSettingsDialog defaultDays={defaultInviteDays} />
         <TshirtSizeDialog count={tshirtSizeCount} />
       </div>

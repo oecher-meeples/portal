@@ -21,9 +21,11 @@ import { KuendigungsstatusSelect } from "@/components/feature/admin-mitglieder/k
 import { MeepleBankDetailsSection } from "@/components/feature/admin-mitglieder/meeple-bank-details-section";
 import { LoginRateLimitSection } from "@/components/feature/admin-mitglieder/login-rate-limit-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   renameMeeple,
   setMemberNumber,
+  setMeepleSystemAccount,
 } from "@/components/feature/admin-mitglieder/actions";
 import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
 
@@ -38,11 +40,14 @@ export function MeepleEditDialog({
   roles,
   canReadBankData,
   canManageAdminAccess,
+  canManageSystemAccounts,
 }: {
   meeple: MeepleRow;
   roles: RoleOption[];
   canReadBankData: boolean;
   canManageAdminAccess: boolean;
+  /** = `members:manage-system-accounts` (#297). */
+  canManageSystemAccounts: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [memberNumber, setMemberNumberValue] = useState(
@@ -59,6 +64,7 @@ export function MeepleEditDialog({
     error: nameError,
     setError: setNameError,
   } = useAction();
+  const { run: runSystemAccount, error: systemAccountError } = useAction();
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -163,6 +169,29 @@ export function MeepleEditDialog({
               membershipState={meeple.membershipState}
             />
           </div>
+
+          {canManageSystemAccounts && (
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center justify-between gap-2 text-sm font-medium">
+                System-Konto
+                <Switch
+                  checked={meeple.isSystemAccount}
+                  onCheckedChange={(checked) =>
+                    runSystemAccount(() =>
+                      setMeepleSystemAccount(meeple.id, checked),
+                    )
+                  }
+                />
+              </label>
+              <p className="text-muted-foreground text-xs">
+                Ausgenommen von Mitgliederzählungen (z. B. Vereinsgeräte-Login,
+                Funktionskonto).
+              </p>
+              {systemAccountError && (
+                <p className="text-destructive text-xs">{systemAccountError}</p>
+              )}
+            </div>
+          )}
 
           <MeepleBankDetailsSection
             meepleId={meeple.id}

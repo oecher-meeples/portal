@@ -70,12 +70,14 @@ export function MitgliederTable({
   canReadBankData,
   canManageAdminAccess,
   canCreateSystemkonto,
+  canManageSystemAccounts,
 }: {
   meeples: MeepleRow[];
   roles: RoleOption[];
   canReadBankData: boolean;
   canManageAdminAccess: boolean;
   canCreateSystemkonto: boolean;
+  canManageSystemAccounts: boolean;
 }) {
   // Deep-Link von der Vereinsmitglieder-Tabelle ("vorhanden" bei
   // `hasPortalLogin`, siehe `vereinsmitglieder-table.tsx`) — öffnet dieses
@@ -214,6 +216,7 @@ export function MitgliederTable({
                           roles={roles}
                           canReadBankData={canReadBankData}
                           canManageAdminAccess={canManageAdminAccess}
+                          canManageSystemAccounts={canManageSystemAccounts}
                         />
                       </TableCell>
                       <TableCell

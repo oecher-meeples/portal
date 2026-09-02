@@ -40,6 +40,7 @@ export default async function AdminMitgliederPage() {
     canManageRoles,
     canManageInvites,
     canCreateSystemkonto,
+    canManageSystemAccounts,
   ] = await Promise.all([
     prisma.member.findMany({
       orderBy: { memberNumber: "asc" },
@@ -50,6 +51,7 @@ export default async function AdminMitgliederPage() {
             displayName: true,
             anonymizedAt: true,
             neonAuthUserId: true,
+            isSystemAccount: true,
           },
         },
       },
@@ -105,6 +107,7 @@ export default async function AdminMitgliederPage() {
     hasPermission(session.user.id, "roles:manage"),
     hasPermission(session.user.id, "invites:manage"),
     hasPermission(session.user.id, "admin:access"),
+    hasPermission(session.user.id, "members:manage-system-accounts"),
   ]);
 
   // A Meeple can hold several roles at once (#335), each with its own
@@ -244,7 +247,9 @@ export default async function AdminMitgliederPage() {
           meeple.member?.ibanLast4 ?? null,
         ),
         hasIban: (meeple.member?.ibanEncrypted ?? null) !== null,
+        isSystemAccount: meeple.isSystemAccount,
       }))}
+      canManageSystemAccounts={canManageSystemAccounts}
       invites={invites.map((invite) => ({
         id: invite.id,
         token: invite.token,

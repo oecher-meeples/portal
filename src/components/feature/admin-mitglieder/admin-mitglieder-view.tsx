@@ -67,6 +67,7 @@ export function AdminMitgliederView({
   membersWithoutLogin,
   defaultInviteDays,
   canCreateSystemkonto,
+  canManageSystemAccounts,
   pendingEmailChanges,
   stufe3Candidates,
 }: {
@@ -94,6 +95,9 @@ export function AdminMitgliederView({
   /** = `admin:access` — reused as-is for the Systemrollen-Gate in
    * `MeepleRoleSelect` (#353), not just for the Systemkonto button. */
   canCreateSystemkonto: boolean;
+  /** = `members:manage-system-accounts` (#297) — blendet den Toggle zum
+   * Setzen/Entfernen der System-Konto-Markierung im Meeple-Edit-Dialog aus. */
+  canManageSystemAccounts: boolean;
   pendingEmailChanges: PendingChangeRow[];
   stufe3Candidates: {
     id: string;
@@ -146,7 +150,7 @@ export function AdminMitgliederView({
     <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Onboarding & Lebenszyklus"
-        title="Mitglieder & Einladungen"
+        title="Benutzer & Einladungen"
         description="Geschlossenes Registrierungssystem: eine Einladung ist ein Token ohne Personenbezug, der Meeple entsteht beim ersten Login."
       />
 
@@ -331,10 +335,6 @@ export function AdminMitgliederView({
         </div>
       )}
 
-      {canManageRoles && (
-        <RoleManagementSection roles={roles} permissions={permissions} />
-      )}
-
       <VereinsmitgliederTable
         members={members}
         canManageMembers={canManageMembers}
@@ -350,7 +350,12 @@ export function AdminMitgliederView({
         canReadBankData={canReadBankData}
         canManageAdminAccess={canCreateSystemkonto}
         canCreateSystemkonto={canCreateSystemkonto}
+        canManageSystemAccounts={canManageSystemAccounts}
       />
+
+      {canManageRoles && (
+        <RoleManagementSection roles={roles} permissions={permissions} />
+      )}
 
       <InvitesSection
         invites={invites}

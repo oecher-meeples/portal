@@ -31,6 +31,7 @@ function member(
       displayName: "Erika",
       anonymizedAt: null,
       neonAuthUserId: "user-1",
+      isSystemAccount: false,
     },
     ...overrides,
   };
@@ -54,6 +55,7 @@ describe("buildVereinsmitgliedRows", () => {
             displayName: "Anonymer Meeple",
             anonymizedAt: null,
             neonAuthUserId: null,
+            isSystemAccount: false,
           },
         }),
       ],
@@ -73,6 +75,7 @@ describe("buildVereinsmitgliedRows", () => {
             displayName: "Ohne Login",
             anonymizedAt: null,
             neonAuthUserId: null,
+            isSystemAccount: false,
           },
         }),
       ],
@@ -165,6 +168,47 @@ describe("buildVereinsmitgliedRows", () => {
     );
 
     expect(rows[0].openInviteToken).toBeNull();
+  });
+
+  it("excludes a Meeple marked as System-Konto (#297)", () => {
+    const rows = buildVereinsmitgliedRows(
+      [
+        member({ id: "member-1" }),
+        member({
+          id: "member-system",
+          meeple: {
+            displayName: "Vereins-Tablet",
+            anonymizedAt: null,
+            neonAuthUserId: "user-2",
+            isSystemAccount: true,
+          },
+        }),
+      ],
+      EMPTY_LOOKUPS,
+      NOW,
+    );
+
+    expect(rows.map((r) => r.id)).toEqual(["member-1"]);
+  });
+
+  it("keeps an anonymised Meeple counted even if marked as System-Konto (#297)", () => {
+    const rows = buildVereinsmitgliedRows(
+      [
+        member({
+          id: "member-anonymised-system",
+          meeple: {
+            displayName: "Ehemaliges Mitglied",
+            anonymizedAt: new Date("2026-01-01T00:00:00Z"),
+            neonAuthUserId: null,
+            isSystemAccount: true,
+          },
+        }),
+      ],
+      EMPTY_LOOKUPS,
+      NOW,
+    );
+
+    expect(rows.map((r) => r.id)).toEqual(["member-anonymised-system"]);
   });
 
   it("marks stufe3Eligible from the given id set", () => {

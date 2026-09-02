@@ -27,9 +27,15 @@ export const SettingsCardButton = forwardRef<
       count: number;
       variant?: VariantProps<typeof badgeVariants>["variant"];
     };
+    /** Label-Badge neben dem Titel — analog `SettingsCard`s `status`-Prop,
+     * für Verbindungszustände statt Zählern (z. B. "Verbunden"). */
+    status?: {
+      label: string;
+      variant?: VariantProps<typeof badgeVariants>["variant"];
+    };
   }
 >(function SettingsCardButton(
-  { title, description, badge, className, ...props },
+  { title, description, badge, status, className, ...props },
   ref,
 ) {
   return (
@@ -49,7 +55,14 @@ export const SettingsCardButton = forwardRef<
           </Badge>
         )}
         <CardHeader className={badge ? "pr-14" : undefined}>
-          <CardTitle>{title}</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle>{title}</CardTitle>
+            {status && (
+              <Badge variant={status.variant ?? "secondary"}>
+                {status.label}
+              </Badge>
+            )}
+          </div>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
       </Card>

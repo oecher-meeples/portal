@@ -80,6 +80,7 @@ export type VereinsmitgliedSourceRow = {
     displayName: string;
     anonymizedAt: Date | null;
     neonAuthUserId: string | null;
+    isSystemAccount: boolean;
   } | null;
 };
 
@@ -92,6 +93,11 @@ export type VereinsmitgliedSourceRow = {
  * Schließt das Sammelkonto "Anonymer Meeple" aus: es braucht zwar eine
  * `Member`-Zeile (Pflicht-FK von `GameHolding.vereinsmitgliedId`), ist aber
  * fachlich kein reguläres Vereinsmitglied (#341).
+ *
+ * Schließt außerdem als "System-Konto" markierte Meeples aus (#297,
+ * `Meeple.isSystemAccount`) — ein anonymisiertes Meeple zählt trotz dieses
+ * Flags weiter mit, ein Systemkonto bleibt genau das auch nach der
+ * Anonymisierung eines regulären Mitglieds nicht.
  */
 export function buildVereinsmitgliedRows(
   members: VereinsmitgliedSourceRow[],
@@ -107,6 +113,10 @@ export function buildVereinsmitgliedRows(
 ): VereinsmitgliedRow[] {
   return members
     .filter((member) => member.meeple?.displayName !== ANONYMER_MEEPLE_NAME)
+    .filter(
+      (member) =>
+        !member.meeple?.isSystemAccount || member.meeple.anonymizedAt !== null,
+    )
     .map((member) => ({
       id: member.id,
       memberNumber: member.memberNumber,

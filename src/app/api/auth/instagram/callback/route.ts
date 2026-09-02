@@ -65,7 +65,7 @@ export async function GET(request: Request) {
   }
 
   const response = NextResponse.redirect(
-    new URL("/admin/einstellungen/instagram", request.url),
+    new URL("/admin/einstellungen", request.url),
   );
   response.headers.append("Set-Cookie", clearStateCookie());
   return response;
