@@ -146,7 +146,7 @@ export function AdminMitgliederView({
     <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Onboarding & Lebenszyklus"
-        title="Mitglieder & Einladungen"
+        title="Benutzer & Einladungen"
         description="Geschlossenes Registrierungssystem: eine Einladung ist ein Token ohne Personenbezug, der Meeple entsteht beim ersten Login."
       />
 
