@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const DEFAULT_DELAY_MS = 300;
+const DEFAULT_DELAY_MS = 1500;
 
 /** Returns `value`, but only updates after `delayMs` of no further changes. */
 export function useDebouncedValue<T>(

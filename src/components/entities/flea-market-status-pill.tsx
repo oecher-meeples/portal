@@ -7,6 +7,9 @@ const TONES: Record<FleaMarketItemStatus, StatusTone> = {
   FOR_SALE: "positive",
   RESERVED: "warning",
   SOLD: "info",
+  PAID_OUT: "info",
+  RETURNED: "neutral",
+  DONATED: "neutral",
 };
 
 /** The one place that knows how a flea-market item's status looks. */

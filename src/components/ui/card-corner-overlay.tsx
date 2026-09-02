@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 const CORNER_CLASSES = {
   "top-left": "top-2 left-2",
   "top-right": "top-2 right-2",
+  "bottom-right": "bottom-2 right-2",
 } as const;
 
 export function CardCornerOverlay({

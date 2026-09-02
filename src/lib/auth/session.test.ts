@@ -1,11 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/lib/__mocks__/prisma";
+
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
-vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+const getCurrentSessionMock = vi.fn();
+vi.mock("@/lib/auth/server", () => ({
+  getCurrentUser: getCurrentUserMock,
+  getCurrentSession: getCurrentSessionMock,
+}));
 
 const hasPermissionMock = vi.fn();
 vi.mock("@/lib/auth/permissions", () => ({
   hasPermission: hasPermissionMock,
+}));
+
+const logAdminLoginOnceMock = vi.fn();
+vi.mock("@/lib/auth/login-log", () => ({
+  logAdminLoginOnce: (...args: unknown[]) => logAdminLoginOnceMock(...args),
 }));
 
 /** Stubs hasPermission by key — everything not listed resolves to false. */
@@ -44,30 +56,31 @@ vi.mock("next/headers", () => ({
 const {
   isSettlementPath,
   requireMember,
+  requireAdminPermission,
   getRealSessionTier,
   getPreviewTier,
   getSessionTier,
   hasPermissionInCurrentView,
 } = await import("./session");
 
-const ACTIVE = {
-  id: "meeple-1",
-  resignedAt: null,
-  membershipEndsAt: null,
-  anonymizedAt: null,
-};
+const ACTIVE = { id: "meeple-1", anonymizedAt: null };
+const ACTIVE_MEMBER = { resignedAt: null, membershipEndsAt: null };
 
-const RESIGNED_AND_GONE = {
-  id: "meeple-2",
+const RESIGNED_AND_GONE = { id: "meeple-2", anonymizedAt: null };
+const RESIGNED_AND_GONE_MEMBER = {
   resignedAt: new Date("2024-07-01T00:00:00Z"),
   membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
-  anonymizedAt: null,
 };
 
-function withUser(meeple: unknown, at: string) {
+function withUser(
+  meeple: unknown,
+  at: string,
+  member: unknown = ACTIVE_MEMBER,
+) {
   pathname = at;
   getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
   ensureMeepleMock.mockResolvedValue(meeple);
+  prismaMock.member.findUnique.mockResolvedValue(member as never);
 }
 
 describe("isSettlementPath", () => {
@@ -86,6 +99,13 @@ describe("isSettlementPath", () => {
     expect(isSettlementPath("/admin/bestand")).toBe(false);
     expect(isSettlementPath("")).toBe(false);
   });
+
+  // /profil ist exact (#386-Nachtrag) — /profil/[slug] zeigt fremde
+  // Profile, die dürfen für den Abwicklungs-Zustand nicht pauschal offen
+  // sein; nur die eigene Slug-Seite lässt requireMember() separat durch.
+  it("does not treat /profil/[slug] as a settlement route", () => {
+    expect(isSettlementPath("/profil/irgendein-slug")).toBe(false);
+  });
 });
 
 describe("requireMember", () => {
@@ -102,19 +122,15 @@ describe("requireMember", () => {
 
     const session = await requireMember();
 
-    expect(session.membershipState).toBe("aktiv");
+    expect(session.membershipState).toBe("registriert");
     expect(session.meeple).toEqual(ACTIVE);
   });
 
   it("lets a member with a recorded resignation through on any route", async () => {
-    withUser(
-      {
-        ...ACTIVE,
-        resignedAt: new Date("2026-07-01T00:00:00Z"),
-        membershipEndsAt: new Date("2999-01-01T00:00:00Z"),
-      },
-      "/ludothek",
-    );
+    withUser(ACTIVE, "/ludothek", {
+      resignedAt: new Date("2026-07-01T00:00:00Z"),
+      membershipEndsAt: new Date("2999-01-01T00:00:00Z"),
+    });
 
     const session = await requireMember();
 
@@ -122,25 +138,127 @@ describe("requireMember", () => {
   });
 
   it("rejects a resigned member on a blocked route", async () => {
-    withUser(RESIGNED_AND_GONE, "/ludothek");
+    withUser(RESIGNED_AND_GONE, "/ludothek", RESIGNED_AND_GONE_MEMBER);
 
     await expect(requireMember()).rejects.toThrow(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 
   it("rejects a resigned member on the internal newsroom", async () => {
-    withUser(RESIGNED_AND_GONE, "/dashboard/news");
+    withUser(RESIGNED_AND_GONE, "/dashboard/news", RESIGNED_AND_GONE_MEMBER);
 
     await expect(requireMember()).rejects.toThrow(RedirectError);
     expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 
   it("lets a resigned member through on a settlement route", async () => {
-    withUser(RESIGNED_AND_GONE, "/scan");
+    withUser(RESIGNED_AND_GONE, "/scan", RESIGNED_AND_GONE_MEMBER);
 
     const session = await requireMember();
 
     expect(session.membershipState).toBe("ausgetreten");
+  });
+
+  it("lets a resigned member through on their own /profil/[slug] page (#386)", async () => {
+    withUser(RESIGNED_AND_GONE, "/profil/mitglied-2", {
+      ...RESIGNED_AND_GONE_MEMBER,
+      slug: "mitglied-2",
+    });
+
+    const session = await requireMember();
+
+    expect(session.membershipState).toBe("ausgetreten");
+  });
+
+  it("still blocks a resigned member from a different member's /profil/[slug] page (#386)", async () => {
+    withUser(RESIGNED_AND_GONE, "/profil/mitglied-3", {
+      ...RESIGNED_AND_GONE_MEMBER,
+      slug: "mitglied-2",
+    });
+
+    await expect(requireMember()).rejects.toThrow(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith("/403");
+  });
+});
+
+describe("requireAdminPermission — admin:access forced-relogin (#231)", () => {
+  it("does not check session freshness for a non-admin:access permission", async () => {
+    withUser(ACTIVE, "/admin/bestand");
+    mockPermissions({ "admin:access": false, "games:manage": true });
+
+    await requireAdminPermission("games:manage");
+
+    expect(getCurrentSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("logs the login and lets a fresh admin:access session through", async () => {
+    redirectMock.mockClear();
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    const createdAt = new Date(Date.now() - 60 * 1000);
+    getCurrentSessionMock.mockResolvedValue({
+      user: { id: "user-1" },
+      session: { createdAt },
+    });
+
+    await requireAdminPermission("admin:access");
+
+    expect(logAdminLoginOnceMock).toHaveBeenCalledWith("user-1", createdAt);
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("force-logout"),
+    );
+  });
+
+  it("forces a re-login once the admin:access session is older than 12h", async () => {
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    const createdAt = new Date(Date.now() - 13 * 60 * 60 * 1000);
+    getCurrentSessionMock.mockResolvedValue({
+      user: { id: "user-1" },
+      session: { createdAt },
+    });
+
+    await expect(requireAdminPermission("admin:access")).rejects.toThrow(
+      RedirectError,
+    );
+    expect(redirectMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/auth/force-logout?next="),
+    );
+  });
+
+  it("handles createdAt as an ISO string, matching the SDK's cache-miss fallback path (#371)", async () => {
+    redirectMock.mockClear();
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    const createdAt = new Date(Date.now() - 60 * 1000);
+    getCurrentSessionMock.mockResolvedValue({
+      user: { id: "user-1" },
+      // `auth.getSession()` only normalises `createdAt` to a `Date` on its
+      // cache-hit path — the cache-miss fallback (e.g. right after a
+      // server restart, before any session-data cache cookie exists)
+      // passes the raw JSON response through, leaving it a string.
+      session: { createdAt: createdAt.toISOString() },
+    });
+
+    await requireAdminPermission("admin:access");
+
+    expect(logAdminLoginOnceMock).toHaveBeenCalledWith("user-1", createdAt);
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("force-logout"),
+    );
+  });
+
+  it("lets the request through when there is no resolvable session (degraded render)", async () => {
+    redirectMock.mockClear();
+    withUser(ACTIVE, "/admin");
+    mockPermissions({ "admin:access": true });
+    getCurrentSessionMock.mockResolvedValue(null);
+
+    await requireAdminPermission("admin:access");
+
+    expect(redirectMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("force-logout"),
+    );
   });
 });
 

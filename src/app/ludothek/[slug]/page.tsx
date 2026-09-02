@@ -1,15 +1,25 @@
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import { Plus, Tag } from "lucide-react";
 import { prisma } from "@/lib/utils/prisma";
 import { Button } from "@/components/ui/button";
 import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
+import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
+import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
-import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
+import {
+  getContactLinks,
+  meepleEmail,
+  type ContactLinks,
+} from "@/lib/members/contact";
+import { memberDisplayName } from "@/lib/members/member-display-name";
+import { anonymisedMeepleDisplayName } from "@/lib/members/anonymised-display-name";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
@@ -35,13 +45,37 @@ export default async function GameDetailPage({
 }) {
   const { slug } = await params;
   const tier = await getSessionTier();
-  const internal = tier !== "gast";
+  const user = await getCurrentUser();
+  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
+  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
+  const internal =
+    tier !== "gast" &&
+    (user ? await hasPermission(user.id, "ludothek:view") : false);
+  // Vorgezogen (statt erst kurz vor dem Render): der Aufenthalts-Verlauf
+  // unten braucht es schon, um anonymisierten Alt-Meeples nur hier den
+  // 6-Hex-Suffix zu zeigen (#364).
+  const canManageGames =
+    !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
 
-  const games = await buildLudothekGames();
+  const clubGames = await buildLudothekGames();
   // One title can have several physical copies (same boardGameSlug) — the
   // header/description render from the first copy, `copies` below carries
   // every one of them for the exemplar table/card (#121/#122).
-  const game = games.find((g) => g.boardGameSlug === slug);
+  let games = clubGames;
+  let game = clubGames.find((g) => g.boardGameSlug === slug);
+
+  // Privatbesitz-Titel bekommen dieselbe Detailseite wie Vereinsspiele
+  // (#255-Folge) — nur intern erreichbar, unabhängig vom "Auch Privatbesitz
+  // anzeigen"-Filter der Übersichtsseite (das ist ein reiner Browse-Filter,
+  // ein direkter Link muss trotzdem funktionieren). Für Gäste nie geladen,
+  // und nur bei einem Vereins-Fehltreffer nachgeladen — kein Extra-Query auf
+  // jeder normalen Detailseite.
+  if (!game && internal) {
+    const privateGames = await buildPrivateLudothekGames();
+    games = [...clubGames, ...privateGames];
+    game = games.find((g) => g.boardGameSlug === slug);
+  }
+
   if (!game) notFound();
   const copies = games.filter((g) => g.boardGameId === game.boardGameId);
 
@@ -67,8 +101,17 @@ export default async function GameDetailPage({
     orderBy: { startedAt: "desc" },
     include: {
       unit: { select: { label: true, code: true } },
-      meeple: { select: { displayName: true } },
-      recordedBy: { select: { displayName: true } },
+      vereinsmitglied: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          meeple: { select: { displayName: true } },
+        },
+      },
+      recordedBy: {
+        select: { id: true, displayName: true, anonymizedAt: true },
+      },
     },
   });
 
@@ -77,13 +120,16 @@ export default async function GameDetailPage({
     const entry: HoldingHistoryEntry = {
       id: holding.id,
       origin: ORIGIN_LABELS[holding.origin] ?? holding.origin,
-      target: holding.meeple
-        ? holding.meeple.displayName
+      target: holding.vereinsmitglied
+        ? memberDisplayName(holding.vereinsmitglied)
         : (holding.unit?.label ?? holding.unit?.code ?? "—"),
       startedAt: formatDateTime(holding.startedAt),
       endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
       confirmedAt: holding.confirmedAt?.toISOString() ?? null,
-      recordedByName: holding.recordedBy.displayName,
+      recordedByName: anonymisedMeepleDisplayName(
+        holding.recordedBy,
+        canManageGames,
+      ),
     };
     const existing = historyByCopyId.get(holding.gameCopyId) ?? [];
     existing.push(entry);
@@ -105,7 +151,7 @@ export default async function GameDetailPage({
         where: { id: { in: responsibleIds } },
         select: {
           id: true,
-          email: true,
+          member: { select: { email: true } },
           telegramHandle: true,
           signalHandle: true,
           discordHandle: true,
@@ -115,7 +161,10 @@ export default async function GameDetailPage({
       })
     : [];
   const contactById = new Map(
-    responsibleMeeples.map((m) => [m.id, getContactLinks(m)]),
+    responsibleMeeples.map((m) => [
+      m.id,
+      getContactLinks({ ...m, email: meepleEmail(m) }),
+    ]),
   );
   const NO_CONTACT: ContactLinks = {
     mailHref: null,
@@ -135,9 +184,11 @@ export default async function GameDetailPage({
       : NO_CONTACT,
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
+    inventoryNumber: copy.inventoryNumber,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
+    isPrivate: copy.isPrivate,
   }));
 
   // Representative location for each linked base game/expansion (#121) —
@@ -153,17 +204,14 @@ export default async function GameDetailPage({
     ]),
   );
 
-  const [explainerEntries, user, openLfgPosts] = await Promise.all([
+  const [explainerEntries, openLfgPosts] = await Promise.all([
     getExplainersForGame(game.boardGameId),
-    getCurrentUser(),
     getOpenLfgPostsForBoardGame(game.boardGameId),
   ]);
   const myLevel =
     explainerEntries.find((entry) => entry.meepleId === currentMeeple?.id)
       ?.level ?? null;
 
-  const canManageGames =
-    !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
   const linkedIds = new Set([
     ...game.baseGames.map((g) => g.id),
     ...game.expansions.map((g) => g.id),
@@ -195,6 +243,7 @@ export default async function GameDetailPage({
         imageUrl: game.imageUrl,
         description: game.description,
         mechanics: game.mechanics,
+        categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
         publisher: game.publisher,
@@ -217,6 +266,37 @@ export default async function GameDetailPage({
     />
   );
 
+  // Existiert bereits (mind.) eine Marktplatz-Anzeige für diesen Titel,
+  // verlinkt der Button auf die vorgefilterte Übersicht statt auf eine
+  // einzelne Anzeige (#278-Folge) — bei mehreren Exemplaren/Anzeigen sollen
+  // alle sichtbar sein, nicht nur die zuletzt angelegte.
+  const hasActiveMarketListing = await prisma.marketListing.findFirst({
+    where: { boardGameId: game.boardGameId },
+    select: { id: true },
+  });
+  const marketListingSection = hasActiveMarketListing ? (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-1.5"
+      render={<Link href={`/markt?suche=${encodeURIComponent(game.title)}`} />}
+    >
+      <Tag className="size-4" />
+      Wird gerade verkauft
+    </Button>
+  ) : (
+    <CreateMarketListingDialog
+      trigger={
+        <Button variant="outline" size="sm" className="gap-1.5">
+          <Tag className="size-4" />
+          Verkaufen
+        </Button>
+      }
+      initialTitle={game.title}
+      boardGameId={game.boardGameId}
+    />
+  );
+
   return (
     <GameDetailView
       game={toPublicGame(game)}
@@ -230,6 +310,7 @@ export default async function GameDetailPage({
       canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
       createLfgTrigger={createLfgTrigger}
+      marketListingSection={marketListingSection}
     />
   );
 }

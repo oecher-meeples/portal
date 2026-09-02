@@ -112,13 +112,14 @@ function copy(overrides: Partial<GameActionsCopy> = {}): GameActionsCopy {
     zustand: "frei",
     locationChain: "Regal A",
     condition: null,
+    inventoryNumber: null,
     ruleBookLanguages: [],
     ...overrides,
   };
 }
 
 describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
-  it("always shows the placeholder Aufenthalt entries", async () => {
+  it("always shows the placeholder Aufenthalt entries except Weitergeben on a free copy", async () => {
     render(
       <GameActionsMenu
         copies={[copy()]}
@@ -130,15 +131,27 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    for (const label of [
-      "Geprüft",
-      "Ausleihen",
-      "Weitergeben",
-      "Rückgabe",
-      "Umlagern",
-    ]) {
+    for (const label of ["Geprüft", "Ausleihen", "Rückgabe", "Umlagern"]) {
       expect(await screen.findByText(label)).toBeInTheDocument();
     }
+    // "frei" (in einer Einheit) heißt: niemand hält das Exemplar gerade, also
+    // gibt es niemanden, der es weitergeben könnte (#405).
+    expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
+  });
+
+  it("shows Weitergeben when the copy is currently with the acting session (#128)", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy({ zustand: "ausgeliehen-verfuegbar", isMine: true })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+
+    expect(await screen.findByText("Weitergeben")).toBeInTheDocument();
   });
 
   it("hides the games:manage entries without permission", async () => {
@@ -177,10 +190,10 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
     expect(screen.getByText("Deinventarisieren")).toBeInTheDocument();
   });
 
-  it("hides Weitergeben when the copy isn't with the current session (#128)", async () => {
+  it("hides Weitergeben when the copy is with someone other than the current session (#128)", async () => {
     render(
       <GameActionsMenu
-        copies={[copy({ isMine: false })]}
+        copies={[copy({ zustand: "ausgeliehen-verfuegbar", isMine: false })]}
         boardGameId="game-1"
         boardGameTitle="Arche Nova"
         canManageGames={false}
@@ -191,6 +204,21 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 
     expect(await screen.findByText("Ausleihen")).toBeInTheDocument();
     expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
+  });
+
+  it("shows Weitergeben for games:manage on any exemplar currently with a person, regardless of isMine (#405)", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy({ zustand: "ausgeliehen-verfuegbar", isMine: false })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+
+    expect(await screen.findByText("Weitergeben")).toBeInTheDocument();
   });
 
   it("offers Exemplar bearbeiten for games:manage holders (Plan-Schritt 10)", async () => {
@@ -212,7 +240,11 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup first (Plan-Schritt 12)", () => {
   const TWO_COPIES = [
     copy({ id: "copy-1", zustand: "frei", locationChain: "Regal A" }),
-    copy({ id: "copy-2", zustand: "ausgeliehen", locationChain: "bei Alex" }),
+    copy({
+      id: "copy-2",
+      zustand: "ausgeliehen-verfuegbar",
+      locationChain: "bei Alex",
+    }),
   ];
 
   it("opens the picker instead of the mini-dialog directly for an exemplar-bound action", async () => {
@@ -273,6 +305,45 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
     expect(
       await screen.findByText("Mängelvermerk-Dialog offen für copy-1"),
     ).toBeInTheDocument();
+  });
+
+  it("hides Weitergeben in the menu when no copy is currently with a person (#405)", async () => {
+    render(
+      <GameActionsMenu
+        copies={[
+          copy({ id: "copy-1", zustand: "frei" }),
+          copy({ id: "copy-2", zustand: "wartung" }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+
+    expect(await screen.findByText("Ausleihen")).toBeInTheDocument();
+    expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
+  });
+
+  it("only lists copies currently with a person in the Weitergeben-Exemplar-Auswahl (#405)", async () => {
+    render(
+      <GameActionsMenu
+        copies={TWO_COPIES}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+    fireEvent.click(await screen.findByText("Weitergeben"));
+
+    expect(await screen.findByText("Exemplar wählen")).toBeInTheDocument();
+    // copy-1 is "frei" (in a unit, not with a person) — excluded.
+    expect(screen.queryByText("Regal A")).not.toBeInTheDocument();
+    // copy-2 is "ausgeliehen-verfuegbar" — the only eligible one.
+    expect(screen.getByText("bei Alex")).toBeInTheDocument();
   });
 
   it("skips the picker for 'Weiteres Exemplar hinzufügen'", async () => {

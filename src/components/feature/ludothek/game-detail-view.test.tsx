@@ -56,6 +56,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: [],
+    categories: [],
     alternateNames: [],
     secondaryTitle: null,
     languageDependence: null,
@@ -70,6 +71,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     expansions: [],
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -134,6 +136,7 @@ const TITLE_EDIT_FIXTURE = {
   imageUrl: null,
   description: null,
   mechanics: [],
+  categories: [],
   explainerVideoUrl: null,
 };
 

@@ -73,14 +73,16 @@ Eine Einladung (`Invite`) gibt es in zwei Ausprägungen, unterschieden allein ü
 
 Blogbeiträge und Termine liegen in **einer** Tabelle, unterschieden über `type`. Der Beitragstext ist Markdown. Termine kommen zusätzlich aus einem öffentlichen ICS-Feed und werden nicht persistiert — nur redaktionell angelegte Termine liegen in `posts`.
 
-`internal` markiert Beiträge, die nur eingeloggte Mitglieder sehen. Die Instagram-Spalten bilden eine Warteschlange ohne externen Queue-Dienst ab: `instagramStatus` wird von einem täglichen Cron-Job abgearbeitet, `instagramAttempts` begrenzt die Wiederholungen.
+`internal` markiert Beiträge, die nur eingeloggte Mitglieder sehen. Die Instagram-Versand-Ergebnisfelder liegen ausgelagert in `PostInstagramDetails` (#318) — `Post.instagram` bleibt die reine Redaktionsentscheidung "soll gecrosspostet werden", der Rest (Status, Retry-Zähler, Fehlertext) hängt 1:1 daran. `status` in `PostInstagramDetails` bildet eine Warteschlange ohne externen Queue-Dienst ab: ein täglicher Cron-Job arbeitet sie ab, `attempts` begrenzt die Wiederholungen.
+
+`PostType.UMFRAGE` (#2) ist ein Blog-Beitrag, der im Freitext auf eine externe Google-Umfrage verlinkt. Die sensiblen Zusatzfelder (Bearbeiten-/Auswertungslink, Deadline) liegen analog in `PostSurveyDetails` und sind ausschließlich im Admin-Editor sichtbar — nie auf der öffentlichen/Mitglieder-Ansicht.
 
 ```mermaid
 erDiagram
     Post {
         String id PK
         String slug UK
-        PostType type "BLOG, TERMIN, TURNIER"
+        PostType type "BLOG, TERMIN, TURNIER, UMFRAGE"
         String title
         String excerpt
         String body "Markdown"
@@ -90,10 +92,23 @@ erDiagram
         Boolean internal
         Boolean instagram
         String coverImageUrl
-        InstagramStatus instagramStatus "PENDING, QUEUED, POSTED, FAILED"
-        String instagramPostUrl
-        Int instagramAttempts
-        String instagramLastError
+    }
+
+    PostInstagramDetails {
+        String id PK
+        String postId FK UK
+        InstagramStatus status "PENDING, QUEUED, POSTED, FAILED"
+        String postUrl
+        Int attempts
+        String lastError
+    }
+
+    PostSurveyDetails {
+        String id PK
+        String postId FK UK
+        DateTime deadline
+        String editLink "Pflicht bei Veröffentlichung"
+        String analysisLink
     }
 
     InstagramConnection {
@@ -103,11 +118,16 @@ erDiagram
         String pageId
         DateTime expiresAt
     }
+
+    Post ||--o| PostInstagramDetails : "hat"
+    Post ||--o| PostSurveyDetails : "hat"
 ```
 
 | Tabelle | Stand |
 |---|---|
 | `posts` | ✅ migriert |
+| `post_instagram_details` | ✅ migriert |
+| `post_survey_details` | ✅ migriert |
 | `instagram_connections` | ✅ migriert |
 
 `InstagramConnection` hält genau eine Verbindung für den Vereins-Account; das Long-Lived-Token wird täglich erneuert.
@@ -336,6 +356,8 @@ erDiagram
         DateTime startsAt
         DateTime endsAt
         String location
+        Boolean helpersWanted
+        String visibility "PUBLIC, INTERNAL, DRAFT"
     }
 
     EventShelfAssignment {
@@ -343,12 +365,27 @@ erDiagram
         String unitId FK
     }
 
+    HelperRole {
+        String id PK
+        String name UK
+        String grantsPermissionKey "optional"
+    }
+
+    EventDay {
+        String id PK
+        String eventId FK
+        DateTime date
+        DateTime startsAt "optional Öffnungszeit"
+        DateTime endsAt "optional Öffnungszeit"
+    }
+
     Shift {
         String id PK
         String eventId FK
-        String type "THEKE, KASSE, LEIHE"
-        DateTime startsAt
-        DateTime endsAt
+        String dayId FK
+        String roleId FK
+        DateTime targetStartsAt
+        DateTime targetEndsAt
         Int capacity
     }
 
@@ -356,6 +393,21 @@ erDiagram
         String shiftId FK
         String meepleId FK
         Boolean uncertain
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailability {
+        String id PK
+        String meepleId FK
+        String dayId FK
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailabilityRole {
+        String availabilityId FK
+        String roleId FK
     }
 
     ExplainerGame {
@@ -384,7 +436,14 @@ erDiagram
 
     Event ||--o{ EventShelfAssignment : "hat"
     StorageUnit ||--o{ EventShelfAssignment : "zugeordnet"
+    Event ||--o{ EventDay : "hat"
     Event ||--o{ Shift : "hat"
+    EventDay ||--o{ Shift : "an Tag"
+    HelperRole ||--o{ Shift : "besetzt als"
+    Meeple ||--o{ HelperAvailability : "meldet"
+    EventDay ||--o{ HelperAvailability : "an Tag"
+    HelperAvailability ||--o{ HelperAvailabilityRole : "wählt"
+    HelperRole ||--o{ HelperAvailabilityRole : "gewählt als"
     Shift ||--o{ ShiftBooking : "gebucht von"
     Meeple ||--o{ ShiftBooking : "bucht"
     Meeple ||--o{ ExplainerGame : "kann erklären"

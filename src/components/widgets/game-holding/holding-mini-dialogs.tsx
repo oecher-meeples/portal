@@ -25,6 +25,13 @@ type ControlledDialogProps = {
   onOpenChange?: (open: boolean) => void;
 };
 
+/** Trigger-Button-Klasse überschreiben — Default `TRIGGER_CLASS` passt zur
+ * vollen Zeilenbreite einer Dropdown-Menu-Zeile (`game-actions-menu.tsx`);
+ * ein Aufrufer außerhalb dieses Kontexts (z. B. `vereinsspiele-section.tsx`,
+ * mehrere Trigger nebeneinander in einer `flex`-Zeile) übergibt hier eine
+ * schmalere Klasse, statt `w-full` in eine Row zu zwingen. */
+type TriggerClassNameProp = { triggerClassName?: string };
+
 /** Ausleihen — always self, no target to pick (see holding-actions.ts). */
 export function BorrowGameDialog({
   gameCopyId,
@@ -101,7 +108,8 @@ export function AcceptReturnDialog({
   gameCopyId,
   open,
   onOpenChange,
-}: { gameCopyId: string } & ControlledDialogProps) {
+  triggerClassName,
+}: { gameCopyId: string } & ControlledDialogProps & TriggerClassNameProp) {
   const [mode, setMode] = useState<ReturnMode>("self");
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
@@ -123,7 +131,11 @@ export function AcceptReturnDialog({
     <ActionDialog
       trigger={
         open === undefined ? (
-          <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(TRIGGER_CLASS, triggerClassName)}
+          >
             Rückgabe
           </Button>
         ) : undefined
@@ -187,7 +199,8 @@ export function GiveToMeepleDialog({
   gameCopyId,
   open,
   onOpenChange,
-}: { gameCopyId: string } & ControlledDialogProps) {
+  triggerClassName,
+}: { gameCopyId: string } & ControlledDialogProps & TriggerClassNameProp) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
 
@@ -195,7 +208,11 @@ export function GiveToMeepleDialog({
     <ActionDialog
       trigger={
         open === undefined ? (
-          <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(TRIGGER_CLASS, triggerClassName)}
+          >
             Weitergeben
           </Button>
         ) : undefined

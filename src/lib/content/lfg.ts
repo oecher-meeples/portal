@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { firstString } from "@/lib/utils/search-params";
 
 export type LfgStatus = "offen" | "voll" | "abgelaufen" | "geschlossen";
 
@@ -7,6 +8,73 @@ export function isLfgExpired(
   now: Date = new Date(),
 ) {
   return post.plannedAt !== null && post.plannedAt.getTime() < now.getTime();
+}
+
+function stripToDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+/** Zeitraum-Filter der LFG-Übersicht (#409) — bewusst getrennt von
+ * `isLfgExpired()` (Status-Badge, exakter Zeitstempel-Vergleich): weil
+ * `LfgPost.plannedAt` keine verlässliche Uhrzeit trägt, gilt ein für
+ * *heute* geplantes Gesuch hier unabhängig vom gewählten Zustand als
+ * "Abgelaufen" **und** als "Bevorstehend" — es wird durch diesen Filter nie
+ * versteckt. Ohne Termin (`plannedAt === null`, "Termin offen") gilt nur als
+ * "bevorstehend". */
+export type LfgTimeframe = "abgelaufen" | "bevorstehend";
+
+export function matchesLfgTimeframeFilter(
+  post: { plannedAt: Date | null },
+  timeframe: LfgTimeframe,
+  now: Date = new Date(),
+): boolean {
+  if (post.plannedAt === null) return timeframe === "bevorstehend";
+
+  const postDay = stripToDay(post.plannedAt);
+  const today = stripToDay(now);
+  if (postDay.getTime() === today.getTime()) return true;
+
+  return timeframe === "abgelaufen" ? postDay < today : postDay > today;
+}
+
+/** Datei-Upload/-Download-Bereich (#283) — bewusst getrennt von
+ * `isLfgExpired()` (Status-Badge, exakter Zeitstempel-Vergleich): der
+ * Upload-Bereich erscheint, wenn `plannedAt`-Kalendertag ≤ heutiger
+ * Kalendertag, unabhängig davon, ob `getLfgStatus()` das Gesuch noch als
+ * "offen" oder schon als "abgelaufen" einstuft. Ohne Termin (`plannedAt ===
+ * null`, "Termin offen") nie eligible — es gibt keinen Tag, den man mit
+ * heute vergleichen könnte. */
+export function isLfgAttachmentEligible(
+  post: { plannedAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  if (post.plannedAt === null) return false;
+  return stripToDay(post.plannedAt).getTime() <= stripToDay(now).getTime();
+}
+
+/** Filter der LFG-Übersicht (#409), URL-Search-Param-basiert analog
+ * `LudothekFilters`/`parseLudothekSearchParams`. */
+export type LfgListFilters = {
+  /** Spiel-Autocomplete — matcht `LfgPost.boardGameId` exakt. */
+  boardGameId?: string;
+  /** "Frei"/"Voll" — unabhängig vom Zeitraum-Filter, nutzt `getLfgStatus()`. */
+  status?: "frei" | "voll";
+  zeitraum?: LfgTimeframe;
+};
+
+export function parseLfgSearchParams(
+  searchParams: Record<string, string | string[] | undefined>,
+): LfgListFilters {
+  const status = firstString(searchParams.status);
+  const zeitraum = firstString(searchParams.zeitraum);
+  return {
+    boardGameId: firstString(searchParams.spiel) || undefined,
+    status: status === "frei" || status === "voll" ? status : undefined,
+    zeitraum:
+      zeitraum === "abgelaufen" || zeitraum === "bevorstehend"
+        ? zeitraum
+        : undefined,
+  };
 }
 
 export function getLfgStatus(

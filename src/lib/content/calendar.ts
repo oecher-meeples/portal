@@ -5,6 +5,7 @@ import {
   getUpcomingEventsIncludingInternal,
   type ContentItem,
 } from "@/lib/content/content";
+import { findPublicUpcomingEvents } from "@/lib/events/upcoming";
 
 const REVALIDATE_SECONDS = 15 * 60;
 const FETCH_TIMEOUT_MS = 8000;
@@ -134,14 +135,36 @@ export async function getUpcomingEventsWithCalendar(
     .slice(0, limit);
 }
 
-export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
-  const [dbItems, calendarEvents] = await Promise.all([
-    getAllContent(),
-    getUpcomingCalendarEvents(50),
-  ]);
+/** Öffentliche `Event`-Datensätze (Sichtbarkeit "Öffentlich", siehe
+ * lib/events/visibility.ts) als ContentItem — kein `id`, damit sie wie
+ * ICS-Termine nicht-editierbar bleiben (kein zugehöriger Post existiert). */
+async function getPublicDbEvents(limit = 50): Promise<ContentItem[]> {
+  const events = await findPublicUpcomingEvents(limit);
+  return events.map((event) => ({
+    slug: `event-${event.slug}`,
+    type: "termin" as const,
+    title: event.title,
+    excerpt: event.location ?? "",
+    body: event.location ?? "",
+    date: event.startsAt.toISOString().slice(0, 10),
+    location: event.location ?? undefined,
+  }));
+}
 
-  return [...dbItems, ...calendarEvents].sort((a, b) =>
-    a.date.localeCompare(b.date),
+/** Internal ICS-Termine fließen immer mit ein — die Sichtbarkeit für
+ * unberechtigte Nutzer wird downstream in `/news` (`canSeeInternal`) anhand
+ * von `item.internal` gefiltert, nicht hier (analog zu den DB-Beiträgen). */
+export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
+  const [dbItems, calendarEvents, publicEvents, internalEvents] =
+    await Promise.all([
+      getAllContent(),
+      getUpcomingCalendarEvents(50),
+      getPublicDbEvents(50),
+      fetchInternalEvents({ limit: 50 }),
+    ]);
+
+  return [...dbItems, ...calendarEvents, ...publicEvents, ...internalEvents].sort(
+    (a, b) => b.date.localeCompare(a.date),
   );
 }
 

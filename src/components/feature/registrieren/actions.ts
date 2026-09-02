@@ -4,8 +4,14 @@ import { prisma } from "@/lib/utils/prisma";
 import { auth } from "@/lib/auth/server";
 import { validateInviteToken } from "@/lib/members/invites";
 import { translateAuthError, validatePassword } from "@/lib/auth/password";
+import { checkFixedCooldown } from "@/lib/utils/rate-limit";
+import { getRequestIp } from "@/lib/utils/request-ip";
 
 const DEFAULT_ROLE = "Meeple";
+
+/** IP-Fix-Cooldown (#326) — reiner Spam-/Lastschutz, keine Eskalation: die
+ * Brute-Force-Schwierigkeit ist durch Token+E-Mail-Pflicht bereits hoch. */
+const INVITE_IP_COOLDOWN_SECONDS = 2;
 
 export async function redeemInvite({
   token,
@@ -18,13 +24,22 @@ export async function redeemInvite({
   password: string;
   name: string;
 }) {
+  const ip = await getRequestIp();
+  const cooldown = await checkFixedCooldown(
+    `invite:ip:${ip ?? "unknown"}`,
+    INVITE_IP_COOLDOWN_SECONDS,
+  );
+  if (!cooldown.allowed) {
+    return { error: "Bitte versuche es in Kürze erneut." };
+  }
+
   const validation = await validateInviteToken(token);
   if (!validation.valid) {
     return { error: "Token ungültig oder abgelaufen." };
   }
 
   const invite = await prisma.invite.findUniqueOrThrow({ where: { token } });
-  if (invite.email && invite.email !== email.trim().toLowerCase()) {
+  if (invite.email !== email.trim().toLowerCase()) {
     return {
       error: "Diese Einladung ist an eine andere E-Mail-Adresse gebunden.",
     };
@@ -44,21 +59,40 @@ export async function redeemInvite({
     where: { name: DEFAULT_ROLE },
   });
 
-  // Unbound invites (invite.email === null) stay redeemable by anyone until
-  // expiry — the row is deliberately left untouched, no redemption tracking.
-  await prisma.$transaction([
-    ...(invite.email
-      ? [
-          prisma.invite.update({
-            where: { token },
-            data: { redeemedAt: new Date() },
-          }),
-        ]
-      : []),
-    prisma.userRole.create({
+  // #329: eine Einladung ist immer an ein bestehendes `Member` gebunden — der
+  // Meeple entsteht hier direkt (statt erst beim nächsten `ensureMeeple()`),
+  // damit `Member.meepleId` sofort verknüpft ist, nicht erst nach dem ersten
+  // weiteren Seitenaufruf.
+  await prisma.$transaction(async (tx) => {
+    await tx.invite.update({
+      where: { token },
+      data: { redeemedAt: new Date() },
+    });
+    await tx.userRole.create({
       data: { neonAuthUserId: data.user.id, roleId: role.id },
-    }),
-  ]);
+    });
+
+    const member = await tx.member.findUnique({
+      where: { email: invite.email },
+    });
+    const displayName =
+      [member?.firstName, member?.lastName].filter(Boolean).join(" ") ||
+      name.trim() ||
+      email.split("@")[0];
+
+    const meeple = await tx.meeple.upsert({
+      where: { neonAuthUserId: data.user.id },
+      update: { displayName },
+      create: { neonAuthUserId: data.user.id, displayName },
+    });
+
+    if (member && !member.meepleId) {
+      await tx.member.update({
+        where: { id: member.id },
+        data: { meepleId: meeple.id },
+      });
+    }
+  });
 
   return { success: true as const };
 }

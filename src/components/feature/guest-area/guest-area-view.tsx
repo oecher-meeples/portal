@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -17,6 +18,11 @@ import {
 } from "@/components/feature/guest-area/free-games-list";
 import type { GuestFleaMarketItem } from "@/lib/events/guest-area";
 import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
+import { RegisterExternalSellerDialog } from "@/components/widgets/bringbuy/register-external-seller-dialog";
+import { PageContainer } from "@/components/ui/page-container";
+
+export type SellerAccess =
+  { kind: "meeple"; href: string } | { kind: "guest"; eventId: string };
 
 const EXPLAINER_LEVEL_LABELS: Record<string, string> = {
   WITH_MANUAL: "Mit Anleitung",
@@ -35,11 +41,13 @@ export function GuestAreaView({
   eventTitle,
   freeGames,
   fleaMarketItems,
+  sellerAccess,
 }: {
   eventId: string;
   eventTitle: string;
   freeGames: FreeGameEntry[];
   fleaMarketItems: GuestFleaMarketItem[];
+  sellerAccess: SellerAccess | null;
 }) {
   const [state, setState] = useState<ViewState>({ kind: "idle" });
   const [manualInput, setManualInput] = useState("");
@@ -67,7 +75,7 @@ export function GuestAreaView({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Gäste-Bereich"
         title={eventTitle}
@@ -141,9 +149,23 @@ export function GuestAreaView({
               <p className="text-sm font-medium">Anwesende Erklärbären</p>
               <ul className="text-muted-foreground text-sm">
                 {state.detail.attendingExplainers.map((explainer) => (
-                  <li key={explainer.meepleId}>
-                    {explainer.displayName} ·{" "}
-                    {EXPLAINER_LEVEL_LABELS[explainer.level] ?? explainer.level}
+                  <li
+                    key={explainer.meepleId}
+                    className="flex items-center gap-2 py-0.5"
+                  >
+                    {explainer.profilePictureUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- Blob-URL, kein next/image nötig für ein kleines Avatar
+                      <img
+                        src={explainer.profilePictureUrl}
+                        alt=""
+                        className="size-6 shrink-0 rounded-full object-cover"
+                      />
+                    )}
+                    <span>
+                      {explainer.displayName} ·{" "}
+                      {EXPLAINER_LEVEL_LABELS[explainer.level] ??
+                        explainer.level}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -156,9 +178,22 @@ export function GuestAreaView({
 
       {fleaMarketItems.length > 0 && (
         <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bring &amp; Buy Flohmarkt
-          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-serif text-lg font-bold">
+              Bring &amp; Buy Flohmarkt
+            </h2>
+            {sellerAccess?.kind === "meeple" && (
+              <Button
+                size="sm"
+                render={
+                  <Link href={sellerAccess.href}>Spieleverkauf anmelden</Link>
+                }
+              />
+            )}
+            {sellerAccess?.kind === "guest" && (
+              <RegisterExternalSellerDialog eventId={sellerAccess.eventId} />
+            )}
+          </div>
           <ul className="flex flex-col divide-y text-sm">
             {fleaMarketItems.map((item) => (
               <li
@@ -184,6 +219,6 @@ export function GuestAreaView({
           </ul>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -5,12 +5,12 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const requireMeepleMock = vi.fn();
+const requireMeeplePermissionMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
   const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
     "@/lib/members/meeples",
   );
-  return { ...actual, requireMeeple: requireMeepleMock };
+  return { ...actual, requireMeeplePermission: requireMeeplePermissionMock };
 });
 
 const generateClientTokenMock = vi.fn();
@@ -24,17 +24,23 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
+const hasPermissionMock = vi.fn();
+vi.mock("@/lib/auth/permissions", () => ({
+  hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
+}));
+
 const {
   createMarketListing,
   updateOwnMarketListing,
   deleteOwnMarketListing,
+  deleteMarketListingImage,
   getMarketListingUploadToken,
 } = await import("./actions");
 
 class RedirectError extends Error {}
 
-const OWNER = { id: "meeple-owner" };
-const OTHER = { id: "meeple-other" };
+const OWNER = { id: "meeple-owner", neonAuthUserId: "user-owner" };
+const OTHER = { id: "meeple-other", neonAuthUserId: "user-other" };
 
 const VALID_INPUT = {
   title: "Catan – Seefahrer",
@@ -57,15 +63,17 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 beforeEach(() => {
-  requireMeepleMock.mockResolvedValue(OWNER);
+  requireMeeplePermissionMock.mockResolvedValue(OWNER);
   deleteBlobsMock.mockReset();
   deleteBlobsMock.mockResolvedValue(undefined);
+  hasPermissionMock.mockReset();
+  hasPermissionMock.mockResolvedValue(false);
   prismaMock.marketListing.create.mockResolvedValue(marketListing() as never);
 });
 
 describe("without a session", () => {
   it("writes nothing", async () => {
-    requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
+    requireMeeplePermissionMock.mockRejectedValue(new RedirectError("/login"));
 
     await expect(createMarketListing(VALID_INPUT)).rejects.toThrow(
       RedirectError,
@@ -154,7 +162,7 @@ describe("updateOwnMarketListing", () => {
   });
 
   it("rejects editing someone else's listing", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
     );
@@ -162,9 +170,27 @@ describe("updateOwnMarketListing", () => {
     const result = await updateOwnMarketListing("listing-1", VALID_INPUT);
 
     expect(result).toEqual({
-      error: "Nur die eigene Anzeige kann bearbeitet werden.",
+      error: "Nur die eigene Anzeige oder ein Admin kann sie bearbeiten.",
     });
     expect(prismaMock.marketListing.update).not.toHaveBeenCalled();
+  });
+
+  it("allows an admin to edit someone else's listing (#175)", async () => {
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
+    hasPermissionMock.mockResolvedValue(true);
+    prismaMock.marketListing.findUnique.mockResolvedValue(
+      marketListing() as never,
+    );
+    prismaMock.marketListing.update.mockResolvedValue({} as never);
+
+    const result = await updateOwnMarketListing("listing-1", VALID_INPUT);
+
+    expect(result).toEqual({ success: true });
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      OTHER.neonAuthUserId,
+      "admin:access",
+    );
+    expect(prismaMock.marketListing.update).toHaveBeenCalled();
   });
 
   it("rejects an unknown listing", async () => {
@@ -218,7 +244,7 @@ describe("deleteOwnMarketListing", () => {
   });
 
   it("rejects deleting someone else's listing", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
     );
@@ -229,6 +255,15 @@ describe("deleteOwnMarketListing", () => {
       error: "Nur die eigene Anzeige kann gelöscht werden.",
     });
     expect(prismaMock.marketListing.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteMarketListingImage", () => {
+  it("deletes a single image blob for the logged-in meeple (#175)", async () => {
+    const result = await deleteMarketListingImage("https://blob/a.jpg");
+
+    expect(result).toEqual({ success: true });
+    expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/a.jpg"]);
   });
 });
 

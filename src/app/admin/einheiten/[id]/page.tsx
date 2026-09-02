@@ -48,7 +48,15 @@ export default async function AdminEinheitDetailPage({
   ]);
 
   const keeperOptions = meeples
-    .filter((m) => getMembershipState(m) !== "anonymisiert")
+    .filter(
+      (m) =>
+        getMembershipState({
+          meepleId: m.id,
+          resignedAt: null,
+          membershipEndsAt: null,
+          anonymizedAt: m.anonymizedAt,
+        }) !== "anonymisiert",
+    )
     .map((m) => ({ id: m.id, displayName: m.displayName }));
 
   return (
@@ -56,9 +64,14 @@ export default async function AdminEinheitDetailPage({
       unit={{
         id: unit.id,
         code: unit.code,
-        kind: unit.kind,
+        // Event-Units (#273) sind system-verwaltet und werden hier nicht
+        // verlinkt — direkt aufgerufen zeigt diese Detailseite sie
+        // pragmatisch als "Regal" an, statt eine dritte Anzeigevariante
+        // für einen Pfad zu bauen, der praktisch nicht vorkommt.
+        kind: unit.kind as "BOX" | "SHELF",
         label: unit.label,
         locationNote: unit.locationNote,
+        category: unit.category,
         keeperMeepleId: unit.keeperMeepleId,
         keeperName: unit.keeper?.displayName ?? null,
         retired: unit.retiredAt !== null,

@@ -1,7 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/utils/prisma";
+import { getCurrentSession, getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
+import { logAdminLoginOnce } from "@/lib/auth/login-log";
 import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
@@ -37,7 +39,10 @@ export const PATHNAME_HEADER = "x-pathname";
 export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   { path: "/dashboard", exact: true },
   { path: "/dashboard/kalender" },
-  { path: "/profil" },
+  // exact: /profil/[slug] wäre sonst für JEDEN Slug erreichbar — die eigene
+  // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
+  // gezielt über isOwnProfilPath durch, nicht über diese Liste.
+  { path: "/profil", exact: true },
   { path: "/scan" },
   { path: "/mitglieder" },
 ];
@@ -111,11 +116,27 @@ export async function requireMember() {
   }
 
   const meeple = await ensureMeeple(user);
-  const membershipState = getMembershipState(meeple);
+  // resignedAt/membershipEndsAt moved to the linked Member (#328) —
+  // anonymizedAt stays on Meeple.
+  const member = await prisma.member.findUnique({
+    where: { meepleId: meeple.id },
+    select: { slug: true, resignedAt: true, membershipEndsAt: true },
+  });
+  const membershipState = getMembershipState({
+    meepleId: meeple.id,
+    resignedAt: member?.resignedAt ?? null,
+    membershipEndsAt: member?.membershipEndsAt ?? null,
+    anonymizedAt: meeple.anonymizedAt,
+  });
 
-  if (membershipState !== "aktiv" && membershipState !== "gekuendigt") {
+  if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
-    if (!isSettlementPath(pathname)) {
+    // #386: die eigene `/profil/[slug]`-Seite muss für den
+    // Abwicklungs-Zustand ebenso erreichbar bleiben wie `/profil` selbst,
+    // aber nur die *eigene*, nicht jede beliebige.
+    const isOwnProfilPath =
+      member?.slug !== undefined && pathname === `/profil/${member.slug}`;
+    if (!isSettlementPath(pathname) && !isOwnProfilPath) {
       redirect("/403");
     }
   }
@@ -123,10 +144,69 @@ export async function requireMember() {
   return { user, meeple, membershipState };
 }
 
-export async function requireAdmin() {
+/**
+ * Zwangs-Logout für `admin:access`-Konten (#231): keine langlebige,
+ * still weiterlaufende Session — nach 12h ab Login (`session.createdAt`,
+ * unabhängig von fortgesetzter Aktivität) wird eine erneute Anmeldung
+ * verlangt. Der eigentliche Cookie-Löschvorgang läuft über einen Redirect
+ * auf einen Route Handler (`/api/auth/force-logout`), weil Server
+ * Components selbst keine Cookies schreiben dürfen (#242).
+ *
+ * Bewusst hier statt in `src/proxy.ts` verankert: `auth.getSession()`
+ * braucht den `next/headers`-Request-Context, den Middleware nicht hat —
+ * dieser Check greift dafür bei jedem Zugriff auf eine `/admin`-Seite,
+ * was für ein praktisch admin-only genutztes Konto ausreicht.
+ */
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
+  if (!(await hasPermission(neonAuthUserId, ADMIN_ACCESS_PERMISSION))) return;
+
+  const session = await getCurrentSession();
+  if (!session) return;
+
+  // #371: `auth.getSession()` normalisiert `createdAt` nur auf seinem
+  // Cache-Hit-Pfad zu einem echten `Date` — im Fallback-Pfad (Cache-Cookie
+  // fehlt/abgelaufen, z. B. direkt nach einem Server-Neustart) kommt ein
+  // roher ISO-String durch, obwohl die SDK-Typen immer `Date` versprechen.
+  const createdAt =
+    session.session.createdAt instanceof Date
+      ? session.session.createdAt
+      : new Date(session.session.createdAt);
+
+  await logAdminLoginOnce(neonAuthUserId, createdAt);
+
+  const ageMs = Date.now() - createdAt.getTime();
+  if (ageMs > ADMIN_SESSION_MAX_AGE_MS) {
+    const pathname = await currentPathname();
+    redirect(
+      `/api/auth/force-logout?next=${encodeURIComponent(`/login?next=${pathname}`)}`,
+    );
+  }
+}
+
+/**
+ * Guard for an admin-area route gated by one or more specific permissions
+ * (any match is enough) — unlike `requirePermission` this also enforces the
+ * membership-state check from `requireMember`, matching `requireAdmin`'s
+ * behaviour. Use this instead of `requireAdmin` wherever a route only needs
+ * one feature permission (e.g. `games:manage`), so a Spielewart/Kassenwart/
+ * Redakteur etc. can reach it without also holding `admin:access`.
+ */
+export async function requireAdminPermission(permissionKey: string | string[]) {
   const session = await requireMember();
-  if (!(await hasPermission(session.user.id, ADMIN_ACCESS_PERMISSION))) {
+  await enforceAdminAccessSessionFreshness(session.user.id);
+
+  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  const results = await Promise.all(
+    keys.map((key) => hasPermission(session.user.id, key)),
+  );
+  if (!results.some(Boolean)) {
     redirect("/403");
   }
   return session;
+}
+
+export async function requireAdmin() {
+  return requireAdminPermission(ADMIN_ACCESS_PERMISSION);
 }

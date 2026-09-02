@@ -73,7 +73,7 @@ describe("createPost — newsletter queueing", () => {
 describe("updatePost — newsletter queueing", () => {
   it("queues the newsletter when a formerly draft post is published with newsletter sharing enabled", async () => {
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: null,
+      instagramDetails: null,
       newsletterStatus: null,
     } as never);
 
@@ -89,7 +89,7 @@ describe("updatePost — newsletter queueing", () => {
 
   it("does not re-queue the newsletter for a post that was already queued/sent", async () => {
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: null,
+      instagramDetails: null,
       newsletterStatus: "SENT",
     } as never);
 

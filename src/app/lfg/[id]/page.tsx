@@ -1,8 +1,15 @@
 import { notFound } from "next/navigation";
-import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
+import {
+  requireAdminPermission,
+  hasPermissionInCurrentView,
+} from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
-import { getLfgParticipantDisplayName, getLfgStatus } from "@/lib/content/lfg";
-import { getContactLinks } from "@/lib/members/contact";
+import {
+  getLfgParticipantDisplayName,
+  getLfgStatus,
+  isLfgAttachmentEligible,
+} from "@/lib/content/lfg";
+import { getContactLinks, meepleEmail } from "@/lib/members/contact";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
 import { formatDateMedium } from "@/lib/utils/format";
 
@@ -11,7 +18,7 @@ export default async function LfgDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user, meeple } = await requireMember();
+  const { user, meeple } = await requireAdminPermission("lfg:participate");
   const { id } = await params;
 
   const post = await prisma.lfgPost.findUnique({
@@ -22,7 +29,7 @@ export default async function LfgDetailPage({
           meeple: {
             select: {
               displayName: true,
-              email: true,
+              member: { select: { email: true } },
               telegramHandle: true,
               signalHandle: true,
               discordHandle: true,
@@ -32,6 +39,10 @@ export default async function LfgDetailPage({
           },
           addedBy: { select: { displayName: true } },
         },
+      },
+      attachments: {
+        include: { uploadedBy: { select: { displayName: true } } },
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -48,6 +59,14 @@ export default async function LfgDetailPage({
   const viewerIsParticipant = post.participants.some(
     (p) => p.meepleId === meeple.id,
   );
+  // Ortsfeld editierbar (#166): Ersteller immer, beigetretene Teilnehmer nur
+  // bei aktivem `participantsMayEditLocation` — analog `canAddGuest`.
+  const canEditLocation =
+    isCreator || (post.participantsMayEditLocation && viewerIsParticipant);
+  // Datei-Bereich (#283) nur für Teilnehmer eines heute geplanten oder
+  // abgelaufenen Gesuchs — `undefined` statt `[]` blendet den Bereich in
+  // `LfgDetailView` komplett aus, statt ihn leer zu zeigen.
+  const showAttachments = viewerIsParticipant && isLfgAttachmentEligible(post);
 
   return (
     <LfgDetailView
@@ -73,7 +92,7 @@ export default async function LfgDetailPage({
         }),
         contact:
           p.meepleId !== null && viewerIsParticipant && p.meeple
-            ? getContactLinks(p.meeple)
+            ? getContactLinks({ ...p.meeple, email: meepleEmail(p.meeple) })
             : null,
         canRemove:
           p.meepleId === null && (p.addedByMeepleId === meeple.id || isCreator),
@@ -82,6 +101,20 @@ export default async function LfgDetailPage({
       viewerMeepleId={meeple.id}
       canClose={isCreator || canManageMembers}
       guestsMayBringGuests={post.guestsMayBringGuests}
+      canEditLocation={canEditLocation}
+      viewerHasOwnAddress={Boolean(meeple.address)}
+      attachments={
+        showAttachments
+          ? post.attachments.map((attachment) => ({
+              id: attachment.id,
+              url: attachment.url,
+              filename: attachment.filename,
+              uploadedByName: attachment.uploadedBy.displayName,
+              canDelete:
+                attachment.uploadedByMeepleId === meeple.id || isCreator,
+            }))
+          : undefined
+      }
     />
   );
 }

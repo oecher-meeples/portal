@@ -71,6 +71,7 @@ const GAME_WITHOUT_BGG_ID = {
   imageUrl: null,
   description: null,
   mechanics: [],
+  categories: [],
   explainerVideoUrl: null,
 };
 
@@ -86,6 +87,7 @@ const BGG_DATA = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel"],
+  categories: [],
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],
@@ -121,10 +123,10 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     );
 
     expect(previewBggImportMock).toHaveBeenCalledWith(342942);
-    expect(await screen.findByText("Aktuelle BGG-Daten")).toBeInTheDocument();
+    expect(await screen.findByText("Abweichungen zu BGG")).toBeInTheDocument();
   });
 
-  it("colors the title field red for a mismatch and closes the comparison again", async () => {
+  it("hides the edit form while comparing, shows it again after closing", async () => {
     const user = userEvent.setup();
     previewBggImportMock.mockResolvedValue({ success: true, data: BGG_DATA });
     render(<EditBoardGameTitleDialog game={GAME_WITH_BGG_ID} />);
@@ -132,22 +134,22 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     await user.click(
       screen.getByRole("button", { name: "Daten mit BGG abgleichen" }),
     );
-    await screen.findByText("Aktuelle BGG-Daten");
+    await screen.findByText("Abweichungen zu BGG");
 
-    // GAME_WITH_BGG_ID.title "Arche Nova" !== BGG_DATA.title "Ark Nova".
-    expect(screen.getByLabelText("Titel")).toHaveClass("border-red-600");
+    expect(screen.queryByLabelText("Titel")).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Abgleich schließen" }),
     );
 
-    expect(screen.queryByText("Aktuelle BGG-Daten")).not.toBeInTheDocument();
+    expect(screen.queryByText("Abweichungen zu BGG")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Daten mit BGG abgleichen" }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Titel")).toBeInTheDocument();
   });
 
-  it("applies a BGG value into the left form via the Übernehmen button", async () => {
+  it("applies a BGG value into the form and shows the field again once done", async () => {
     const user = userEvent.setup();
     previewBggImportMock.mockResolvedValue({ success: true, data: BGG_DATA });
     render(<EditBoardGameTitleDialog game={GAME_WITH_BGG_ID} />);
@@ -155,12 +157,14 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     await user.click(
       screen.getByRole("button", { name: "Daten mit BGG abgleichen" }),
     );
-    await screen.findByText("Aktuelle BGG-Daten");
+    await screen.findByText("Abweichungen zu BGG");
 
-    await user.click(screen.getByRole("button", { name: "Titel übernehmen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Titel: BGG-Wert übernehmen" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
 
     expect(screen.getByLabelText("Titel")).toHaveValue("Ark Nova");
-    expect(screen.getByLabelText("Titel")).toHaveClass("border-emerald-600");
   });
 
   it("shows a speaking error when the BGG fetch fails", async () => {
@@ -179,5 +183,56 @@ describe("EditBoardGameTitleDialog — BGG-Abgleich (#189)", () => {
     expect(
       await screen.findByText("BoardGameGeek ist aktuell nicht erreichbar."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("EditBoardGameTitleDialog — ungültige EAN beim Speichern (#322)", () => {
+  it("asks for confirmation and resaves without the EAN when confirmed", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    updateBoardGameMock
+      .mockResolvedValueOnce({
+        error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+        invalidEan: true,
+      })
+      .mockResolvedValueOnce({ success: true });
+
+    render(
+      <EditBoardGameTitleDialog game={{ ...GAME_WITHOUT_BGG_ID, ean: "x" }} />,
+    );
+    await openDialog(user);
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(updateBoardGameMock).toHaveBeenCalledTimes(2);
+    expect(updateBoardGameMock).toHaveBeenLastCalledWith(
+      "title-1",
+      expect.objectContaining({ ean: "" }),
+    );
+    confirmSpy.mockRestore();
+  });
+
+  it("leaves the blocking error in place when the confirmation is declined", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    updateBoardGameMock.mockResolvedValue({
+      error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
+    });
+
+    render(
+      <EditBoardGameTitleDialog game={{ ...GAME_WITHOUT_BGG_ID, ean: "x" }} />,
+    );
+    await openDialog(user);
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(updateBoardGameMock).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(
+        "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      ),
+    ).toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 });

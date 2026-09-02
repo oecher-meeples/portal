@@ -1,12 +1,20 @@
 "use server";
 
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
-import { InstagramStatus, type NewsletterCategory } from "@prisma/client";
+import {
+  InstagramStatus,
+  type NewsletterCategory,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
-import { processPost } from "@/lib/instagram/queue";
+import {
+  canManagePostType,
+  getPostPermissions,
+} from "@/lib/content/post-permissions";
+import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 
@@ -26,6 +34,11 @@ export type PostInput = {
   sendAsNewsletter?: boolean;
   newsletterCategory?: NewsletterCategory | null;
   coverImageUrl?: string;
+  /** Nur bei `type: "umfrage"` relevant (#2). `surveyEditLink` ist Pflicht
+   * bei Veröffentlichung, im Entwurf optional — siehe `validatePostInput()`. */
+  surveyDeadline?: string;
+  surveyEditLink?: string;
+  surveyAnalysisLink?: string;
 };
 
 function slugify(title: string) {
@@ -40,6 +53,15 @@ function slugify(title: string) {
 function validatePostInput(input: PostInput) {
   if (!input.title || !input.type || !input.date || !input.body) {
     return "Bitte Titel, Typ, Datum und Inhalt ausfüllen.";
+  }
+  // Der Umfrage-Link zum Bearbeiten/Auswerten muss spätestens bei der
+  // Veröffentlichung vorliegen — als Entwurf speichern geht ohne ihn (#2).
+  if (
+    input.type === "umfrage" &&
+    input.status === "PUBLISHED" &&
+    !input.surveyEditLink?.trim()
+  ) {
+    return "Bitte einen Bearbeiten-/Auswertungslink für die Umfrage angeben, um sie zu veröffentlichen.";
   }
   return null;
 }
@@ -77,9 +99,46 @@ function shouldQueueNewsletter(input: PostInput) {
   );
 }
 
+/** Nested `instagramDetails`-Write für `post.update()` — löscht die Zeile bei
+ * internen Beiträgen/Entwürfen (die nie in der Queue landen dürfen), legt sie
+ * bei frisch aktiviertem Instagram-Toggle eager mit PENDING an, sonst
+ * unverändert. */
+function buildInstagramDetailsUpdate(
+  input: PostInput,
+  hasExisting: boolean,
+): Prisma.PostUpdateInput["instagramDetails"] | undefined {
+  if (input.internal || input.status !== "PUBLISHED") {
+    return hasExisting ? { delete: true } : undefined;
+  }
+  if (input.instagram && !hasExisting) {
+    return { create: { status: InstagramStatus.PENDING } };
+  }
+  return undefined;
+}
+
+/** Nested `surveyDetails`-Write für `post.create()`/`post.update()` — pflegt
+ * deadline/editLink/analysisLink nur bei `type: "umfrage"`, löscht die Zeile
+ * beim Wechsel auf einen anderen Typ (#2). */
+function buildSurveyDetailsUpdate(
+  input: PostInput,
+  hasExisting: boolean,
+): Prisma.PostUpdateInput["surveyDetails"] | undefined {
+  if (input.type !== "umfrage") {
+    return hasExisting ? { delete: true } : undefined;
+  }
+  const data = {
+    deadline: input.surveyDeadline ? new Date(input.surveyDeadline) : null,
+    editLink: input.surveyEditLink?.trim() || null,
+    analysisLink: input.surveyAnalysisLink?.trim() || null,
+  };
+  return hasExisting ? { update: data } : { create: data };
+}
+
 export async function createPost(input: PostInput) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+  if (!user) return { error: "Keine Berechtigung." };
+  const perms = await getPostPermissions(user.id);
+  if (!canManagePostType(perms, input.internal)) {
     return { error: "Keine Berechtigung." };
   }
 
@@ -88,15 +147,18 @@ export async function createPost(input: PostInput) {
     return { error: validationError };
   }
 
+  // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue eingereiht.
+  const queueForInstagram =
+    input.instagram && !input.internal && input.status === "PUBLISHED";
+  const surveyDetails = buildSurveyDetailsUpdate(input, false);
   const post = await prisma.post.create({
     data: {
       slug: slugify(input.title),
       ...toPostData(input),
-      // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue eingereiht.
-      instagramStatus:
-        input.instagram && !input.internal && input.status === "PUBLISHED"
-          ? InstagramStatus.PENDING
-          : null,
+      ...(queueForInstagram
+        ? { instagramDetails: { create: { status: InstagramStatus.PENDING } } }
+        : {}),
+      ...(surveyDetails ? { surveyDetails } : {}),
     },
   });
 
@@ -109,40 +171,54 @@ export async function createPost(input: PostInput) {
 
 export async function updatePost(id: string, input: PostInput) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
-    return { error: "Keine Berechtigung." };
-  }
+  if (!user) return { error: "Keine Berechtigung." };
 
   const validationError = validatePostInput(input);
   if (validationError) {
     return { error: validationError };
   }
 
-  const wantsNewsletter = shouldQueueNewsletter(input);
-  const needsExisting =
-    (!input.internal && input.status === "PUBLISHED" && input.instagram) ||
-    wantsNewsletter;
-  const existing = needsExisting
-    ? await prisma.post.findUnique({
-        where: { id },
-        select: { instagramStatus: true, newsletterStatus: true },
-      })
-    : null;
-
-  let instagramStatus: InstagramStatus | null | undefined;
-  if (input.internal || input.status !== "PUBLISHED") {
-    // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue
-    // eingereiht, auch wenn sie es vorher schon waren.
-    instagramStatus = null;
-  } else if (input.instagram && !existing?.instagramStatus) {
-    instagramStatus = InstagramStatus.PENDING;
+  // Immer geladen (statt nur bedingt) — die Berechtigungsprüfung braucht den
+  // bisherigen internal-Wert so oder so: wer nur posts:public hat, darf
+  // weder einen internen Beitrag anfassen noch einen öffentlichen intern
+  // machen (#321).
+  const existing = await prisma.post.findUnique({
+    where: { id },
+    select: {
+      internal: true,
+      newsletterStatus: true,
+      instagramDetails: { select: { id: true } },
+      surveyDetails: { select: { id: true } },
+    },
+  });
+  if (!existing) {
+    return { error: "Beitrag nicht gefunden." };
   }
+
+  const perms = await getPostPermissions(user.id);
+  if (
+    !canManagePostType(perms, existing.internal) ||
+    !canManagePostType(perms, input.internal)
+  ) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const wantsNewsletter = shouldQueueNewsletter(input);
+  const instagramDetails = buildInstagramDetailsUpdate(
+    input,
+    Boolean(existing?.instagramDetails),
+  );
+  const surveyDetails = buildSurveyDetailsUpdate(
+    input,
+    Boolean(existing?.surveyDetails),
+  );
 
   await prisma.post.update({
     where: { id },
     data: {
       ...toPostData(input),
-      ...(instagramStatus !== undefined ? { instagramStatus } : {}),
+      ...(instagramDetails ? { instagramDetails } : {}),
+      ...(surveyDetails ? { surveyDetails } : {}),
     },
   });
 
@@ -158,7 +234,8 @@ export async function updatePost(id: string, input: PostInput) {
 
 export async function getUploadToken(pathname: string) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+  const perms = user ? await getPostPermissions(user.id) : null;
+  if (!perms || (!perms.canEditPublic && !perms.canEditInternal)) {
     throw new Error("Keine Berechtigung.");
   }
 
@@ -170,22 +247,33 @@ export async function getUploadToken(pathname: string) {
   });
 }
 
+/** Instagram-Crosspost gibt es nur für öffentliche Beiträge (die Checkbox
+ * ist in post-form.tsx bei internen Beiträgen deaktiviert) — daher genügt
+ * hier posts:public, kein posts:internal-Fall zu prüfen. */
 export async function retryInstagramPost(postId: string) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+  if (!user || !(await hasPermission(user.id, "posts:public"))) {
     return { error: "Keine Berechtigung." };
   }
 
   const post = await prisma.post.update({
     where: { id: postId },
     data: {
-      instagramAttempts: 0,
-      instagramStatus: InstagramStatus.PENDING,
-      instagramLastError: null,
+      instagramDetails: {
+        upsert: {
+          create: { status: InstagramStatus.PENDING },
+          update: {
+            attempts: 0,
+            status: InstagramStatus.PENDING,
+            lastError: null,
+          },
+        },
+      },
     },
+    include: { instagramDetails: true },
   });
 
-  const success = await processPost(post);
+  const success = await processPost(post as DuePost);
   return { success: true as const, posted: success };
 }
 

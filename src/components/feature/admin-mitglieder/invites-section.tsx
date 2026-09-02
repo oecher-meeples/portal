@@ -31,6 +31,7 @@ import {
 import { ActionButton } from "@/components/ui/action-button";
 import { InviteStatusPill } from "@/components/entities/invite-status-pill";
 import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
+import { ImportInvitesDialog } from "@/components/feature/admin-mitglieder/import-invites-dialog";
 import {
   extendInvite,
   revokeInvite,
@@ -41,11 +42,12 @@ import {
   formatInviteMessage,
   type InviteStatus,
 } from "@/lib/members/invites";
+import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
 export type InviteRow = {
   id: string;
   token: string;
-  email: string | null;
+  email: string;
   createdByDisplayName: string;
   createdAt: string;
   expiresAt: string;
@@ -66,7 +68,15 @@ function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
 }
 
-export function InvitesSection({ invites }: { invites: InviteRow[] }) {
+export function InvitesSection({
+  invites,
+  membersWithoutLogin,
+  defaultDays,
+}: {
+  invites: InviteRow[];
+  membersWithoutLogin: MemberWithoutLoginRow[];
+  defaultDays: number;
+}) {
   const [search, setSearch] = useState("");
   const [activeStatuses, setActiveStatuses] = useState<Set<InviteStatus>>(
     () => new Set(DEFAULT_ACTIVE_STATUSES),
@@ -96,7 +106,7 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
       if (!activeStatuses.has(invite.status)) return false;
       if (
         search &&
-        !invite.email?.toLowerCase().includes(search.toLowerCase())
+        !invite.email.toLowerCase().includes(search.toLowerCase())
       ) {
         return false;
       }
@@ -119,7 +129,13 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
               <StatTile label="Offene Einladungen" value={openCount} />
               <StatTile label="Abgelaufene Einladungen" value={expiredCount} />
             </div>
-            <InviteForm />
+            <InviteForm
+              membersWithoutLogin={membersWithoutLogin}
+              defaultDays={defaultDays}
+            />
+            <div className="flex justify-end">
+              <ImportInvitesDialog />
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-full max-w-sm">
                 <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
@@ -170,7 +186,7 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
                   {filteredInvites.map((invite) => (
                     <TableRow key={invite.id}>
                       <TableCell className="font-medium">
-                        {invite.email ?? "*"}
+                        {invite.email}
                       </TableCell>
                       <TableCell>
                         <InviteStatusPill status={invite.status} />
@@ -200,7 +216,7 @@ export function InvitesSection({ invites }: { invites: InviteRow[] }) {
                                   link,
                                   new Date(invite.expiresAt),
                                 );
-                                const mailtoHref = `mailto:${invite.email ?? ""}?subject=${encodeURIComponent(
+                                const mailtoHref = `mailto:${invite.email}?subject=${encodeURIComponent(
                                   "Einladung zu Oecher Meeples",
                                 )}&body=${encodeURIComponent(message)}`;
                                 return (

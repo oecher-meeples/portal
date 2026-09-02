@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -9,6 +10,17 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RoleManagementSection } from "@/components/feature/admin-mitglieder/role-management-section";
+
+/** jsdom has no working native DataTransfer — a minimal stand-in that
+ * supports exactly what the component uses (analog role-permissions-editor.test.tsx, #359). */
+function fakeDataTransfer() {
+  const store = new Map<string, string>();
+  return {
+    effectAllowed: "none",
+    setData: (type: string, value: string) => store.set(type, value),
+    getData: (type: string) => store.get(type) ?? "",
+  };
+}
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -18,11 +30,13 @@ const createRoleMock = vi.fn();
 const updateRoleMock = vi.fn();
 const deleteRoleMock = vi.fn();
 const setRolePermissionsMock = vi.fn();
+const reorderRolesMock = vi.fn();
 vi.mock("@/components/feature/admin-mitglieder/actions", () => ({
   createRole: (...args: unknown[]) => createRoleMock(...args),
   updateRole: (...args: unknown[]) => updateRoleMock(...args),
   deleteRole: (...args: unknown[]) => deleteRoleMock(...args),
   setRolePermissions: (...args: unknown[]) => setRolePermissionsMock(...args),
+  reorderRoles: (...args: unknown[]) => reorderRolesMock(...args),
 }));
 
 afterEach(() => {
@@ -45,12 +59,16 @@ const ROLES = [
     name: "Vorstand",
     description: "Leitung des Vereins",
     permissionIds: ["perm-manage"],
+    isSystemRole: false,
+    sortOrder: 0,
   },
   {
     id: "role-admin",
     name: "Admin",
     description: null,
     permissionIds: ["perm-manage", "perm-admin"],
+    isSystemRole: false,
+    sortOrder: 1,
   },
 ];
 
@@ -195,5 +213,58 @@ describe("RoleManagementSection — Löschen (#219)", () => {
     await user.click(screen.getByRole("button", { name: "Endgültig löschen" }));
 
     expect(deleteRoleMock).toHaveBeenCalledWith("role-vorstand");
+  });
+});
+
+describe("RoleManagementSection — Umsortieren (#391)", () => {
+  it("persists the dragged role's new position via reorderRoles", async () => {
+    const user = userEvent.setup();
+    reorderRolesMock.mockResolvedValue({ success: true });
+    render(<RoleManagementSection roles={ROLES} permissions={PERMISSIONS} />);
+    await openAccordion(user);
+
+    const dataTransfer = fakeDataTransfer();
+    const source = screen
+      .getByLabelText("Rolle „Admin“ per Drag-and-Drop verschieben")
+      .closest("li")!;
+    const target = screen.getByText("Vorstand").closest("li")!;
+
+    fireEvent.dragStart(
+      within(source).getByLabelText(
+        "Rolle „Admin“ per Drag-and-Drop verschieben",
+      ),
+      { dataTransfer },
+    );
+    fireEvent.drop(target, { dataTransfer });
+
+    expect(reorderRolesMock).toHaveBeenCalledWith([
+      "role-admin",
+      "role-vorstand",
+    ]);
+  });
+
+  it("reverts the optimistic order if persisting fails", async () => {
+    const user = userEvent.setup();
+    reorderRolesMock.mockResolvedValue({ error: "Speichern fehlgeschlagen." });
+    render(<RoleManagementSection roles={ROLES} permissions={PERMISSIONS} />);
+    await openAccordion(user);
+
+    const dataTransfer = fakeDataTransfer();
+    const handle = screen.getByLabelText(
+      "Rolle „Admin“ per Drag-and-Drop verschieben",
+    );
+    const target = screen.getByText("Vorstand").closest("li")!;
+
+    fireEvent.dragStart(handle, { dataTransfer });
+    fireEvent.drop(target, { dataTransfer });
+
+    expect(
+      await screen.findByText("Speichern fehlgeschlagen."),
+    ).toBeInTheDocument();
+
+    const roleNames = screen
+      .getAllByRole("listitem")
+      .map((item) => within(item).queryByText(/Vorstand|Admin/)?.textContent);
+    expect(roleNames).toEqual(["Vorstand", "Admin"]);
   });
 });

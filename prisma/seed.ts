@@ -11,7 +11,7 @@ import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import {
   findOrCreateBoardGameTitle,
   uniqueBoardGameSlug,
-} from "../src/lib/ludothek/board-games";
+} from "../src/lib/ludothek/board-game-title-lookup";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -19,6 +19,8 @@ import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
 import { DEMO_LEGAL_DOCUMENTS } from "./seed-data/demo-legal-documents";
 import { DEMO_POSTS } from "./seed-data/demo-posts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
+import { seedDemoFamily } from "./seed-family";
+import { ANONYMER_MEEPLE_NAME } from "../src/lib/ludothek/anonymer-meeple";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
  * manually testable without a real second purchase. */
@@ -58,7 +60,14 @@ const DEMO_ROLE_ACCOUNTS = [
   password: process.env.SEED_DEMO_PASSWORD ?? "demo1234",
 }));
 
-async function upsertNeonAuthUser({
+/**
+ * #370: ein bereits existierender User bricht hier NICHT früh ab, sondern
+ * synct den Passwort-Hash auf den aktuell übergebenen Wert — sonst bleibt
+ * nach einer Passwort-Änderung in `.env.local` (z. B. `SEED_ADMIN_PASSWORD`)
+ * der alte Hash bestehen und der Login schlägt trotz "korrektem" Passwort
+ * fehl, ohne dass Rate-Limiting oder ein Code-Bug beteiligt wäre.
+ */
+export async function upsertNeonAuthUser({
   email,
   password,
   name,
@@ -67,15 +76,23 @@ async function upsertNeonAuthUser({
   password: string;
   name: string;
 }) {
+  const hashedPassword = await hashPassword(password);
+
   const existing = await prisma.$queryRaw<{ id: string }[]>`
     SELECT id FROM neon_auth."user" WHERE email = ${email}
   `;
   if (existing.length > 0) {
-    console.log(`Neon-Auth-User "${email}" existiert bereits, überspringe.`);
-    return existing[0].id;
+    const userId = existing[0].id;
+    await prisma.$executeRaw`
+      UPDATE neon_auth."account"
+      SET password = ${hashedPassword}, "updatedAt" = now()
+      WHERE "userId" = ${userId}::uuid AND "providerId" = 'credential'
+    `;
+    console.log(
+      `Neon-Auth-User "${email}" existiert bereits, Passwort synchronisiert.`,
+    );
+    return userId;
   }
-
-  const hashedPassword = await hashPassword(password);
 
   const [user] = await prisma.$queryRaw<{ id: string }[]>`
     INSERT INTO neon_auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
@@ -100,12 +117,62 @@ async function ensureAdminMeeple(neonAuthUserId: string) {
   });
 }
 
-async function ensureMeeple(neonAuthUserId: string, displayName: string) {
+export async function ensureMeeple(
+  neonAuthUserId: string,
+  displayName: string,
+) {
   return prisma.meeple.upsert({
     where: { neonAuthUserId },
     update: {},
     create: { neonAuthUserId, displayName },
   });
+}
+
+/** Kein Unique-Feld erlaubt hier ein Upsert: `neonAuthUserId` ist `null` (kein
+ * Login), und mehrere `NULL`-Zeilen sind in Postgres zulässig — also
+ * find-or-create über den Displaynamen, statt (fälschlich) auf `neonAuthUserId`
+ * zu upserten und dabei bei jedem Lauf eine weitere Zeile anzulegen. */
+/**
+ * Dauerhaftes Sammelkonto "Anonymer Meeple" (#333) — Ziel jeder "an extern
+ * weitergegeben"-Aktion, deren Empfänger:in kein eigenes Vereinsmitglied ist.
+ * Kein Login (`neonAuthUserId: null`), keine echten Personendaten. Bekommt
+ * trotzdem eine begleitende `Member`-Zeile (bewusste Modellierungs-
+ * entscheidung, siehe Kommentar in `holdings.ts` bei `handOverToExternal()`):
+ * `GameHolding.vereinsmitgliedId` ist nicht nullable-für-Freitext gebaut,
+ * daher braucht auch dieses Sammelkonto ein `Member`-Ziel — ohne
+ * `firstName`/`lastName`/Adresse, nur zum Halten der Fremdschlüssel-Referenz.
+ */
+export async function nextMemberNumber(): Promise<number> {
+  const highestNumber = await prisma.member.aggregate({
+    _max: { memberNumber: true },
+  });
+  return (highestNumber._max.memberNumber ?? 0) + 1;
+}
+
+async function ensureAnonymerMeeple() {
+  const meeple =
+    (await prisma.meeple.findFirst({
+      where: { displayName: ANONYMER_MEEPLE_NAME, neonAuthUserId: null },
+    })) ??
+    (await prisma.meeple.create({
+      data: { displayName: ANONYMER_MEEPLE_NAME },
+    }));
+
+  const existingMember = await prisma.member.findUnique({
+    where: { meepleId: meeple.id },
+  });
+  if (existingMember) return { meeple, member: existingMember };
+
+  const member = await prisma.member.create({
+    data: {
+      memberNumber: await nextMemberNumber(),
+      slug: slugify(ANONYMER_MEEPLE_NAME),
+      email: "anonymer-meeple@oecher-meeples.invalid",
+      meepleId: meeple.id,
+    },
+  });
+
+  return { meeple, member };
 }
 
 /**
@@ -144,14 +211,15 @@ async function createDemoGameCopy(
   return copy;
 }
 
-async function seedDemoGames(adminMeepleId: string) {
+async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
   const unsortiert = await prisma.storageUnit.upsert({
     where: { code: UNSORTIERT_CODE },
-    update: {},
+    update: { keeperMeepleId },
     create: {
       code: UNSORTIERT_CODE,
       kind: StorageUnitKind.BOX,
       label: "Unsortiert",
+      keeperMeepleId,
     },
   });
 
@@ -296,17 +364,26 @@ async function seedDemoMeeples() {
   );
 }
 
-/** Ein Account je Vereinsamt (DEMO_ROLE_ACCOUNTS) — Login zum Durchklicken jeder Rolle. */
+/**
+ * Ein Account je Vereinsamt (DEMO_ROLE_ACCOUNTS) — Login zum Durchklicken jeder Rolle.
+ * Gibt die Meeple-Id je Rolle zurück, z. B. damit `seedDemoGames` die
+ * Unsortiert-Einheit dem Kassenwart als Keeper zuweisen kann.
+ */
 async function seedDemoRoleAccounts() {
+  const meepleIdByRole = new Map<string, string>();
+
   for (const account of DEMO_ROLE_ACCOUNTS) {
     const userId = await upsertNeonAuthUser(account);
     await assignRole(userId, account.role);
-    await ensureMeeple(userId, account.name);
+    const meeple = await ensureMeeple(userId, account.name);
+    meepleIdByRole.set(account.role, meeple.id);
   }
 
   console.log(
     `${DEMO_ROLE_ACCOUNTS.length} Rollen-Demo-Accounts angelegt/übersprungen.`,
   );
+
+  return meepleIdByRole;
 }
 
 /** Upsertet auf `slug`, damit ein Re-Seed die Demo-Beiträge nicht dupliziert. */
@@ -327,7 +404,11 @@ async function seedDemoPosts() {
         internal: post.internal,
         instagram: post.instagram,
         coverImageUrl: post.coverImageUrl,
-        instagramStatus: post.instagram ? InstagramStatus.PENDING : null,
+        ...(post.instagram
+          ? {
+              instagramDetails: { create: { status: InstagramStatus.PENDING } },
+            }
+          : {}),
       },
     });
   }
@@ -370,9 +451,15 @@ async function main() {
   await assignRole(adminUserId, "sysadmin");
 
   const adminMeeple = await ensureAdminMeeple(adminUserId);
-  await seedDemoGames(adminMeeple.id);
+  const meepleIdByRole = await seedDemoRoleAccounts();
+  const spielewartMeepleId = meepleIdByRole.get("Spielewart");
+  if (!spielewartMeepleId) {
+    throw new Error("Spielewart-Demo-Account wurde nicht angelegt.");
+  }
+  await seedDemoGames(adminMeeple.id, spielewartMeepleId);
   await seedDemoMeeples();
-  await seedDemoRoleAccounts();
+  await seedDemoFamily();
+  await ensureAnonymerMeeple();
   await seedDemoPosts();
   await seedDemoDownloads();
   await seedDemoLegalDocuments();

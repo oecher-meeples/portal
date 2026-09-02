@@ -39,6 +39,9 @@ auditConfig:
     - GHSA-fmh4-wcc4-5jm3
     - GHSA-pw9m-5jxm-xr6h
     - GHSA-qq9h-g4jm-xgf3
+    # mysql2 (better-auth → prisma → mysql2, transitiv) — Projekt nutzt
+    # ausschließlich Postgres/Neon, mysql2 wird nie tatsächlich verwendet.
+    - GHSA-3f6p-5ww8-9rcr
 minimumReleaseAgeExclude:
   - better-auth@1.6.2 || 1.6.11
   - "@hono/node-server@2.0.5"

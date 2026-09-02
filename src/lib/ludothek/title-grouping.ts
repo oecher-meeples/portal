@@ -2,12 +2,17 @@ import type { GameZustand } from "@/lib/ludothek/holdings";
 
 /** Best-Zustand-Priorität für die aggregierte Titel-Pille (Plan-Schritt 8):
  * "frei" schlägt "ausgeliehen" schlägt "wartung" schlägt "nicht-erfasst" —
- * ein Titel gilt als frei, sobald irgendein Exemplar frei ist. */
+ * ein Titel gilt als frei, sobald irgendein Exemplar frei ist. Die beiden
+ * "ausgeliehen"-Unterfälle (#333) teilen sich einen Rang — welcher
+ * repräsentativ gezeigt wird, wenn beide vorkommen, ist nicht fachlich
+ * entschieden, daher "verfügbar" zuerst (die freundlichere Auskunft). */
 const ZUSTAND_PRIORITY: Record<GameZustand, number> = {
   frei: 0,
-  ausgeliehen: 1,
+  "ausgeliehen-verfuegbar": 1,
+  "ausgeliehen-nicht-verfuegbar": 1,
   wartung: 2,
   "nicht-erfasst": 3,
+  privat: 4,
 };
 
 export type LudothekTitleGroup<

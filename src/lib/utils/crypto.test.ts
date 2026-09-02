@@ -4,6 +4,7 @@ import {
   EncryptionKeyError,
   decryptSecret,
   encryptSecret,
+  ibanFirst2,
   ibanLast4,
   isValidIban,
   maskIban,
@@ -126,18 +127,34 @@ describe("isValidIban", () => {
   });
 });
 
-describe("ibanLast4 / maskIban", () => {
+describe("ibanFirst2 / ibanLast4 / maskIban (Live-Review F6)", () => {
+  it("returns the first two characters (country code) of the normalised iban", () => {
+    expect(ibanFirst2(IBAN)).toBe("DE");
+  });
+
   it("returns the last four characters of the normalised iban", () => {
     expect(ibanLast4(IBAN)).toBe("3000");
   });
 
-  it("masks everything but the last four digits", () => {
-    expect(maskIban(ibanLast4(IBAN))).toBe("**** 3000");
+  it("masks in full IBAN length when first2 is known", () => {
+    // DE = 22 Zeichen gesamt: 2 (Präfix) + 16 Sterne + 4 (last4).
+    expect(maskIban(ibanFirst2(IBAN), ibanLast4(IBAN))).toBe(
+      `DE${"*".repeat(16)}3000`,
+    );
+  });
+
+  it("falls back to a country-agnostic length for an unknown country", () => {
+    expect(maskIban("XX", "3000")).toBe(`XX${"*".repeat(16)}3000`);
+  });
+
+  it("falls back to the short form without first2 (Altbestand)", () => {
+    expect(maskIban(null, ibanLast4(IBAN))).toBe("**** 3000");
+    expect(maskIban(undefined, ibanLast4(IBAN))).toBe("**** 3000");
   });
 
   it("renders a dash when nothing is stored", () => {
-    expect(maskIban(null)).toBe("—");
-    expect(maskIban(undefined)).toBe("—");
-    expect(maskIban("")).toBe("—");
+    expect(maskIban(null, null)).toBe("—");
+    expect(maskIban(null, undefined)).toBe("—");
+    expect(maskIban(null, "")).toBe("—");
   });
 });

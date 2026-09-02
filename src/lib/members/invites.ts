@@ -48,7 +48,7 @@ export function inviteStatus(
 export type InviteRow = {
   id: string;
   token: string;
-  email: string | null;
+  email: string;
   createdByDisplayName: string;
   createdAt: Date;
   expiresIn: number;
@@ -105,8 +105,9 @@ export async function findOpenInviteByEmail(email: string, now = new Date()) {
 /** No fixed minimum — any value greater than zero is a valid validity period. */
 export const MIN_INVITE_DAYS = 0;
 export const MAX_INVITE_DAYS = 183;
+/** Fallback only for callers that can't read `InviteSettings` (e.g. pure unit
+ * tests) — the admin-configured default (`getDefaultInviteDays()`) wins in the UI. */
 export const DEFAULT_BOUND_DAYS = 7;
-export const DEFAULT_UNBOUND_DAYS = 1;
 
 /** Rounded up so a fractional day (e.g. 2.5) never resolves to less validity
  * than requested. */
@@ -122,16 +123,15 @@ export function computeExpiresAt(
 }
 
 /** The registration URL for an invite — shared so every place that links to
- * `/registrieren` builds it the same way (with `email` for bound invites).
+ * `/registrieren` builds it the same way, with the bound `email` pre-filled.
  * Plain string building, not `new URL()`, so an empty `origin` (SSR, before
  * `window.location` is known) still yields a valid relative link. */
 export function buildRegistrationLink(
   origin: string,
   token: string,
-  email: string | null,
+  email: string,
 ): string {
-  const emailParam = email ? `&email=${encodeURIComponent(email)}` : "";
-  return `${origin}/registrieren?token=${encodeURIComponent(token)}${emailParam}`;
+  return `${origin}/registrieren?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
 }
 
 /** Shared by the "Per Mail versenden" and "Einladung kopieren" buttons — the

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { sleep } from "@/lib/utils/sleep";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import {
+  BGG_REQUEST_THROTTLE_MS as THROTTLE_MS,
   fetchBggGame,
   searchBggGamesExact,
   type BggGameData,
@@ -11,20 +12,22 @@ import {
 } from "@/lib/bgg/client";
 import { lookupEanTitle, UpcLookupError } from "@/lib/upc-lookup/client";
 import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
-import { resolvePublisherFromVersions } from "@/lib/ludothek/board-game-versions";
+import {
+  bggDataToTitleInput,
+  resolvePublisherFromVersions,
+} from "@/lib/ludothek/board-game-versions";
 import {
   createBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
+import { getSuggestedInventoryNumber } from "@/lib/ludothek/game-copies";
 
-/** Mind. so viel Zeit zwischen zwei BGG-Anfragen (#186) — BGGs Rate-Limit
- * skaliert nicht ungebremst auf z. B. 50 Titel, siehe `FETCH_TIMEOUT_MS` in
- * `lib/bgg/client.ts`. Konservativ etwas über der geforderten "max. 2
- * Anfragen/Sekunde" (500ms), da jeder eindeutig auflösbare Name zwei
- * aufeinanderfolgende BGG-Anfragen braucht (Suche + Detaildaten). */
-const THROTTLE_MS = 600;
+/** The bulk-import dialog's "Trennzeichen"-Dropdown (#289) — `undefined`
+ * ("Kein Trennzeichen") keeps today's behaviour, every line is a plain
+ * Name/EAN. */
+export type BulkImportDelimiter = ";" | "|";
 
 export type BulkImportRow =
   | {
@@ -43,6 +46,10 @@ export type BulkImportRow =
       /** Set when `name` was an EAN — the title it was resolved to before
        * the BGG search, so the admin sees what was actually looked up. */
       searchedTitle?: string;
+      /** Set when the line carried an explicit Inventarnummer (#289) — kept
+       * around so `resolveBulkImportCandidate()` can still apply it once the
+       * admin picks the right candidate by hand. */
+      inventoryNumber?: string;
     }
   | {
       name: string;
@@ -53,30 +60,42 @@ export type BulkImportRow =
        * afterwards (preview or create error) — the same single match as a
        * correction suggestion, so the admin doesn't have to search again. */
       candidates?: BggSearchResult[];
+      inventoryNumber?: string;
     };
 
-function toCreateInput(bggId: number, data: BggGameData): CreateBoardGameInput {
+function toCreateInput(
+  bggId: number,
+  data: BggGameData,
+  inventoryNumber?: string,
+): CreateBoardGameInput {
   return {
-    title: data.title,
-    kind: data.kind,
-    bggId,
-    minPlayers: data.minPlayers ?? undefined,
-    maxPlayers: data.maxPlayers ?? undefined,
-    playTimeMinutes: data.playTimeMinutes ?? undefined,
-    weight: data.weight ?? undefined,
-    imageUrl: data.imageUrl ?? undefined,
-    description: data.description ?? undefined,
-    mechanics: data.mechanics,
-    explainerVideoUrl: data.explainerVideoUrl ?? undefined,
-    languageDependence: data.languageDependence,
-    author: data.author,
-    yearPublished: data.yearPublished ?? undefined,
-    // Ohne UI zur Konfliktauflösung übernimmt der Massenimport nur einen
-    // eindeutigen Verlag — bei Abweichungen bleibt das Feld leer, korrigierbar
-    // im Titel-Editor (#205).
-    publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
+    ...bggDataToTitleInput(bggId, data),
     alternateNames: data.alternateNames,
+    inventoryNumber,
   };
+}
+
+/**
+ * Trennt eine Zeile in Inventarnummer + Name/EAN, wenn ein Trennzeichen
+ * gewählt ist (#289) — die erste Spalte ist die Inventarnummer, der Rest der
+ * Zeile das Spiel. Enthält die Zeile das Trennzeichen nicht (oder wäre eine
+ * Seite danach leer), gilt sie unverändert als reines Name/EAN ohne
+ * Inventarnummer.
+ */
+function splitInventoryNumber(
+  line: string,
+  delimiter?: BulkImportDelimiter,
+): { entry: string; inventoryNumber?: string } {
+  if (!delimiter) return { entry: line };
+
+  const index = line.indexOf(delimiter);
+  if (index === -1) return { entry: line };
+
+  const inventoryNumber = line.slice(0, index).trim();
+  const entry = line.slice(index + delimiter.length).trim();
+  if (!inventoryNumber || !entry) return { entry: line };
+
+  return { entry, inventoryNumber };
 }
 
 /**
@@ -116,6 +135,7 @@ async function finishImport(
   entry: string,
   bggId: number,
   searchedTitle?: string,
+  inventoryNumber?: string,
 ): Promise<BulkImportRow> {
   const existing = await prisma.boardGame.findUnique({
     where: { bggId },
@@ -137,16 +157,28 @@ async function finishImport(
       status: "failed",
       error: preview.error,
       searchedTitle,
+      inventoryNumber,
     };
   }
 
-  const created = await createBoardGame(toCreateInput(bggId, preview.data));
+  // Unbeaufsichtigter Import — es gibt niemanden, der einen Vorschlag noch
+  // bestätigen könnte, deshalb wird er direkt übernommen statt nur vorbelegt
+  // (#289). Sequentiell (nach Commit des vorherigen `createBoardGame()`
+  // unten), damit zwei neue Exemplare im selben Batch nie denselben
+  // Vorschlag bekommen.
+  const resolvedInventoryNumber =
+    inventoryNumber ?? (await getSuggestedInventoryNumber());
+
+  const created = await createBoardGame(
+    toCreateInput(bggId, preview.data, resolvedInventoryNumber),
+  );
   if (created.error) {
     return {
       name: entry,
       status: "failed",
       error: created.error,
       searchedTitle,
+      inventoryNumber,
     };
   }
 
@@ -162,7 +194,10 @@ async function finishImport(
   };
 }
 
-async function importOne(entry: string): Promise<BulkImportRow> {
+async function importOne(
+  entry: string,
+  inventoryNumber?: string,
+): Promise<BulkImportRow> {
   const resolved = await resolveEntryTitle(entry);
   if ("error" in resolved) {
     return { name: entry, status: "failed", error: resolved.error };
@@ -173,11 +208,22 @@ async function importOne(entry: string): Promise<BulkImportRow> {
   await sleep(THROTTLE_MS);
   const candidates = await searchBggGamesExact(name);
   if (candidates.length !== 1) {
-    return { name: entry, status: "needs-review", candidates, searchedTitle };
+    return {
+      name: entry,
+      status: "needs-review",
+      candidates,
+      searchedTitle,
+      inventoryNumber,
+    };
   }
 
   await sleep(THROTTLE_MS);
-  const result = await finishImport(entry, candidates[0].bggId, searchedTitle);
+  const result = await finishImport(
+    entry,
+    candidates[0].bggId,
+    searchedTitle,
+    inventoryNumber,
+  );
   // Keep the (single) match around as a correction suggestion if it still
   // failed afterwards — same reasoning as the needs-review candidates list.
   return result.status === "failed" ? { ...result, candidates } : result;
@@ -191,13 +237,14 @@ async function importOne(entry: string): Promise<BulkImportRow> {
 export async function resolveBulkImportCandidate(
   entry: string,
   bggId: number,
+  inventoryNumber?: string,
 ): Promise<BulkImportRow> {
   const user = await requireGamesManagePermission();
   if (!user) {
     return { name: entry, status: "failed", error: "Keine Berechtigung." };
   }
 
-  return finishImport(entry, bggId);
+  return finishImport(entry, bggId, undefined, inventoryNumber);
 }
 
 /**
@@ -210,6 +257,7 @@ export async function resolveBulkImportCandidate(
  */
 export async function bulkImportBoardGames(
   names: string[],
+  delimiter?: BulkImportDelimiter,
 ): Promise<{ success: true; results: BulkImportRow[] } | { error: string }> {
   const user = await requireGamesManagePermission();
   if (!user) {
@@ -223,8 +271,9 @@ export async function bulkImportBoardGames(
   );
 
   const results: BulkImportRow[] = [];
-  for (const name of trimmedNames) {
-    results.push(await importOne(name));
+  for (const line of trimmedNames) {
+    const { entry, inventoryNumber } = splitInventoryNumber(line, delimiter);
+    results.push(await importOne(entry, inventoryNumber));
   }
 
   return { success: true, results };

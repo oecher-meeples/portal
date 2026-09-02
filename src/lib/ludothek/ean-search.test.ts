@@ -78,12 +78,12 @@ describe("searchEanForBoardGame", () => {
   });
 
   describe("BGG-Product-Code-Priorität (#205)", () => {
-    it("returns the BGG product code directly, without calling UPCitemdb", async () => {
+    it("returns a valid BGG product code directly, without calling UPCitemdb", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
       prismaMock.rolePermission.count.mockResolvedValue(1);
 
       const result = await searchEanForBoardGame("Ark Nova", {
-        bggProductCode: "FEU001",
+        bggProductCode: "0850000576407",
         publisher: ["Feuerland Spiele"],
       });
 
@@ -91,7 +91,11 @@ describe("searchEanForBoardGame", () => {
       expect(result).toEqual({
         success: true,
         results: [
-          { ean: "FEU001", title: "Ark Nova", brand: "Feuerland Spiele" },
+          {
+            ean: "0850000576407",
+            title: "Ark Nova",
+            brand: "Feuerland Spiele",
+          },
         ],
       });
     });
@@ -110,6 +114,26 @@ describe("searchEanForBoardGame", () => {
       expect(searchEanByNameMock).toHaveBeenCalledWith("Ark Nova");
       expect(result.success && result.results).toEqual([
         { ean: "0850000576407", title: "Ark Nova" },
+      ]);
+    });
+
+    it("falls back to UPCitemdb when the BGG product code is not a valid EAN (#322)", async () => {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      prismaMock.rolePermission.count.mockResolvedValue(1);
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "0850000576407", title: "Ark Nova", brand: "Feuerland Spiele" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova", {
+        // Real-world case (#322): BGG's German-edition product code, not a
+        // valid EAN (contains letters, wrong length).
+        bggProductCode: "FEU001",
+        publisher: ["Feuerland Spiele"],
+      });
+
+      expect(searchEanByNameMock).toHaveBeenCalledWith("Ark Nova");
+      expect(result.success && result.results).toEqual([
+        { ean: "0850000576407", title: "Ark Nova", brand: "Feuerland Spiele" },
       ]);
     });
   });

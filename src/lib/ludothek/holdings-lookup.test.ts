@@ -4,6 +4,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const {
+  ensureEventUnit,
   getGameZustand,
   getResponsibleMeeple,
   resolveScannedCode,
@@ -20,7 +21,7 @@ function openHolding(overrides: Partial<Record<string, unknown>> = {}) {
     id: "holding-1",
     gameCopyId: GAME_ID,
     unitId: null,
-    meepleId: null,
+    vereinsmitgliedId: null,
     origin: "INITIAL",
     startedAt: new Date(),
     endedAt: null,
@@ -50,7 +51,7 @@ beforeEach(() => {
 describe("getResponsibleMeeple", () => {
   it("is the borrower for a direct loan", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEEPLE_A }) as never,
     );
 
     expect(await getResponsibleMeeple({ id: GAME_ID })).toBe(MEEPLE_A);
@@ -114,15 +115,28 @@ describe("getGameZustand", () => {
     ).toBe("frei");
   });
 
-  it("is ausgeliehen when a person holds it", async () => {
+  it("is ausgeliehen-verfuegbar when the holding Member has a Meeple with a login", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue({
-      ...openHolding({ meepleId: MEEPLE_A }),
+      ...openHolding({ vereinsmitgliedId: MEEPLE_A }),
       unit: null,
+      vereinsmitglied: { meeple: { neonAuthUserId: "auth-1" } },
     } as never);
 
     expect(
       await getGameZustand({ id: GAME_ID, status: "ACTIVE" as never }),
-    ).toBe("ausgeliehen");
+    ).toBe("ausgeliehen-verfuegbar");
+  });
+
+  it("is ausgeliehen-nicht-verfuegbar when the holding Member has no Meeple login", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue({
+      ...openHolding({ vereinsmitgliedId: MEEPLE_A }),
+      unit: null,
+      vereinsmitglied: null,
+    } as never);
+
+    expect(
+      await getGameZustand({ id: GAME_ID, status: "ACTIVE" as never }),
+    ).toBe("ausgeliehen-nicht-verfuegbar");
   });
 
   it("is wartung when the completeness check failed", async () => {
@@ -288,5 +302,51 @@ describe("formatLocationChain", () => {
     expect(formatLocationChain({ responsibleName: null, unitChain: "" })).toBe(
       "",
     );
+  });
+});
+
+describe("ensureEventUnit (#273)", () => {
+  it("upserts by a code deterministically derived from the event slug", async () => {
+    prismaMock.storageUnit.upsert.mockResolvedValue({
+      id: "unit-1",
+      code: "OM-EVENT-spieletag-2026",
+    } as never);
+
+    await ensureEventUnit({ slug: "spieletag-2026", title: "Spieletag 2026" });
+
+    expect(prismaMock.storageUnit.upsert).toHaveBeenCalledWith({
+      where: { code: "OM-EVENT-spieletag-2026" },
+      update: {},
+      create: {
+        code: "OM-EVENT-spieletag-2026",
+        kind: "EVENT",
+        label: "Spieletag 2026",
+      },
+    });
+  });
+
+  it("is idempotent — a second call for the same event reuses the row", async () => {
+    prismaMock.storageUnit.upsert.mockResolvedValue({
+      id: "unit-1",
+      code: "OM-EVENT-spieletag-2026",
+    } as never);
+
+    const event = { slug: "spieletag-2026", title: "Spieletag 2026" };
+    const first = await ensureEventUnit(event);
+    const second = await ensureEventUnit(event);
+
+    expect(first.id).toBe(second.id);
+    expect(prismaMock.storageUnit.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("has no keeper, analogous to Unsortiert", async () => {
+    prismaMock.storageUnit.upsert.mockResolvedValue({} as never);
+
+    await ensureEventUnit({ slug: "spieletag-2026", title: "Spieletag 2026" });
+
+    const call = prismaMock.storageUnit.upsert.mock.calls[0][0] as {
+      create: Record<string, unknown>;
+    };
+    expect(call.create).not.toHaveProperty("keeperMeepleId");
   });
 });

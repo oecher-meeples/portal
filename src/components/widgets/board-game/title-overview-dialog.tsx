@@ -119,7 +119,14 @@ export function TitleOverviewDialog({
   async function handlePromoteAlternateToTitle(alt: AlternateName) {
     const result = await promoteAlternateNameToTitle(alt.id);
     if ("success" in result) {
+      const previousTitle = title;
       onTitleChange(alt.name);
+      // War noch kein Sekundärtitel gesetzt, verschiebt der Server den
+      // bisherigen Haupttitel dorthin (siehe `promoteAlternateNameToTitle`)
+      // — sonst bleibt der bisherige Sekundärtitel unangetastet (#285).
+      if (!secondaryTitle) {
+        onSecondaryTitleChange(previousTitle);
+      }
       await refresh();
     }
     return result;
@@ -175,8 +182,8 @@ export function TitleOverviewDialog({
         {isLoading ? (
           <p className="text-muted-foreground text-sm">Lade…</p>
         ) : (
-          <ul className="flex flex-col gap-1.5 text-sm">
-            <li className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between">
+          <ul className="flex max-h-80 flex-col gap-1.5 overflow-y-auto text-sm">
+            <li className="flex flex-col gap-1.5 rounded-md border p-2">
               <span>
                 {title}
                 <span className="text-muted-foreground"> (Haupttitel)</span>
@@ -192,7 +199,7 @@ export function TitleOverviewDialog({
             </li>
 
             {secondaryTitle && (
-              <li className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between">
+              <li className="flex flex-col gap-1.5 rounded-md border p-2">
                 <span>
                   {secondaryTitle}
                   <span className="text-muted-foreground">
@@ -233,7 +240,7 @@ export function TitleOverviewDialog({
             {names.map((alt) => (
               <li
                 key={alt.id}
-                className="flex flex-col gap-1.5 rounded-md border p-2 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-1.5 rounded-md border p-2"
               >
                 <span>
                   {alt.name}

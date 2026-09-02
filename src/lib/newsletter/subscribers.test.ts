@@ -225,7 +225,7 @@ describe("setMeepleNewsletterPreference", () => {
   });
 
   it("creates a CONFIRMED subscriber directly, without a confirmation email", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+    prismaMock.member.findUnique.mockResolvedValue({
       email: "meeple@example.com",
     } as never);
     prismaMock.newsletterSubscriber.findUnique.mockResolvedValue(null);
@@ -247,7 +247,7 @@ describe("setMeepleNewsletterPreference", () => {
   });
 
   it("links an existing anonymous subscription under the same email instead of duplicating it", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+    prismaMock.member.findUnique.mockResolvedValue({
       email: "person@example.com",
     } as never);
     prismaMock.newsletterSubscriber.findUnique.mockResolvedValue({
@@ -274,7 +274,7 @@ describe("setMeepleNewsletterPreference", () => {
   });
 
   it("does nothing when the meeple has no email on file", async () => {
-    prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
+    prismaMock.member.findUnique.mockResolvedValue({
       email: null,
     } as never);
 

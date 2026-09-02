@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
-import { requireCashierRights } from "@/components/feature/admin-bringbuy/cashier-actions";
+import { requireCashierRights } from "@/lib/bringbuy/actions";
 
 /**
  * Cashier-side bulk import (#211) — replaces the former member self-service
@@ -15,7 +15,7 @@ import { requireCashierRights } from "@/components/feature/admin-bringbuy/cashie
 export async function importFleaMarketItemsCsv(eventId: string, raw: string) {
   let meeple;
   try {
-    meeple = await requireCashierRights(eventId);
+    meeple = await requireCashierRights();
   } catch (error) {
     return { created: 0, errors: [], error: (error as Error).message };
   }

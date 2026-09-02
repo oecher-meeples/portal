@@ -23,8 +23,10 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: [],
+    categories: [],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
     alternateNames: [],
     secondaryTitle: null,
@@ -46,6 +48,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Regal A",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }

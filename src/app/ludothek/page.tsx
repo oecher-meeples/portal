@@ -1,17 +1,26 @@
+import Link from "next/link";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentMeeple } from "@/lib/members/meeples";
 import { prisma } from "@/lib/utils/prisma";
 import {
   filterLudothekGames,
   findMaxDurationBound,
+  listDistinctCategories,
   listDistinctMechanics,
   parseLudothekSearchParams,
   toPublicGame,
 } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
-import { buildPrivateCollectionResults } from "@/lib/ludothek/private-collection";
+import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
+import { hasUnconfirmedHoldingsForMeeple } from "@/lib/ludothek/holdings";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
+import { findCurrentEvent } from "@/lib/events/upcoming";
+import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
+import { getPresentGameCopyIds } from "@/lib/events/guest-area";
 
 export default async function LudothekPage({
   searchParams,
@@ -19,9 +28,12 @@ export default async function LudothekPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const tier = await getSessionTier();
-  const internal = tier !== "gast";
-
   const user = await getCurrentUser();
+  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
+  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
+  const internal =
+    tier !== "gast" &&
+    (user ? await hasPermission(user.id, "ludothek:view") : false);
   const canManageGames = user
     ? await hasPermissionInCurrentView(user.id, "games:manage")
     : false;
@@ -29,10 +41,49 @@ export default async function LudothekPage({
   const rawSearchParams = await searchParams;
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
 
-  const allGames = await buildLudothekGames();
-  const filtered = filterLudothekGames(allGames, filters);
+  // "Meine Ausleihen"-Filter (#290): kein eigener Bestätigen-Weg hier, nur
+  // ein Hinweis zurück zum Dashboard, wo die eigentliche Aktion sitzt.
+  const currentMeeple = internal ? await getCurrentMeeple() : null;
+  const showsOwnLoans =
+    currentMeeple !== null && filters.atMeepleId === currentMeeple.id;
+  const hasUnconfirmedOwnHoldings = showsOwnLoans
+    ? await hasUnconfirmedHoldingsForMeeple(currentMeeple.id)
+    : false;
+
+  const clubGames = await buildLudothekGames();
+  // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
+  // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
+  // eines separaten, statischen Blocks).
+  const privateGames =
+    internal && filters.showPrivateCollection
+      ? await buildPrivateLudothekGames()
+      : [];
+  const allGames = [...clubGames, ...privateGames];
+
+  // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
+  // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
+  // nur sinnvoll, solange ein Event läuft, für Meeples wie Gäste gleichermaßen.
+  const currentEvent = await findCurrentEvent();
+  const showExplainerFilter = internal || currentEvent !== null;
+  const attendingExplainerBoardGameIds =
+    !internal && filters.hasExplainer
+      ? currentEvent
+        ? await getAttendingExplainerBoardGameIds(currentEvent.id)
+        : new Set<string>()
+      : undefined;
+  const showPresentFilter = currentEvent !== null;
+  const presentGameCopyIds =
+    filters.onlyPresentAtEvent && currentEvent
+      ? await getPresentGameCopyIds(currentEvent.id)
+      : undefined;
+
+  const filtered = filterLudothekGames(allGames, filters, {
+    attendingExplainerBoardGameIds,
+    presentGameCopyIds,
+  });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
+  const categoriesOptions = listDistinctCategories(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
 
   const meepleOptions = internal
@@ -53,35 +104,21 @@ export default async function LudothekPage({
       })()
     : undefined;
 
-  // Internal-only, and only fetched when the toggle is on — never reaches the guest path.
-  const privateCollectionResults =
-    internal && filters.showPrivateCollection
-      ? buildPrivateCollectionResults(
-          await prisma.privateGameCollectionEntry.findMany({
-            include: {
-              meeple: { select: { displayName: true } },
-              boardGame: {
-                select: {
-                  title: true,
-                  imageUrl: true,
-                  minPlayers: true,
-                  maxPlayers: true,
-                  playTimeMinutes: true,
-                },
-              },
-            },
-          }),
-          filters,
-        )
-      : undefined;
-
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer variant="wide">
       <PageHeading
         eyebrow="Das Herzstück"
         title={`Ludothek – ${allGames.length} Spiele`}
         description="Durchstöbere den Vereinsbestand und filtere nach Spieleranzahl, Dauer oder Mechanik."
       />
+      {hasUnconfirmedOwnHoldings && (
+        <p className="bg-card rounded-lg border p-4 text-sm">
+          Du hast noch unbestätigte Spiele.{" "}
+          <Link href="/dashboard" className="text-primary hover:underline">
+            Zum Dashboard
+          </Link>
+        </p>
+      )}
       <LudothekBrowser
         games={internal ? filtered : filtered.map(toPublicGame)}
         internal={internal}
@@ -90,10 +127,12 @@ export default async function LudothekPage({
         rawSearchParams={rawSearchParams}
         filters={filters}
         mechanicsOptions={mechanicsOptions}
+        categoriesOptions={categoriesOptions}
         maxDurationBound={maxDurationBound}
         meepleOptions={meepleOptions}
-        privateCollectionResults={privateCollectionResults}
+        showExplainerFilter={showExplainerFilter}
+        showPresentFilter={showPresentFilter}
       />
-    </div>
+    </PageContainer>
   );
 }

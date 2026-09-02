@@ -35,6 +35,7 @@ function baseProps() {
     rawSearchParams: {},
     filters: {},
     mechanicsOptions: [],
+    categoriesOptions: [],
   };
 }
 

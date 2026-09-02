@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { disconnectInstagram } from "@/components/feature/admin-settings/actions";
+import { PageContainer } from "@/components/ui/page-container";
 
 export function InstagramConnectionView({
   connected,
@@ -31,7 +32,7 @@ export function InstagramConnectionView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <PageContainer className="gap-4">
       <div className="flex items-center gap-2">
         <Badge variant={connected ? "default" : "outline"}>
           {connected ? "Verbunden" : "Nicht verbunden"}
@@ -64,6 +65,6 @@ export function InstagramConnectionView({
           </Button>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,11 +1,22 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
+
+vi.mock("@/lib/content/content", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/content/content")>()),
+  getAllContent: vi.fn(),
+}));
+vi.mock("@/lib/events/upcoming", () => ({
+  findPublicUpcomingEvents: vi.fn().mockResolvedValue([]),
+}));
+
+const { getAllContent } = await import("@/lib/content/content");
+const {
   fetchInternalEvents,
   fetchPublicEvents,
+  getAllContentWithCalendar,
   parseCalendarEvents,
-} from "@/lib/content/calendar";
+} = await import("@/lib/content/calendar");
 
 const FIXTURE = fs.readFileSync(
   path.join(__dirname, "..", "__fixtures__", "calendar.ics"),
@@ -42,6 +53,47 @@ describe("parseCalendarEvents", () => {
     });
 
     expect(events).toHaveLength(1);
+  });
+});
+
+describe("getAllContentWithCalendar", () => {
+  afterEach(() => {
+    delete process.env.PUBLIC_CALENDAR_ICS_URL;
+    delete process.env.ICS_FEED_URL_INTERNAL;
+    vi.unstubAllGlobals();
+  });
+
+  it("sorts entries descending by date, newest first (#252)", async () => {
+    vi.mocked(getAllContent).mockResolvedValue([
+      { slug: "alt", type: "blog", title: "Alt", date: "2026-06-01" },
+      { slug: "neu", type: "blog", title: "Neu", date: "2026-08-01" },
+    ] as Awaited<ReturnType<typeof getAllContent>>);
+
+    const items = await getAllContentWithCalendar();
+
+    expect(items.map((item) => item.date)).toEqual([
+      "2026-08-01",
+      "2026-06-01",
+    ]);
+  });
+
+  it("includes internal ICS-Termine, marked internal (#208)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(REFERENCE_NOW);
+    try {
+      vi.mocked(getAllContent).mockResolvedValue([]);
+      process.env.ICS_FEED_URL_INTERNAL = "https://example.org/internal.ics";
+      mockFetchOnce(true, FIXTURE);
+
+      const items = await getAllContentWithCalendar();
+
+      const internalItem = items.find((item) =>
+        item.slug.startsWith("kalender-"),
+      );
+      expect(internalItem?.internal).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

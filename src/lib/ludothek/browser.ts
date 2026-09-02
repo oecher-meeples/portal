@@ -42,9 +42,13 @@ export type LudothekGame = {
    * oder ohne BGG-ID (#214). */
   averageRating: number | null;
   mechanics: string[];
+  /** BGGs `boardgamecategory`-Links, analog `mechanics` (#404). */
+  categories: string[];
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
+  /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
+  inventoryNumber: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
    * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
@@ -88,6 +92,9 @@ export type LudothekGame = {
   /** Whether this title has at least one open (see `getLfgStatus`) LfgPost —
    * backs the members-only "Zeige nur Spielergesuche"-Filter (#144). */
   hasOpenLfg: boolean;
+  /** True for a Meeple's privately imported BGG title (#255-Folge) — no
+   * `GameCopy` behind it, `zustand` is always `"privat"`, no Detailseite. */
+  isPrivate: boolean;
 };
 
 /**
@@ -105,6 +112,7 @@ export type PublicLudothekGame = Omit<
   | "locationChain"
   | "ean"
   | "condition"
+  | "inventoryNumber"
   | "bggId"
 >;
 
@@ -120,6 +128,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     locationChain: _locationChain,
     ean: _ean,
     condition: _condition,
+    inventoryNumber: _inventoryNumber,
     bggId: _bggId,
     ...rest
   } = game;
@@ -144,6 +153,8 @@ export type LudothekFilters = {
   durationTo?: number;
   maxWeight?: number;
   mechanics?: string[];
+  /** BGGs Categories (#404) — Filter analog `mechanics`, ODER-verknüpft. */
+  categories?: string[];
   hideExpansions?: boolean;
   /** Erstveröffentlichung von/bis (Jahr, inklusive) — beide unabhängig
    * voneinander setzbar (#205). */
@@ -166,6 +177,18 @@ export type LudothekFilters = {
   showPrivateCollection?: boolean;
   /** Default off. Members-only — matches when a title has at least one open LfgPost (#144). */
   onlyWithOpenLfg?: boolean;
+  /** Default off. Public — "Erklärbär vorhanden" (#256). For Meeples: ≥1
+   * `ExplainerGame`-Eintrag (`explainerCount > 0`). For Gäste während eines
+   * laufenden Events: enger — ≥1 Erklärbär mit `ExplainerAttendance` =
+   * "heute anwesend" (siehe `attendingExplainerBoardGameIds` in
+   * `filterLudothekGames`). */
+  hasExplainer?: boolean;
+  /** Default off. Nur sinnvoll während eines laufenden Events — "nur
+   * anwesende Spiele" (#273), siehe `presentGameCopyIds` in
+   * `filterLudothekGames`. Kein Zeit-Gate an `event.endsAt`: ein Exemplar,
+   * das nach Event-Ende noch auf der Event-Unit liegt, gilt bewusst
+   * weiterhin als anwesend. */
+  onlyPresentAtEvent?: boolean;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -179,9 +202,7 @@ export const MAX_PLAYERS_FILTER = 9;
 
 /** Zeigt Titel, die genau `players` Spieler unterstützen — Ein-Knoten-Slider
  * statt fester Buckets (#214-Folge). Ab `MAX_PLAYERS_FILTER` ("9+") reicht
- * es, wenn der Titel mindestens so viele Spieler unterstützt. Von
- * `filterLudothekGames` und `buildPrivateCollectionResults` gemeinsam
- * genutzt. */
+ * es, wenn der Titel mindestens so viele Spieler unterstützt. */
 export function matchesPlayerCount(
   game: PlayerCounted,
   players: number | undefined,
@@ -228,6 +249,7 @@ export function parseLudothekSearchParams(
 ): LudothekFilters {
   const maxWeightRaw = firstString(searchParams.gewicht);
   const mechanikRaw = searchParams.mechanik;
+  const kategorieRaw = searchParams.kategorie;
   const view = firstString(searchParams.ansicht);
 
   const filters: LudothekFilters = {
@@ -247,12 +269,19 @@ export function parseLudothekSearchParams(
         ? mechanikRaw
         : [mechanikRaw]
       : undefined,
+    categories: kategorieRaw
+      ? Array.isArray(kategorieRaw)
+        ? kategorieRaw
+        : [kategorieRaw]
+      : undefined,
     hideExpansions: firstString(searchParams.ohneErweiterungen) === "1",
     yearFrom: parseNumberParam(firstString(searchParams.jahrVon)),
     yearTo: parseNumberParam(firstString(searchParams.jahrBis)),
     ratingFrom: parseNumberParam(firstString(searchParams.bewertungVon)),
     ratingTo: parseNumberParam(firstString(searchParams.bewertungBis)),
     languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
+    hasExplainer: firstString(searchParams.erklaerbaer) === "1",
+    onlyPresentAtEvent: firstString(searchParams.anwesend) === "1",
   };
 
   if (internal) {
@@ -274,7 +303,13 @@ export function parseLudothekSearchParams(
 export function matchesLudothekSearch(
   game: Pick<
     LudothekGame,
-    "title" | "ean" | "bggId" | "alternateNames" | "publisher" | "author"
+    | "title"
+    | "secondaryTitle"
+    | "ean"
+    | "bggId"
+    | "alternateNames"
+    | "publisher"
+    | "author"
   >,
   search: string,
 ): boolean {
@@ -282,6 +317,7 @@ export function matchesLudothekSearch(
   if (!term) return true;
 
   if (game.title.toLowerCase().includes(term)) return true;
+  if (game.secondaryTitle?.toLowerCase().includes(term)) return true;
   if (game.ean !== null && game.ean === search.trim()) return true;
   if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
   if (game.alternateNames.some((name) => name.toLowerCase().includes(term)))
@@ -297,6 +333,19 @@ export function matchesLudothekSearch(
 export function filterLudothekGames(
   games: LudothekGame[],
   filters: LudothekFilters,
+  {
+    attendingExplainerBoardGameIds,
+    presentGameCopyIds,
+  }: {
+    /** Gast-während-Event-Kontext (#256): wenn gesetzt, ersetzt diese Menge
+     * die einfache `explainerCount > 0`-Prüfung durch "hat ein gerade
+     * anwesender Erklärbär". Weglassen für den Meeple-Kontext. */
+    attendingExplainerBoardGameIds?: Set<string>;
+    /** GameCopy-Ids, deren Ahnenkette gerade die Event-Unit erreicht (#273) —
+     * nötig für `filters.onlyPresentAtEvent`. Weglassen/leer lassen, solange
+     * kein Event läuft. */
+    presentGameCopyIds?: Set<string>;
+  } = {},
 ): LudothekGame[] {
   return games.filter((game) => {
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
@@ -313,6 +362,12 @@ export function filterLudothekGames(
     }
     if (filters.mechanics && filters.mechanics.length > 0) {
       const hasAny = filters.mechanics.some((m) => game.mechanics.includes(m));
+      if (!hasAny) return false;
+    }
+    if (filters.categories && filters.categories.length > 0) {
+      const hasAny = filters.categories.some((c) =>
+        game.categories.includes(c),
+      );
       if (!hasAny) return false;
     }
     if (
@@ -370,6 +425,15 @@ export function filterLudothekGames(
     if (filters.onlyWithOpenLfg && !game.hasOpenLfg) {
       return false;
     }
+    if (filters.hasExplainer) {
+      const hasAttendingExplainer = attendingExplainerBoardGameIds
+        ? attendingExplainerBoardGameIds.has(game.boardGameId)
+        : game.explainerCount > 0;
+      if (!hasAttendingExplainer) return false;
+    }
+    if (filters.onlyPresentAtEvent) {
+      if (!presentGameCopyIds?.has(game.id)) return false;
+    }
     return true;
   });
 }
@@ -379,6 +443,12 @@ export function filterLudothekGames(
  * dialog (#124). */
 export function listDistinctMechanics(games: { mechanics: string[] }[]) {
   return [...new Set(games.flatMap((game) => game.mechanics))].sort();
+}
+
+/** Every distinct category across the Bestand, sorted — Autocomplete-
+ * Vorschläge for the Kategorie-Filter (#404), analog `listDistinctMechanics`. */
+export function listDistinctCategories(games: { categories: string[] }[]) {
+  return [...new Set(games.flatMap((game) => game.categories))].sort();
 }
 
 /** Obergrenze für den Dauer-Slider (Minuten) — höchste im Bestand erfasste

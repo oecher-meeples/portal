@@ -11,7 +11,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ActionButton } from "@/components/ui/action-button";
 import { TextField } from "@/components/ui/field";
 import { useAction } from "@/components/ui/use-action";
 import {
@@ -20,11 +19,13 @@ import {
 } from "@/components/feature/admin-mitglieder/meeple-role-select";
 import { KuendigungsstatusSelect } from "@/components/feature/admin-mitglieder/kuendigungsstatus-select";
 import { MeepleBankDetailsSection } from "@/components/feature/admin-mitglieder/meeple-bank-details-section";
+import { LoginRateLimitSection } from "@/components/feature/admin-mitglieder/login-rate-limit-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { Switch } from "@/components/ui/switch";
 import {
   renameMeeple,
-  sendSelbstauskunft,
   setMemberNumber,
+  setMeepleSystemAccount,
 } from "@/components/feature/admin-mitglieder/actions";
 import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
 
@@ -38,10 +39,15 @@ export function MeepleEditDialog({
   meeple,
   roles,
   canReadBankData,
+  canManageAdminAccess,
+  canManageSystemAccounts,
 }: {
   meeple: MeepleRow;
   roles: RoleOption[];
   canReadBankData: boolean;
+  canManageAdminAccess: boolean;
+  /** = `members:manage-system-accounts` (#297). */
+  canManageSystemAccounts: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [memberNumber, setMemberNumberValue] = useState(
@@ -58,6 +64,7 @@ export function MeepleEditDialog({
     error: nameError,
     setError: setNameError,
   } = useAction();
+  const { run: runSystemAccount, error: systemAccountError } = useAction();
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -146,8 +153,9 @@ export function MeepleEditDialog({
             {meeple.hasAccount ? (
               <MeepleRoleSelect
                 meepleId={meeple.id}
-                roleId={meeple.roleId}
+                assignments={meeple.roleAssignments}
                 roles={roles}
+                canManageAdminAccess={canManageAdminAccess}
               />
             ) : (
               <span className="text-muted-foreground text-sm">Kein Konto</span>
@@ -162,6 +170,29 @@ export function MeepleEditDialog({
             />
           </div>
 
+          {canManageSystemAccounts && (
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center justify-between gap-2 text-sm font-medium">
+                System-Konto
+                <Switch
+                  checked={meeple.isSystemAccount}
+                  onCheckedChange={(checked) =>
+                    runSystemAccount(() =>
+                      setMeepleSystemAccount(meeple.id, checked),
+                    )
+                  }
+                />
+              </label>
+              <p className="text-muted-foreground text-xs">
+                Ausgenommen von Mitgliederzählungen (z. B. Vereinsgeräte-Login,
+                Funktionskonto).
+              </p>
+              {systemAccountError && (
+                <p className="text-destructive text-xs">{systemAccountError}</p>
+              )}
+            </div>
+          )}
+
           <MeepleBankDetailsSection
             meepleId={meeple.id}
             accountHolder={meeple.accountHolder}
@@ -170,35 +201,17 @@ export function MeepleEditDialog({
             canReadBankData={canReadBankData}
           />
 
-          <div className="flex flex-col gap-1.5 border-t pt-4">
-            <span className="text-sm font-medium">Datenschutz</span>
-            <ActionButton
-              action={() => sendSelbstauskunft(meeple.id)}
-              refresh={false}
-              variant="outline"
-              size="sm"
-              disabled={!meeple.email}
-              confirm={
-                meeple.email
-                  ? `Selbstauskunft an ${meeple.email} senden?`
-                  : undefined
-              }
-              pendingLabel="Sende…"
-            >
-              Selbstauskunft senden
-            </ActionButton>
-            {!meeple.email && (
-              <p className="text-muted-foreground text-xs">
-                Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.
-              </p>
-            )}
-            {canAnonymise && (
+          <LoginRateLimitSection meepleId={meeple.id} />
+
+          {canAnonymise && (
+            <div className="flex flex-col gap-1.5 border-t pt-4">
+              <span className="text-sm font-medium">Datenschutz</span>
               <AnonymiseMeepleDialog
                 meepleId={meeple.id}
                 displayName={meeple.displayName}
               />
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter showCloseButton />

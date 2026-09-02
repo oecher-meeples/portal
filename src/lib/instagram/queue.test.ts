@@ -36,7 +36,10 @@ const CONNECTION = {
   updatedAt: new Date(),
 };
 
-function makePost(overrides: Partial<Record<string, unknown>> = {}) {
+function makePost(
+  instagramDetailsOverrides: Partial<Record<string, unknown>> = {},
+  overrides: Partial<Record<string, unknown>> = {},
+) {
   return {
     id: "post-1",
     slug: "spieleabend-juli",
@@ -50,10 +53,15 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     internal: null,
     instagram: true,
     coverImageUrl: null,
-    instagramStatus: "PENDING",
-    instagramPostUrl: null,
-    instagramAttempts: 0,
-    instagramLastError: null,
+    instagramDetails: {
+      id: "details-1",
+      postId: "post-1",
+      status: "PENDING",
+      postUrl: null,
+      attempts: 0,
+      lastError: null,
+      ...instagramDetailsOverrides,
+    },
     ...overrides,
   } as never;
 }
@@ -67,9 +75,12 @@ describe("findDuePosts", () => {
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
       where: {
         instagram: true,
-        instagramStatus: { in: ["PENDING", "QUEUED"] },
-        instagramAttempts: { lt: 3 },
+        instagramDetails: {
+          status: { in: ["PENDING", "QUEUED"] },
+          attempts: { lt: 3 },
+        },
       },
+      include: { instagramDetails: true },
     });
   });
 });
@@ -98,44 +109,45 @@ describe("processPost", () => {
     expect(publishMediaMock).toHaveBeenCalledWith(
       expect.objectContaining({ accessToken: PLAINTEXT_TOKEN }),
     );
-    expect(prismaMock.post.update).toHaveBeenCalledWith({
-      where: { id: "post-1" },
-      data: expect.objectContaining({
-        instagramStatus: "POSTED",
-        instagramPostUrl: "https://www.instagram.com/p/media-1/",
-        instagramLastError: null,
-      }),
+    expect(prismaMock.postInstagramDetails.update).toHaveBeenCalledWith({
+      where: { postId: "post-1" },
+      data: {
+        status: "POSTED",
+        postUrl: "https://www.instagram.com/p/media-1/",
+        lastError: null,
+      },
     });
   });
 
   it("increments the attempt counter and stays PENDING below the limit", async () => {
     createMediaContainerMock.mockRejectedValue(new Error("Rate limit"));
 
-    const success = await processPost(makePost({ instagramAttempts: 1 }));
+    const success = await processPost(makePost({ attempts: 1 }));
 
     expect(success).toBe(false);
-    expect(prismaMock.post.update).toHaveBeenCalledWith({
-      where: { id: "post-1" },
-      data: expect.objectContaining({
-        instagramAttempts: 2,
-        instagramLastError: "Rate limit",
-        instagramStatus: "PENDING",
-      }),
+    expect(prismaMock.postInstagramDetails.update).toHaveBeenCalledWith({
+      where: { postId: "post-1" },
+      data: {
+        attempts: 2,
+        lastError: "Rate limit",
+        status: "PENDING",
+      },
     });
   });
 
   it("marks the post as FAILED once the attempt limit is reached", async () => {
     createMediaContainerMock.mockRejectedValue(new Error("Rate limit"));
 
-    const success = await processPost(makePost({ instagramAttempts: 2 }));
+    const success = await processPost(makePost({ attempts: 2 }));
 
     expect(success).toBe(false);
-    expect(prismaMock.post.update).toHaveBeenCalledWith({
-      where: { id: "post-1" },
-      data: expect.objectContaining({
-        instagramAttempts: 3,
-        instagramStatus: "FAILED",
-      }),
+    expect(prismaMock.postInstagramDetails.update).toHaveBeenCalledWith({
+      where: { postId: "post-1" },
+      data: {
+        attempts: 3,
+        lastError: "Rate limit",
+        status: "FAILED",
+      },
     });
   });
 });
@@ -153,8 +165,8 @@ describe("processQueue", () => {
 
   it("summarizes processed, succeeded and failed posts", async () => {
     prismaMock.post.findMany.mockResolvedValue([
-      makePost({ id: "post-1" }),
-      makePost({ id: "post-2" }),
+      makePost({}, { id: "post-1" }),
+      makePost({}, { id: "post-2" }),
     ] as never);
     createMediaContainerMock.mockResolvedValue({ creationId: "creation-1" });
     publishMediaMock

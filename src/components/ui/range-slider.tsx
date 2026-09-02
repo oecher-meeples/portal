@@ -74,6 +74,11 @@ export function SingleSlider({
   onValueCommitted,
   getAriaLabel,
   className,
+  /** #253: manche Filter (z. B. Spieleranzahl) treffen einen exakten Wert,
+   * kein Von/Bis — der gefüllte Track suggeriert dort fälschlich einen
+   * Bereich von `min` bis `value`. `true` blendet den Indikator aus, nur
+   * der Thumb-Punkt bleibt sichtbar. @default false */
+  hideTrackFill = false,
 }: {
   min: number;
   max: number;
@@ -86,6 +91,7 @@ export function SingleSlider({
   onValueCommitted?: (value: number) => void;
   getAriaLabel: () => string;
   className?: string;
+  hideTrackFill?: boolean;
 }) {
   return (
     <SliderPrimitive.Root
@@ -99,7 +105,9 @@ export function SingleSlider({
     >
       <SliderPrimitive.Control className="flex w-full items-center py-2">
         <SliderPrimitive.Track className="bg-muted relative h-1.5 w-full grow rounded-full">
-          <SliderPrimitive.Indicator className="bg-primary absolute h-full rounded-full" />
+          {!hideTrackFill && (
+            <SliderPrimitive.Indicator className="bg-primary absolute h-full rounded-full" />
+          )}
           <SliderPrimitive.Thumb
             getAriaLabel={getAriaLabel}
             className="border-primary bg-background focus-visible:ring-ring/50 block size-4 rounded-full border-2 shadow-sm outline-none focus-visible:ring-[3px]"

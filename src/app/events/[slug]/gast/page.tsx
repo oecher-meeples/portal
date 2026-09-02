@@ -1,5 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
+import { getCurrentUser } from "@/lib/auth/server";
+import { getSessionTier } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getCurrentMeeple } from "@/lib/members/meeples";
+import { isEventVisible } from "@/lib/events/visibility";
 import {
   getFreeGamesInRoom,
   getGuestFleaMarketItems,
@@ -7,6 +12,7 @@ import {
 import { isBringAndBuyMarketOpen } from "@/lib/events/upcoming";
 import { GuestAreaView } from "@/components/feature/guest-area/guest-area-view";
 import type { FreeGameEntry } from "@/components/feature/guest-area/free-games-list";
+import type { SellerAccess } from "@/components/feature/guest-area/guest-area-view";
 
 export default async function EventGuestAreaPage({
   params,
@@ -20,12 +26,26 @@ export default async function EventGuestAreaPage({
     notFound();
   }
 
+  const [tier, user] = await Promise.all([getSessionTier(), getCurrentUser()]);
+  const canManageEvents =
+    !!user && (await hasPermission(user.id, "events:manage"));
+  if (!isEventVisible(event.visibility, { tier, canManageEvents })) {
+    notFound();
+  }
+
   const showBringAndBuy = isBringAndBuyMarketOpen(event);
 
-  const [freeGames, fleaMarketItems] = await Promise.all([
+  const [freeGames, fleaMarketItems, meeple] = await Promise.all([
     getFreeGamesInRoom(event.id, {}),
     showBringAndBuy ? getGuestFleaMarketItems(event.id) : Promise.resolve([]),
+    showBringAndBuy ? getCurrentMeeple() : Promise.resolve(null),
   ]);
+
+  const sellerAccess: SellerAccess | null = !showBringAndBuy
+    ? null
+    : meeple
+      ? { kind: "meeple", href: `/events/${slug}/verkauf` }
+      : { kind: "guest", eventId: event.id };
 
   const freeGameEntries: FreeGameEntry[] = freeGames.map((game) => ({
     id: game.id,
@@ -40,6 +60,7 @@ export default async function EventGuestAreaPage({
       eventTitle={event.title}
       freeGames={freeGameEntries}
       fleaMarketItems={fleaMarketItems}
+      sellerAccess={sellerAccess}
     />
   );
 }

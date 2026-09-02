@@ -2,22 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import type { NewsletterCategory } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileField } from "@/components/ui/file-field";
 import { Textarea } from "@/components/ui/textarea";
 import { CoverMedia } from "@/components/ui/cover-media";
+import { MarkdownContent } from "@/components/ui/markdown-content";
+import { SurveyFields } from "@/components/feature/admin-news/survey-fields";
+import { PostPublishingOptions } from "@/components/feature/admin-news/post-publishing-options";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
 import type { ContentType } from "@/lib/content/content";
-import {
-  NEWSLETTER_CATEGORIES,
-  NEWSLETTER_CATEGORY_LABELS,
-} from "@/lib/newsletter/labels";
 import {
   createPost,
   getUploadToken,
@@ -34,30 +31,37 @@ const DEFAULT_NEWSLETTER_CATEGORY_BY_TYPE: Record<
   blog: "NEWS",
   termin: "TERMINE",
   turnier: "TURNIERE",
-};
-
-const INSTAGRAM_STATUS_LABELS: Record<string, string> = {
-  PENDING: "Ausstehend",
-  QUEUED: "In Warteschlange",
-  POSTED: "Erfolgreich gepostet",
-  FAILED: "Fehlgeschlagen",
+  umfrage: "NEWS",
 };
 
 const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
   { value: "blog", label: "Blog" },
   { value: "termin", label: "Termin" },
   { value: "turnier", label: "Turnier" },
+  { value: "umfrage", label: "Umfrage" },
 ];
 
 export function PostForm({
   postId,
   initialValues,
+  canEditPublic = true,
+  canEditInternal = true,
 }: {
   postId?: string;
-  initialValues?: Partial<PostInput> & { instagramStatus?: string | null };
+  initialValues?: Partial<PostInput> & {
+    instagramStatus?: string | null;
+    surveyDeadline?: string;
+    surveyEditLink?: string;
+    surveyAnalysisLink?: string;
+  };
+  /** Wer nur eines der beiden Rechte hat, bekommt die Checkbox "Nur intern"
+   * fest auf den erlaubten Wert gesperrt statt frei wählbar (#321). */
+  canEditPublic?: boolean;
+  canEditInternal?: boolean;
 }) {
   const isExistingDraft = Boolean(postId) && initialValues?.status === "DRAFT";
   const router = useRouter();
+  const internalLocked = canEditPublic !== canEditInternal;
   const [type, setType] = useState<ContentType>(initialValues?.type ?? "blog");
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [date, setDate] = useState(initialValues?.date ?? "");
@@ -65,9 +69,20 @@ export function PostForm({
   const [author, setAuthor] = useState(initialValues?.author ?? "");
   const [body, setBody] = useState(initialValues?.body ?? "");
   const [instagram, setInstagram] = useState(initialValues?.instagram ?? false);
-  const [internal, setInternal] = useState(initialValues?.internal ?? false);
+  const [internal, setInternal] = useState(
+    internalLocked ? canEditInternal : (initialValues?.internal ?? false),
+  );
   const [coverImageUrl, setCoverImageUrl] = useState(
     initialValues?.coverImageUrl ?? "",
+  );
+  const [surveyDeadline, setSurveyDeadline] = useState(
+    initialValues?.surveyDeadline ?? "",
+  );
+  const [surveyEditLink, setSurveyEditLink] = useState(
+    initialValues?.surveyEditLink ?? "",
+  );
+  const [surveyAnalysisLink, setSurveyAnalysisLink] = useState(
+    initialValues?.surveyAnalysisLink ?? "",
   );
   const {
     uploadFiles,
@@ -140,6 +155,13 @@ export function PostForm({
       sendAsNewsletter,
       newsletterCategory: sendAsNewsletter ? newsletterCategory : null,
       coverImageUrl: coverImageUrl || undefined,
+      ...(type === "umfrage"
+        ? {
+            surveyDeadline: surveyDeadline || undefined,
+            surveyEditLink: surveyEditLink || undefined,
+            surveyAnalysisLink: surveyAnalysisLink || undefined,
+          }
+        : {}),
     };
 
     try {
@@ -226,7 +248,17 @@ export function PostForm({
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="body">Inhalt (Markdown)</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="body">Inhalt (Markdown)</Label>
+            <a
+              href="https://de.wikipedia.org/wiki/Markdown"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground text-xs underline underline-offset-2"
+            >
+              Was ist Markdown?
+            </a>
+          </div>
           <div className="flex gap-1">
             <Button
               type="button"
@@ -256,11 +288,23 @@ export function PostForm({
             required
           />
         ) : (
-          <div className="[&_a]:text-primary min-h-64 rounded-md border p-4 text-sm leading-relaxed [&_a]:underline [&_strong]:font-semibold">
-            <ReactMarkdown>{body || "*Keine Vorschau*"}</ReactMarkdown>
-          </div>
+          <MarkdownContent
+            body={body || "*Keine Vorschau*"}
+            className="min-h-64 rounded-md border p-4 text-sm"
+          />
         )}
       </div>
+
+      {type === "umfrage" && (
+        <SurveyFields
+          deadline={surveyDeadline}
+          onDeadlineChange={setSurveyDeadline}
+          editLink={surveyEditLink}
+          onEditLinkChange={setSurveyEditLink}
+          analysisLink={surveyAnalysisLink}
+          onAnalysisLinkChange={setSurveyAnalysisLink}
+        />
+      )}
 
       <div className="flex flex-col gap-1.5">
         <FileField
@@ -286,85 +330,25 @@ export function PostForm({
         )}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={internal}
-            onChange={(event) => setInternal(event.target.checked)}
-          />
-          Nur intern (nur für eingeloggte Mitglieder sichtbar)
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={instagram}
-            disabled={internal}
-            onChange={(event) => setInstagram(event.target.checked)}
-          />
-          Auch auf Instagram teilen
-          {internal && (
-            <span className="text-muted-foreground text-xs">
-              (nicht möglich für interne Beiträge)
-            </span>
-          )}
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={sendAsNewsletter}
-            onChange={(event) => setSendAsNewsletter(event.target.checked)}
-          />
-          Als Newsletter versenden in
-          {sendAsNewsletter && (
-            <select
-              value={newsletterCategory}
-              onChange={(event) =>
-                setNewsletterCategory(event.target.value as NewsletterCategory)
-              }
-              className="border-primary bg-background h-9 w-fit rounded-md border-2 px-3 text-sm"
-            >
-              {NEWSLETTER_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {NEWSLETTER_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
-        {isExistingDraft && (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={copyDraft}
-              onChange={(event) => setCopyDraft(event.target.checked)}
-            />
-            Entwurf kopieren?
-            <span className="text-muted-foreground text-xs">
-              (legt beim Speichern einen neuen Beitrag an, der bestehende
-              Entwurf bleibt unverändert)
-            </span>
-          </label>
-        )}
-        {instagramStatus && (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="self-start">
-              {INSTAGRAM_STATUS_LABELS[instagramStatus] ?? instagramStatus}
-            </Badge>
-            {instagramStatus === "FAILED" && postId && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isRetrying}
-                onClick={handleRetry}
-              >
-                {isRetrying ? "Wird erneut versucht…" : "Erneut versuchen"}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+      <PostPublishingOptions
+        internal={internal}
+        onInternalChange={setInternal}
+        internalLocked={internalLocked}
+        canEditInternal={canEditInternal}
+        instagram={instagram}
+        onInstagramChange={setInstagram}
+        sendAsNewsletter={sendAsNewsletter}
+        onSendAsNewsletterChange={setSendAsNewsletter}
+        newsletterCategory={newsletterCategory}
+        onNewsletterCategoryChange={setNewsletterCategory}
+        isExistingDraft={isExistingDraft}
+        copyDraft={copyDraft}
+        onCopyDraftChange={setCopyDraft}
+        instagramStatus={instagramStatus}
+        isRetrying={isRetrying}
+        onRetry={handleRetry}
+        postId={postId}
+      />
 
       {error && <p className="text-destructive text-sm">{error}</p>}
       <div className="flex gap-2">

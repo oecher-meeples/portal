@@ -1,20 +1,13 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
 import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
+import { deleteExpiredLoginLogs } from "@/lib/auth/login-log";
 import { anonymiseExpiredMeeples } from "@/lib/members/retention";
 import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
+import { isAuthorizedCronRequest } from "@/lib/utils/cron-auth";
 
 // Brevo's free tier caps at 300 mails/day; this cron runs once a day (see vercel.json).
 const NEWSLETTER_DAILY_LIMIT = 300;
-
-function isAuthorized(authHeader: string | null, cronSecret: string) {
-  if (!authHeader) return false;
-  const expected = Buffer.from(`Bearer ${cronSecret}`);
-  const actual = Buffer.from(authHeader);
-  if (expected.length !== actual.length) return false;
-  return timingSafeEqual(expected, actual);
-}
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -26,7 +19,7 @@ export async function GET(request: Request) {
   }
 
   const authHeader = request.headers.get("authorization");
-  if (!isAuthorized(authHeader, cronSecret)) {
+  if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -34,12 +27,14 @@ export async function GET(request: Request) {
   const summary = await processQueue();
   const newsletter = await processNewsletterQueue(NEWSLETTER_DAILY_LIMIT);
   const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
+  const loginLogCleanup = await deleteExpiredLoginLogs();
   // Reports `skipped: true` until the retention period is decided (see #49).
   const retention = await anonymiseExpiredMeeples();
   return NextResponse.json({
     ...summary,
     newsletter,
     bankLogCleanup,
+    loginLogCleanup,
     retention,
   });
 }

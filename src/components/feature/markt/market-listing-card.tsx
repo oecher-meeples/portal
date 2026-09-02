@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { PlaceholderMedia } from "@/components/ui/placeholder-media";
+import { Camera } from "lucide-react";
+import { CoverMedia } from "@/components/ui/cover-media";
+import { Badge } from "@/components/ui/badge";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { ActionButton } from "@/components/ui/action-button";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-listing-dialog";
@@ -17,9 +20,24 @@ export function MarketListingCard({
 }) {
   return (
     <div className="bg-card flex flex-col overflow-hidden rounded-lg border">
-      <Link href={`/markt/${listing.id}`}>
-        <PlaceholderMedia label="FOTO" />
-      </Link>
+      <div className="relative">
+        <Link href={`/markt/${listing.id}`}>
+          <CoverMedia
+            imageUrl={listing.imageUrls[0] ?? null}
+            alt={listing.title}
+            label="FOTO"
+            fit="contain"
+          />
+        </Link>
+        {listing.imageUrls.length > 1 && (
+          <CardCornerOverlay corner="bottom-right">
+            <Badge className="gap-1 border-transparent bg-black/70 text-white">
+              <Camera className="size-3" />
+              {listing.imageUrls.length}
+            </Badge>
+          </CardCornerOverlay>
+        )}
+      </div>
       <div className="flex flex-1 flex-col gap-1 p-4">
         <div className="flex items-start justify-between gap-2">
           <Link

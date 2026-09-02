@@ -10,13 +10,8 @@ const MEEPLE = {
   id: "meeple-1",
   memberNumber: 42,
   displayName: "Jan Herwig",
-  email: "jan@example.org",
   joinedAt: new Date("2025-01-01"),
-  resignedAt: null,
-  membershipEndsAt: null,
   anonymizedAt: null,
-  ibanLast4: "1234",
-  accountHolder: "Jan Herwig",
   bggUsername: "janh",
   bgaUsername: null,
   telegramHandle: "@janh",
@@ -30,6 +25,28 @@ const MEEPLE = {
   neonAuthUserId: "user-1",
 };
 
+const MEMBER = {
+  id: "member-1",
+  memberNumber: 42,
+  lastName: null,
+  firstName: null,
+  birthDate: null,
+  birthPlace: null,
+  street: null,
+  postalCode: null,
+  city: null,
+  phone: null,
+  email: "jan@example.org",
+  selbstgewaehlterBeitrag: null,
+  ibanFirst2: "DE",
+  ibanLast4: "1234",
+  accountHolder: "Jan Herwig",
+  resignedAt: null,
+  membershipEndsAt: null,
+  createdAt: new Date("2025-01-01"),
+  updatedAt: new Date("2026-01-01"),
+};
+
 /** Every findMany the export calls, so a test can point one of them at data. */
 const FIND_MANY_MOCKS = [
   "bankDataAccessLog",
@@ -38,6 +55,7 @@ const FIND_MANY_MOCKS = [
   "explainerGame",
   "fleaMarketItem",
   "gameHolding",
+  "helperAvailability",
   "invite",
   "lfgParticipant",
   "lfgPost",
@@ -52,6 +70,7 @@ const FIND_MANY_MOCKS = [
 
 beforeEach(() => {
   prismaMock.meeple.findUnique.mockResolvedValue(MEEPLE as never);
+  prismaMock.member.findUnique.mockResolvedValue(MEMBER as never);
   for (const model of FIND_MANY_MOCKS) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (prismaMock as any)[model].findMany.mockResolvedValue([]);
@@ -96,10 +115,10 @@ describe("collectMeeplePersonalData", () => {
     const result = await collectMeeplePersonalData("meeple-1");
 
     const serialised = JSON.stringify(result);
-    expect(result!.daten.Meeple).toMatchObject({ ibanLast4: "1234" });
+    expect(result!.daten.Member).toMatchObject({ ibanLast4: "1234" });
     expect(serialised).not.toContain("ibanEncrypted");
     expect(
-      prismaMock.meeple.findUnique.mock.calls[0][0].select,
+      prismaMock.member.findUnique.mock.calls[0][0].select,
     ).not.toHaveProperty("ibanEncrypted");
   });
 
@@ -121,7 +140,11 @@ describe("collectMeeplePersonalData", () => {
 
   it("includes rows where the meeple only acted as the recording person", async () => {
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { id: "holding-1", recordedByMeepleId: "meeple-1", meepleId: null },
+      {
+        id: "holding-1",
+        recordedByMeepleId: "meeple-1",
+        vereinsmitgliedId: null,
+      },
     ] as never);
 
     await collectMeeplePersonalData("meeple-1");
@@ -129,7 +152,10 @@ describe("collectMeeplePersonalData", () => {
     expect(prismaMock.gameHolding.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          OR: [{ meepleId: "meeple-1" }, { recordedByMeepleId: "meeple-1" }],
+          OR: [
+            { vereinsmitgliedId: "member-1" },
+            { recordedByMeepleId: "meeple-1" },
+          ],
         },
       }),
     );

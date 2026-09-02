@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
-import { getMembershipState, requireMeeple } from "@/lib/members/meeples";
+import { requireMeeplePermission } from "@/lib/members/meeples";
+import { memberDisplayName } from "@/lib/members/member-display-name";
+import { getMembershipState } from "@/lib/members/membership-state";
 import {
   borrowGame,
   confirmHolding,
+  confirmHoldingAsGamesManager,
   handOverGame,
   HoldingConflictError,
   moveStorageUnit,
@@ -14,57 +17,19 @@ import {
   returnGame,
   type ResolvedScan,
 } from "@/lib/ludothek/holdings";
-
-async function requireActingMeeple() {
-  const meeple = await requireMeeple();
-  return { meeple, membershipState: getMembershipState(meeple) };
-}
-
-/** Ausgetretene Meeples dürfen abgeben, aber nichts mehr annehmen (siehe CONTEXT.md). */
-function assertCanReceive(
-  membershipState: ReturnType<typeof getMembershipState>,
-) {
-  if (membershipState === "ausgetreten") {
-    throw new HoldingConflictError(
-      "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    );
-  }
-}
-
-async function toResult<T>(
-  run: () => Promise<T> | T,
-  onSuccess?: (value: T) => Promise<void> | void,
-) {
-  try {
-    const value = await run();
-    if (onSuccess) await onSuccess(value);
-    return { success: true as const, value };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unbekannter Fehler.",
-    };
-  }
-}
-
-/** Revalidates the list, admin overview and (if resolvable) the copy's detail page — only called on success. */
-async function revalidateGamePaths(gameCopyId: string) {
-  revalidatePath("/ludothek");
-  revalidatePath("/admin/bestand");
-  const copy = await prisma.gameCopy.findUnique({
-    where: { id: gameCopyId },
-    select: { boardGame: { select: { slug: true } } },
-  });
-  if (copy) revalidatePath(`/ludothek/${copy.boardGame.slug}`);
-}
-
-function toResultAndRevalidate<T extends { gameCopyId: string }>(
-  run: () => Promise<T> | T,
-) {
-  return toResult(run, (value) => revalidateGamePaths(value.gameCopyId));
-}
+import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
+import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
+import {
+  assertCanReceive,
+  requireActingMeeple,
+  requireMemberForMeeple,
+  requireOwnMember,
+  toResult,
+  toResultAndRevalidate,
+} from "@/lib/ludothek/holding-actions-shared";
 
 export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
-  await requireMeeple();
+  await requireMeeplePermission("ludothek:borrow");
   try {
     return await resolveScannedCode(raw);
   } catch {
@@ -72,30 +37,34 @@ export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
   }
 }
 
-/** Ausleihen — der Scannende bucht immer auf den eigenen Meeple aus. */
+/** Ausleihen — der Scannende bucht immer auf das eigene Vereinsmitglied aus. */
 export async function scanBorrowGame(gameCopyId: string) {
-  const { meeple, membershipState } = await requireActingMeeple();
+  const { meeple, member, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
+    const own = requireOwnMember(member);
     return borrowGame({
       gameCopyId,
-      meepleId: meeple.id,
+      vereinsmitgliedId: own.id,
       recordedByMeepleId: meeple.id,
+      isSelf: true,
     });
   });
 }
 
 /** "Ich habe es erhalten" — die empfangende Person bestätigt die Weitergabe selbst. */
 export async function scanAcceptHandover(gameCopyId: string) {
-  const { meeple, membershipState } = await requireActingMeeple();
+  const { meeple, member, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
+    const own = requireOwnMember(member);
     return handOverGame({
       gameCopyId,
-      toMeepleId: meeple.id,
+      toVereinsmitgliedId: own.id,
       recordedByMeepleId: meeple.id,
+      isSelf: true,
     });
   });
 }
@@ -104,20 +73,27 @@ export async function scanAcceptHandover(gameCopyId: string) {
 export async function scanGiveToMeeple(gameCopyId: string, toMeepleId: string) {
   const { meeple } = await requireActingMeeple();
 
-  return toResultAndRevalidate(() =>
-    handOverGame({ gameCopyId, toMeepleId, recordedByMeepleId: meeple.id }),
-  );
+  return toResultAndRevalidate(async () => {
+    const toMember = await requireMemberForMeeple(toMeepleId);
+    return handOverGame({
+      gameCopyId,
+      toVereinsmitgliedId: toMember.id,
+      recordedByMeepleId: meeple.id,
+      isSelf: false,
+    });
+  });
 }
 
 /** "Ich nehme es zur Rückgabe an" — abgeschlossen ist die Rückgabe erst durchs Einlagern. */
 export async function scanAcceptReturn(gameCopyId: string) {
-  const { meeple, membershipState } = await requireActingMeeple();
+  const { meeple, member, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
+    const own = requireOwnMember(member);
     return returnGame({
       gameCopyId,
-      toMeepleId: meeple.id,
+      toVereinsmitgliedId: own.id,
       recordedByMeepleId: meeple.id,
     });
   });
@@ -138,9 +114,14 @@ export async function scanReturnToMeeple(
 ) {
   const { meeple } = await requireActingMeeple();
 
-  return toResultAndRevalidate(() =>
-    returnGame({ gameCopyId, toMeepleId, recordedByMeepleId: meeple.id }),
-  );
+  return toResultAndRevalidate(async () => {
+    const toMember = await requireMemberForMeeple(toMeepleId);
+    return returnGame({
+      gameCopyId,
+      toVereinsmitgliedId: toMember.id,
+      recordedByMeepleId: meeple.id,
+    });
+  });
 }
 
 export async function scanRelocateGame(gameCopyId: string, toUnitId: string) {
@@ -185,24 +166,46 @@ export async function scanPlaceGameInUnit(gameCopyId: string, unitId: string) {
 }
 
 export async function scanConfirmHolding(holdingId: string) {
-  const { meeple, membershipState } = await requireActingMeeple();
+  const { member, membershipState } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
     assertCanReceive(membershipState);
-    return confirmHolding({ holdingId, confirmingMeepleId: meeple.id });
+    const own = requireOwnMember(member);
+    return confirmHolding({ holdingId, confirmingVereinsmitgliedId: own.id });
   });
 }
 
+/** "Der Spielewart ist von dieser Regel ausgenommen" (#290) — bestätigt eine
+ * fremde offene Übergabe direkt, ohne die empfangende Person. Dashboard,
+ * `/admin/bestand`-Antrags-Queue und `GameHoldingPanel` (dort zusätzlich zum
+ * bestehenden Bestätigen-Button für die empfangende Person selbst) nutzen
+ * dieselbe Action. */
+export async function confirmHoldingForGamesManager(holdingId: string) {
+  const user = await requireGamesManagePermission();
+  if (!user) return { error: "Keine Berechtigung." };
+
+  return toResultAndRevalidate(() => confirmHoldingAsGamesManager(holdingId));
+}
+
 export type ScannedGameContext = {
-  game: { id: string; title: string; status: string };
+  game: {
+    id: string;
+    title: string;
+    status: string;
+    /** Freie Inventarnummer des Exemplars (#270). */
+    inventoryNumber: string | null;
+  };
   holding: {
     id: string;
     confirmedAt: string | null;
+    origin: string;
     unitId: string | null;
     unitCode: string | null;
     unitLabel: string | null;
-    meepleId: string | null;
-    meepleName: string | null;
+    vereinsmitgliedId: string | null;
+    vereinsmitgliedName: string | null;
+    /** Ob das haltende Vereinsmitglied ein Portal-Konto mit Login hat (#333). */
+    verfuegbar: boolean;
   } | null;
   isSelf: boolean;
 };
@@ -211,7 +214,7 @@ export type ScannedGameContext = {
 export async function scanGetGameContext(
   gameCopyId: string,
 ): Promise<ScannedGameContext | null> {
-  const { meeple } = await requireActingMeeple();
+  const { member } = await requireActingMeeple();
 
   const [copy, holding] = await Promise.all([
     prisma.gameCopy.findUnique({
@@ -219,41 +222,89 @@ export async function scanGetGameContext(
       select: {
         id: true,
         status: true,
+        inventoryNumber: true,
         boardGame: { select: { title: true } },
       },
     }),
     prisma.gameHolding.findFirst({
       where: { gameCopyId, endedAt: null },
-      include: { unit: true, meeple: { select: { displayName: true } } },
+      include: {
+        unit: true,
+        vereinsmitglied: {
+          include: {
+            meeple: { select: { displayName: true, neonAuthUserId: true } },
+          },
+        },
+      },
     }),
   ]);
 
   if (!copy) return null;
 
   return {
-    game: { id: copy.id, title: copy.boardGame.title, status: copy.status },
+    game: {
+      id: copy.id,
+      title: copy.boardGame.title,
+      status: copy.status,
+      inventoryNumber: copy.inventoryNumber,
+    },
     holding: holding
       ? {
           id: holding.id,
           confirmedAt: holding.confirmedAt?.toISOString() ?? null,
+          origin: holding.origin,
           unitId: holding.unitId,
           unitCode: holding.unit?.code ?? null,
           unitLabel: holding.unit?.label ?? null,
-          meepleId: holding.meepleId,
-          meepleName: holding.meeple?.displayName ?? null,
+          vereinsmitgliedId: holding.vereinsmitgliedId,
+          vereinsmitgliedName: holding.vereinsmitglied
+            ? memberDisplayName(holding.vereinsmitglied)
+            : null,
+          verfuegbar: Boolean(holding.vereinsmitglied?.meeple?.neonAuthUserId),
         }
       : null,
-    isSelf: holding?.meepleId === meeple.id,
+    isSelf: holding?.vereinsmitgliedId === member?.id,
   };
 }
 
+/** Target list for the "Weitergeben"/"An Person zurückgeben"-Picker — Meeples
+ * mit Portal-Konto. Das Sammelkonto "Anonymer Meeple" ist bewusst ausgeschlossen:
+ * dorthin führt ausschließlich `scanHandOverToExternal()` (#333b), nicht diese
+ * generische Auswahl. */
+/** Target list for handover/return-to-person pickers — excludes an
+ * "ausgetreten" Meeple (#405): they can no longer accept a game
+ * (`assertCanReceive()`), so picking one as a target would only create a
+ * holding nobody could ever confirm. "Gekündigt" (notice given, not yet
+ * effective) may still receive, matching `assertCanReceive()`. */
 export async function scanListMeeples() {
   await requireActingMeeple();
-  return prisma.meeple.findMany({
-    where: { anonymizedAt: null },
+  const meeples = await prisma.meeple.findMany({
+    where: {
+      anonymizedAt: null,
+      displayName: { not: ANONYMER_MEEPLE_NAME },
+    },
     orderBy: { displayName: "asc" },
-    select: { id: true, displayName: true },
+    select: {
+      id: true,
+      displayName: true,
+      member: {
+        select: {
+          resignedAt: true,
+          membershipEndsAt: true,
+          meepleId: true,
+        },
+      },
+    },
   });
+
+  return meeples
+    .filter(
+      ({ member }) =>
+        // The `where` above already guarantees anonymizedAt: null here.
+        !member ||
+        getMembershipState({ ...member, anonymizedAt: null }) !== "ausgetreten",
+    )
+    .map(({ id, displayName }) => ({ id, displayName }));
 }
 
 /** Target list for the Umlagern mini-dialog (#121/#122) — active units only. */

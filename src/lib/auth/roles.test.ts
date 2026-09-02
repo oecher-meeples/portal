@@ -4,7 +4,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { createRole, updateRole, deleteRole, setRolePermissions } =
+const { createRole, updateRole, deleteRole, setRolePermissions, reorderRoles } =
   await import("./roles");
 
 function uniqueConstraintError() {
@@ -18,16 +18,31 @@ beforeEach(() => {
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
+  prismaMock.role.aggregate.mockResolvedValue({
+    _max: { sortOrder: 4 },
+  } as never);
 });
 
 describe("createRole", () => {
-  it("creates the role with a trimmed name and description", async () => {
+  it("creates the role with a trimmed name and description, appended after the highest sortOrder", async () => {
     expect(await createRole("  Kassenwart  ", "  Finanzen  ")).toEqual({
       success: true,
     });
 
     expect(prismaMock.role.create).toHaveBeenCalledWith({
-      data: { name: "Kassenwart", description: "Finanzen" },
+      data: { name: "Kassenwart", description: "Finanzen", sortOrder: 5 },
+    });
+  });
+
+  it("starts sortOrder at 0 for the very first role", async () => {
+    prismaMock.role.aggregate.mockResolvedValue({
+      _max: { sortOrder: null },
+    } as never);
+
+    await createRole("Kassenwart", null);
+
+    expect(prismaMock.role.create).toHaveBeenCalledWith({
+      data: { name: "Kassenwart", description: null, sortOrder: 0 },
     });
   });
 
@@ -35,7 +50,7 @@ describe("createRole", () => {
     await createRole("Kassenwart", "   ");
 
     expect(prismaMock.role.create).toHaveBeenCalledWith({
-      data: { name: "Kassenwart", description: null },
+      data: { name: "Kassenwart", description: null, sortOrder: 5 },
     });
   });
 
@@ -157,5 +172,26 @@ describe("setRolePermissions", () => {
         "Diese Rolle gewährt Systemzugriff und behält deshalb immer alle Rechte — sie können nicht einzeln entzogen werden.",
     });
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("reorderRoles (#391)", () => {
+  it("sets each role's sortOrder to its index in the given list", async () => {
+    expect(await reorderRoles(["role-b", "role-a", "role-c"])).toEqual({
+      success: true,
+    });
+
+    expect(prismaMock.role.update).toHaveBeenCalledWith({
+      where: { id: "role-b" },
+      data: { sortOrder: 0 },
+    });
+    expect(prismaMock.role.update).toHaveBeenCalledWith({
+      where: { id: "role-a" },
+      data: { sortOrder: 1 },
+    });
+    expect(prismaMock.role.update).toHaveBeenCalledWith({
+      where: { id: "role-c" },
+      data: { sortOrder: 2 },
+    });
   });
 });

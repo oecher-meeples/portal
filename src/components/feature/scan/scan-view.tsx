@@ -14,6 +14,7 @@ import {
   scanResolveCode,
 } from "@/lib/ludothek/holding-actions";
 import type { ResolvedScan } from "@/lib/ludothek/holdings";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type SeriesMode =
   | { type: "einlagern"; unitId: string; unitCode: string }
@@ -25,13 +26,18 @@ type ViewState =
   | { kind: "unknown"; raw: string }
   | {
       kind: "select-game";
-      games: { id: string; title: string }[];
+      games: { id: string; title: string; inventoryNumber: string | null }[];
       /** Selecting here places directly into the active Serienmodus-Kiste
        * instead of opening the GameHoldingPanel (#5). */
       forEinlagern: boolean;
     }
   | { kind: "game"; gameCopyId: string }
-  | { kind: "pruefen"; gameCopyId: string; title: string }
+  | {
+      kind: "pruefen";
+      gameCopyId: string;
+      title: string;
+      inventoryNumber: string | null;
+    }
   | {
       kind: "unit";
       unitId: string;
@@ -131,6 +137,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
             title: g.condition
               ? `${g.boardGame.title} (${g.condition})`
               : g.boardGame.title,
+            inventoryNumber: g.inventoryNumber,
           })),
           forEinlagern: true,
         });
@@ -152,6 +159,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
               kind: "pruefen",
               gameCopyId: game.id,
               title: game.boardGame.title,
+              inventoryNumber: game.inventoryNumber,
             }
           : { kind: "game", gameCopyId: game.id },
       );
@@ -164,6 +172,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
         title: g.condition
           ? `${g.boardGame.title} (${g.condition})`
           : g.boardGame.title,
+        inventoryNumber: g.inventoryNumber,
       })),
       forEinlagern: false,
     });
@@ -193,7 +202,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <CodeScanner onDetected={handleCode} />
 
@@ -310,6 +319,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                                 kind: "pruefen",
                                 gameCopyId: game.id,
                                 title: game.title,
+                                inventoryNumber: game.inventoryNumber,
                               }
                             : { kind: "game", gameCopyId: game.id },
                         );
@@ -334,6 +344,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
               <PruefbogenPanel
                 gameCopyId={state.gameCopyId}
                 title={state.title}
+                inventoryNumber={state.inventoryNumber}
                 onDone={reset}
               />
             )}
@@ -410,6 +421,6 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
           Zuletzt gescannt: <span className="font-mono">{lastRaw}</span>
         </p>
       )}
-    </div>
+    </PageContainer>
   );
 }

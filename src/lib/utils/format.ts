@@ -11,7 +11,8 @@ import type { InviteStatus } from "@/lib/members/invites";
  * src/components/entities/*-pill.tsx instead.
  */
 export const MEMBERSHIP_STATE_LABELS: Record<MembershipState, string> = {
-  aktiv: "Aktives Mitglied",
+  unregistriert: "Unregistriert",
+  registriert: "Registriert",
   gekuendigt: "Kündigung vorliegend",
   ausgetreten: "Ausgetreten",
   anonymisiert: "Anonymisiert",
@@ -46,6 +47,15 @@ const DATE_TIME = new Intl.DateTimeFormat("de-DE", {
 });
 const DATE_MEDIUM = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 const DATE_PLAIN = new Intl.DateTimeFormat("de-DE");
+const TIME_PLAIN = new Intl.DateTimeFormat("de-DE", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const WEEKDAY_LONG = new Intl.DateTimeFormat("de-DE", { weekday: "long" });
+const DAY_MONTH = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+});
 
 type DateInput = string | number | Date;
 
@@ -64,6 +74,34 @@ export function formatDatePlain(value: DateInput) {
   return DATE_PLAIN.format(new Date(value));
 }
 
+/** "14:30" */
+export function formatTimePlain(value: DateInput) {
+  return TIME_PLAIN.format(new Date(value));
+}
+
+/** "Donnerstag, den 27.08." — Tagesüberschrift im Helferplan-Akkordion. */
+export function formatWeekdayDate(value: DateInput) {
+  const date = new Date(value);
+  return `${WEEKDAY_LONG.format(date)}, den ${DAY_MONTH.format(date)}`;
+}
+
+/** "Donnerstag 27.08, 18:00 – 22:00" — Helferplan: zugewiesene Schicht,
+ * Beginn und Ende liegen immer am selben Tag. */
+export function formatWeekdayDateTimeRange(
+  startsAt: DateInput,
+  endsAt: DateInput,
+) {
+  const start = new Date(startsAt);
+  const dayMonth = DAY_MONTH.format(start).replace(/\.$/, "");
+  return `${WEEKDAY_LONG.format(start)} ${dayMonth}, ${formatTimePlain(startsAt)} – ${formatTimePlain(endsAt)}`;
+}
+
+/** "14:30 – 18:00" — pure time-of-day range, kein Datum. Für Tabellen, in
+ * denen der Tag schon in einer eigenen Spalte steht (Schichten-Tabelle). */
+export function formatTimeRange(startsAt: DateInput, endsAt: DateInput) {
+  return `${formatTimePlain(startsAt)} – ${formatTimePlain(endsAt)}`;
+}
+
 /** "01.02.26, 14:30 – 18:00" — the timeframe pattern used across event views. */
 export function formatDateTimeRange(
   startsAt: DateInput,
@@ -71,6 +109,13 @@ export function formatDateTimeRange(
 ) {
   if (!endsAt) return formatDateTime(startsAt);
   return `${formatDateTime(startsAt)} – ${formatDateTime(endsAt)}`;
+}
+
+/** "10.10.2026" or "10.10.2026 – 12.10.2026" — a pure date range, no time-of-day.
+ * Used for `Event.startsAt`/`endsAt` (#150), which carry no meaningful time. */
+export function formatDateRange(startsAt: DateInput, endsAt: DateInput | null) {
+  if (!endsAt) return formatDatePlain(startsAt);
+  return `${formatDatePlain(startsAt)} – ${formatDatePlain(endsAt)}`;
 }
 
 /** "12,3 MB" — binary (1024-based) units, one decimal, German locale separator. */
@@ -105,4 +150,7 @@ export const FLEA_MARKET_ITEM_STATUS_LABELS: Record<
   FOR_SALE: "Im Verkauf",
   RESERVED: "Reserviert",
   SOLD: "Verkauft",
+  PAID_OUT: "Ausgezahlt",
+  RETURNED: "Zurückgegeben",
+  DONATED: "Gespendet",
 };

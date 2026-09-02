@@ -32,8 +32,13 @@ export async function createRole(
   }
 
   try {
+    const { _max } = await prisma.role.aggregate({ _max: { sortOrder: true } });
     await prisma.role.create({
-      data: { name: trimmedName, description: description?.trim() || null },
+      data: {
+        name: trimmedName,
+        description: description?.trim() || null,
+        sortOrder: (_max.sortOrder ?? -1) + 1,
+      },
     });
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -124,6 +129,25 @@ export async function setRolePermissions(
       }),
     ),
   ]);
+
+  return { success: true };
+}
+
+/**
+ * Persists a new canonical role order (#391) — `roleIds` is the complete,
+ * already-reordered list (drag target position decided client-side), each
+ * entry's index becomes its `sortOrder`. Not a partial move: the caller
+ * (Drag-and-Drop-Handler in role-management-section.tsx) always sends every
+ * role id. Does not check permissions — that is the caller's job.
+ */
+export async function reorderRoles(
+  roleIds: string[],
+): Promise<RoleActionResult> {
+  await prisma.$transaction(
+    roleIds.map((roleId, sortOrder) =>
+      prisma.role.update({ where: { id: roleId }, data: { sortOrder } }),
+    ),
+  );
 
   return { success: true };
 }
