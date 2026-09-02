@@ -20,24 +20,9 @@ export type LfgPostSummary = {
   isParticipant: boolean;
 };
 
-export function LfgList({
-  posts,
-  showExpiredHref,
-  showingExpired,
-}: {
-  posts: LfgPostSummary[];
-  showExpiredHref: string;
-  showingExpired: boolean;
-}) {
+export function LfgList({ posts }: { posts: LfgPostSummary[] }) {
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        href={showExpiredHref}
-        className="text-primary w-fit text-sm hover:underline"
-      >
-        {showingExpired ? "Nur aktuelle anzeigen" : "Auch vergangene anzeigen"}
-      </Link>
-
       <div className="grid gap-4 sm:grid-cols-2">
         {posts.map((post) => (
           <div
