@@ -70,7 +70,7 @@
     "@vitest/coverage-v8": "^4.1.11",
     "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
-    "eslint": "^9.39.5",
+    "eslint": "^10.9.1",
     "eslint-config-next": "^16.3.3",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
@@ -82,7 +82,7 @@
     "shadcn": "^4.19.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11",
     "vitest-mock-extended": "^5.1.1"
   }
