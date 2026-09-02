@@ -59,6 +59,8 @@ describe("parseCalendarEvents", () => {
 describe("getAllContentWithCalendar", () => {
   afterEach(() => {
     delete process.env.PUBLIC_CALENDAR_ICS_URL;
+    delete process.env.ICS_FEED_URL_INTERNAL;
+    vi.unstubAllGlobals();
   });
 
   it("sorts entries descending by date, newest first (#252)", async () => {
@@ -73,6 +75,25 @@ describe("getAllContentWithCalendar", () => {
       "2026-08-01",
       "2026-06-01",
     ]);
+  });
+
+  it("includes internal ICS-Termine, marked internal (#208)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(REFERENCE_NOW);
+    try {
+      vi.mocked(getAllContent).mockResolvedValue([]);
+      process.env.ICS_FEED_URL_INTERNAL = "https://example.org/internal.ics";
+      mockFetchOnce(true, FIXTURE);
+
+      const items = await getAllContentWithCalendar();
+
+      const internalItem = items.find((item) =>
+        item.slug.startsWith("kalender-"),
+      );
+      expect(internalItem?.internal).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
