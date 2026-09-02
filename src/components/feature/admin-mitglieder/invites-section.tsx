@@ -31,6 +31,7 @@ import {
 import { ActionButton } from "@/components/ui/action-button";
 import { InviteStatusPill } from "@/components/entities/invite-status-pill";
 import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
+import { ImportInvitesDialog } from "@/components/feature/admin-mitglieder/import-invites-dialog";
 import {
   extendInvite,
   revokeInvite,
@@ -132,6 +133,9 @@ export function InvitesSection({
               membersWithoutLogin={membersWithoutLogin}
               defaultDays={defaultDays}
             />
+            <div className="flex justify-end">
+              <ImportInvitesDialog />
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-full max-w-sm">
                 <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />

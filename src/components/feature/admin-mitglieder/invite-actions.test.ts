@@ -26,7 +26,7 @@ vi.mock("@/lib/members/invites", async () => {
   };
 });
 
-const { createInvite } = await import("./invite-actions");
+const { createInvite, bulkImportInvites } = await import("./invite-actions");
 
 const MEMBER = {
   id: "member-1",
@@ -76,6 +76,50 @@ describe("createInvite (#349)", () => {
 
     await expect(createInvite({ memberId: "member-1" })).rejects.toThrow(
       "Dieses Mitglied hat keine E-Mail-Adresse hinterlegt.",
+    );
+  });
+});
+
+describe("bulkImportInvites (#265)", () => {
+  it("creates one invite per email with a matching, loginless member", async () => {
+    prismaMock.member.findFirst.mockResolvedValue(MEMBER as never);
+
+    const result = await bulkImportInvites(["erika@example.com"]);
+
+    expect(result).toEqual({ created: 1, errors: [] });
+    expect(prismaMock.invite.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a per-row error for an email with no matching member, without aborting the batch", async () => {
+    prismaMock.member.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(MEMBER as never);
+
+    const result = await bulkImportInvites([
+      "unknown@example.com",
+      "erika@example.com",
+    ]);
+
+    expect(result.created).toBe(1);
+    expect(result.errors).toEqual([
+      {
+        email: "unknown@example.com",
+        message: "Kein einladbares Mitglied mit dieser E-Mail-Adresse.",
+      },
+    ]);
+  });
+
+  it("only matches members without a portal login and without resignation", async () => {
+    await bulkImportInvites(["erika@example.com"]);
+
+    expect(prismaMock.member.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          email: "erika@example.com",
+          meepleId: null,
+          resignedAt: null,
+        },
+      }),
     );
   });
 });
