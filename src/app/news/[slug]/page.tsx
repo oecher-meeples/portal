@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { canViewContentItem, getContentBySlug } from "@/lib/content/content";
+import { canManagePostType } from "@/lib/content/post-access";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { hasPermissionInCurrentView } from "@/lib/auth/session";
@@ -20,9 +21,16 @@ export default async function PostDetailPage({
     : false;
   if (!canViewContentItem(item, canViewInternal)) notFound();
 
-  const canEdit = user
-    ? await hasPermissionInCurrentView(user.id, "posts:write")
-    : false;
+  const [canEditPublic, canEditInternal] = user
+    ? await Promise.all([
+        hasPermissionInCurrentView(user.id, "posts:public"),
+        hasPermissionInCurrentView(user.id, "posts:internal"),
+      ])
+    : [false, false];
+  const canEdit = canManagePostType(
+    { canEditPublic, canEditInternal },
+    item.internal,
+  );
 
   return <PostDetailView item={item} canEdit={canEdit} />;
 }

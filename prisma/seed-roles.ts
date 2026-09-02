@@ -6,7 +6,16 @@ const PERMISSIONS = [
     description:
       'Zugriff auf den Admin-Bereich und dessen Tier-Vorschau (ersetzt die frühere Prüfung auf den Rollennamen "admin", siehe src/lib/auth/session.ts)',
   },
-  { key: "posts:write", description: "Beiträge erstellen und bearbeiten" },
+  {
+    key: "posts:public",
+    description:
+      "Öffentliche Beiträge anzeigen, bearbeiten und senden (inkl. Instagram-Crosspost, sofern verbunden) — Nachfolger von posts:write (#321)",
+  },
+  {
+    key: "posts:internal",
+    description:
+      "Interne (vereinsinterne) Beiträge anzeigen, bearbeiten und senden (#321)",
+  },
   { key: "posts:delete", description: "Beiträge löschen" },
   {
     key: "invites:manage",
@@ -141,7 +150,12 @@ const ROLES = [
   {
     name: "Redakteur",
     description: "Redaktion — Beiträge und Instagram-Verbindung verwalten",
-    permissionKeys: ["posts:write", "posts:delete", "instagram:connect"],
+    permissionKeys: [
+      "posts:public",
+      "posts:internal",
+      "posts:delete",
+      "instagram:connect",
+    ],
   },
   {
     name: "Meeple",

@@ -1,4 +1,4 @@
-import { requirePermission } from "@/lib/auth/permissions";
+import { requirePostPermissions } from "@/lib/content/post-permissions";
 import { prisma } from "@/lib/utils/prisma";
 import {
   AdminNewsView,
@@ -6,9 +6,17 @@ import {
 } from "@/components/feature/admin-news/admin-news-view";
 
 export default async function AdminNewsPage() {
-  await requirePermission("posts:write");
+  const { canEditPublic, canEditInternal } = await requirePostPermissions();
 
-  const posts = await prisma.post.findMany({ orderBy: { date: "desc" } });
+  // posts:internal sieht auch öffentliche Beiträge (asymmetrisch — nicht
+  // schützenswert); posts:public-only bekommt interne Beiträge serverseitig
+  // nie aus der Query (#321), nicht nur clientseitig versteckt.
+  const posts = await prisma.post.findMany({
+    where: canEditInternal
+      ? {}
+      : { OR: [{ internal: null }, { internal: false }] },
+    orderBy: { date: "desc" },
+  });
 
   const rows: AdminNewsPostRow[] = posts.map((post) => ({
     id: post.id,
@@ -21,5 +29,11 @@ export default async function AdminNewsPage() {
     status: post.status,
   }));
 
-  return <AdminNewsView posts={rows} />;
+  return (
+    <AdminNewsView
+      posts={rows}
+      canEditPublic={canEditPublic}
+      canEditInternal={canEditInternal}
+    />
+  );
 }

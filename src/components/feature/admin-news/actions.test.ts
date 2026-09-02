@@ -48,7 +48,7 @@ describe("createPost", () => {
     expect(prismaMock.post.create).not.toHaveBeenCalled();
   });
 
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the user lacks both posts:public and posts:internal", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(0);
 
@@ -225,9 +225,25 @@ describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
 });
 
 describe("updatePost", () => {
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the post does not exist", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.findUnique.mockResolvedValue(null);
+
+    const result = await updatePost("post-1", VALID_INPUT);
+
+    expect(result).toEqual({ error: "Beitrag nicht gefunden." });
+    expect(prismaMock.post.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the user lacks both posts:public and posts:internal", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(0);
+    prismaMock.post.findUnique.mockResolvedValue({
+      internal: null,
+      newsletterStatus: null,
+      instagramDetails: null,
+    } as never);
 
     const result = await updatePost("post-1", VALID_INPUT);
 
@@ -238,6 +254,11 @@ describe("updatePost", () => {
   it("updates the post when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.findUnique.mockResolvedValue({
+      internal: null,
+      newsletterStatus: null,
+      instagramDetails: null,
+    } as never);
 
     const result = await updatePost("post-1", VALID_INPUT);
 
@@ -281,10 +302,14 @@ describe("updatePost", () => {
   it("does not touch instagramDetails when instagram sharing stays disabled", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.post.findUnique.mockResolvedValue({
+      internal: null,
+      newsletterStatus: null,
+      instagramDetails: null,
+    } as never);
 
     await updatePost("post-1", VALID_INPUT);
 
-    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
     expect(call?.data).not.toHaveProperty("instagramDetails");
   });
@@ -356,7 +381,7 @@ describe("updatePost", () => {
 });
 
 describe("retryInstagramPost", () => {
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the user lacks the posts:public permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(0);
 
@@ -429,7 +454,7 @@ describe("getUploadToken", () => {
     expect(generateClientTokenMock).not.toHaveBeenCalled();
   });
 
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the user lacks the posts:public/posts:internal permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(0);
 

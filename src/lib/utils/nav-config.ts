@@ -77,7 +77,8 @@ export function tierAtLeast(current: Tier, minTier: Tier) {
  * keep those in sync with this list).
  */
 export const ADMIN_PERMISSIONS = [
-  "posts:write",
+  "posts:public",
+  "posts:internal",
   "games:manage",
   "members:manage",
   "invites:manage",
@@ -212,7 +213,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/admin/news",
         icon: Newspaper,
         section: "Administration",
-        permission: "posts:write",
+        permission: ["posts:public", "posts:internal"],
       },
       {
         label: "Bestand & Inventur",

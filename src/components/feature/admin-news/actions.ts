@@ -10,6 +10,10 @@ import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
+import {
+  canManagePostType,
+  getPostPermissions,
+} from "@/lib/content/post-permissions";
 import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
@@ -100,7 +104,9 @@ function buildInstagramDetailsUpdate(
 
 export async function createPost(input: PostInput) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+  if (!user) return { error: "Keine Berechtigung." };
+  const perms = await getPostPermissions(user.id);
+  if (!canManagePostType(perms, input.internal)) {
     return { error: "Keine Berechtigung." };
   }
 
@@ -131,31 +137,38 @@ export async function createPost(input: PostInput) {
 
 export async function updatePost(id: string, input: PostInput) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
-    return { error: "Keine Berechtigung." };
-  }
+  if (!user) return { error: "Keine Berechtigung." };
 
   const validationError = validatePostInput(input);
   if (validationError) {
     return { error: validationError };
   }
 
-  const wantsNewsletter = shouldQueueNewsletter(input);
-  const needsExisting =
-    input.internal ||
-    input.status !== "PUBLISHED" ||
-    input.instagram ||
-    wantsNewsletter;
-  const existing = needsExisting
-    ? await prisma.post.findUnique({
-        where: { id },
-        select: {
-          newsletterStatus: true,
-          instagramDetails: { select: { id: true } },
-        },
-      })
-    : null;
+  // Immer geladen (statt nur bedingt) — die Berechtigungsprüfung braucht den
+  // bisherigen internal-Wert so oder so: wer nur posts:public hat, darf
+  // weder einen internen Beitrag anfassen noch einen öffentlichen intern
+  // machen (#321).
+  const existing = await prisma.post.findUnique({
+    where: { id },
+    select: {
+      internal: true,
+      newsletterStatus: true,
+      instagramDetails: { select: { id: true } },
+    },
+  });
+  if (!existing) {
+    return { error: "Beitrag nicht gefunden." };
+  }
 
+  const perms = await getPostPermissions(user.id);
+  if (
+    !canManagePostType(perms, existing.internal) ||
+    !canManagePostType(perms, input.internal)
+  ) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const wantsNewsletter = shouldQueueNewsletter(input);
   const instagramDetails = buildInstagramDetailsUpdate(
     input,
     Boolean(existing?.instagramDetails),
@@ -181,7 +194,8 @@ export async function updatePost(id: string, input: PostInput) {
 
 export async function getUploadToken(pathname: string) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+  const perms = user ? await getPostPermissions(user.id) : null;
+  if (!perms || (!perms.canEditPublic && !perms.canEditInternal)) {
     throw new Error("Keine Berechtigung.");
   }
 
@@ -193,9 +207,12 @@ export async function getUploadToken(pathname: string) {
   });
 }
 
+/** Instagram-Crosspost gibt es nur für öffentliche Beiträge (die Checkbox
+ * ist in post-form.tsx bei internen Beiträgen deaktiviert) — daher genügt
+ * hier posts:public, kein posts:internal-Fall zu prüfen. */
 export async function retryInstagramPost(postId: string) {
   const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:write"))) {
+  if (!user || !(await hasPermission(user.id, "posts:public"))) {
     return { error: "Keine Berechtigung." };
   }
 

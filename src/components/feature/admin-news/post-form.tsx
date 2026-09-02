@@ -52,12 +52,19 @@ const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
 export function PostForm({
   postId,
   initialValues,
+  canEditPublic = true,
+  canEditInternal = true,
 }: {
   postId?: string;
   initialValues?: Partial<PostInput> & { instagramStatus?: string | null };
+  /** Wer nur eines der beiden Rechte hat, bekommt die Checkbox "Nur intern"
+   * fest auf den erlaubten Wert gesperrt statt frei wählbar (#321). */
+  canEditPublic?: boolean;
+  canEditInternal?: boolean;
 }) {
   const isExistingDraft = Boolean(postId) && initialValues?.status === "DRAFT";
   const router = useRouter();
+  const internalLocked = canEditPublic !== canEditInternal;
   const [type, setType] = useState<ContentType>(initialValues?.type ?? "blog");
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [date, setDate] = useState(initialValues?.date ?? "");
@@ -65,7 +72,9 @@ export function PostForm({
   const [author, setAuthor] = useState(initialValues?.author ?? "");
   const [body, setBody] = useState(initialValues?.body ?? "");
   const [instagram, setInstagram] = useState(initialValues?.instagram ?? false);
-  const [internal, setInternal] = useState(initialValues?.internal ?? false);
+  const [internal, setInternal] = useState(
+    internalLocked ? canEditInternal : (initialValues?.internal ?? false),
+  );
   const [coverImageUrl, setCoverImageUrl] = useState(
     initialValues?.coverImageUrl ?? "",
   );
@@ -302,9 +311,16 @@ export function PostForm({
           <input
             type="checkbox"
             checked={internal}
+            disabled={internalLocked}
             onChange={(event) => setInternal(event.target.checked)}
           />
           Nur intern (nur für eingeloggte Mitglieder sichtbar)
+          {internalLocked && (
+            <span className="text-muted-foreground text-xs">
+              (nur {canEditInternal ? "interne" : "öffentliche"} Beiträge
+              erlaubt)
+            </span>
+          )}
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
