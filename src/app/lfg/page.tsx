@@ -56,7 +56,12 @@ export default async function LfgPage({
         eyebrow="Schwarzes Brett"
         title="Spielergesuche (LFG)"
         description="Finde Mitspielende – für ein bestimmtes Spiel oder einfach spontan für einen Abend."
-        action={<CreateLfgDialog boardGameOptions={boardGameOptions} />}
+        action={
+          <CreateLfgDialog
+            boardGameOptions={boardGameOptions}
+            viewerAddress={meeple.address}
+          />
+        }
       />
       <LfgList
         posts={summaries}

@@ -51,6 +51,10 @@ export default async function LfgDetailPage({
   const viewerIsParticipant = post.participants.some(
     (p) => p.meepleId === meeple.id,
   );
+  // Ortsfeld editierbar (#166): Ersteller immer, beigetretene Teilnehmer nur
+  // bei aktivem `participantsMayEditLocation` — analog `canAddGuest`.
+  const canEditLocation =
+    isCreator || (post.participantsMayEditLocation && viewerIsParticipant);
 
   return (
     <LfgDetailView
@@ -85,6 +89,8 @@ export default async function LfgDetailPage({
       viewerMeepleId={meeple.id}
       canClose={isCreator || canManageMembers}
       guestsMayBringGuests={post.guestsMayBringGuests}
+      canEditLocation={canEditLocation}
+      viewerHasOwnAddress={Boolean(meeple.address)}
     />
   );
 }

@@ -15,6 +15,8 @@ export type LfgPostInput = {
   plannedAt?: Date | null;
   dateNote?: string | null;
   location?: string | null;
+  /** Erlaubt beigetretenen Meeples, das Ortsfeld selbst zu bearbeiten (#166) — der Ersteller darf das immer. */
+  participantsMayEditLocation?: boolean;
   maxParticipants: number;
   /** Erlaubt beigetretenen Meeples, eigene Gäste hinzuzufügen (#145) — der Ersteller darf das immer. */
   guestsMayBringGuests?: boolean;
@@ -40,6 +42,7 @@ export async function createLfgPost(input: LfgPostInput) {
         plannedAt: input.plannedAt ?? null,
         dateNote: input.dateNote || null,
         location: input.location || null,
+        participantsMayEditLocation: input.participantsMayEditLocation ?? false,
         maxParticipants: input.maxParticipants,
         guestsMayBringGuests: input.guestsMayBringGuests ?? false,
         createdByMeepleId: meeple.id,
@@ -219,6 +222,79 @@ export async function closeLfgPost(postId: string) {
   await prisma.lfgPost.update({
     where: { id: postId },
     data: { closedAt: new Date() },
+  });
+
+  revalidatePath("/lfg");
+  revalidatePath(`/lfg/${postId}`);
+  return { success: true as const };
+}
+
+/** Ersteller darf das Ortsfeld immer bearbeiten; beigetretene Meeples nur,
+ * wenn `participantsMayEditLocation` aktiv ist (#166) — analog `addLfgGuest`. */
+async function requireLfgLocationEditRight(postId: string, meepleId: string) {
+  const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
+  if (!post) {
+    return { error: "Gesuch nicht gefunden." } as const;
+  }
+
+  const isCreator = post.createdByMeepleId === meepleId;
+  if (!isCreator) {
+    if (!post.participantsMayEditLocation) {
+      return { error: "Nur der Ersteller darf den Ort ändern." } as const;
+    }
+    const isParticipant = await prisma.lfgParticipant.findFirst({
+      where: { postId, meepleId },
+    });
+    if (!isParticipant) {
+      return { error: "Nur Teilnehmende können den Ort ändern." } as const;
+    }
+  }
+
+  return { post } as const;
+}
+
+export async function updateLfgLocation(postId: string, location: string) {
+  const meeple = await requireMeeplePermission("lfg:participate");
+
+  const result = await requireLfgLocationEditRight(postId, meeple.id);
+  if ("error" in result) {
+    return result;
+  }
+
+  await prisma.lfgPost.update({
+    where: { id: postId },
+    data: { location: location.trim() || null },
+  });
+
+  revalidatePath("/lfg");
+  revalidatePath(`/lfg/${postId}`);
+  return { success: true as const };
+}
+
+/** Übernimmt die im Profil hinterlegte Adresse als Ort (#166) — Adresse und
+ * Klingel-Notiz kommen bewusst serverseitig aus `meeple`, nicht vom Client,
+ * damit niemand eine fremde Adresse unterschieben kann. Hängt eine vorhandene
+ * Klingel-Notiz an die Beschreibung an, statt sie zu überschreiben. */
+export async function useOwnAddressAsLfgLocation(postId: string) {
+  const meeple = await requireMeeplePermission("lfg:participate");
+
+  const result = await requireLfgLocationEditRight(postId, meeple.id);
+  if ("error" in result) {
+    return result;
+  }
+  const { post } = result;
+
+  if (!meeple.address) {
+    return { error: "In deinem Profil ist keine Adresse hinterlegt." };
+  }
+
+  const description = meeple.doorbellNote
+    ? `${post.description}\n\nKlingelschild: ${meeple.doorbellNote}`
+    : post.description;
+
+  await prisma.lfgPost.update({
+    where: { id: postId },
+    data: { location: meeple.address, description },
   });
 
   revalidatePath("/lfg");

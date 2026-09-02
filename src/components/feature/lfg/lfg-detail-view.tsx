@@ -9,6 +9,7 @@ import {
   leaveLfgPost,
   removeLfgGuest,
 } from "@/components/feature/lfg/actions";
+import { LfgLocationEditor } from "@/components/feature/lfg/lfg-location-editor";
 import type { LfgStatus } from "@/lib/content/lfg";
 import type { ContactLinks } from "@/lib/members/contact";
 import { PageContainer } from "@/components/ui/page-container";
@@ -40,6 +41,8 @@ export function LfgDetailView({
   viewerMeepleId,
   canClose,
   guestsMayBringGuests,
+  canEditLocation,
+  viewerHasOwnAddress,
 }: {
   id: string;
   title: string;
@@ -54,6 +57,13 @@ export function LfgDetailView({
   viewerMeepleId: string | null;
   canClose: boolean;
   guestsMayBringGuests: boolean;
+  /** Ersteller darf das Ortsfeld immer bearbeiten, beigetretene Teilnehmer
+   * nur bei aktivem `participantsMayEditLocation` (#166) — serverseitig
+   * entschieden, hier nur gerendert. */
+  canEditLocation: boolean;
+  /** Ob der Betrachter eine Adresse im Profil hinterlegt hat — steuert, ob
+   * "Meine Adresse übernehmen" am Ortsfeld erscheint (#166). */
+  viewerHasOwnAddress: boolean;
 }) {
   const isParticipant = participants.some((p) => p.meepleId === viewerMeepleId);
   const isCreator = viewerMeepleId === createdByMeepleId;
@@ -68,12 +78,21 @@ export function LfgDetailView({
           <h1 className="font-serif text-2xl font-bold">{title}</h1>
           <p className="text-muted-foreground text-sm">
             {dateLabel}
-            {location && ` · ${location}`}
+            {!canEditLocation && location && ` · ${location}`}
             {gameTitle && ` · ${gameTitle}`}
           </p>
         </div>
         <LfgStatusPill status={status} />
       </div>
+
+      {canEditLocation && (
+        <LfgLocationEditor
+          key={location ?? ""}
+          postId={id}
+          initialLocation={location}
+          hasOwnAddress={viewerHasOwnAddress}
+        />
+      )}
 
       <p className="leading-relaxed">{description}</p>
 

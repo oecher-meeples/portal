@@ -41,6 +41,8 @@ const EMPTY_FORM = {
   boardGameId: null as string | null,
   title: "",
   plannedAt: "",
+  location: "",
+  participantsMayEditLocation: false,
   maxParticipants: 4,
   description: "",
   guestsMayBringGuests: false,
@@ -54,6 +56,7 @@ export function CreateLfgDialog({
   defaultGameTitle,
   defaultBoardGameId,
   defaultMaxParticipants,
+  viewerAddress,
 }: {
   /** Existing inventory titles to optionally link the post to (#34) — never required. */
   boardGameOptions?: LfgBoardGameOption[];
@@ -64,6 +67,10 @@ export function CreateLfgDialog({
   defaultGameTitle?: string;
   defaultBoardGameId?: string | null;
   defaultMaxParticipants?: number;
+  /** Eigener Wohnort des Erstellers (`Meeple.address`) für den
+   * "Meine Adresse übernehmen"-Button am Ortsfeld (#166) — `null`, wenn keine
+   * Adresse im Profil hinterlegt ist, dann bleibt der Button verborgen. */
+  viewerAddress?: string | null;
 } = {}) {
   const initialForm = {
     ...EMPTY_FORM,
@@ -101,6 +108,8 @@ export function CreateLfgDialog({
           boardGameId: form.boardGameId,
           description: form.description,
           plannedAt: form.plannedAt ? new Date(form.plannedAt) : undefined,
+          location: form.location || undefined,
+          participantsMayEditLocation: form.participantsMayEditLocation,
           maxParticipants: Number(form.maxParticipants),
           guestsMayBringGuests: form.guestsMayBringGuests,
         })
@@ -176,6 +185,26 @@ export function CreateLfgDialog({
             }
           />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <TextField
+            id="lfg-location"
+            label="Ort (optional)"
+            value={form.location}
+            onChange={(event) => patch("location", event.target.value)}
+            placeholder="z. B. bei mir zuhause"
+          />
+          {viewerAddress && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => patch("location", viewerAddress)}
+            >
+              Meine Adresse übernehmen
+            </Button>
+          )}
+        </div>
         <TextAreaField
           id="lfg-desc"
           label="Beschreibung"
@@ -194,6 +223,16 @@ export function CreateLfgDialog({
             }
           />
           Meine Gäste dürfen Gäste mitbringen
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.participantsMayEditLocation}
+            onChange={(event) =>
+              patch("participantsMayEditLocation", event.target.checked)
+            }
+          />
+          Teilnehmer dürfen Ort festlegen
         </label>
       </div>
     </ActionDialog>
