@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Pencil, Share2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
+import { SurveyDeadlineBanner } from "@/components/entities/survey-deadline-banner";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { Button } from "@/components/ui/button";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import { ShareButton } from "@/components/ui/share-button";
 import { formatDate } from "@/lib/utils/format";
 import { getRequestOrigin } from "@/lib/utils/request-origin";
@@ -66,9 +67,10 @@ export async function PostDetailView({ item, canEdit }: PostDetailViewProps) {
         {item.author && <> · {item.author}</>}
         {item.location && <> · {item.location}</>}
       </p>
-      <div className="[&_a]:text-primary flex flex-col gap-4 text-base leading-relaxed [&_a]:underline [&_strong]:font-semibold">
-        <ReactMarkdown>{item.body}</ReactMarkdown>
-      </div>
+      {item.type === "umfrage" && (
+        <SurveyDeadlineBanner deadline={item.surveyDeadline} />
+      )}
+      <MarkdownContent body={item.body} />
       <ShareButton url={`${origin}/news/${item.slug}`} title={item.title} />
     </article>
   );

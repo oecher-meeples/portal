@@ -404,7 +404,11 @@ async function seedDemoPosts() {
         internal: post.internal,
         instagram: post.instagram,
         coverImageUrl: post.coverImageUrl,
-        instagramStatus: post.instagram ? InstagramStatus.PENDING : null,
+        ...(post.instagram
+          ? {
+              instagramDetails: { create: { status: InstagramStatus.PENDING } },
+            }
+          : {}),
       },
     });
   }

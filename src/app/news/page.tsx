@@ -5,7 +5,6 @@ import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
@@ -14,14 +13,17 @@ export default async function NewsPage() {
     getCurrentUser(),
   ]);
   const canSeeInternal = user
-    ? await hasPermission(user.id, "news:internal:view")
+    ? await hasPermissionInCurrentView(user.id, "news:internal:view")
     : false;
   const items = canSeeInternal
     ? allItems
     : allItems.filter((item) => !item.internal);
-  const canEdit = user
-    ? await hasPermissionInCurrentView(user.id, "posts:write")
-    : false;
+  const [canEditPublic, canEditInternal] = user
+    ? await Promise.all([
+        hasPermissionInCurrentView(user.id, "posts:public"),
+        hasPermissionInCurrentView(user.id, "posts:internal"),
+      ])
+    : [false, false];
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +32,7 @@ export default async function NewsPage() {
         title="Termine & Blog"
         description="Alle Veranstaltungen, Turniere und Vereinsnews. Beiträge der Moderator:innen erscheinen automatisch auch auf Instagram."
         action={
-          canEdit ? (
+          canEditPublic || canEditInternal ? (
             <Button
               render={<Link href="/admin/news/new">+ Neuer Beitrag</Link>}
             />
@@ -41,7 +43,8 @@ export default async function NewsPage() {
       <NewsBrowser
         items={items}
         icsUrl={process.env.PUBLIC_CALENDAR_ICS_URL}
-        canEdit={canEdit}
+        canEditPublic={canEditPublic}
+        canEditInternal={canEditInternal}
         canSeeInternal={canSeeInternal}
       />
     </div>

@@ -30,12 +30,14 @@ const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
 export function NewsBrowser({
   items,
   icsUrl,
-  canEdit,
+  canEditPublic,
+  canEditInternal,
   canSeeInternal,
 }: {
   items: ContentItem[];
   icsUrl?: string;
-  canEdit?: boolean;
+  canEditPublic?: boolean;
+  canEditInternal?: boolean;
   canSeeInternal?: boolean;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -96,7 +98,8 @@ export function NewsBrowser({
           key={`${filter}-${onlyInternal}-${selectedDate ?? ""}`}
           items={visible}
           viewMode={viewMode}
-          canEdit={canEdit}
+          canEditPublic={canEditPublic}
+          canEditInternal={canEditInternal}
         />
         <NewsCalendar
           items={items}

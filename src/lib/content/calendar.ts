@@ -151,15 +151,20 @@ async function getPublicDbEvents(limit = 50): Promise<ContentItem[]> {
   }));
 }
 
+/** Internal ICS-Termine fließen immer mit ein — die Sichtbarkeit für
+ * unberechtigte Nutzer wird downstream in `/news` (`canSeeInternal`) anhand
+ * von `item.internal` gefiltert, nicht hier (analog zu den DB-Beiträgen). */
 export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
-  const [dbItems, calendarEvents, publicEvents] = await Promise.all([
-    getAllContent(),
-    getUpcomingCalendarEvents(50),
-    getPublicDbEvents(50),
-  ]);
+  const [dbItems, calendarEvents, publicEvents, internalEvents] =
+    await Promise.all([
+      getAllContent(),
+      getUpcomingCalendarEvents(50),
+      getPublicDbEvents(50),
+      fetchInternalEvents({ limit: 50 }),
+    ]);
 
-  return [...dbItems, ...calendarEvents, ...publicEvents].sort((a, b) =>
-    b.date.localeCompare(a.date),
+  return [...dbItems, ...calendarEvents, ...publicEvents, ...internalEvents].sort(
+    (a, b) => b.date.localeCompare(a.date),
   );
 }
 

@@ -160,6 +160,29 @@ describe("PostForm", () => {
     );
   });
 
+  it("locks the internal checkbox on when the user only has posts:internal (#321)", async () => {
+    render(<PostForm canEditPublic={false} canEditInternal={true} />);
+
+    const checkbox = screen.getByRole("checkbox", { name: /Nur intern/ });
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+  });
+
+  it("locks the internal checkbox off when the user only has posts:public (#321)", async () => {
+    render(<PostForm canEditPublic={true} canEditInternal={false} />);
+
+    const checkbox = screen.getByRole("checkbox", { name: /Nur intern/ });
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeDisabled();
+  });
+
+  it("leaves the internal checkbox freely toggleable with both permissions", async () => {
+    render(<PostForm canEditPublic={true} canEditInternal={true} />);
+
+    const checkbox = screen.getByRole("checkbox", { name: /Nur intern/ });
+    expect(checkbox).not.toBeDisabled();
+  });
+
   it("sends newsletterCategory as null when the newsletter checkbox is unchecked", async () => {
     const user = userEvent.setup();
     createPostMock.mockResolvedValue({ success: true, id: "post-1" });
