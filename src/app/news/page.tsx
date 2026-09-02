@@ -5,7 +5,6 @@ import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
@@ -14,7 +13,7 @@ export default async function NewsPage() {
     getCurrentUser(),
   ]);
   const canSeeInternal = user
-    ? await hasPermission(user.id, "news:internal:view")
+    ? await hasPermissionInCurrentView(user.id, "news:internal:view")
     : false;
   const items = canSeeInternal
     ? allItems
