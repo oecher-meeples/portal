@@ -6,6 +6,12 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { TextAreaField, TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  combineValidators,
+  maxDate,
+  minDate,
+} from "@/components/ui/constraints";
 import {
   Combobox,
   ComboboxEmpty,
@@ -15,6 +21,20 @@ import {
   ComboboxPopup,
 } from "@/components/ui/combobox";
 import { createLfgPost } from "@/components/feature/lfg/actions";
+
+/** Termine sind auf heute bis heute + 1 Jahr begrenzt (#407) — kein weiterer
+ * Verwender, daher keine benannte Kombination in `constraints.ts` (DRY-Grenze
+ * ist die zweite Verwendung, analog `birthDateValidator()`). */
+function lfgDateValidator(
+  now: Date = new Date(),
+): ReturnType<typeof combineValidators> {
+  const oneYearFromNow = new Date(
+    now.getFullYear() + 1,
+    now.getMonth(),
+    now.getDate(),
+  );
+  return combineValidators(minDate(now), maxDate(oneYearFromNow));
+}
 
 const EMPTY_FORM = {
   gameTitle: "",
@@ -137,12 +157,13 @@ export function CreateLfgDialog({
           required
         />
         <div className="grid grid-cols-2 gap-3">
-          <TextField
+          <DatePicker
             id="lfg-date"
             label="Datum (optional)"
-            type="date"
+            openAt="Month"
+            validate={lfgDateValidator()}
             value={form.plannedAt}
-            onChange={(event) => patch("plannedAt", event.target.value)}
+            onChange={(value) => patch("plannedAt", value)}
           />
           <TextField
             id="lfg-max"
