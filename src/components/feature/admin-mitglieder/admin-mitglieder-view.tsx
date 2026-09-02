@@ -331,10 +331,6 @@ export function AdminMitgliederView({
         </div>
       )}
 
-      {canManageRoles && (
-        <RoleManagementSection roles={roles} permissions={permissions} />
-      )}
-
       <VereinsmitgliederTable
         members={members}
         canManageMembers={canManageMembers}
@@ -351,6 +347,10 @@ export function AdminMitgliederView({
         canManageAdminAccess={canCreateSystemkonto}
         canCreateSystemkonto={canCreateSystemkonto}
       />
+
+      {canManageRoles && (
+        <RoleManagementSection roles={roles} permissions={permissions} />
+      )}
 
       <InvitesSection
         invites={invites}
