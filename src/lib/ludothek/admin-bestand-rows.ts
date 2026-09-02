@@ -18,6 +18,7 @@ import {
   type AdminBestandFilter,
 } from "@/lib/ludothek/admin-bestand-filters";
 import { formatDatePlain } from "@/lib/utils/format";
+import { memberDisplayName } from "@/lib/members/member-display-name";
 
 /** One row per physical `GameCopy` for `/admin/bestand` (#121/#198). */
 export type AdminBoardGameRow = {
@@ -33,6 +34,10 @@ export type AdminBoardGameRow = {
   lastCheckedAt: string | null;
   archivedReason: string | null;
   zustand: GameZustand;
+  /** Offene Weitergabe/Ausleihe, die die empfangende Person noch nicht
+   * bestätigt hat (#406) — analog der "unbestätigt"-`StatusPill` in
+   * `GameHoldingPanel`. */
+  isUnconfirmed: boolean;
   locationChain: string;
   bggId: number | null;
   minPlayers: number | null;
@@ -45,7 +50,10 @@ export type AdminBoardGameRow = {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  categories: string[];
   condition: string | null;
+  /** Freie Inventarnummer des Exemplars (#270). */
+  inventoryNumber: string | null;
   kind: BoardGameKind;
   explainerVideoUrl: string | null;
   languageDependence: LanguageDependence | null;
@@ -79,7 +87,18 @@ export async function buildAdminBoardGameRows({
         boardGame: { include: { alternateNames: { select: { name: true } } } },
         holdings: {
           where: { endedAt: null },
-          include: { unit: true, meeple: { select: { displayName: true } } },
+          include: {
+            unit: true,
+            vereinsmitglied: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                meeple: { select: { displayName: true, neonAuthUserId: true } },
+              },
+            },
+          },
         },
       },
     }),
@@ -98,7 +117,12 @@ export async function buildAdminBoardGameRows({
   return copies.map((copy) => {
     const holding = copy.holdings[0] ?? null;
     const zustand = holding
-      ? zustandFromHoldingAndUnit(holding, holding.unit, copy.status)
+      ? zustandFromHoldingAndUnit(
+          holding,
+          holding.unit,
+          copy.status,
+          holding.vereinsmitglied,
+        )
       : "nicht-erfasst";
     const boardGame = copy.boardGame;
 
@@ -115,6 +139,8 @@ export async function buildAdminBoardGameRows({
         : null,
       archivedReason: copy.archivedReason,
       zustand,
+      isUnconfirmed:
+        Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
       bggId: boardGame.bggId,
       minPlayers: boardGame.minPlayers,
       maxPlayers: boardGame.maxPlayers,
@@ -124,7 +150,9 @@ export async function buildAdminBoardGameRows({
       imageUrl: boardGame.imageUrl,
       description: boardGame.description,
       mechanics: boardGame.mechanics,
+      categories: boardGame.categories,
       condition: copy.condition,
+      inventoryNumber: copy.inventoryNumber,
       kind: boardGame.kind,
       explainerVideoUrl: boardGame.explainerVideoUrl,
       languageDependence: boardGame.languageDependence,
@@ -134,9 +162,11 @@ export async function buildAdminBoardGameRows({
       ruleBookLanguages: copy.ruleBookLanguages,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       locationChain: (() => {
-        if (holding?.meepleId) {
+        if (holding?.vereinsmitgliedId) {
           return formatLocationChain({
-            responsibleName: holding.meeple?.displayName ?? "Meeple",
+            responsibleName: holding.vereinsmitglied
+              ? memberDisplayName(holding.vereinsmitglied)
+              : "Vereinsmitglied",
             unitChain: "",
           });
         }

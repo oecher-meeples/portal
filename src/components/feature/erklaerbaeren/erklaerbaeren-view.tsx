@@ -7,6 +7,7 @@ import {
   type MyExplainerGame,
   type SelectableGame,
 } from "@/components/feature/erklaerbaeren/my-explainer-games";
+import { PageContainer } from "@/components/ui/page-container";
 
 export function ErklaerbaerenView({
   directory,
@@ -22,7 +23,7 @@ export function ErklaerbaerenView({
   isAdmin: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-8">
+    <PageContainer className="gap-8">
       {isAdmin && (
         <section className="flex flex-col gap-3">
           <ExplainerDirectory entries={directory} />
@@ -32,6 +33,6 @@ export function ErklaerbaerenView({
       <section className="flex flex-col gap-3">
         <MyExplainerGames myGames={myGames} availableGames={availableGames} />
       </section>
-    </div>
+    </PageContainer>
   );
 }

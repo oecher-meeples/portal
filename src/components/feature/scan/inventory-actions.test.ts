@@ -52,28 +52,45 @@ describe("confirmGameCondition", () => {
 
 describe("reportGameDefect", () => {
   it("sets MAINTENANCE and rejects an empty note", async () => {
-    const result = await reportGameDefect("game-1", "   ");
+    const result = await reportGameDefect("game-1", "beschaedigt", "   ");
 
     expect(result).toEqual({ error: "Bitte eine Notiz zum Mangel angeben." });
     expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 
-  it("records the defect note and sets the status to MAINTENANCE", async () => {
-    const result = await reportGameDefect("game-1", "Karte fehlt");
+  it("records the defect note prefixed with the issue label and sets MAINTENANCE", async () => {
+    const result = await reportGameDefect(
+      "game-1",
+      "unvollstaendig",
+      "Karte fehlt",
+    );
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "game-1" },
       data: {
-        condition: "Karte fehlt",
+        condition: "Unvollständig spielbar: Karte fehlt",
         lastCheckedAt: expect.any(Date),
         status: "MAINTENANCE",
       },
     });
   });
 
+  it.each([
+    ["nicht_spielbar", "Nicht spielbar"],
+    ["beschaedigt", "Beschädigt"],
+  ] as const)("prefixes the %s label correctly (#273)", async (kind, label) => {
+    await reportGameDefect("game-1", kind, "Notiz");
+
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ condition: `${label}: Notiz` }),
+      }),
+    );
+  });
+
   it("is available to any logged-in member", async () => {
-    await reportGameDefect("game-1", "Mangel");
+    await reportGameDefect("game-1", "beschaedigt", "Mangel");
 
     expect(requireMeepleMock).toHaveBeenCalled();
     expect(requirePermissionMock).not.toHaveBeenCalled();

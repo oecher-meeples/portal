@@ -6,6 +6,7 @@ import { ContentCard } from "@/components/entities/content-card";
 import { formatDate } from "@/lib/utils/format";
 import type { getLatestPosts } from "@/lib/content/content";
 import type { getUpcomingEventsWithCalendar } from "@/lib/content/calendar";
+import { PageContainer } from "@/components/ui/page-container";
 
 type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
@@ -22,7 +23,7 @@ export function HomeView({
   isMember,
 }: HomeViewProps) {
   return (
-    <div className="flex flex-col gap-10">
+    <PageContainer className="gap-10">
       <section className="flex flex-col gap-2">
         <p className="text-primary text-xs font-semibold tracking-wider uppercase">
           Willkommen bei den Oecher Meeples
@@ -134,6 +135,6 @@ export function HomeView({
           ))}
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }

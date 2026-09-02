@@ -27,10 +27,8 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     instagram: true,
     status: "PUBLISHED" as const,
     coverImageUrl: null,
-    instagramStatus: null,
-    instagramPostUrl: null,
-    instagramAttempts: 0,
-    instagramLastError: null,
+    instagramDetails: null,
+    surveyDetails: null,
     sendAsNewsletter: false,
     newsletterCategory: null,
     newsletterStatus: null,
@@ -70,6 +68,19 @@ describe("getAllContent", () => {
     expect(items).toHaveLength(3);
     expect(items[0].date).toBe("2026-06-15");
     expect(items[0].body).toBe("Unser Sommerfest war ein voller Erfolg.");
+  });
+
+  it("queries posts descending by date, newest first (#252)", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    await getAllContent();
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "PUBLISHED" },
+        orderBy: { date: "desc" },
+      }),
+    );
   });
 });
 
@@ -149,6 +160,10 @@ function evaluateWhere(
       if (value === null || value === undefined) return false;
       return value !== excluded;
     }
+    if (condition && typeof condition === "object" && "in" in condition) {
+      const allowed = (condition as { in: unknown[] }).in;
+      return allowed.includes(post[key]);
+    }
     return post[key] === condition;
   });
 }
@@ -170,12 +185,16 @@ describe("getUpcomingEvents", () => {
     expect(result.every((item) => item.type !== "blog")).toBe(true);
     expect(prismaMock.post.findMany).toHaveBeenCalledWith({
       where: {
-        type: { not: "BLOG" },
+        type: { in: ["TERMIN", "TURNIER"] },
         OR: [{ internal: null }, { internal: false }],
         status: "PUBLISHED",
       },
       orderBy: { date: "asc" },
       take: 10,
+      include: {
+        instagramDetails: { select: { postUrl: true } },
+        surveyDetails: { select: { deadline: true } },
+      },
     });
   });
 
@@ -225,6 +244,10 @@ describe("getLatestPosts", () => {
       },
       orderBy: { date: "desc" },
       take: 3,
+      include: {
+        instagramDetails: { select: { postUrl: true } },
+        surveyDetails: { select: { deadline: true } },
+      },
     });
   });
 

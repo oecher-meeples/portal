@@ -15,6 +15,8 @@ export type CopyOption = {
   id: string;
   zustand: GameZustand;
   locationChain: string;
+  /** Freie Inventarnummer des Exemplars (#270). */
+  inventoryNumber?: string | null;
 };
 
 /**
@@ -53,6 +55,7 @@ export function CopyPickerDialog({
                 onClick={() => onPick(copy.id)}
               >
                 <span className="text-muted-foreground truncate text-sm">
+                  {copy.inventoryNumber ? `${copy.inventoryNumber} · ` : ""}
                   {copy.locationChain || "—"}
                 </span>
                 <GameZustandPill zustand={copy.zustand} />

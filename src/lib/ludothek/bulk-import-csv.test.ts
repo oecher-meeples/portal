@@ -52,4 +52,27 @@ describe("parseBulkImportCsv", () => {
   it("returns an empty array for empty input", () => {
     expect(parseBulkImportCsv("")).toEqual([]);
   });
+
+  describe("joinCellsWith (#289)", () => {
+    it("joins each row's cells with the given delimiter instead of flattening them", () => {
+      const csv =
+        "Inventarnummer,EAN\nOM-0142,4001504311896\nOM-0143,4260402312019";
+      expect(parseBulkImportCsv(csv, ";")).toEqual([
+        "OM-0142;4001504311896",
+        "OM-0143;4260402312019",
+      ]);
+    });
+
+    it("leaves a single-column row as a plain entry without the delimiter", () => {
+      expect(parseBulkImportCsv("Arche Nova\nWingspan", ";")).toEqual([
+        "Arche Nova",
+        "Wingspan",
+      ]);
+    });
+
+    it("drops empty cells before joining", () => {
+      const csv = "OM-0142,,4001504311896";
+      expect(parseBulkImportCsv(csv, ";")).toEqual(["OM-0142;4001504311896"]);
+    });
+  });
 });

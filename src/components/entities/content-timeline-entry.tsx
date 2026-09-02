@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Pencil } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import type { ContentItem } from "@/lib/content/content";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { Button } from "@/components/ui/button";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import { formatDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 
@@ -62,9 +62,7 @@ export function ContentTimelineEntry({
           {item.title}
         </Link>
       </h3>
-      <div className="[&_a]:text-primary flex flex-col gap-4 text-base leading-relaxed [&_a]:underline [&_strong]:font-semibold">
-        <ReactMarkdown>{item.body}</ReactMarkdown>
-      </div>
+      <MarkdownContent body={item.body} />
     </article>
   );
 }

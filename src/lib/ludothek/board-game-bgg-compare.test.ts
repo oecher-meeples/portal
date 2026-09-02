@@ -14,6 +14,7 @@ const EMPTY_FORM = {
   imageUrl: "",
   description: "",
   mechanics: "",
+  categories: "",
   languageDependence: null,
 };
 
@@ -27,6 +28,7 @@ const BGG_DATA: BggGameData = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
+  categories: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,
   author: [],
@@ -49,6 +51,7 @@ const MATCHING_FORM = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: "Kartenspiel, Engine-Building",
+  categories: "",
   languageDependence: LanguageDependence.MODERATE_TEXT,
 };
 
@@ -65,6 +68,7 @@ describe("compareBoardGameWithBgg", () => {
       imageUrl: true,
       description: true,
       mechanics: true,
+      categories: true,
       languageDependence: true,
     });
   });
@@ -94,6 +98,24 @@ describe("compareBoardGameWithBgg", () => {
     );
 
     expect(result.mechanics).toBe(true);
+  });
+
+  it("treats categories as matching regardless of order (#404)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, categories: "Familienspiel, Partyspiel" },
+      { ...BGG_DATA, categories: ["Partyspiel", "Familienspiel"] },
+    );
+
+    expect(result.categories).toBe(true);
+  });
+
+  it("marks categories as a mismatch when they differ", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, categories: "" },
+      { ...BGG_DATA, categories: ["Partyspiel"] },
+    );
+
+    expect(result.categories).toBe(false);
   });
 
   it("marks numeric fields as mismatching when BGG has no value but the form does", () => {

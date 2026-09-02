@@ -1,12 +1,14 @@
+import type { PostType } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 
-export type ContentType = "termin" | "blog" | "turnier";
+export type ContentType = "termin" | "blog" | "turnier" | "umfrage";
 
 export const CONTENT_TYPE_FILTERS: { label: string; value: ContentType | "alle" }[] = [
   { label: "Alle", value: "alle" },
   { label: "Termine", value: "termin" },
   { label: "Blog", value: "blog" },
   { label: "Turniere", value: "turnier" },
+  { label: "Umfragen", value: "umfrage" },
 ];
 
 export type ContentItem = {
@@ -24,24 +26,31 @@ export type ContentItem = {
   instagram?: boolean;
   instagramPostUrl?: string;
   coverImageUrl?: string;
+  /** Nur bei `type: "umfrage"` gesetzt — steuert das Deadline-Banner auf der
+   * Detailseite (#2). `editLink`/`analysisLink` sind bewusst NICHT Teil von
+   * `ContentItem`: sensibel, nur im Admin-Editor sichtbar (siehe
+   * post-permissions.ts), nie auf `/news`. */
+  surveyDeadline?: string;
 };
 
-const TYPE_TO_DB: Record<ContentType, "BLOG" | "TERMIN" | "TURNIER"> = {
+const TYPE_TO_DB: Record<ContentType, "BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE"> = {
   blog: "BLOG",
   termin: "TERMIN",
   turnier: "TURNIER",
+  umfrage: "UMFRAGE",
 };
 
-const DB_TO_TYPE: Record<"BLOG" | "TERMIN" | "TURNIER", ContentType> = {
+const DB_TO_TYPE: Record<"BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE", ContentType> = {
   BLOG: "blog",
   TERMIN: "termin",
   TURNIER: "turnier",
+  UMFRAGE: "umfrage",
 };
 
 type PostWithoutBody = {
   id: string;
   slug: string;
-  type: "BLOG" | "TERMIN" | "TURNIER";
+  type: "BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE";
   title: string;
   excerpt: string;
   date: Date;
@@ -49,7 +58,8 @@ type PostWithoutBody = {
   location: string | null;
   internal: boolean | null;
   instagram: boolean | null;
-  instagramPostUrl: string | null;
+  instagramDetails: { postUrl: string | null } | null;
+  surveyDetails: { deadline: Date | null } | null;
   coverImageUrl: string | null;
 };
 
@@ -65,14 +75,23 @@ function toContentItemBase(post: PostWithoutBody): Omit<ContentItem, "body"> {
     location: post.location ?? undefined,
     internal: post.internal ?? undefined,
     instagram: post.instagram ?? undefined,
-    instagramPostUrl: post.instagramPostUrl ?? undefined,
+    instagramPostUrl: post.instagramDetails?.postUrl ?? undefined,
     coverImageUrl: post.coverImageUrl ?? undefined,
+    surveyDeadline:
+      post.surveyDetails?.deadline?.toISOString().slice(0, 10) ?? undefined,
   };
 }
 
 function toContentItem(post: PostWithoutBody & { body: string }): ContentItem {
   return { ...toContentItemBase(post), body: post.body };
 }
+
+const INSTAGRAM_DETAILS_SELECT = { select: { postUrl: true } } as const;
+const SURVEY_DETAILS_SELECT = { select: { deadline: true } } as const;
+const POST_RELATIONS_INCLUDE = {
+  instagramDetails: INSTAGRAM_DETAILS_SELECT,
+  surveyDetails: SURVEY_DETAILS_SELECT,
+} as const;
 
 const POST_WITHOUT_BODY_SELECT = {
   id: true,
@@ -85,7 +104,8 @@ const POST_WITHOUT_BODY_SELECT = {
   location: true,
   internal: true,
   instagram: true,
-  instagramPostUrl: true,
+  instagramDetails: INSTAGRAM_DETAILS_SELECT,
+  surveyDetails: SURVEY_DETAILS_SELECT,
   coverImageUrl: true,
 } as const;
 
@@ -93,6 +113,8 @@ const POST_WITHOUT_BODY_SELECT = {
 export async function getAllContent(): Promise<ContentItem[]> {
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
+    orderBy: { date: "desc" },
+    include: POST_RELATIONS_INCLUDE,
   });
   return posts.map(toContentItem);
 }
@@ -111,20 +133,28 @@ export async function getInternalContent(
 }
 
 export async function getContentBySlug(slug: string) {
-  const post = await prisma.post.findUnique({ where: { slug } });
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    include: POST_RELATIONS_INCLUDE,
+  });
   return post && post.status === "PUBLISHED" ? toContentItem(post) : undefined;
 }
+
+/** Kalender-Termine — bewusst `TERMIN`/`TURNIER` statt `type: { not: "BLOG" }`:
+ * `UMFRAGE` ist ein Content-Typ wie Blog, kein Kalendereintrag (#2). */
+const EVENT_TYPES: PostType[] = ["TERMIN", "TURNIER"];
 
 /** Public-facing by default — never surfaces internal posts (homepage preview, public calendar). */
 export async function getUpcomingEvents(limit = 3) {
   const posts = await prisma.post.findMany({
     where: {
-      type: { not: "BLOG" },
+      type: { in: EVENT_TYPES },
       OR: [{ internal: null }, { internal: false }],
       status: "PUBLISHED",
     },
     orderBy: { date: "asc" },
     take: limit,
+    include: POST_RELATIONS_INCLUDE,
   });
   return posts.map(toContentItem);
 }
@@ -135,6 +165,7 @@ export async function getLatestPosts(limit = 3) {
     where: { OR: [{ internal: null }, { internal: false }], status: "PUBLISHED" },
     orderBy: { date: "desc" },
     take: limit,
+    include: POST_RELATIONS_INCLUDE,
   });
   return posts.map(toContentItem);
 }
@@ -142,19 +173,20 @@ export async function getLatestPosts(limit = 3) {
 /** Same as `getUpcomingEvents`, but includes internal Termine — for the internal calendar. */
 export async function getUpcomingEventsIncludingInternal(limit = 3) {
   const posts = await prisma.post.findMany({
-    where: { type: { not: "BLOG" }, status: "PUBLISHED" },
+    where: { type: { in: EVENT_TYPES }, status: "PUBLISHED" },
     orderBy: { date: "asc" },
     take: limit,
+    include: POST_RELATIONS_INCLUDE,
   });
   return posts.map(toContentItem);
 }
 
-/** Interne Beiträge sind nur mit Session sichtbar — used to gate the detail page. */
+/** Interne Beiträge brauchen news:internal:view (nicht nur eine Session) — used to gate the detail page. */
 export function canViewContentItem(
   item: Pick<ContentItem, "internal">,
-  hasSession: boolean,
+  canViewInternal: boolean,
 ) {
-  return !item.internal || hasSession;
+  return !item.internal || canViewInternal;
 }
 
 export { TYPE_TO_DB, DB_TO_TYPE };

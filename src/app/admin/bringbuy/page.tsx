@@ -5,8 +5,10 @@ import {
   findUpcomingEvents,
   resolveSelectedEventId,
 } from "@/lib/events/upcoming";
-import { hasFleaMarketRights } from "@/lib/events/shift-rights";
+import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
+import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 import { computeFleaMarketStats } from "@/lib/bringbuy/stats";
+import { listReservedFleaMarketCarts } from "@/lib/bringbuy/actions";
 import {
   AdminBringBuyView,
   type CashierEventOption,
@@ -31,20 +33,30 @@ export default async function AdminBringBuyPage({
         selectedEventId=""
         stats={{ listed: 0, soldToday: 0, revenue: 0, reserved: 0 }}
         items={[]}
+        reservedCarts={[]}
       />
     );
   }
 
-  const allowed = await hasFleaMarketRights(meeple.id, selectedEventId);
+  const allowed = await hasRoleGrantedPermission(
+    meeple.id,
+    FLEA_MARKET_CASHIER_PERMISSION_KEY,
+  );
   if (!allowed) {
     redirect("/403");
   }
 
-  const items = await prisma.fleaMarketItem.findMany({
-    where: { eventId: selectedEventId },
-    orderBy: { createdAt: "asc" },
-    include: { seller: { select: { displayName: true } } },
-  });
+  const [items, reservedCarts] = await Promise.all([
+    prisma.fleaMarketItem.findMany({
+      where: { eventId: selectedEventId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        seller: { select: { displayName: true } },
+        externalSeller: { select: { name: true } },
+      },
+    }),
+    listReservedFleaMarketCarts(selectedEventId),
+  ]);
 
   const stats = computeFleaMarketStats(
     selectedEventId,
@@ -65,9 +77,11 @@ export default async function AdminBringBuyPage({
     id: item.id,
     code: item.code,
     title: item.title,
-    sellerName: item.seller.displayName,
+    sellerName:
+      item.seller?.displayName ?? item.externalSeller?.name ?? "Unbekannt",
     priceEuros: item.priceEuros,
     status: item.status,
+    cartId: item.cartId,
   }));
 
   return (
@@ -76,6 +90,12 @@ export default async function AdminBringBuyPage({
       selectedEventId={selectedEventId}
       stats={stats}
       items={cashierItems}
+      reservedCarts={reservedCarts.map((cart) => ({
+        id: cart.id,
+        name: cart.name,
+        itemIds: cart.itemIds,
+        totalEuros: cart.totalEuros,
+      }))}
     />
   );
 }

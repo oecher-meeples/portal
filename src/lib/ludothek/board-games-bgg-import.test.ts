@@ -105,7 +105,7 @@ describe("previewBggImport", () => {
   it("returns the mapped preview data without persisting anything", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
-    const bggData = { title: "Ark Nova", mechanics: [] };
+    const bggData = { title: "Ark Nova", mechanics: [], categories: [] };
     fetchBggGameMock.mockResolvedValue(bggData);
 
     const result = await previewBggImport(342942);
@@ -123,6 +123,7 @@ describe("previewBggImport", () => {
       title: "Ark Nova",
       description: "Build a modern zoo.",
       mechanics: ["Worker Placement", "Some Unmapped Mechanic"],
+      categories: [],
     });
     translateToGermanMock.mockResolvedValue("Baue einen modernen Zoo.");
 
@@ -135,6 +136,7 @@ describe("previewBggImport", () => {
         title: "Ark Nova",
         description: "Baue einen modernen Zoo.",
         mechanics: ["Arbeitereinsatz", "Some Unmapped Mechanic"],
+        categories: [],
       },
     });
   });
@@ -146,6 +148,7 @@ describe("previewBggImport", () => {
       title: "Ark Nova",
       description: "Build a modern zoo.",
       mechanics: [],
+      categories: [],
     });
     translateToGermanMock.mockRejectedValue(new Error("translation API boom"));
 
@@ -157,6 +160,7 @@ describe("previewBggImport", () => {
         title: "Ark Nova",
         description: "Build a modern zoo.",
         mechanics: [],
+        categories: [],
       },
       hint: "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — Beschreibung ist vorerst auf Englisch, bitte über den „Übersetzen“-Button oder manuell auf Deutsch ergänzen.",
     });

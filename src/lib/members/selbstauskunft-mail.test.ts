@@ -22,6 +22,10 @@ beforeEach(() => {
   collectMeeplePersonalDataMock
     .mockReset()
     .mockResolvedValue({ exportedAt: "2026-08-13T00:00:00.000Z" });
+  prismaMock.meeple.findUnique.mockResolvedValue({
+    id: "meeple-1",
+    displayName: "Jan Herwig",
+  } as never);
 });
 
 describe("sendSelbstauskunftMail", () => {
@@ -34,12 +38,8 @@ describe("sendSelbstauskunftMail", () => {
     expect(sendTransactionalEmailMock).not.toHaveBeenCalled();
   });
 
-  it("returns an error when no email address is on file", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
-      email: null,
-      displayName: "Jan Herwig",
-    } as never);
+  it("returns an error when no linked Vereinsmitglied/email address is on file", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
 
     expect(await sendSelbstauskunftMail("meeple-1")).toEqual({
       error: "Für dieses Mitglied ist keine E-Mail-Adresse hinterlegt.",
@@ -48,10 +48,8 @@ describe("sendSelbstauskunftMail", () => {
   });
 
   it("sends the collected data to the stored email address", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       email: "jan@example.org",
-      displayName: "Jan Herwig",
     } as never);
 
     expect(await sendSelbstauskunftMail("meeple-1")).toEqual({
@@ -68,8 +66,10 @@ describe("sendSelbstauskunftMail", () => {
   it("escapes the display name in the email body", async () => {
     prismaMock.meeple.findUnique.mockResolvedValue({
       id: "meeple-1",
-      email: "jan@example.org",
       displayName: "<script>",
+    } as never);
+    prismaMock.member.findUnique.mockResolvedValue({
+      email: "jan@example.org",
     } as never);
 
     await sendSelbstauskunftMail("meeple-1");
@@ -80,10 +80,8 @@ describe("sendSelbstauskunftMail", () => {
   });
 
   it("turns a mailer failure into an error result instead of throwing", async () => {
-    prismaMock.meeple.findUnique.mockResolvedValue({
-      id: "meeple-1",
+    prismaMock.member.findUnique.mockResolvedValue({
       email: "jan@example.org",
-      displayName: "Jan Herwig",
     } as never);
     sendTransactionalEmailMock.mockRejectedValue(new Error("Brevo down"));
 

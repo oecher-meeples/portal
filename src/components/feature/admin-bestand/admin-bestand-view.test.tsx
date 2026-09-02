@@ -32,17 +32,11 @@ vi.mock(
     BulkImportBoardGamesDialog: () => null,
   }),
 );
-vi.mock(
-  "@/components/widgets/board-game/deinventorise-board-game-dialog",
-  () => ({
-    DeinventoriseBoardGameDialog: () => null,
-  }),
-);
 vi.mock("@/components/widgets/board-game/edit-board-game-dialog", () => ({
   EditBoardGameDialog: () => null,
 }));
-vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
-  AddGameCopyDialog: () => null,
+vi.mock("@/components/widgets/game-holding/game-actions-menu", () => ({
+  GameActionsMenu: () => null,
 }));
 vi.mock(
   "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog",
@@ -65,6 +59,7 @@ const games = [
     lastCheckedAt: null,
     archivedReason: null,
     zustand: "frei" as const,
+    isUnconfirmed: false,
     locationChain: "Regal A",
     bggId: 13,
     minPlayers: 3,
@@ -75,7 +70,9 @@ const games = [
     imageUrl: null,
     description: null,
     mechanics: [],
+    categories: [],
     condition: null,
+    inventoryNumber: null,
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
@@ -96,6 +93,7 @@ const games = [
     lastCheckedAt: null,
     archivedReason: null,
     zustand: "frei" as const,
+    isUnconfirmed: false,
     locationChain: "Regal B",
     bggId: null,
     minPlayers: 2,
@@ -106,7 +104,9 @@ const games = [
     imageUrl: null,
     description: null,
     mechanics: [],
+    categories: [],
     condition: null,
+    inventoryNumber: null,
     explainerVideoUrl: null,
     alternateNames: [],
     kind: "BOARDGAME" as const,
@@ -149,6 +149,7 @@ describe("AdminBestandView defaultQuickFilter (#224-Folge)", () => {
             id: "3",
             title: "Nicht erfasst",
             zustand: "nicht-erfasst" as const,
+            isUnconfirmed: false,
           },
         ]}
         showDeinventarised={false}
@@ -188,5 +189,31 @@ describe("AdminBestandView CSV export gating", () => {
     );
 
     expect(screen.getByText("csv-export-dialog")).toBeInTheDocument();
+  });
+});
+
+describe("AdminBestandView — unbestätigt-Kennzeichnung (#406)", () => {
+  it("shows the unbestätigt pill for a game with an open, unconfirmed handover", () => {
+    render(
+      <AdminBestandView
+        games={[{ ...games[0], isUnconfirmed: true }]}
+        showDeinventarised={false}
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("unbestätigt")).toBeInTheDocument();
+  });
+
+  it("hides the unbestätigt pill otherwise", () => {
+    render(
+      <AdminBestandView
+        games={games}
+        showDeinventarised={false}
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.queryByText("unbestätigt")).not.toBeInTheDocument();
   });
 });

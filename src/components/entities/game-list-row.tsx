@@ -73,7 +73,7 @@ export function GameListRow({
           title={game.title}
           aspect="aspect-[3/4]"
         />
-        {isExpansion && <RibbonCorner size="sm">Erweiterung</RibbonCorner>}
+        {isExpansion && <RibbonCorner size="xs">Erweiterung</RibbonCorner>}
         <CardCornerOverlay corner="top-right">
           <BggRatingBadge averageRating={game.averageRating} />
         </CardCornerOverlay>
@@ -125,7 +125,9 @@ export function GameListRow({
             "bg-card border-primary/60 absolute inset-x-0 top-full z-20 -mt-px flex flex-col gap-2 rounded-b-lg border border-t-0 p-4 shadow-lg",
           )}
         >
-          {(game.mechanics.length > 0 || game.weight) && (
+          {(game.mechanics.length > 0 ||
+            game.categories.length > 0 ||
+            game.weight) && (
             <div className="flex flex-wrap items-center gap-2">
               {game.mechanics.map((mechanic) => (
                 <span
@@ -133,6 +135,14 @@ export function GameListRow({
                   className="bg-muted rounded-full px-2 py-0.5 text-xs font-medium"
                 >
                   {mechanic}
+                </span>
+              ))}
+              {game.categories.map((category) => (
+                <span
+                  key={category}
+                  className="bg-muted rounded-full px-2 py-0.5 text-xs font-medium"
+                >
+                  {category}
                 </span>
               ))}
               {game.weight && (

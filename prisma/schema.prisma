@@ -10,6 +10,9 @@ enum PostType {
   BLOG
   TERMIN
   TURNIER
+  /// Umfrage-Blog-Beitrag (#2): verlinkt im Freitext auf eine externe
+  /// Google-Umfrage, siehe `PostSurveyDetails`.
+  UMFRAGE
 }
 
 enum PostStatus {
@@ -38,11 +41,29 @@ enum GameInventoryStatus {
 enum StorageUnitKind {
   BOX
   SHELF
+  /// Wurzel des Standort-Baums für die Dauer eines Events (#273) — lazy per
+  /// Upsert erzeugt, `keeperMeepleId = null` (analog "Unsortiert"). Regal-
+  /// `StorageUnit`s werden vor Ort per normalem Umlagern als Kind
+  /// eingehängt (`parentUnitId`), statt über eine eigene Zuordnungstabelle.
+  EVENT
 }
 
 enum BoardGameKind {
   BOARDGAME
   BOARDGAME_EXPANSION
+}
+
+/// Regal-Kategorien für die feste Einteilung des Bestands (#276) — vom Admin
+/// manuell pro `StorageUnit` vergeben. Die Zuordnung Spiel→Kategorie selbst
+/// ist keine gespeicherte Relation, sondern eine reine Ableitungsfunktion
+/// (`deriveShelfCategories()`) aus den vorhandenen `BoardGame`-Feldern.
+enum ShelfCategory {
+  ZWEI_PERSONEN
+  KINDER_FAMILIE
+  KENNERSPIELE
+  EXPERTENSPIELE
+  KOOPERATIV
+  PARTY
 }
 
 /// BGGs 5-stufiges "Language Dependence"-Poll-Modell (#188) — Level 1 = kein
@@ -74,12 +95,6 @@ enum HoldingOrigin {
   RELOCATION
 }
 
-enum ShiftType {
-  THEKE
-  KASSE
-  LEIHE
-}
-
 enum ExplainerExperienceLevel {
   WITH_MANUAL
   WITHOUT_MANUAL
@@ -91,6 +106,16 @@ enum FleaMarketItemStatus {
   FOR_SALE
   RESERVED
   SOLD
+  /// Kassenperson hat den Verkaufserlös an die Verkäufer:in ausgezahlt (#266)
+  /// — explizite Kassierer-Aktion, kein impliziter Zustand.
+  PAID_OUT
+  /// Verkäufer:in hat ein nicht verkauftes Stück wieder abgeholt (#266) —
+  /// von FOR_SALE oder RESERVED aus erreichbar.
+  RETURNED
+  /// Nach Event-Ende, für nicht abgeholte Artikel (#266) — manuelle
+  /// Kassierer-Aktion, kein Cron/Automatismus. Reines Status-Label, keine
+  /// automatische Ludothek-/GameCopy-Buchung (siehe #267).
+  DONATED
 }
 
 enum NewsletterCategory {
@@ -118,6 +143,22 @@ enum DownloadStatus {
   OFFLINE
 }
 
+enum EventVisibility {
+  PUBLIC
+  INTERNAL
+  DRAFT
+}
+
+/// Sichtbarkeit des Meeple-Profilbilds (#389): INTERN = für alle eingeloggten
+/// Meeple, EVENTS = zusätzlich für Gäste, solange eine aktive
+/// `ExplainerAttendance` bei einem laufenden Event besteht, IMMER = dauerhaft
+/// öffentlich, auch außerhalb von Events.
+enum ProfilePictureVisibility {
+  INTERN
+  EVENTS
+  IMMER
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -128,11 +169,19 @@ model Permission {
 }
 
 model Role {
-  id          String           @id @default(cuid())
-  name        String           @unique
-  description String?
-  permissions RolePermission[]
-  users       UserRole[]
+  id           String           @id @default(cuid())
+  name         String           @unique
+  description  String?
+  /// "Systemrolle" (#353): Zuweisen/Entfernen erfordert `admin:access` statt
+  /// nur `members:manage` — unabhängig vom Konzept "Systemkonto"
+  /// (`createSystemkonto()`, ein technisches Meeple ohne Person dahinter).
+  isSystemRole Boolean          @default(false)
+  /// Kanonische, per Drag-and-Drop änderbare Anzeigereihenfolge (#391) —
+  /// reine Ordnungszahl, kein Verlauf. Backfill über die bisherige
+  /// `ROLES`-Array-Reihenfolge in prisma/seed-roles.ts.
+  sortOrder    Int              @default(0)
+  permissions  RolePermission[]
+  users        UserRole[]
 
   @@map("roles")
 }
@@ -147,55 +196,106 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+/// Eine Zuweisung gilt für ein Zeitfenster [startsAt, endsAt); mehrere Fenster
+/// derselben Rolle über die Zeit sind möglich (z. B. Wahlperioden, siehe #264),
+/// exakt-doppelte Zuweisung im selben Fenster nicht.
 model UserRole {
+  id             String    @id @default(cuid())
   neonAuthUserId String
   roleId         String
-  role           Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  startsAt       DateTime  @default(now())
+  endsAt         DateTime?
+  role           Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
-  @@id([neonAuthUserId, roleId])
+  @@unique([neonAuthUserId, roleId, startsAt])
   @@map("user_roles")
 }
 
-/// Mitgliedsprofil, 1:1 zum Login-Konto (siehe docs/adr/0002).
-/// Der Mitgliedschaftszustand wird aus resignedAt/membershipEndsAt/anonymizedAt abgeleitet.
+/// Mitgliedsprofil, 1:1 zum Login-Konto (siehe docs/adr/0002). Seit dem
+/// Vereinsmitglied/Meeple-Split (ADR 0013, #328) ist das die reine
+/// Portal-Account-Ebene — die offizielle Vereinsmitgliedschaft (Mitgliedsnummer,
+/// Kontaktdaten für den Verein, Bankdaten, Kündigung) lebt auf `Member`, hier
+/// verknüpft über `Member.meepleId`. `memberNumber` hier ist eine reine
+/// Konto-Zählnummer, unabhängig von `Member.memberNumber` (der eigentlichen
+/// Mitgliedsnummer) — die beiden Werte fallen im heutigen 1:1-Bestand
+/// zufällig zusammen, sind aber zwei getrennte Zähler.
+/// Der Mitgliedschaftszustand wird aus dem verknüpften `Member`
+/// (resignedAt/membershipEndsAt) plus `anonymizedAt` hier abgeleitet.
 model Meeple {
-  id               String    @id @default(cuid())
-  neonAuthUserId   String?   @unique
-  memberNumber     Int       @unique @default(autoincrement())
-  displayName      String
-  email            String?
-  joinedAt         DateTime  @default(now())
-  resignedAt       DateTime?
-  membershipEndsAt DateTime?
-  anonymizedAt     DateTime?
-  ibanEncrypted    String?
-  ibanLast4        String?
-  accountHolder    String?
-  bggUsername      String?
-  bgaUsername      String?
-  telegramHandle   String?
-  signalHandle     String?
-  discordHandle    String?
-  address          String?
-  /** Opt-in: shows `address` to other Meeples in their `ContactDialog` (see
+  id                        String                   @id @default(cuid())
+  neonAuthUserId            String?                  @unique
+  memberNumber              Int                      @unique @default(autoincrement())
+  displayName               String
+  joinedAt                  DateTime                 @default(now())
+  anonymizedAt              DateTime?
+  /// "System-Konto" (#297): schließt dieses Meeple aus Mitgliederzählungen
+  /// aus (Vereinsmitglieder-Tabelle/-Statistik), unabhängig davon, ob ein
+  /// `Member` verknüpft ist. Ergänzt, nicht ersetzt, `createSystemkonto()`
+  /// (Login ohne `Member`) — das eine ist ein Konto-Erzeugungsweg, das
+  /// andere eine nachträglich setz-/entfernbare Ausschluss-Markierung.
+  /// Ein anonymisiertes Meeple (`anonymizedAt`) zählt trotz dieses Flags
+  /// weiter mit (siehe `buildVereinsmitgliedRows`).
+  isSystemAccount           Boolean                  @default(false)
+  bggUsername               String?
+  bgaUsername               String?
+  telegramHandle            String?
+  signalHandle              String?
+  discordHandle             String?
+  address                   String?
+  /**
+   * Opt-in: shows `address` to other Meeples in their `ContactDialog` (see
    * `getContactLinks()`). Off by default — `address` alone stays private,
-   * used only for LFG-Autofill, until a Meeple explicitly flips this. */
-  shareAddress     Boolean   @default(false)
-  doorbellNote     String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+   * used only for LFG-Autofill, until a Meeple explicitly flips this.
+   */
+  shareAddress              Boolean                  @default(false)
+  /**
+   * Opt-in: gibt die private BGG-Collection (`PrivateGameCollectionEntry`)
+   * dieses Meeples für andere interne Nutzer:innen im "auch private
+   * anzeigen"-Filter der Ludothek frei (#255). Off by default — ohne dieses
+   * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
+   */
+  privateCollectionVisible  Boolean                  @default(false)
+  /**
+   * Opt-in: täglicher Digest-Newsletter über neue Marktplatz-Angebote
+   * (`MarketListing`, #254). Bewusst ein eigenes Flag statt einer Kategorie
+   * im `NewsletterSubscriber`-Modell — das ist für anonyme/öffentliche
+   * Abonnenten gedacht, eine meeple-only-Kategorie dort würde eine
+   * dauerhafte Sonderfall-Verzweigung auf der Verwaltungsseite erzwingen.
+   */
+  marketNewsletterOptIn     Boolean                  @default(false)
+  /// Zeitpunkt des letzten manuellen BGG-Collection-Imports (#255-Folge) —
+  /// Grundlage für den 1h-Cooldown, unabhängig von den Collection-Einträgen
+  /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
+  privateCollectionSyncedAt DateTime?
+  doorbellNote              String?
+  /// Profilbild-URL im Blob-Storage (#389) — `null` solange kein Bild
+  /// hochgeladen wurde, unabhängig von `profilePictureVisibility`.
+  profilePictureUrl         String?
+  /// Freigabe-Einstellung für das Profilbild (#389), siehe
+  /// `ProfilePictureVisibility`. Default INTERN — bewusst nicht öffentlich,
+  /// bis das Meeple aktiv eine weitergehende Freigabe wählt.
+  profilePictureVisibility  ProfilePictureVisibility @default(INTERN)
+  /// Sichtbarkeit der freiwilligen Meeple-Angaben (Live-Review F2) — soll
+  /// später die Seite "Die Meeples stellen sich vor" befüllen, aktuell noch
+  /// ohne Konsumenten-Logik, reine Datenerfassung. Wiederverwendet dasselbe
+  /// Enum wie `profilePictureVisibility` (#389) statt einer zweiten,
+  /// parallelen Sichtbarkeits-Systematik.
+  meepleDatenVisibility     ProfilePictureVisibility @default(INTERN)
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
 
   bankDataAccessesMade     BankDataAccessLog[]          @relation("BankDataAccessActor")
   bankDataAccessesReceived BankDataAccessLog[]          @relation("BankDataAccessSubject")
   keptUnits                StorageUnit[]                @relation("StorageUnitKeeper")
   recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
   movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
-  holdings                 GameHolding[]                @relation("GameHoldingMeeple")
   recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
   lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
   lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
+  lfgAttachments           LfgAttachment[]              @relation("LfgAttachmentUploadedBy")
   shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
+  helperAvailabilities     HelperAvailability[]         @relation("HelperAvailabilityMeeple")
   explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
   explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
   fleaMarketItems          FleaMarketItem[]             @relation("FleaMarketItemSeller")
@@ -204,8 +304,95 @@ model Meeple {
   privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
   deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
   newsletterSubscription   NewsletterSubscriber?
+  member                   Member?
 
   @@map("meeples")
+}
+
+/// Die offizielle Vereinsmitgliedschaft — getrennt vom Portal-Account
+/// (`Meeple`), seit dem Vereinsmitglied/Meeple-Split (ADR 0013, #328). Kann
+/// ohne `Meeple` existieren (noch kein Login) und ein `Meeple` kann ohne
+/// `Member` existieren (Systemkonto, anonymisierter Alt-Meeple). Nur
+/// `memberNumber` und `email` sind Pflicht — alle übrigen Personenfelder sind
+/// bewusst nullable, kein Platzhalter-Backfill (siehe Migration).
+model Member {
+  id                      String    @id @default(cuid())
+  memberNumber            Int       @unique
+  /// Routing-Basis für `/mitglied/[slug]` (#379), analog `BoardGame.slug`
+  /// (`uniqueSlug()`-Pattern). Backfill für Altbestand: `mitglied-<memberNumber>`.
+  slug                    String    @unique
+  lastName                String?
+  firstName               String?
+  birthDate               DateTime?
+  birthPlace              String?
+  street                  String?
+  postalCode              String?
+  city                    String?
+  phone                   String?
+  /// Nullable seit #373 (MiniMeeple/Erziehungsberechtigte ohne eigene
+  /// E-Mail) — Postgres erlaubt mehrere NULLs unter `@unique`, kollidiert
+  /// nicht mit bestehender Eindeutigkeit befüllter E-Mails.
+  email                   String?   @unique
+  /// Individuell gewählter Mitgliedsbeitrag — überstimmt die aus `birthDate`
+  /// abgeleitete Beitragsart, wenn gesetzt (siehe `lib/members/contribution.ts`).
+  selbstgewaehlterBeitrag Decimal?
+  ibanEncrypted           String?
+  /// Klartext gespeichert wie `ibanLast4` (nicht sensibel für sich genommen)
+  /// — die ISO-Ländercode-Präfix der IBAN, für eine vollständig lange
+  /// Maskierung (`maskIban()`, Live-Review) statt nur "**** 1234". `null`
+  /// bei Altbestand vor diesem Feld — `maskIban()` fällt dann auf die kurze
+  /// Form zurück, kein Backfill nötig.
+  ibanFirst2              String?
+  ibanLast4               String?
+  accountHolder           String?
+  /// Vereinsbeitritt (Live-Review F1) — fachlich getrennt von
+  /// `Meeple.joinedAt` (Anlagedatum des Portal-Kontos): fallen bei
+  /// Erwachsenen zufällig zusammen, nicht bei Kindern ohne eigenen Login
+  /// (#373). Backfill für Bestand: `createdAt` (siehe Migration).
+  joinedAt                DateTime  @default(now())
+  resignedAt              DateTime?
+  membershipEndsAt        DateTime?
+  meepleId                String?   @unique
+  tshirtSizeId            String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  meeple         Meeple?          @relation(fields: [meepleId], references: [id], onDelete: SetNull)
+  tshirtSize     TshirtSize?      @relation(fields: [tshirtSizeId], references: [id], onDelete: SetNull)
+  holdings       GameHolding[]    @relation("GameHoldingMember")
+  pendingChanges PendingChange[]
+  asGuardianOf   MemberGuardian[] @relation("MemberGuardianGuardian")
+  guardians      MemberGuardian[] @relation("MemberGuardianChild")
+
+  @@map("members")
+}
+
+/// Erziehungsberechtigten-Verknüpfung (#373) — m:n, ein Kind kann mehrere
+/// Erziehungsberechtigte haben, ein:e Erziehungsberechtigte:r mehrere Kinder.
+model MemberGuardian {
+  childMemberId    String
+  guardianMemberId String
+
+  child    Member @relation("MemberGuardianChild", fields: [childMemberId], references: [id], onDelete: Cascade)
+  guardian Member @relation("MemberGuardianGuardian", fields: [guardianMemberId], references: [id], onDelete: Cascade)
+
+  @@id([childMemberId, guardianMemberId])
+  @@map("member_guardians")
+}
+
+/// Admin-gepflegte T-Shirt-Größenliste (#388) — eigene Tabelle statt Enum,
+/// da die verfügbaren Größen vom Lieferanten abhängen und sich ändern
+/// können. `sortOrder` erlaubt eine fachliche statt alphabetische Reihenfolge
+/// (z. B. Kindergrößen vor Erwachsenengrößen).
+model TshirtSize {
+  id        String   @id @default(cuid())
+  label     String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  members Member[]
+
+  @@map("tshirt_sizes")
 }
 
 /// A member's Art.-17 deletion request. Deliberately has no free-text field: the
@@ -228,25 +415,28 @@ model DeletionRequest {
 /// A player-search post. `gameTitle` is deliberately free text, not a relation to
 /// BoardGame — a Gesuch can be for a title the club doesn't own (see docs/schema.md).
 model LfgPost {
-  id                   String    @id @default(cuid())
-  title                String
-  gameTitle            String?
-  description          String
-  plannedAt            DateTime?
-  dateNote             String?
-  location             String?
-  maxParticipants      Int
-  createdByMeepleId    String
+  id                          String    @id @default(cuid())
+  title                       String
+  gameTitle                   String?
+  description                 String
+  plannedAt                   DateTime?
+  dateNote                    String?
+  location                    String?
+  /// Erlaubt beigetretenen Meeples, das Ortsfeld selbst zu bearbeiten (#166) — der Ersteller darf das immer.
+  participantsMayEditLocation Boolean   @default(false)
+  maxParticipants             Int
+  createdByMeepleId           String
   /// Optional link to an inventory title (#34) — gameTitle free text stays the default, this is never required.
-  boardGameId          String?
+  boardGameId                 String?
   /// Erlaubt beigetretenen Meeples (nicht nur dem Ersteller), eigene Gäste hinzuzufügen (#145).
-  guestsMayBringGuests Boolean   @default(false)
-  closedAt             DateTime?
-  createdAt            DateTime  @default(now())
+  guestsMayBringGuests        Boolean   @default(false)
+  closedAt                    DateTime?
+  createdAt                   DateTime  @default(now())
 
   createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
   boardGame    BoardGame?       @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
   participants LfgParticipant[]
+  attachments  LfgAttachment[]
 
   @@index([createdByMeepleId])
   @@index([boardGameId])
@@ -273,6 +463,26 @@ model LfgParticipant {
   @@map("lfg_participants")
 }
 
+/// Datei-Anhänge zu einem LFG-Gesuch (#283) — von Teilnehmern hochgeladen,
+/// nur sichtbar/hochladbar, solange `isLfgAttachmentEligible()` (heute oder
+/// vergangen laut Kalendertag) zutrifft. Teilt sich keine Tabelle mit
+/// `MarketListing`/Downloads — reine Fach-Trennung, keine technische.
+model LfgAttachment {
+  id                 String   @id @default(cuid())
+  postId             String
+  uploadedByMeepleId String
+  url                String
+  filename           String
+  createdAt          DateTime @default(now())
+
+  post       LfgPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  uploadedBy Meeple  @relation("LfgAttachmentUploadedBy", fields: [uploadedByMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([uploadedByMeepleId])
+  @@map("lfg_attachments")
+}
+
 /// Audit trail for every decrypted read of bank data (see docs/adr/0003). Kept 24 months.
 model BankDataAccessLog {
   id                 String             @id @default(cuid())
@@ -289,24 +499,63 @@ model BankDataAccessLog {
   @@map("bank_data_access_logs")
 }
 
+/// Generischer Rate-Limiter-Zustand (#326) — Postgres statt eines eigenen
+/// Redis/KV-Diensts (siehe Issue für Begründung). `key` kodiert Zweck +
+/// Schlüssel, z. B. `"login:ip:<ip>"`, `"login:email:<email>"`,
+/// `"invite:ip:<ip>"`, `"iban-reveal:<meepleId>"`.
+model RateLimitAttempt {
+  id                  String    @id @default(cuid())
+  key                 String    @unique
+  failCount           Int       @default(0)
+  /// Aktueller Cooldown in Sekunden, direkt gespeichert statt bei jedem
+  /// Request aus `failCount` neu berechnet — O(1)-Verdopplung pro
+  /// Fehlversuch. `Int` reicht: der 8h-Deckel begrenzt den Maximalwert auf
+  /// 28.800, weit unter jeder Int32-Grenze.
+  currentCooldownSecs Int       @default(0)
+  /// Bei Fix-Cooldown-/Zähl-Keys: Zeitpunkt des letzten Versuchs. Bei
+  /// `"login:email:<email>"`: Zeitpunkt des letzten *Fehl*versuchs.
+  lastFailedAt        DateTime  @default(now())
+  /// Nur für `"login:email:<email>"` befüllt — IP des letzten Fehlversuchs,
+  /// für den Reset-Trigger "erfolgreicher Login von derselben IP" (#326).
+  lastFailedIp        String?
+  /// Harte, manuell gesetzte Sperre (#327) — im Unterschied zu
+  /// `currentCooldownSecs` NICHT durch den 10h-Idle-Reset aufgehoben, nur
+  /// durch eine explizite Admin-Aktion (`members:manage`).
+  manuallyLockedAt    DateTime?
+
+  @@map("rate_limit_attempts")
+}
+
+/// Login-Audit-Trail für privilegierte Konten (#231) — protokolliert wird
+/// nur, wer zum Login-Zeitpunkt `admin:access` besitzt (Credentials- **und**
+/// Google-SSO-Logins). Aufbewahrung: 24 Monate, analog zu
+/// `BankDataAccessLog` (docs/adr/0003).
+model LoginLog {
+  id             String   @id @default(cuid())
+  neonAuthUserId String
+  ipAddress      String?
+  userAgent      String?
+  at             DateTime @default(now())
+
+  @@index([neonAuthUserId])
+  @@index([at])
+  @@map("login_logs")
+}
+
 model Post {
-  id                 String           @id @default(cuid())
-  slug               String           @unique
-  type               PostType
-  title              String
-  excerpt            String
-  body               String
-  date               DateTime
-  author             String?
-  location           String?
-  internal           Boolean?
-  instagram          Boolean?
-  status             PostStatus       @default(PUBLISHED)
-  coverImageUrl      String?
-  instagramStatus    InstagramStatus?
-  instagramPostUrl   String?
-  instagramAttempts  Int              @default(0)
-  instagramLastError String?
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  type          PostType
+  title         String
+  excerpt       String
+  body          String
+  date          DateTime
+  author        String?
+  location      String?
+  internal      Boolean?
+  instagram     Boolean?
+  status        PostStatus @default(PUBLISHED)
+  coverImageUrl String?
 
   sendAsNewsletter    Boolean                   @default(false)
   newsletterCategory  NewsletterCategory?
@@ -315,10 +564,54 @@ model Post {
   newsletterLastError String?
   newsletterSentAt    DateTime?
 
-  dispatchJobs NewsletterDispatchJob[]
+  dispatchJobs     NewsletterDispatchJob[]
+  instagramDetails PostInstagramDetails?
+  surveyDetails    PostSurveyDetails?
 
   @@index([type, internal, date])
   @@map("posts")
+}
+
+/// Ergebnis-/Status-Felder eines Instagram-Crossposts, ausgelagert aus `Post`
+/// (#318) — nur ein Bruchteil der Beiträge befüllt sie je. `Post.instagram`
+/// (die Redaktionsentscheidung "soll gecrosspostet werden") bleibt bewusst
+/// auf `Post`, analog zu `sendAsNewsletter`. Die Zeile entsteht eager, sobald
+/// `instagram: true` gesetzt wird (nicht erst beim ersten Versandversuch),
+/// damit `findDuePosts()` direkt auf den Status filtern kann.
+model PostInstagramDetails {
+  id        String          @id @default(cuid())
+  postId    String          @unique
+  status    InstagramStatus @default(PENDING)
+  postUrl   String?
+  attempts  Int             @default(0)
+  lastError String?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_instagram_details")
+}
+
+/// Umfrage-spezifische Felder eines `PostType.UMFRAGE`-Beitrags (#2),
+/// ausgelagert analog zu `PostInstagramDetails` — nur eine Minderheit der
+/// Beiträge ist eine Umfrage. `editLink`/`analysisLink` sind sensibel (nur
+/// im Admin-Editor sichtbar, siehe post-permissions.ts) und folgen exakt der
+/// Sichtbarkeitsregel des Posts selbst (`posts:public`/`posts:internal`) —
+/// keine eigene Permission. Der eigentliche Umfrage-Link (zum Ausfüllen)
+/// steht bewusst nicht hier, sondern als normaler Markdown-Link im
+/// `Post.body`-Freitext. `editLink` ist erst bei Veröffentlichung
+/// Pflichtfeld (App-Ebene, siehe validatePostInput) — deshalb hier
+/// nullable, wie `Post.title`/`.body` bei einem Entwurf auch keine
+/// DB-Constraint tragen.
+model PostSurveyDetails {
+  id           String    @id @default(cuid())
+  postId       String    @unique
+  deadline     DateTime?
+  editLink     String?
+  analysisLink String?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_survey_details")
 }
 
 /// A single opt-in list combining two sources: anonymous public sign-ups (need
@@ -364,10 +657,10 @@ model NewsletterDispatchJob {
 model Invite {
   id              String    @id @default(cuid())
   token           String    @unique
-  /// null = ungebunden: beliebig oft einlösbar, keine Protokollierung.
-  /// Gesetzt = gebunden: genau einmal einlösbar, muss beim Einlösen exakt
-  /// (case-insensitiv) übereinstimmen. Immer lowercased gespeichert.
-  email           String?
+  /// Immer gesetzt (seit #329 — keine ungebundenen Einladungen mehr): genau
+  /// einmal einlösbar, muss beim Einlösen exakt (case-insensitiv)
+  /// übereinstimmen. Immer lowercased gespeichert, entspricht `Member.email`.
+  email           String
   createdByUserId String
   createdAt       DateTime  @default(now())
   /// Gewählte Gültigkeitsdauer in Minuten (aufgerundet) — Offset, nicht
@@ -380,6 +673,60 @@ model Invite {
   revokedAt       DateTime?
 
   @@map("invites")
+}
+
+/// Singleton row for global invite defaults (#329) — always exactly one row,
+/// fixed id so `upsert({ where: { id: "singleton" } })` never creates a second.
+model InviteSettings {
+  id          String   @id @default("singleton")
+  defaultDays Float    @default(7)
+  updatedAt   DateTime @updatedAt
+
+  @@map("invite_settings")
+}
+
+/// A member-initiated change to sensitive `Member` data that needs a second
+/// pair of eyes before it takes effect (#330). Distinct from the login email
+/// (`Meeple`/Neon Auth), which changes directly via a confirmation link, no
+/// board approval. Only one open `PendingChange` per (member, kind) — a new
+/// request replaces the old one (see `pending-changes.ts`).
+model PendingChange {
+  id               String            @id @default(cuid())
+  memberId         String
+  kind             PendingChangeKind
+  /// New value the member proposes — IBAN encrypted here (#357, same as
+  /// `Member.ibanEncrypted`) or the new email in the clear.
+  newValue         String
+  /// Nur `kind: IBAN` — der neue Kontoinhaber, geht mit der IBAN zusammen ein.
+  newAccountHolder String?
+  /// Nur `kind: MEMBER_STAMMDATEN` (#379) — JSON-serialisiertes
+  /// `{ field: { old, new } }`-Diff über mehrere geänderte Stammdatenfelder
+  /// hinweg, ein Antrag, ein Freigeben/Ablehnen für alle Felder darin.
+  fieldsJson       String?
+  requestedAt      DateTime          @default(now())
+  /// Reachability-Token für den Bestätigungslink (nur MEMBER_EMAIL) — null,
+  /// solange kein Link nötig war (IBAN) oder nach Bestätigung verbraucht.
+  confirmToken     String?           @unique
+  /// Set once the member confirms via emailed link — only relevant for
+  /// MEMBER_EMAIL, which additionally needs board approval afterwards.
+  confirmedAt      DateTime?
+  approvedAt       DateTime?
+  approvedByUserId String?
+  rejectedAt       DateTime?
+  rejectedByUserId String?
+  rejectionReason  String?
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("pending_changes")
+}
+
+enum PendingChangeKind {
+  IBAN
+  MEMBER_EMAIL
+  /// Generischer Stammdaten-Änderungsantrag (#379) — Diff-Payload in
+  /// `fieldsJson`, `newValue` bleibt hierfür ungenutzt (leerer String).
+  MEMBER_STAMMDATEN
 }
 
 /// A game title — BGG/product metadata, one row per title regardless of how many
@@ -404,6 +751,10 @@ model BoardGame {
   imageUrl           String?
   description        String?
   mechanics          String[]
+  /// BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
+  /// analog `mechanics` importiert (#404) — Voraussetzung für die
+  /// Regal-Kategorisierung anhand BGG-Daten (#276).
+  categories         String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
   explainerVideoUrl  String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
@@ -436,6 +787,7 @@ model BoardGame {
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
   lfgPosts                 LfgPost[]
+  marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
 
   @@index([ean])
@@ -473,6 +825,9 @@ model GameCopy {
   ruleBookLanguages      RuleBookLanguage[]
   needsCompletenessCheck Boolean             @default(false)
   lastCheckedAt          DateTime?
+  /// Freier Text, externe Fortführung (z. B. Zettel am Regal), kein
+  /// automatisch lückenloses Nummernschema wie `codes.ts` (#270).
+  inventoryNumber        String?             @unique
   status                 GameInventoryStatus @default(ACTIVE)
   archivedAt             DateTime?
   archivedReason         String?
@@ -517,12 +872,18 @@ model MarketListing {
   priceEuros     Int
   condition      String
   imageUrls      String[]
+  /// Optionaler Link zum Inventar-Titel — gesetzt bei Anlage per "BGG for
+  /// trade importieren" (#275), erlaubt Anzeige/Rückverweis über den
+  /// gemeinsamen `BoardGame`-Datensatz statt einer eigenen bggId (#278).
+  boardGameId    String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  seller Meeple @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  seller    Meeple     @relation("MarketListingSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame? @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
 
   @@index([sellerMeepleId])
+  @@index([boardGameId])
   @@map("market_listings")
 }
 
@@ -534,6 +895,12 @@ model PrivateGameCollectionEntry {
   meepleId    String
   boardGameId String
   syncedAt    DateTime
+  /// Persönliche BGG-Bewertung (`stats.rating`), `null` wenn unbewertet.
+  rating      Float?
+  /// BGG-Collection-Status-Flags dieses Titels (nur die zwei, die die
+  /// Übersicht anzeigt — andere Stati werden beim Sync ignoriert).
+  forTrade    Boolean  @default(false)
+  wantToPlay  Boolean  @default(false)
 
   meeple    Meeple    @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
   boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
@@ -567,6 +934,10 @@ model StorageUnit {
   keeperMeepleId String?
   /// Free text, only meaningful where no parent unit exists. Independent of the keeper.
   locationNote   String?
+  /// Feste Regal-Kategorie (#276), manuell vom Admin vergeben — `null`, bis
+  /// jemand sie setzt. Kein Bezug zu `kind`; auch eine `BOX` kann eine
+  /// Kategorie tragen.
+  category       ShelfCategory?
   retiredAt      DateTime?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -605,11 +976,17 @@ model StorageUnitMove {
 
 /// Where a game was during a period. Exactly one target (unit or meeple) and exactly
 /// one open holding per game — both enforced by hand-written constraints, see ADR 0001.
+/// `vereinsmitgliedId` (bis #333: `meepleId`) referenziert seit dem
+/// Vereinsmitglied/Meeple-Split (ADR 0013) `Member`, nicht mehr `Meeple` — ein
+/// Aufenthalt bei einer Person ist fachlich immer bei einem Vereinsmitglied,
+/// unabhängig davon, ob dieses ein Portal-Konto (`Member.meepleId`) hat. Die
+/// erfassende Person (`recordedByMeepleId`) bleibt unverändert ein `Meeple`
+/// (Handlungs-/Login-Identität, nicht Ziel des Aufenthalts).
 model GameHolding {
   id                 String        @id @default(cuid())
   gameCopyId         String
   unitId             String?
-  meepleId           String?
+  vereinsmitgliedId  String?
   origin             HoldingOrigin
   startedAt          DateTime      @default(now())
   endedAt            DateTime?
@@ -618,22 +995,28 @@ model GameHolding {
   recordedByMeepleId String
   note               String?
 
-  gameCopy   GameCopy     @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
-  unit       StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
-  meeple     Meeple?      @relation("GameHoldingMeeple", fields: [meepleId], references: [id], onDelete: Restrict)
-  recordedBy Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
+  gameCopy        GameCopy     @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
+  unit            StorageUnit? @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  // SetNull statt Restrict (Stand Paket 5): Stufe 3 der Anonymisierung (#331)
+  // löscht die `Member`-Zeile 12 Monate nach Austritt hart — die Historie
+  // (auch abgeschlossene Aufenthalte) bleibt lesbar, nur der Personenbezug
+  // fällt weg, exakt wie bei `Post.author` in `anonymisation.ts`.
+  vereinsmitglied Member?      @relation("GameHoldingMember", fields: [vereinsmitgliedId], references: [id], onDelete: SetNull)
+  recordedBy      Meeple       @relation("GameHoldingRecorder", fields: [recordedByMeepleId], references: [id], onDelete: Cascade)
 
   @@index([gameCopyId, endedAt])
   @@index([unitId])
-  @@index([meepleId])
+  @@index([vereinsmitgliedId])
   @@map("game_holdings")
 }
 
 /// A play day or larger event, independent of the public/internal ICS calendar feed
 /// (see docs/adr/0004). The basis for shifts, explainer attendance and flea market items.
+/// `startsAt`/`endsAt` are a pure date range (no meaningful time-of-day) — actual
+/// opening times per calendar day live on `EventDay` (#150), set after creation.
 model Event {
-  id                   String    @id @default(cuid())
-  slug                 String    @unique
+  id                   String          @id @default(cuid())
+  slug                 String          @unique
   title                String
   startsAt             DateTime
   endsAt               DateTime?
@@ -641,16 +1024,48 @@ model Event {
   /// Whether this event has a Bring&Buy flea market at all (#211) — separate
   /// from the self-service Kleinanzeigen/Ersatzteillager market, which is
   /// always open and not tied to a specific event.
-  hasBringAndBuyMarket Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  hasBringAndBuyMarket Boolean         @default(false)
+  /// Gilt für das ganze Event, nicht pro Tag (#155) — schaltet die
+  /// Dashboard-Karte für Meeples frei und den "Helferplan"-Nav-Eintrag
+  /// (nur solange das Event noch kommt, siehe hasOpenHelperRequest()).
+  helpersWanted        Boolean         @default(false)
+  /// Entwurf: nur für events:manage sichtbar. Intern: zusätzlich für
+  /// eingeloggte Meeples. Öffentlich: für alle, inkl. Gäste-Bereich und
+  /// öffentlicher Termine-Seite (/news). Default DRAFT — ein Event wird erst
+  /// nach bewusster Freigabe sichtbar, siehe lib/events/visibility.ts.
+  visibility           EventVisibility @default(DRAFT)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
-  shifts               Shift[]
-  shelfAssignments     EventShelfAssignment[]
-  explainerAttendances ExplainerAttendance[]
-  fleaMarketItems      FleaMarketItem[]
+  days                      EventDay[]
+  shifts                    Shift[]
+  shelfAssignments          EventShelfAssignment[]
+  explainerAttendances      ExplainerAttendance[]
+  fleaMarketItems           FleaMarketItem[]
+  fleaMarketExternalSellers FleaMarketExternalSeller[]
+  fleaMarketCarts           FleaMarketCart[]
 
   @@map("events")
+}
+
+/// One calendar day within an event's date range. Generated from `Event.startsAt`/
+/// `endsAt` on create/update (#150); `startsAt`/`endsAt` here hold the actual opening
+/// time for that day, set separately on the event detail page — null until then.
+model EventDay {
+  id        String    @id @default(cuid())
+  eventId   String
+  date      DateTime
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  event          Event                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  shifts         Shift[]
+  availabilities HelperAvailability[]
+
+  @@unique([eventId, date])
+  @@map("event_days")
 }
 
 /// Which shelves are set up at an event. Purely informational — it never changes a
@@ -668,35 +1083,118 @@ model EventShelfAssignment {
 
 /// A time slot with a fixed type and capacity within an event, self-service bookable
 /// by members. Booking a KASSE shift grants time-bound flea market rights (ADR 0006).
-model Shift {
-  id        String    @id @default(cuid())
-  eventId   String
-  type      ShiftType
+/// Global, admin-definable helper role (ADR-0012) — replaces the former fixed
+/// ShiftType enum so admins can add roles (e.g. "Küche") without a migration.
+/// `grantsPermissionKey` generalizes the former KASSE hardcode: when set, the
+/// permission applies for the duration of an assigned shift booking (see
+/// hasRoleGrantedPermission in shift-rights.ts).
+model HelperRole {
+  id                  String   @id @default(cuid())
+  name                String   @unique
+  grantsPermissionKey String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  shifts              Shift[]
+  availabilityChoices HelperAvailabilityRole[]
+
+  @@map("helper_roles")
+}
+
+/// Ein Meeple meldet sich für einen Event-Tag als Helfer verfügbar (#156) —
+/// eigenes Verfügbarkeitsfenster (`startsAt`/`endsAt`) plus Mehrfachauswahl
+/// der Rollen, die es an diesem Tag übernehmen würde. Getrennt von der
+/// späteren admin-seitigen Zeitblock-Zuweisung (`ShiftBooking`) — eine
+/// Zusage hier ist ein Angebot, keine Buchung. Ein Meeple hat höchstens
+/// eine Zusage pro Tag (`@@unique`); erneutes Absenden ersetzt sie.
+model HelperAvailability {
+  id        String   @id @default(cuid())
+  meepleId  String
+  dayId     String
   startsAt  DateTime
   endsAt    DateTime
-  capacity  Int
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  meeple Meeple                   @relation("HelperAvailabilityMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  day    EventDay                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  roles  HelperAvailabilityRole[]
+
+  @@unique([meepleId, dayId])
+  @@map("helper_availabilities")
+}
+
+model HelperAvailabilityRole {
+  availabilityId String
+  roleId         String
+
+  availability HelperAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  role         HelperRole         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([availabilityId, roleId])
+  @@map("helper_availability_roles")
+}
+
+/// Bedarfs-Container (#153): Rolle + Event-Tag + Stellenzahl (`capacity`,
+/// parallele Plätze) + eigener Ziel-Zeitraum, den der Admin frei setzt —
+/// unabhängig vom Event-Start/-Ende, wegen Auf-/Abbau außerhalb der
+/// eigentlichen Veranstaltungszeit. `targetStartsAt`/`targetEndsAt` sind
+/// (noch) das einzige Zeitfenster, gegen das `hasRoleGrantedPermission` und
+/// `findActiveShiftEvent` prüfen — individuelle, verschiebbare
+/// Zuweisungs-Zeitblöcke pro `ShiftBooking` kommen erst mit dem
+/// Schichtplan-Editor (#157 ff.).
+model Shift {
+  id             String   @id @default(cuid())
+  eventId        String
+  dayId          String
+  roleId         String
+  targetStartsAt DateTime
+  targetEndsAt   DateTime
+  capacity       Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   event    Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  day      EventDay       @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  role     HelperRole     @relation(fields: [roleId], references: [id])
   bookings ShiftBooking[]
 
   @@index([eventId])
+  @@index([dayId])
+  @@index([roleId])
   @@map("shifts")
 }
 
-/// A member's booking of a shift. `uncertain` marks an unsure commitment but still
-/// counts against capacity — the simplest rule that avoids overbooking.
+/// A member's booking of a shift — every row counts against capacity
+/// regardless of confirmation status, the simplest rule that avoids overbooking.
+/// `startsAt`/`endsAt` (#159) are this booking's own, individually movable
+/// time block — distinct from `Shift.targetStartsAt`/`targetEndsAt`, the
+/// container's overall target period. Defaults to the full target period on
+/// creation; the Schichtplan-Editor's resize handles (#160) narrow it.
+/// `confirmedAt` (#Helferplan-Zuweisungsbestätigung): eine Zuweisung entsteht
+/// durch den Admin im Schichtplan-Editor (Drag&Drop, `assignShiftBooking`)
+/// und gilt bis zur Bestätigung durch das zugewiesene Meeple selbst als
+/// unbestätigt (`null`). Ersetzt das frühere Selbstbuchungs-Flag `uncertain`.
 model ShiftBooking {
-  shiftId   String
-  meepleId  String
-  uncertain Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  shiftId     String
+  meepleId    String
+  startsAt    DateTime
+  endsAt      DateTime
+  confirmedAt DateTime?
+  /// 0-basierte Spalte innerhalb der Rollen-Spaltengruppe im Schichtplan-
+  /// Grid — rein optische Vorliebe der Admin (per Drag gesetzt), null lässt
+  /// die Spalte automatisch aus der Buchungsreihenfolge ableiten.
+  slotIndex   Int?
+  createdAt   DateTime  @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
   meeple Meeple @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
 
-  @@id([shiftId, meepleId])
+  // Kein @@id([shiftId, meepleId]) mehr — ein Meeple kann in derselben Schicht
+  // mehrfach mit unterschiedlichen, nicht überlappenden Zeitblöcken
+  // eingetragen sein (z. B. eine Pausenablösung durch dieselbe Person).
+  @@index([shiftId, meepleId])
   @@map("shift_bookings")
 }
 
@@ -736,22 +1234,73 @@ model FleaMarketItem {
   id                 String               @id @default(cuid())
   code               String               @unique
   eventId            String
-  sellerMeepleId     String
+  /// Vereinsmitglied als Verkäufer:in — exklusiv zu `externalSellerId`
+  /// (#266: Meeple braucht kein Token, ist über die Anmeldung identifiziert).
+  sellerMeepleId     String?
+  /// Externe, nicht angemeldete Verkäufer:in — exklusiv zu `sellerMeepleId`,
+  /// siehe `FleaMarketExternalSeller` (#266).
+  externalSellerId   String?
   title              String
+  /// Sprache des Spiels — Pflichtfeld im Self-Service-Formular (#266).
+  language           String?
   description        String?
   priceEuros         Int
   status             FleaMarketItemStatus @default(PENDING)
   approvedAt         DateTime?
   approvedByMeepleId String?
+  /// Nur gesetzt, während der Artikel in einem reservierten Warenkorb liegt
+  /// (#266) — leer, sobald der Warenkorb verkauft/aufgelöst wird.
+  cartId             String?
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
-  event  Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  seller Meeple @relation("FleaMarketItemSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  event          Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seller         Meeple?                   @relation("FleaMarketItemSeller", fields: [sellerMeepleId], references: [id], onDelete: Cascade)
+  externalSeller FleaMarketExternalSeller? @relation(fields: [externalSellerId], references: [id], onDelete: Cascade)
+  cart           FleaMarketCart?           @relation(fields: [cartId], references: [id], onDelete: SetNull)
 
   @@index([eventId])
   @@index([sellerMeepleId])
+  @@index([externalSellerId])
+  @@index([cartId])
   @@map("flea_market_items")
+}
+
+/// Externe, nicht als Meeple angemeldete Verkäufer:in eines Bring & Buy-Events
+/// (#266) — per E-Mail-Link-Token identifiziert, kein Vereinskonto. Der Token
+/// wird ungültig, sobald keiner ihrer Artikel mehr eine offene Aktion braucht
+/// (siehe `isFleaMarketExternalSellerTokenValid` in lib/bringbuy/status.ts).
+model FleaMarketExternalSeller {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  handle    String
+  email     String
+  token     String   @unique
+  createdAt DateTime @default(now())
+
+  event Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items FleaMarketItem[]
+
+  @@index([eventId])
+  @@map("flea_market_external_sellers")
+}
+
+/// Zwischengespeicherter, reservierter Kassen-Warenkorb (#266) — überlebt
+/// Reload und Geräte-/Sitzungswechsel der Kassenperson. Der aktive, noch
+/// unentschiedene Warenkorb an der Kasse ist reiner Client-State und wird
+/// erst bei "Reservieren" hier persistiert.
+model FleaMarketCart {
+  id        String   @id @default(cuid())
+  eventId   String
+  name      String
+  createdAt DateTime @default(now())
+
+  event Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items FleaMarketItem[]
+
+  @@index([eventId])
+  @@map("flea_market_carts")
 }
 
 /// A downloadable file managed by admins (upload, visibility, delete), replacing

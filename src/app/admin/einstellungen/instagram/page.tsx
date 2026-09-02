@@ -1,22 +1,7 @@
-import { requirePermission } from "@/lib/auth/permissions";
-import { requireAdmin } from "@/lib/auth/session";
-import { PageHeading } from "@/components/ui/page-heading";
-import { prisma } from "@/lib/utils/prisma";
-import { InstagramConnectionView } from "@/components/feature/admin-settings/instagram-connection-view";
+import { redirect } from "next/navigation";
 
-export default async function AdminInstagramSettingsPage() {
-  await requireAdmin();
-  await requirePermission("instagram:connect");
-
-  const connection = await prisma.instagramConnection.findFirst();
-
-  return (
-    <div className="flex flex-col gap-6">
-      <PageHeading eyebrow="Einstellungen" title="Instagram" />
-      <InstagramConnectionView
-        connected={!!connection}
-        expiresAt={connection?.expiresAt.toISOString() ?? null}
-      />
-    </div>
-  );
+/** Ersetzt durch den Popup-Dialog auf /admin/einstellungen (#351) — die
+ * eigene Seite ist keine Route mehr, nur ein Redirect für alte Links. */
+export default function AdminInstagramSettingsRedirectPage() {
+  redirect("/admin/einstellungen");
 }

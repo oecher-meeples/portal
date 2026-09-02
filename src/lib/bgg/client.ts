@@ -51,6 +51,9 @@ export interface BggGameData {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
+   * analog `mechanics` geparst (#404). */
+  categories: string[];
   /** Direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item — anders als
    * `publisher` nicht versionsabhängig (#205). */
   author: string[];
@@ -219,7 +222,8 @@ const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "youtu.be"]);
 
 function isYoutubeLink(link: string): boolean {
   try {
-    return YOUTUBE_HOSTS.has(new URL(link).hostname);
+    const url = new URL(link);
+    return url.protocol === "https:" && YOUTUBE_HOSTS.has(url.hostname);
   } catch {
     return false;
   }
@@ -357,6 +361,9 @@ function mapItem(item: BggItem): BggGameData {
   const mechanics = toArray(item.link)
     .filter((link) => link.type === "boardgamemechanic")
     .map((link) => link.value);
+  const categories = toArray(item.link)
+    .filter((link) => link.type === "boardgamecategory")
+    .map((link) => link.value);
 
   const rawWeight = parseNumber(item.statistics?.ratings?.averageweight?.value);
   const rawAverageRating = parseNumber(
@@ -380,6 +387,7 @@ function mapItem(item: BggItem): BggGameData {
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
+    categories,
     kind: parseKind(item.type),
     languageDependence: parseLanguageDependence(item.poll),
     author: parseAuthor(item.link),
@@ -424,6 +432,14 @@ async function fetchBggXml(
   }
   return response.text();
 }
+
+/** Mind. so viel Zeit zwischen zwei `fetchBggGame`-Aufrufen in einer Schleife
+ * (#186) — BGGs Rate-Limit skaliert nicht ungebremst auf z. B. 50 Titel.
+ * Konservativ etwas über der geforderten "max. 2 Anfragen/Sekunde" (500ms),
+ * da jeder eindeutig auflösbare Name zwei aufeinanderfolgende BGG-Anfragen
+ * braucht (Suche + Detaildaten). Von Massenimport und privatem
+ * Collection-Sync gemeinsam genutzt. */
+export const BGG_REQUEST_THROTTLE_MS = 600;
 
 export async function fetchBggGame(bggId: number): Promise<BggGameData> {
   const xml = await fetchBggXml(
@@ -512,3 +528,5 @@ export async function searchBggGamesExact(
 ): Promise<BggSearchResult[]> {
   return searchBggGamesInternal(query, { exact: true });
 }
+
+export { fetchBggXml, parser, toArray, parseNumber, SEARCH_REVALIDATE_SECONDS };

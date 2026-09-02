@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
 import { clearPreviewTier } from "@/components/feature/admin-preview-tier/actions";
@@ -34,9 +34,13 @@ export function UserMenu({ user }: { user: { name: string } | null }) {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-muted-foreground hidden sm:inline">
+      <Link
+        href="/profil"
+        className="text-muted-foreground hover:text-foreground hidden items-center gap-1.5 sm:inline-flex"
+      >
+        <UserRound className="text-primary size-4" />
         {user.name}
-      </span>
+      </Link>
       <Button
         variant="ghost"
         size="sm"

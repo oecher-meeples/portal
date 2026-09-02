@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/ui/page-container";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { YoutubeIcon } from "@/components/ui/youtube-icon";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -29,6 +31,7 @@ import type { ExplainerEntry } from "@/lib/explainer/queries";
 import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
 import type { GuestCopyAvailability } from "@/lib/events/guest-area";
 import { formatDateMedium } from "@/lib/utils/format";
+import { buildYoutubeRulesSearchUrl } from "@/lib/utils/youtube";
 
 export type HoldingHistoryEntry = {
   id: string;
@@ -53,6 +56,7 @@ export function GameDetailView({
   availability,
   openLfgPosts,
   createLfgTrigger,
+  marketListingSection,
 }: {
   game: PublicLudothekGame;
   /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
@@ -88,75 +92,86 @@ export function GameDetailView({
    * import so this feature stays isolated from `components/feature/lfg`
    * (#142, see CLAUDE.md layer rules). */
   createLfgTrigger?: ReactNode;
+  /** Fertig gerenderter Marktplatz-Hinweis/-Trigger ("wird verkauft" oder
+   * "Verkaufen"), von der Seite komponiert — analog `createLfgTrigger`, hält
+   * diesen Titel von `components/feature/markt` isoliert (#278). */
+  marketListingSection?: ReactNode;
 }) {
   return (
-    <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-      <div className="flex flex-col gap-4">
-        <div className="relative overflow-hidden rounded-md">
-          <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
-          {game.kind === "BOARDGAME_EXPANSION" && (
-            <RibbonCorner>Erweiterung</RibbonCorner>
-          )}
-          <CardCornerOverlay corner="top-right">
-            <BggRatingBadge averageRating={game.averageRating} />
-          </CardCornerOverlay>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-6">
-        <div>
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-3">
-              <div>
-                <h1 className="font-serif text-3xl font-bold tracking-tight">
-                  {game.title}
-                </h1>
-                {game.secondaryTitle && (
-                  <p className="text-muted-foreground">{game.secondaryTitle}</p>
-                )}
-                <LanguageIndependentPill
-                  languageDependence={game.languageDependence}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {createLfgTrigger}
-              {bggId && (
-                <Button
-                  variant="outline"
-                  className="gap-1.5 px-2.5"
-                  aria-label="Auf BoardGameGeek ansehen"
-                  render={
-                    <a
-                      href={`https://boardgamegeek.com/boardgame/${bggId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  }
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
-                  <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
-                  <ExternalLink className="size-4" />
-                </Button>
+    // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
+    // Displays stapeln sie in Quelltext-Reihenfolge — Titelblock, Bild,
+    // Rest —, das Bild landet damit zwischen der Spieler/Dauer/Gewichtung-
+    // Zeile und den Mechaniken. Ab `lg` bekommt jedes Item eine explizite
+    // Grid-Position, die wieder das klassische Bild-neben-Text-Layout
+    // ergibt (Bild spannt beide Zeilen der rechten Spalte).
+    <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
+      <div className="lg:col-start-2 lg:row-start-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-3">
+            <div>
+              <h1 className="font-serif text-3xl font-bold tracking-tight">
+                {game.title}
+              </h1>
+              {game.secondaryTitle && (
+                <p className="text-muted-foreground">{game.secondaryTitle}</p>
               )}
-              {titleEdit && (
-                <EditBoardGameTitleDialog
-                  game={titleEdit}
-                  mechanicsOptions={mechanicsOptions}
-                />
-              )}
+              <LanguageIndependentPill
+                languageDependence={game.languageDependence}
+                className="mt-1"
+              />
             </div>
           </div>
-          <p className="text-muted-foreground mt-1">
-            {game.minPlayers && game.maxPlayers
-              ? `${game.minPlayers}–${game.maxPlayers} Spieler`
-              : null}
-            {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
-            {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
-          </p>
+          <div className="flex items-center gap-2">
+            {createLfgTrigger}
+            {marketListingSection}
+            {bggId && (
+              <Button
+                variant="outline"
+                className="gap-1.5 px-2.5"
+                aria-label="Auf BoardGameGeek ansehen"
+                render={
+                  <a
+                    href={`https://boardgamegeek.com/boardgame/${bggId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
+                <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
+                <ExternalLink className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
+        <p className="text-muted-foreground mt-1">
+          {game.minPlayers && game.maxPlayers
+            ? `${game.minPlayers}–${game.maxPlayers} Spieler`
+            : null}
+          {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
+          {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
+        </p>
+      </div>
 
+      <div className="relative overflow-hidden rounded-md lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
+        {game.kind === "BOARDGAME_EXPANSION" && (
+          <RibbonCorner>Erweiterung</RibbonCorner>
+        )}
+        <CardCornerOverlay corner="top-right">
+          <BggRatingBadge averageRating={game.averageRating} />
+        </CardCornerOverlay>
+        {titleEdit && (
+          <CardCornerOverlay corner="bottom-right">
+            <EditBoardGameTitleDialog
+              game={titleEdit}
+              mechanicsOptions={mechanicsOptions}
+            />
+          </CardCornerOverlay>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-6 lg:col-start-2 lg:row-start-2">
         <div className="flex flex-wrap gap-2">
           {game.mechanics.map((mechanic) => (
             <span
@@ -164,6 +179,14 @@ export function GameDetailView({
               className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
             >
               {mechanic}
+            </span>
+          ))}
+          {game.categories.map((category) => (
+            <span
+              key={category}
+              className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
+            >
+              {category}
             </span>
           ))}
         </div>
@@ -249,19 +272,49 @@ export function GameDetailView({
           </div>
         )}
 
-        {(game.description || game.explainerVideoUrl) && (
-          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Erklärung</h2>
-            {game.description && (
-              <p className="text-sm leading-relaxed whitespace-pre-line">
-                {game.description}
-              </p>
-            )}
-            {game.explainerVideoUrl && (
-              <ExplainerVideo url={game.explainerVideoUrl} />
-            )}
+        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">Erklärung</h2>
+          {game.description && (
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {game.description}
+            </p>
+          )}
+          {game.explainerVideoUrl && (
+            <ExplainerVideo url={game.explainerVideoUrl} />
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a
+                  href={buildYoutubeRulesSearchUrl(game.title, "de")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <YoutubeIcon className="size-4" />
+              Nach Regeln auf Youtube suchen
+              <ExternalLink className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a
+                  href={buildYoutubeRulesSearchUrl(game.title, "en")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <YoutubeIcon className="size-4" />
+              Search for rules on Youtube
+              <ExternalLink className="size-4" />
+            </Button>
           </div>
-        )}
+        </div>
 
         {openLfgPosts && openLfgPosts.length > 0 && (
           <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
@@ -310,6 +363,6 @@ export function GameDetailView({
           />
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

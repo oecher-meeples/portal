@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { getContactLinks } from "./contact";
+import { getContactLinks, meepleEmail } from "./contact";
+
+describe("meepleEmail", () => {
+  it("flattens the linked Member's email", () => {
+    expect(meepleEmail({ member: { email: "lea@example.com" } })).toBe(
+      "lea@example.com",
+    );
+  });
+
+  it("is null without a linked Member", () => {
+    expect(meepleEmail({ member: null })).toBeNull();
+  });
+});
 
 const NONE = {
   email: null,

@@ -33,6 +33,10 @@ export type BoardGameFormValues = {
   imageUrl: string;
   description: string;
   mechanics: string;
+  /** BGGs `boardgamecategory`-Links, kommagetrennt (#404) — kein eigenes
+   * Formularfeld (nur BGG-Import/-Abgleich setzt sie), roundtrip-sicher wie
+   * jedes andere Feld gegen versehentliches Leeren beim Speichern. */
+  categories: string;
   explainerVideoUrl: string;
   /** BGGs Language-Dependence-Poll-Level, `null` solange nicht erfasst (#188). */
   languageDependence: LanguageDependence | null;
@@ -61,6 +65,7 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   imageUrl: "",
   description: "",
   mechanics: "",
+  categories: "",
   explainerVideoUrl: "",
   languageDependence: null,
   ruleBookLanguages: [],
@@ -85,6 +90,7 @@ export type BoardGameRecord = {
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  categories: string[];
   explainerVideoUrl: string | null;
   languageDependence: LanguageDependence | null;
   ruleBookLanguages: RuleBookLanguage[];
@@ -111,6 +117,7 @@ export function boardGameToFormValues(
     imageUrl: game.imageUrl ?? "",
     description: game.description ?? "",
     mechanics: formatMechanics(game.mechanics),
+    categories: formatCommaSeparatedList(game.categories),
     explainerVideoUrl: game.explainerVideoUrl ?? "",
     languageDependence: game.languageDependence,
     ruleBookLanguages: game.ruleBookLanguages,
@@ -140,6 +147,7 @@ export function boardGameFormToTitleInput(
     imageUrl: form.imageUrl || undefined,
     description: form.description || undefined,
     mechanics: parseMechanics(form.mechanics),
+    categories: parseCommaSeparatedList(form.categories),
     explainerVideoUrl: form.explainerVideoUrl || undefined,
     languageDependence: form.languageDependence,
     publisher: parseCommaSeparatedList(form.publisher),

@@ -52,6 +52,7 @@ describe("fetchBggGame", () => {
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
+      categories: ["Animals"],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
       author: ["Mathias Wigge"],
@@ -79,6 +80,7 @@ describe("fetchBggGame", () => {
       imageUrl: null,
       description: null,
       mechanics: [],
+      categories: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
       author: [],
@@ -216,6 +218,15 @@ describe("fetchBggGame", () => {
         channel: "other",
       },
     ]);
+  });
+
+  it("rejects http:// youtube links instead of importing them unnormalized (#262)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-http-video.xml"));
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.explainerVideoUrl).toBeNull();
+    expect(result.englishExplainerVideos).toEqual([]);
   });
 
   it("returns null when the videos block has no instructional entry", async () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   filterLudothekGames,
+  listDistinctCategories,
   parseLudothekSearchParams,
   toPublicGame,
   type LudothekGame,
@@ -21,8 +22,10 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: ["Engine-Building"],
+    categories: [],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
     alternateNames: [],
     secondaryTitle: null,
@@ -44,6 +47,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Karton 1",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -53,34 +57,6 @@ describe("filterLudothekGames", () => {
     const games = [game({ title: "Arche Nova" }), game({ title: "Wingspan" })];
 
     expect(filterLudothekGames(games, { search: "wing" })).toHaveLength(1);
-  });
-
-  it("matches an exact EAN", () => {
-    const games = [
-      game({ title: "Arche Nova", ean: "4001504311892" }),
-      game({ title: "Wingspan", ean: "0700304142529" }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "4001504311892" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Arche Nova");
-  });
-
-  it("does not match a partial EAN", () => {
-    const games = [game({ title: "Arche Nova", ean: "4001504311892" })];
-
-    expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(0);
-  });
-
-  it("matches an exact BGG-ID", () => {
-    const games = [
-      game({ title: "Arche Nova", bggId: 342942 }),
-      game({ title: "Wingspan", bggId: 266192 }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "342942" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Arche Nova");
   });
 
   it("filters by maximum weight", () => {
@@ -102,6 +78,18 @@ describe("filterLudothekGames", () => {
     });
 
     expect(result).toEqual([tileLaying, both]);
+  });
+
+  it("filters by category with a multi-select OR match (#404)", () => {
+    const party = game({ categories: ["Partyspiel"] });
+    const strategy = game({ categories: ["Strategiespiel"] });
+    const both = game({ categories: ["Partyspiel", "Strategiespiel"] });
+
+    const result = filterLudothekGames([party, strategy, both], {
+      categories: ["Partyspiel"],
+    });
+
+    expect(result).toEqual([party, both]);
   });
 
   it("filters by maximum language dependence level (#188)", () => {
@@ -175,6 +163,59 @@ describe("filterLudothekGames", () => {
     ).toEqual([withOpenLfg, withoutOpenLfg]);
   });
 
+  it("filters by 'Erklärbär vorhanden' in the Meeple context via explainerCount (#256)", () => {
+    const withExplainer = game({ explainerCount: 2 });
+    const withoutExplainer = game({ explainerCount: 0 });
+
+    expect(
+      filterLudothekGames([withExplainer, withoutExplainer], {
+        hasExplainer: true,
+      }),
+    ).toEqual([withExplainer]);
+  });
+
+  it("filters by 'Erklärbär vorhanden' in the Gast-während-Event context via the attending-set (#256)", () => {
+    const attending = game({
+      boardGameId: "game-attending",
+      explainerCount: 0,
+    });
+    const notAttending = game({
+      boardGameId: "game-not-attending",
+      explainerCount: 5, // has an Erklärbär profile, but none attending today
+    });
+
+    const result = filterLudothekGames(
+      [attending, notAttending],
+      { hasExplainer: true },
+      { attendingExplainerBoardGameIds: new Set(["game-attending"]) },
+    );
+
+    expect(result).toEqual([attending]);
+  });
+
+  it("filters by 'nur anwesende Spiele' via presentGameCopyIds (#273)", () => {
+    const present = game({ id: "copy-present" });
+    const absent = game({ id: "copy-absent" });
+
+    const result = filterLudothekGames(
+      [present, absent],
+      { onlyPresentAtEvent: true },
+      { presentGameCopyIds: new Set(["copy-present"]) },
+    );
+
+    expect(result).toEqual([present]);
+  });
+
+  it("shows nothing for 'nur anwesende Spiele' when no event is running", () => {
+    const result = filterLudothekGames(
+      [game({ id: "copy-1" })],
+      { onlyPresentAtEvent: true },
+      {},
+    );
+
+    expect(result).toEqual([]);
+  });
+
   it("combines multiple filters", () => {
     const match = game({
       title: "Arche Nova",
@@ -202,41 +243,10 @@ describe("filterLudothekGames", () => {
     );
   });
 
-  it("matches on an alternate name substring, case-insensitively (#187)", () => {
-    const games = [
-      game({ title: "Catan", alternateNames: ["Die Siedler von Catan"] }),
-      game({ title: "Wingspan" }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "siedler" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Catan");
-  });
-
-  it("matches on a publisher substring, case-insensitively (#205)", () => {
-    const games = [
-      game({ title: "Ark Nova", publisher: ["Feuerland Spiele"] }),
-      game({ title: "Wingspan", publisher: ["Stonemaier Games"] }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "feuerland" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Ark Nova");
-  });
-
-  it("matches on an author substring, case-insensitively (#205)", () => {
-    const games = [
-      game({ title: "Cascadia", author: ["Randy Flynn"] }),
-      game({ title: "Wingspan", author: ["Elizabeth Hargrave"] }),
-    ];
-
-    const result = filterLudothekGames(games, { search: "hargrave" });
-    expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Wingspan");
-  });
-
   // Erstveröffentlichung-, Bewertung- und Spieler/Dauer-Slider-Tests siehe
   // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
+  // Textsuche (EAN/BGG-ID/Alternativname/Sekundärtitel/Verlag/Autor) siehe
+  // browser-search.test.ts (#287, ausgelagert wegen Dateigröße).
 });
 
 describe("parseLudothekSearchParams", () => {
@@ -257,6 +267,8 @@ describe("parseLudothekSearchParams", () => {
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
+      hasExplainer: false,
+      onlyPresentAtEvent: false,
       view: "grid",
     });
   });
@@ -393,6 +405,24 @@ describe("parseLudothekSearchParams", () => {
       ).mechanics,
     ).toEqual(["Engine-Building"]);
   });
+
+  it("parses categories (#404)", () => {
+    expect(
+      parseLudothekSearchParams(
+        { kategorie: ["Partyspiel", "Strategiespiel"] },
+        { internal: false },
+      ).categories,
+    ).toEqual(["Partyspiel", "Strategiespiel"]);
+  });
+
+  it("normalises a single kategorie value to an array (#404)", () => {
+    expect(
+      parseLudothekSearchParams(
+        { kategorie: "Partyspiel" },
+        { internal: false },
+      ).categories,
+    ).toEqual(["Partyspiel"]);
+  });
 });
 
 describe("toPublicGame", () => {
@@ -404,5 +434,25 @@ describe("toPublicGame", () => {
     expect(publicGame).not.toHaveProperty("responsibleMeepleId");
     expect(publicGame).not.toHaveProperty("locationChain");
     expect(publicGame.title).toBe("Arche Nova");
+  });
+});
+
+describe("listDistinctCategories (#404)", () => {
+  it("returns every distinct category across the Bestand, sorted", () => {
+    const games = [
+      game({ categories: ["Strategiespiel", "Partyspiel"] }),
+      game({ categories: ["Familienspiel"] }),
+      game({ categories: ["Partyspiel"] }),
+    ];
+
+    expect(listDistinctCategories(games)).toEqual([
+      "Familienspiel",
+      "Partyspiel",
+      "Strategiespiel",
+    ]);
+  });
+
+  it("returns an empty array for no games", () => {
+    expect(listDistinctCategories([])).toEqual([]);
   });
 });

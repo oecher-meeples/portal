@@ -33,6 +33,7 @@ import {
   type ContentType,
 } from "@/lib/content/content";
 import { deletePost } from "@/components/feature/admin-news/actions";
+import { PageContainer } from "@/components/ui/page-container";
 
 const TYPE_FILTER_OPTIONS: PillOption<ContentType | "alle">[] =
   CONTENT_TYPE_FILTERS.map((option) => ({
@@ -44,6 +45,7 @@ const TYPE_LABELS: Record<ContentType, string> = {
   termin: "Termin",
   blog: "Blog",
   turnier: "Turnier",
+  umfrage: "Umfrage",
 };
 
 /** Prüft ein boolesches Merkmal (z. B. `post.internal`) gegen einen
@@ -65,7 +67,15 @@ export type AdminNewsPostRow = {
   status: string;
 };
 
-export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
+export function AdminNewsView({
+  posts,
+  canEditPublic,
+  canEditInternal,
+}: {
+  posts: AdminNewsPostRow[];
+  canEditPublic: boolean;
+  canEditInternal: boolean;
+}) {
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
   const [titleQuery, setTitleQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -84,7 +94,7 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
     .filter((post) => matchesTriState(instagramFilter, post.instagram));
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Redaktion"
         title="Beiträge"
@@ -165,9 +175,14 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
           <TableBody>
             {visible.map((post) => {
               const contentType =
-                DB_TO_TYPE[post.type as "BLOG" | "TERMIN" | "TURNIER"];
+                DB_TO_TYPE[
+                  post.type as "BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE"
+                ];
               const typeLabel = TYPE_LABELS[contentType];
               const TypeIcon = getContentTypeIcon(contentType);
+              const canEditThis = post.internal
+                ? canEditInternal
+                : canEditPublic;
               return (
                 <TableRow key={post.id}>
                   <TableCell className="font-medium">
@@ -210,16 +225,18 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        render={
-                          <Link href={`/admin/news/${post.id}/edit`}>
-                            <Pencil className="size-4" />
-                            Bearbeiten
-                          </Link>
-                        }
-                      />
+                      {canEditThis && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          render={
+                            <Link href={`/admin/news/${post.id}/edit`}>
+                              <Pencil className="size-4" />
+                              Bearbeiten
+                            </Link>
+                          }
+                        />
+                      )}
                       <ActionButton
                         variant="destructive"
                         size="sm"
@@ -237,6 +254,6 @@ export function AdminNewsView({ posts }: { posts: AdminNewsPostRow[] }) {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

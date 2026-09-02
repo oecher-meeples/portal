@@ -12,6 +12,7 @@ import {
   type LegalDocumentRow,
 } from "@/components/feature/rechtliches/legal-document-editor";
 import { LegalDocView } from "@/components/feature/rechtliches/legal-doc-view";
+import { PageContainer } from "@/components/ui/page-container";
 
 /** Edit page for a single Rechtliches document. Two tabs share one draft —
  * title/sections/pdfFileUrl live here, not inside `LegalDocumentEditor`,
@@ -30,7 +31,7 @@ export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
   const [extractedText, setExtractedText] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading eyebrow="Rechtliches" title={`${doc.title} bearbeiten`} />
       <Tabs defaultValue="edit">
         <div className="bg-background sticky top-16 z-20 border-b py-3">
@@ -61,6 +62,6 @@ export function LegalDocEditView({ doc }: { doc: LegalDocumentRow }) {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   );
 }

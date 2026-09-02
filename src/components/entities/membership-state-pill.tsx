@@ -3,7 +3,8 @@ import type { MembershipState } from "@/lib/members/meeples";
 import { MEMBERSHIP_STATE_LABELS } from "@/lib/utils/format";
 
 const TONES: Record<MembershipState, StatusTone> = {
-  aktiv: "positive",
+  unregistriert: "info",
+  registriert: "positive",
   gekuendigt: "warning",
   ausgetreten: "negative",
   anonymisiert: "neutral",

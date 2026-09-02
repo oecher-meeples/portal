@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import {
   Dialog,
@@ -13,16 +12,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  createBoardGame,
-  updateBoardGame,
-  type CreateBoardGameInput,
-} from "@/lib/ludothek/board-games";
-import {
   previewBggImport,
   searchBggGamesAction,
 } from "@/lib/ludothek/board-games-bgg-import";
-import { createGameCopy } from "@/lib/ludothek/game-copies";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
+import { isValidEan } from "@/lib/inventory/ean";
 import {
   resolvePublisherFromVersions,
   resolveProductCodeFromVersions,
@@ -30,14 +24,14 @@ import {
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
 import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
 import { BoardGameDuplicateWarning } from "@/components/widgets/board-game/board-game-duplicate-warning";
+import { InvalidEanRecovery } from "@/components/widgets/board-game/invalid-ean-recovery";
 import { useBoardGameDuplicateGuard } from "@/components/widgets/board-game/use-board-game-duplicate-guard";
+import { useCreateBoardGameSubmit } from "@/components/widgets/board-game/use-create-board-game-submit";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
 import { CreateBoardGameExemplarStep } from "@/components/widgets/board-game/create-board-game-exemplar-step";
 import { type LocationPlacement } from "@/components/widgets/board-game/create-board-game-location-field";
 import {
   EMPTY_BOARD_GAME_FORM,
-  boardGameFormToInput,
-  boardGameFormToTitleInput,
   boardGameToFormValues,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
@@ -71,7 +65,6 @@ export function CreateBoardGameDialog({
    * als Auswahl übernehmen wollen (#204). */
   onCreated?: (game: { id: string; title: string }) => void;
 } = {}) {
-  const router = useRouter();
   const [open, setOpen] = useState(Boolean(defaultEan));
   // Ein Scan identifiziert die physische Kopie bereits eindeutig — der
   // BGG-Import-Schritt bringt dann nichts, direkt zur manuellen Prüfung.
@@ -86,9 +79,6 @@ export function CreateBoardGameDialog({
     ...EMPTY_BOARD_GAME_FORM,
     ean: defaultEan ?? "",
   });
-  const [error, setError] = useState<string | null>(null);
-  const [lastHint, setLastHint] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [placement, setPlacement] = useState<LocationPlacement | null>(null);
 
   const {
@@ -106,6 +96,27 @@ export function CreateBoardGameDialog({
     bggIdText: form.bggId,
   });
 
+  const {
+    handleSubmit,
+    error,
+    setError,
+    invalidEan,
+    lastHint,
+    isSubmitting,
+    resetSubmitState,
+  } = useCreateBoardGameSubmit({
+    form,
+    existingBoardGame,
+    correctingExistingTitle,
+    placement,
+    preview,
+    onCreated,
+    onSuccess: () => {
+      setOpen(false);
+      reset();
+    },
+  });
+
   function patchForm(patch: Partial<BoardGameFormValues>) {
     setForm((prev) => ({ ...prev, ...patch }));
   }
@@ -119,7 +130,7 @@ export function CreateBoardGameDialog({
     setPreview(null);
     resetDuplicateGuard();
     setForm({ ...EMPTY_BOARD_GAME_FORM, ean: defaultEan ?? "" });
-    setError(null);
+    resetSubmitState();
     setPlacement(null);
   }
 
@@ -181,6 +192,7 @@ export function CreateBoardGameDialog({
         imageUrl: result.data.imageUrl ?? "",
         description: result.data.description ?? "",
         mechanics: result.data.mechanics.join(", "),
+        categories: result.data.categories.join(", "),
         languageDependence: result.data.languageDependence,
         author: result.data.author.join(", "),
         yearPublished: result.data.yearPublished?.toString() ?? "",
@@ -278,78 +290,20 @@ export function CreateBoardGameDialog({
     }
   }
 
-  /** Übernimmt Verlag + Product Code (als EAN) der gewählten BGG-Edition,
-   * wenn sich mehrere Editionen nicht auf einen gemeinsamen Verlag einigen
-   * (#205) — der Product Code ist meist die echte Verpackungs-EAN. */
+  /** Übernimmt Verlag + Product Code (als EAN) der gewählten BGG-Edition
+   * (#205) — nur, wenn der Code eine gültige EAN ist (#322). */
   function handleSelectVersion(version: BggVersion) {
     patchForm({
       publisher: version.publisher.join(", "),
-      ...(version.productCode ? { ean: version.productCode } : {}),
+      ...(version.productCode && isValidEan(version.productCode)
+        ? { ean: version.productCode }
+        : {}),
     });
   }
 
   function handleSkipImport() {
     setError(null);
     setStep(2);
-  }
-
-  async function handleSubmit() {
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      if (existingBoardGame) {
-        if (correctingExistingTitle) {
-          const updateResult = await updateBoardGame(
-            existingBoardGame.id,
-            boardGameFormToTitleInput(form),
-          );
-          if (updateResult.error) {
-            setError(updateResult.error);
-            return;
-          }
-        }
-
-        const result = await createGameCopy(existingBoardGame.id, {
-          condition: form.condition || undefined,
-          ...(placement ? { placement } : {}),
-        });
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-        setLastHint(null);
-        onCreated?.({ id: existingBoardGame.id, title: form.title });
-      } else {
-        const input: CreateBoardGameInput = {
-          ...boardGameFormToInput(form),
-          ...(placement ? { placement } : {}),
-          alternateNames: preview?.alternateNames,
-        };
-        const result = await createBoardGame(input);
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-        setLastHint(result.hint ?? null);
-        // `result.error` above already excludes the error branch — TS just
-        // doesn't narrow `boardGameId` off of it (a plain `string` field,
-        // not a literal discriminant), same gap `result.hint` silently has too.
-        onCreated?.({ id: result.boardGameId as string, title: form.title });
-      }
-
-      setOpen(false);
-      reset();
-      router.refresh();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Das Spiel konnte nicht angelegt werden. Bitte erneut versuchen.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   // Ohne bekannten Zieltitel braucht es einen Titel, um einen neuen anzulegen;
@@ -441,7 +395,16 @@ export function CreateBoardGameDialog({
             <BoardGameDuplicateWarning duplicate={activeDuplicate} />
           )}
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error &&
+            (invalidEan ? (
+              <InvalidEanRecovery
+                message={error}
+                onDeleteAndSave={() => handleSubmit("")}
+                onBack={() => setError(null)}
+              />
+            ) : (
+              <p className="text-destructive text-sm">{error}</p>
+            ))}
 
           <CreateBoardGameDialogFooter
             step={step}
@@ -453,7 +416,7 @@ export function CreateBoardGameDialog({
             onUseExistingCopy={handleUseExistingCopy}
             onBack={() => setStep(step === 3 ? 2 : 1)}
             onNext={() => setStep(step === 1 ? 2 : 3)}
-            onSubmit={handleSubmit}
+            onSubmit={() => handleSubmit()}
           />
         </DialogContent>
       </Dialog>

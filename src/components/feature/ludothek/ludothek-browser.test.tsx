@@ -45,17 +45,6 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-const PRIVATE_RESULT = {
-  id: "entry-1",
-  title: "Dune: Imperium",
-  imageUrl: null,
-  minPlayers: 1,
-  maxPlayers: 4,
-  playTimeMinutes: 60,
-  ownerMeepleId: "meeple-1",
-  ownerDisplayName: "Lea Demo",
-};
-
 function baseProps() {
   return {
     games: [],
@@ -63,6 +52,7 @@ function baseProps() {
     rawSearchParams: {},
     filters: {},
     mechanicsOptions: [],
+    categoriesOptions: [],
   };
 }
 
@@ -80,8 +70,10 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     weight: 3.7,
     averageRating: 8.5,
     mechanics: [],
+    categories: [],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
     alternateNames: [],
     secondaryTitle: null,
@@ -103,53 +95,10 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Regal A",
     explainerCount: 0,
     hasOpenLfg: false,
+    isPrivate: false,
     ...overrides,
   };
 }
-
-describe("LudothekBrowser — private collection leak prevention", () => {
-  it("never renders private collection results in the guest (public) view, even if passed by mistake", () => {
-    render(
-      <LudothekBrowser
-        {...baseProps()}
-        internal={false}
-        privateCollectionResults={[PRIVATE_RESULT]}
-      />,
-    );
-
-    expect(screen.queryByText("Dune: Imperium")).not.toBeInTheDocument();
-    expect(screen.queryByText(/im Privatbesitz von/)).not.toBeInTheDocument();
-  });
-
-  it("renders nothing when the toggle is off, even internally", () => {
-    render(
-      <LudothekBrowser
-        {...baseProps()}
-        internal
-        filters={{ showPrivateCollection: false }}
-        privateCollectionResults={[PRIVATE_RESULT]}
-      />,
-    );
-
-    expect(screen.queryByText("Dune: Imperium")).not.toBeInTheDocument();
-  });
-
-  it("renders the owner hint when internal and the toggle is on", () => {
-    render(
-      <LudothekBrowser
-        {...baseProps()}
-        internal
-        filters={{ showPrivateCollection: true }}
-        privateCollectionResults={[PRIVATE_RESULT]}
-      />,
-    );
-
-    expect(screen.getByText("Dune: Imperium")).toBeInTheDocument();
-    expect(
-      screen.getByText(/im Privatbesitz von Lea Demo/),
-    ).toBeInTheDocument();
-  });
-});
 
 describe("LudothekBrowser — live search", () => {
   afterEach(() => {
@@ -167,7 +116,7 @@ describe("LudothekBrowser — live search", () => {
     expect(routerReplaceMock).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(1500);
     });
 
     expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?q=arche");
@@ -185,7 +134,7 @@ describe("LudothekBrowser — live search", () => {
 
       fireEvent.click(screen.getByText("simulate-scan"));
       act(() => {
-        vi.advanceTimersByTime(300);
+        vi.advanceTimersByTime(1500);
       });
 
       expect(routerReplaceMock).toHaveBeenCalledWith(
@@ -193,6 +142,39 @@ describe("LudothekBrowser — live search", () => {
       );
     },
   );
+});
+
+describe("LudothekBrowser — Enter im Suchfeld (#286)", () => {
+  it("submits via router.replace instead of native form navigation, even with an empty field", () => {
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    const form = document.querySelector("form");
+    expect(form).not.toBeNull();
+    const submitEvent = new Event("submit", {
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(form!, submitEvent);
+
+    expect(submitEvent.defaultPrevented).toBe(true);
+    expect(routerReplaceMock).toHaveBeenCalledTimes(1);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek");
+  });
+
+  it("submits the current (not-yet-debounced) search value immediately", () => {
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    const input = screen.getByPlaceholderText(
+      "Spiel, EAN oder BGG-ID suchen …",
+    );
+    fireEvent.change(input, { target: { value: "arche" } });
+
+    const form = document.querySelector("form");
+    fireEvent.submit(form!);
+
+    expect(routerReplaceMock).toHaveBeenCalledTimes(1);
+    expect(routerReplaceMock).toHaveBeenCalledWith("/ludothek?q=arche");
+  });
 });
 
 // Erstveröffentlichung-, Bewertung-, Dauer- und Spieler-Slider-Tests siehe
@@ -318,32 +300,29 @@ describe("LudothekBrowser — three render modes", () => {
     expect(screen.getByText("Regal A")).toBeInTheDocument();
   });
 
-  it("keeps the 'Privatbesitz'-section a grid regardless of the chosen mode", () => {
+  it("renders private-collection rows in the same view mode as club games, linked like any other title (#255-Folge)", () => {
     render(
       <LudothekBrowser
         {...baseProps()}
-        games={[game()]}
+        games={[
+          game({
+            id: "entry-1",
+            boardGameId: "title-private",
+            boardGameSlug: "dune-imperium",
+            title: "Dune: Imperium",
+            zustand: "privat",
+            isPrivate: true,
+          }),
+        ]}
         filters={{ view: "liste", showPrivateCollection: true }}
         internal
         canManageGames
-        privateCollectionResults={[
-          {
-            id: "entry-1",
-            title: "Dune: Imperium",
-            imageUrl: null,
-            minPlayers: 1,
-            maxPlayers: 4,
-            playTimeMinutes: 60,
-            ownerMeepleId: "meeple-1",
-            ownerDisplayName: "Lea Demo",
-          },
-        ]}
       />,
     );
 
-    expect(screen.getByText("Dune: Imperium")).toBeInTheDocument();
-    const grids = document.querySelectorAll(".grid");
-    expect(grids.length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("link", { name: /Dune: Imperium/ }),
+    ).toHaveAttribute("href", "/ludothek/dune-imperium");
   });
 });
 

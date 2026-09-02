@@ -2,6 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 
 export type {
   MembershipState,
@@ -10,6 +11,7 @@ export type {
 export {
   getMembershipState,
   nextTurnOfTheYear,
+  computeMembershipEndsAt,
 } from "@/lib/members/membership-state";
 
 export type AuthUser = {
@@ -28,12 +30,11 @@ function displayNameFor(user: AuthUser) {
  */
 export async function ensureMeeple(user: AuthUser) {
   const displayName = displayNameFor(user);
-  const email = user.email ?? null;
 
   return prisma.meeple.upsert({
     where: { neonAuthUserId: user.id },
-    update: { displayName, email },
-    create: { neonAuthUserId: user.id, displayName, email },
+    update: { displayName },
+    create: { neonAuthUserId: user.id, displayName },
   });
 }
 
@@ -47,6 +48,22 @@ export async function requireMeeple() {
   const meeple = await getCurrentMeeple();
   if (!meeple) {
     redirect("/login");
+  }
+  return meeple;
+}
+
+/**
+ * Like `requireMeeple`, but also requires a specific permission (e.g.
+ * "lfg:participate") — used by feature actions that a "Ausgetreten"-Meeple
+ * (#332) must no longer be able to call, even though it's still logged in.
+ */
+export async function requireMeeplePermission(permissionKey: string) {
+  const meeple = await requireMeeple();
+  if (
+    !meeple.neonAuthUserId ||
+    !(await hasPermission(meeple.neonAuthUserId, permissionKey))
+  ) {
+    redirect("/403");
   }
   return meeple;
 }

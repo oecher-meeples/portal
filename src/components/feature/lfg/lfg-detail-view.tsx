@@ -9,8 +9,14 @@ import {
   leaveLfgPost,
   removeLfgGuest,
 } from "@/components/feature/lfg/actions";
+import { LfgLocationEditor } from "@/components/feature/lfg/lfg-location-editor";
+import {
+  LfgAttachmentsSection,
+  type LfgAttachmentRow,
+} from "@/components/feature/lfg/lfg-attachments-section";
 import type { LfgStatus } from "@/lib/content/lfg";
 import type { ContactLinks } from "@/lib/members/contact";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type LfgParticipantRow = {
   /** Teilnehmer-Zeilen-ID, immer gesetzt — auch für Gäste. */
@@ -39,6 +45,9 @@ export function LfgDetailView({
   viewerMeepleId,
   canClose,
   guestsMayBringGuests,
+  canEditLocation,
+  viewerHasOwnAddress,
+  attachments,
 }: {
   id: string;
   title: string;
@@ -53,6 +62,16 @@ export function LfgDetailView({
   viewerMeepleId: string | null;
   canClose: boolean;
   guestsMayBringGuests: boolean;
+  /** Ersteller darf das Ortsfeld immer bearbeiten, beigetretene Teilnehmer
+   * nur bei aktivem `participantsMayEditLocation` (#166) — serverseitig
+   * entschieden, hier nur gerendert. */
+  canEditLocation: boolean;
+  /** Ob der Betrachter eine Adresse im Profil hinterlegt hat — steuert, ob
+   * "Meine Adresse übernehmen" am Ortsfeld erscheint (#166). */
+  viewerHasOwnAddress: boolean;
+  /** `undefined` = Datei-Bereich wird nicht angezeigt — weder Teilnehmer
+   * noch `isLfgAttachmentEligible()` (#283), serverseitig entschieden. */
+  attachments?: LfgAttachmentRow[];
 }) {
   const isParticipant = participants.some((p) => p.meepleId === viewerMeepleId);
   const isCreator = viewerMeepleId === createdByMeepleId;
@@ -61,18 +80,27 @@ export function LfgDetailView({
     (isCreator || (guestsMayBringGuests && isParticipant));
 
   return (
-    <div className="flex max-w-2xl flex-col gap-5">
+    <PageContainer className="max-w-2xl gap-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-serif text-2xl font-bold">{title}</h1>
           <p className="text-muted-foreground text-sm">
             {dateLabel}
-            {location && ` · ${location}`}
+            {!canEditLocation && location && ` · ${location}`}
             {gameTitle && ` · ${gameTitle}`}
           </p>
         </div>
         <LfgStatusPill status={status} />
       </div>
+
+      {canEditLocation && (
+        <LfgLocationEditor
+          key={location ?? ""}
+          postId={id}
+          initialLocation={location}
+          hasOwnAddress={viewerHasOwnAddress}
+        />
+      )}
 
       <p className="leading-relaxed">{description}</p>
 
@@ -130,6 +158,10 @@ export function LfgDetailView({
         )}
       </div>
 
+      {attachments && (
+        <LfgAttachmentsSection postId={id} attachments={attachments} />
+      )}
+
       <div className="flex flex-wrap gap-3">
         {!isParticipant && (
           <ActionButton
@@ -162,6 +194,6 @@ export function LfgDetailView({
           </ActionButton>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

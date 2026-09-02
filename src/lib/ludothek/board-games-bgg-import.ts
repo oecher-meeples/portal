@@ -10,6 +10,7 @@ import {
 } from "@/lib/bgg/client";
 import { translateToGerman } from "@/lib/bgg/translate";
 import { translateMechanics } from "@/lib/ludothek/mechanics-translations";
+import { translateCategories } from "@/lib/ludothek/category-translations";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { searchYoutubeVideos } from "@/lib/youtube/client";
 
@@ -45,14 +46,15 @@ export async function searchBggGamesAction(query: string) {
  * so geht beim Import nichts verloren, der Admin übersetzt später über den
  * "Übersetzen"-Button im Titel-Editor (`translateDescription()` unten).
  */
-async function translateBggGameData(
+export async function translateBggGameData(
   data: BggGameData,
 ): Promise<{ data: BggGameData; descriptionTranslationFailed: boolean }> {
   const mechanics = translateMechanics(data.mechanics);
+  const categories = translateCategories(data.categories);
 
   if (!data.description) {
     return {
-      data: { ...data, mechanics },
+      data: { ...data, mechanics, categories },
       descriptionTranslationFailed: false,
     };
   }
@@ -60,7 +62,7 @@ async function translateBggGameData(
   try {
     const description = await translateToGerman(data.description);
     return {
-      data: { ...data, description, mechanics },
+      data: { ...data, description, mechanics, categories },
       descriptionTranslationFailed: false,
     };
   } catch (error) {
@@ -69,7 +71,7 @@ async function translateBggGameData(
       error,
     );
     return {
-      data: { ...data, mechanics },
+      data: { ...data, mechanics, categories },
       descriptionTranslationFailed: true,
     };
   }

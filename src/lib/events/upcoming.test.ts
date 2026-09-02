@@ -5,7 +5,10 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const {
   findUpcomingEvents,
+  findUpcomingEventsVisibleToMembers,
   findUpcomingBringAndBuyEvents,
+  findOpenHelperRequestEvent,
+  hasOpenHelperRequest,
   isBringAndBuyMarketOpen,
   isEventCurrentlyRunning,
   resolveSelectedEventId,
@@ -48,6 +51,57 @@ describe("isEventCurrentlyRunning", () => {
       },
       select: { id: true },
     });
+  });
+});
+
+describe("hasOpenHelperRequest", () => {
+  it("is true when an upcoming event has helpersWanted set", async () => {
+    prismaMock.event.findFirst.mockResolvedValue({
+      id: "event-1",
+      title: "Spieletag",
+    } as never);
+
+    expect(await hasOpenHelperRequest()).toBe(true);
+    expect(prismaMock.event.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({ helpersWanted: true }),
+      orderBy: { startsAt: "asc" },
+      select: { id: true, title: true },
+    });
+  });
+
+  it("is false when no upcoming event has an open helper request", async () => {
+    prismaMock.event.findFirst.mockResolvedValue(null);
+
+    expect(await hasOpenHelperRequest()).toBe(false);
+  });
+});
+
+describe("findOpenHelperRequestEvent", () => {
+  it("returns the earliest upcoming event with an open helper request", async () => {
+    prismaMock.event.findFirst.mockResolvedValue({
+      id: "event-1",
+      title: "Spieletag",
+    } as never);
+
+    const result = await findOpenHelperRequestEvent();
+
+    expect(result).toEqual({ id: "event-1", title: "Spieletag" });
+  });
+
+  it("returns null when nothing matches", async () => {
+    prismaMock.event.findFirst.mockResolvedValue(null);
+
+    expect(await findOpenHelperRequestEvent()).toBeNull();
+  });
+
+  it("does not filter by visibility — an Entwurf-Event with helpersWanted still counts", async () => {
+    await findOpenHelperRequestEvent();
+
+    expect(prismaMock.event.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.not.objectContaining({ visibility: expect.anything() }),
+      }),
+    );
   });
 });
 
@@ -94,6 +148,26 @@ describe("findUpcomingEvents", () => {
     expect(prismaMock.event.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         select: { id: true, slug: true, startsAt: true },
+      }),
+    );
+  });
+});
+
+describe("findUpcomingEventsVisibleToMembers", () => {
+  it("includes non-Entwurf events, or Entwurf events with helpersWanted", async () => {
+    prismaMock.event.findMany.mockResolvedValue([]);
+
+    await findUpcomingEventsVisibleToMembers();
+
+    expect(prismaMock.event.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            {
+              OR: [{ visibility: { not: "DRAFT" } }, { helpersWanted: true }],
+            },
+          ]),
+        }),
       }),
     );
   });

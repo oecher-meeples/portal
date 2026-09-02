@@ -3,49 +3,44 @@
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   buildRegistrationLink,
-  DEFAULT_BOUND_DAYS,
-  DEFAULT_UNBOUND_DAYS,
   formatInviteMessage,
-  MAX_INVITE_DAYS,
 } from "@/lib/members/invites";
+import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
-export function InviteForm() {
-  const [unbound, setUnbound] = useState(false);
-  const [email, setEmail] = useState("");
-  const [days, setDays] = useState<number>(DEFAULT_BOUND_DAYS);
+export function InviteForm({
+  membersWithoutLogin,
+  defaultDays,
+}: {
+  membersWithoutLogin: MemberWithoutLoginRow[];
+  /** Zentraler Wert aus `/admin/einstellungen/einladungen` (#349) — hier nur
+   * noch angezeigt, nicht mehr pro Einladung überschreibbar. */
+  defaultDays: number;
+}) {
+  const [memberId, setMemberId] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<{
     token: string;
+    email: string;
     expiresAt: string;
     extended: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function handleUnboundChange(checked: boolean) {
-    setUnbound(checked);
-    setDays(checked ? DEFAULT_UNBOUND_DAYS : DEFAULT_BOUND_DAYS);
-  }
-
   async function handleCreateInvite() {
+    if (!memberId) {
+      setError("Bitte ein Mitglied auswählen.");
+      return;
+    }
     setIsPending(true);
     setError(null);
 
     try {
-      const created = await createInvite({
-        email: unbound ? null : email,
-        days,
-      });
-      setResult({
-        token: created.token,
-        expiresAt: created.expiresAt,
-        extended: created.extended,
-      });
+      const created = await createInvite({ memberId });
+      setResult(created);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -58,16 +53,12 @@ export function InviteForm() {
   }
 
   const inviteLink = result
-    ? buildRegistrationLink(
-        window.location.origin,
-        result.token,
-        unbound ? null : email,
-      )
+    ? buildRegistrationLink(window.location.origin, result.token, result.email)
     : null;
 
   const mailtoHref =
     inviteLink && result
-      ? `mailto:${unbound ? "" : email}?subject=${encodeURIComponent(
+      ? `mailto:${result.email}?subject=${encodeURIComponent(
           "Einladung zu Oecher Meeples",
         )}&body=${encodeURIComponent(
           formatInviteMessage(inviteLink, new Date(result.expiresAt)),
@@ -76,42 +67,38 @@ export function InviteForm() {
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="font-serif text-lg font-bold">Neues Mitglied einladen</h2>
+      <h2 className="font-serif text-lg font-bold">Einladung erstellen</h2>
+      <p className="text-muted-foreground text-sm">
+        Eine Einladung ist immer an ein bestehendes Vereinsmitglied gebunden —
+        die E-Mail-Adresse kommt aus dessen Stammdaten. Gültigkeitsdauer:{" "}
+        {defaultDays} {defaultDays === 1 ? "Tag" : "Tage"} (zentral in den
+        Einladungseinstellungen hinterlegt).
+      </p>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={unbound}
-          onChange={(event) => handleUnboundChange(event.target.checked)}
-        />
-        Ungebundene Einladung (mehrfach nutzbar, keine E-Mail-Bindung)
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-[2fr_1fr_auto]">
-        <TextField
-          id="invite-email"
-          type="email"
-          label="E-Mail-Adresse"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={unbound}
-          required={!unbound}
-        />
+      <div className="grid gap-4 sm:grid-cols-[2fr_auto]">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-days">Gültigkeit (Tage)</Label>
-          <Input
-            id="invite-days"
-            type="number"
-            min={0}
-            max={MAX_INVITE_DAYS}
-            step={0.5}
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value))}
-          />
+          <Label htmlFor="invite-member">Mitglied</Label>
+          <select
+            id="invite-member"
+            value={memberId}
+            onChange={(event) => setMemberId(event.target.value)}
+            className="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+          >
+            <option value="" disabled>
+              {membersWithoutLogin.length === 0
+                ? "Keine Mitglieder ohne Login vorhanden"
+                : "Mitglied ohne Login wählen …"}
+            </option>
+            {membersWithoutLogin.map((member) => (
+              <option key={member.id} value={member.id}>
+                #{member.memberNumber} {member.displayName} ({member.email})
+              </option>
+            ))}
+          </select>
         </div>
         <Button
           onClick={handleCreateInvite}
-          disabled={isPending}
+          disabled={isPending || !memberId}
           className="self-end"
         >
           <UserPlus />
@@ -125,12 +112,13 @@ export function InviteForm() {
         <div className="flex flex-col gap-2">
           {result?.extended ? (
             <p className="text-sm">
-              E-Mail wurde bereits eingeladen, Gültigkeitsdauer wurde
-              verlängert.
+              Für dieses Mitglied lag bereits eine offene Einladung vor, die
+              Gültigkeitsdauer wurde verlängert.
             </p>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Registrierungslink ({days} {days === 1 ? "Tag" : "Tage"} gültig):
+              Registrierungslink ({defaultDays}{" "}
+              {defaultDays === 1 ? "Tag" : "Tage"} gültig):
             </p>
           )}
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">

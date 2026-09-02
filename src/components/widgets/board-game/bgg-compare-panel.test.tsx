@@ -4,7 +4,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { BggComparePanel } from "@/components/widgets/board-game/bgg-compare-panel";
+import { compareBoardGameWithBgg } from "@/lib/ludothek/board-game-bgg-compare";
 import type { BggGameData } from "@/lib/bgg/client";
+import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 
 afterEach(() => {
   cleanup();
@@ -20,6 +22,7 @@ const BGG_DATA: BggGameData = {
   imageUrl: "https://cf.geekdo-images.com/full.jpg",
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
+  categories: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,
   author: [],
@@ -31,111 +34,145 @@ const BGG_DATA: BggGameData = {
   englishExplainerVideos: [],
 };
 
-describe("BggComparePanel", () => {
-  it("shows every comparable BGG value", () => {
-    render(<BggComparePanel bggData={BGG_DATA} onChange={vi.fn()} />);
+const FORM: BoardGameFormValues = {
+  title: "Arche Nova",
+  secondaryTitle: "",
+  ean: "",
+  condition: "",
+  kind: BoardGameKind.BOARDGAME,
+  bggId: "342942",
+  minPlayers: "1",
+  maxPlayers: "4",
+  playTimeMinutes: "150",
+  weight: "3.7",
+  averageRating: "8.5",
+  imageUrl: "https://cf.geekdo-images.com/full.jpg",
+  description: "Baue einen modernen Zoo.",
+  mechanics: "Kartenspiel, Engine-Building",
+  categories: "",
+  explainerVideoUrl: "",
+  languageDependence: LanguageDependence.MODERATE_TEXT,
+  ruleBookLanguages: [],
+  publisher: "",
+  author: "",
+  yearPublished: "",
+};
 
+function renderPanel(
+  overrides: {
+    form?: BoardGameFormValues;
+    bggData?: BggGameData;
+    onChange?: (patch: Partial<BoardGameFormValues>) => void;
+    onDone?: () => void;
+  } = {},
+) {
+  const form = overrides.form ?? FORM;
+  const bggData = overrides.bggData ?? BGG_DATA;
+  return render(
+    <BggComparePanel
+      bggData={bggData}
+      form={form}
+      compareStatus={compareBoardGameWithBgg(form, bggData)}
+      onChange={overrides.onChange ?? vi.fn()}
+      onDone={overrides.onDone ?? vi.fn()}
+    />,
+  );
+}
+
+describe("BggComparePanel", () => {
+  it("shows only fields that actually differ, not the whole comparison", () => {
+    // Only the title differs from FORM here.
+    renderPanel();
+
+    expect(screen.getByText("Arche Nova")).toBeInTheDocument();
     expect(screen.getByText("Ark Nova")).toBeInTheDocument();
-    expect(screen.getByText("Baue einen modernen Zoo.")).toBeInTheDocument();
     expect(
-      screen.getByText("Kartenspiel, Engine-Building"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("https://cf.geekdo-images.com/full.jpg"),
-    ).toBeInTheDocument();
+      screen.queryByText("Baue einen modernen Zoo."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("says so when nothing differs", () => {
+    renderPanel({ bggData: { ...BGG_DATA, title: "Arche Nova" } });
+
+    expect(screen.getByText("Keine Abweichungen mehr.")).toBeInTheDocument();
+  });
+
+  it("applies the BGG value and removes the row on click", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPanel({ onChange });
+
+    await user.click(
+      screen.getByRole("button", { name: "Titel: BGG-Wert übernehmen" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({ title: "Ark Nova" });
+    expect(screen.getByText("Keine Abweichungen mehr.")).toBeInTheDocument();
+  });
+
+  it("keeps the old value without patching the form, and still removes the row", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPanel({ onChange });
+
+    await user.click(
+      screen.getByRole("button", { name: "Titel: bisherigen Wert behalten" }),
+    );
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText("Keine Abweichungen mehr.")).toBeInTheDocument();
+  });
+
+  it("shows and applies a categories diff (#404)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPanel({
+      onChange,
+      bggData: { ...BGG_DATA, title: "Arche Nova", categories: ["Party"] },
+    });
+
+    expect(screen.getByText("Party")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Kategorien: BGG-Wert übernehmen" }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({ categories: "Party" });
   });
 
   it("shows a dash for fields BGG has no value for", () => {
-    render(
-      <BggComparePanel
-        bggData={{ ...BGG_DATA, minPlayers: null, description: null }}
-        onChange={vi.fn()}
-      />,
-    );
+    renderPanel({ bggData: { ...BGG_DATA, minPlayers: null } });
 
-    const dashes = screen.getAllByText("—");
-    expect(dashes.length).toBeGreaterThan(0);
-  });
-
-  it("applies the title via its Übernehmen button", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
-
-    await user.click(screen.getByRole("button", { name: "Titel übernehmen" }));
-
-    expect(onChange).toHaveBeenCalledWith({ title: "Ark Nova" });
-  });
-
-  it("applies mechanics as a formatted, comma-separated string", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
-
-    await user.click(
-      screen.getByRole("button", { name: "Mechaniken übernehmen" }),
-    );
-
-    expect(onChange).toHaveBeenCalledWith({
-      mechanics: "Kartenspiel, Engine-Building",
-    });
-  });
-
-  it("applies numeric fields as strings", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
-
-    await user.click(
-      screen.getByRole("button", { name: "Spieler von übernehmen" }),
-    );
-
-    expect(onChange).toHaveBeenCalledWith({ minPlayers: "1" });
+    expect(
+      screen.getByRole("button", { name: "Spieler von: BGG-Wert übernehmen" }),
+    ).toHaveTextContent("—");
   });
 
   it("shows and applies the kind (Art) BGG reports (#202)", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(
-      <BggComparePanel
-        bggData={{ ...BGG_DATA, kind: BoardGameKind.BOARDGAME_EXPANSION }}
-        onChange={onChange}
-      />,
-    );
+    renderPanel({
+      bggData: { ...BGG_DATA, kind: BoardGameKind.BOARDGAME_EXPANSION },
+      onChange,
+    });
 
     expect(screen.getByText("Erweiterung")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Art übernehmen" }));
+    await user.click(
+      screen.getByRole("button", { name: "Art: BGG-Wert übernehmen" }),
+    );
 
     expect(onChange).toHaveBeenCalledWith({
       kind: BoardGameKind.BOARDGAME_EXPANSION,
     });
   });
 
-  it("shows and applies the language dependence BGG reports (#188)", async () => {
+  it("calls onDone when 'Fertig' is clicked", async () => {
     const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<BggComparePanel bggData={BGG_DATA} onChange={onChange} />);
+    const onDone = vi.fn();
+    renderPanel({ onDone });
 
-    expect(
-      screen.getByText("Mäßig viel Text – Spickzettel oder Aufkleber nötig"),
-    ).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "Sprachabhängigkeit übernehmen" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Fertig" }));
 
-    expect(onChange).toHaveBeenCalledWith({
-      languageDependence: LanguageDependence.MODERATE_TEXT,
-    });
-  });
-
-  it("shows a dash when BGG has no language dependence poll result", () => {
-    render(
-      <BggComparePanel
-        bggData={{ ...BGG_DATA, languageDependence: null }}
-        onChange={vi.fn()}
-      />,
-    );
-
-    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    expect(onDone).toHaveBeenCalled();
   });
 });

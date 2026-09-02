@@ -153,6 +153,64 @@ describe("CreateBoardGameDialog — manueller Wizard-Durchlauf (EAN-Scan)", () =
   });
 });
 
+describe("CreateBoardGameDialog — ungültige EAN beim Speichern (#322)", () => {
+  it("shows a recovery popup instead of a plain error and saves without the EAN on confirm", async () => {
+    const user = userEvent.setup();
+    createBoardGameMock
+      .mockResolvedValueOnce({
+        error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+        invalidEan: true,
+      })
+      .mockResolvedValueOnce({ success: true, id: "game-1", hint: undefined });
+
+    render(<CreateBoardGameDialog defaultEan="FEU001" />);
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
+    await goNext(dialog, user);
+    await user.click(submitButton(dialog));
+
+    expect(
+      await within(dialog).findByText("Fehlerhafte EAN gefunden"),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "EAN löschen und speichern" }),
+    );
+
+    await waitFor(() => expect(createBoardGameMock).toHaveBeenCalledTimes(2));
+    expect(createBoardGameMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: "Arche Nova", ean: "" }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("dismisses the popup back to a correctable form on Zurück, without resubmitting", async () => {
+    const user = userEvent.setup();
+    createBoardGameMock.mockResolvedValue({
+      error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
+    });
+
+    render(<CreateBoardGameDialog defaultEan="FEU001" />);
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
+    await goNext(dialog, user);
+    await user.click(submitButton(dialog));
+    const heading = await within(dialog).findByText("Fehlerhafte EAN gefunden");
+    const recovery = within(heading.closest("div") as HTMLElement);
+
+    await user.click(recovery.getByRole("button", { name: "Zurück" }));
+
+    expect(
+      screen.queryByText("Fehlerhafte EAN gefunden"),
+    ).not.toBeInTheDocument();
+    expect(createBoardGameMock).toHaveBeenCalledTimes(1);
+    expect(dialog).toBeInTheDocument();
+  });
+});
+
 describe("CreateBoardGameDialog — Wizard-Navigation", () => {
   it("skips the BGG-import step and lands on the review step with a blank form", async () => {
     const user = userEvent.setup();

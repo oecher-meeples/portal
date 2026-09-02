@@ -3,59 +3,32 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
-import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
 
-export async function bookShift(shiftId: string, uncertain: boolean) {
-  const meeple = await requireMeeple();
-
-  const [shift, existingBooking] = await Promise.all([
-    prisma.shift.findUnique({
-      where: { id: shiftId },
-      include: { bookings: { select: { uncertain: true } } },
-    }),
-    prisma.shiftBooking.findUnique({
-      where: { shiftId_meepleId: { shiftId, meepleId: meeple.id } },
-    }),
-  ]);
-
-  if (!shift) {
-    return { error: "Schicht nicht gefunden." };
-  }
-  if (existingBooking) {
-    return { error: "Du bist bereits für diese Schicht eingetragen." };
-  }
-  if (computeShiftFillLevel(shift, shift.bookings).isFull) {
-    return { error: "Diese Schicht ist bereits voll." };
-  }
-
-  await prisma.shiftBooking.create({
-    data: { shiftId, meepleId: meeple.id, uncertain },
-  });
-
-  revalidatePath("/helfer");
-  return { success: true as const };
-}
-
-export async function updateBookingCertainty(
-  shiftId: string,
-  uncertain: boolean,
-) {
+/**
+ * Ein Meeple bestätigt eine ihm zugewiesene Schicht (Schichtplan-Editor,
+ * #159) — bis dahin gilt die Zuweisung als unbestätigt (`confirmedAt`
+ * null). Kein Selbstbuchungs-Flow mehr: Zuweisungen entstehen nur noch per
+ * Admin-Drag&Drop, nicht durch das Meeple selbst.
+ */
+export async function confirmOwnShiftBooking(shiftId: string) {
   const meeple = await requireMeeple();
 
   const updated = await prisma.shiftBooking.updateMany({
-    where: { shiftId, meepleId: meeple.id },
-    data: { uncertain },
+    where: { shiftId, meepleId: meeple.id, confirmedAt: null },
+    data: { confirmedAt: new Date() },
   });
 
   if (updated.count === 0) {
-    return { error: "Keine eigene Buchung für diese Schicht gefunden." };
+    return { error: "Keine offene Zuweisung für diese Schicht gefunden." };
   }
 
   revalidatePath("/helfer");
   return { success: true as const };
 }
 
-export async function cancelBooking(shiftId: string) {
+/** Ein Meeple lehnt eine ihm zugewiesene Schicht ab — entfernt die eigene
+ * Zuweisung, unabhängig vom Bestätigungsstatus. */
+export async function declineOwnShiftBooking(shiftId: string) {
   const meeple = await requireMeeple();
 
   await prisma.shiftBooking.deleteMany({

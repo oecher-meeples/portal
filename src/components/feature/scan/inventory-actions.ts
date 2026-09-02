@@ -4,6 +4,10 @@ import { GameInventoryStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
 import { requirePermission } from "@/lib/auth/permissions";
+import {
+  GAME_ISSUE_LABELS,
+  type GameIssueKind,
+} from "@/components/feature/scan/game-issue-labels";
 
 export async function confirmGameCondition(
   gameCopyId: string,
@@ -23,7 +27,11 @@ export async function confirmGameCondition(
   return { success: true as const };
 }
 
-export async function reportGameDefect(gameCopyId: string, note: string) {
+export async function reportGameDefect(
+  gameCopyId: string,
+  kind: GameIssueKind,
+  note: string,
+) {
   await requireMeeple();
 
   if (!note.trim()) {
@@ -33,7 +41,7 @@ export async function reportGameDefect(gameCopyId: string, note: string) {
   await prisma.gameCopy.update({
     where: { id: gameCopyId },
     data: {
-      condition: note.trim(),
+      condition: `${GAME_ISSUE_LABELS[kind]}: ${note.trim()}`,
       lastCheckedAt: new Date(),
       status: GameInventoryStatus.MAINTENANCE,
     },
