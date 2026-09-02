@@ -23,6 +23,9 @@ export type DemoFamilyParent = {
   street: string;
   postalCode: string;
   city: string;
+  /** Kinder (JungSohn/MiniTochter) bekommen bewusst keine IBAN — sie sind
+   * nicht die Beitragszahler:innen der Familie. */
+  iban: string;
 };
 
 export type DemoFamilyChild = {
@@ -47,6 +50,7 @@ export const DEMO_FAMILY_VATER: DemoFamilyParent = {
   lastName: "Musterfamilie",
   birthDate: new Date("1985-04-12"),
   ...DEMO_FAMILY_ADDRESS,
+  iban: "DE76250202000004445556",
 };
 
 export const DEMO_FAMILY_MUTTER: DemoFamilyParent = {
@@ -59,6 +63,7 @@ export const DEMO_FAMILY_MUTTER: DemoFamilyParent = {
   lastName: "Musterfamilie",
   birthDate: new Date("1987-09-03"),
   ...DEMO_FAMILY_ADDRESS,
+  iban: "DE40760200700005556667",
 };
 
 /** ~14 Jahre alt zum Zeitpunkt des Anlegens — Beitragskategorie "jung". */
