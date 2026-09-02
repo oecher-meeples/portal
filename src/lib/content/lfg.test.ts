@@ -6,9 +6,12 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 const {
   getLfgStatus,
   isLfgExpired,
+  isLfgAttachmentEligible,
   getLfgParticipantDisplayName,
   getOpenLfgPostsForBoardGame,
   getBoardGameIdsWithOpenLfgPosts,
+  matchesLfgTimeframeFilter,
+  parseLfgSearchParams,
 } = await import("./lfg");
 
 const NOW = new Date("2026-08-01T12:00:00Z");
@@ -213,5 +216,94 @@ describe("getBoardGameIdsWithOpenLfgPosts", () => {
         },
       }),
     );
+  });
+});
+
+describe("matchesLfgTimeframeFilter", () => {
+  it("treats a post without a planned date as bevorstehend only", () => {
+    expect(
+      matchesLfgTimeframeFilter({ plannedAt: null }, "bevorstehend", NOW),
+    ).toBe(true);
+    expect(
+      matchesLfgTimeframeFilter({ plannedAt: null }, "abgelaufen", NOW),
+    ).toBe(false);
+  });
+
+  it("matches a past date only as abgelaufen", () => {
+    const past = { plannedAt: new Date("2026-07-01T00:00:00Z") };
+    expect(matchesLfgTimeframeFilter(past, "abgelaufen", NOW)).toBe(true);
+    expect(matchesLfgTimeframeFilter(past, "bevorstehend", NOW)).toBe(false);
+  });
+
+  it("matches a future date only as bevorstehend", () => {
+    const future = { plannedAt: new Date("2026-09-01T00:00:00Z") };
+    expect(matchesLfgTimeframeFilter(future, "abgelaufen", NOW)).toBe(false);
+    expect(matchesLfgTimeframeFilter(future, "bevorstehend", NOW)).toBe(true);
+  });
+
+  it("counts a post planned for today as both abgelaufen and bevorstehend (#409)", () => {
+    // NOW ist 2026-08-01T12:00:00Z — ein früherer Zeitpunkt am selben Tag
+    // gilt für den Zeitraum-Filter trotzdem als "heute", nicht als "abgelaufen".
+    const today = { plannedAt: new Date("2026-08-01T06:00:00Z") };
+    expect(matchesLfgTimeframeFilter(today, "abgelaufen", NOW)).toBe(true);
+    expect(matchesLfgTimeframeFilter(today, "bevorstehend", NOW)).toBe(true);
+  });
+});
+
+describe("isLfgAttachmentEligible", () => {
+  it("is false without a planned date", () => {
+    expect(isLfgAttachmentEligible({ plannedAt: null }, NOW)).toBe(false);
+  });
+
+  it("is true for a date in the past", () => {
+    expect(
+      isLfgAttachmentEligible(
+        { plannedAt: new Date("2026-07-01T00:00:00Z") },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is true for today", () => {
+    expect(isLfgAttachmentEligible({ plannedAt: NOW }, NOW)).toBe(true);
+  });
+
+  it("is false for a future date", () => {
+    expect(
+      isLfgAttachmentEligible(
+        { plannedAt: new Date("2026-09-01T00:00:00Z") },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("parseLfgSearchParams", () => {
+  it("returns no filters when nothing is set", () => {
+    expect(parseLfgSearchParams({})).toEqual({
+      boardGameId: undefined,
+      status: undefined,
+      zeitraum: undefined,
+    });
+  });
+
+  it("parses all three filters", () => {
+    expect(
+      parseLfgSearchParams({
+        spiel: "board-1",
+        status: "frei",
+        zeitraum: "abgelaufen",
+      }),
+    ).toEqual({
+      boardGameId: "board-1",
+      status: "frei",
+      zeitraum: "abgelaufen",
+    });
+  });
+
+  it("ignores an invalid status/zeitraum value", () => {
+    expect(
+      parseLfgSearchParams({ status: "geschlossen", zeitraum: "irgendwann" }),
+    ).toEqual({ boardGameId: undefined, status: undefined, zeitraum: undefined });
   });
 });

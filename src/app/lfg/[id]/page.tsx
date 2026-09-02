@@ -4,7 +4,11 @@ import {
   hasPermissionInCurrentView,
 } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
-import { getLfgParticipantDisplayName, getLfgStatus } from "@/lib/content/lfg";
+import {
+  getLfgParticipantDisplayName,
+  getLfgStatus,
+  isLfgAttachmentEligible,
+} from "@/lib/content/lfg";
 import { getContactLinks, meepleEmail } from "@/lib/members/contact";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
 import { formatDateMedium } from "@/lib/utils/format";
@@ -36,6 +40,10 @@ export default async function LfgDetailPage({
           addedBy: { select: { displayName: true } },
         },
       },
+      attachments: {
+        include: { uploadedBy: { select: { displayName: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
   if (!post) notFound();
@@ -51,6 +59,14 @@ export default async function LfgDetailPage({
   const viewerIsParticipant = post.participants.some(
     (p) => p.meepleId === meeple.id,
   );
+  // Ortsfeld editierbar (#166): Ersteller immer, beigetretene Teilnehmer nur
+  // bei aktivem `participantsMayEditLocation` — analog `canAddGuest`.
+  const canEditLocation =
+    isCreator || (post.participantsMayEditLocation && viewerIsParticipant);
+  // Datei-Bereich (#283) nur für Teilnehmer eines heute geplanten oder
+  // abgelaufenen Gesuchs — `undefined` statt `[]` blendet den Bereich in
+  // `LfgDetailView` komplett aus, statt ihn leer zu zeigen.
+  const showAttachments = viewerIsParticipant && isLfgAttachmentEligible(post);
 
   return (
     <LfgDetailView
@@ -85,6 +101,20 @@ export default async function LfgDetailPage({
       viewerMeepleId={meeple.id}
       canClose={isCreator || canManageMembers}
       guestsMayBringGuests={post.guestsMayBringGuests}
+      canEditLocation={canEditLocation}
+      viewerHasOwnAddress={Boolean(meeple.address)}
+      attachments={
+        showAttachments
+          ? post.attachments.map((attachment) => ({
+              id: attachment.id,
+              url: attachment.url,
+              filename: attachment.filename,
+              uploadedByName: attachment.uploadedBy.displayName,
+              canDelete:
+                attachment.uploadedByMeepleId === meeple.id || isCreator,
+            }))
+          : undefined
+      }
     />
   );
 }

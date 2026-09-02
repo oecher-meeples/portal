@@ -31,6 +31,15 @@ const YEARS_PER_RANGE = 25;
 type View = "year" | "month" | "day";
 type SelectedDate = { year: number; month: number; day: number } | null;
 
+/** Startansicht beim Öffnen des Popups — siehe `DatePicker`-Prop `openAt`. */
+type OpenAt = "Year" | "Month" | "Date";
+
+function viewForOpenAt(openAt: OpenAt): View {
+  if (openAt === "Month") return "month";
+  if (openAt === "Date") return "day";
+  return "year";
+}
+
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
@@ -141,20 +150,25 @@ function DatePickerPanel({
   selected,
   onSelect,
   validate,
+  openAt,
 }: {
   selected: SelectedDate;
   onSelect: (date: SelectedDate) => void;
   /** Live-Review F4 — ohne `validate` verhält sich die Komponente wie in F3,
    * kein Tag gesperrt. */
   validate?: Validator;
+  openAt: OpenAt;
 }) {
   const today = new Date();
-  // Startansicht ist immer 'year' (Live-Review F3, nachträgliche
+  // Startansicht ist standardmäßig 'year' (Live-Review F3, nachträgliche
   // Klarstellung) — auch mit vorhandenem `selected` nicht direkt in
-  // Monats-/Tagesansicht springen. `year`/`month`/`yearRangeStart` werden
-  // trotzdem sinnvoll aus `selected` vorbelegt, damit die Jahres-Range das
-  // ausgewählte Jahr enthält und hervorgehoben ist.
-  const [view, setView] = useState<View>("year");
+  // Monats-/Tagesansicht springen. Aufrufer können das per `openAt`
+  // überschreiben (z. B. LFG-Dialog: Termine liegen immer nahe der
+  // Gegenwart, Jahresauswahl ist dort unnötiger Zwischenschritt).
+  // `year`/`month`/`yearRangeStart` werden unabhängig davon sinnvoll aus
+  // `selected` vorbelegt, damit die Jahres-Range das ausgewählte Jahr enthält
+  // und hervorgehoben ist.
+  const [view, setView] = useState<View>(viewForOpenAt(openAt));
   const [year, setYear] = useState(selected?.year ?? today.getFullYear());
   const [month, setMonth] = useState(selected?.month ?? today.getMonth());
   const [yearRangeStart, setYearRangeStart] = useState(
@@ -342,6 +356,7 @@ export function DatePicker({
   fieldClassName,
   required,
   disabled,
+  openAt = "Year",
 }: {
   id: string;
   label: ReactNode;
@@ -356,6 +371,12 @@ export function DatePicker({
   fieldClassName?: string;
   required?: boolean;
   disabled?: boolean;
+  /** Startansicht beim Öffnen des Popups. Default `"Year"` — kein
+   * Verhaltensbruch für bestehende Aufrufer. Für Termine nahe der Gegenwart
+   * (z. B. LFG-Dialog) `"Month"`, um die unnötige Jahresauswahl zu
+   * überspringen; Navigation zur Jahresansicht bleibt über den
+   * Jahres-Button in der Monatsansicht weiterhin möglich. */
+  openAt?: OpenAt;
 }) {
   const [open, setOpen] = useState(false);
   const popupId = useId();
@@ -399,6 +420,7 @@ export function DatePicker({
               <DatePickerPanel
                 selected={selected}
                 validate={validate}
+                openAt={openAt}
                 onSelect={(date) => {
                   onChange(formatValue(date));
                   setOpen(false);
