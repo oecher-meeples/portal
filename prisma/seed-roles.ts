@@ -14,6 +14,11 @@ const PERMISSIONS = [
   },
   { key: "members:manage", description: "Mitgliederverwaltung" },
   {
+    key: "members:manage-system-accounts",
+    description:
+      "Meeple-Profile als System-Konto markieren/entmarkieren (#297) — schließt sie aus Mitgliederzählungen aus",
+  },
+  {
     key: "roles:manage",
     description:
       "Rollen und deren Rechte bearbeiten (#365) — bewusst getrennt von members:manage, damit nicht jeder Mitglieder-Admin auch die Rollenverwaltung selbst ändern kann",
@@ -113,6 +118,7 @@ const ROLES = [
       "Vereinsvorstand — verwaltet Mitglieder, Einladungen, Events, Ludothek, Downloads, Rechtliches und wichtige Links",
     permissionKeys: [
       "members:manage",
+      "members:manage-system-accounts",
       "invites:manage",
       "events:manage",
       "games:manage",

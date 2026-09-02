@@ -45,6 +45,13 @@ async function requireRolesManage() {
   return requirePermission("roles:manage");
 }
 
+/** #297: eigene Permission statt `members:manage`, damit nicht jeder
+ * Mitglieder-Admin auch Mitgliederzählungen manipulieren kann — analog
+ * `roles:manage`. */
+async function requireManageSystemAccounts() {
+  return requirePermission("members:manage-system-accounts");
+}
+
 /** How many games and units currently sit with this Meeple, for the confirmation dialog. */
 export async function getOpenHoldingsSummary(meepleId: string) {
   await requireMembersManage();
@@ -139,6 +146,25 @@ export async function renameMeeple(meepleId: string, displayName: string) {
   await prisma.meeple.update({
     where: { id: meepleId },
     data: { displayName: trimmed },
+  });
+
+  revalidatePath("/admin/mitglieder");
+  return { success: true as const };
+}
+
+/** Setzt/entfernt die "System-Konto"-Markierung (#297) — schließt das
+ * Meeple aus Mitgliederzählungen aus (`buildVereinsmitgliedRows`), unabhängig
+ * davon, ob ein `Member` verknüpft ist. Ergänzt `createSystemkonto()` (Login
+ * ohne `Member`), ersetzt es nicht. */
+export async function setMeepleSystemAccount(
+  meepleId: string,
+  isSystemAccount: boolean,
+) {
+  await requireManageSystemAccounts();
+
+  await prisma.meeple.update({
+    where: { id: meepleId },
+    data: { isSystemAccount },
   });
 
   revalidatePath("/admin/mitglieder");

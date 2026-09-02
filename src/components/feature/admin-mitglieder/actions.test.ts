@@ -63,6 +63,7 @@ const {
   revealMemberIban,
   revokeResignation,
   setMemberNumber,
+  setMeepleSystemAccount,
 } = await import("./actions");
 
 class ForbiddenError extends Error {}
@@ -104,9 +105,41 @@ describe("without the members:manage permission", () => {
     await expect(renameMeeple("meeple-1", "Neuer Name")).rejects.toThrow(
       ForbiddenError,
     );
+    await expect(setMeepleSystemAccount("meeple-1", true)).rejects.toThrow(
+      ForbiddenError,
+    );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
     expect(anonymiseMeepleStufe1Mock).not.toHaveBeenCalled();
+  });
+});
+
+describe("setMeepleSystemAccount (#297)", () => {
+  it("requires members:manage-system-accounts, not members:manage", async () => {
+    await setMeepleSystemAccount("meeple-1", true);
+
+    expect(requirePermissionMock).toHaveBeenCalledWith(
+      "members:manage-system-accounts",
+    );
+  });
+
+  it("sets the flag and revalidates", async () => {
+    const result = await setMeepleSystemAccount("meeple-1", true);
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { isSystemAccount: true },
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it("can remove the flag again", async () => {
+    await setMeepleSystemAccount("meeple-1", false);
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { isSystemAccount: false },
+    });
   });
 });
 

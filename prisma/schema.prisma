@@ -225,6 +225,14 @@ model Meeple {
   displayName               String
   joinedAt                  DateTime  @default(now())
   anonymizedAt              DateTime?
+  /// "System-Konto" (#297): schließt dieses Meeple aus Mitgliederzählungen
+  /// aus (Vereinsmitglieder-Tabelle/-Statistik), unabhängig davon, ob ein
+  /// `Member` verknüpft ist. Ergänzt, nicht ersetzt, `createSystemkonto()`
+  /// (Login ohne `Member`) — das eine ist ein Konto-Erzeugungsweg, das
+  /// andere eine nachträglich setz-/entfernbare Ausschluss-Markierung.
+  /// Ein anonymisiertes Meeple (`anonymizedAt`) zählt trotz dieses Flags
+  /// weiter mit (siehe `buildVereinsmitgliedRows`).
+  isSystemAccount           Boolean   @default(false)
   bggUsername               String?
   bgaUsername               String?
   telegramHandle            String?

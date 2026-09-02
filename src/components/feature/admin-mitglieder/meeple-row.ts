@@ -33,4 +33,6 @@ export type MeepleRow = {
   accountHolder: string | null;
   maskedIban: string;
   hasIban: boolean;
+  /** "System-Konto" (#297) — aus Mitgliederzählungen ausgenommen. */
+  isSystemAccount: boolean;
 };
