@@ -34,6 +34,11 @@ export type PostInput = {
   sendAsNewsletter?: boolean;
   newsletterCategory?: NewsletterCategory | null;
   coverImageUrl?: string;
+  /** Nur bei `type: "umfrage"` relevant (#2). `surveyEditLink` ist Pflicht
+   * bei Veröffentlichung, im Entwurf optional — siehe `validatePostInput()`. */
+  surveyDeadline?: string;
+  surveyEditLink?: string;
+  surveyAnalysisLink?: string;
 };
 
 function slugify(title: string) {
@@ -48,6 +53,15 @@ function slugify(title: string) {
 function validatePostInput(input: PostInput) {
   if (!input.title || !input.type || !input.date || !input.body) {
     return "Bitte Titel, Typ, Datum und Inhalt ausfüllen.";
+  }
+  // Der Umfrage-Link zum Bearbeiten/Auswerten muss spätestens bei der
+  // Veröffentlichung vorliegen — als Entwurf speichern geht ohne ihn (#2).
+  if (
+    input.type === "umfrage" &&
+    input.status === "PUBLISHED" &&
+    !input.surveyEditLink?.trim()
+  ) {
+    return "Bitte einen Bearbeiten-/Auswertungslink für die Umfrage angeben, um sie zu veröffentlichen.";
   }
   return null;
 }
@@ -102,6 +116,24 @@ function buildInstagramDetailsUpdate(
   return undefined;
 }
 
+/** Nested `surveyDetails`-Write für `post.create()`/`post.update()` — pflegt
+ * deadline/editLink/analysisLink nur bei `type: "umfrage"`, löscht die Zeile
+ * beim Wechsel auf einen anderen Typ (#2). */
+function buildSurveyDetailsUpdate(
+  input: PostInput,
+  hasExisting: boolean,
+): Prisma.PostUpdateInput["surveyDetails"] | undefined {
+  if (input.type !== "umfrage") {
+    return hasExisting ? { delete: true } : undefined;
+  }
+  const data = {
+    deadline: input.surveyDeadline ? new Date(input.surveyDeadline) : null,
+    editLink: input.surveyEditLink?.trim() || null,
+    analysisLink: input.surveyAnalysisLink?.trim() || null,
+  };
+  return hasExisting ? { update: data } : { create: data };
+}
+
 export async function createPost(input: PostInput) {
   const user = await getCurrentUser();
   if (!user) return { error: "Keine Berechtigung." };
@@ -118,6 +150,7 @@ export async function createPost(input: PostInput) {
   // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue eingereiht.
   const queueForInstagram =
     input.instagram && !input.internal && input.status === "PUBLISHED";
+  const surveyDetails = buildSurveyDetailsUpdate(input, false);
   const post = await prisma.post.create({
     data: {
       slug: slugify(input.title),
@@ -125,6 +158,7 @@ export async function createPost(input: PostInput) {
       ...(queueForInstagram
         ? { instagramDetails: { create: { status: InstagramStatus.PENDING } } }
         : {}),
+      ...(surveyDetails ? { surveyDetails } : {}),
     },
   });
 
@@ -154,6 +188,7 @@ export async function updatePost(id: string, input: PostInput) {
       internal: true,
       newsletterStatus: true,
       instagramDetails: { select: { id: true } },
+      surveyDetails: { select: { id: true } },
     },
   });
   if (!existing) {
@@ -173,12 +208,17 @@ export async function updatePost(id: string, input: PostInput) {
     input,
     Boolean(existing?.instagramDetails),
   );
+  const surveyDetails = buildSurveyDetailsUpdate(
+    input,
+    Boolean(existing?.surveyDetails),
+  );
 
   await prisma.post.update({
     where: { id },
     data: {
       ...toPostData(input),
       ...(instagramDetails ? { instagramDetails } : {}),
+      ...(surveyDetails ? { surveyDetails } : {}),
     },
   });
 

@@ -10,6 +10,9 @@ enum PostType {
   BLOG
   TERMIN
   TURNIER
+  /// Umfrage-Blog-Beitrag (#2): verlinkt im Freitext auf eine externe
+  /// Google-Umfrage, siehe `PostSurveyDetails`.
+  UMFRAGE
 }
 
 enum PostStatus {
@@ -563,6 +566,7 @@ model Post {
 
   dispatchJobs     NewsletterDispatchJob[]
   instagramDetails PostInstagramDetails?
+  surveyDetails    PostSurveyDetails?
 
   @@index([type, internal, date])
   @@map("posts")
@@ -585,6 +589,29 @@ model PostInstagramDetails {
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("post_instagram_details")
+}
+
+/// Umfrage-spezifische Felder eines `PostType.UMFRAGE`-Beitrags (#2),
+/// ausgelagert analog zu `PostInstagramDetails` — nur eine Minderheit der
+/// Beiträge ist eine Umfrage. `editLink`/`analysisLink` sind sensibel (nur
+/// im Admin-Editor sichtbar, siehe post-permissions.ts) und folgen exakt der
+/// Sichtbarkeitsregel des Posts selbst (`posts:public`/`posts:internal`) —
+/// keine eigene Permission. Der eigentliche Umfrage-Link (zum Ausfüllen)
+/// steht bewusst nicht hier, sondern als normaler Markdown-Link im
+/// `Post.body`-Freitext. `editLink` ist erst bei Veröffentlichung
+/// Pflichtfeld (App-Ebene, siehe validatePostInput) — deshalb hier
+/// nullable, wie `Post.title`/`.body` bei einem Entwurf auch keine
+/// DB-Constraint tragen.
+model PostSurveyDetails {
+  id           String    @id @default(cuid())
+  postId       String    @unique
+  deadline     DateTime?
+  editLink     String?
+  analysisLink String?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_survey_details")
 }
 
 /// A single opt-in list combining two sources: anonymous public sign-ups (need

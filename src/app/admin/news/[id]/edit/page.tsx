@@ -1,17 +1,12 @@
 ﻿import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
+import { DB_TO_TYPE } from "@/lib/content/content";
 import {
   canManagePostType,
   requirePostPermissions,
 } from "@/lib/content/post-permissions";
 import { prisma } from "@/lib/utils/prisma";
 import { PostForm } from "@/components/feature/admin-news/post-form";
-
-const DB_TO_TYPE = {
-  BLOG: "blog",
-  TERMIN: "termin",
-  TURNIER: "turnier",
-} as const;
 
 export default async function EditPostPage({
   params,
@@ -23,7 +18,10 @@ export default async function EditPostPage({
 
   const post = await prisma.post.findUnique({
     where: { id },
-    include: { instagramDetails: { select: { status: true } } },
+    include: {
+      instagramDetails: { select: { status: true } },
+      surveyDetails: true,
+    },
   });
   if (!post) notFound();
   // Direkter URL-Aufruf des jeweils falschen Beitragstyps (#321): wer nur
@@ -53,6 +51,11 @@ export default async function EditPostPage({
           newsletterCategory: post.newsletterCategory,
           coverImageUrl: post.coverImageUrl ?? undefined,
           instagramStatus: post.instagramDetails?.status,
+          surveyDeadline: post.surveyDetails?.deadline
+            ?.toISOString()
+            .slice(0, 10),
+          surveyEditLink: post.surveyDetails?.editLink ?? undefined,
+          surveyAnalysisLink: post.surveyDetails?.analysisLink ?? undefined,
         }}
       />
     </div>

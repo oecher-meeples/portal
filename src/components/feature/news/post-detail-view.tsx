@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Pencil, Share2 } from "lucide-react";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
+import { SurveyDeadlineBanner } from "@/components/entities/survey-deadline-banner";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "@/components/ui/markdown-content";
@@ -66,6 +67,9 @@ export async function PostDetailView({ item, canEdit }: PostDetailViewProps) {
         {item.author && <> · {item.author}</>}
         {item.location && <> · {item.location}</>}
       </p>
+      {item.type === "umfrage" && (
+        <SurveyDeadlineBanner deadline={item.surveyDeadline} />
+      )}
       <MarkdownContent body={item.body} />
       <ShareButton url={`${origin}/news/${item.slug}`} title={item.title} />
     </article>

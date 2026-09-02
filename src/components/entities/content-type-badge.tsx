@@ -5,6 +5,7 @@ const CONTENT_TYPE_META: Record<ContentType, { label: string; emoji: string }> =
     termin: { label: "Termin", emoji: "📅" },
     blog: { label: "Blog", emoji: "📰" },
     turnier: { label: "Turnier", emoji: "🏆" },
+    umfrage: { label: "Umfrage", emoji: "📊" },
   };
 
 export function ContentTypeBadge({ type }: { type: ContentType }) {

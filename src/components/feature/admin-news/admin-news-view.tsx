@@ -45,6 +45,7 @@ const TYPE_LABELS: Record<ContentType, string> = {
   termin: "Termin",
   blog: "Blog",
   turnier: "Turnier",
+  umfrage: "Umfrage",
 };
 
 /** Prüft ein boolesches Merkmal (z. B. `post.internal`) gegen einen
@@ -174,7 +175,9 @@ export function AdminNewsView({
           <TableBody>
             {visible.map((post) => {
               const contentType =
-                DB_TO_TYPE[post.type as "BLOG" | "TERMIN" | "TURNIER"];
+                DB_TO_TYPE[
+                  post.type as "BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE"
+                ];
               const typeLabel = TYPE_LABELS[contentType];
               const TypeIcon = getContentTypeIcon(contentType);
               const canEditThis = post.internal
