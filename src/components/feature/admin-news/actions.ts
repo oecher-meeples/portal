@@ -1,12 +1,16 @@
 "use server";
 
 import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
-import { InstagramStatus, type NewsletterCategory } from "@prisma/client";
+import {
+  InstagramStatus,
+  type NewsletterCategory,
+  type Prisma,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
-import { processPost } from "@/lib/instagram/queue";
+import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 
@@ -77,6 +81,23 @@ function shouldQueueNewsletter(input: PostInput) {
   );
 }
 
+/** Nested `instagramDetails`-Write für `post.update()` — löscht die Zeile bei
+ * internen Beiträgen/Entwürfen (die nie in der Queue landen dürfen), legt sie
+ * bei frisch aktiviertem Instagram-Toggle eager mit PENDING an, sonst
+ * unverändert. */
+function buildInstagramDetailsUpdate(
+  input: PostInput,
+  hasExisting: boolean,
+): Prisma.PostUpdateInput["instagramDetails"] | undefined {
+  if (input.internal || input.status !== "PUBLISHED") {
+    return hasExisting ? { delete: true } : undefined;
+  }
+  if (input.instagram && !hasExisting) {
+    return { create: { status: InstagramStatus.PENDING } };
+  }
+  return undefined;
+}
+
 export async function createPost(input: PostInput) {
   const user = await getCurrentUser();
   if (!user || !(await hasPermission(user.id, "posts:write"))) {
@@ -88,15 +109,16 @@ export async function createPost(input: PostInput) {
     return { error: validationError };
   }
 
+  // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue eingereiht.
+  const queueForInstagram =
+    input.instagram && !input.internal && input.status === "PUBLISHED";
   const post = await prisma.post.create({
     data: {
       slug: slugify(input.title),
       ...toPostData(input),
-      // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue eingereiht.
-      instagramStatus:
-        input.instagram && !input.internal && input.status === "PUBLISHED"
-          ? InstagramStatus.PENDING
-          : null,
+      ...(queueForInstagram
+        ? { instagramDetails: { create: { status: InstagramStatus.PENDING } } }
+        : {}),
     },
   });
 
@@ -120,29 +142,30 @@ export async function updatePost(id: string, input: PostInput) {
 
   const wantsNewsletter = shouldQueueNewsletter(input);
   const needsExisting =
-    (!input.internal && input.status === "PUBLISHED" && input.instagram) ||
+    input.internal ||
+    input.status !== "PUBLISHED" ||
+    input.instagram ||
     wantsNewsletter;
   const existing = needsExisting
     ? await prisma.post.findUnique({
         where: { id },
-        select: { instagramStatus: true, newsletterStatus: true },
+        select: {
+          newsletterStatus: true,
+          instagramDetails: { select: { id: true } },
+        },
       })
     : null;
 
-  let instagramStatus: InstagramStatus | null | undefined;
-  if (input.internal || input.status !== "PUBLISHED") {
-    // Interne Beiträge und Entwürfe werden nie in die Instagram-Queue
-    // eingereiht, auch wenn sie es vorher schon waren.
-    instagramStatus = null;
-  } else if (input.instagram && !existing?.instagramStatus) {
-    instagramStatus = InstagramStatus.PENDING;
-  }
+  const instagramDetails = buildInstagramDetailsUpdate(
+    input,
+    Boolean(existing?.instagramDetails),
+  );
 
   await prisma.post.update({
     where: { id },
     data: {
       ...toPostData(input),
-      ...(instagramStatus !== undefined ? { instagramStatus } : {}),
+      ...(instagramDetails ? { instagramDetails } : {}),
     },
   });
 
@@ -179,13 +202,21 @@ export async function retryInstagramPost(postId: string) {
   const post = await prisma.post.update({
     where: { id: postId },
     data: {
-      instagramAttempts: 0,
-      instagramStatus: InstagramStatus.PENDING,
-      instagramLastError: null,
+      instagramDetails: {
+        upsert: {
+          create: { status: InstagramStatus.PENDING },
+          update: {
+            attempts: 0,
+            status: InstagramStatus.PENDING,
+            lastError: null,
+          },
+        },
+      },
     },
+    include: { instagramDetails: true },
   });
 
-  const success = await processPost(post);
+  const success = await processPost(post as DuePost);
   return { success: true as const, posted: success };
 }
 

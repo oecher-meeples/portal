@@ -27,10 +27,7 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     instagram: true,
     status: "PUBLISHED" as const,
     coverImageUrl: null,
-    instagramStatus: null,
-    instagramPostUrl: null,
-    instagramAttempts: 0,
-    instagramLastError: null,
+    instagramDetails: null,
     sendAsNewsletter: false,
     newsletterCategory: null,
     newsletterStatus: null,
@@ -189,6 +186,7 @@ describe("getUpcomingEvents", () => {
       },
       orderBy: { date: "asc" },
       take: 10,
+      include: { instagramDetails: { select: { postUrl: true } } },
     });
   });
 
@@ -238,6 +236,7 @@ describe("getLatestPosts", () => {
       },
       orderBy: { date: "desc" },
       take: 3,
+      include: { instagramDetails: { select: { postUrl: true } } },
     });
   });
 

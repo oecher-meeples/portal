@@ -18,7 +18,10 @@ export default async function EditPostPage({
   await requirePermission("posts:write");
   const { id } = await params;
 
-  const post = await prisma.post.findUnique({ where: { id } });
+  const post = await prisma.post.findUnique({
+    where: { id },
+    include: { instagramDetails: { select: { status: true } } },
+  });
   if (!post) notFound();
 
   return (
@@ -38,7 +41,7 @@ export default async function EditPostPage({
           sendAsNewsletter: post.sendAsNewsletter,
           newsletterCategory: post.newsletterCategory,
           coverImageUrl: post.coverImageUrl ?? undefined,
-          instagramStatus: post.instagramStatus,
+          instagramStatus: post.instagramDetails?.status,
         }}
       />
     </div>

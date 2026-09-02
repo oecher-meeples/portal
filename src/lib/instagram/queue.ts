@@ -1,4 +1,8 @@
-import { InstagramStatus, type Post } from "@prisma/client";
+import {
+  InstagramStatus,
+  type Post,
+  type PostInstagramDetails,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { decryptSecret, encryptSecret } from "@/lib/utils/crypto";
 import { resolveCoverImageUrl } from "@/lib/instagram/cover-image";
@@ -12,6 +16,8 @@ const MAX_ATTEMPTS = 3;
 const REFRESH_THRESHOLD_MS = 10 * 24 * 60 * 60 * 1000;
 const DEFAULT_EXPIRES_IN_SECONDS = 60 * 24 * 60 * 60;
 
+export type DuePost = Post & { instagramDetails: PostInstagramDetails };
+
 function buildCaption(post: Pick<Post, "title" | "excerpt" | "slug">): string {
   const siteUrl = process.env.PUBLIC_SITE_URL ?? "";
   return `${post.title}\n\n${post.excerpt}\n\nMehr dazu: ${siteUrl}/news/${post.slug}`;
@@ -21,15 +27,16 @@ export function findDuePosts() {
   return prisma.post.findMany({
     where: {
       instagram: true,
-      instagramStatus: {
-        in: [InstagramStatus.PENDING, InstagramStatus.QUEUED],
+      instagramDetails: {
+        status: { in: [InstagramStatus.PENDING, InstagramStatus.QUEUED] },
+        attempts: { lt: MAX_ATTEMPTS },
       },
-      instagramAttempts: { lt: MAX_ATTEMPTS },
     },
-  });
+    include: { instagramDetails: true },
+  }) as Promise<DuePost[]>;
 }
 
-export async function processPost(post: Post): Promise<boolean> {
+export async function processPost(post: DuePost): Promise<boolean> {
   try {
     const connection = await prisma.instagramConnection.findFirst();
     if (!connection) {
@@ -52,24 +59,24 @@ export async function processPost(post: Post): Promise<boolean> {
       accessToken,
     });
 
-    await prisma.post.update({
-      where: { id: post.id },
+    await prisma.postInstagramDetails.update({
+      where: { postId: post.id },
       data: {
-        instagramStatus: InstagramStatus.POSTED,
-        instagramPostUrl: `https://www.instagram.com/p/${mediaId}/`,
-        instagramLastError: null,
+        status: InstagramStatus.POSTED,
+        postUrl: `https://www.instagram.com/p/${mediaId}/`,
+        lastError: null,
       },
     });
     return true;
   } catch (error) {
-    const attempts = post.instagramAttempts + 1;
-    await prisma.post.update({
-      where: { id: post.id },
+    const attempts = post.instagramDetails.attempts + 1;
+    await prisma.postInstagramDetails.update({
+      where: { postId: post.id },
       data: {
-        instagramAttempts: attempts,
-        instagramLastError:
+        attempts,
+        lastError:
           error instanceof Error ? error.message : "Unbekannter Fehler",
-        instagramStatus:
+        status:
           attempts >= MAX_ATTEMPTS
             ? InstagramStatus.FAILED
             : InstagramStatus.PENDING,

@@ -49,7 +49,7 @@ type PostWithoutBody = {
   location: string | null;
   internal: boolean | null;
   instagram: boolean | null;
-  instagramPostUrl: string | null;
+  instagramDetails: { postUrl: string | null } | null;
   coverImageUrl: string | null;
 };
 
@@ -65,7 +65,7 @@ function toContentItemBase(post: PostWithoutBody): Omit<ContentItem, "body"> {
     location: post.location ?? undefined,
     internal: post.internal ?? undefined,
     instagram: post.instagram ?? undefined,
-    instagramPostUrl: post.instagramPostUrl ?? undefined,
+    instagramPostUrl: post.instagramDetails?.postUrl ?? undefined,
     coverImageUrl: post.coverImageUrl ?? undefined,
   };
 }
@@ -73,6 +73,8 @@ function toContentItemBase(post: PostWithoutBody): Omit<ContentItem, "body"> {
 function toContentItem(post: PostWithoutBody & { body: string }): ContentItem {
   return { ...toContentItemBase(post), body: post.body };
 }
+
+const INSTAGRAM_DETAILS_SELECT = { select: { postUrl: true } } as const;
 
 const POST_WITHOUT_BODY_SELECT = {
   id: true,
@@ -85,7 +87,7 @@ const POST_WITHOUT_BODY_SELECT = {
   location: true,
   internal: true,
   instagram: true,
-  instagramPostUrl: true,
+  instagramDetails: INSTAGRAM_DETAILS_SELECT,
   coverImageUrl: true,
 } as const;
 
@@ -94,6 +96,7 @@ export async function getAllContent(): Promise<ContentItem[]> {
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
     orderBy: { date: "desc" },
+    include: { instagramDetails: INSTAGRAM_DETAILS_SELECT },
   });
   return posts.map(toContentItem);
 }
@@ -112,7 +115,10 @@ export async function getInternalContent(
 }
 
 export async function getContentBySlug(slug: string) {
-  const post = await prisma.post.findUnique({ where: { slug } });
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    include: { instagramDetails: INSTAGRAM_DETAILS_SELECT },
+  });
   return post && post.status === "PUBLISHED" ? toContentItem(post) : undefined;
 }
 
@@ -126,6 +132,7 @@ export async function getUpcomingEvents(limit = 3) {
     },
     orderBy: { date: "asc" },
     take: limit,
+    include: { instagramDetails: INSTAGRAM_DETAILS_SELECT },
   });
   return posts.map(toContentItem);
 }
@@ -136,6 +143,7 @@ export async function getLatestPosts(limit = 3) {
     where: { OR: [{ internal: null }, { internal: false }], status: "PUBLISHED" },
     orderBy: { date: "desc" },
     take: limit,
+    include: { instagramDetails: INSTAGRAM_DETAILS_SELECT },
   });
   return posts.map(toContentItem);
 }
@@ -146,6 +154,7 @@ export async function getUpcomingEventsIncludingInternal(limit = 3) {
     where: { type: { not: "BLOG" }, status: "PUBLISHED" },
     orderBy: { date: "asc" },
     take: limit,
+    include: { instagramDetails: INSTAGRAM_DETAILS_SELECT },
   });
   return posts.map(toContentItem);
 }

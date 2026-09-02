@@ -540,23 +540,19 @@ model LoginLog {
 }
 
 model Post {
-  id                 String           @id @default(cuid())
-  slug               String           @unique
-  type               PostType
-  title              String
-  excerpt            String
-  body               String
-  date               DateTime
-  author             String?
-  location           String?
-  internal           Boolean?
-  instagram          Boolean?
-  status             PostStatus       @default(PUBLISHED)
-  coverImageUrl      String?
-  instagramStatus    InstagramStatus?
-  instagramPostUrl   String?
-  instagramAttempts  Int              @default(0)
-  instagramLastError String?
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  type          PostType
+  title         String
+  excerpt       String
+  body          String
+  date          DateTime
+  author        String?
+  location      String?
+  internal      Boolean?
+  instagram     Boolean?
+  status        PostStatus @default(PUBLISHED)
+  coverImageUrl String?
 
   sendAsNewsletter    Boolean                   @default(false)
   newsletterCategory  NewsletterCategory?
@@ -565,10 +561,30 @@ model Post {
   newsletterLastError String?
   newsletterSentAt    DateTime?
 
-  dispatchJobs NewsletterDispatchJob[]
+  dispatchJobs     NewsletterDispatchJob[]
+  instagramDetails PostInstagramDetails?
 
   @@index([type, internal, date])
   @@map("posts")
+}
+
+/// Ergebnis-/Status-Felder eines Instagram-Crossposts, ausgelagert aus `Post`
+/// (#318) — nur ein Bruchteil der Beiträge befüllt sie je. `Post.instagram`
+/// (die Redaktionsentscheidung "soll gecrosspostet werden") bleibt bewusst
+/// auf `Post`, analog zu `sendAsNewsletter`. Die Zeile entsteht eager, sobald
+/// `instagram: true` gesetzt wird (nicht erst beim ersten Versandversuch),
+/// damit `findDuePosts()` direkt auf den Status filtern kann.
+model PostInstagramDetails {
+  id        String          @id @default(cuid())
+  postId    String          @unique
+  status    InstagramStatus @default(PENDING)
+  postUrl   String?
+  attempts  Int             @default(0)
+  lastError String?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("post_instagram_details")
 }
 
 /// A single opt-in list combining two sources: anonymous public sign-ups (need
