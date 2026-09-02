@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import type { NewsletterCategory } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { FileField } from "@/components/ui/file-field";
 import { Textarea } from "@/components/ui/textarea";
 import { CoverMedia } from "@/components/ui/cover-media";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
 import type { ContentType } from "@/lib/content/content";
@@ -266,9 +266,10 @@ export function PostForm({
             required
           />
         ) : (
-          <div className="[&_a]:text-primary min-h-64 rounded-md border p-4 text-sm leading-relaxed [&_a]:underline [&_strong]:font-semibold">
-            <ReactMarkdown>{body || "*Keine Vorschau*"}</ReactMarkdown>
-          </div>
+          <MarkdownContent
+            body={body || "*Keine Vorschau*"}
+            className="min-h-64 rounded-md border p-4 text-sm"
+          />
         )}
       </div>
 
