@@ -6,6 +6,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 const {
   getLfgStatus,
   isLfgExpired,
+  isLfgAttachmentEligible,
   getLfgParticipantDisplayName,
   getOpenLfgPostsForBoardGame,
   getBoardGameIdsWithOpenLfgPosts,
@@ -246,6 +247,34 @@ describe("matchesLfgTimeframeFilter", () => {
     const today = { plannedAt: new Date("2026-08-01T06:00:00Z") };
     expect(matchesLfgTimeframeFilter(today, "abgelaufen", NOW)).toBe(true);
     expect(matchesLfgTimeframeFilter(today, "bevorstehend", NOW)).toBe(true);
+  });
+});
+
+describe("isLfgAttachmentEligible", () => {
+  it("is false without a planned date", () => {
+    expect(isLfgAttachmentEligible({ plannedAt: null }, NOW)).toBe(false);
+  });
+
+  it("is true for a date in the past", () => {
+    expect(
+      isLfgAttachmentEligible(
+        { plannedAt: new Date("2026-07-01T00:00:00Z") },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is true for today", () => {
+    expect(isLfgAttachmentEligible({ plannedAt: NOW }, NOW)).toBe(true);
+  });
+
+  it("is false for a future date", () => {
+    expect(
+      isLfgAttachmentEligible(
+        { plannedAt: new Date("2026-09-01T00:00:00Z") },
+        NOW,
+      ),
+    ).toBe(false);
   });
 });
 

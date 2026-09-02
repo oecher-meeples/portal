@@ -10,6 +10,10 @@ import {
   removeLfgGuest,
 } from "@/components/feature/lfg/actions";
 import { LfgLocationEditor } from "@/components/feature/lfg/lfg-location-editor";
+import {
+  LfgAttachmentsSection,
+  type LfgAttachmentRow,
+} from "@/components/feature/lfg/lfg-attachments-section";
 import type { LfgStatus } from "@/lib/content/lfg";
 import type { ContactLinks } from "@/lib/members/contact";
 import { PageContainer } from "@/components/ui/page-container";
@@ -43,6 +47,7 @@ export function LfgDetailView({
   guestsMayBringGuests,
   canEditLocation,
   viewerHasOwnAddress,
+  attachments,
 }: {
   id: string;
   title: string;
@@ -64,6 +69,9 @@ export function LfgDetailView({
   /** Ob der Betrachter eine Adresse im Profil hinterlegt hat — steuert, ob
    * "Meine Adresse übernehmen" am Ortsfeld erscheint (#166). */
   viewerHasOwnAddress: boolean;
+  /** `undefined` = Datei-Bereich wird nicht angezeigt — weder Teilnehmer
+   * noch `isLfgAttachmentEligible()` (#283), serverseitig entschieden. */
+  attachments?: LfgAttachmentRow[];
 }) {
   const isParticipant = participants.some((p) => p.meepleId === viewerMeepleId);
   const isCreator = viewerMeepleId === createdByMeepleId;
@@ -149,6 +157,10 @@ export function LfgDetailView({
           </ActionButton>
         )}
       </div>
+
+      {attachments && (
+        <LfgAttachmentsSection postId={id} attachments={attachments} />
+      )}
 
       <div className="flex flex-wrap gap-3">
         {!isParticipant && (

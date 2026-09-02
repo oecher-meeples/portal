@@ -290,6 +290,7 @@ model Meeple {
   lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
   lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
+  lfgAttachments           LfgAttachment[]              @relation("LfgAttachmentUploadedBy")
   shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
   helperAvailabilities     HelperAvailability[]         @relation("HelperAvailabilityMeeple")
   explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
@@ -432,6 +433,7 @@ model LfgPost {
   createdBy    Meeple           @relation("LfgPostCreator", fields: [createdByMeepleId], references: [id], onDelete: Cascade)
   boardGame    BoardGame?       @relation(fields: [boardGameId], references: [id], onDelete: SetNull)
   participants LfgParticipant[]
+  attachments  LfgAttachment[]
 
   @@index([createdByMeepleId])
   @@index([boardGameId])
@@ -456,6 +458,26 @@ model LfgParticipant {
   @@index([meepleId])
   @@index([addedByMeepleId])
   @@map("lfg_participants")
+}
+
+/// Datei-Anhänge zu einem LFG-Gesuch (#283) — von Teilnehmern hochgeladen,
+/// nur sichtbar/hochladbar, solange `isLfgAttachmentEligible()` (heute oder
+/// vergangen laut Kalendertag) zutrifft. Teilt sich keine Tabelle mit
+/// `MarketListing`/Downloads — reine Fach-Trennung, keine technische.
+model LfgAttachment {
+  id                 String   @id @default(cuid())
+  postId             String
+  uploadedByMeepleId String
+  url                String
+  filename           String
+  createdAt          DateTime @default(now())
+
+  post       LfgPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  uploadedBy Meeple  @relation("LfgAttachmentUploadedBy", fields: [uploadedByMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([uploadedByMeepleId])
+  @@map("lfg_attachments")
 }
 
 /// Audit trail for every decrypted read of bank data (see docs/adr/0003). Kept 24 months.

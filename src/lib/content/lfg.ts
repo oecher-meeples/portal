@@ -37,6 +37,21 @@ export function matchesLfgTimeframeFilter(
   return timeframe === "abgelaufen" ? postDay < today : postDay > today;
 }
 
+/** Datei-Upload/-Download-Bereich (#283) — bewusst getrennt von
+ * `isLfgExpired()` (Status-Badge, exakter Zeitstempel-Vergleich): der
+ * Upload-Bereich erscheint, wenn `plannedAt`-Kalendertag ≤ heutiger
+ * Kalendertag, unabhängig davon, ob `getLfgStatus()` das Gesuch noch als
+ * "offen" oder schon als "abgelaufen" einstuft. Ohne Termin (`plannedAt ===
+ * null`, "Termin offen") nie eligible — es gibt keinen Tag, den man mit
+ * heute vergleichen könnte. */
+export function isLfgAttachmentEligible(
+  post: { plannedAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  if (post.plannedAt === null) return false;
+  return stripToDay(post.plannedAt).getTime() <= stripToDay(now).getTime();
+}
+
 /** Filter der LFG-Übersicht (#409), URL-Search-Param-basiert analog
  * `LudothekFilters`/`parseLudothekSearchParams`. */
 export type LfgListFilters = {
