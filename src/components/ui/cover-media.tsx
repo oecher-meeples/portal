@@ -21,6 +21,12 @@ export function CoverMedia({
   sizing?: "aspect" | "natural";
 }) {
   if (!imageUrl) {
+    // #447: "natural" ist bislang nur für Detailseiten mit optionalem Bild
+    // im Einsatz (Blog-Beitrag, Marktplatz-Lightbox) — dort ist kein Bild
+    // kein Platzhalter-Fall, sondern schlicht kein Bild. Grid-Kontexte
+    // (Ludothek/Marktplatz-Karten) nutzen weiterhin "aspect" und behalten
+    // den Platzhalter für eine konsistente Kachel-Höhe.
+    if (sizing === "natural") return null;
     return (
       <PlaceholderMedia label={label} aspect={aspect} className={className} />
     );
