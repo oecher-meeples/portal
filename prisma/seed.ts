@@ -1,4 +1,3 @@
-import { hashPassword } from "better-auth/crypto";
 import {
   BoardGameKind,
   HoldingOrigin,
@@ -6,7 +5,6 @@ import {
   StorageUnitKind,
 } from "@prisma/client";
 import { prisma } from "../src/lib/utils/prisma";
-import { slugify } from "../src/lib/utils/slug";
 import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import {
   findOrCreateBoardGameTitle,
@@ -18,115 +16,34 @@ import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collectio
 import { DEMO_DOWNLOADS } from "./seed-data/demo-downloads";
 import { DEMO_LEGAL_DOCUMENTS } from "./seed-data/demo-legal-documents";
 import { DEMO_POSTS } from "./seed-data/demo-posts";
+import {
+  ADMIN_ACCOUNT,
+  DEMO_MEEPLE_1,
+  DEMO_MEEPLE_2,
+  DEMO_ROLE_ACCOUNTS,
+} from "./seed-data/demo-accounts";
+import { randomDemoContactFields } from "./seed-data/demo-contacts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
 import { seedDemoFamily } from "./seed-family";
+import {
+  seedDemoResignedMember,
+  seedDemoAnonymisedMeeple,
+} from "./seed-departed";
+import { seedDemoLoanHistory } from "./seed-loans";
+import { seedDemoLfgPosts } from "./seed-lfg";
+import { seedDemoMarketListings } from "./seed-marketplace";
+import {
+  upsertNeonAuthUser,
+  ensureMeeple,
+  ensureDemoMember,
+  nextMemberNumber,
+} from "./seed-shared";
 import { ANONYMER_MEEPLE_NAME } from "../src/lib/ludothek/anonymer-meeple";
+import { slugify } from "../src/lib/utils/slug";
 
 /** Gets a second `GameCopy` in the seed, so the multi-exemplar EAN-scan flow is
  * manually testable without a real second purchase. */
 const DEMO_SECOND_COPY_TITLES = ["Catan"];
-
-const ADMIN_USER = {
-  email: process.env.SEED_ADMIN_EMAIL ?? "admin@jan-herwig.de",
-  password: process.env.SEED_ADMIN_PASSWORD ?? "admin",
-  name: "Admin",
-};
-
-const DEMO_MEEPLE_1 = {
-  email: process.env.SEED_DEMO_MEEPLE_1_EMAIL ?? "demo1@jan-herwig.de",
-  password: process.env.SEED_DEMO_PASSWORD ?? "demo1234",
-  name: "Lea Demo",
-};
-
-const DEMO_MEEPLE_2 = {
-  email: process.env.SEED_DEMO_MEEPLE_2_EMAIL ?? "demo2@jan-herwig.de",
-  password: process.env.SEED_DEMO_MEEPLE_2_PASSWORD ?? "demo1234",
-  name: "Tobias Demo",
-};
-
-/**
- * Ein Demo-Account je Vereinsamt, damit sich jede Rolle ohne Rechte-Rätselraten
- * durchklicken lässt — Name ist zugleich der Rollenname (siehe seed-roles.ts).
- */
-const DEMO_ROLE_ACCOUNTS = [
-  "Vorstand",
-  "Kassenwart",
-  "Spielewart",
-  "Redakteur",
-].map((name) => ({
-  name,
-  role: name,
-  email: `${name.toLowerCase()}@oecher-meeples.org`,
-  password: process.env.SEED_DEMO_PASSWORD ?? "demo1234",
-}));
-
-/**
- * #370: ein bereits existierender User bricht hier NICHT früh ab, sondern
- * synct den Passwort-Hash auf den aktuell übergebenen Wert — sonst bleibt
- * nach einer Passwort-Änderung in `.env.local` (z. B. `SEED_ADMIN_PASSWORD`)
- * der alte Hash bestehen und der Login schlägt trotz "korrektem" Passwort
- * fehl, ohne dass Rate-Limiting oder ein Code-Bug beteiligt wäre.
- */
-export async function upsertNeonAuthUser({
-  email,
-  password,
-  name,
-}: {
-  email: string;
-  password: string;
-  name: string;
-}) {
-  const hashedPassword = await hashPassword(password);
-
-  const existing = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT id FROM neon_auth."user" WHERE email = ${email}
-  `;
-  if (existing.length > 0) {
-    const userId = existing[0].id;
-    await prisma.$executeRaw`
-      UPDATE neon_auth."account"
-      SET password = ${hashedPassword}, "updatedAt" = now()
-      WHERE "userId" = ${userId}::uuid AND "providerId" = 'credential'
-    `;
-    console.log(
-      `Neon-Auth-User "${email}" existiert bereits, Passwort synchronisiert.`,
-    );
-    return userId;
-  }
-
-  const [user] = await prisma.$queryRaw<{ id: string }[]>`
-    INSERT INTO neon_auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
-    VALUES (gen_random_uuid(), ${name}, ${email}, true, now(), now())
-    RETURNING id
-  `;
-
-  await prisma.$executeRaw`
-    INSERT INTO neon_auth."account" (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
-    VALUES (gen_random_uuid(), ${user.id}, 'credential', ${user.id}::uuid, ${hashedPassword}, now(), now())
-  `;
-
-  console.log(`Neon-Auth-Test-User "${email}" angelegt (id: ${user.id}).`);
-  return user.id;
-}
-
-async function ensureAdminMeeple(neonAuthUserId: string) {
-  return prisma.meeple.upsert({
-    where: { neonAuthUserId },
-    update: {},
-    create: { neonAuthUserId, displayName: ADMIN_USER.name },
-  });
-}
-
-export async function ensureMeeple(
-  neonAuthUserId: string,
-  displayName: string,
-) {
-  return prisma.meeple.upsert({
-    where: { neonAuthUserId },
-    update: {},
-    create: { neonAuthUserId, displayName },
-  });
-}
 
 /** Kein Unique-Feld erlaubt hier ein Upsert: `neonAuthUserId` ist `null` (kein
  * Login), und mehrere `NULL`-Zeilen sind in Postgres zulässig — also
@@ -142,17 +59,19 @@ export async function ensureMeeple(
  * daher braucht auch dieses Sammelkonto ein `Member`-Ziel — ohne
  * `firstName`/`lastName`/Adresse, nur zum Halten der Fremdschlüssel-Referenz.
  */
-export async function nextMemberNumber(): Promise<number> {
-  const highestNumber = await prisma.member.aggregate({
-    _max: { memberNumber: true },
-  });
-  return (highestNumber._max.memberNumber ?? 0) + 1;
-}
-
 async function ensureAnonymerMeeple() {
   const meeple =
     (await prisma.meeple.findFirst({
-      where: { displayName: ANONYMER_MEEPLE_NAME, neonAuthUserId: null },
+      // `anonymizedAt: null` grenzt gegen `seedDemoAnonymisedMeeple()`
+      // (`seed-departed.ts`) ab: dessen Alt-Meeple trägt denselben
+      // `displayName` und ebenfalls `neonAuthUserId: null`, ist aber ein
+      // Stufe-2-anonymisierter Einzelfall, kein Sammelkonto (siehe
+      // `anonymisedMeepleDisplayName()`-Kommentar zum Unterschied).
+      where: {
+        displayName: ANONYMER_MEEPLE_NAME,
+        neonAuthUserId: null,
+        anonymizedAt: null,
+      },
     })) ??
     (await prisma.meeple.create({
       data: { displayName: ANONYMER_MEEPLE_NAME },
@@ -339,29 +258,45 @@ async function seedPrivateGameCollection(
   );
 }
 
-async function seedDemoMeeples() {
-  const [user1Id, user2Id] = await Promise.all([
-    upsertNeonAuthUser(DEMO_MEEPLE_1),
-    upsertNeonAuthUser(DEMO_MEEPLE_2),
-  ]);
-  await Promise.all([
-    assignRole(user1Id, "Meeple"),
-    assignRole(user2Id, "Meeple"),
-  ]);
+/** Login, Meeple *und* Member (Adresse + IBAN, #328) für einen der festen
+ * Demo-Accounts aus `demo-accounts.ts`, plus zufällige Kontaktfelder. Gibt
+ * beide Ids zurück — `memberId` u. a. für die Demo-Ausleihhistorie
+ * (`seed-loans.ts`), die an `Member`, nicht an `Meeple` hängt. */
+async function ensureDemoAccountWithMember(
+  account: (typeof DEMO_ROLE_ACCOUNTS)[number] | typeof ADMIN_ACCOUNT,
+  role: string,
+) {
+  const userId = await upsertNeonAuthUser(account);
+  await assignRole(userId, role);
+  const meeple = await ensureMeeple(userId, account.name);
+  await prisma.meeple.update({
+    where: { id: meeple.id },
+    data: randomDemoContactFields(account.email),
+  });
+  const member = await ensureDemoMember(meeple.id, account);
+  return { meepleId: meeple.id, memberId: member.id };
+}
 
-  const [meeple1, meeple2] = await Promise.all([
-    ensureMeeple(user1Id, DEMO_MEEPLE_1.name),
-    ensureMeeple(user2Id, DEMO_MEEPLE_2.name),
+async function seedDemoMeeples() {
+  const [lea, tobias] = await Promise.all([
+    ensureDemoAccountWithMember(DEMO_MEEPLE_1, "Meeple"),
+    ensureDemoAccountWithMember(DEMO_MEEPLE_2, "Meeple"),
   ]);
 
   await seedPrivateGameCollection(
-    meeple1.id,
+    lea.meepleId,
     DEMO_PRIVATE_COLLECTION_POOL.slice(0, 30),
   );
   await seedPrivateGameCollection(
-    meeple2.id,
+    tobias.meepleId,
     DEMO_PRIVATE_COLLECTION_POOL.slice(30, 60),
   );
+
+  return {
+    leaMeepleId: lea.meepleId,
+    tobiasMeepleId: tobias.meepleId,
+    memberIds: [lea.memberId, tobias.memberId],
+  };
 }
 
 /**
@@ -371,19 +306,22 @@ async function seedDemoMeeples() {
  */
 async function seedDemoRoleAccounts() {
   const meepleIdByRole = new Map<string, string>();
+  const memberIds: string[] = [];
 
   for (const account of DEMO_ROLE_ACCOUNTS) {
-    const userId = await upsertNeonAuthUser(account);
-    await assignRole(userId, account.role);
-    const meeple = await ensureMeeple(userId, account.name);
-    meepleIdByRole.set(account.role, meeple.id);
+    const { meepleId, memberId } = await ensureDemoAccountWithMember(
+      account,
+      account.role,
+    );
+    meepleIdByRole.set(account.role, meepleId);
+    memberIds.push(memberId);
   }
 
   console.log(
     `${DEMO_ROLE_ACCOUNTS.length} Rollen-Demo-Accounts angelegt/übersprungen.`,
   );
 
-  return meepleIdByRole;
+  return { meepleIdByRole, memberIds };
 }
 
 /** Upsertet auf `slug`, damit ein Re-Seed die Demo-Beiträge nicht dupliziert. */
@@ -445,24 +383,71 @@ async function seedDemoLegalDocuments() {
 }
 
 async function main() {
-  const adminUserId = await upsertNeonAuthUser(ADMIN_USER);
+  const adminUserId = await upsertNeonAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
   await assignRole(adminUserId, "sysadmin");
 
-  const adminMeeple = await ensureAdminMeeple(adminUserId);
-  const meepleIdByRole = await seedDemoRoleAccounts();
+  const adminMeeple = await ensureMeeple(adminUserId, ADMIN_ACCOUNT.name);
+  await prisma.meeple.update({
+    where: { id: adminMeeple.id },
+    data: randomDemoContactFields(ADMIN_ACCOUNT.email),
+  });
+  const adminMember = await ensureDemoMember(adminMeeple.id, ADMIN_ACCOUNT);
+
+  const { meepleIdByRole, memberIds: roleMemberIds } =
+    await seedDemoRoleAccounts();
   const spielewartMeepleId = meepleIdByRole.get("Spielewart");
   if (!spielewartMeepleId) {
     throw new Error("Spielewart-Demo-Account wurde nicht angelegt.");
   }
   await seedDemoGames(adminMeeple.id, spielewartMeepleId);
-  await seedDemoMeeples();
-  await seedDemoFamily();
+  const {
+    leaMeepleId,
+    tobiasMeepleId,
+    memberIds: demoMeepleMemberIds,
+  } = await seedDemoMeeples();
+  const {
+    vaterMeepleId,
+    mutterMeepleId,
+    memberIds: familyMemberIds,
+  } = await seedDemoFamily();
+  const { memberId: resignedMemberId } = await seedDemoResignedMember();
+  await seedDemoAnonymisedMeeple();
   await ensureAnonymerMeeple();
   await seedDemoPosts();
   await seedDemoDownloads();
   await seedDemoLegalDocuments();
+
+  // Schlüssel für LFG-/Marktplatz-Demo-Daten (`seed-data/demo-lfg.ts`,
+  // `seed-data/demo-marketplace.ts`) — lowercase, unabhängig vom Rollennamen.
+  const meepleIdByKey = new Map<string, string>([
+    ["admin", adminMeeple.id],
+    ["lea", leaMeepleId],
+    ["tobias", tobiasMeepleId],
+    ["vater", vaterMeepleId],
+    ["mutter", mutterMeepleId],
+    ...[...meepleIdByRole].map(
+      ([role, id]) => [role.toLowerCase(), id] as const,
+    ),
+  ]);
+  await seedDemoLfgPosts(meepleIdByKey);
+  await seedDemoMarketListings(meepleIdByKey);
+
+  // Kleine Ausleihhistorie über alle Demo-Vereinsmitglieder verteilt (siehe
+  // `seed-loans.ts`) — bewusst inklusive des ausgetretenen Mitglieds, aber
+  // ohne das anonymisierte Alt-Meeple (das hat kein `Member` mehr) und ohne
+  // das Sammelkonto "Anonymer Meeple".
+  await seedDemoLoanHistory(
+    [
+      adminMember.id,
+      ...roleMemberIds,
+      ...demoMeepleMemberIds,
+      ...familyMemberIds,
+      resignedMemberId,
+    ],
+    spielewartMeepleId,
+  );
 
   console.log("Seed abgeschlossen.");
 }

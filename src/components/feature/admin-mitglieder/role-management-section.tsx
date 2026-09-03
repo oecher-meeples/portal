@@ -130,9 +130,9 @@ export function RoleManagementSection({
                       moveDraggedRoleBefore(role.id);
                     }
                   }}
-                  className="flex flex-wrap items-center justify-between gap-2 py-2"
+                  className="flex items-center justify-between gap-2 py-2"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span
                       draggable
                       onDragStart={(event) => {
@@ -141,15 +141,15 @@ export function RoleManagementSection({
                         event.dataTransfer.effectAllowed = "move";
                       }}
                       onDragEnd={() => setDraggedRoleId(null)}
-                      className="text-muted-foreground hover:text-foreground cursor-grab touch-none active:cursor-grabbing"
+                      className="text-muted-foreground hover:text-foreground shrink-0 cursor-grab touch-none active:cursor-grabbing"
                       aria-label={`Rolle „${role.name}“ per Drag-and-Drop verschieben`}
                       role="button"
                       tabIndex={0}
                     >
                       <GripVertical className="size-4" />
                     </span>
-                    <div className="flex flex-col">
-                      <span className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{role.name}</span>
                         <Badge variant="secondary">
                           {role.permissionIds.length}
@@ -168,7 +168,7 @@ export function RoleManagementSection({
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     <EditRoleDialog
                       role={role}
                       permissions={permissions}

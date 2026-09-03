@@ -126,68 +126,72 @@ export function DownloadRow({
       onDrop={onDrop}
       className="flex flex-col gap-1 p-4"
     >
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          {draggable && (
-            <GripVertical
-              className="text-muted-foreground size-4 shrink-0 cursor-grab"
-              aria-hidden
-            />
-          )}
+      {/* 3×3-Grid statt weiterer Stack-Verschachtelung: Spalte 1 (Drag-
+          Handle) über volle Höhe, Spalte 2 (Icon+Titel/Dateiname/Datum)
+          — Titelzeile über beide Content-Spalten (col-span-2, volle
+          Breite), die zwei Meta-Zeilen darunter an der Icon-Spalte
+          ausgerichtet, Spalte 3 (Menü+Download) nur über die zwei
+          Meta-Zeilen zentriert (row-span-2 ab Zeile 2, nicht die Titelzeile). */}
+      <div className="grid grid-cols-[auto_1fr_auto] grid-rows-[auto_auto_auto] items-center gap-x-3 gap-y-0.5">
+        {draggable && (
+          <GripVertical
+            className="text-muted-foreground col-start-1 row-span-3 row-start-1 size-4 shrink-0 cursor-grab self-center justify-self-center"
+            aria-hidden
+          />
+        )}
+        <div className="col-span-2 col-start-2 row-start-1 flex min-w-0 items-start gap-3">
           {file.fileType === "XLSX" ? (
-            <FileSpreadsheet className="size-5 text-emerald-600" />
+            <FileSpreadsheet className="size-5 shrink-0 text-emerald-600" />
           ) : (
-            <FileText className="text-muted-foreground size-5" />
+            <FileText className="text-muted-foreground size-5 shrink-0" />
           )}
-          <div>
-            {isRenaming ? (
-              <form
-                onSubmit={handleRenameSubmit}
-                className="flex items-center gap-1.5"
+          {isRenaming ? (
+            <form
+              onSubmit={handleRenameSubmit}
+              className="flex min-w-0 items-center gap-1.5"
+            >
+              <Input
+                autoFocus
+                value={titleDraft}
+                onChange={(event) => setTitleDraft(event.target.value)}
+                className="h-7 max-w-56"
+                aria-label="Titel"
+              />
+              <Button type="submit" size="sm">
+                Speichern
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={cancelRename}
               >
-                <Input
-                  autoFocus
-                  value={titleDraft}
-                  onChange={(event) => setTitleDraft(event.target.value)}
-                  className="h-7 max-w-56"
-                  aria-label="Titel"
-                />
-                <Button type="submit" size="sm">
-                  Speichern
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={cancelRename}
-                >
-                  Abbrechen
-                </Button>
-              </form>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <p className="font-medium">
-                  {file.title} ({file.fileType})
-                </p>
-                {file.status === "INTERNAL" && (
-                  <InternalOnlyBadge tooltip="Nur für Mitglieder" />
-                )}
-              </div>
-            )}
-            {canManage && (
-              <p className="text-muted-foreground text-xs">
-                {file.fileName} · {file.fileSizeFormatted}
+                Abbrechen
+              </Button>
+            </form>
+          ) : (
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="min-w-0 font-medium">
+                {file.title} ({file.fileType})
               </p>
-            )}
-            <p className="text-muted-foreground text-xs">
-              Geändert am{" "}
-              {canManage
-                ? formatDateTime(file.fileUpdatedAt)
-                : formatDateMedium(file.fileUpdatedAt)}
-            </p>
-          </div>
+              {file.status === "INTERNAL" && (
+                <InternalOnlyBadge tooltip="Nur für Mitglieder" />
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-1">
+        {canManage && (
+          <p className="text-muted-foreground col-start-2 row-start-2 text-xs">
+            {file.fileName} · {file.fileSizeFormatted}
+          </p>
+        )}
+        <p className="text-muted-foreground col-start-2 row-start-3 text-xs">
+          Geändert am{" "}
+          {canManage
+            ? formatDateTime(file.fileUpdatedAt)
+            : formatDateMedium(file.fileUpdatedAt)}
+        </p>
+        <div className="col-start-3 row-span-2 row-start-2 flex items-center gap-1 self-end">
           {canManage && (
             <DropdownMenu>
               <DropdownMenuTrigger

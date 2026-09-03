@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
@@ -28,12 +29,27 @@ export async function AppShell({ children }: { children: ReactNode }) {
         permissions={permissions}
         flags={{ openHelperRequest }}
       />
+      {/* < md ersetzt MobileNav (#437) die dort ausgeblendete Sidebar — exakt
+          an Sidebars md-Schwelle übergeben, sonst Navigations-Lücke
+          zwischen 640–768px (keine der beiden sichtbar). */}
+      <MobileNav
+        tier={tier}
+        realTier={realTier}
+        permissions={permissions}
+        flags={{ openHelperRequest }}
+        user={user ? { name: user.name } : null}
+      />
       {/* pt-[5.5rem]/sm:pt-24: header (h-16 = 4rem) + the block's own py-6/sm:py-8 top inset,
           since the header is fixed and no longer pushes this block down via normal flow. */}
       {/* Width cap lives on each page now via PageContainer (#398) — routes
           differ (e.g. Ludothek uses "wide"), so AppShell no longer forces
           one globally. */}
-      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-6 sm:ml-64 sm:px-8 sm:pt-24 sm:pb-8">
+      {/* ml folgt der Sidebar-Breite (#336): < md ausgeblendet (keine Margin),
+          md–lg Icon-only (w-16), ab xl volle Breite (w-64). Der Hover-/Pin-
+          Ausklappzustand der Sidebar ist ein Overlay (position: fixed) und
+          verschiebt diese Margin bewusst nicht. pb (< md): Platz für die
+          fixed MobileNav-Bottom-Bar (#437), die bis exakt md sichtbar ist. */}
+      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-20 sm:px-8 sm:pt-24 md:ml-16 md:pb-8 xl:ml-64">
         {children}
         {/* Scroll buffer: lets page content (e.g. a dropdown menu at the
             bottom, or the last section of a long page) scroll clear of the

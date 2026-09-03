@@ -21,6 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ActionButton } from "@/components/ui/action-button";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/components/ui/use-pagination";
+import { useResponsivePageSize } from "@/components/ui/use-responsive-page-size";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
@@ -147,6 +150,13 @@ export function VereinsmitgliederTable({
     return result;
   }, [members, search, contributionFilter, zustandFilter, portalLoginFilter]);
 
+  const [pageSize, setPageSize] = useResponsivePageSize(10, 25);
+  const { page, pageCount, setPage, start, end } = usePagination(
+    filteredMembers.length,
+    pageSize,
+  );
+  const pageMembers = filteredMembers.slice(start, end);
+
   return (
     <Accordion
       id="vereinsmitglieder"
@@ -247,7 +257,7 @@ export function VereinsmitgliederTable({
                       </TableCell>
                     </TableRow>
                   )}
-                  {filteredMembers.map((member) => (
+                  {pageMembers.map((member) => (
                     <TableRow key={member.id}>
                       <TableCell>
                         <MemberEditDialog member={member} isAdmin={isAdmin} />
@@ -374,6 +384,14 @@ export function VereinsmitgliederTable({
                 </TableBody>
               </Table>
             </div>
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              totalItems={filteredMembers.length}
+            />
           </div>
         </AccordionPanel>
       </AccordionItem>

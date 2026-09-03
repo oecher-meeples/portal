@@ -20,7 +20,9 @@ export function Header({
         {previewTier && <PreviewTierSwitcher tier={previewTier} />}
         {user && <FeedbackButton />}
         <UserMenu user={user} />
-        <ThemeToggle />
+        {/* < sm hat MobileNav (im ersten Bottom-Sheet) bereits einen eigenen
+            Theme-Toggle — hier redundant. */}
+        <ThemeToggle className="hidden sm:inline-flex" />
       </div>
     </header>
   );

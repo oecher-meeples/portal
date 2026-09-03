@@ -127,12 +127,9 @@ export function DownloadsView({
 
         <div className="bg-card flex flex-col divide-y rounded-lg border">
           {legalDocs.map((doc) => (
-            <div
-              key={doc.slug}
-              className="flex items-center justify-between gap-4 p-4"
-            >
+            <div key={doc.slug} className="flex flex-col gap-2 p-4">
               <p className="font-medium">{doc.title}</p>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center justify-end gap-1">
                 {canManageLegal && (
                   <Button
                     variant="outline"

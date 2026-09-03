@@ -4,6 +4,15 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+} from "@/components/ui/combobox";
+import { useControlledComboboxInput } from "@/components/ui/use-controlled-combobox-input";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   buildRegistrationLink,
@@ -11,14 +20,28 @@ import {
 } from "@/lib/members/invites";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
+/** Suchschlüssel eines Mitglieds in der Combobox — eindeutig (führt die
+ * Mitgliedsnummer), dient sowohl der Textsuche als auch als `value` des
+ * jeweiligen Items. Sichtbar dargestellt wird Name/E-Mail zweizeilig (s.
+ * `ComboboxItem` unten), nicht dieser String selbst. */
+function memberSearchKey(member: MemberWithoutLoginRow) {
+  return `#${member.memberNumber} ${member.displayName} (${member.email})`;
+}
+
 export function InviteForm({
   membersWithoutLogin,
   defaultDays,
+  initialSearch = "",
 }: {
   membersWithoutLogin: MemberWithoutLoginRow[];
   /** Zentraler Wert aus `/admin/einstellungen/einladungen` (#349) — hier nur
    * noch angezeigt, nicht mehr pro Einladung überschreibbar. */
   defaultDays: number;
+  /** Vorbelegt das Mitglied-Suchfeld, z. B. mit der (erfolglosen) Eingabe aus
+   * der Einladungen-Suche darüber (Live-Review) — läuft live mit, solange
+   * noch kein Mitglied ausgewählt ist (danach hat die Auswahl Vorrang, s.
+   * `useControlledComboboxInput`). */
+  initialSearch?: string;
 }) {
   const [memberId, setMemberId] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
@@ -29,6 +52,12 @@ export function InviteForm({
     extended: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedMember =
+    membersWithoutLogin.find((member) => member.id === memberId) ?? null;
+  const [inputValue, setInputValue] = useControlledComboboxInput(
+    selectedMember?.displayName ?? initialSearch,
+  );
 
   async function handleCreateInvite() {
     if (!memberId) {
@@ -66,35 +95,59 @@ export function InviteForm({
       : null;
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="font-serif text-lg font-bold">Einladung erstellen</h2>
-      <p className="text-muted-foreground text-sm">
-        Eine Einladung ist immer an ein bestehendes Vereinsmitglied gebunden —
-        die E-Mail-Adresse kommt aus dessen Stammdaten. Gültigkeitsdauer:{" "}
-        {defaultDays} {defaultDays === 1 ? "Tag" : "Tage"} (zentral in den
-        Einladungseinstellungen hinterlegt).
-      </p>
-
+    <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-[2fr_auto]">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-member">Mitglied</Label>
-          <select
-            id="invite-member"
-            value={memberId}
-            onChange={(event) => setMemberId(event.target.value)}
-            className="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+          <Combobox
+            items={membersWithoutLogin.map(memberSearchKey)}
+            value={selectedMember ? memberSearchKey(selectedMember) : null}
+            inputValue={inputValue}
+            onInputValueChange={setInputValue}
+            onValueChange={(key) => {
+              const selected = membersWithoutLogin.find(
+                (member) => memberSearchKey(member) === key,
+              );
+              setMemberId(selected?.id ?? "");
+            }}
           >
-            <option value="" disabled>
-              {membersWithoutLogin.length === 0
-                ? "Keine Mitglieder ohne Login vorhanden"
-                : "Mitglied ohne Login wählen …"}
-            </option>
-            {membersWithoutLogin.map((member) => (
-              <option key={member.id} value={member.id}>
-                #{member.memberNumber} {member.displayName} ({member.email})
-              </option>
-            ))}
-          </select>
+            <ComboboxInput
+              id="invite-member"
+              disabled={membersWithoutLogin.length === 0}
+              placeholder={
+                membersWithoutLogin.length === 0
+                  ? "Keine Mitglieder ohne Login vorhanden"
+                  : "Mitglied ohne Login suchen …"
+              }
+            />
+            <ComboboxPopup>
+              <ComboboxEmpty>Keine Treffer.</ComboboxEmpty>
+              <ComboboxList>
+                {(key: string) => {
+                  const member = membersWithoutLogin.find(
+                    (candidate) => memberSearchKey(candidate) === key,
+                  );
+                  if (!member) return null;
+                  return (
+                    <ComboboxItem key={key} value={key}>
+                      {/* Name/E-Mail zweizeilig statt einer langen Zeile
+                       * ("#num Name (email)") — hält die Combobox schmal,
+                       * sonst zwang die Breite des längsten Eintrags den
+                       * Button daneben aus dem Akkordeon hinaus. */}
+                      <span className="flex flex-col">
+                        <span>
+                          #{member.memberNumber} {member.displayName}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {member.email}
+                        </span>
+                      </span>
+                    </ComboboxItem>
+                  );
+                }}
+              </ComboboxList>
+            </ComboboxPopup>
+          </Combobox>
         </div>
         <Button
           onClick={handleCreateInvite}

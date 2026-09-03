@@ -86,7 +86,7 @@ export function BankverbindungSection({
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-serif text-lg font-bold">Bankverbindung</h2>
         {canEditUi && !editing && (
           <Button

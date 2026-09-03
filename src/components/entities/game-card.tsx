@@ -41,10 +41,13 @@ export function GameCard({
         </div>
       </CardCornerOverlay>
       {isExpansion && <RibbonCorner>Erweiterung</RibbonCorner>}
+      {/* < sm: 1-spaltiges Grid macht das Cover sonst sehr groß (volle
+          Kartenbreite) — etwas kürzeres Seitenverhältnis verkleinert es
+          dort; ab sm (2+ Spalten, schmalere Karten) wieder aspect-video. */}
       <GameCoverMedia
         imageUrl={game.imageUrl}
         title={game.title}
-        aspect="aspect-video"
+        aspect="aspect-[2/1] sm:aspect-video"
       />
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">

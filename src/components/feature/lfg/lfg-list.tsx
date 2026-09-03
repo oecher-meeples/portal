@@ -45,7 +45,7 @@ export function LfgList({ posts }: { posts: LfgPostSummary[] }) {
               </div>
               <LfgStatusPill status={post.status} />
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="mt-auto flex items-center justify-between gap-3">
               <div className="text-sm">
                 {post.creatorName} · {post.participantCount}/
                 {post.maxParticipants}
