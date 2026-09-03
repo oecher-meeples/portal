@@ -110,7 +110,7 @@ export function MobileNav({
                           "flex items-center gap-3 rounded-md px-3 py-2.5 font-medium transition-colors",
                           itemActive
                             ? "bg-sidebar-primary/15 text-foreground"
-                            : "text-foreground/80 hover:bg-accent",
+                            : "text-foreground/80 hover:bg-accent hover:text-accent-foreground",
                         )}
                       >
                         <ItemIcon className="size-4 shrink-0" />
