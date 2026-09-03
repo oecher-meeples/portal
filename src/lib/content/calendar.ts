@@ -22,7 +22,10 @@ async function readCappedIcsBody(
   maxBytes: number,
 ): Promise<string | null> {
   const contentLength = Number(response.headers?.get?.("content-length") ?? 0);
-  if (contentLength > maxBytes) return null;
+  if (contentLength > maxBytes) {
+    await response.body?.cancel();
+    return null;
+  }
 
   const reader = response.body?.getReader();
   if (!reader) {
@@ -110,7 +113,10 @@ async function fetchIcsFeed(
       next: { revalidate: REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!response.ok) return [];
+    if (!response.ok) {
+      await response.body?.cancel();
+      return [];
+    }
 
     const icsText = await readCappedIcsBody(response, MAX_ICS_BYTES);
     if (icsText === null) return [];
