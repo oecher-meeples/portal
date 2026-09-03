@@ -47,6 +47,12 @@ export function NewsCalendar({
   });
 
   const eventDates = new Set(items.map((item) => item.date));
+  // #10: Tage mit mind. einem internen Termin bekommen eine eigene Farbe —
+  // bei gemischten Tagen (intern + extern) hat intern bewusst Vorrang, damit
+  // die Markierung nicht auf eine dritte Mischfarbe angewiesen ist.
+  const internalEventDates = new Set(
+    items.filter((item) => item.internal).map((item) => item.date),
+  );
   const cells = buildMonthGrid(viewMonth);
   const todayKey = toDateKey(new Date());
 
@@ -92,6 +98,7 @@ export function NewsCalendar({
           if (!date) return <span key={index} />;
           const key = toDateKey(date);
           const hasEvent = eventDates.has(key);
+          const isInternal = internalEventDates.has(key);
           const isSelected = selectedDate === key;
           const isToday = key === todayKey;
 
@@ -103,9 +110,11 @@ export function NewsCalendar({
               onClick={() => onSelectDate(isSelected ? null : key)}
               className={cn(
                 "aspect-square rounded-md text-sm transition-colors",
-                hasEvent
-                  ? "bg-primary/15 hover:bg-primary/25 font-semibold"
-                  : "text-muted-foreground",
+                hasEvent &&
+                  (isInternal
+                    ? "bg-secondary hover:bg-secondary/80 font-semibold"
+                    : "bg-primary/15 hover:bg-primary/25 font-semibold"),
+                !hasEvent && "text-muted-foreground",
                 isSelected && "bg-primary text-primary-foreground",
                 isToday && !isSelected && "ring-primary ring-1",
               )}
@@ -116,9 +125,20 @@ export function NewsCalendar({
         })}
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        <span className="flex items-center gap-1.5">
+          <span className="bg-primary/15 size-3 rounded-sm" aria-hidden />
+          Öffentlich
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="bg-secondary size-3 rounded-sm" aria-hidden />
+          Intern
+        </span>
+      </div>
+
       <p className="text-muted-foreground mt-3 text-sm">
-        Automatisch synchronisiert aus dem öffentlichen Vereinskalender. Tage
-        mit Terminen sind markiert – anklicken filtert die Liste.
+        Automatisch synchronisiert aus dem Vereinskalender. Tage mit Terminen
+        sind markiert – anklicken filtert die Liste.
       </p>
 
       {icsUrl && (
