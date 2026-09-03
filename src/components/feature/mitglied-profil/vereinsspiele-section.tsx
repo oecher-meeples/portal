@@ -44,13 +44,17 @@ export function VereinsspieleSection({
               </p>
             </div>
             <div className="flex gap-2">
+              {/* #455: außerhalb eines Dropdown-Menüs braucht der Trigger
+               * sichtbare Button-Optik statt des dortigen ghost-Defaults. */}
               <GiveToMeepleDialog
                 gameCopyId={holding.gameCopyId}
                 triggerClassName="w-auto"
+                triggerVariant="outline"
               />
               <AcceptReturnDialog
                 gameCopyId={holding.gameCopyId}
                 triggerClassName="w-auto"
+                triggerVariant="outline"
                 hideSelfMode={viewerIsSubject}
               />
             </div>

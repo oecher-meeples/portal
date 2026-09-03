@@ -4,9 +4,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { VereinsspieleSection } from "@/components/feature/mitglied-profil/vereinsspiele-section";
 
 const acceptReturnDialogMock = vi.fn();
+const giveToMeepleDialogMock = vi.fn();
 
 vi.mock("@/components/widgets/game-holding/holding-mini-dialogs", () => ({
-  GiveToMeepleDialog: () => <button>Weitergeben</button>,
+  GiveToMeepleDialog: (props: { triggerVariant?: string }) => {
+    giveToMeepleDialogMock(props);
+    return <button>Weitergeben</button>;
+  },
   AcceptReturnDialog: (props: { hideSelfMode?: boolean }) => {
     acceptReturnDialogMock(props);
     return <button>Rückgabe</button>;
@@ -66,6 +70,21 @@ describe("VereinsspieleSection (#383)", () => {
 
     expect(acceptReturnDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({ hideSelfMode: true }),
+    );
+  });
+
+  // #455: freistehend im Profil braucht der Trigger sichtbare Button-Optik
+  // statt des ghost-Defaults, der zum Dropdown-Menü-Kontext gehört.
+  it("gives both trigger buttons a visible button style", () => {
+    render(
+      <VereinsspieleSection holdings={[HOLDING]} viewerIsSubject={false} />,
+    );
+
+    expect(acceptReturnDialogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ triggerVariant: "outline" }),
+    );
+    expect(giveToMeepleDialogMock).toHaveBeenCalledWith(
+      expect.objectContaining({ triggerVariant: "outline" }),
     );
   });
 });

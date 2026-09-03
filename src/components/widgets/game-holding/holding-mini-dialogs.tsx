@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, type buttonVariants } from "@/components/ui/button";
+import type { VariantProps } from "class-variance-authority";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -31,6 +32,14 @@ type ControlledDialogProps = {
  * mehrere Trigger nebeneinander in einer `flex`-Zeile) übergibt hier eine
  * schmalere Klasse, statt `w-full` in eine Row zu zwingen. */
 type TriggerClassNameProp = { triggerClassName?: string };
+
+/** Trigger-Button-Variante überschreiben (#455) — Default `ghost` passt zum
+ * Dropdown-Menü-Kontext (`game-actions-menu.tsx`), wirkt aber freistehend
+ * (z. B. `vereinsspiele-section.tsx`) ohne Rand/Füllung nicht als Button
+ * erkennbar. Aufrufer außerhalb eines Menüs übergeben hier `"outline"`. */
+type TriggerVariantProp = {
+  triggerVariant?: VariantProps<typeof buttonVariants>["variant"];
+};
 
 /** Ausleihen — always self, no target to pick (see holding-actions.ts). */
 export function BorrowGameDialog({
@@ -109,9 +118,11 @@ export function AcceptReturnDialog({
   open,
   onOpenChange,
   triggerClassName,
+  triggerVariant = "ghost",
   hideSelfMode,
 }: { gameCopyId: string; hideSelfMode?: boolean } & ControlledDialogProps &
-  TriggerClassNameProp) {
+  TriggerClassNameProp &
+  TriggerVariantProp) {
   const initialMode: ReturnMode = hideSelfMode ? "person" : "self";
   const [mode, setMode] = useState<ReturnMode>(initialMode);
   const [targets, setTargets] = useState<Target[]>([]);
@@ -134,7 +145,7 @@ export function AcceptReturnDialog({
       trigger={
         open === undefined ? (
           <Button
-            variant="ghost"
+            variant={triggerVariant}
             size="sm"
             className={cn(TRIGGER_CLASS, triggerClassName)}
           >
@@ -208,7 +219,10 @@ export function GiveToMeepleDialog({
   open,
   onOpenChange,
   triggerClassName,
-}: { gameCopyId: string } & ControlledDialogProps & TriggerClassNameProp) {
+  triggerVariant = "ghost",
+}: { gameCopyId: string } & ControlledDialogProps &
+  TriggerClassNameProp &
+  TriggerVariantProp) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
 
@@ -217,7 +231,7 @@ export function GiveToMeepleDialog({
       trigger={
         open === undefined ? (
           <Button
-            variant="ghost"
+            variant={triggerVariant}
             size="sm"
             className={cn(TRIGGER_CLASS, triggerClassName)}
           >
