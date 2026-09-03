@@ -14,16 +14,9 @@ export default async function HomePage() {
     getLatestPosts(3, isMember),
     countBoardGameTitles().then(roundDownToHundred),
   ]);
-  // Non-members don't see the donation callout next to the calendar (#96) —
-  // let the calendar use that freed space by showing more events instead.
-  const events = await getUpcomingEventsWithCalendar(isMember ? 3 : 6);
+  // #420: die Spenden-Sperre aus #96 ist aufgehoben — der Spenden-Callout
+  // steht jetzt für alle neben dem Kalender, also immer dieselbe Event-Zahl.
+  const events = await getUpcomingEventsWithCalendar(3);
 
-  return (
-    <HomeView
-      events={events}
-      posts={posts}
-      gameCount={gameCount}
-      isMember={isMember}
-    />
-  );
+  return <HomeView events={events} posts={posts} gameCount={gameCount} />;
 }

@@ -169,7 +169,6 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/spenden",
         icon: HeartHandshake,
         section: "Öffentlich",
-        minTier: "mitglied",
       },
       {
         label: "Downloads & Rechtliches",
