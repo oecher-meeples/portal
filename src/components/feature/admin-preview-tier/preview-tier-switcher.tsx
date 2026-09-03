@@ -13,7 +13,15 @@ const OPTIONS: { label: string; value: Tier }[] = [
   { label: "Admin", value: "admin" },
 ];
 
-export function PreviewTierSwitcher({ tier }: { tier: Tier }) {
+export function PreviewTierSwitcher({
+  tier,
+  className,
+}: {
+  tier: Tier;
+  /** Default: nur ab `md` sichtbar (Header). MobileNav (#437-Folge) braucht
+   * ihn dagegen immer sichtbar, da die Bottom-Bar dort bereits `< sm` ist. */
+  className?: string;
+}) {
   const [value, setValue] = useState(tier);
   const { run, pending } = useAction();
 
@@ -27,6 +35,7 @@ export function PreviewTierSwitcher({ tier }: { tier: Tier }) {
       className={cn(
         "hidden items-center gap-2 md:flex",
         pending && "opacity-60",
+        className,
       )}
     >
       <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">

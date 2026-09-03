@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UserRound } from "lucide-react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
   DialogOverlay,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { PreviewTierSwitcher } from "@/components/feature/admin-preview-tier/preview-tier-switcher";
 import {
   getVisibleNavGroups,
   NAV_GROUP_ICONS,
@@ -33,11 +35,13 @@ export function MobileNav({
   realTier,
   permissions,
   flags,
+  user,
 }: {
   tier: Tier;
   realTier: Tier;
   permissions: readonly string[];
   flags: Readonly<Record<NavFlag, boolean>>;
+  user: { name: string } | null;
 }) {
   const pathname = usePathname();
   const previewingLowerTier = realTier === "admin" && tier !== "admin";
@@ -92,13 +96,28 @@ export function MobileNav({
                 data-slot="dialog-content"
                 className="bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col gap-1 rounded-t-xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm ring-1 duration-150 outline-none"
               >
-                {/* Theme-Umschalter ist sonst nur im Header — auf `< sm`
-                    (wo die Bottom-Bar ihn ersetzt) nicht erreichbar. Landet
-                    hier in der ersten Gruppe statt an anderer Stelle in der
-                    Bottom-Bar selbst zu leben, da es kein eigenes viertes
-                    Icon dafür geben soll. */}
+                {/* Preview-Tier-Switcher, Profil-Link und Theme-Umschalter
+                    sind sonst nur im Header — auf `< sm` (wo die Bottom-Bar
+                    ihn ersetzt) nicht erreichbar. Landen hier in der ersten
+                    Gruppe statt an anderer Stelle in der Bottom-Bar selbst
+                    zu leben, da es kein eigenes viertes Icon dafür geben
+                    soll. Zeile insgesamt rechtsbündig, Reihenfolge darin
+                    links nach rechts wie gewünscht. */}
                 {index === 0 && (
-                  <div className="flex justify-end px-2 pb-1">
+                  <div className="flex items-center justify-end gap-3 px-2 pb-1">
+                    {realTier === "admin" && (
+                      <PreviewTierSwitcher tier={tier} className="flex" />
+                    )}
+                    {user && (
+                      <Link
+                        href="/profil"
+                        onClick={() => setOpenGroup(null)}
+                        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm"
+                      >
+                        <UserRound className="text-primary size-4" />
+                        {user.name}
+                      </Link>
+                    )}
                     <ThemeToggle />
                   </div>
                 )}

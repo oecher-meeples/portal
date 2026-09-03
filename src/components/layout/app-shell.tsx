@@ -35,6 +35,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         realTier={realTier}
         permissions={permissions}
         flags={{ openHelperRequest }}
+        user={user ? { name: user.name } : null}
       />
       {/* pt-[5.5rem]/sm:pt-24: header (h-16 = 4rem) + the block's own py-6/sm:py-8 top inset,
           since the header is fixed and no longer pushes this block down via normal flow. */}
