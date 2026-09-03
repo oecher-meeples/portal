@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# `@neondatabase/auth`-Unterbaum: AGPL-Risiko dokumentiert, nicht behoben
+# `@neondatabase/auth`-Unterbaum: AGPL-Risiko dokumentiert, Vercel-Trace verifiziert
 
 `@neondatabase/auth` löst transitiv über `@neondatabase/auth-ui` → `@daveyplate/better-auth-ui` → `@triplit/client`/`@triplit/db`/`@triplit/react` auf. `@triplit/client` deklariert im eigenen `package.json` ausdrücklich `"license": "AGPL-3.0-only"`. `@triplit/db` und `@triplit/logger` haben **kein** `license`-Feld im npm-Manifest — ohne ausdrückliche Lizenz besteht per Urheberrecht kein Nutzungsrecht, das ist der ungünstigste Ausgangspunkt, nicht der harmloseste. Da beide Pakete Teil desselben Triplit-Monorepos sind wie das AGPL-lizenzierte `@triplit/client`, ist AGPL-3.0-only auch für sie die naheliegende Annahme — bestätigt ist das aber nicht; das müsste am Upstream-Repository (nicht am npm-Manifest) geklärt werden, was in diesem Lauf nicht möglich war.
 
@@ -23,12 +23,28 @@ Nur `src/lib/auth/server.ts` und `src/lib/auth/client.ts` importieren aus `@neon
 
 AGPL §13 (Remote Network Interaction) greift beim **Betrieb** eines Netzwerkdienstes, nicht erst beim Ausliefern von Code an den Browser. Dass die Triplit-Pakete nicht ins ausgelieferte Bundle gelangen, beantwortet also nicht die eigentliche Frage — die wäre, ob und wie `@neondatabase/auth` diese Pakete zur **Laufzeit auf dem Server** tatsächlich nutzt (z. B. für Realtime-Sync-Funktionen, die dieses Portal nicht verwendet). Das haben wir in diesem Lauf nicht bis auf den Ausführungspfad zurückverfolgt.
 
+## Vercel-Deployment-Trace verifiziert (#41, 2026-09-03)
+
+Der Bundle-Grep in `.next/server`/`.next/static` oben deckt nur ab, was Webpack in die JS-Chunks einbettet — nicht, ob Vercels tatsächlicher Function-Bundler (`@vercel/nft`, Dependency-Tracing beim Deployment) zusätzliche `node_modules`-Dateien in das Serverless-Function-Artefakt zieht, die im Webpack-Output nicht auftauchen. Das war die einzige offene technische Unsicherheit aus #41.
+
+Verifiziert per `vercel build` (lokaler Nachbau des exakten Vercel-Deployment-Traces, `vercel-cli@59.11.2`, gegen das verlinkte Projekt `jh-erwig/oecher-meeples-portal`): Next.js schreibt dabei für jede Route eine `*.nft.json` — das ist exakt das `@vercel/nft`-Traceergebnis, das Vercel für das reale Deployment verwendet, unabhängig vom `.vercel/output`-Symlink-Schritt (der auf Windows ohne Symlink-Rechte scheitert, aber nach der Trace-Phase liegt).
+
+```
+grep -rli "triplit\|daveyplate\|auth-ui\|neondatabase.auth" .next/server --include="*.nft.json"
+```
+
+**0 Treffer** über alle 64 erzeugten `.nft.json`-Dateien, inklusive `app/login/page.js.nft.json` und `app/api/auth/[...path]/route.js.nft.json` (die beiden Routen, die `@neondatabase/auth` tatsächlich importieren). `@neondatabase/auth` selbst taucht in den Traces ebenfalls nicht als externe Datei auf — es ist vollständig in die jeweiligen Webpack-Chunks eingebettet, das Nft-Tracing greift nur für den Rest (Prisma-Runtime, Next.js-eigene compiled Assets, …), der nicht statisch bundlebar ist.
+
+**Damit ist die im Issue gestellte Given/When/Then-Bedingung erfüllt:** Der Trace zeigt ebenfalls 0 Treffer für die AGPL-Kette (`@triplit/*`, `@daveyplate/*`, `@neondatabase/auth-ui`) — das technische Restrisiko (Code wird zur Laufzeit nicht geladen/ausgeführt) gilt als abschließend dokumentiert geklärt. Kein Dependency-Austausch nötig.
+
+Offen bleibt weiterhin, unabhängig von dieser technischen Frage: (1) die Upstream-Lizenz von `@triplit/db`/`@triplit/logger` ist am Triplit-Repository selbst nicht verifiziert (kein `license`-Feld im npm-Manifest), und (2) der LICENSE-Widerspruch (public Repo vs. "All rights reserved", siehe unten) — beides sind eigenständige, nicht-technische Punkte, die eine Vorstandsentscheidung erfordern, nicht eine erneute Code-Prüfung.
+
 ## Zusätzlicher Widerspruch
 
 Das Repository ist **public**, die eigene [`LICENSE`](../../LICENSE) sagt „All rights reserved" und räumt Dritten nur akademische Ansicht ein. Das ist unabhängig von der Triplit-Frage ein eigener, ungeklärter Punkt.
 
 ## Consequences
 
-- Kein Dependency-Austausch in diesem Lauf. Das Risiko bleibt bestehen, bis der Vorstand/die Entwicklung entscheidet, ob `@neondatabase/auth` ersetzt wird.
-- Vor jedem Produktions-Release sollte geklärt werden, ob `@neondatabase/auth` die Triplit-Pakete zur Laufzeit tatsächlich aktiv nutzt (nicht nur importiert) — das ist der eigentlich offene Punkt, nicht die Bundle-Frage.
+- Kein Dependency-Austausch nötig — sowohl der Webpack-Bundle-Grep als auch der Vercel-`@vercel/nft`-Deployment-Trace zeigen 0 Treffer für die AGPL-Kette. Das technische Restrisiko aus #41 gilt als abschließend dokumentiert.
+- Weiterhin offen, aber nicht-technisch und daher außerhalb der Reichweite eines erneuten Code-Checks: Upstream-Lizenz von `@triplit/db`/`@triplit/logger` und der LICENSE-Widerspruch (public Repo vs. "All rights reserved") — beides Sache des Vorstands, ggf. im Zuge von #48.
 - Kommentar mit diesem Befund geht an #41.
