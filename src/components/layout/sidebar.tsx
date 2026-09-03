@@ -149,17 +149,6 @@ export function Sidebar({
           );
         })}
       </nav>
-      <div
-        className={cn(
-          "text-sidebar-foreground/60 mt-auto border-t pt-4 text-xs",
-          expandedFlex,
-          "flex-col",
-        )}
-      >
-        Klickbarer Prototyp &middot; Oecher Meeples
-        <br />
-        alle Inhalte sind Platzhalter
-      </div>
     </aside>
   );
 }
