@@ -162,6 +162,8 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 
 Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `entities/`, `ui/` oder `lib/`.
 
+**Ausnahme `verwendete-bibliotheken` (#117):** `src/app/verwendete-bibliotheken/page.tsx` liegt bewusst außerhalb von `app/rechtliches/[slug]` und `feature/rechtliches/` — die Seite rendert die vollautomatisch generierte `public/THIRD-PARTY-LICENSES.md` (`pnpm run licenses:generate`) direkt zur Request-Zeit über `MarkdownContent`, ist kein `LegalDocument` und taucht nicht im Rechtliches-Editor auf (kein Redakteur bearbeitet sie je). Die rohe `.md`-Datei bleibt zusätzlich unter `/THIRD-PARTY-LICENSES.md` erreichbar.
+
 ## `src/components/layout/` — App-Rahmen
 
 `app-shell`, `header`, `sidebar`, `logo`, `theme-provider`, `theme-toggle`, `user-menu`, `brand-watermark`. Reine Struktur/Positionierung; darf als oberste Schicht aus allen anderen importieren.

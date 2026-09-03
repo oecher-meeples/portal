@@ -153,7 +153,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
         links: [
           {
             label: "Third-Party-Lizenzverzeichnis",
-            href: "/THIRD-PARTY-LICENSES.md",
+            href: "/verwendete-bibliotheken",
           },
         ],
       },
@@ -202,7 +202,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
         links: [
           {
             label: "Third-Party-Lizenzverzeichnis",
-            href: "/THIRD-PARTY-LICENSES.md",
+            href: "/verwendete-bibliotheken",
           },
         ],
       },
