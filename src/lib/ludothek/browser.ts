@@ -80,6 +80,9 @@ export type LudothekGame = {
   /** Display name for `responsibleMeepleId` — a person or the keeper of the
    * storage unit chain, whichever comes first (#121 Standort-Kette). */
   responsibleName: string | null;
+  /** True, solange der aktuelle Halter die Übernahme nach einer Weitergabe
+   * noch nicht bestätigt hat (`GameHolding.confirmedAt === null`, #456). */
+  isUnconfirmed: boolean;
   /** Storage units only, outermost → innermost — no person prefix (see
    * `locationChain` for the combined, person-first display string). */
   unitChain: string;
@@ -108,6 +111,7 @@ export type PublicLudothekGame = Omit<
   | "isLoanedOut"
   | "responsibleMeepleId"
   | "responsibleName"
+  | "isUnconfirmed"
   | "unitChain"
   | "locationChain"
   | "ean"
@@ -124,6 +128,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     isLoanedOut: _isLoanedOut,
     responsibleMeepleId: _responsibleMeepleId,
     responsibleName: _responsibleName,
+    isUnconfirmed: _isUnconfirmed,
     unitChain: _unitChain,
     locationChain: _locationChain,
     ean: _ean,

@@ -87,4 +87,24 @@ describe("VereinsspieleSection (#383)", () => {
       expect.objectContaining({ triggerVariant: "outline" }),
     );
   });
+
+  // #456: unbestätigte Weitergabe war im Profil bislang nicht sichtbar.
+  it("shows '(Unbestätigt)' behind the title for an unconfirmed holding", () => {
+    render(
+      <VereinsspieleSection
+        holdings={[{ ...HOLDING, isUnconfirmed: true }]}
+        viewerIsSubject={false}
+      />,
+    );
+
+    expect(screen.getByText("(Unbestätigt)")).toBeInTheDocument();
+  });
+
+  it("does not show '(Unbestätigt)' for a confirmed holding", () => {
+    render(
+      <VereinsspieleSection holdings={[HOLDING]} viewerIsSubject={false} />,
+    );
+
+    expect(screen.queryByText("(Unbestätigt)")).not.toBeInTheDocument();
+  });
 });

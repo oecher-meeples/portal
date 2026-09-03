@@ -40,6 +40,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     isLoanedOut: false,
     responsibleMeepleId: "meeple-a",
     responsibleName: "Alex",
+    isUnconfirmed: false,
     unitChain: "Karton 1",
     locationChain: "Karton 1",
     explainerCount: 0,

@@ -44,6 +44,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     isLoanedOut: false,
     responsibleMeepleId: null,
     responsibleName: null,
+    isUnconfirmed: false,
     unitChain: "Regal A",
     locationChain: "Regal A",
     explainerCount: 0,

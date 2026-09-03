@@ -28,6 +28,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     zustand: "frei",
     unitChain: "Regal A",
     responsibleName: null,
+    isUnconfirmed: false,
     responsibleContact: {
       mailHref: null,
       telegramHref: null,
@@ -159,6 +160,27 @@ describe("GameCopiesSection", () => {
 
     const cell = screen.getByText(/Regal A/);
     expect(cell.textContent).toBe("bei Alex → Regal A");
+  });
+
+  // #456: unbestätigte Weitergabe war auf der Spieledetailseite nicht sichtbar.
+  it("adds '(Unbestätigt)' behind the responsible person for an unconfirmed holding", () => {
+    render(
+      <GameCopiesSection
+        copies={[
+          copy({
+            unitChain: "Regal A",
+            responsibleName: "Alex",
+            isUnconfirmed: true,
+          }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    const cell = screen.getByText(/Regal A/);
+    expect(cell.textContent).toBe("bei Alex (Unbestätigt) → Regal A");
   });
 
   it("renders a table for more than one copy", () => {

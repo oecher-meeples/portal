@@ -131,6 +131,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         isLoanedOut: false,
         responsibleMeepleId: null,
         responsibleName: null,
+        isUnconfirmed: false,
         unitChain: "",
         locationChain: "",
       };
@@ -154,6 +155,9 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         // ContactDialog anschreiben könnte (#333).
         responsibleMeepleId: holding.vereinsmitglied?.meeple?.id ?? null,
         responsibleName,
+        // #456: nach einer Weitergabe unbestätigt, bis die empfangende
+        // Person die Übernahme aktiv bestätigt.
+        isUnconfirmed: !holding.confirmedAt,
         unitChain: "",
         locationChain: formatLocationChain({ responsibleName, unitChain: "" }),
       };
@@ -172,6 +176,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       isLoanedOut: false,
       responsibleMeepleId: keeperMeepleId,
       responsibleName,
+      isUnconfirmed: !holding.confirmedAt,
       unitChain,
       locationChain: formatLocationChain({ responsibleName, unitChain }),
     };

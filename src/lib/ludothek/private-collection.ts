@@ -151,6 +151,8 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       isLoanedOut: false,
       responsibleMeepleId: entry.meeple.id,
       responsibleName: entry.meeple.displayName,
+      // Privatbesitz hat keine Vereins-Weitergabe/-Bestätigung (#456).
+      isUnconfirmed: false,
       unitChain: "",
       locationChain: `bei ${entry.meeple.displayName} (privat)`,
       explainerCount: 0,

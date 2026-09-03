@@ -28,6 +28,9 @@ export type GameCopyRow = {
   unitChain: string;
   responsibleName: string | null;
   responsibleContact: ContactLinks;
+  /** True, solange der aktuelle Halter die Übernahme nach einer Weitergabe
+   * noch nicht bestätigt hat (`Holding.confirmedAt === null`, #456). */
+  isUnconfirmed: boolean;
   condition: string | null;
   /** Sprache(n) des mitgelieferten Regelhefts, z. B. `["DE", "EN"]` (#188). */
   ruleBookLanguages: RuleBookLanguage[];
@@ -59,6 +62,7 @@ function LocationCell({ copy }: { copy: GameCopyRow }) {
             name={copy.responsibleName}
             contact={copy.responsibleContact}
           />
+          {copy.isUnconfirmed && " (Unbestätigt)"}
         </>
       )}
       {copy.responsibleName && copy.unitChain && " → "}

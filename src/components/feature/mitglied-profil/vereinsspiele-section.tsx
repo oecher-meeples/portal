@@ -37,7 +37,15 @@ export function VereinsspieleSection({
             className="flex flex-wrap items-center justify-between gap-3 py-3"
           >
             <div>
-              <p className="font-medium">{holding.boardGameTitle}</p>
+              <p className="font-medium">
+                {holding.boardGameTitle}
+                {holding.isUnconfirmed && (
+                  <span className="text-muted-foreground font-normal">
+                    {" "}
+                    (Unbestätigt)
+                  </span>
+                )}
+              </p>
               <p className="text-muted-foreground">
                 seit {formatDatePlain(holding.startedAt)}
                 {holding.inventoryNumber && ` · ${holding.inventoryNumber}`}
