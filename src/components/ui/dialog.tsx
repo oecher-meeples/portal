@@ -58,7 +58,17 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm",
+          // `max-h-[calc(100vh-4rem)]` + `overflow-y-auto` analog zur
+          // horizontalen `max-w-[calc(100%-2rem)]`-Randbreite — sonst ragt
+          // ein langer Dialog (viele Felder, lange Liste) auf kleinen
+          // Viewports über den sichtbaren Bereich hinaus, ohne dass er
+          // scrollen ließe. Unter `md` sitzt zusätzlich die fixe
+          // `MobileNav`-Bottom-Bar (`h-16` = 4rem, `z-[60]`, über dem Dialog)
+          // — der Anker verschiebt sich dort um ihre halbe Höhe nach oben und
+          // die maximale Höhe reserviert die volle Bar-Höhe extra, sonst
+          // verschwindet der Dialog-Footer dahinter (#437-Folge). Ab `md`
+          // ist die Bar ausgeblendet, dort bleibt es bei echter Zentrierung.
+          "bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-[calc(50%-2rem)] left-1/2 z-50 grid max-h-[calc(100vh-6rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl p-4 text-sm ring-1 duration-100 outline-none sm:max-w-sm md:top-1/2 md:max-h-[calc(100vh-4rem)]",
           // Wenn dieser Dialog selbst einen verschachtelten Dialog geöffnet
           // hat (Base UI setzt dafür `data-nested-dialog-open` automatisch),
           // wird er unklickbar und optisch zurückgenommen — sonst blieb er
@@ -113,7 +123,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t p-4 sm:flex-row sm:justify-end",
+        "bg-muted/50 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t px-4 py-2 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
