@@ -175,8 +175,11 @@ export function DashboardView({
           <p className="text-muted-foreground mt-2 text-sm">
             Öffentliche und interne Termine an einem Ort.
           </p>
+          {/* #209: /dashboard/kalender entfernt (News-Konsolidierung) — /news
+           * deckt Öffentlich+Intern bereits über die "Nur interne
+           * anzeigen"-Checkbox ab. */}
           <Link
-            href="/dashboard/kalender"
+            href="/news"
             className="text-primary mt-3 inline-block text-sm hover:underline"
           >
             Zum Vereinskalender →

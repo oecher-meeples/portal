@@ -88,7 +88,6 @@ describe("isSettlementPath", () => {
     expect(isSettlementPath("/dashboard")).toBe(true);
     expect(isSettlementPath("/profil")).toBe(true);
     expect(isSettlementPath("/scan")).toBe(true);
-    expect(isSettlementPath("/dashboard/kalender")).toBe(true);
   });
 
   it("blocks everything else, including nested internal routes", () => {
@@ -96,6 +95,8 @@ describe("isSettlementPath", () => {
     expect(isSettlementPath("/lfg")).toBe(false);
     expect(isSettlementPath("/dashboard/news")).toBe(false);
     expect(isSettlementPath("/admin/bestand")).toBe(false);
+    // #209: /dashboard/kalender ist entfernt (News-Konsolidierung).
+    expect(isSettlementPath("/dashboard/kalender")).toBe(false);
     // #401: /mitglieder war ein vergessenes Überbleibsel ohne zugehörige Seite.
     expect(isSettlementPath("/mitglieder")).toBe(false);
     expect(isSettlementPath("")).toBe(false);

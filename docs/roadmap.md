@@ -94,7 +94,7 @@ Diese Roadmap dokumentiert die strategischen Phasen, Meilensteine und Detailziel
     * [ ] Erweiterung des Google-SSO/Logins für reguläre Vereinsmitglieder (Meeples). Mitglieder-Onboarding (Einladungs-Flow, Meeple entsteht beim ersten Login, Mitgliedschafts-Lebenszyklus) ist umgesetzt; Google SSO selbst bleibt wie in Phase 2 zurückgestellt (offen).
     * [x] Self-Service-Bereich zur sicheren Änderung der eigenen Bankdaten (DSGVO-konforme Verschlüsselung) — AES-256-GCM, Leseweg nur für die Rolle `kassenwart` mit Zugriffsprotokoll (siehe ADR 0003).
     * [x] **Interne Newsroom-Seite:** Ein geschützter News-Feed, der nur für eingeloggte Mitglieder sichtbar ist.
-    * [x] **Vereinsinterner Kalender:** Zweiter ICS-Feed (`ICS_FEED_URL_INTERNAL`) statt Google-Calendar-API, zeigt öffentliche und interne Termine zusammen (siehe Plan-Annahme „Kalender-Sync" aus Phase 2).
+    * [x] **Vereinsinterner Kalender:** Zweiter ICS-Feed (`ICS_FEED_URL_INTERNAL`) statt Google-Calendar-API, zeigt öffentliche und interne Termine zusammen (siehe Plan-Annahme „Kalender-Sync" aus Phase 2). Ursprünglich eigene Seite `/dashboard/kalender`, seit #209 in `/news` konsolidiert.
 * [x] **Meilenstein 5.3: Intelligente Spielsuche & Spielergesuche**
     * [x] Bereitstellung der Spiele-Suche für Mitglieder mit Filtern (Dauer, Komplexität, Mechaniken) — zwei Projektionen (öffentlich/intern) einer Komponente, alle Filter über `searchParams`.
     * [x] **Spielergesuche-Modul:** Mitglieder können Gesuche inserieren und andere sich per Klick anmelden.

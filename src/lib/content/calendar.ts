@@ -2,7 +2,6 @@ import ical, { type VEvent } from "node-ical";
 import {
   getAllContent,
   getUpcomingEvents,
-  getUpcomingEventsIncludingInternal,
   type ContentItem,
 } from "@/lib/content/content";
 import { findPublicUpcomingEvents } from "@/lib/events/upcoming";
@@ -165,20 +164,5 @@ export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
 
   return [...dbItems, ...calendarEvents, ...publicEvents, ...internalEvents].sort(
     (a, b) => b.date.localeCompare(a.date),
-  );
-}
-
-/** Public and internal termine together, for the members-only calendar view. */
-export async function getInternalCalendarEvents(
-  limit = 50,
-): Promise<ContentItem[]> {
-  const [dbEvents, publicEvents, internalEvents] = await Promise.all([
-    getUpcomingEventsIncludingInternal(limit),
-    fetchPublicEvents({ limit }),
-    fetchInternalEvents({ limit }),
-  ]);
-
-  return [...dbEvents, ...publicEvents, ...internalEvents].sort((a, b) =>
-    a.date.localeCompare(b.date),
   );
 }

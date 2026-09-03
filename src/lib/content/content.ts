@@ -178,17 +178,6 @@ export async function getLatestPosts(limit = 3, includeSurveys = false) {
   return posts.map(toContentItem);
 }
 
-/** Same as `getUpcomingEvents`, but includes internal Termine — for the internal calendar. */
-export async function getUpcomingEventsIncludingInternal(limit = 3) {
-  const posts = await prisma.post.findMany({
-    where: { type: { in: EVENT_TYPES }, status: "PUBLISHED" },
-    orderBy: { date: "asc" },
-    take: limit,
-    include: POST_RELATIONS_INCLUDE,
-  });
-  return posts.map(toContentItem);
-}
-
 /** Interne Beiträge brauchen news:internal:view (nicht nur eine Session) — used to gate the detail page. */
 export function canViewContentItem(
   item: Pick<ContentItem, "internal">,

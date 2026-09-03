@@ -33,12 +33,18 @@ export const PATHNAME_HEADER = "x-pathname";
 
 /**
  * The only routes an "ausgetreten" Meeple may still reach — settling up:
- * own profile, own holdings, giving games back or on, calendar.
+ * own profile, own holdings, giving games back or on.
  * Everything else (Ludothek, interne News, Spielergesuche) is closed.
+ *
+ * #209: `/dashboard/kalender` ist entfernt (News-Konsolidierung, #208) —
+ * `/news` deckt die Funktion ab, ist aber ein öffentlicher Weg (kein
+ * `requireMember()`-Gate) und braucht deshalb keinen eigenen Eintrag hier.
+ * Bewusste Konsequenz: Ausgetretene verlieren den bisherigen separaten
+ * internen Kalender-Zugriff (`news:internal:view` bleibt ihnen entzogen),
+ * s. `docs/mitglieder-konzept.md`.
  */
 export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   { path: "/dashboard", exact: true },
-  { path: "/dashboard/kalender" },
   // exact: /profil/[slug] wäre sonst für JEDEN Slug erreichbar — die eigene
   // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
   // gezielt über isOwnProfilPath durch, nicht über diese Liste.

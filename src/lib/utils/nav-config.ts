@@ -1,7 +1,6 @@
 import {
   Home,
   Newspaper,
-  CalendarDays,
   HeartHandshake,
   FileText,
   LayoutDashboard,
@@ -192,12 +191,6 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Mein Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
-        section: "Mitgliederbereich",
-      },
-      {
-        label: "Vereinskalender",
-        href: "/dashboard/kalender",
-        icon: CalendarDays,
         section: "Mitgliederbereich",
       },
       {

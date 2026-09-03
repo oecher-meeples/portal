@@ -114,7 +114,7 @@ Verträge laufen immer bis zum Ende des Kalenderjahres, Kündigungsfrist 4 Woche
 
 In den letzten 31 Tagen der Mitgliedschaft erscheint im Dashboard eine Warnung mit der Aufforderung, ausgeliehene Spiele rechtzeitig zurückzugeben (inkl. Kontaktmöglichkeiten für die Rückgabe).
 
-Nach Ablauf der Mitgliedschaft (`membershipEndsAt` erreicht) gilt die Person als **Ausgetreten**: Login bleibt möglich, Zugriff beschränkt sich aber aufs Abwickeln — eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Kalender, Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt, annehmen darf die Person nichts mehr.
+Nach Ablauf der Mitgliedschaft (`membershipEndsAt` erreicht) gilt die Person als **Ausgetreten**: Login bleibt möglich, Zugriff beschränkt sich aber aufs Abwickeln — eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt, annehmen darf die Person nichts mehr. Der interne Kalender ist seit der News-Konsolidierung (#209) kein separater Zugriffsweg mehr — er ist Teil von `/news` und damit an `news:internal:view` gebunden, das Ausgetretenen ausdrücklich entzogen ist (kein eigener Kalenderzugang mehr).
 
 Technisch ist "Ausgetreten" eine echte `Role` mit eigenem Rechte-Satz, aber nur mit `admin:access` manuell zuweisbar (Korrekturfälle). Da alle Mitgliedschaften zum selben festen Datum enden, genügt ein einziger jährlicher Cron-Job (2.1., 02:00), der die Rolle für alle betroffenen Vereinsmitglieder in einem Rutsch setzt.
 
