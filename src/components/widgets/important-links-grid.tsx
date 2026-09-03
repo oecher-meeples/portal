@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { CoverMedia } from "@/components/ui/cover-media";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { cn } from "@/lib/utils/cn";
 
 export type LinkGridItem = {
   href: string;
@@ -35,8 +37,10 @@ export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
             <span className="font-serif font-semibold">{item.label}</span>
           </>
         );
-        const className =
-          "bg-card hover:border-primary/60 flex flex-col items-center gap-2 rounded-lg border p-6 text-center transition-colors";
+        const className = cn(
+          "bg-card flex flex-col items-center gap-2 rounded-lg border p-6 text-center",
+          CARD_HOVER_CLASS,
+        );
 
         return item.external ? (
           <a

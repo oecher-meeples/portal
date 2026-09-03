@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 
 function StatTileContent({
   label,
@@ -39,7 +40,8 @@ export function StatTile({
       <Link
         href={href}
         className={cn(
-          "bg-card hover:border-primary/60 block h-full rounded-lg border p-5 transition-colors",
+          "bg-card block h-full rounded-lg border p-5",
+          CARD_HOVER_CLASS,
         )}
       >
         <StatTileContent label={label} value={value} hint={hint} />

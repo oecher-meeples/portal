@@ -7,6 +7,7 @@ import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { formatDate } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 
 export function ContentListRow({
   item,
@@ -18,7 +19,8 @@ export function ContentListRow({
   return (
     <div
       className={cn(
-        "group bg-card hover:border-primary/60 relative flex gap-4 rounded-lg border p-4 transition-colors",
+        "group bg-card flex gap-4 rounded-lg border p-4",
+        CARD_HOVER_CLASS,
         item.internal && "border-l-primary border-l-4",
       )}
     >

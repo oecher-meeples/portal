@@ -4,12 +4,17 @@ import type { ContentItem } from "@/lib/content/content";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { formatDate } from "@/lib/utils/format";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { cn } from "@/lib/utils/cn";
 
 export function ContentCard({ item }: { item: ContentItem }) {
   return (
     <Link
       href={`/news/${item.slug}`}
-      className="group bg-card hover:border-primary/60 flex flex-col overflow-hidden rounded-lg border transition-colors"
+      className={cn(
+        "group bg-card flex flex-col overflow-hidden rounded-lg border",
+        CARD_HOVER_CLASS,
+      )}
     >
       <CoverMedia
         imageUrl={item.coverImageUrl}

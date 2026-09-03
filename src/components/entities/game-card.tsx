@@ -11,6 +11,8 @@ import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { cn } from "@/lib/utils/cn";
 
 export function GameCard({
   game,
@@ -32,7 +34,10 @@ export function GameCard({
   return (
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
-      className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
+      className={cn(
+        "group bg-card flex flex-col overflow-hidden rounded-lg border",
+        CARD_HOVER_CLASS,
+      )}
     >
       <CardCornerOverlay corner="top-right">
         <div className="flex flex-col items-end gap-1.5">
