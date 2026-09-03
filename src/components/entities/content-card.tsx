@@ -17,9 +17,17 @@ export function ContentCard({ item }: { item: ContentItem }) {
         label="BILD"
         aspect="aspect-[4/3]"
         fit="contain"
-        className="transition-all duration-300 group-hover:aspect-video"
       />
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      <div className="bg-card relative flex flex-1 flex-col gap-2 p-4">
+        {/* Bei Hover wächst nur dieser Vorschau-Text — als `absolute`
+            Overlay direkt über dem Bild statt in normalem Flow, damit
+            Bild- und Kartengröße konstant bleiben (kein Layout-Shift im
+            Grid). */}
+        <p
+          className="text-muted-foreground bg-card pointer-events-none absolute right-0 bottom-full left-0 line-clamp-2 p-4 text-sm opacity-0 shadow-[0_-8px_16px_-4px_rgba(0,0,0,0.15)] transition-opacity duration-300 group-hover:opacity-100"
+        >
+          {item.excerpt}
+        </p>
         <div className="flex items-center gap-2">
           <ContentTypeBadge type={item.type} />
           {item.instagram && (
@@ -32,9 +40,6 @@ export function ContentCard({ item }: { item: ContentItem }) {
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {item.title}
         </h3>
-        <p className="text-muted-foreground line-clamp-2 hidden text-sm group-hover:block">
-          {item.excerpt}
-        </p>
         <p className="text-muted-foreground mt-auto pt-2 text-xs">
           {formatDate(item.date)}
         </p>
