@@ -17,6 +17,7 @@ import {
 import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { stripMarkdown } from "@/lib/utils/strip-markdown";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
@@ -66,11 +67,14 @@ function validatePostInput(input: PostInput) {
   return null;
 }
 
-/** Falls back to the first 130 characters of the body when no excerpt was given. */
+/** Falls back to the first 130 characters of the body when no excerpt was
+ * given — Markdown-Syntax wird vorher entfernt (#448), sonst landen rohe
+ * `#`/`**`/`~~`/… -Zeichen in der Karten-/Listen-Vorschau. */
 function deriveExcerpt(excerpt: string | undefined, body: string) {
   const trimmed = excerpt?.trim();
   if (trimmed) return trimmed;
-  return body.length > 130 ? `${body.slice(0, 130)}...` : body;
+  const plain = stripMarkdown(body);
+  return plain.length > 130 ? `${plain.slice(0, 130)}...` : plain;
 }
 
 function toPostData(input: PostInput) {
