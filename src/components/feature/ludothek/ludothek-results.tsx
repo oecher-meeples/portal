@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { GameCard } from "@/components/entities/game-card";
 import { GameListRow } from "@/components/entities/game-list-row";
 import { GameCompactRow } from "@/components/entities/game-compact-row";
@@ -67,6 +68,7 @@ export function LudothekResults({
   view,
   canManageGames,
   mechanicsOptions,
+  cardMinWidth,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   view: LudothekViewMode;
@@ -74,6 +76,9 @@ export function LudothekResults({
   /** Autocomplete-Vorschläge for the title-edit dialog's Mechaniken field
    * (#124) — only meaningful together with `canManageGames`. */
   mechanicsOptions?: string[];
+  /** #446: `minmax(...)`-Minimalwert der Grid-Karten in px — nur für
+   * `view === "grid"` relevant, wird dort per Slider eingestellt. */
+  cardMinWidth?: number;
 }) {
   // One card/row per title in all three views (Plan-Schritt 8) — a title
   // with several copies shows a single entry with the aggregated zustand.
@@ -118,7 +123,16 @@ export function LudothekResults({
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+    <div
+      className="grid grid-cols-[repeat(auto-fit,minmax(var(--ludothek-card-min-width,220px),1fr))] gap-4"
+      style={
+        cardMinWidth
+          ? ({
+              "--ludothek-card-min-width": `${cardMinWidth}px`,
+            } as CSSProperties)
+          : undefined
+      }
+    >
       {rows.map((game) => (
         <GameCard
           key={game.boardGameSlug}

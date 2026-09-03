@@ -82,6 +82,30 @@ describe("LudothekResults — one entry per title (#121/#122)", () => {
     expect(screen.getAllByText("Arche Nova")).toHaveLength(1);
   });
 
+  // #446: Slider setzt die minmax-Kartenbreite im Grid per CSS-Custom-Property.
+  it("applies cardMinWidth as a CSS custom property on the grid", () => {
+    const { container } = render(
+      <LudothekResults
+        games={TWO_COPIES}
+        view="grid"
+        canManageGames={false}
+        cardMinWidth={280}
+      />,
+    );
+
+    const grid = container.querySelector(".grid");
+    expect(grid).toHaveStyle({ "--ludothek-card-min-width": "280px" });
+  });
+
+  it("leaves the grid without an inline style when cardMinWidth is omitted", () => {
+    const { container } = render(
+      <LudothekResults games={TWO_COPIES} view="grid" canManageGames={false} />,
+    );
+
+    const grid = container.querySelector(".grid");
+    expect(grid).not.toHaveAttribute("style");
+  });
+
   it("shows exactly one list row for two copies of the same title", () => {
     render(
       <LudothekResults
