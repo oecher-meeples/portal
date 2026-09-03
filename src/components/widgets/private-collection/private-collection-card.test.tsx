@@ -18,6 +18,16 @@ vi.mock("@/lib/ludothek/private-collection-sync", () => ({
   syncPrivateBggCollection: vi.fn(),
 }));
 
+// #122: zieht sonst requireMeeple() und damit die serverseitige
+// Auth-Kette in den Komponententest.
+vi.mock(
+  "@/components/widgets/private-collection/private-collection-actions",
+  () => ({
+    offerPrivateGameForEventAction: vi.fn(),
+    withdrawPrivateGameOfferAction: vi.fn(),
+  }),
+);
+
 function entry(
   overrides: Partial<OwnPrivateCollectionEntry> = {},
 ): OwnPrivateCollectionEntry {
@@ -26,7 +36,12 @@ function entry(
     rating: null,
     forTrade: false,
     wantToPlay: false,
-    boardGame: { slug: "ark-nova", title: "Ark Nova", imageUrl: null },
+    boardGame: {
+      id: "bg-1",
+      slug: "ark-nova",
+      title: "Ark Nova",
+      imageUrl: null,
+    },
     ...overrides,
   };
 }
@@ -105,5 +120,94 @@ describe("PrivateCollectionCard (#308)", () => {
     );
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+});
+
+describe("PrivateCollectionCard — Event-Freigabe (#122)", () => {
+  const NEXT_EVENT = { id: "event-1", title: "Spieleabend Oktober" };
+
+  it("shows no offer control without an upcoming event", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.queryByRole("button", { name: /zur Ausleihe freigeben/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers a not-yet-offered title for the next event", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByRole("button", {
+        name: 'Für "Spieleabend Oktober" zur Ausleihe freigeben',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers withdrawal for an already-offered title", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[{ id: "loan-1", boardGameId: "bg-1", status: "OFFERED" }]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByRole("button", {
+        name: 'Freigabe für "Spieleabend Oktober" zurückziehen',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a loaned pill instead of a control once issued", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[{ id: "loan-1", boardGameId: "bg-1", status: "LOANED" }]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByText("Ausgeliehen (Spieleabend Oktober)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /zurückziehen|freigeben/ }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -21,6 +21,11 @@ import { cn } from "@/lib/utils/cn";
 import { syncPrivateBggCollection } from "@/lib/ludothek/private-collection-sync";
 import { formatTimePlain } from "@/lib/utils/format";
 import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
+import type { OwnPrivateLoanOffer } from "@/lib/ludothek/private-event-loans";
+import {
+  offerPrivateGameForEventAction,
+  withdrawPrivateGameOfferAction,
+} from "@/components/widgets/private-collection/private-collection-actions";
 
 type SortMode = "alphabetical" | "rating";
 type StatusFilter = "forTrade" | "wantToPlay";
@@ -42,6 +47,8 @@ export function PrivateCollectionCard({
   cooldownEndsAt,
   canForceImport,
   visibleToOthers,
+  nextEvent = null,
+  ownOffers = [],
 }: {
   bggUsername: string | null;
   entries: OwnPrivateCollectionEntry[];
@@ -53,6 +60,11 @@ export function PrivateCollectionCard({
    * in der Ludothek ("Auch Privatbesitz anzeigen"), wenn dieses Flag an ist
    * (#255-Folge: sonst „nicht auffindbar“, obwohl der Import geklappt hat). */
   visibleToOthers: boolean;
+  /** (#122) Nächstes kommendes Event — einziger Freigabe-Kontext, `null`/
+   * fehlend ohne kommendes Event (dann keine Freigabe-Steuerung). */
+  nextEvent?: { id: string; title: string } | null;
+  /** Eigene Freigaben für `nextEvent`, sofern vorhanden. */
+  ownOffers?: OwnPrivateLoanOffer[];
 }) {
   const [open, setOpen] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
@@ -270,30 +282,46 @@ export function PrivateCollectionCard({
               {visibleEntries.map((entry) => (
                 <li
                   key={entry.id}
-                  className="flex items-center justify-between gap-2 rounded-md border p-2"
+                  className="flex flex-col gap-1.5 rounded-md border p-2"
                 >
-                  <span className="flex min-w-0 items-baseline gap-1.5">
-                    <Link
-                      href={`/ludothek/${entry.boardGame.slug}`}
-                      className="hover:text-primary flex min-w-0 items-center gap-1 truncate underline-offset-2 hover:underline"
-                    >
-                      <span className="truncate">{entry.boardGame.title}</span>
-                      <ExternalLink className="size-3.5 shrink-0" />
-                    </Link>
-                    {entry.rating !== null && (
-                      <span className="text-muted-foreground shrink-0 text-xs">
-                        ★ {entry.rating.toFixed(1)}
-                      </span>
-                    )}
-                  </span>
-                  <span className="flex shrink-0 gap-1.5">
-                    {entry.forTrade && (
-                      <StatusPill label="For Trade" tone="info" />
-                    )}
-                    {entry.wantToPlay && (
-                      <StatusPill label="Want to Play" tone="neutral" />
-                    )}
-                  </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <Link
+                        href={`/ludothek/${entry.boardGame.slug}`}
+                        className="hover:text-primary flex min-w-0 items-center gap-1 truncate underline-offset-2 hover:underline"
+                      >
+                        <span className="truncate">
+                          {entry.boardGame.title}
+                        </span>
+                        <ExternalLink className="size-3.5 shrink-0" />
+                      </Link>
+                      {entry.rating !== null && (
+                        <span className="text-muted-foreground shrink-0 text-xs">
+                          ★ {entry.rating.toFixed(1)}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex shrink-0 gap-1.5">
+                      {entry.forTrade && (
+                        <StatusPill label="For Trade" tone="info" />
+                      )}
+                      {entry.wantToPlay && (
+                        <StatusPill label="Want to Play" tone="neutral" />
+                      )}
+                    </span>
+                  </div>
+                  {nextEvent && (
+                    <PrivateEventLoanToggle
+                      eventId={nextEvent.id}
+                      eventTitle={nextEvent.title}
+                      boardGameId={entry.boardGame.id}
+                      status={
+                        ownOffers.find(
+                          (offer) => offer.boardGameId === entry.boardGame.id,
+                        )?.status ?? null
+                      }
+                    />
+                  )}
                 </li>
               ))}
             </ul>
@@ -301,5 +329,41 @@ export function PrivateCollectionCard({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** (#122) Ein-Klick-Freigabe eines einzelnen Titels für das nächste Event —
+ * kein separater "Speichern"-Schritt, jeder Klick ist eine eigene
+ * Server-Action-Ausführung wie überall sonst im Projekt (`ActionButton`). */
+function PrivateEventLoanToggle({
+  eventId,
+  eventTitle,
+  boardGameId,
+  status,
+}: {
+  eventId: string;
+  eventTitle: string;
+  boardGameId: string;
+  status: "OFFERED" | "LOANED" | null;
+}) {
+  if (status === "LOANED") {
+    return <StatusPill label={`Ausgeliehen (${eventTitle})`} tone="warning" />;
+  }
+
+  return (
+    <ActionButton
+      variant="outline"
+      size="sm"
+      className="w-fit"
+      action={
+        status === "OFFERED"
+          ? withdrawPrivateGameOfferAction.bind(null, eventId, boardGameId)
+          : offerPrivateGameForEventAction.bind(null, eventId, boardGameId)
+      }
+    >
+      {status === "OFFERED"
+        ? `Freigabe für "${eventTitle}" zurückziehen`
+        : `Für "${eventTitle}" zur Ausleihe freigeben`}
+    </ActionButton>
   );
 }

@@ -14,6 +14,8 @@ import {
   getImportCooldownEndsAt,
   getOwnPrivateCollection,
 } from "@/lib/ludothek/private-collection";
+import { listOwnPrivateLoanOffers } from "@/lib/ludothek/private-event-loans";
+import { findUpcomingEventsVisibleToMembers } from "@/lib/events/upcoming";
 import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import { PrivateSpieleSection } from "@/components/feature/mitglied-profil/private-spiele-section";
 import { findMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
@@ -99,12 +101,24 @@ export async function MitgliedProfilView({
     ? await getActiveHoldingsForMember(member.id)
     : [];
 
+  // (#122) Nächstes kommendes Event als einziger Freigabe-Kontext — bewusst
+  // kein Mehrfach-Event-Picker, das Feature deckt den Regelfall "das nächste
+  // Spieletreffen" ab.
+  const upcomingEvents = isSelf
+    ? await findUpcomingEventsVisibleToMembers({ id: true, title: true })
+    : [];
+  const nextEvent = upcomingEvents[0] ?? null;
+
   const ownPrivateCollection =
     isSelf && member.meeple
       ? {
           entries: await getOwnPrivateCollection(member.meeple.id),
           cooldownEndsAt: await getImportCooldownEndsAt(member.meeple),
           canForceImport: await canForceImport(member.meeple.neonAuthUserId),
+          nextEvent,
+          ownOffers: nextEvent
+            ? await listOwnPrivateLoanOffers(member.meeple.id, nextEvent.id)
+            : [],
         }
       : null;
 
@@ -277,6 +291,8 @@ export async function MitgliedProfilView({
             cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
             canForceImport={ownPrivateCollection.canForceImport}
             visibleToOthers={member.meeple.privateCollectionVisible}
+            nextEvent={ownPrivateCollection.nextEvent}
+            ownOffers={ownPrivateCollection.ownOffers}
           />
         )}
         {/* Bewusst kein starrer `col-span-*` — nur Titel, ein Satz Text und

@@ -303,6 +303,8 @@ model Meeple {
   marketListings           MarketListing[]              @relation("MarketListingSeller")
   privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
   deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
+  privateEventLoansOffered PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
+  privateEventLoansIssued  PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
   newsletterSubscription   NewsletterSubscriber?
   member                   Member?
 
@@ -789,6 +791,7 @@ model BoardGame {
   lfgPosts                 LfgPost[]
   marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
+  privateEventLoans        PrivateEventLoan[]
 
   @@index([ean])
   @@map("board_games")
@@ -1044,6 +1047,7 @@ model Event {
   fleaMarketItems           FleaMarketItem[]
   fleaMarketExternalSellers FleaMarketExternalSeller[]
   fleaMarketCarts           FleaMarketCart[]
+  privateEventLoans         PrivateEventLoan[]
 
   @@map("events")
 }
@@ -1226,6 +1230,43 @@ model ExplainerAttendance {
 
   @@id([eventId, meepleId])
   @@map("explainer_attendances")
+}
+
+enum PrivateEventLoanStatus {
+  /// Eigentümer:in hat das Exemplar für dieses Event freigegeben, noch nicht ausgegeben.
+  OFFERED
+  /// Ausleihe-Meeple hat das Exemplar an einen Gast ausgegeben.
+  LOANED
+  /// Nach dem Event an die Eigentümer:in zurückgegeben — Abschlusszustand,
+  /// der Datensatz kann danach gelöscht werden (#122).
+  RETURNED
+}
+
+/// Ein Meeple gibt ein Spiel aus seiner privaten Collection (#122) für die Dauer
+/// eines Events zur Ausleihe frei — bewusst kein GameCopy-Klon: kein Standort,
+/// keine GameHolding-Kette, keine Zustandsverwaltung wie beim Vereinsbestand.
+/// Explizite Freigabe pro Titel und Event; die Event-Anmeldung als Erklärbär/
+/// Helfer:in allein reicht nicht (siehe Issue-Klärung). Haftungsfragen bei
+/// Verlust/Schaden sind bewusst nicht Teil dieses Modells, siehe #277.
+model PrivateEventLoan {
+  id               String                 @id @default(cuid())
+  eventId          String
+  ownerMeepleId    String
+  boardGameId      String
+  status           PrivateEventLoanStatus @default(OFFERED)
+  offeredAt        DateTime               @default(now())
+  issuedAt         DateTime?
+  issuedByMeepleId String?
+  returnedAt       DateTime?
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  owner     Meeple    @relation("PrivateEventLoanOwner", fields: [ownerMeepleId], references: [id], onDelete: Cascade)
+  issuedBy  Meeple?   @relation("PrivateEventLoanIssuedBy", fields: [issuedByMeepleId], references: [id], onDelete: SetNull)
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, ownerMeepleId, boardGameId])
+  @@index([eventId, status])
+  @@map("private_event_loans")
 }
 
 /// A member's item for an event's Bring & Buy flea market. Starts PENDING and only

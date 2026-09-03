@@ -116,7 +116,12 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
         rating: 8.5,
         forTrade: true,
         wantToPlay: false,
-        boardGame: { slug: "ark-nova", title: "Ark Nova", imageUrl: null },
+        boardGame: {
+          id: "bg-1",
+          slug: "ark-nova",
+          title: "Ark Nova",
+          imageUrl: null,
+        },
       },
     ] as never);
 
@@ -128,14 +133,19 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
         rating: 8.5,
         forTrade: true,
         wantToPlay: false,
-        boardGame: { slug: "ark-nova", title: "Ark Nova", imageUrl: null },
+        boardGame: {
+          id: "bg-1",
+          slug: "ark-nova",
+          title: "Ark Nova",
+          imageUrl: null,
+        },
       },
     ]);
     expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({
           boardGame: {
-            select: { slug: true, title: true, imageUrl: true },
+            select: { id: true, slug: true, title: true, imageUrl: true },
           },
         }),
       }),

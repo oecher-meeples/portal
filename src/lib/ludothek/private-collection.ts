@@ -11,6 +11,7 @@ export type OwnPrivateCollectionEntry = {
   forTrade: boolean;
   wantToPlay: boolean;
   boardGame: {
+    id: string;
     slug: string;
     title: string;
     imageUrl: string | null;
@@ -34,7 +35,9 @@ export async function getOwnPrivateCollection(
       rating: true,
       forTrade: true,
       wantToPlay: true,
-      boardGame: { select: { slug: true, title: true, imageUrl: true } },
+      boardGame: {
+        select: { id: true, slug: true, title: true, imageUrl: true },
+      },
     },
   });
 }
