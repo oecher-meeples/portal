@@ -7,6 +7,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Switch } from "@/components/ui/switch";
 import {
   createEvent,
@@ -95,20 +96,18 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         onChange={(fieldEvent) => setTitle(fieldEvent.target.value)}
         required
       />
-      <TextField
+      <DatePicker
         id="event-starts"
         label="Beginn"
-        type="date"
         value={startsAt}
-        onChange={(fieldEvent) => setStartsAt(fieldEvent.target.value)}
+        onChange={setStartsAt}
         required
       />
-      <TextField
+      <DatePicker
         id="event-ends"
         label="Ende (optional)"
-        type="date"
         value={endsAt}
-        onChange={(fieldEvent) => setEndsAt(fieldEvent.target.value)}
+        onChange={setEndsAt}
       />
       <Field label="Sichtbarkeit" htmlFor="event-visibility">
         <select
