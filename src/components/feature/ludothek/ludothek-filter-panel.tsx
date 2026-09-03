@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { RangeSlider, SingleSlider } from "@/components/ui/range-slider";
+import { FilterPill } from "@/components/ui/filter-pill";
 import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import { LudothekMultiSelectFilter } from "@/components/feature/ludothek/ludothek-multi-select-filter";
-import { cn } from "@/lib/utils/cn";
 import {
   MAX_PLAYERS_FILTER,
   type LudothekFilters,
@@ -38,30 +37,29 @@ const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Nicht erfasst", value: "nicht-erfasst" },
 ];
 
-function FilterPill({
+/** Label-Zeile (Titel + aktueller Wert) über einem der fünf Slider unten —
+ * war fünfmal identisch dupliziert, DRY-Ort bleibt diese Datei (die
+ * Kombination Titel+Wert+Slider ist fachlich an die Filter hier gebunden,
+ * kein fachfreier `ui/`-Baustein). */
+function FilterSliderRow({
   label,
-  href,
-  active,
-  className,
+  value,
+  children,
 }: {
   label: string;
-  href: string;
-  active: boolean;
-  className?: string;
+  value: ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground",
-        className,
-      )}
-    >
-      {label}
-    </Link>
+    <div className="flex min-w-56 flex-1 flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          {label}
+        </span>
+        <span className="text-muted-foreground text-xs">{value}</span>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -186,19 +184,16 @@ export function LudothekFilterPanel({
       </summary>
 
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-3">
-        <div className="flex min-w-56 flex-1 flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Spieler
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {players <= ALL_PLAYERS
-                ? "Alle"
-                : players >= MAX_PLAYERS_FILTER
-                  ? `${MAX_PLAYERS_FILTER}+`
-                  : players}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Spieler"
+          value={
+            players <= ALL_PLAYERS
+              ? "Alle"
+              : players >= MAX_PLAYERS_FILTER
+                ? `${MAX_PLAYERS_FILTER}+`
+                : players
+          }
+        >
           <SingleSlider
             min={ALL_PLAYERS}
             max={MAX_PLAYERS_FILTER}
@@ -208,17 +203,12 @@ export function LudothekFilterPanel({
             getAriaLabel={() => "Spieler"}
             hideTrackFill
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex min-w-56 flex-1 flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Dauer (Min.)
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {durationRange[0]} – {durationRange[1]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Dauer (Min.)"
+          value={`${durationRange[0]} – ${durationRange[1]}`}
+        >
           <RangeSlider
             min={MIN_DURATION}
             max={maxDurationBound}
@@ -228,17 +218,12 @@ export function LudothekFilterPanel({
             onValueCommitted={commitDurationRange}
             getAriaLabel={(index) => (index === 0 ? "Dauer von" : "Dauer bis")}
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex min-w-56 flex-1 flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Erstveröffentlichung
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {yearRange[0]} – {yearRange[1]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Erstveröffentlichung"
+          value={`${yearRange[0]} – ${yearRange[1]}`}
+        >
           <RangeSlider
             min={MIN_YEAR}
             max={currentYear}
@@ -251,17 +236,12 @@ export function LudothekFilterPanel({
                 : "Erstveröffentlichung bis"
             }
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex min-w-56 flex-1 flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Bewertung
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {ratingRange[0]} – {ratingRange[1]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Bewertung"
+          value={`${ratingRange[0]} – ${ratingRange[1]}`}
+        >
           <RangeSlider
             min={MIN_RATING}
             max={MAX_RATING}
@@ -272,21 +252,18 @@ export function LudothekFilterPanel({
               index === 0 ? "Bewertung von" : "Bewertung bis"
             }
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex min-w-56 flex-1 flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Sprachneutralität
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {languageDependenceMax <= MIN_LANGUAGE_DEPENDENCE
-                ? "Alle"
-                : LANGUAGE_DEPENDENCE_SHORT_LABELS[
-                    LANGUAGE_DEPENDENCE_BY_LEVEL[languageDependenceMax - 1]
-                  ]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Sprachneutralität"
+          value={
+            languageDependenceMax <= MIN_LANGUAGE_DEPENDENCE
+              ? "Alle"
+              : LANGUAGE_DEPENDENCE_SHORT_LABELS[
+                  LANGUAGE_DEPENDENCE_BY_LEVEL[languageDependenceMax - 1]
+                ]
+          }
+        >
           <SingleSlider
             min={MIN_LANGUAGE_DEPENDENCE}
             max={MAX_LANGUAGE_DEPENDENCE}
@@ -296,7 +273,7 @@ export function LudothekFilterPanel({
             getAriaLabel={() => "Sprachneutralität"}
             hideTrackFill
           />
-        </div>
+        </FilterSliderRow>
 
         {(mechanicsOptions.length > 0 || categoriesOptions.length > 0) && (
           <div className="flex w-full flex-wrap gap-x-5 gap-y-3 border-t pt-4">
