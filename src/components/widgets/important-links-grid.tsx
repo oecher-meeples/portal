@@ -14,7 +14,11 @@ export type LinkGridItem = {
 /** Shared card grid for Schnellzugriff and the admin-curated Wichtige Links (#110) — same layout, either a Lucide icon or an uploaded image. */
 export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+    // #454: minmax(200px,200px) statt minmax(200px,1fr) — feste statt
+    // gestreckte Kartenbreite, damit wenige Einträge nicht auf volle
+    // Container-Breite auseinandergezogen werden. auto-fit sorgt weiterhin
+    // dafür, dass so viele 200px-Spalten wie möglich in eine Reihe passen.
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,200px))] gap-4">
       {items.map((item) => {
         const content = (
           <>
