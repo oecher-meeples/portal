@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DonationAmountPicker } from "@/components/feature/spenden/donation-amount-picker";
 import { PageContainer } from "@/components/ui/page-container";
+import { CONTRIBUTION_CATEGORY_SHORT_LABELS } from "@/lib/members/contribution";
 
 const PAYPAL_DONATION_URL = "https://paypal.me/oechermeeples";
 const GAME_DONATION_MAIL = "spenden@oecher-meeples.org";
@@ -66,16 +67,22 @@ export function SpendenMockView() {
           </p>
           <dl className="flex flex-col divide-y border-t">
             <div className="flex items-center justify-between py-2.5">
-              <dt className="text-muted-foreground text-sm">Beitrag</dt>
-              <dd className="font-medium">60 € / Jahr</dd>
+              <dt className="text-muted-foreground text-sm">
+                {CONTRIBUTION_CATEGORY_SHORT_LABELS.mini} (unter 13 Jahre)
+              </dt>
+              <dd className="font-medium">0 € / Jahr</dd>
             </div>
             <div className="flex items-center justify-between py-2.5">
-              <dt className="text-muted-foreground text-sm">Ermäßigt</dt>
+              <dt className="text-muted-foreground text-sm">
+                {CONTRIBUTION_CATEGORY_SHORT_LABELS.jung} (13–18 Jahre)
+              </dt>
+              <dd className="font-medium">12 € / Jahr</dd>
+            </div>
+            <div className="flex items-center justify-between py-2.5">
+              <dt className="text-muted-foreground text-sm">
+                {CONTRIBUTION_CATEGORY_SHORT_LABELS.meeple} (ab 18 Jahren)
+              </dt>
               <dd className="font-medium">36 € / Jahr</dd>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <dt className="text-muted-foreground text-sm">Aufnahme</dt>
-              <dd className="font-medium">auf Einladung eines Mitglieds</dd>
             </div>
           </dl>
           <Button
