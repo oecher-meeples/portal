@@ -34,6 +34,7 @@ export function ContentListRow({
           label="BILD"
           aspect="aspect-square"
           className="pointer-events-none"
+          placeholderVariant="logo"
         />
         {canEdit && item.id && (
           <CardCornerOverlay corner="top-left">

@@ -10,6 +10,7 @@ export function CoverMedia({
   aspect = "aspect-video",
   fit = "cover",
   sizing = "aspect",
+  placeholderVariant = "generic",
 }: {
   imageUrl?: string | null;
   alt: string;
@@ -19,6 +20,10 @@ export function CoverMedia({
   fit?: "cover" | "contain";
   /** "natural" keeps the image's own aspect ratio instead of forcing `aspect` (#106). */
   sizing?: "aspect" | "natural";
+  /** "logo" (#320): Vereinslogo statt generischer Platzhalter-Box, gezielt
+   * für News/Blog-Übersichten (`content-card.tsx`/`content-list-row.tsx`) —
+   * siehe `PlaceholderMedia`. */
+  placeholderVariant?: "generic" | "logo";
 }) {
   if (!imageUrl) {
     // #447: "natural" ist bislang nur für Detailseiten mit optionalem Bild
@@ -28,7 +33,12 @@ export function CoverMedia({
     // den Platzhalter für eine konsistente Kachel-Höhe.
     if (sizing === "natural") return null;
     return (
-      <PlaceholderMedia label={label} aspect={aspect} className={className} />
+      <PlaceholderMedia
+        label={label}
+        aspect={aspect}
+        className={className}
+        variant={placeholderVariant}
+      />
     );
   }
 

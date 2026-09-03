@@ -22,6 +22,7 @@ export function ContentCard({ item }: { item: ContentItem }) {
         label="BILD"
         aspect="aspect-[4/3]"
         fit="contain"
+        placeholderVariant="logo"
       />
       <div className="bg-card flex flex-1 flex-col gap-2 p-4">
         {/* Fixe "Fenster"-Höhe: Badge/Link/Titel-Block und Vorschau-Text

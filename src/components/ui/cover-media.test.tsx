@@ -42,3 +42,28 @@ describe("CoverMedia — kein Platzhalter für sizing='natural' ohne Bild (#447)
     );
   });
 });
+
+// #320: News/Blog-Übersichten (content-card.tsx/content-list-row.tsx) zeigen
+// statt der generischen Platzhalter-Box das Vereinslogo.
+describe("CoverMedia — placeholderVariant='logo' (#320)", () => {
+  it("shows the club logo instead of the generic placeholder box", () => {
+    const { container } = render(
+      <CoverMedia
+        imageUrl={null}
+        alt="Titelbild"
+        label="BILD"
+        placeholderVariant="logo"
+      />,
+    );
+
+    expect(screen.queryByText("BILD")).not.toBeInTheDocument();
+    // Deko-Bilder mit leerem alt (Logo, theme-abhängig) — kein "img"-Role.
+    expect(container.querySelectorAll("img")).toHaveLength(2);
+  });
+
+  it("still shows the generic placeholder by default", () => {
+    render(<CoverMedia imageUrl={null} alt="Titelbild" label="BILD" />);
+
+    expect(screen.getByText("BILD")).toBeInTheDocument();
+  });
+});
