@@ -21,6 +21,8 @@ import {
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { AnonymisationExplanation } from "@/components/entities/anonymisation-explanation";
+import { HelpDialog } from "@/components/ui/help-dialog";
 import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import {
   RoleManagementSection,
@@ -285,9 +287,14 @@ export function AdminMitgliederView({
 
       {readyForAnonymisation.length > 0 && (
         <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bereit zur Anonymisierung
-          </h2>
+          <div className="flex items-center gap-1">
+            <h2 className="font-serif text-lg font-bold">
+              Bereit zur Anonymisierung
+            </h2>
+            <HelpDialog title="Anonymisierung">
+              <AnonymisationExplanation />
+            </HelpDialog>
+          </div>
           <ul className="mt-3 flex flex-col divide-y text-sm">
             {readyForAnonymisation.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
@@ -311,9 +318,14 @@ export function AdminMitgliederView({
 
       {stufe3Candidates.length > 0 && (
         <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bereit zur endgültigen Löschung (Stufe 3)
-          </h2>
+          <div className="flex items-center gap-1">
+            <h2 className="font-serif text-lg font-bold">
+              Bereit zur endgültigen Löschung (Stufe 3)
+            </h2>
+            <HelpDialog title="Anonymisierung">
+              <AnonymisationExplanation />
+            </HelpDialog>
+          </div>
           <p className="text-muted-foreground mt-1 text-sm">
             12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
           </p>
