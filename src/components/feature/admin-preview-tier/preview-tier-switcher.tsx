@@ -16,11 +16,17 @@ const OPTIONS: { label: string; value: Tier }[] = [
 export function PreviewTierSwitcher({
   tier,
   className,
+  labelClassName = "hidden lg:inline",
 }: {
   tier: Tier;
   /** Default: nur ab `md` sichtbar (Header). MobileNav (#437-Folge) braucht
    * ihn dagegen immer sichtbar, da die Bottom-Bar dort bereits `< sm` ist. */
   className?: string;
+  /** Default: zwischen `md` und `lg` ausgeblendet — im Header ist genau
+   * dieser Bereich manchmal zu knapp für Label+Pills nebeneinander (führte
+   * sonst zu abgeschnittenem Text statt sauberem Verschwinden). MobileNav
+   * hat immer genug Platz und überschreibt auf dauerhaft sichtbar. */
+  labelClassName?: string;
 }) {
   const [value, setValue] = useState(tier);
   const { run, pending } = useAction();
@@ -33,15 +39,29 @@ export function PreviewTierSwitcher({
   return (
     <div
       className={cn(
-        "hidden items-center gap-2 md:flex",
+        "hidden items-center justify-end gap-2 overflow-hidden md:flex",
         pending && "opacity-60",
         className,
       )}
     >
-      <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+      {/* Kein Zeilenumbruch (kein `flex-wrap`) — bei zu wenig Platz wird das
+          Label über `labelClassName` komplett ausgeblendet statt
+          abgeschnitten; die Pills selbst schrumpfen zusätzlich über
+          `compact` (clamp()-Min/Max) minimal mit. */}
+      <span
+        className={cn(
+          "text-muted-foreground text-xs font-semibold tracking-wider whitespace-nowrap uppercase",
+          labelClassName,
+        )}
+      >
         Ansicht
       </span>
-      <PillToggle options={OPTIONS} value={value} onChange={handleChange} />
+      <PillToggle
+        options={OPTIONS}
+        value={value}
+        onChange={handleChange}
+        compact
+      />
     </div>
   );
 }

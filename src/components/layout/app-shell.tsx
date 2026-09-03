@@ -29,7 +29,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
         permissions={permissions}
         flags={{ openHelperRequest }}
       />
-      {/* < sm ersetzt MobileNav (#437) die dort ausgeblendete Sidebar. */}
+      {/* < md ersetzt MobileNav (#437) die dort ausgeblendete Sidebar — exakt
+          an Sidebars md-Schwelle übergeben, sonst Navigations-Lücke
+          zwischen 640–768px (keine der beiden sichtbar). */}
       <MobileNav
         tier={tier}
         realTier={realTier}
@@ -45,9 +47,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
       {/* ml folgt der Sidebar-Breite (#336): < md ausgeblendet (keine Margin),
           md–lg Icon-only (w-16), ab xl volle Breite (w-64). Der Hover-/Pin-
           Ausklappzustand der Sidebar ist ein Overlay (position: fixed) und
-          verschiebt diese Margin bewusst nicht. pb (< sm): Platz für die
-          fixed MobileNav-Bottom-Bar (#437). */}
-      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-20 sm:px-8 sm:pt-24 sm:pb-8 md:ml-16 xl:ml-64">
+          verschiebt diese Margin bewusst nicht. pb (< md): Platz für die
+          fixed MobileNav-Bottom-Bar (#437), die bis exakt md sichtbar ist. */}
+      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-20 sm:px-8 sm:pt-24 md:ml-16 md:pb-8 xl:ml-64">
         {children}
         {/* Scroll buffer: lets page content (e.g. a dropdown menu at the
             bottom, or the last section of a long page) scroll clear of the

@@ -56,15 +56,13 @@ export function MobileNav({
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="bg-sidebar text-sidebar-foreground fixed inset-x-0 bottom-0 z-20 flex border-t sm:hidden"
+      className="bg-sidebar text-sidebar-foreground fixed inset-x-0 bottom-0 z-[60] flex h-16 border-t md:hidden"
     >
       {groups.map((group, index) => {
         const key = group.title ?? "root";
         const Icon = NAV_GROUP_ICONS[key];
         const active = group.items.some((item) =>
-          item.href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(item.href),
+          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
         );
         return (
           <DialogPrimitive.Root
@@ -74,7 +72,7 @@ export function MobileNav({
           >
             <DialogPrimitive.Trigger
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors",
+                "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 font-medium transition-colors",
                 active
                   ? "text-sidebar-foreground"
                   : "text-sidebar-foreground/70",
@@ -86,36 +84,47 @@ export function MobileNav({
                   active && "bg-sidebar-primary/15",
                 )}
               >
-                <Icon className="size-5" />
+                <Icon className="size-5 shrink-0" />
               </span>
-              {group.title ?? "Öffentlich"}
+              {/* Icon bleibt fest `size-5` — bei Platzmangel (schmale
+                  Displays, 3 Icons teilen sich die Breite) schrumpft
+                  stattdessen nur die Schrift stufenlos per `clamp()` statt
+                  umzubrechen oder abgeschnitten zu werden. */}
+              <span className="max-w-full truncate text-[clamp(0.5625rem,2.8vw,0.75rem)]">
+                {group.title ?? "Öffentlich"}
+              </span>
             </DialogPrimitive.Trigger>
             <DialogPortal>
               <DialogOverlay />
               <DialogPrimitive.Popup
                 data-slot="dialog-content"
-                className="bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col gap-1 rounded-t-xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm ring-1 duration-150 outline-none"
+                className="bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom fixed inset-x-0 bottom-16 z-50 flex max-h-[calc(70vh-4rem)] flex-col gap-1 overflow-x-hidden rounded-t-xl p-3 text-sm ring-1 duration-150 outline-none"
               >
                 {/* Preview-Tier-Switcher, Profil-Link und Theme-Umschalter
                     sind sonst nur im Header — auf `< sm` (wo die Bottom-Bar
                     ihn ersetzt) nicht erreichbar. Landen hier in der ersten
                     Gruppe statt an anderer Stelle in der Bottom-Bar selbst
                     zu leben, da es kein eigenes viertes Icon dafür geben
-                    soll. Zeile insgesamt rechtsbündig, Reihenfolge darin
-                    links nach rechts wie gewünscht. */}
+                    soll. Beide Zeilen rechtsbündig. */}
+                {index === 0 && realTier === "admin" && (
+                  <div className="flex justify-end px-2 pb-1">
+                    <PreviewTierSwitcher
+                      tier={tier}
+                      className="flex"
+                      labelClassName="inline"
+                    />
+                  </div>
+                )}
                 {index === 0 && (
                   <div className="flex items-center justify-end gap-3 px-2 pb-1">
-                    {realTier === "admin" && (
-                      <PreviewTierSwitcher tier={tier} className="flex" />
-                    )}
                     {user && (
                       <Link
                         href="/profil"
                         onClick={() => setOpenGroup(null)}
-                        className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm"
+                        className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-sm"
                       >
-                        <UserRound className="text-primary size-4" />
-                        {user.name}
+                        <UserRound className="text-primary size-4 shrink-0" />
+                        <span className="truncate">{user.name}</span>
                       </Link>
                     )}
                     <ThemeToggle />
