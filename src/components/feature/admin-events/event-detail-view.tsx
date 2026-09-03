@@ -88,7 +88,12 @@ export function EventDetailView({
         }
       />
 
+      {/* #459: `multiple` fehlte — ohne dieses Prop fällt base-ui nach der
+          ersten Interaktion (z. B. Öffnungszeit speichern → revalidatePath)
+          auf Einzelauswahl zurück, obwohl `defaultValue` initial mehrere
+          Werte zeigt. */}
       <Accordion
+        multiple
         defaultValue={["stammdaten", "schichten", "schichtplan"]}
         className="flex flex-col gap-3"
       >
