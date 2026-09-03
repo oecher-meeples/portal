@@ -276,8 +276,16 @@ export async function MitgliedProfilView({
             visibleToOthers={member.meeple.privateCollectionVisible}
           />
         )}
+        {/* Bewusst kein starrer `col-span-*` — nur Titel, ein Satz Text und
+         * ein Link, keine Struktur, die bei 1 Spalte auseinanderfällt. Für
+         * `!isSelf` (dieser Zweig hier) ist sie zudem immer die letzte
+         * Grid-Karte im DOM (das `selfServiceData`-Fragment danach ist
+         * `isSelf`-only, rendert hier also nie) — `md:last:col-span-full`
+         * füllt deshalb die sonst leere Nachbarspalte, wenn sie allein in
+         * der letzten Zeile landet (s. Datenschutz-Karte oben, gleiches
+         * Prinzip). */}
         {!isSelf && member.meeple?.privateCollectionVisible && (
-          <div className="md:col-span-2">
+          <div className="md:last:col-span-full">
             <PrivateSpieleSection meepleId={member.meeple.id} />
           </div>
         )}
