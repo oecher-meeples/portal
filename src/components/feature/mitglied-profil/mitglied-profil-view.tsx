@@ -172,8 +172,17 @@ export async function MitgliedProfilView({
        * viel Leerraum auf großen Displays — die bestehenden `md:col-span-2`
        * (2 von 3 Spalten bei `lg`) und Karten ohne Angabe (1 von 3) brauchen
        * dafür keine eigene `lg:col-span-*`: Tailwinds Breakpoints kaskadieren
-       * nach oben, `md:col-span-2` gilt unverändert auch ab `lg` weiter. */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+       * nach oben, `md:col-span-2` gilt unverändert auch ab `lg` weiter.
+       * `items-start` statt des Grid-Defaults `stretch`, sonst zieht sich
+       * eine kurze Karte (z. B. Newsletter) auf die Höhe der langen
+       * Zeilennachbarin (z. B. Datenschutz) — sichtbar leerer Innenraum.
+       * `grid-flow-dense` füllt Lücken, die eine `col-span-2`-Karte
+       * hinterlässt, mit späteren kleineren Karten auf — nötig, weil nicht
+       * jede:r Betrachter:in dieselben Karten sieht (Bankdaten nur
+       * Meeple/Kassenwart, Vereinsspiele nur mit Berechtigung, …) und sich
+       * die Kartenkombination damit pro Rolle unterscheidet; von Hand
+       * ausbalancierte `col-span`-Werte könnten das nicht abdecken. */}
+      <div className="grid grid-cols-1 gap-6 md:grid-flow-dense md:grid-cols-2 md:items-start lg:grid-cols-3">
         <div className="md:col-span-2">
           <StammdatenSection
             member={member}
@@ -256,16 +265,16 @@ export async function MitgliedProfilView({
           </div>
         )}
 
+        {/* Bewusst kein `col-span-*` — bleibt immer 1x1, nicht wie die
+         * übrigen Listen-/Formular-lastigen Karten hier 2 Spalten breit. */}
         {ownPrivateCollection && member.meeple && (
-          <div className="md:col-span-2">
-            <PrivateCollectionCard
-              bggUsername={member.meeple.bggUsername}
-              entries={ownPrivateCollection.entries}
-              cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
-              canForceImport={ownPrivateCollection.canForceImport}
-              visibleToOthers={member.meeple.privateCollectionVisible}
-            />
-          </div>
+          <PrivateCollectionCard
+            bggUsername={member.meeple.bggUsername}
+            entries={ownPrivateCollection.entries}
+            cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
+            canForceImport={ownPrivateCollection.canForceImport}
+            visibleToOthers={member.meeple.privateCollectionVisible}
+          />
         )}
         {!isSelf && member.meeple?.privateCollectionVisible && (
           <div className="md:col-span-2">
@@ -291,7 +300,17 @@ export async function MitgliedProfilView({
               </div>
             )}
 
-            <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+            {/* Bewusst kein starrer `col-span-*` (im Gegensatz zu den
+             * strukturierten Karten wie Stammdaten/Meeple-Daten mit fester
+             * 2-Spalten-Feldtabelle) — nur Fließtext + 2 Buttons, keine
+             * Struktur, die bei 1 Spalte Breite auseinanderfällt. Diese Karte
+             * ist im DOM immer die letzte im Grid (letztes Kind des
+             * `selfServiceData`-Fragments) — `md:last:col-span-full` nutzt
+             * das: CSS Grid streckt ein Item nie von selbst auf leere
+             * Nachbarspalten, nur `grid-column` legt die Breite fest, also
+             * blieb die letzte Spalte neben ihr sonst einfach frei statt
+             * gefüllt. */}
+            <div className="bg-card flex flex-col gap-3 rounded-lg border p-5 md:last:col-span-full">
               <h2 className="font-serif text-lg font-bold">Datenschutz</h2>
               <DataExportPanel />
               <DeletionRequestPanel
@@ -299,21 +318,25 @@ export async function MitgliedProfilView({
                 openHoldings={selfServiceData.openHoldings}
               />
             </div>
-
-            <div className="border-destructive/40 flex flex-col gap-3 rounded-lg border p-5 md:col-span-2">
-              <h2 className="font-serif text-lg font-bold">
-                Mitgliedschaft beenden
-              </h2>
-              <ResignMembershipPanel
-                resignedAt={member.resignedAt?.toISOString() ?? null}
-                membershipEndsAt={
-                  member.membershipEndsAt?.toISOString() ?? null
-                }
-              />
-            </div>
           </>
         )}
       </div>
+
+      {/* Außerhalb des Grids statt `md:col-span-2`-Karte darin: `grid-flow-
+       * dense` oben darf Karten zum Auffüllen von Lücken nach vorne ziehen —
+       * diese Danger-Zone (Kündigung) soll dagegen garantiert immer als
+       * letzter Block stehen, unabhängig von der Kartenkombination. */}
+      {selfServiceData && (
+        <div className="border-destructive/40 flex flex-col gap-3 rounded-lg border p-5">
+          <h2 className="font-serif text-lg font-bold">
+            Mitgliedschaft beenden
+          </h2>
+          <ResignMembershipPanel
+            resignedAt={member.resignedAt?.toISOString() ?? null}
+            membershipEndsAt={member.membershipEndsAt?.toISOString() ?? null}
+          />
+        </div>
+      )}
     </PageContainer>
   );
 }
