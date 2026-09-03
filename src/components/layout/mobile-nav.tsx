@@ -9,6 +9,7 @@ import {
   DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import {
   getVisibleNavGroups,
   NAV_GROUP_ICONS,
@@ -53,7 +54,7 @@ export function MobileNav({
       aria-label="Hauptnavigation"
       className="bg-sidebar text-sidebar-foreground fixed inset-x-0 bottom-0 z-20 flex border-t sm:hidden"
     >
-      {groups.map((group) => {
+      {groups.map((group, index) => {
         const key = group.title ?? "root";
         const Icon = NAV_GROUP_ICONS[key];
         const active = group.items.some((item) =>
@@ -91,6 +92,16 @@ export function MobileNav({
                 data-slot="dialog-content"
                 className="bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom fixed inset-x-0 bottom-0 z-50 flex max-h-[70vh] flex-col gap-1 rounded-t-xl p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm ring-1 duration-150 outline-none"
               >
+                {/* Theme-Umschalter ist sonst nur im Header — auf `< sm`
+                    (wo die Bottom-Bar ihn ersetzt) nicht erreichbar. Landet
+                    hier in der ersten Gruppe statt an anderer Stelle in der
+                    Bottom-Bar selbst zu leben, da es kein eigenes viertes
+                    Icon dafür geben soll. */}
+                {index === 0 && (
+                  <div className="flex justify-end px-2 pb-1">
+                    <ThemeToggle />
+                  </div>
+                )}
                 <DialogTitle className="px-2 py-1.5 text-xs font-bold tracking-wider uppercase">
                   {group.title ?? "Öffentlich"}
                 </DialogTitle>
