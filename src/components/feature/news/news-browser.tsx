@@ -22,11 +22,18 @@ import {
   type NewsViewMode,
 } from "@/components/feature/news/news-results-list";
 
-const TYPE_FILTER_OPTIONS: PillOption<ContentType | "alle">[] =
-  CONTENT_TYPE_FILTERS.map((option) => ({
+/** #424: Kategorie "Umfragen" gehört nicht in die Filterleiste für Gäste —
+ * es gibt keine öffentlichen Umfragen, nur Meeple sind abstimmungsberechtigt. */
+function typeFilterOptions(
+  canSeeSurveys: boolean,
+): PillOption<ContentType | "alle">[] {
+  return CONTENT_TYPE_FILTERS.filter(
+    (option) => canSeeSurveys || option.value !== "umfrage",
+  ).map((option) => ({
     ...option,
     icon: getContentTypeIcon(option.value),
   }));
+}
 
 const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
   { label: "Vorschau", value: "vorschau", icon: Eye },
@@ -39,12 +46,14 @@ export function NewsBrowser({
   canEditPublic,
   canEditInternal,
   canSeeInternal,
+  canSeeSurveys,
 }: {
   items: ContentItem[];
   icsUrl?: string;
   canEditPublic?: boolean;
   canEditInternal?: boolean;
   canSeeInternal?: boolean;
+  canSeeSurveys?: boolean;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
@@ -69,7 +78,7 @@ export function NewsBrowser({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4">
           <PillToggle
-            options={TYPE_FILTER_OPTIONS}
+            options={typeFilterOptions(!!canSeeSurveys)}
             value={filter}
             onChange={setFilter}
           />

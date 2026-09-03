@@ -159,10 +159,18 @@ export async function getUpcomingEvents(limit = 3) {
   return posts.map(toContentItem);
 }
 
-/** Public-facing by default — never surfaces internal posts (homepage preview). */
-export async function getLatestPosts(limit = 3) {
+/** Public-facing by default — never surfaces internal posts (homepage
+ * preview). `includeSurveys` defaults to false: für Gäste gibt es keine
+ * öffentlichen Umfragen (#424), nur Meeple sind abstimmungsberechtigt —
+ * sonst tauchte auf der Startseite eine Umfrage auf, die auf `/news` für
+ * denselben Gast bereits ausgeblendet ist. */
+export async function getLatestPosts(limit = 3, includeSurveys = false) {
   const posts = await prisma.post.findMany({
-    where: { OR: [{ internal: null }, { internal: false }], status: "PUBLISHED" },
+    where: {
+      OR: [{ internal: null }, { internal: false }],
+      status: "PUBLISHED",
+      ...(includeSurveys ? {} : { type: { not: "UMFRAGE" } }),
+    },
     orderBy: { date: "desc" },
     take: limit,
     include: POST_RELATIONS_INCLUDE,

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { canViewContentItem, getContentBySlug } from "@/lib/content/content";
 import { canManagePostType } from "@/lib/content/post-access";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -16,6 +16,11 @@ export default async function PostDetailPage({
   if (!item) notFound();
 
   const user = await getCurrentUser();
+
+  // #424: keine öffentlichen Umfragen — nur Meeple sind abstimmungsberechtigt.
+  // Gilt unabhängig vom internal-Flag, deshalb vor dem canViewContentItem-Check.
+  if (item.type === "umfrage" && !user) redirect("/news");
+
   const canViewInternal = user
     ? await hasPermission(user.id, "news:internal:view")
     : false;

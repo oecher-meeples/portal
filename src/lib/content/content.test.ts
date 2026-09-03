@@ -232,7 +232,7 @@ describe("canViewContentItem", () => {
 });
 
 describe("getLatestPosts", () => {
-  it("queries all posts descending by date with a limit", async () => {
+  it("queries all posts descending by date with a limit, excluding UMFRAGE by default (#424)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
     await getLatestPosts(3);
@@ -241,6 +241,7 @@ describe("getLatestPosts", () => {
       where: {
         OR: [{ internal: null }, { internal: false }],
         status: "PUBLISHED",
+        type: { not: "UMFRAGE" },
       },
       orderBy: { date: "desc" },
       take: 3,
@@ -249,6 +250,21 @@ describe("getLatestPosts", () => {
         surveyDetails: { select: { deadline: true } },
       },
     });
+  });
+
+  it("drops the UMFRAGE filter when includeSurveys is true (#424, eingeloggte Meeple)", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    await getLatestPosts(3, true);
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ internal: null }, { internal: false }],
+          status: "PUBLISHED",
+        },
+      }),
+    );
   });
 
   it("includes internal: null posts but excludes internal: true (real Prisma NULL semantics)", async () => {
@@ -267,5 +283,23 @@ describe("getLatestPosts", () => {
       "termin-public-false",
       "termin-public-null",
     ]);
+  });
+
+  it("excludes an UMFRAGE post from the guest preview even when public (#424)", async () => {
+    const withSurvey = [
+      ...INTERNAL_VARIANTS,
+      makePost({ slug: "umfrage-public-null", type: "UMFRAGE", internal: null }),
+    ];
+    prismaMock.post.findMany.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (async ({ where }: any) =>
+        withSurvey.filter((post) => evaluateWhere(post, where))) as never,
+    );
+
+    const result = await getLatestPosts(10);
+
+    expect(result.map((item) => item.slug)).not.toContain(
+      "umfrage-public-null",
+    );
   });
 });

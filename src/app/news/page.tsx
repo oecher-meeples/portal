@@ -15,9 +15,11 @@ export default async function NewsPage() {
   const canSeeInternal = user
     ? await hasPermissionInCurrentView(user.id, "news:internal:view")
     : false;
-  const items = canSeeInternal
-    ? allItems
-    : allItems.filter((item) => !item.internal);
+  // #424: keine öffentlichen Umfragen — nur Meeple sind abstimmungsberechtigt,
+  // unabhängig vom internal-Flag des einzelnen Posts.
+  const items = allItems
+    .filter((item) => canSeeInternal || !item.internal)
+    .filter((item) => user || item.type !== "umfrage");
   const [canEditPublic, canEditInternal] = user
     ? await Promise.all([
         hasPermissionInCurrentView(user.id, "posts:public"),
@@ -46,6 +48,7 @@ export default async function NewsPage() {
         canEditPublic={canEditPublic}
         canEditInternal={canEditInternal}
         canSeeInternal={canSeeInternal}
+        canSeeSurveys={!!user}
       />
     </div>
   );
