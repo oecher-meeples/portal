@@ -33,7 +33,11 @@ export async function AppShell({ children }: { children: ReactNode }) {
       {/* Width cap lives on each page now via PageContainer (#398) — routes
           differ (e.g. Ludothek uses "wide"), so AppShell no longer forces
           one globally. */}
-      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-6 sm:ml-64 sm:px-8 sm:pt-24 sm:pb-8">
+      {/* ml folgt der Sidebar-Breite (#336): < md ausgeblendet (keine Margin),
+          md–lg Icon-only (w-16), ab xl volle Breite (w-64). Der Hover-/Pin-
+          Ausklappzustand der Sidebar ist ein Overlay (position: fixed) und
+          verschiebt diese Margin bewusst nicht. */}
+      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-6 sm:px-8 sm:pt-24 sm:pb-8 md:ml-16 xl:ml-64">
         {children}
         {/* Scroll buffer: lets page content (e.g. a dropdown menu at the
             bottom, or the last section of a long page) scroll clear of the

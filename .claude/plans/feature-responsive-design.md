@@ -3,7 +3,7 @@ branch: feature/responsive-design
 created: 2026-09-03
 issues:
   437: { status: pending }
-  336: { status: pending }
+  336: { status: done }
   430: { status: done }
   426: { status: done }
 ---
