@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { RangeSlider, SingleSlider } from "@/components/ui/range-slider";
+import { FilterPill } from "@/components/ui/filter-pill";
 import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import { LudothekMultiSelectFilter } from "@/components/feature/ludothek/ludothek-multi-select-filter";
-import { cn } from "@/lib/utils/cn";
 import {
   MAX_PLAYERS_FILTER,
   type LudothekFilters,
@@ -38,27 +37,29 @@ const ZUSTAND_OPTIONS: { label: string; value: GameZustand }[] = [
   { label: "Nicht erfasst", value: "nicht-erfasst" },
 ];
 
-function FilterPill({
+/** Label-Zeile (Titel + aktueller Wert) über einem der fünf Slider unten —
+ * war fünfmal identisch dupliziert, DRY-Ort bleibt diese Datei (die
+ * Kombination Titel+Wert+Slider ist fachlich an die Filter hier gebunden,
+ * kein fachfreier `ui/`-Baustein). */
+function FilterSliderRow({
   label,
-  href,
-  active,
+  value,
+  children,
 }: {
   label: string;
-  href: string;
-  active: boolean;
+  value: ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {label}
-    </Link>
+    <div className="flex min-w-56 flex-1 flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          {label}
+        </span>
+        <span className="text-muted-foreground text-xs">{value}</span>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -182,20 +183,17 @@ export function LudothekFilterPanel({
         Filter
       </summary>
 
-      <div className="mt-3 flex flex-col gap-3">
-        <div className="flex max-w-xs flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Spieler
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {players <= ALL_PLAYERS
-                ? "Alle"
-                : players >= MAX_PLAYERS_FILTER
-                  ? `${MAX_PLAYERS_FILTER}+`
-                  : players}
-            </span>
-          </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-3">
+        <FilterSliderRow
+          label="Spieler"
+          value={
+            players <= ALL_PLAYERS
+              ? "Alle"
+              : players >= MAX_PLAYERS_FILTER
+                ? `${MAX_PLAYERS_FILTER}+`
+                : players
+          }
+        >
           <SingleSlider
             min={ALL_PLAYERS}
             max={MAX_PLAYERS_FILTER}
@@ -205,17 +203,12 @@ export function LudothekFilterPanel({
             getAriaLabel={() => "Spieler"}
             hideTrackFill
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex max-w-xs flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Dauer (Min.)
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {durationRange[0]} – {durationRange[1]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Dauer (Min.)"
+          value={`${durationRange[0]} – ${durationRange[1]}`}
+        >
           <RangeSlider
             min={MIN_DURATION}
             max={maxDurationBound}
@@ -225,17 +218,12 @@ export function LudothekFilterPanel({
             onValueCommitted={commitDurationRange}
             getAriaLabel={(index) => (index === 0 ? "Dauer von" : "Dauer bis")}
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex max-w-xs flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Erstveröffentlichung
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {yearRange[0]} – {yearRange[1]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Erstveröffentlichung"
+          value={`${yearRange[0]} – ${yearRange[1]}`}
+        >
           <RangeSlider
             min={MIN_YEAR}
             max={currentYear}
@@ -248,17 +236,12 @@ export function LudothekFilterPanel({
                 : "Erstveröffentlichung bis"
             }
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex max-w-xs flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Bewertung
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {ratingRange[0]} – {ratingRange[1]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Bewertung"
+          value={`${ratingRange[0]} – ${ratingRange[1]}`}
+        >
           <RangeSlider
             min={MIN_RATING}
             max={MAX_RATING}
@@ -269,21 +252,18 @@ export function LudothekFilterPanel({
               index === 0 ? "Bewertung von" : "Bewertung bis"
             }
           />
-        </div>
+        </FilterSliderRow>
 
-        <div className="flex max-w-xs flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Sprachneutralität
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {languageDependenceMax <= MIN_LANGUAGE_DEPENDENCE
-                ? "Alle"
-                : LANGUAGE_DEPENDENCE_SHORT_LABELS[
-                    LANGUAGE_DEPENDENCE_BY_LEVEL[languageDependenceMax - 1]
-                  ]}
-            </span>
-          </div>
+        <FilterSliderRow
+          label="Sprachneutralität"
+          value={
+            languageDependenceMax <= MIN_LANGUAGE_DEPENDENCE
+              ? "Alle"
+              : LANGUAGE_DEPENDENCE_SHORT_LABELS[
+                  LANGUAGE_DEPENDENCE_BY_LEVEL[languageDependenceMax - 1]
+                ]
+          }
+        >
           <SingleSlider
             min={MIN_LANGUAGE_DEPENDENCE}
             max={MAX_LANGUAGE_DEPENDENCE}
@@ -293,107 +273,83 @@ export function LudothekFilterPanel({
             getAriaLabel={() => "Sprachneutralität"}
             hideTrackFill
           />
-        </div>
+        </FilterSliderRow>
 
-        {mechanicsOptions.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Mechanik
-            </span>
-            <LudothekMultiSelectFilter
-              id="mechanik-filter"
-              paramKey="mechanik"
-              basePath={basePath}
-              rawSearchParams={rawSearchParams}
-              options={mechanicsOptions}
-              selected={filters.mechanics ?? []}
-              placeholder="Mechanik suchen …"
-              emptyLabel="Keine passende Mechanik"
-            />
-          </div>
-        )}
-
-        {categoriesOptions.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-              Kategorie
-            </span>
-            <LudothekMultiSelectFilter
-              id="kategorie-filter"
-              paramKey="kategorie"
-              basePath={basePath}
-              rawSearchParams={rawSearchParams}
-              options={categoriesOptions}
-              selected={filters.categories ?? []}
-              placeholder="Kategorie suchen …"
-              emptyLabel="Keine passende Kategorie"
-            />
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <FilterPill
-            label="Erweiterungen ausblenden"
-            href={href({
-              ohneErweiterungen: filters.hideExpansions ? undefined : "1",
-            })}
-            active={Boolean(filters.hideExpansions)}
-          />
-          {showExplainerFilter && (
-            <FilterPill
-              label="Erklärbär vorhanden"
-              href={href({
-                erklaerbaer: filters.hasExplainer ? undefined : "1",
-              })}
-              active={Boolean(filters.hasExplainer)}
-            />
-          )}
-          {showPresentFilter && (
-            <FilterPill
-              label="Nur anwesende Spiele"
-              href={href({
-                anwesend: filters.onlyPresentAtEvent ? undefined : "1",
-              })}
-              active={Boolean(filters.onlyPresentAtEvent)}
-            />
-          )}
-        </div>
-
-        {internal && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                Zustand
-              </span>
-              <FilterPill
-                label="Alle"
-                href={href({ zustand: undefined })}
-                active={!filters.zustand}
-              />
-              {ZUSTAND_OPTIONS.map((option) => (
-                <FilterPill
-                  key={option.value}
-                  label={option.label}
-                  href={href({ zustand: option.value })}
-                  active={filters.zustand === option.value}
+        {(mechanicsOptions.length > 0 || categoriesOptions.length > 0) && (
+          <div className="flex w-full flex-wrap gap-x-5 gap-y-3 border-t pt-4">
+            {mechanicsOptions.length > 0 && (
+              <div className="flex min-w-56 flex-1 flex-col gap-1.5">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  Mechanik
+                </span>
+                <LudothekMultiSelectFilter
+                  id="mechanik-filter"
+                  paramKey="mechanik"
+                  basePath={basePath}
+                  rawSearchParams={rawSearchParams}
+                  options={mechanicsOptions}
+                  selected={filters.mechanics ?? []}
+                  placeholder="Mechanik suchen …"
+                  emptyLabel="Keine passende Mechanik"
                 />
-              ))}
+              </div>
+            )}
+
+            {categoriesOptions.length > 0 && (
+              <div className="flex min-w-56 flex-1 flex-col gap-1.5">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  Kategorie
+                </span>
+                <LudothekMultiSelectFilter
+                  id="kategorie-filter"
+                  paramKey="kategorie"
+                  basePath={basePath}
+                  rawSearchParams={rawSearchParams}
+                  options={categoriesOptions}
+                  selected={filters.categories ?? []}
+                  placeholder="Kategorie suchen …"
+                  emptyLabel="Keine passende Kategorie"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Unabhängige Ein/Aus-Filter (Checkbox-artig, beliebig kombinierbar)
+            in einer gemeinsamen Gruppe statt verstreuter Einzelzeilen —
+            klare Abgrenzung zu "Zustand" darunter, das eine Einzelauswahl
+            ist. */}
+        <div className="flex w-full flex-col gap-2 border-t pt-4">
+          <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+            Weitere Filter
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterPill
+              label="Erweiterungen ausblenden"
+              href={href({
+                ohneErweiterungen: filters.hideExpansions ? undefined : "1",
+              })}
+              active={Boolean(filters.hideExpansions)}
+            />
+            {showExplainerFilter && (
               <FilterPill
-                label="Ist ausgeliehen"
+                label="Erklärbär vorhanden"
                 href={href({
-                  ausgeliehen: filters.onlyLoanedOut ? undefined : "1",
+                  erklaerbaer: filters.hasExplainer ? undefined : "1",
                 })}
-                active={Boolean(filters.onlyLoanedOut)}
+                active={Boolean(filters.hasExplainer)}
               />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+            )}
+            {showPresentFilter && (
               <FilterPill
-                label="Auch Privatbesitz anzeigen"
+                label="Nur anwesende Spiele"
                 href={href({
-                  privatbesitz: filters.showPrivateCollection ? undefined : "1",
+                  anwesend: filters.onlyPresentAtEvent ? undefined : "1",
                 })}
-                active={Boolean(filters.showPrivateCollection)}
+                active={Boolean(filters.onlyPresentAtEvent)}
               />
+            )}
+            {internal && (
               <FilterPill
                 label="Zeige nur Spielergesuche"
                 href={href({
@@ -401,22 +357,74 @@ export function LudothekFilterPanel({
                 })}
                 active={Boolean(filters.onlyWithOpenLfg)}
               />
+            )}
+          </div>
+        </div>
+
+        {internal && (
+          <>
+            <div className="flex w-full flex-col gap-2 border-t pt-4">
+              <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                Zustand
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterPill
+                  label="Alle"
+                  href={href({ zustand: undefined })}
+                  active={!filters.zustand}
+                />
+                {ZUSTAND_OPTIONS.map((option) => (
+                  <FilterPill
+                    key={option.value}
+                    label={option.label}
+                    href={href({ zustand: option.value })}
+                    active={filters.zustand === option.value}
+                  />
+                ))}
+                <FilterPill
+                  label="Ist ausgeliehen"
+                  href={href({
+                    ausgeliehen: filters.onlyLoanedOut ? undefined : "1",
+                  })}
+                  active={Boolean(filters.onlyLoanedOut)}
+                />
+              </div>
             </div>
-            {meepleOptions && meepleOptions.length > 0 && (
-              <div className="flex max-w-xs flex-col gap-1">
+            <div className="flex w-full flex-col gap-2 border-t pt-4">
+              {meepleOptions && meepleOptions.length > 0 && (
                 <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                   Bei
                 </span>
-                <MeepleCombobox
-                  options={meepleOptions}
-                  value={filters.atMeepleId ?? null}
-                  onValueChange={(meepleId) =>
-                    router.push(href({ bei: meepleId ?? undefined }))
-                  }
-                  placeholder="Alle"
+              )}
+              {/* items-center statt items-end: die Texte von "Alle" und der
+                  Pill sollen sich die mittlere Baseline teilen, nicht die
+                  untere Kante. Deshalb ohne das "Bei"-Label in dieser Zeile
+                  — sonst zieht dessen Zeile den Mittelpunkt nach oben. */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                {meepleOptions && meepleOptions.length > 0 && (
+                  <div className="flex-1">
+                    <MeepleCombobox
+                      options={meepleOptions}
+                      value={filters.atMeepleId ?? null}
+                      onValueChange={(meepleId) =>
+                        router.push(href({ bei: meepleId ?? undefined }))
+                      }
+                      placeholder="Alle"
+                    />
+                  </div>
+                )}
+                <FilterPill
+                  label="Auch Privatbesitz anzeigen"
+                  href={href({
+                    privatbesitz: filters.showPrivateCollection
+                      ? undefined
+                      : "1",
+                  })}
+                  active={Boolean(filters.showPrivateCollection)}
+                  className="shrink-0"
                 />
               </div>
-            )}
+            </div>
           </>
         )}
       </div>

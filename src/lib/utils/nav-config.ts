@@ -68,6 +68,53 @@ export function tierAtLeast(current: Tier, minTier: Tier) {
 }
 
 /**
+ * Whether a nav item should show for this user. Items with a `permission`
+ * (currently only Administration entries) are gated by permission instead
+ * of tier, so e.g. a Kassenwart (tier "mitglied") still sees "Beitragseinzug".
+ * `previewingLowerTier` (a real admin previewing as mitglied/gast) still
+ * hides them — the preview switcher must show exactly what that tier sees.
+ */
+function isItemVisible(
+  item: NavItem,
+  group: NavGroup,
+  tier: Tier,
+  permissions: ReadonlySet<string>,
+  previewingLowerTier: boolean,
+  flags: Readonly<Record<NavFlag, boolean>>,
+) {
+  if (item.requiresFlag && !flags[item.requiresFlag]) return false;
+  if (item.permission) {
+    if (previewingLowerTier) return false;
+    if (permissions.has("admin:access")) return true;
+    const required = Array.isArray(item.permission)
+      ? item.permission
+      : [item.permission];
+    return required.some((key) => permissions.has(key));
+  }
+  return tierAtLeast(tier, item.minTier ?? group.minTier);
+}
+
+/**
+ * `NAV_GROUPS`, gefiltert auf das, was dieser Nutzer sieht — einzige
+ * Quelle der Wahrheit für Sidebar (Desktop) *und* MobileNav (#437), damit
+ * beide garantiert dieselben Einträge zeigen. Gruppen ohne sichtbare
+ * Einträge fallen komplett weg.
+ */
+export function getVisibleNavGroups(
+  tier: Tier,
+  permissions: ReadonlySet<string>,
+  previewingLowerTier: boolean,
+  flags: Readonly<Record<NavFlag, boolean>>,
+): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      isItemVisible(item, group, tier, permissions, previewingLowerTier, flags),
+    ),
+  })).filter((group) => group.items.length > 0);
+}
+
+/**
  * Every permission that unlocks at least one Administration nav item —
  * mirrors the `permission` field below. Also used as the required
  * permission set for "Mitglieder & Einladungen" and "Einstellungen", which
@@ -96,6 +143,14 @@ export const EINSTELLUNGEN_PERMISSIONS = [
   // auch ohne eine der drei anderen Berechtigungen.
   "members:manage",
 ];
+
+/** Icon je NAV_GROUPS-Gruppe für die mobile Bottom-Bar (#437), geschlüsselt
+ * wie `sidebar.tsx`s `collapsedGroups` (`group.title ?? "root"`). */
+export const NAV_GROUP_ICONS: Record<string, LucideIcon> = {
+  root: Home,
+  Mitgliederbereich: Users,
+  Administration: Settings,
+};
 
 export const NAV_GROUPS: NavGroup[] = [
   {

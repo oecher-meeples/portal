@@ -124,9 +124,13 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
   }
   html {
-    @apply font-sans;
+    /* Verhindert horizontales Scrollen der ganzen Seite (z. B. durch eine
+       versehentlich zu breite Zeile) — sonst zieht das auf Mobile die
+       `fixed` MobileNav-Bottom-Bar beim horizontalen Scroll seitlich aus
+       dem sichtbaren Bereich mit heraus. */
+    @apply overflow-x-hidden font-sans;
   }
 }

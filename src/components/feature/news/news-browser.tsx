@@ -1,13 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Rows3 } from "lucide-react";
+import { CalendarDays, Eye, Rows3 } from "lucide-react";
 import {
   CONTENT_TYPE_FILTERS,
   type ContentItem,
   type ContentType,
 } from "@/lib/content/content";
 import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
+import { Button } from "@/components/ui/button";
+import {
+  BottomSheet,
+  BottomSheetTrigger,
+  BottomSheetContent,
+} from "@/components/ui/bottom-sheet";
 import { getContentTypeIcon } from "@/components/entities/content-type-icon";
 import { formatDate } from "@/lib/utils/format";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
@@ -44,6 +50,14 @@ export function NewsBrowser({
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
   const [onlyInternal, setOnlyInternal] = useState(false);
   const [viewMode, setViewMode] = useState<NewsViewMode>("vorschau");
+  // < lg: Kalender steht sonst als Grid-Zweitspalte ganz unten unter der
+  // Ergebnisliste — dort stattdessen über ein Bottom-Sheet erreichbar.
+  const [calendarSheetOpen, setCalendarSheetOpen] = useState(false);
+
+  function selectDateAndCloseSheet(date: string | null) {
+    setSelectedDate(date);
+    setCalendarSheetOpen(false);
+  }
 
   const visible = items
     .filter((item) => !selectedDate || item.date === selectedDate)
@@ -74,6 +88,31 @@ export function NewsBrowser({
               Nur interne anzeigen
             </label>
           )}
+          <BottomSheet
+            open={calendarSheetOpen}
+            onOpenChange={setCalendarSheetOpen}
+          >
+            <BottomSheetTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 lg:hidden"
+                />
+              }
+            >
+              <CalendarDays className="size-4" />
+              Nach Datum filtern
+            </BottomSheetTrigger>
+            <BottomSheetContent title="Kalender">
+              <NewsCalendar
+                items={items}
+                selectedDate={selectedDate}
+                onSelectDate={selectDateAndCloseSheet}
+                icsUrl={icsUrl}
+              />
+            </BottomSheetContent>
+          </BottomSheet>
         </div>
         {selectedDate && (
           <div className="flex items-center gap-2 text-sm">
@@ -101,12 +140,16 @@ export function NewsBrowser({
           canEditPublic={canEditPublic}
           canEditInternal={canEditInternal}
         />
-        <NewsCalendar
-          items={items}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          icsUrl={icsUrl}
-        />
+        {/* < lg: Kalender nur noch über das Bottom-Sheet oben (s. "Nach
+            Datum filtern") erreichbar, nicht mehr zusätzlich hier unten. */}
+        <div className="hidden lg:block">
+          <NewsCalendar
+            items={items}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            icsUrl={icsUrl}
+          />
+        </div>
       </div>
     </div>
   );

@@ -22,6 +22,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ActionButton } from "@/components/ui/action-button";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/components/ui/use-pagination";
+import { useResponsivePageSize } from "@/components/ui/use-responsive-page-size";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import {
@@ -137,6 +140,13 @@ export function MitgliederTable({
     );
   }, [searchedMeeples, quickFilter]);
 
+  const [pageSize, setPageSize] = useResponsivePageSize(10, 25);
+  const { page, pageCount, setPage, start, end } = usePagination(
+    filteredMeeples.length,
+    pageSize,
+  );
+  const pageMeeples = filteredMeeples.slice(start, end);
+
   return (
     <Accordion
       id="mitglieder"
@@ -208,7 +218,7 @@ export function MitgliederTable({
                       </TableCell>
                     </TableRow>
                   )}
-                  {filteredMeeples.map((meeple) => (
+                  {pageMeeples.map((meeple) => (
                     <TableRow key={meeple.id}>
                       <TableCell>
                         <MeepleEditDialog
@@ -294,6 +304,14 @@ export function MitgliederTable({
                 </TableBody>
               </Table>
             </div>
+            <Pagination
+              page={page}
+              pageCount={pageCount}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              totalItems={filteredMeeples.length}
+            />
           </div>
         </AccordionPanel>
       </AccordionItem>
