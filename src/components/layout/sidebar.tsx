@@ -5,46 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Pin, PinOff } from "lucide-react";
 import {
-  NAV_GROUPS,
-  tierAtLeast,
+  getVisibleNavGroups,
   type NavFlag,
-  type NavGroup,
-  type NavItem,
   type Tier,
 } from "@/lib/utils/nav-config";
 import { cn } from "@/lib/utils/cn";
 
-/**
- * Whether a nav item should show for this user. Items with a `permission`
- * (currently only Administration entries) are gated by permission instead
- * of tier, so e.g. a Kassenwart (tier "mitglied") still sees "Beitragseinzug".
- * `previewingLowerTier` (a real admin previewing as mitglied/gast) still
- * hides them — the preview switcher must show exactly what that tier sees.
- */
 /** Persistiert, ob der Meeple die auf `md`–`lg` sonst nur bei Hover/Fokus
  * ausklappende Sidebar (#336) dauerhaft in voller Breite fixiert hat.
  * Client-seitig only — kein Server-State nötig. */
 const PINNED_STORAGE_KEY = "sidebar-pinned";
-
-function isItemVisible(
-  item: NavItem,
-  group: NavGroup,
-  tier: Tier,
-  permissions: ReadonlySet<string>,
-  previewingLowerTier: boolean,
-  flags: Readonly<Record<NavFlag, boolean>>,
-) {
-  if (item.requiresFlag && !flags[item.requiresFlag]) return false;
-  if (item.permission) {
-    if (previewingLowerTier) return false;
-    if (permissions.has("admin:access")) return true;
-    const required = Array.isArray(item.permission)
-      ? item.permission
-      : [item.permission];
-    return required.some((key) => permissions.has(key));
-  }
-  return tierAtLeast(tier, item.minTier ?? group.minTier);
-}
 
 export function Sidebar({
   tier,
@@ -58,21 +28,13 @@ export function Sidebar({
   flags: Readonly<Record<NavFlag, boolean>>;
 }) {
   const pathname = usePathname();
-  const permissionSet = new Set(permissions);
   const previewingLowerTier = realTier === "admin" && tier !== "admin";
-  const groups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) =>
-      isItemVisible(
-        item,
-        group,
-        tier,
-        permissionSet,
-        previewingLowerTier,
-        flags,
-      ),
-    ),
-  })).filter((group) => group.items.length > 0);
+  const groups = getVisibleNavGroups(
+    tier,
+    new Set(permissions),
+    previewingLowerTier,
+    flags,
+  );
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
