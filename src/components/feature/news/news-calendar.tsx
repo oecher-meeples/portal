@@ -46,10 +46,14 @@ export function NewsCalendar({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const eventDates = new Set(items.map((item) => item.date));
-  // #10: Tage mit mind. einem internen Termin bekommen eine eigene Farbe —
-  // bei gemischten Tagen (intern + extern) hat intern bewusst Vorrang, damit
-  // die Markierung nicht auf eine dritte Mischfarbe angewiesen ist.
+  // #10 (Folgefehler beim Live-Test): volle Zellfarbe (bg-secondary) machte
+  // die Zifferfarbe auf sich selbst unlesbar (Weiß auf Weiß im Dark Mode, da
+  // secondary = foreground-Farbe). Zwei kleine Punkte unter der Zahl statt
+  // Zellfarbe umgehen das strukturell — die Tagesfarbe (Text/Ring) bleibt
+  // unverändert lesbar, unabhängig davon welche Termine der Tag hat.
+  const publicEventDates = new Set(
+    items.filter((item) => !item.internal).map((item) => item.date),
+  );
   const internalEventDates = new Set(
     items.filter((item) => item.internal).map((item) => item.date),
   );
@@ -97,10 +101,15 @@ export function NewsCalendar({
         {cells.map((date, index) => {
           if (!date) return <span key={index} />;
           const key = toDateKey(date);
-          const hasEvent = eventDates.has(key);
-          const isInternal = internalEventDates.has(key);
+          const hasPublicEvent = publicEventDates.has(key);
+          const hasInternalEvent = internalEventDates.has(key);
+          const hasEvent = hasPublicEvent || hasInternalEvent;
           const isSelected = selectedDate === key;
           const isToday = key === todayKey;
+          // Aktiver Filter: alle anderen Tage mit Terminen treten optisch
+          // zurück, damit der ausgewählte Tag als einziger aktiver Filter
+          // erkennbar bleibt (statt gleichwertig neben ihm zu stehen).
+          const isDimmed = selectedDate !== null && !isSelected;
 
           return (
             <button
@@ -109,17 +118,25 @@ export function NewsCalendar({
               disabled={!hasEvent}
               onClick={() => onSelectDate(isSelected ? null : key)}
               className={cn(
-                "aspect-square rounded-md text-sm transition-colors",
-                hasEvent &&
-                  (isInternal
-                    ? "bg-secondary hover:bg-secondary/80 font-semibold"
-                    : "bg-primary/15 hover:bg-primary/25 font-semibold"),
+                "hover:bg-accent relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-md text-sm transition-[opacity,background-color]",
+                hasEvent && "font-semibold",
                 !hasEvent && "text-muted-foreground",
                 isSelected && "bg-primary text-primary-foreground",
                 isToday && !isSelected && "ring-primary ring-1",
+                isDimmed && "opacity-35",
               )}
             >
               {date.getDate()}
+              {hasEvent && (
+                <span className="flex gap-0.5" aria-hidden>
+                  {hasPublicEvent && (
+                    <span className="bg-event-public size-1.5 rounded-full" />
+                  )}
+                  {hasInternalEvent && (
+                    <span className="bg-event-internal size-1.5 rounded-full" />
+                  )}
+                </span>
+              )}
             </button>
           );
         })}
@@ -127,11 +144,11 @@ export function NewsCalendar({
 
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
         <span className="flex items-center gap-1.5">
-          <span className="bg-primary/15 size-3 rounded-sm" aria-hidden />
+          <span className="bg-event-public size-2 rounded-full" aria-hidden />
           Öffentlich
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="bg-secondary size-3 rounded-sm" aria-hidden />
+          <span className="bg-event-internal size-2 rounded-full" aria-hidden />
           Intern
         </span>
       </div>

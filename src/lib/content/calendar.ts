@@ -53,6 +53,26 @@ function toText(value: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * Formats an event's start as `YYYY-MM-DD`. Ganztägige ICS-Termine
+ * (`DTSTART;VALUE=DATE:...`, z. B. Google-Kalender-„Ganztägig"-Events) haben
+ * keine Uhrzeit/Zeitzone — node-ical baut daraus ein `Date` in *lokaler*
+ * Serverzeit. `toISOString()` würde das zurück nach UTC rechnen und in
+ * Zeitzonen östlich von UTC (Europe/Berlin) einen Tag zurückspringen (Mitternacht
+ * 08.09. CEST → 07.09. 22:00 UTC). Für diese Events daher die lokalen
+ * Datumskomponenten verwenden statt über UTC zu gehen; getimte Events (mit
+ * echtem UTC-Zeitstempel) bleiben bei `toISOString()`.
+ */
+function formatEventDate(event: VEvent): string {
+  const isFullDay = event.datetype === "date" || Boolean(event.start.dateOnly);
+  if (!isFullDay) return event.start.toISOString().slice(0, 10);
+
+  const year = event.start.getFullYear();
+  const month = String(event.start.getMonth() + 1).padStart(2, "0");
+  const day = String(event.start.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function parseCalendarEvents(
   icsText: string,
   { limit = 3, now = new Date() }: { limit?: number; now?: Date } = {},
@@ -73,7 +93,7 @@ export function parseCalendarEvents(
       title: toText(event.summary) ?? "Termin",
       excerpt: toText(event.description) ?? "",
       body: toText(event.description) ?? "",
-      date: event.start.toISOString().slice(0, 10),
+      date: formatEventDate(event),
       location: toText(event.location),
     }));
 }

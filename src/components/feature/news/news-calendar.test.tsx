@@ -31,7 +31,7 @@ describe("NewsCalendar — Farbunterscheidung intern/extern (#10)", () => {
     expect(screen.getByText("Intern")).toBeInTheDocument();
   });
 
-  it("marks a day with only a public event using the public style", () => {
+  it("marks a day with only a public event using the public dot, no internal dot", () => {
     render(
       <NewsCalendar
         items={[makeItem({ date: DAY_WITH_PUBLIC_EVENT, internal: false })]}
@@ -41,11 +41,11 @@ describe("NewsCalendar — Farbunterscheidung intern/extern (#10)", () => {
     );
 
     const day = screen.getByRole("button", { name: "5" });
-    expect(day).toHaveClass("bg-primary/15");
-    expect(day).not.toHaveClass("bg-secondary");
+    expect(day.querySelector(".bg-event-public")).toBeInTheDocument();
+    expect(day.querySelector(".bg-event-internal")).not.toBeInTheDocument();
   });
 
-  it("marks a day with an internal event using the internal style", () => {
+  it("marks a day with an internal event using the internal dot, no public dot", () => {
     render(
       <NewsCalendar
         items={[
@@ -61,11 +61,14 @@ describe("NewsCalendar — Farbunterscheidung intern/extern (#10)", () => {
     );
 
     const day = screen.getByRole("button", { name: "12" });
-    expect(day).toHaveClass("bg-secondary");
-    expect(day).not.toHaveClass("bg-primary/15");
+    expect(day.querySelector(".bg-event-internal")).toBeInTheDocument();
+    expect(day.querySelector(".bg-event-public")).not.toBeInTheDocument();
   });
 
-  it("gives internal precedence on a day with both a public and an internal event", () => {
+  // #10 (Folgefehler beim Live-Test): keine Zellfarbe mehr, die auf sich
+  // selbst unlesbar würde (Weiß-auf-Weiß im Dark Mode) — zwei Punkte statt
+  // einer "Vorrang"-Regel zeigen gemischte Tage jetzt vollständig an.
+  it("shows both dots on a day with a public and an internal event", () => {
     render(
       <NewsCalendar
         items={[
@@ -86,6 +89,31 @@ describe("NewsCalendar — Farbunterscheidung intern/extern (#10)", () => {
     );
 
     const day = screen.getByRole("button", { name: "5" });
-    expect(day).toHaveClass("bg-secondary");
+    expect(day.querySelector(".bg-event-public")).toBeInTheDocument();
+    expect(day.querySelector(".bg-event-internal")).toBeInTheDocument();
+  });
+
+  it("dims other event days while one is selected, keeping the selected day at full opacity", () => {
+    render(
+      <NewsCalendar
+        items={[
+          makeItem({ slug: "a", date: DAY_WITH_PUBLIC_EVENT }),
+          makeItem({
+            slug: "b",
+            date: DAY_WITH_INTERNAL_EVENT,
+            internal: true,
+          }),
+        ]}
+        selectedDate={DAY_WITH_PUBLIC_EVENT}
+        onSelectDate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "5" })).not.toHaveClass(
+      "opacity-35",
+    );
+    expect(screen.getByRole("button", { name: "12" })).toHaveClass(
+      "opacity-35",
+    );
   });
 });

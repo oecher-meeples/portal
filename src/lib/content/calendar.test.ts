@@ -29,13 +29,27 @@ describe("parseCalendarEvents", () => {
   it("parses VEVENTs into ContentItem-shaped calendar entries", () => {
     const events = parseCalendarEvents(FIXTURE, { now: REFERENCE_NOW });
 
-    expect(events).toHaveLength(1);
+    expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({
       type: "termin",
       title: "Offener Spieleabend",
       date: "2026-08-10",
       location: "Vereinsheim Aachen",
     });
+  });
+
+  // #10 (Folgefehler beim Live-Test): Ganztägige ICS-Events
+  // (DTSTART;VALUE=DATE:...) tragen keine Zeitzone. node-ical baut daraus ein
+  // Date in lokaler Serverzeit — vorher rechnete parseCalendarEvents das über
+  // toISOString() nach UTC um und sprang in Europe/Berlin einen Tag zurück
+  // (08.09. wurde als 07.09. angezeigt).
+  it("keeps the calendar date for full-day events instead of shifting via UTC", () => {
+    const events = parseCalendarEvents(FIXTURE, { now: REFERENCE_NOW });
+
+    const fullDayEvent = events.find(
+      (event) => event.title === "Ganztaegiger Spieltag",
+    );
+    expect(fullDayEvent?.date).toBe("2026-09-08");
   });
 
   it("excludes events that already happened", () => {
@@ -119,8 +133,8 @@ describe("fetchInternalEvents", () => {
 
     const events = await fetchInternalEvents({ now: REFERENCE_NOW });
 
-    expect(events).toHaveLength(1);
-    expect(events[0].internal).toBe(true);
+    expect(events).toHaveLength(2);
+    expect(events.every((event) => event.internal)).toBe(true);
   });
 
   it("returns an empty list without throwing when the env var is missing", async () => {
@@ -181,7 +195,7 @@ describe("fetchPublicEvents", () => {
       fetchInternalEvents({ now: REFERENCE_NOW }),
     ]);
 
-    expect(publicEvents).toHaveLength(1);
+    expect(publicEvents).toHaveLength(2);
     expect(internalEvents).toEqual([]);
   });
 });

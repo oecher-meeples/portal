@@ -5,6 +5,7 @@ import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { tierAtLeast } from "@/lib/utils/nav-config";
 
@@ -14,9 +15,19 @@ export default async function NewsPage() {
     getCurrentUser(),
     getSessionTier(),
   ]);
-  const canSeeInternal = user
-    ? await hasPermissionInCurrentView(user.id, "news:internal:view")
-    : false;
+  // #10 (Folgefehler beim Live-Test): news:internal:view ist keine
+  // Editier-Affordance, sondern eine reguläre Meeple-Berechtigung
+  // (REGULAR_MEEPLE_PERMISSION_KEYS) — hasPermissionInCurrentView() ist laut
+  // eigenem Vertrag nur für Admin-only-Affordances gedacht und lieferte in
+  // der Admin-Vorschau "als Mitglied" pauschal false, obwohl ein echter
+  // Mitglied-Account interne News standardmäßig sieht. sessionTier statt
+  // hasPermissionInCurrentView respektiert die Vorschau (gast sieht nie
+  // intern), das echte hasPermission() gilt für alle anderen Fälle
+  // (inkl. z. B. eines Ausgetretenen, dem die Berechtigung entzogen ist).
+  const canSeeInternal =
+    user && sessionTier !== "gast"
+      ? await hasPermission(user.id, "news:internal:view")
+      : false;
   // #424: keine öffentlichen Umfragen — nur Meeple sind abstimmungsberechtigt,
   // unabhängig vom internal-Flag des einzelnen Posts. sessionTier statt der
   // bloßen Login-Prüfung, damit ein Admin in der Gäste-Vorschau
