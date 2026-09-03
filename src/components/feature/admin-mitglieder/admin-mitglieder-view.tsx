@@ -303,7 +303,8 @@ export function AdminMitgliederView({
       )}
 
       <PendingChangesPanel
-        title="Offene E-Mail-Änderungsanträge"
+        titleSingular="Offener E-Mail-Änderungsantrag"
+        titlePlural="Offene E-Mail-Änderungsanträge"
         changes={pendingEmailChanges}
         isEmailChangePanel
       />

@@ -248,7 +248,8 @@ export function StammdatenSection({
 
       {isAdmin && openChanges.length > 0 && (
         <PendingChangesPanel
-          title="Offene Änderungsanträge"
+          titleSingular="Offener Änderungsantrag"
+          titlePlural="Offene Änderungsanträge"
           changes={openChanges}
         />
       )}

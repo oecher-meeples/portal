@@ -179,7 +179,8 @@ export function BankverbindungSection({
 
       {canEdit && openChanges.length > 0 && (
         <PendingChangesPanel
-          title="Offene IBAN-Änderungsanträge"
+          titleSingular="Offener IBAN-Änderungsantrag"
+          titlePlural="Offene IBAN-Änderungsanträge"
           changes={openChanges}
           revealIban={async (changeId) => {
             const result = await revealPendingMemberIban(changeId);

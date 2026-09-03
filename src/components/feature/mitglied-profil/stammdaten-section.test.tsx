@@ -134,7 +134,8 @@ describe("StammdatenSection (#380)", () => {
       />,
     );
 
-    expect(screen.getByText(/Offene Änderungsanträge/)).toBeInTheDocument();
+    // #416: genau ein Eintrag → Singular-Titel.
+    expect(screen.getByText("Offener Änderungsantrag")).toBeInTheDocument();
     expect(screen.getByText(/Vorname: Neu/)).toBeInTheDocument();
   });
 
