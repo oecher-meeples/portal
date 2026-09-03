@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 import { translateAuthError } from "@/lib/auth/password";
+import {
+  clearLoginCooldown,
+  getLoginCooldownSeconds,
+  recordLoginFailureClient,
+} from "@/lib/auth/login-cooldown";
 
 export function LoginForm() {
   const router = useRouter();
@@ -16,6 +21,18 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // #425: client-seitige Näherung des Server-Backoffs (#326) — der Server
+  // bestätigt nie, ob ein Fehlversuch am Passwort oder am Cooldown lag, also
+  // spiegelt diese Zahl nur nach, ohne je serverseitig bestätigt zu sein.
+  // `now` tickt sekündlich, cooldownSeconds wird daraus beim Rendern
+  // abgeleitet statt per setState im Effekt geschrieben zu werden.
+  const [now, setNow] = useState(() => Date.now());
+  const cooldownSeconds = getLoginCooldownSeconds(email, now);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -29,16 +46,20 @@ export function LoginForm() {
       });
 
       if (signInError) {
+        recordLoginFailureClient(email);
+        setNow(Date.now());
         setError(translateAuthError(signInError.message));
         return;
       }
 
+      clearLoginCooldown(email);
       router.push("/dashboard");
       router.refresh();
     } catch {
       // Netzwerkfehler o.ä. — ohne dieses catch bliebe der Button dauerhaft
       // im "Anmelden…"-Zustand hängen, ohne dass der Nutzer je eine
-      // Rückmeldung bekommt.
+      // Rückmeldung bekommt. Kein echter Login-Fehlversuch, zählt daher
+      // nicht in den Cooldown-Zähler.
       setError("Das hat leider nicht funktioniert. Bitte versuche es erneut.");
     } finally {
       setIsSubmitting(false);
@@ -75,7 +96,13 @@ export function LoginForm() {
           />
         </div>
         {error && <p className="text-destructive text-sm">{error}</p>}
-        <Button type="submit" disabled={isSubmitting}>
+        {cooldownSeconds > 0 && (
+          <p className="text-muted-foreground text-sm">
+            Zu viele Fehlversuche — bitte warte noch ca. {cooldownSeconds}{" "}
+            Sekunden.
+          </p>
+        )}
+        <Button type="submit" disabled={isSubmitting || cooldownSeconds > 0}>
           {isSubmitting ? "Anmelden…" : "Anmelden"}
         </Button>
         <Link
