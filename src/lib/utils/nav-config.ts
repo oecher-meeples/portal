@@ -109,14 +109,7 @@ export function getVisibleNavGroups(
   return NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter((item) =>
-      isItemVisible(
-        item,
-        group,
-        tier,
-        permissions,
-        previewingLowerTier,
-        flags,
-      ),
+      isItemVisible(item, group, tier, permissions, previewingLowerTier, flags),
     ),
   })).filter((group) => group.items.length > 0);
 }

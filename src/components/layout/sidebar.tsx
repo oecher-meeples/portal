@@ -82,7 +82,7 @@ export function Sidebar({
     <aside
       className={cn(
         "bg-sidebar text-sidebar-foreground group fixed inset-y-0 top-16 left-0 z-20 hidden flex-col gap-2 overflow-x-hidden overflow-y-auto border-r px-3 py-6 transition-[width] duration-150 md:flex md:w-16 xl:w-64",
-        !pinned && "md:hover:w-64 md:focus-within:w-64",
+        !pinned && "md:focus-within:w-64 md:hover:w-64",
         pinned && "md:w-64",
       )}
     >
