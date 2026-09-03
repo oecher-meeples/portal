@@ -28,6 +28,8 @@ import {
   type KeeperOption,
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
 import { PageContainer } from "@/components/ui/page-container";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import type { ProfilePictureVisibility } from "@prisma/client";
 
 export type UnitDetail = {
   id: string;
@@ -39,6 +41,10 @@ export type UnitDetail = {
   category: ShelfCategory | null;
   keeperMeepleId: string | null;
   keeperName: string | null;
+  /** (#412) Verwahrer-Profilbild — Lagereinheiten-Verwaltung ist member-only,
+   * Viewer ist daher immer "meeple". */
+  keeperProfilePictureUrl: string | null;
+  keeperProfilePictureVisibility: ProfilePictureVisibility;
   retired: boolean;
 };
 
@@ -145,8 +151,18 @@ export function UnitDetailView({
             </select>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-muted-foreground text-sm">
-              Verwahrer: {unit.keeperName ?? "keiner"}
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              Verwahrer:{" "}
+              {unit.keeperName ? (
+                <MeepleAvatar
+                  name={unit.keeperName}
+                  profilePictureUrl={unit.keeperProfilePictureUrl}
+                  profilePictureVisibility={unit.keeperProfilePictureVisibility}
+                  viewer={{ kind: "meeple" }}
+                  size="sm"
+                />
+              ) : null}
+              {unit.keeperName ?? "keiner"}
             </p>
             {!unit.retired && (
               <AssignKeeperDialog

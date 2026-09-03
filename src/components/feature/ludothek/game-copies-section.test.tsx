@@ -36,6 +36,8 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
       discordHandle: null,
       address: null,
     },
+    responsibleProfilePictureUrl: null,
+    responsibleProfilePictureVisibility: "INTERN",
     condition: null,
     ruleBookLanguages: [],
     inventoryNumber: null,
@@ -158,8 +160,10 @@ describe("GameCopiesSection", () => {
       />,
     );
 
+    // "A" vor dem Namen ist die MeepleAvatar-Fallback-Initiale (#412), da
+    // jsdom das Bild nie lädt — siehe meeple-avatar.test.tsx.
     const cell = screen.getByText(/Regal A/);
-    expect(cell.textContent).toBe("bei Alex → Regal A");
+    expect(cell.textContent).toBe("bei AAlex → Regal A");
   });
 
   // #456: unbestätigte Weitergabe war auf der Spieledetailseite nicht sichtbar.
@@ -180,7 +184,7 @@ describe("GameCopiesSection", () => {
     );
 
     const cell = screen.getByText(/Regal A/);
-    expect(cell.textContent).toBe("bei Alex (Unbestätigt) → Regal A");
+    expect(cell.textContent).toBe("bei AAlex (Unbestätigt) → Regal A");
   });
 
   it("renders a table for more than one copy", () => {

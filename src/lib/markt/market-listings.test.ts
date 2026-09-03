@@ -27,6 +27,8 @@ describe("toMarketListingView", () => {
         discordHandle: null,
         address: null,
         shareAddress: false,
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
       },
     );
 
@@ -46,6 +48,8 @@ describe("toMarketListingView", () => {
         discordHandle: null,
         address: null,
       },
+      sellerProfilePictureUrl: null,
+      sellerProfilePictureVisibility: "INTERN",
       boardGame: null,
     });
   });
@@ -70,6 +74,8 @@ function listing(
       discordHandle: null,
       address: null,
     },
+    sellerProfilePictureUrl: null,
+    sellerProfilePictureVisibility: "INTERN",
     boardGame: null,
     ...overrides,
   };

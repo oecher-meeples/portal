@@ -10,8 +10,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import { cn } from "@/lib/utils/cn";
 import type { ContactLinks } from "@/lib/members/contact";
+import type { ProfilePictureViewer } from "@/lib/members/profile-picture-visibility";
+import type { ProfilePictureVisibility } from "@prisma/client";
+
+/** (#412) Optionales Profilbild neben dem Namen — nur gesetzt, wenn der
+ * Aufrufer bereits Bild-URL/Freigabe des betroffenen Meeples geladen hat.
+ * Ohne dieses Prop bleibt `ContactDialog` unverändert (reiner Name/Link). */
+export type ContactDialogAvatar = {
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
+  viewer: ProfilePictureViewer;
+};
 
 /**
  * A person's name as a link — click opens a dialog with every contact
@@ -22,11 +34,23 @@ export function ContactDialog({
   name,
   contact,
   className,
+  avatar,
 }: {
   name: string;
   contact: ContactLinks;
   className?: string;
+  avatar?: ContactDialogAvatar;
 }) {
+  const avatarElement = avatar && (
+    <MeepleAvatar
+      name={name}
+      profilePictureUrl={avatar.profilePictureUrl}
+      profilePictureVisibility={avatar.profilePictureVisibility}
+      viewer={avatar.viewer}
+      size="sm"
+    />
+  );
+
   if (
     !contact.mailHref &&
     !contact.telegramHref &&
@@ -34,7 +58,12 @@ export function ContactDialog({
     !contact.discordHandle &&
     !contact.address
   ) {
-    return <span className={className}>{name}</span>;
+    return (
+      <span className={cn("inline-flex items-center gap-1.5", className)}>
+        {avatarElement}
+        {name}
+      </span>
+    );
   }
 
   return (
@@ -44,10 +73,11 @@ export function ContactDialog({
           <button
             type="button"
             className={cn(
-              "hover:text-primary underline-offset-2 hover:underline",
+              "hover:text-primary inline-flex items-center gap-1.5 underline-offset-2 hover:underline",
               className,
             )}
           >
+            {avatarElement}
             {name}
           </button>
         }

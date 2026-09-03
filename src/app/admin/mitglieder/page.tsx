@@ -59,6 +59,8 @@ export default async function AdminMitgliederPage() {
     prisma.meeple.findMany({
       orderBy: { memberNumber: "asc" },
       include: {
+        // (#412) select stays implicit (no `select:` on the top-level
+        // meeple query) — profilePictureUrl/-Visibility come along already.
         member: {
           select: {
             id: true,
@@ -248,6 +250,8 @@ export default async function AdminMitgliederPage() {
         ),
         hasIban: (meeple.member?.ibanEncrypted ?? null) !== null,
         isSystemAccount: meeple.isSystemAccount,
+        profilePictureUrl: meeple.profilePictureUrl,
+        profilePictureVisibility: meeple.profilePictureVisibility,
       }))}
       canManageSystemAccounts={canManageSystemAccounts}
       invites={invites.map((invite) => ({

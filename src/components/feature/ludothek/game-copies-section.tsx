@@ -18,7 +18,10 @@ import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-det
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ContactLinks } from "@/lib/members/contact";
 import { formatRuleBookLanguages } from "@/lib/ludothek/language-dependence";
-import type { RuleBookLanguage } from "@prisma/client";
+import type {
+  ProfilePictureVisibility,
+  RuleBookLanguage,
+} from "@prisma/client";
 
 export type GameCopyRow = {
   /** GameCopy id. */
@@ -28,6 +31,11 @@ export type GameCopyRow = {
   unitChain: string;
   responsibleName: string | null;
   responsibleContact: ContactLinks;
+  /** (#412) Profilbild der verantwortlichen Person, sofern hochgeladen und
+   * sichtbar — Viewer ist hier immer "meeple" (Ludothek-Standortdaten sind
+   * member-only, siehe `toPublicGame()`). */
+  responsibleProfilePictureUrl: string | null;
+  responsibleProfilePictureVisibility: ProfilePictureVisibility;
   /** True, solange der aktuelle Halter die Übernahme nach einer Weitergabe
    * noch nicht bestätigt hat (`Holding.confirmedAt === null`, #456). */
   isUnconfirmed: boolean;
@@ -61,6 +69,12 @@ function LocationCell({ copy }: { copy: GameCopyRow }) {
           <ContactDialog
             name={copy.responsibleName}
             contact={copy.responsibleContact}
+            avatar={{
+              profilePictureUrl: copy.responsibleProfilePictureUrl,
+              profilePictureVisibility:
+                copy.responsibleProfilePictureVisibility,
+              viewer: { kind: "meeple" },
+            }}
           />
           {copy.isUnconfirmed && " (Unbestätigt)"}
         </>

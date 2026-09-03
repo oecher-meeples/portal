@@ -55,6 +55,11 @@ export function MarketListingCard({
           <ContactDialog
             name={listing.sellerDisplayName}
             contact={listing.sellerContact}
+            avatar={{
+              profilePictureUrl: listing.sellerProfilePictureUrl,
+              profilePictureVisibility: listing.sellerProfilePictureVisibility,
+              viewer: { kind: "meeple" },
+            }}
           />
         </p>
         {isOwn && (

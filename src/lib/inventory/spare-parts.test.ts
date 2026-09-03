@@ -9,6 +9,8 @@ const KEEPER = {
   discordHandle: null,
   address: null,
   shareAddress: false,
+  profilePictureUrl: null,
+  profilePictureVisibility: "INTERN" as const,
 };
 
 describe("toSparePartListingView", () => {
@@ -38,6 +40,8 @@ describe("toSparePartListingView", () => {
         discordHandle: null,
         address: null,
       },
+      keeperProfilePictureUrl: null,
+      keeperProfilePictureVisibility: "INTERN",
     });
   });
 

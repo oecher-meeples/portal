@@ -113,7 +113,14 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       },
     },
     include: {
-      meeple: { select: { id: true, displayName: true } },
+      meeple: {
+        select: {
+          id: true,
+          displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+        },
+      },
       boardGame: { include: { alternateNames: { select: { name: true } } } },
     },
   });
@@ -154,6 +161,9 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       isLoanedOut: false,
       responsibleMeepleId: entry.meeple.id,
       responsibleName: entry.meeple.displayName,
+      responsibleProfilePictureUrl: entry.meeple.profilePictureUrl,
+      responsibleProfilePictureVisibility:
+        entry.meeple.profilePictureVisibility,
       // Privatbesitz hat keine Vereins-Weitergabe/-Bestätigung (#456).
       isUnconfirmed: false,
       unitChain: "",

@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/utils/prisma";
-import { BoardGameKind, GameInventoryStatus } from "@prisma/client";
+import {
+  BoardGameKind,
+  GameInventoryStatus,
+  ProfilePictureVisibility,
+} from "@prisma/client";
 import {
   isLoanHolding,
   zustandFromHoldingAndUnit,
@@ -60,7 +64,13 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
                 lastName: true,
                 email: true,
                 meeple: {
-                  select: { id: true, displayName: true, neonAuthUserId: true },
+                  select: {
+                    id: true,
+                    displayName: true,
+                    neonAuthUserId: true,
+                    profilePictureUrl: true,
+                    profilePictureVisibility: true,
+                  },
                 },
               },
             },
@@ -84,7 +94,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     getBoardGameIdsWithOpenLfgPosts(uniqueBoardGameIds),
   ]);
 
-  const { unitById, keeperNameById } = await buildUnitAndKeeperMaps(units);
+  const { unitById, keeperNameById, keeperProfileById } =
+    await buildUnitAndKeeperMaps(units);
 
   return copies.map((copy) => {
     const boardGame = copy.boardGame;
@@ -131,6 +142,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         isLoanedOut: false,
         responsibleMeepleId: null,
         responsibleName: null,
+        responsibleProfilePictureUrl: null,
+        responsibleProfilePictureVisibility: ProfilePictureVisibility.INTERN,
         isUnconfirmed: false,
         unitChain: "",
         locationChain: "",
@@ -141,6 +154,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       const responsibleName = holding.vereinsmitglied
         ? memberDisplayName(holding.vereinsmitglied)
         : "Vereinsmitglied";
+      const responsibleMeeple = holding.vereinsmitglied?.meeple;
       return {
         ...base,
         zustand: zustandFromHoldingAndUnit(
@@ -153,8 +167,15 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         // Nur ein erreichbares (verfügbares) Vereinsmitglied hat eine
         // kontaktierbare Meeple-Id — sonst gibt es niemanden, den der
         // ContactDialog anschreiben könnte (#333).
-        responsibleMeepleId: holding.vereinsmitglied?.meeple?.id ?? null,
+        responsibleMeepleId: responsibleMeeple?.id ?? null,
         responsibleName,
+        // (#412) Nur gesetzt, wenn das Meeple auch tatsächlich erreichbar
+        // ist (s. o.) — sonst gibt es ohnehin keinen ContactDialog dafür.
+        responsibleProfilePictureUrl:
+          responsibleMeeple?.profilePictureUrl ?? null,
+        responsibleProfilePictureVisibility:
+          responsibleMeeple?.profilePictureVisibility ??
+          ProfilePictureVisibility.INTERN,
         // #456: nach einer Weitergabe unbestätigt, bis die empfangende
         // Person die Übernahme aktiv bestätigt.
         isUnconfirmed: !holding.confirmedAt,
@@ -170,12 +191,19 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     const responsibleName = keeperMeepleId
       ? (keeperNameById.get(keeperMeepleId) ?? null)
       : null;
+    const keeperProfile = keeperMeepleId
+      ? keeperProfileById.get(keeperMeepleId)
+      : null;
     return {
       ...base,
       zustand: zustandFromHoldingAndUnit(holding, holding.unit, copy.status),
       isLoanedOut: false,
       responsibleMeepleId: keeperMeepleId,
       responsibleName,
+      responsibleProfilePictureUrl: keeperProfile?.profilePictureUrl ?? null,
+      responsibleProfilePictureVisibility:
+        keeperProfile?.profilePictureVisibility ??
+        ProfilePictureVisibility.INTERN,
       isUnconfirmed: !holding.confirmedAt,
       unitChain,
       locationChain: formatLocationChain({ responsibleName, unitChain }),

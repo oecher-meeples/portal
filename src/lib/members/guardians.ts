@@ -1,9 +1,18 @@
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { requireMember } from "@/lib/auth/session";
 
 /** Reused by the admin guardian picker and the "Meine Kinder" section (#376). */
-export type GuardianLinkOption = { id: string; displayName: string };
+export type GuardianLinkOption = {
+  id: string;
+  displayName: string;
+  /** (#412) Profilbild — nur von `listChildrenOf`/`listGuardiansOf` befüllt
+   * (Anzeigestelle auf dem Kind-/eigenen Profil, immer Viewer "meeple");
+   * `listGuardianCandidates` liefert eine Auswahl-Liste, kein Avatar nötig. */
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
+};
 
 const MEMBER_DISPLAY_SELECT = {
   id: true,
@@ -11,7 +20,13 @@ const MEMBER_DISPLAY_SELECT = {
   lastName: true,
   email: true,
   memberNumber: true,
-  meeple: { select: { displayName: true } },
+  meeple: {
+    select: {
+      displayName: true,
+      profilePictureUrl: true,
+      profilePictureVisibility: true,
+    },
+  },
 } as const;
 
 /** Serverseitige Berechtigungsprüfung (#372) — niemals einem
@@ -45,6 +60,9 @@ export async function listChildrenOf(
     id: link.child.id,
     slug: link.child.slug,
     displayName: memberDisplayName(link.child),
+    profilePictureUrl: link.child.meeple?.profilePictureUrl ?? null,
+    profilePictureVisibility:
+      link.child.meeple?.profilePictureVisibility ?? "INTERN",
   }));
 }
 
@@ -63,6 +81,9 @@ export async function listGuardiansOf(
     id: link.guardian.id,
     slug: link.guardian.slug,
     displayName: memberDisplayName(link.guardian),
+    profilePictureUrl: link.guardian.meeple?.profilePictureUrl ?? null,
+    profilePictureVisibility:
+      link.guardian.meeple?.profilePictureVisibility ?? "INTERN",
   }));
 }
 
@@ -79,6 +100,9 @@ export async function listGuardianCandidates(
   return members.map((member) => ({
     id: member.id,
     displayName: memberDisplayName(member),
+    profilePictureUrl: member.meeple?.profilePictureUrl ?? null,
+    profilePictureVisibility:
+      member.meeple?.profilePictureVisibility ?? "INTERN",
   }));
 }
 

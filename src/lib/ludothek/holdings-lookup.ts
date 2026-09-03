@@ -98,12 +98,27 @@ export async function buildUnitAndKeeperMaps<T extends StorageUnitLite>(
   const keepers = keeperIds.length
     ? await prisma.meeple.findMany({
         where: { id: { in: keeperIds } },
-        select: { id: true, displayName: true },
+        select: {
+          id: true,
+          displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+        },
       })
     : [];
   const keeperNameById = new Map(keepers.map((k) => [k.id, k.displayName]));
+  // (#412) Profilbild des Keepers, für MeepleAvatar in der Standort-Kette.
+  const keeperProfileById = new Map(
+    keepers.map((k) => [
+      k.id,
+      {
+        profilePictureUrl: k.profilePictureUrl,
+        profilePictureVisibility: k.profilePictureVisibility,
+      },
+    ]),
+  );
 
-  return { unitById, keeperNameById };
+  return { unitById, keeperNameById, keeperProfileById };
 }
 
 /** The one place that decides the display order: person/event first (the

@@ -1,3 +1,4 @@
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
 
 export type SparePartListingView = {
@@ -8,6 +9,10 @@ export type SparePartListingView = {
   keeperMeepleId: string;
   keeperDisplayName: string;
   keeperContact: ContactLinks;
+  /** (#412) Verwalter:in-Profilbild — Ersatzteillager ist member-only
+   * (`market:participate`), Viewer ist daher immer "meeple". */
+  keeperProfilePictureUrl: string | null;
+  keeperProfilePictureVisibility: ProfilePictureVisibility;
 };
 
 export function toSparePartListingView(
@@ -26,6 +31,8 @@ export function toSparePartListingView(
     discordHandle: string | null;
     address: string | null;
     shareAddress: boolean;
+    profilePictureUrl: string | null;
+    profilePictureVisibility: ProfilePictureVisibility;
   },
 ): SparePartListingView {
   return {
@@ -36,5 +43,7 @@ export function toSparePartListingView(
     keeperMeepleId: listing.keeperMeepleId,
     keeperDisplayName: keeper.displayName,
     keeperContact: getContactLinks(keeper),
+    keeperProfilePictureUrl: keeper.profilePictureUrl,
+    keeperProfilePictureVisibility: keeper.profilePictureVisibility,
   };
 }

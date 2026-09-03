@@ -182,6 +182,9 @@ export default async function GameDetailPage({
     responsibleContact: copy.responsibleMeepleId
       ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
       : NO_CONTACT,
+    responsibleProfilePictureUrl: copy.responsibleProfilePictureUrl,
+    responsibleProfilePictureVisibility:
+      copy.responsibleProfilePictureVisibility,
     isUnconfirmed: copy.isUnconfirmed,
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,

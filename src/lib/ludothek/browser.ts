@@ -3,6 +3,7 @@ import {
   BoardGameKind,
   type LanguageDependence,
   type RuleBookLanguage,
+  type ProfilePictureVisibility,
 } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 import { languageDependenceLevel } from "@/lib/ludothek/language-dependence";
@@ -80,6 +81,12 @@ export type LudothekGame = {
   /** Display name for `responsibleMeepleId` — a person or the keeper of the
    * storage unit chain, whichever comes first (#121 Standort-Kette). */
   responsibleName: string | null;
+  /** Profilbild von `responsibleMeepleId` (#412) — `null` ohne
+   * `responsibleMeepleId` oder ohne hochgeladenes Bild. Viewer ist hier
+   * immer "meeple": Ludothek-Standortdaten sind ohnehin member-only, siehe
+   * `toPublicGame()`. */
+  responsibleProfilePictureUrl: string | null;
+  responsibleProfilePictureVisibility: ProfilePictureVisibility;
   /** True, solange der aktuelle Halter die Übernahme nach einer Weitergabe
    * noch nicht bestätigt hat (`GameHolding.confirmedAt === null`, #456). */
   isUnconfirmed: boolean;
@@ -111,6 +118,8 @@ export type PublicLudothekGame = Omit<
   | "isLoanedOut"
   | "responsibleMeepleId"
   | "responsibleName"
+  | "responsibleProfilePictureUrl"
+  | "responsibleProfilePictureVisibility"
   | "isUnconfirmed"
   | "unitChain"
   | "locationChain"
@@ -128,6 +137,8 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     isLoanedOut: _isLoanedOut,
     responsibleMeepleId: _responsibleMeepleId,
     responsibleName: _responsibleName,
+    responsibleProfilePictureUrl: _responsibleProfilePictureUrl,
+    responsibleProfilePictureVisibility: _responsibleProfilePictureVisibility,
     isUnconfirmed: _isUnconfirmed,
     unitChain: _unitChain,
     locationChain: _locationChain,

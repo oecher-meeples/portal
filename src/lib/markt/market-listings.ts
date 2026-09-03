@@ -1,3 +1,4 @@
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { firstString } from "@/lib/utils/search-params";
 import { getContactLinks, type ContactLinks } from "@/lib/members/contact";
 
@@ -11,6 +12,10 @@ export type MarketListingView = {
   sellerMeepleId: string;
   sellerDisplayName: string;
   sellerContact: ContactLinks;
+  /** (#412) Verkäufer:in-Profilbild — Markt ist member-only
+   * (`market:participate`), Viewer ist daher immer "meeple". */
+  sellerProfilePictureUrl: string | null;
+  sellerProfilePictureVisibility: ProfilePictureVisibility;
   /** Link zum Inventar-Titel (#278), `null` bei frei angelegten Anzeigen —
    * trägt den BGG-Link/Slug bereits über den `BoardGame`-Datensatz. */
   boardGame: { slug: string; bggId: number | null } | null;
@@ -35,6 +40,8 @@ export function toMarketListingView(
     discordHandle: string | null;
     address: string | null;
     shareAddress: boolean;
+    profilePictureUrl: string | null;
+    profilePictureVisibility: ProfilePictureVisibility;
   },
 ): MarketListingView {
   return {
@@ -47,6 +54,8 @@ export function toMarketListingView(
     sellerMeepleId: listing.sellerMeepleId,
     sellerDisplayName: seller.displayName,
     sellerContact: getContactLinks(seller),
+    sellerProfilePictureUrl: seller.profilePictureUrl,
+    sellerProfilePictureVisibility: seller.profilePictureVisibility,
     boardGame: listing.boardGame,
   };
 }

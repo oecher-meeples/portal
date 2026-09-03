@@ -20,8 +20,16 @@ describe("ErziehungsberechtigteSection (#385)", () => {
             id: "guardian-1",
             slug: "erika-muster",
             displayName: "Erika Muster",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
           },
-          { id: "guardian-2", slug: "max-muster", displayName: "Max Muster" },
+          {
+            id: "guardian-2",
+            slug: "max-muster",
+            displayName: "Max Muster",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
+          },
         ]}
       />,
     );

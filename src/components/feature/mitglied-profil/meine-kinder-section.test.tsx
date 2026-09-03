@@ -14,8 +14,20 @@ describe("MeineKinderSection (#376)", () => {
     render(
       <MeineKinderSection
         guardianChildren={[
-          { id: "child-1", slug: "mitglied-1", displayName: "Anna Muster" },
-          { id: "child-2", slug: "mitglied-2", displayName: "Ben Muster" },
+          {
+            id: "child-1",
+            slug: "mitglied-1",
+            displayName: "Anna Muster",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
+          },
+          {
+            id: "child-2",
+            slug: "mitglied-2",
+            displayName: "Ben Muster",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
+          },
         ]}
       />,
     );
