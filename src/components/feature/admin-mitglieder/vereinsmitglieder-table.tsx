@@ -34,7 +34,6 @@ import { revokeResignation } from "@/components/feature/admin-mitglieder/actions
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   CONTRIBUTION_CATEGORY_LABELS,
-  CONTRIBUTION_CATEGORY_SHORT_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
 import { MEMBERSHIP_STATE_LABELS, formatDatePlain } from "@/lib/utils/format";
@@ -276,7 +275,7 @@ export function VereinsmitgliederTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {member.contributionCategory
-                          ? CONTRIBUTION_CATEGORY_SHORT_LABELS[
+                          ? CONTRIBUTION_CATEGORY_LABELS[
                               member.contributionCategory
                             ]
                           : "unbestimmt"}

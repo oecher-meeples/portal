@@ -8,21 +8,11 @@ import type { Prisma } from "@prisma/client";
  */
 export type ContributionCategory = "mini" | "jung" | "meeple" | "individuell";
 
+/** #452: der erklärende Klammer-Zusatz ("ermäßigter Kinderbeitrag" etc.) ist
+ * überflüssig und wurde entfernt — damit ist diese Map identisch zur
+ * ehemaligen `CONTRIBUTION_CATEGORY_SHORT_LABELS`, die deshalb entfällt
+ * (DRY, eine Map statt zwei gleicher). */
 export const CONTRIBUTION_CATEGORY_LABELS: Record<
-  ContributionCategory,
-  string
-> = {
-  mini: "MiniMeeple (ermäßigter Kinderbeitrag)",
-  jung: "JungMeeple (ermäßigter Jugendbeitrag)",
-  meeple: "Meeple (regulärer Beitrag)",
-  individuell: "Individueller Beitrag",
-};
-
-/** Kurzform ohne Beitrags-Erklärung — für die kompakte Statistik-Kachel in
- * `admin-mitglieder-view.tsx`, wo der Beitrag ohnehin schon im Kartentitel
- * "Vereinsmitglieder" steht. Tabelle/Filter-Badge nutzen weiterhin die
- * ausführliche Variante oben. */
-export const CONTRIBUTION_CATEGORY_SHORT_LABELS: Record<
   ContributionCategory,
   string
 > = {

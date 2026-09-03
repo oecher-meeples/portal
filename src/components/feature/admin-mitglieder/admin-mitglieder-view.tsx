@@ -12,7 +12,7 @@ import {
   type VereinsmitgliedRow,
 } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
 import {
-  CONTRIBUTION_CATEGORY_SHORT_LABELS,
+  CONTRIBUTION_CATEGORY_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
 import { nextContributionFilter } from "@/components/feature/admin-mitglieder/contribution-filter";
@@ -194,7 +194,7 @@ export function AdminMitgliederView({
                         : "text-muted-foreground",
                     )}
                   >
-                    <dt>{CONTRIBUTION_CATEGORY_SHORT_LABELS[key]}</dt>
+                    <dt>{CONTRIBUTION_CATEGORY_LABELS[key]}</dt>
                     <dd className="font-mono">{count}</dd>
                   </button>
                 );
