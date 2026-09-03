@@ -9,7 +9,6 @@ import {
   type NavFlag,
   type Tier,
 } from "@/lib/utils/nav-config";
-import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
 import { cn } from "@/lib/utils/cn";
 
 /** Persistiert, ob der Meeple die auf `md`–`lg` sonst nur bei Hover/Fokus
@@ -24,11 +23,20 @@ export function Sidebar({
   realTier,
   permissions,
   flags,
+  pinned,
+  onTogglePinned,
 }: {
   tier: Tier;
   realTier: Tier;
   permissions: readonly string[];
   flags: Readonly<Record<NavFlag, boolean>>;
+  /** (#471) Von `SidebarShell` gehalten statt lokal — `main`s Content-Margin
+   * braucht denselben Wert, um bei aktivem Pin auf `md`/`lg` mitzuwandern
+   * (Attached- statt Overlay-Zustand). Ein zweiter, unabhängiger
+   * `useLocalStorageState`-Aufruf hier würde nicht mit dem in `main`
+   * synchron bleiben — `localStorage` selbst löst kein Re-Render aus. */
+  pinned: boolean;
+  onTogglePinned: () => void;
 }) {
   const pathname = usePathname();
   const previewingLowerTier = realTier === "admin" && tier !== "admin";
@@ -41,15 +49,6 @@ export function Sidebar({
   const [collapsedGroups, setCollapsedGroups] = useState<
     Record<string, boolean>
   >({});
-
-  // Icon-only-Breite auf md–lg (#336): Hover/Fokus klappt per CSS
-  // (group-hover/group-focus-within) auf volle Breite auf, als Overlay über
-  // dem Content — AppShell verschiebt dafür nichts. Der Pin fixiert das
-  // zusätzlich dauerhaft, für Touch-Geräte ohne Hover.
-  const [pinned, setPinned] = useLocalStorageState(PINNED_STORAGE_KEY, false);
-  function togglePinned() {
-    setPinned(!pinned);
-  }
 
   // Nur sichtbar/lesbar, wenn die Sidebar tatsächlich ausgeklappt ist:
   // dauerhaft ab xl, sonst bei Pin, Hover oder Tastatur-Fokus auf md–lg.
@@ -75,7 +74,7 @@ export function Sidebar({
     >
       <button
         type="button"
-        onClick={togglePinned}
+        onClick={onTogglePinned}
         className={cn(
           "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground mb-2 flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors xl:hidden",
           pinned && "bg-sidebar-primary/15 text-sidebar-foreground",
