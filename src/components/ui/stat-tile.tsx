@@ -39,7 +39,7 @@ export function StatTile({
       <Link
         href={href}
         className={cn(
-          "bg-card hover:border-primary/60 block rounded-lg border p-5 transition-colors",
+          "bg-card hover:border-primary/60 block h-full rounded-lg border p-5 transition-colors",
         )}
       >
         <StatTileContent label={label} value={value} hint={hint} />

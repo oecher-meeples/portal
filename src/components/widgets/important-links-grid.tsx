@@ -14,7 +14,7 @@ export type LinkGridItem = {
 /** Shared card grid for Schnellzugriff and the admin-curated Wichtige Links (#110) — same layout, either a Lucide icon or an uploaded image. */
 export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
       {items.map((item) => {
         const content = (
           <>

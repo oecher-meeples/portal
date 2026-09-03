@@ -100,52 +100,46 @@ export function DashboardView({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}>
-          <StatTile
-            label="Eigene Ausleihen"
-            value={ownLoansCount}
-            hint="Spiele"
-          />
-        </Link>
-        <Link href={`/ludothek?bei=${meepleId}`}>
-          <StatTile
-            label="In meinen Kartons"
-            value={ownUnitContentsCount}
-            hint="Spiele"
-          />
-        </Link>
-        <Link href="/lfg">
-          <StatTile
-            label="Offene Gesuche"
-            value={ownOpenLfgCount}
-            hint="von dir"
-          />
-        </Link>
-        <Link href="/helfer">
-          <StatTile
-            label="Anstehende Schichten"
-            value={upcomingShiftCount}
-            hint="eigene Zusagen"
-          />
-        </Link>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        <StatTile
+          href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}
+          label="Eigene Ausleihen"
+          value={ownLoansCount}
+          hint="Spiele"
+        />
+        <StatTile
+          href={`/ludothek?bei=${meepleId}`}
+          label="In meinen Kartons"
+          value={ownUnitContentsCount}
+          hint="Spiele"
+        />
+        <StatTile
+          href="/lfg"
+          label="Offene Gesuche"
+          value={ownOpenLfgCount}
+          hint="von dir"
+        />
+        <StatTile
+          href="/helfer"
+          label="Anstehende Schichten"
+          value={upcomingShiftCount}
+          hint="eigene Zusagen"
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link href="/lfg">
-          <StatTile
-            label="Offene Gesuche"
-            value={totalOpenLfgCount}
-            hint="im Verein"
-          />
-        </Link>
-        <Link href="/markt">
-          <StatTile
-            label="Marktplatz-Angebote"
-            value={activeMarketListingCount}
-            hint="aktiv"
-          />
-        </Link>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        <StatTile
+          href="/lfg"
+          label="Offene Gesuche"
+          value={totalOpenLfgCount}
+          hint="im Verein"
+        />
+        <StatTile
+          href="/markt"
+          label="Marktplatz-Angebote"
+          value={activeMarketListingCount}
+          hint="aktiv"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

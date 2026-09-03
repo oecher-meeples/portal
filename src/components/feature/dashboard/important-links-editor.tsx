@@ -14,7 +14,7 @@ import type { ImportantLinkRow } from "@/lib/links/links";
  * bekommt Bearbeiten/Löschen, am Ende steht eine gestrichelte "Hinzufügen"-Card. */
 export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
       {links.map((link) => (
         <div
           key={link.id}
