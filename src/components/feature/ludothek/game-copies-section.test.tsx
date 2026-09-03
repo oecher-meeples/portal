@@ -4,6 +4,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { GameCopiesSection } from "@/components/feature/ludothek/game-copies-section";
 import type { GameCopyRow } from "@/components/feature/ludothek/game-copies-section";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
   AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
 }));

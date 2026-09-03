@@ -25,6 +25,7 @@ import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-
 import { matchesAdminBestandSearch } from "@/components/feature/admin-bestand/admin-bestand-search";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { AdminBestandCsvExportDialog } from "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog";
+import { GameCopyQrExportButton } from "@/components/widgets/board-game/game-copy-qr-export-button";
 import type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
 import { PageContainer } from "@/components/ui/page-container";
 
@@ -152,15 +153,25 @@ export function AdminBestandView({
         </div>
         <div className="ml-auto flex gap-2">
           {canManageGames && (
-            <AdminBestandCsvExportDialog
-              filteredRows={filtered.map((game) => ({
-                title: game.title,
-                ean: game.ean,
-                status: game.status,
-                zustand: game.zustand,
-                locationChain: game.locationChain,
-              }))}
-            />
+            <>
+              <AdminBestandCsvExportDialog
+                filteredRows={filtered.map((game) => ({
+                  title: game.title,
+                  ean: game.ean,
+                  status: game.status,
+                  zustand: game.zustand,
+                  locationChain: game.locationChain,
+                }))}
+              />
+              <GameCopyQrExportButton
+                label="QR-Codes (gefiltert)"
+                copies={filtered.map((game) => ({
+                  id: game.id,
+                  title: game.title,
+                  inventoryNumber: game.inventoryNumber,
+                }))}
+              />
+            </>
           )}
           <Button
             size="sm"

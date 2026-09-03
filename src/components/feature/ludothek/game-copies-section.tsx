@@ -9,6 +9,7 @@ import {
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
+import { GameCopyQrExportButton } from "@/components/widgets/board-game/game-copy-qr-export-button";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import {
   GameCopyCard,
@@ -122,10 +123,20 @@ export function GameCopiesSection({
           {copies.length > 1 ? "Exemplare" : "Exemplar"}
         </h2>
         {canManageGames && (
-          <AddGameCopyDialog
-            boardGameId={boardGameId}
-            boardGameTitle={boardGameTitle}
-          />
+          <div className="flex flex-wrap gap-2">
+            <GameCopyQrExportButton
+              copies={copies.map((copy) => ({
+                id: copy.id,
+                title: boardGameTitle,
+                inventoryNumber: copy.inventoryNumber,
+              }))}
+              zipFilename={`${boardGameTitle}-qr-codes.zip`}
+            />
+            <AddGameCopyDialog
+              boardGameId={boardGameId}
+              boardGameTitle={boardGameTitle}
+            />
+          </div>
         )}
       </div>
 
