@@ -354,7 +354,7 @@ export function AdminMitgliederView({
         canManageInvites={canManageInvites}
         isAdmin={canCreateSystemkonto}
         contributionFilter={contributionFilter}
-        onClearContributionFilter={() => setContributionFilter(null)}
+        onContributionFilterChange={setContributionFilter}
       />
 
       <MitgliederTable
