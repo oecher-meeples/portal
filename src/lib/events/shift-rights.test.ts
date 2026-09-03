@@ -4,8 +4,11 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const { hasRoleGrantedPermission, findActiveShiftEvent } =
-  await import("./shift-rights");
+const {
+  hasRoleGrantedPermission,
+  findActiveShiftEvent,
+  hasActiveAusleiheShift,
+} = await import("./shift-rights");
 
 const MEEPLE_ID = "meeple-1";
 const PERMISSION_KEY = "events:manage";
@@ -128,5 +131,55 @@ describe("findActiveShiftEvent", () => {
     const result = await findActiveShiftEvent(MEEPLE_ID, "Leihe", AT);
 
     expect(result).toBeNull();
+  });
+});
+
+describe("hasActiveAusleiheShift (#433)", () => {
+  it("is false without a Neon Auth user id (guest)", async () => {
+    const result = await hasActiveAusleiheShift(null);
+
+    expect(result).toBe(false);
+    expect(prismaMock.meeple.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("is false when no Meeple exists for the Neon Auth user", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(null);
+
+    const result = await hasActiveAusleiheShift("neon-user-1");
+
+    expect(result).toBe(false);
+    expect(prismaMock.shiftBooking.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("is true for a Meeple with a currently active 'Leihe'-Schichtbuchung", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      id: MEEPLE_ID,
+    } as never);
+    prismaMock.shiftBooking.findFirst.mockResolvedValue({
+      shift: { eventId: "event-1" },
+    } as never);
+
+    const result = await hasActiveAusleiheShift("neon-user-1");
+
+    expect(result).toBe(true);
+    expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          meepleId: MEEPLE_ID,
+          shift: { role: { name: "Leihe" } },
+        }),
+      }),
+    );
+  });
+
+  it("is false for a Meeple without a currently active 'Leihe'-Schichtbuchung", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      id: MEEPLE_ID,
+    } as never);
+    prismaMock.shiftBooking.findFirst.mockResolvedValue(null);
+
+    const result = await hasActiveAusleiheShift("neon-user-1");
+
+    expect(result).toBe(false);
   });
 });

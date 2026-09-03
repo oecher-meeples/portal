@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
 import { requireMember } from "@/lib/auth/session";
-import { findActiveShiftEvent } from "@/lib/events/shift-rights";
+import {
+  AUSLEIHE_ROLE_NAME,
+  findActiveShiftEvent,
+} from "@/lib/events/shift-rights";
 import { AusleiheView } from "@/components/feature/event-ausleihe/ausleihe-view";
-
-/** Muss zum in prisma/migrations/…_add_helper_role gepflegten Rollennamen passen. */
-const AUSLEIHE_ROLE_NAME = "Leihe";
 
 export default async function AusleihePage() {
   const { meeple } = await requireMember();

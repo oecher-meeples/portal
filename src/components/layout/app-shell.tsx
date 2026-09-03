@@ -6,6 +6,7 @@ import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
 import { hasOpenHelperRequest } from "@/lib/events/upcoming";
+import { hasActiveAusleiheShift } from "@/lib/events/shift-rights";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const [realTier, user, openHelperRequest] = await Promise.all([
@@ -15,7 +16,13 @@ export async function AppShell({ children }: { children: ReactNode }) {
   ]);
   const previewTier = realTier === "admin" ? await getPreviewTier() : null;
   const tier = previewTier ?? realTier;
-  const permissions = user ? await getUserPermissionKeys(user.id) : [];
+  // #433: activeAusleiheShift ist pro Nutzer, braucht deshalb user.id — kann
+  // erst nach dem obigen Promise.all starten, läuft dafür parallel zu
+  // permissions.
+  const [permissions, activeAusleiheShift] = await Promise.all([
+    user ? getUserPermissionKeys(user.id) : Promise.resolve([]),
+    hasActiveAusleiheShift(user?.id ?? null),
+  ]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -27,7 +34,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest }}
+        flags={{ openHelperRequest, activeAusleiheShift }}
       />
       {/* < md ersetzt MobileNav (#437) die dort ausgeblendete Sidebar — exakt
           an Sidebars md-Schwelle übergeben, sonst Navigations-Lücke
@@ -36,7 +43,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest }}
+        flags={{ openHelperRequest, activeAusleiheShift }}
         user={user ? { name: user.name } : null}
       />
       {/* pt-[5.5rem]/sm:pt-24: header (h-16 = 4rem) + the block's own py-6/sm:py-8 top inset,

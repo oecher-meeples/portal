@@ -41,16 +41,19 @@ export type NavItem = {
    */
   permission?: string | string[];
   /**
-   * Extra data-dependent visibility gate on top of tier/permission — the
-   * only current flag is "openHelperRequest" (#155): hides "Helferplan"
-   * unless a future event has `Event.helpersWanted` set. Resolved server-side
-   * in app-shell.tsx and passed to Sidebar; direct navigation to the href
-   * itself stays reachable regardless (the page shows its own empty state).
+   * Extra data-dependent visibility gate on top of tier/permission —
+   * "openHelperRequest" (#155, event-wide): hides "Helferplan" unless a
+   * future event has `Event.helpersWanted` set. "activeAusleiheShift"
+   * (#433, per Nutzer): hides "Ausleihe & Rückgabe" unless the current
+   * Meeple is inside a currently active "Leihe"-Schichtbuchung. Resolved
+   * server-side in app-shell.tsx and passed to Sidebar; direct navigation to
+   * the href itself stays reachable regardless (the page shows its own
+   * empty state / 403).
    */
   requiresFlag?: NavFlag;
 };
 
-export type NavFlag = "openHelperRequest";
+export type NavFlag = "openHelperRequest" | "activeAusleiheShift";
 
 export type Tier = "gast" | "mitglied" | "admin";
 
@@ -217,6 +220,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/ausleihe",
         icon: PackageOpen,
         section: "Mitgliederbereich",
+        requiresFlag: "activeAusleiheShift",
       },
       {
         label: "Erklärbären",
