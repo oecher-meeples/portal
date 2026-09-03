@@ -9,7 +9,9 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
+import { NeonStorageUsageCard } from "@/components/entities/neon-storage-usage-card";
 import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
+import type { NeonStorageUsage } from "@/lib/admin/neon-storage";
 import type { RateLimitAlert } from "@/lib/auth/rate-limit-alerts";
 import { formatDateTime } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
@@ -46,11 +48,13 @@ export type AdminDashboardStats = {
 export function AdminDashboardView({
   stats,
   blobStorageUsage,
+  neonStorageUsage,
   rateLimitAlerts,
   recentAdminLogins,
 }: {
   stats: AdminDashboardStats;
   blobStorageUsage: BlobStorageUsage | null;
+  neonStorageUsage: NeonStorageUsage | null;
   rateLimitAlerts: RateLimitAlert[];
   /** `null`, wenn der Betrachter kein `admin:access` hat (#231) — die
    * Login-Historie ist sensibel und nicht Teil des sonstigen
@@ -116,6 +120,7 @@ export function AdminDashboardView({
           href="/admin/events"
         />
         {blobStorageUsage && <BlobStorageUsageCard usage={blobStorageUsage} />}
+        {neonStorageUsage && <NeonStorageUsageCard usage={neonStorageUsage} />}
       </div>
 
       <div className="flex flex-col gap-3">

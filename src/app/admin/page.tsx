@@ -7,6 +7,7 @@ import { isLoanHolding } from "@/lib/ludothek/holdings";
 import { UNSORTIERT_CODE } from "@/lib/inventory/codes";
 import { countActiveEvents } from "@/lib/members/dashboard";
 import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
+import { getNeonStorageUsage } from "@/lib/admin/neon-storage";
 import { getRateLimitAlerts } from "@/lib/auth/rate-limit-alerts";
 import { getRecentAdminLogins } from "@/lib/auth/login-log";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
@@ -29,6 +30,7 @@ export default async function AdminDashboardPage() {
     uncheckedGames,
     events,
     blobStorageUsage,
+    neonStorageUsage,
     rateLimitAlerts,
     recentAdminLogins,
   ] = await Promise.all([
@@ -68,6 +70,9 @@ export default async function AdminDashboardPage() {
     // hiccup) must not break the rest of the admin dashboard, so it degrades
     // to `null` and the card simply doesn't render (see AdminDashboardView).
     getBlobStorageUsage().catch(() => null),
+    // Gleiche Fehler-Toleranz wie Blob-Storage (#240) — die Karte
+    // entfällt einfach, statt das Dashboard zu blockieren.
+    getNeonStorageUsage().catch(() => null),
     getRateLimitAlerts(),
     canViewLoginHistory ? getRecentAdminLogins() : Promise.resolve([]),
   ]);
@@ -98,6 +103,7 @@ export default async function AdminDashboardPage() {
         activeEvents: countActiveEvents(events),
       }}
       blobStorageUsage={blobStorageUsage}
+      neonStorageUsage={neonStorageUsage}
       rateLimitAlerts={rateLimitAlerts}
       recentAdminLogins={canViewLoginHistory ? recentAdminLogins : null}
     />
