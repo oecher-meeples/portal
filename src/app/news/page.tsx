@@ -5,21 +5,27 @@ import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermissionInCurrentView } from "@/lib/auth/session";
+import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
+import { tierAtLeast } from "@/lib/utils/nav-config";
 
 export default async function NewsPage() {
-  const [allItems, user] = await Promise.all([
+  const [allItems, user, sessionTier] = await Promise.all([
     getAllContentWithCalendar(),
     getCurrentUser(),
+    getSessionTier(),
   ]);
   const canSeeInternal = user
     ? await hasPermissionInCurrentView(user.id, "news:internal:view")
     : false;
   // #424: keine öffentlichen Umfragen — nur Meeple sind abstimmungsberechtigt,
-  // unabhängig vom internal-Flag des einzelnen Posts.
+  // unabhängig vom internal-Flag des einzelnen Posts. sessionTier statt der
+  // bloßen Login-Prüfung, damit ein Admin in der Gäste-Vorschau
+  // (getPreviewTier()) ebenfalls keine Umfragen sieht — die vorherige
+  // `!!user`-Prüfung blieb für einen echten Admin auch im Gast-Preview wahr.
+  const isMember = tierAtLeast(sessionTier, "mitglied");
   const items = allItems
     .filter((item) => canSeeInternal || !item.internal)
-    .filter((item) => user || item.type !== "umfrage");
+    .filter((item) => isMember || item.type !== "umfrage");
   const [canEditPublic, canEditInternal] = user
     ? await Promise.all([
         hasPermissionInCurrentView(user.id, "posts:public"),
@@ -48,7 +54,7 @@ export default async function NewsPage() {
         canEditPublic={canEditPublic}
         canEditInternal={canEditInternal}
         canSeeInternal={canSeeInternal}
-        canSeeSurveys={!!user}
+        canSeeSurveys={isMember}
       />
     </div>
   );
