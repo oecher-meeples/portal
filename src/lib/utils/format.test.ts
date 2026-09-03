@@ -21,8 +21,9 @@ describe("formatDateShort", () => {
 });
 
 describe("formatWeekdayDate", () => {
-  it("formats an ISO date as '<Wochentag>, den dd.mm.'", () => {
-    expect(formatWeekdayDate("2026-08-27")).toBe("Donnerstag, den 27.08.");
+  // #435: mit Jahr, damit z. B. eine Jahreswechsel-Schicht eindeutig bleibt.
+  it("formats an ISO date as '<Wochentag>, den dd.mm.yyyy'", () => {
+    expect(formatWeekdayDate("2026-08-27")).toBe("Donnerstag, den 27.08.2026");
   });
 });
 
