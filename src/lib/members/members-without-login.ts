@@ -13,27 +13,45 @@ export type MemberWithoutLoginRow = {
 export async function listMembersWithoutLogin(): Promise<
   MemberWithoutLoginRow[]
 > {
-  const members = await prisma.member.findMany({
-    // #374: ein Member ohne E-Mail (z. B. MiniMeeple, #373) kann ohnehin
-    // nicht eingeladen werden — solche Zeilen tauchen in dieser Auswahl gar
-    // nicht erst auf, statt später mit einem Fehler abzubrechen.
-    where: { meepleId: null, resignedAt: null, email: { not: null } },
-    orderBy: { memberNumber: "asc" },
-    select: {
-      id: true,
-      memberNumber: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-    },
-  });
+  const [members, openInvites] = await Promise.all([
+    prisma.member.findMany({
+      // #374: ein Member ohne E-Mail (z. B. MiniMeeple, #373) kann ohnehin
+      // nicht eingeladen werden — solche Zeilen tauchen in dieser Auswahl gar
+      // nicht erst auf, statt später mit einem Fehler abzubrechen.
+      where: { meepleId: null, resignedAt: null, email: { not: null } },
+      orderBy: { memberNumber: "asc" },
+      select: {
+        id: true,
+        memberNumber: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    }),
+    // #451: gleiche Bedingung wie findOpenInviteByEmail() — ein Mitglied mit
+    // bereits offener Einladung darf nicht ein zweites Mal ausgewählt werden.
+    prisma.invite.findMany({
+      where: {
+        redeemedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { email: true },
+    }),
+  ]);
 
-  return members.map((member) => ({
-    id: member.id,
-    memberNumber: member.memberNumber,
-    displayName:
-      [member.firstName, member.lastName].filter(Boolean).join(" ") ||
-      member.email!,
-    email: member.email!,
-  }));
+  const invitedEmails = new Set(
+    openInvites.map((invite) => invite.email.toLowerCase()),
+  );
+
+  return members
+    .filter((member) => !invitedEmails.has(member.email!.toLowerCase()))
+    .map((member) => ({
+      id: member.id,
+      memberNumber: member.memberNumber,
+      displayName:
+        [member.firstName, member.lastName].filter(Boolean).join(" ") ||
+        member.email!,
+      email: member.email!,
+    }));
 }
