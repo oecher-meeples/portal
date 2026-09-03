@@ -10,8 +10,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+const refreshMock = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh: refreshMock }),
 }));
 
 vi.mock("@/lib/ludothek/private-collection-sync", () => ({
@@ -85,6 +86,34 @@ describe("PrivateCollectionCard (#308)", () => {
     expect(
       screen.getByRole("heading", { name: "Meine privaten Spiele (1)" }),
     ).toBeInTheDocument();
+  });
+
+  // (Live-Test): Base UI's DialogClose rendert per Portal außerhalb der
+  // Karte im DOM, bleibt im React-Baum aber ihr Kind — ein Klick auf das X
+  // bubbelte deshalb bis zur klickbaren Karte hoch und öffnete den Dialog im
+  // selben Tick wieder, sodass nur Esc tatsächlich schloss.
+  it("closes the dialog when clicking the close button, not just Escape", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(screen.getByText("Meine privaten Spiele"));
+    expect(
+      screen.getByRole("heading", { name: "Meine privaten Spiele (1)" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+    expect(
+      screen.queryByRole("heading", { name: "Meine privaten Spiele (1)" }),
+    ).not.toBeInTheDocument();
   });
 
   it("does not open the dialog when clicking the import button (#Live-Review F9)", async () => {
@@ -186,6 +215,39 @@ describe("PrivateCollectionCard — Event-Freigabe (#122)", () => {
         name: 'Freigabe für "Spieleabend Oktober" zurückziehen',
       }),
     ).toBeInTheDocument();
+  });
+
+  // (#122-Folge, Live-Test): der Dialog blieb nach dem Klick offen und das
+  // X ließ sich nur noch nicht per Klick schließen (nur Esc) — Ursache war
+  // router.refresh() bei offenem Dialog. Der Toggle darf keinen
+  // Router-Refresh mehr auslösen, das Umschalten muss rein lokal passieren.
+  it("toggles the offer locally without triggering a router refresh", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    await user.click(
+      screen.getByRole("button", {
+        name: 'Für "Spieleabend Oktober" zur Ausleihe freigeben',
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: 'Freigabe für "Spieleabend Oktober" zurückziehen',
+      }),
+    ).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 
   it("shows a loaned pill instead of a control once issued", async () => {
