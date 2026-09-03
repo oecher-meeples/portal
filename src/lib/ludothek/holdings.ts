@@ -127,8 +127,14 @@ async function confirmationFor(
   tx: Tx,
   recordedByMeepleId: string,
   isSelf: boolean,
+  /** #465: die abgebende Person hat den persönlichen QR-Code der
+   * empfangenden Person gescannt (`resolveScannedCode()`, `kind: "meeple"`)
+   * — das Scannen ist der Bestätigungsnachweis, unabhängig davon, wer den
+   * Vorgang technisch verbucht (`recordedByMeepleId`) oder ob diese Person
+   * `games:manage` hat. */
+  viaTargetQrScan = false,
 ) {
-  if (isSelf) {
+  if (isSelf || viaTargetQrScan) {
     return new Date();
   }
 
@@ -210,12 +216,16 @@ export async function handOverGame({
   toVereinsmitgliedId,
   recordedByMeepleId,
   isSelf,
+  viaTargetQrScan,
   note,
 }: {
   gameCopyId: string;
   toVereinsmitgliedId: string;
   recordedByMeepleId: string;
   isSelf: boolean;
+  /** #465: Ziel wurde über den persönlichen QR-Code der empfangenden
+   * Person aufgelöst — löst dieselbe Sofort-Bestätigung wie `isSelf` aus. */
+  viaTargetQrScan?: boolean;
   note?: string | null;
 }) {
   return prisma.$transaction(async (tx) => {
@@ -232,7 +242,12 @@ export async function handOverGame({
       target: { vereinsmitgliedId: toVereinsmitgliedId },
       origin: HoldingOrigin.HANDOVER,
       recordedByMeepleId,
-      confirmedAt: await confirmationFor(tx, recordedByMeepleId, isSelf),
+      confirmedAt: await confirmationFor(
+        tx,
+        recordedByMeepleId,
+        isSelf,
+        viaTargetQrScan,
+      ),
       note,
     });
   });
@@ -243,10 +258,17 @@ export async function returnGame({
   toUnitId,
   toVereinsmitgliedId,
   recordedByMeepleId,
+  viaTargetQrScan = false,
   note,
 }: {
   gameCopyId: string;
   recordedByMeepleId: string;
+  /** #465: Ziel wurde über den persönlichen QR-Code der annehmenden Person
+   * aufgelöst — die Rückgabe gilt dann sofort als bestätigt, ohne dass die
+   * Person sie selbst noch einlagern/bestätigen muss. Nur relevant für
+   * `toVereinsmitgliedId`, ignoriert bei `toUnitId` (dort ist "liegt in der
+   * Einheit" ohnehin schon die Bestätigung). */
+  viaTargetQrScan?: boolean;
   note?: string | null;
 } & (
   | { toUnitId: string; toVereinsmitgliedId?: never }
@@ -283,7 +305,9 @@ export async function returnGame({
       // Only completed once the accepting person actually stores it away
       // (einlagern) — or, for a return from someone with no reachable Meeple
       // login ("nicht verfügbar", #333c/d), via `confirmExternalReturn()`.
-      confirmedAt: null,
+      // #465: Ausnahme, wenn das Ziel per persönlichem QR-Code der Person
+      // selbst aufgelöst wurde — das Scannen ist dann der Nachweis.
+      confirmedAt: viaTargetQrScan ? new Date() : null,
       note,
     });
   });

@@ -69,8 +69,15 @@ export async function scanAcceptHandover(gameCopyId: string) {
   });
 }
 
-/** Die abgebende Person trägt die Weitergabe ein — bleibt bis zum Klick der Empfängerin unbestätigt. */
-export async function scanGiveToMeeple(gameCopyId: string, toMeepleId: string) {
+/** Die abgebende Person trägt die Weitergabe ein — bleibt bis zum Klick der
+ * Empfängerin unbestätigt, außer das Ziel kam per persönlichem QR-Code der
+ * Person selbst (#465, `viaTargetQrScan`) — dann gilt das Scannen selbst als
+ * Bestätigungsnachweis. */
+export async function scanGiveToMeeple(
+  gameCopyId: string,
+  toMeepleId: string,
+  viaTargetQrScan = false,
+) {
   const { meeple } = await requireActingMeeple();
 
   return toResultAndRevalidate(async () => {
@@ -80,6 +87,7 @@ export async function scanGiveToMeeple(gameCopyId: string, toMeepleId: string) {
       toVereinsmitgliedId: toMember.id,
       recordedByMeepleId: meeple.id,
       isSelf: false,
+      viaTargetQrScan,
     });
   });
 }
@@ -107,10 +115,13 @@ export async function scanReturnToUnit(gameCopyId: string, toUnitId: string) {
   );
 }
 
-/** Rückgabe an eine Person, die das Spiel einlagern soll — keine Weitergabe. */
+/** Rückgabe an eine Person, die das Spiel einlagern soll — keine Weitergabe.
+ * Bleibt unbestätigt, außer das Ziel kam per persönlichem QR-Code der Person
+ * selbst (#465, `viaTargetQrScan`). */
 export async function scanReturnToMeeple(
   gameCopyId: string,
   toMeepleId: string,
+  viaTargetQrScan = false,
 ) {
   const { meeple } = await requireActingMeeple();
 
@@ -120,6 +131,7 @@ export async function scanReturnToMeeple(
       gameCopyId,
       toVereinsmitgliedId: toMember.id,
       recordedByMeepleId: meeple.id,
+      viaTargetQrScan,
     });
   });
 }

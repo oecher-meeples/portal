@@ -177,10 +177,22 @@ export async function ensureEventUnit(
 export type ResolvedScan =
   | { kind: "games"; games: ScannedGameCopy[] }
   | { kind: "unit"; unit: StorageUnit; contents: ScannedGameCopy[] }
+  | { kind: "meeple"; meeple: { id: string; displayName: string } }
   | { kind: "unknown"; raw: string };
 
 export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
   const parsed = parseScannedCode(raw);
+
+  if (parsed.kind === "meeple") {
+    const meeple = await prisma.meeple.findUnique({
+      where: { id: parsed.value },
+      select: { id: true, displayName: true },
+    });
+    if (!meeple) {
+      return { kind: "unknown", raw };
+    }
+    return { kind: "meeple", meeple };
+  }
 
   if (parsed.kind === "unit") {
     const unit = await prisma.storageUnit.findUnique({

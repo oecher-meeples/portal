@@ -32,7 +32,9 @@ describe("UserMenu — Logout räumt Sidebar-Pin-Zustand (#472)", () => {
     signOutMock.mockResolvedValue(undefined);
     clearPreviewTierMock.mockResolvedValue(undefined);
 
-    render(<UserMenu user={{ name: "Erika Musterfrau" }} />);
+    render(
+      <UserMenu user={{ name: "Erika Musterfrau", meepleId: "meeple-1" }} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /Abmelden/ }));
 
     await vi.waitFor(() => {
@@ -44,7 +46,9 @@ describe("UserMenu — Logout räumt Sidebar-Pin-Zustand (#472)", () => {
     signOutMock.mockResolvedValue(undefined);
     clearPreviewTierMock.mockResolvedValue(undefined);
 
-    render(<UserMenu user={{ name: "Erika Musterfrau" }} />);
+    render(
+      <UserMenu user={{ name: "Erika Musterfrau", meepleId: "meeple-1" }} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /Abmelden/ }));
 
     await vi.waitFor(() => {

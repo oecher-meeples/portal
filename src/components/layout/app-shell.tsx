@@ -5,6 +5,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
+import { ensureMeeple } from "@/lib/members/meeples";
 import { hasOpenHelperRequest } from "@/lib/events/upcoming";
 import { hasActiveAusleiheShift } from "@/lib/events/shift-rights";
 
@@ -18,16 +19,18 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const tier = previewTier ?? realTier;
   // #433: activeAusleiheShift ist pro Nutzer, braucht deshalb user.id — kann
   // erst nach dem obigen Promise.all starten, läuft dafür parallel zu
-  // permissions.
-  const [permissions, activeAusleiheShift] = await Promise.all([
+  // permissions. #465: meepleId fürs Header-Longpress-QR-Popup, ebenfalls
+  // erst ab hier möglich (braucht `user`).
+  const [permissions, activeAusleiheShift, meeple] = await Promise.all([
     user ? getUserPermissionKeys(user.id) : Promise.resolve([]),
     hasActiveAusleiheShift(user?.id ?? null),
+    user ? ensureMeeple(user) : Promise.resolve(null),
   ]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <Header
-        user={user ? { name: user.name } : null}
+        user={user && meeple ? { name: user.name, meepleId: meeple.id } : null}
         previewTier={realTier === "admin" ? tier : undefined}
       />
       <SidebarShell

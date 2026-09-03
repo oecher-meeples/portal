@@ -93,7 +93,11 @@ describe("AcceptReturnDialog", () => {
       within(dialog).getByRole("button", { name: "An Person übergeben" }),
     );
 
-    expect(scanReturnToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
   });
 
   it("resolves a simulated scan against the meeple list and submits the match", async () => {
@@ -109,7 +113,33 @@ describe("AcceptReturnDialog", () => {
       within(dialog).getByRole("button", { name: "An Person übergeben" }),
     );
 
-    expect(scanReturnToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+  });
+
+  // #465: ein gescannter persönlicher QR-Code matcht per Id, nicht per
+  // Freitext, und markiert die Auswahl als "via QR" für Sofort-Bestätigung.
+  it("resolves a scanned personal QR code by id and marks it as via-QR", async () => {
+    nextScannedText = "OM-MEEPLE-meeple-2";
+    render(<AcceptReturnDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "An Person" }));
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "An Person übergeben" }),
+    );
+
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      true,
+    );
   });
 
   // #443: der Betrachter hält das Exemplar bereits selbst — "An mich" ist
@@ -135,7 +165,11 @@ describe("AcceptReturnDialog", () => {
       within(dialog).getByRole("button", { name: "An Person übergeben" }),
     );
 
-    expect(scanReturnToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
     expect(scanAcceptReturnMock).not.toHaveBeenCalled();
   });
 });
@@ -153,7 +187,11 @@ describe("GiveToMeepleDialog", () => {
       within(dialog).getByRole("button", { name: "Weitergeben" }),
     );
 
-    expect(scanGiveToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
+    expect(scanGiveToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
   });
 
   it("resolves a simulated scan against the meeple list and submits the match", async () => {
@@ -168,7 +206,31 @@ describe("GiveToMeepleDialog", () => {
       within(dialog).getByRole("button", { name: "Weitergeben" }),
     );
 
-    expect(scanGiveToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
+    expect(scanGiveToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+  });
+
+  // #465: siehe AcceptReturnDialog oben.
+  it("resolves a scanned personal QR code by id and marks it as via-QR", async () => {
+    nextScannedText = "OM-MEEPLE-meeple-2";
+    render(<GiveToMeepleDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Weitergeben" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Weitergeben" }),
+    );
+
+    expect(scanGiveToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      true,
+    );
   });
 });
 

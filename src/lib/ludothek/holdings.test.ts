@@ -255,6 +255,28 @@ describe("handOverGame (Weitergabe)", () => {
       data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
     });
   });
+
+  // #465: Ziel per persönlichem QR-Code der empfangenden Person aufgelöst —
+  // das Scannen gilt als Bestätigungsnachweis, unabhängig von games:manage.
+  it("confirms immediately when the target was resolved via their own QR code (#465)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
+    );
+
+    await handOverGame({
+      gameCopyId: GAME_ID,
+      toVereinsmitgliedId: MEMBER_B,
+      recordedByMeepleId: MEEPLE_B,
+      isSelf: false,
+      viaTargetQrScan: true,
+    });
+
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
+    });
+    // Kein Permission-Check nötig, wenn der QR-Scan schon bestätigt.
+    expect(prismaMock.rolePermission.count).not.toHaveBeenCalled();
+  });
 });
 
 describe("returnGame (Rückgabe)", () => {
@@ -302,6 +324,25 @@ describe("returnGame (Rückgabe)", () => {
     expect(created.data.origin).toBe("RETURN");
     expect(created.data.confirmedAt).toBeNull();
     expect(isLoanHolding(created.data as never)).toBe(false);
+  });
+
+  // #465: siehe handOverGame — dieselbe Sofort-Bestätigung bei QR-Scan-Ziel.
+  it("confirms immediately when the accepting person was resolved via their own QR code (#465)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
+    );
+
+    await returnGame({
+      gameCopyId: GAME_ID,
+      toVereinsmitgliedId: MEMBER_B,
+      recordedByMeepleId: MEEPLE_A,
+      viaTargetQrScan: true,
+    });
+
+    const created = prismaMock.gameHolding.create.mock.calls[0][0] as {
+      data: { confirmedAt: Date | null };
+    };
+    expect(created.data.confirmedAt).toBeInstanceOf(Date);
   });
 
   it("rejects returning a game that is already in a unit", async () => {

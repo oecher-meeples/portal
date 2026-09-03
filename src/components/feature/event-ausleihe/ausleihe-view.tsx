@@ -67,7 +67,9 @@ export function AusleiheView() {
     setMessage(null);
     const resolved = await ausleiheResolveCode(raw);
 
-    if (resolved.kind === "unknown") {
+    // #465: Meeple-QR-Code hat in der Ausleihe-Ansicht keine Bedeutung —
+    // wird hier wie ein unbekannter Code behandelt.
+    if (resolved.kind === "unknown" || resolved.kind === "meeple") {
       setState({ kind: "unknown", raw });
       return;
     }

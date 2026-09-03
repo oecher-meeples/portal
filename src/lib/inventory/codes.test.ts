@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextUnitCode, parseScannedCode } from "./codes";
+import { buildMeepleCode, nextUnitCode, parseScannedCode } from "./codes";
 
 describe("nextUnitCode", () => {
   it("starts at 0001 for boxes", () => {
@@ -69,6 +69,30 @@ describe("parseScannedCode", () => {
     expect(parseScannedCode("12345")).toEqual({
       kind: "unknown",
       value: "12345",
+    });
+  });
+
+  // #465: Meeple-QR-Code — statisch an die Meeple-Id gebunden.
+  it("recognises a Meeple's personal QR code", () => {
+    expect(parseScannedCode("OM-MEEPLE-clx8f0000000abcdef")).toEqual({
+      kind: "meeple",
+      value: "clx8f0000000abcdef",
+    });
+  });
+});
+
+describe("buildMeepleCode (#465)", () => {
+  it("builds the QR content for a Meeple's personal code", () => {
+    expect(buildMeepleCode("clx8f0000000abcdef")).toBe(
+      "OM-MEEPLE-clx8f0000000abcdef",
+    );
+  });
+
+  it("round-trips through parseScannedCode", () => {
+    const meepleId = "clx8f0000000abcdef";
+    expect(parseScannedCode(buildMeepleCode(meepleId))).toEqual({
+      kind: "meeple",
+      value: meepleId,
     });
   });
 });

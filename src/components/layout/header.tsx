@@ -9,7 +9,7 @@ export function Header({
   user,
   previewTier,
 }: {
-  user: { name: string } | null;
+  user: { name: string; meepleId: string } | null;
   /** Only passed for real admins — renders the tier switcher. */
   previewTier?: Tier;
 }) {
