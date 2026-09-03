@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ProfilePictureVisibility } from "@prisma/client";
 import {
   requireAdminPermission,
   hasPermissionInCurrentView,
@@ -35,6 +36,8 @@ export default async function LfgDetailPage({
               discordHandle: true,
               address: true,
               shareAddress: true,
+              profilePictureUrl: true,
+              profilePictureVisibility: true,
             },
           },
           addedBy: { select: { displayName: true } },
@@ -94,6 +97,12 @@ export default async function LfgDetailPage({
           p.meepleId !== null && viewerIsParticipant && p.meeple
             ? getContactLinks({ ...p.meeple, email: meepleEmail(p.meeple) })
             : null,
+        // (#412) Bild statt Initialen-Kreis, sofern hochgeladen und laut
+        // Freigabe sichtbar — Betrachter ist hier immer "meeple" (LFG ist
+        // ein reiner Mitglieder-Bereich, kein Gast-Kontext).
+        profilePictureUrl: p.meeple?.profilePictureUrl ?? null,
+        profilePictureVisibility:
+          p.meeple?.profilePictureVisibility ?? ProfilePictureVisibility.INTERN,
         canRemove:
           p.meepleId === null && (p.addedByMeepleId === meeple.id || isCreator),
       }))}
