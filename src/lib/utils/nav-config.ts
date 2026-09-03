@@ -133,6 +133,7 @@ export const ADMIN_PERMISSIONS = [
   "invites:manage",
   "bank:read",
   "events:manage",
+  "events:bestand",
   "instagram:connect",
 ] as const;
 
@@ -285,14 +286,14 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/admin/bestand/event-ausgabe",
         icon: Boxes,
         section: "Administration",
-        permission: "games:manage",
+        permission: "events:bestand",
       },
       {
         label: "Event-Rückgabe",
         href: "/admin/bestand/event-rueckgabe",
         icon: Boxes,
         section: "Administration",
-        permission: "games:manage",
+        permission: "events:bestand",
       },
       {
         label: "Mitglieder & Einladungen",

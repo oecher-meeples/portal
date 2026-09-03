@@ -51,6 +51,11 @@ const PERMISSIONS = [
       "Events, Schichten und Regal-Zuordnungen verwalten, Flohmarkt-Artikel freigeben/Kasse bedienen außerhalb einer Kasse-Schicht",
   },
   {
+    key: "events:bestand",
+    description:
+      "Event-Ausgabe und Event-Rückgabe scannen (Regal-Zuordnung beim Verladen) — bewusst eigenständig statt games:manage (#436), engerer Scope als events:manage",
+  },
+  {
     key: "downloads:manage",
     description:
       "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
@@ -130,6 +135,7 @@ const ROLES = [
       "members:manage-system-accounts",
       "invites:manage",
       "events:manage",
+      "events:bestand",
       "games:manage",
       "downloads:manage",
       "legal:manage",
@@ -145,7 +151,7 @@ const ROLES = [
   {
     name: "Spielewart",
     description: "Ludothek verwalten",
-    permissionKeys: ["games:manage"],
+    permissionKeys: ["games:manage", "events:bestand"],
   },
   {
     name: "Redakteur",
