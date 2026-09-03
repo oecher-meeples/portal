@@ -13,6 +13,15 @@ export async function listVisibleDownloads(tier: Tier) {
   });
 }
 
+/** Für stabile Redirect-Routen wie `/downloads/Mitgliedsantrag` (#423): der
+ * `title` ist frei editierbar (kein fester Slug), ein hart codierter
+ * `fileUrl`-Link würde beim nächsten Admin-Reupload lautlos brechen. Nur
+ * `PUBLIC` — solche Routen sind für nicht eingeloggte Besucher gedacht
+ * (analog `listVisibleDownloads()` ohne `tier`). */
+export async function findPublicDownloadByTitle(title: string) {
+  return prisma.download.findFirst({ where: { title, status: "PUBLIC" } });
+}
+
 /** OFFLINE downloads only — the private table below the main list, sorted
  * by last file change (see #201) since there is no manual order for hidden
  * downloads. */

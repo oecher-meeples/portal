@@ -80,7 +80,11 @@ export function SpendenMockView() {
           </dl>
           <Button
             variant="outline"
-            render={<a href="/downloads">Mitgliedsantrag herunterladen →</a>}
+            render={
+              <a href="/downloads/Mitgliedsantrag">
+                Mitgliedsantrag herunterladen →
+              </a>
+            }
           />
         </div>
       </div>
