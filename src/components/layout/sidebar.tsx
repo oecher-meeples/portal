@@ -14,8 +14,10 @@ import { cn } from "@/lib/utils/cn";
 
 /** Persistiert, ob der Meeple die auf `md`–`lg` sonst nur bei Hover/Fokus
  * ausklappende Sidebar (#336) dauerhaft in voller Breite fixiert hat.
- * Client-seitig only — kein Server-State nötig. */
-const PINNED_STORAGE_KEY = "sidebar-pinned";
+ * Client-seitig only — kein Server-State nötig. Exportiert, damit
+ * `user-menu.tsx` beim Logout denselben Key räumt (#472), statt ihn ein
+ * zweites Mal als Literal zu hinterlegen. */
+export const PINNED_STORAGE_KEY = "sidebar-pinned";
 
 export function Sidebar({
   tier,

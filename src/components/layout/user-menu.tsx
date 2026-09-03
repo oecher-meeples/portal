@@ -6,6 +6,7 @@ import { LogIn, LogOut, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
 import { clearPreviewTier } from "@/components/feature/admin-preview-tier/actions";
+import { PINNED_STORAGE_KEY } from "@/components/layout/sidebar";
 
 export function UserMenu({ user }: { user: { name: string } | null }) {
   const router = useRouter();
@@ -28,6 +29,10 @@ export function UserMenu({ user }: { user: { name: string } | null }) {
 
   async function handleSignOut() {
     await Promise.all([authClient.signOut(), clearPreviewTier()]);
+    // #472: Client-Präferenzen sind geräte-, nicht kontogebunden — ohne das
+    // hier zu räumen, würde die nächste Person am selben Gerät (auch ein
+    // anderes Meeple) im zuletzt angehefteten Sidebar-Zustand starten.
+    localStorage.removeItem(PINNED_STORAGE_KEY);
     router.push("/");
     router.refresh();
   }
