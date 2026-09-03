@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Pin, PinOff } from "lucide-react";
@@ -9,6 +9,7 @@ import {
   type NavFlag,
   type Tier,
 } from "@/lib/utils/nav-config";
+import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
 import { cn } from "@/lib/utils/cn";
 
 /** Persistiert, ob der Meeple die auf `md`–`lg` sonst nur bei Hover/Fokus
@@ -43,25 +44,9 @@ export function Sidebar({
   // (group-hover/group-focus-within) auf volle Breite auf, als Overlay über
   // dem Content — AppShell verschiebt dafür nichts. Der Pin fixiert das
   // zusätzlich dauerhaft, für Touch-Geräte ohne Hover.
-  const [pinned, setPinned] = useState(false);
-  useEffect(() => {
-    try {
-      setPinned(localStorage.getItem(PINNED_STORAGE_KEY) === "1");
-    } catch {
-      // localStorage kann in Private-Mode/blockiertem Storage werfen —
-      // dann bleibt der Pin einfach ungesetzt.
-    }
-  }, []);
+  const [pinned, setPinned] = useLocalStorageState(PINNED_STORAGE_KEY, false);
   function togglePinned() {
-    setPinned((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(PINNED_STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        // s. o.
-      }
-      return next;
-    });
+    setPinned(!pinned);
   }
 
   // Nur sichtbar/lesbar, wenn die Sidebar tatsächlich ausgeklappt ist:

@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useClientValue } from "@/components/ui/use-client-value";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
   // Intentional hydration-safe mount guard (next-themes pattern): resolvedTheme
   // is undefined on the server, so this avoids a client/server markup mismatch.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setMounted(true), []);
+  const mounted = useClientValue(() => true, false);
 
   return (
     <Button
