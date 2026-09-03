@@ -249,7 +249,10 @@ export async function MitgliedProfilView({
 
         {canViewVereinsspiele && (
           <div className="md:col-span-2">
-            <VereinsspieleSection holdings={holdings} />
+            <VereinsspieleSection
+              holdings={holdings}
+              viewerIsSubject={isSelf}
+            />
           </div>
         )}
 

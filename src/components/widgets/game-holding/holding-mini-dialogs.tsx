@@ -109,13 +109,15 @@ export function AcceptReturnDialog({
   open,
   onOpenChange,
   triggerClassName,
-}: { gameCopyId: string } & ControlledDialogProps & TriggerClassNameProp) {
-  const [mode, setMode] = useState<ReturnMode>("self");
+  hideSelfMode,
+}: { gameCopyId: string; hideSelfMode?: boolean } & ControlledDialogProps &
+  TriggerClassNameProp) {
+  const initialMode: ReturnMode = hideSelfMode ? "person" : "self";
+  const [mode, setMode] = useState<ReturnMode>(initialMode);
   const [targets, setTargets] = useState<Target[]>([]);
   const [selected, setSelected] = useState("");
 
-  async function switchToPersonMode() {
-    setMode("person");
+  async function loadTargets() {
     if (targets.length > 0) return;
     const meeples = await scanListMeeples();
     setTargets(
@@ -155,32 +157,38 @@ export function AcceptReturnDialog({
           ? scanAcceptReturn(gameCopyId)
           : scanReturnToMeeple(gameCopyId, selected)
       }
+      onOpen={hideSelfMode ? loadTargets : undefined}
       onReset={() => {
-        setMode("self");
+        setMode(initialMode);
         setSelected("");
       }}
     >
       <div className="flex flex-col gap-3">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === "self" ? "default" : "outline"}
-            className={cn(mode === "self" && "pointer-events-none")}
-            onClick={() => setMode("self")}
-          >
-            An mich
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === "person" ? "default" : "outline"}
-            className={cn(mode === "person" && "pointer-events-none")}
-            onClick={switchToPersonMode}
-          >
-            An Person
-          </Button>
-        </div>
+        {!hideSelfMode && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "self" ? "default" : "outline"}
+              className={cn(mode === "self" && "pointer-events-none")}
+              onClick={() => setMode("self")}
+            >
+              An mich
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === "person" ? "default" : "outline"}
+              className={cn(mode === "person" && "pointer-events-none")}
+              onClick={() => {
+                setMode("person");
+                loadTargets();
+              }}
+            >
+              An Person
+            </Button>
+          </div>
+        )}
         {mode === "person" && (
           <TargetPicker
             targets={targets}

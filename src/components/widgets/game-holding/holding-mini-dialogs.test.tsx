@@ -111,6 +111,33 @@ describe("AcceptReturnDialog", () => {
 
     expect(scanReturnToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
   });
+
+  // #443: der Betrachter hält das Exemplar bereits selbst — "An mich" ist
+  // dann sinnlos und wird unterdrückt, der Dialog startet direkt im
+  // "An Person"-Flow.
+  it("hides the 'an mich'-tab and starts in person-mode when hideSelfMode is set", async () => {
+    render(<AcceptReturnDialog gameCopyId="copy-1" hideSelfMode />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      within(dialog).queryByRole("button", { name: "An mich" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "An Person" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(await within(dialog).findByRole("combobox"), {
+      target: { value: "meeple-2" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "An Person übergeben" }),
+    );
+
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith("copy-1", "meeple-2");
+    expect(scanAcceptReturnMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("GiveToMeepleDialog", () => {

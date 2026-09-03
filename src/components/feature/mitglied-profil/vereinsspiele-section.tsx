@@ -12,11 +12,18 @@ import {
  * Weitergabe-Logik selbst kennt keine "eigene" vs. "fremde" Ausleihe, sie
  * bezieht sich immer auf den aktuellen Halter des Exemplars (hier: dieses
  * Mitglied), unabhängig davon, wer den Button klickt (Spielewart,
- * Erziehungsberechtigte:r oder das Mitglied selbst). */
+ * Erziehungsberechtigte:r oder das Mitglied selbst).
+ *
+ * #443: sieht das Mitglied sein eigenes Profil an (`viewerIsSubject`), kann
+ * es das Exemplar nicht von sich selbst annehmen — der "An mich"-Tab von
+ * `AcceptReturnDialog` wird dann unterdrückt. Für Spielewart/
+ * Erziehungsberechtigte:r (`viewerIsSubject: false`) bleibt er verfügbar. */
 export function VereinsspieleSection({
   holdings,
+  viewerIsSubject,
 }: {
   holdings: ActiveMeepleHolding[];
+  viewerIsSubject: boolean;
 }) {
   if (holdings.length === 0) return null;
 
@@ -44,6 +51,7 @@ export function VereinsspieleSection({
               <AcceptReturnDialog
                 gameCopyId={holding.gameCopyId}
                 triggerClassName="w-auto"
+                hideSelfMode={viewerIsSubject}
               />
             </div>
           </li>
