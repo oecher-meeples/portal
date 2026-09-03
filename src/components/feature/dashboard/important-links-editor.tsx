@@ -56,7 +56,7 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
         trigger={
           <button
             type="button"
-            className="text-muted-foreground hover:border-primary/60 hover:text-primary flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm transition-colors"
+            className="text-muted-foreground hover:border-primary/60 hover:text-primary flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm transition-colors"
           >
             <Plus className="size-6" />
             Hinzufügen

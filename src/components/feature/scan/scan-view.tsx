@@ -300,7 +300,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                     <button
                       key={game.id}
                       type="button"
-                      className="hover:bg-muted rounded-md border px-3 py-2 text-left text-sm"
+                      className="hover:bg-muted cursor-pointer rounded-md border px-3 py-2 text-left text-sm"
                       onClick={() => {
                         if (
                           state.forEinlagern &&
