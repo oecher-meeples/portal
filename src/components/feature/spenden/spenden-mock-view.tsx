@@ -45,10 +45,10 @@ export function SpendenMockView() {
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
           <h2 className="font-serif text-lg font-bold">Spiele spenden</h2>
           <p className="text-muted-foreground text-sm">
-            Du möchtest vollständige, funktionsfähige Spiele in unseren
-            Vereinsbestand geben? Wir übernehmen sie gerne in die Ludothek. Für
-            beschädigte oder unvollständige Spiele (Ersatzteillager) nutze bitte
-            den Marktplatz.
+            Du möchtest Spiele in unseren Vereinsbestand geben? Wir freuen uns
+            über jede Spende — unabhängig vom Zustand. Der Spielwart
+            entscheidet, ob dein Spiel in die Ludothek oder ins Ersatzteillager
+            kommt.
           </p>
           <Button
             variant="outline"
