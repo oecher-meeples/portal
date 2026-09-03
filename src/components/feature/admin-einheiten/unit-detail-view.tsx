@@ -134,7 +134,7 @@ export function UnitDetailView({
                 setCategory(event.target.value as ShelfCategory | "")
               }
               disabled={unit.retired || !isAdmin}
-              className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
+              className="border-input bg-background h-8 rounded-md border px-2 text-sm disabled:opacity-60"
             >
               <option value="">Keine</option>
               {SHELF_CATEGORY_VALUES.map((value) => (

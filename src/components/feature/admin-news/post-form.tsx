@@ -206,7 +206,7 @@ export function PostForm({
             id="type"
             value={type}
             onChange={(event) => setType(event.target.value as ContentType)}
-            className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
           >
             {TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>

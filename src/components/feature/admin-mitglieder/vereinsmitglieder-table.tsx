@@ -187,7 +187,7 @@ export function VereinsmitgliederTable({
                   setZustandFilter(event.target.value as ZustandFilter)
                 }
                 aria-label="Nach Zustand filtern"
-                className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
               >
                 {ZUSTAND_FILTERS.map(({ value, label }) => (
                   <option key={value} value={value}>
@@ -201,7 +201,7 @@ export function VereinsmitgliederTable({
                   setPortalLoginFilter(event.target.value as PortalLoginFilter)
                 }
                 aria-label="Nach Portal-Login filtern"
-                className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
               >
                 <option value="alle">Portal-Login: alle</option>
                 <option value="vorhanden">Portal-Login: vorhanden</option>
