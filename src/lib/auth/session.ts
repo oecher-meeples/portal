@@ -33,7 +33,7 @@ export const PATHNAME_HEADER = "x-pathname";
 
 /**
  * The only routes an "ausgetreten" Meeple may still reach — settling up:
- * own profile, own holdings, giving games back or on, calendar, member directory.
+ * own profile, own holdings, giving games back or on, calendar.
  * Everything else (Ludothek, interne News, Spielergesuche) is closed.
  */
 export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
@@ -44,7 +44,6 @@ export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   // gezielt über isOwnProfilPath durch, nicht über diese Liste.
   { path: "/profil", exact: true },
   { path: "/scan" },
-  { path: "/mitglieder" },
 ];
 
 export function isSettlementPath(pathname: string) {
