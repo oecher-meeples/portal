@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playersAndDuration } from "./format";
+import { formatDurationHours, playersAndDuration } from "./format";
 
 describe("playersAndDuration", () => {
   it("formats a player range and duration", () => {
@@ -30,5 +30,20 @@ describe("playersAndDuration", () => {
         playTimeMinutes: 30,
       } as never),
     ).toBe("? Spieler · 30’");
+  });
+});
+
+describe("formatDurationHours (#427)", () => {
+  it("formats zero minutes", () => {
+    expect(formatDurationHours(0)).toBe("0:00h");
+  });
+
+  it("pads minutes below ten", () => {
+    expect(formatDurationHours(90)).toBe("1:30h");
+    expect(formatDurationHours(65)).toBe("1:05h");
+  });
+
+  it("formats durations above one hour", () => {
+    expect(formatDurationHours(1020)).toBe("17:00h");
   });
 });
