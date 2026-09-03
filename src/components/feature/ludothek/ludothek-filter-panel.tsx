@@ -182,8 +182,8 @@ export function LudothekFilterPanel({
         Filter
       </summary>
 
-      <div className="mt-3 flex flex-col gap-3">
-        <div className="flex max-w-xs flex-col gap-1">
+      <div className="mt-3 flex flex-wrap gap-3">
+        <div className="flex min-w-56 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Spieler
@@ -207,7 +207,7 @@ export function LudothekFilterPanel({
           />
         </div>
 
-        <div className="flex max-w-xs flex-col gap-1">
+        <div className="flex min-w-56 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Dauer (Min.)
@@ -227,7 +227,7 @@ export function LudothekFilterPanel({
           />
         </div>
 
-        <div className="flex max-w-xs flex-col gap-1">
+        <div className="flex min-w-56 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Erstveröffentlichung
@@ -250,7 +250,7 @@ export function LudothekFilterPanel({
           />
         </div>
 
-        <div className="flex max-w-xs flex-col gap-1">
+        <div className="flex min-w-56 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Bewertung
@@ -271,7 +271,7 @@ export function LudothekFilterPanel({
           />
         </div>
 
-        <div className="flex max-w-xs flex-col gap-1">
+        <div className="flex min-w-56 flex-1 flex-col gap-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Sprachneutralität
@@ -296,7 +296,7 @@ export function LudothekFilterPanel({
         </div>
 
         {mechanicsOptions.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-56 flex-1 flex-col gap-1.5">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Mechanik
             </span>
@@ -314,7 +314,7 @@ export function LudothekFilterPanel({
         )}
 
         {categoriesOptions.length > 0 && (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-56 flex-1 flex-col gap-1.5">
             <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Kategorie
             </span>
@@ -331,7 +331,7 @@ export function LudothekFilterPanel({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2">
           <FilterPill
             label="Erweiterungen ausblenden"
             href={href({
@@ -361,7 +361,7 @@ export function LudothekFilterPanel({
 
         {internal && (
           <>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                 Zustand
               </span>
@@ -386,7 +386,7 @@ export function LudothekFilterPanel({
                 active={Boolean(filters.onlyLoanedOut)}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2">
               <FilterPill
                 label="Auch Privatbesitz anzeigen"
                 href={href({
@@ -403,7 +403,7 @@ export function LudothekFilterPanel({
               />
             </div>
             {meepleOptions && meepleOptions.length > 0 && (
-              <div className="flex max-w-xs flex-col gap-1">
+              <div className="flex min-w-56 flex-1 flex-col gap-1">
                 <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                   Bei
                 </span>

@@ -5,7 +5,7 @@ issues:
   437: { status: pending }
   336: { status: pending }
   430: { status: done }
-  426: { status: pending }
+  426: { status: done }
 ---
 
 # Plan: Responsive Design Batch (Epic #278)
