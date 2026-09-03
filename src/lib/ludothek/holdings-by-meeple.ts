@@ -13,6 +13,8 @@ export type ActiveMeepleHolding = {
   gameCopyId: string;
   boardGameId: string;
   boardGameTitle: string;
+  /** Für den Link zur Spieledetailseite (`/ludothek/[slug]`, #457). */
+  boardGameSlug: string;
   startedAt: Date;
   locationChain: string;
   condition: string | null;
@@ -74,7 +76,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
           condition: true,
           ruleBookLanguages: true,
           inventoryNumber: true,
-          boardGame: { select: { id: true, title: true } },
+          boardGame: { select: { id: true, title: true, slug: true } },
         },
       },
     },
@@ -100,6 +102,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
       gameCopyId: holding.gameCopyId,
       boardGameId: holding.gameCopy.boardGame.id,
       boardGameTitle: holding.gameCopy.boardGame.title,
+      boardGameSlug: holding.gameCopy.boardGame.slug,
       startedAt: holding.startedAt,
       locationChain: formatLocationChain({
         responsibleName: name,
@@ -144,7 +147,7 @@ export async function getActiveHoldingsForMember(
           condition: true,
           ruleBookLanguages: true,
           inventoryNumber: true,
-          boardGame: { select: { id: true, title: true } },
+          boardGame: { select: { id: true, title: true, slug: true } },
         },
       },
     },
@@ -154,6 +157,7 @@ export async function getActiveHoldingsForMember(
     gameCopyId: holding.gameCopyId,
     boardGameId: holding.gameCopy.boardGame.id,
     boardGameTitle: holding.gameCopy.boardGame.title,
+    boardGameSlug: holding.gameCopy.boardGame.slug,
     startedAt: holding.startedAt,
     locationChain: "",
     condition: holding.gameCopy.condition,

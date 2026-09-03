@@ -27,6 +27,7 @@ describe("VereinsspieleSection (#383)", () => {
     gameCopyId: "copy-1",
     boardGameId: "bg-1",
     boardGameTitle: "Ark Nova",
+    boardGameSlug: "ark-nova",
     startedAt: new Date("2026-08-01"),
     locationChain: "",
     condition: null,
@@ -106,5 +107,36 @@ describe("VereinsspieleSection (#383)", () => {
     );
 
     expect(screen.queryByText("(Unbestätigt)")).not.toBeInTheDocument();
+  });
+
+  // #457: Titel war reiner Text, Inv.-Nr. fehlte kommentarlos ganz.
+  it("links the title to the game's detail page", () => {
+    render(
+      <VereinsspieleSection holdings={[HOLDING]} viewerIsSubject={false} />,
+    );
+
+    expect(screen.getByRole("link", { name: "Ark Nova" })).toHaveAttribute(
+      "href",
+      "/ludothek/ark-nova",
+    );
+  });
+
+  it("shows a labelled inventory number when present", () => {
+    render(
+      <VereinsspieleSection
+        holdings={[{ ...HOLDING, inventoryNumber: "OM-042" }]}
+        viewerIsSubject={false}
+      />,
+    );
+
+    expect(screen.getByText(/Inv\.-Nr\.: OM-042/)).toBeInTheDocument();
+  });
+
+  it("shows a placeholder instead of omitting the inventory number", () => {
+    render(
+      <VereinsspieleSection holdings={[HOLDING]} viewerIsSubject={false} />,
+    );
+
+    expect(screen.getByText(/Inv\.-Nr\.: —/)).toBeInTheDocument();
   });
 });

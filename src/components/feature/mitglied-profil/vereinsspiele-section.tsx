@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { ActiveMeepleHolding } from "@/lib/ludothek/holdings-by-meeple";
 import {
@@ -38,7 +39,14 @@ export function VereinsspieleSection({
           >
             <div>
               <p className="font-medium">
-                {holding.boardGameTitle}
+                {/* #457: Link zur Spieledetailseite, analog zu den übrigen
+                 * Ludothek-Listen. */}
+                <Link
+                  href={`/ludothek/${holding.boardGameSlug}`}
+                  className="hover:underline"
+                >
+                  {holding.boardGameTitle}
+                </Link>
                 {holding.isUnconfirmed && (
                   <span className="text-muted-foreground font-normal">
                     {" "}
@@ -47,8 +55,8 @@ export function VereinsspieleSection({
                 )}
               </p>
               <p className="text-muted-foreground">
-                seit {formatDatePlain(holding.startedAt)}
-                {holding.inventoryNumber && ` · ${holding.inventoryNumber}`}
+                seit {formatDatePlain(holding.startedAt)} · Inv.-Nr.:{" "}
+                {holding.inventoryNumber || "—"}
               </p>
             </div>
             <div className="flex gap-2">
