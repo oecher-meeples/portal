@@ -240,8 +240,17 @@ export function InvitesSection({
                         {(invite.status === "offen" ||
                           invite.status === "abgelaufen") && (
                           <TableRow className="hover:bg-transparent">
-                            <TableCell colSpan={5} className="pt-0">
-                              <div className="flex flex-wrap justify-end gap-2">
+                            <TableCell
+                              colSpan={5}
+                              className="pt-0 whitespace-normal"
+                            >
+                              {/* #441: max-w-… ist nötig, damit flex-wrap
+                               * überhaupt greift — ohne Breitenbegrenzung
+                               * berechnet die Table-Auto-Layout-Engine die
+                               * Zeile anhand der ungewrappten Button-Summe
+                               * und lässt die ganze Tabelle wachsen statt
+                               * hier umzubrechen. */}
+                              <div className="flex max-w-3xl flex-wrap justify-end gap-2">
                                 {invite.status === "offen" && (
                                   <>
                                     <CopyButton
