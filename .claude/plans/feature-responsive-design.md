@@ -4,7 +4,7 @@ created: 2026-09-03
 issues:
   437: { status: pending }
   336: { status: pending }
-  430: { status: pending }
+  430: { status: done }
   426: { status: pending }
 ---
 
