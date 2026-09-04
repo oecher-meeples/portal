@@ -71,6 +71,7 @@ export function AdminMitgliederView({
   canCreateSystemkonto,
   canManageSystemAccounts,
   pendingEmailChanges,
+  pendingStammdatenChanges,
   stufe3Candidates,
 }: {
   members: VereinsmitgliedRow[];
@@ -101,6 +102,7 @@ export function AdminMitgliederView({
    * Setzen/Entfernen der System-Konto-Markierung im Meeple-Edit-Dialog aus. */
   canManageSystemAccounts: boolean;
   pendingEmailChanges: PendingChangeRow[];
+  pendingStammdatenChanges: PendingChangeRow[];
   stufe3Candidates: {
     id: string;
     memberNumber: number;
@@ -314,6 +316,12 @@ export function AdminMitgliederView({
         titlePlural="Offene E-Mail-Änderungsanträge"
         changes={pendingEmailChanges}
         isEmailChangePanel
+      />
+
+      <PendingChangesPanel
+        titleSingular="Offene Stammdaten-Änderung"
+        titlePlural="Offene Stammdaten-Änderungen"
+        changes={pendingStammdatenChanges}
       />
 
       {stufe3Candidates.length > 0 && (

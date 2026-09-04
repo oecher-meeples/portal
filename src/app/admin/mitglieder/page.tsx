@@ -14,6 +14,8 @@ import { memberDisplayName } from "@/lib/members/member-display-name";
 import { listMembersEligibleForStufe3 } from "@/lib/members/anonymisation";
 import { buildVereinsmitgliedRows } from "@/lib/members/vereinsmitglieder-rows";
 import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
+import { listTshirtSizes } from "@/lib/members/tshirt-sizes";
+import { formatStammdatenDiffSummary } from "@/lib/members/stammdaten";
 import { PendingChangeKind } from "@prisma/client";
 
 export default async function AdminMitgliederPage() {
@@ -35,6 +37,7 @@ export default async function AdminMitgliederPage() {
     defaultInviteDays,
     pendingChanges,
     stufe3Candidates,
+    tshirtSizes,
     canReadBankData,
     canManageMembers,
     canManageRoles,
@@ -104,6 +107,7 @@ export default async function AdminMitgliederPage() {
     getDefaultInviteDays(),
     listOpenPendingChanges(),
     listMembersEligibleForStufe3(now),
+    listTshirtSizes(),
     hasPermission(session.user.id, "bank:read"),
     hasPermission(session.user.id, "members:manage"),
     hasPermission(session.user.id, "roles:manage"),
@@ -158,6 +162,10 @@ export default async function AdminMitgliederPage() {
       openInviteTokenByEmail,
     },
     now,
+  );
+
+  const tshirtSizeLabelById = Object.fromEntries(
+    tshirtSizes.map((size) => [size.id, size.label]),
   );
 
   return (
@@ -277,6 +285,22 @@ export default async function AdminMitgliederPage() {
           displayValue: change.newValue,
           requestedAt: change.requestedAt.toISOString(),
           confirmed: change.confirmedAt !== null,
+        }))}
+      pendingStammdatenChanges={pendingChanges
+        .filter((change) => change.kind === PendingChangeKind.MEMBER_STAMMDATEN)
+        .map((change) => ({
+          id: change.id,
+          memberDisplayName: memberDisplayName(change.member),
+          memberNumber: change.member.memberNumber,
+          memberSlug: change.member.slug,
+          displayValue: formatStammdatenDiffSummary(
+            change.fieldsJson,
+            tshirtSizeLabelById,
+          ),
+          requestedAt: change.requestedAt.toISOString(),
+          // Stammdaten-Änderungen brauchen keine Mitglieder-Bestätigung per
+          // Mail, analog zum IBAN-Fall (admin/bank/page.tsx).
+          confirmed: true,
         }))}
       stufe3Candidates={stufe3Candidates.map((member) => ({
         id: member.id,
