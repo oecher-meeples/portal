@@ -18,43 +18,52 @@ import {
   mondayFirstWeekday,
   parseValue,
   formatValue,
+  isSameDate,
+  isBeforeDate,
   viewForOpenAt,
   type View,
   type SelectedDate,
   type OpenAt,
 } from "@/components/ui/date-picker-shared";
 
-/** Dreistufiger Auswahl-Flow (Live-Review F3) — ersetzt den nativen
- * `<input type="date">`, der je nach Browser/OS unterschiedlich aussieht
- * (analog `TimePicker` für `type="time"`). State bleibt beim Wechsel
- * zwischen den drei Ansichten erhalten, nichts wird zurückgesetzt. */
-function DatePickerPanel({
-  selected,
-  onSelect,
+export type DateRangeValue = { start: string; end: string };
+
+/**
+ * Bereichsauswahl-Tagesansicht (#458) — anders als `DatePickerPanel`
+ * (Einzeldatum, schließt sofort) bleibt das Popup nach der Start-Auswahl
+ * offen und derselbe Klick-Flow legt das Ende fest:
+ *
+ * - Kein Ende gesetzt → nächster Klick setzt den Start (auch, um einen
+ *   bereits vollständigen Bereich neu zu beginnen).
+ * - Start gesetzt, Ende noch offen → nächster Klick ist der "zweite Schritt":
+ *   derselbe Tag wie Start → kein Ende (Ein-Tages-Termin); ein Tag vor Start
+ *   → Swap (der frühere Tag wird neuer Start, der alte Start wird Ende); ein
+ *   Tag nach Start → normales Ende.
+ *
+ * Beide Fälle außer "kein Ende gesetzt" schließen das Popup automatisch.
+ */
+function DateRangePickerPanel({
+  start,
+  end,
+  onChange,
+  onCommit,
   validate,
   openAt,
 }: {
-  selected: SelectedDate;
-  onSelect: (date: SelectedDate) => void;
-  /** Live-Review F4 — ohne `validate` verhält sich die Komponente wie in F3,
-   * kein Tag gesperrt. */
+  start: SelectedDate;
+  end: SelectedDate;
+  onChange: (start: SelectedDate, end: SelectedDate) => void;
+  /** Schließt das Popup — nach allem außer der reinen Start-Auswahl. */
+  onCommit: () => void;
   validate?: Validator;
   openAt: OpenAt;
 }) {
   const today = new Date();
-  // Startansicht ist standardmäßig 'year' (Live-Review F3, nachträgliche
-  // Klarstellung) — auch mit vorhandenem `selected` nicht direkt in
-  // Monats-/Tagesansicht springen. Aufrufer können das per `openAt`
-  // überschreiben (z. B. LFG-Dialog: Termine liegen immer nahe der
-  // Gegenwart, Jahresauswahl ist dort unnötiger Zwischenschritt).
-  // `year`/`month`/`yearRangeStart` werden unabhängig davon sinnvoll aus
-  // `selected` vorbelegt, damit die Jahres-Range das ausgewählte Jahr enthält
-  // und hervorgehoben ist.
   const [view, setView] = useState<View>(viewForOpenAt(openAt));
-  const [year, setYear] = useState(selected?.year ?? today.getFullYear());
-  const [month, setMonth] = useState(selected?.month ?? today.getMonth());
+  const [year, setYear] = useState(start?.year ?? today.getFullYear());
+  const [month, setMonth] = useState(start?.month ?? today.getMonth());
   const [yearRangeStart, setYearRangeStart] = useState(
-    (selected?.year ?? today.getFullYear()) - (YEARS_PER_RANGE - 1),
+    (start?.year ?? today.getFullYear()) - (YEARS_PER_RANGE - 1),
   );
 
   if (view === "year") {
@@ -131,8 +140,45 @@ function DatePickerPanel({
     year === today.getFullYear() &&
     month === today.getMonth() &&
     day === today.getDate();
-  const isSelectedDay = (day: number) =>
-    selected?.year === year && selected.month === month && selected.day === day;
+
+  function dateAt(day: number): SelectedDate {
+    return { year, month, day };
+  }
+  function isStart(day: number) {
+    return isSameDate(start, dateAt(day));
+  }
+  function isEnd(day: number) {
+    return isSameDate(end, dateAt(day));
+  }
+  function isBetween(day: number) {
+    if (!start || !end) return false;
+    const date = dateAt(day);
+    return isBeforeDate(start, date) && isBeforeDate(date, end);
+  }
+
+  function handleDayClick(day: number) {
+    const clicked = dateAt(day);
+
+    // Kein Start, oder bereits ein vollständiger Bereich — neu beginnen.
+    if (!start || end) {
+      onChange(clicked, null);
+      return;
+    }
+
+    // Start gesetzt, Ende noch offen — zweiter Schritt.
+    if (isSameDate(clicked, start)) {
+      onChange(start, null);
+      onCommit();
+      return;
+    }
+    if (isBeforeDate(clicked, start)) {
+      onChange(clicked, start);
+      onCommit();
+      return;
+    }
+    onChange(start, clicked);
+    onCommit();
+  }
 
   return (
     <div className="flex w-72 flex-col gap-3 p-3">
@@ -173,6 +219,9 @@ function DatePickerPanel({
           </button>
         </div>
       </NavRow>
+      <p className="text-muted-foreground text-xs font-medium">
+        {!start || end ? "Beginn wählen" : "Ende wählen"}
+      </p>
       <div className="grid grid-cols-7 gap-1 text-center">
         {WEEKDAY_LABELS.map((weekday) => (
           <span
@@ -188,23 +237,26 @@ function DatePickerPanel({
           const disabledReason =
             result && !result.valid ? result.reason : undefined;
           const disabled = disabledReason !== undefined;
+          const edge = isStart(day) || isEnd(day);
           return (
             <button
               key={day}
               type="button"
               disabled={disabled}
               title={disabledReason}
-              onClick={() => onSelect({ year, month, day })}
-              aria-pressed={isSelectedDay(day)}
+              onClick={() => handleDayClick(day)}
+              aria-pressed={edge}
               className={cn(
                 "flex h-9 items-center justify-center rounded-md text-sm",
                 disabled
                   ? "text-muted-foreground/50 cursor-not-allowed"
-                  : isSelectedDay(day)
+                  : edge
                     ? "bg-primary text-primary-foreground"
-                    : isToday(day)
-                      ? "ring-ring ring-1"
-                      : "hover:bg-muted",
+                    : isBetween(day)
+                      ? "bg-primary/15"
+                      : isToday(day)
+                        ? "ring-ring ring-1"
+                        : "hover:bg-muted",
               )}
             >
               {day}
@@ -212,26 +264,26 @@ function DatePickerPanel({
           );
         })}
       </div>
-      {selected && (
-        <p className="text-muted-foreground text-xs">
-          Ausgewählt: {formatDatePlain(formatValue(selected))}
-        </p>
-      )}
+      <p className="text-muted-foreground text-xs">
+        {start && end
+          ? `${formatDatePlain(formatValue(start))} – ${formatDatePlain(formatValue(end))}`
+          : start
+            ? `Beginn: ${formatDatePlain(formatValue(start))}`
+            : "Kein Zeitraum ausgewählt"}
+      </p>
     </div>
   );
 }
 
 /**
- * Fachfreier DatePicker (Live-Review F3) — löst den nativen
- * `<input type="date">` ab, der je nach Browser/OS uneinheitlich aussieht.
- * Drop-in-Ersatz für die frühere `TextField type="date"`-Stelle: `value`/
- * `onChange` transportieren weiterhin ein "yyyy-mm-dd"-String wie ein
- * natives Date-Input.
+ * Datumsbereichs-Feld (#458) — ersetzt zwei unabhängige `DatePicker`-
+ * Instanzen für Beginn/Ende: ein Popup, ein zusammenhängender Klick-Flow.
+ * Wie `DatePicker` transportieren `value.start`/`value.end` "yyyy-mm-dd"-
+ * Strings, `end` bleibt optional (leerer String).
  */
-export function DatePicker({
+export function DateRangePicker({
   id,
   label,
-  labelHint,
   value,
   onChange,
   validate,
@@ -242,45 +294,27 @@ export function DatePicker({
 }: {
   id: string;
   label: ReactNode;
-  /** Live-Review F5 — z. B. das aus `value` berechnete Alter beim
-   * Geburtsdatum-Feld ("(34 Jahre)"), gedämpft neben dem Label. Nur gesetzt,
-   * solange der Aufrufer etwas zu zeigen hat. */
-  labelHint?: ReactNode;
-  value: string;
-  onChange: (value: string) => void;
-  /** Live-Review F4 — sperrt einzelne Tage im Kalender, siehe `constraints.ts`. */
+  value: DateRangeValue;
+  onChange: (value: DateRangeValue) => void;
   validate?: Validator;
   fieldClassName?: string;
   required?: boolean;
   disabled?: boolean;
-  /** Startansicht beim Öffnen des Popups. Default `"Year"` — kein
-   * Verhaltensbruch für bestehende Aufrufer. Für Termine nahe der Gegenwart
-   * (z. B. LFG-Dialog) `"Month"`, um die unnötige Jahresauswahl zu
-   * überspringen; Navigation zur Jahresansicht bleibt über den
-   * Jahres-Button in der Monatsansicht weiterhin möglich. */
   openAt?: OpenAt;
 }) {
   const [open, setOpen] = useState(false);
   const popupId = useId();
-  const selected = parseValue(value);
+  const start = parseValue(value.start);
+  const end = parseValue(value.end);
+
+  function triggerLabel() {
+    if (!start) return "Zeitraum wählen";
+    if (!end) return formatDatePlain(value.start);
+    return `${formatDatePlain(value.start)} – ${formatDatePlain(value.end)}`;
+  }
 
   return (
-    <Field
-      label={
-        labelHint ? (
-          <span className="flex items-baseline gap-1.5">
-            {label}
-            <span className="text-muted-foreground font-normal">
-              {labelHint}
-            </span>
-          </span>
-        ) : (
-          label
-        )
-      }
-      htmlFor={id}
-      className={fieldClassName}
-    >
+    <Field label={label} htmlFor={id} className={fieldClassName}>
       <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
         <PopoverPrimitive.Trigger
           id={id}
@@ -288,8 +322,8 @@ export function DatePicker({
           aria-required={required}
           className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
         >
-          <span className={cn(!selected && "text-muted-foreground")}>
-            {selected ? formatDatePlain(value) : "Datum wählen"}
+          <span className={cn(!start && "text-muted-foreground")}>
+            {triggerLabel()}
           </span>
           <CalendarIcon className="text-muted-foreground size-4 shrink-0" />
         </PopoverPrimitive.Trigger>
@@ -299,14 +333,18 @@ export function DatePicker({
               id={popupId}
               className="bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 rounded-lg shadow-md ring-1 outline-none"
             >
-              <DatePickerPanel
-                selected={selected}
+              <DateRangePickerPanel
+                start={start}
+                end={end}
                 validate={validate}
                 openAt={openAt}
-                onSelect={(date) => {
-                  onChange(formatValue(date));
-                  setOpen(false);
-                }}
+                onChange={(nextStart, nextEnd) =>
+                  onChange({
+                    start: formatValue(nextStart),
+                    end: formatValue(nextEnd),
+                  })
+                }
+                onCommit={() => setOpen(false)}
               />
             </PopoverPrimitive.Popup>
           </PopoverPrimitive.Positioner>

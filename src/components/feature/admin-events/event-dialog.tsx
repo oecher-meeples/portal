@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { EventVisibility } from "@prisma/client";
 import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Switch } from "@/components/ui/switch";
 import {
   createEvent,
@@ -32,6 +33,7 @@ function toDateInput(iso: string) {
 }
 
 export function EventDialog({ event }: { event?: EditableEvent }) {
+  const router = useRouter();
   const isEdit = Boolean(event);
   const [title, setTitle] = useState(event?.title ?? "");
   const [startsAt, setStartsAt] = useState(
@@ -76,7 +78,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
       description="Losgelöst vom Kalender-Feed — das Event ist die Grundlage für Schichten, Erklärbären und Flohmarkt-Artikel. Uhrzeiten je Tag werden anschließend auf der Eventseite festgelegt."
       submitLabel={isEdit ? "Speichern" : "Event anlegen"}
       canSubmit={Boolean(title.trim()) && Boolean(startsAt)}
-      action={() => {
+      action={async () => {
         const input = {
           title,
           startsAt: new Date(startsAt),
@@ -85,7 +87,15 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
           helpersWanted,
           visibility,
         };
-        return event ? updateEvent(event.id, input) : createEvent(input);
+        if (event) return updateEvent(event.id, input);
+
+        const result = await createEvent(input);
+        // #458: nach dem Anlegen direkt zur neuen Event-Detailseite statt
+        // auf der Übersicht zu bleiben.
+        if ("success" in result) {
+          router.push(`/admin/events/${result.slug}`);
+        }
+        return result;
       }}
       onReset={reset}
     >
@@ -96,18 +106,15 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         onChange={(fieldEvent) => setTitle(fieldEvent.target.value)}
         required
       />
-      <DatePicker
-        id="event-starts"
-        label="Beginn"
-        value={startsAt}
-        onChange={setStartsAt}
+      <DateRangePicker
+        id="event-daterange"
+        label="Beginn – Ende (optional)"
+        value={{ start: startsAt, end: endsAt }}
+        onChange={({ start, end }) => {
+          setStartsAt(start);
+          setEndsAt(end);
+        }}
         required
-      />
-      <DatePicker
-        id="event-ends"
-        label="Ende (optional)"
-        value={endsAt}
-        onChange={setEndsAt}
       />
       <Field label="Sichtbarkeit" htmlFor="event-visibility">
         <select
