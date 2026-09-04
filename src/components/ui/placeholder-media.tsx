@@ -23,7 +23,7 @@ export function PlaceholderMedia({
     return (
       <div
         className={cn(
-          "bg-muted flex items-center justify-center overflow-hidden rounded-md border",
+          "bg-muted flex items-end justify-center overflow-hidden rounded-md border",
           aspect,
           className,
         )}
@@ -33,14 +33,14 @@ export function PlaceholderMedia({
           alt=""
           width={3840}
           height={1000}
-          className="h-auto w-1/2 object-contain dark:hidden"
+          className="h-auto w-full object-contain dark:hidden"
         />
         <Image
           src="/icons/oecher-meeples-header-dark.png"
           alt=""
           width={3840}
           height={1000}
-          className="hidden h-auto w-1/2 object-contain dark:block"
+          className="hidden h-auto w-full object-contain dark:block"
         />
       </div>
     );
