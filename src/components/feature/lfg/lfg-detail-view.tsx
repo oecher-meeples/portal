@@ -3,6 +3,7 @@ import type { ProfilePictureVisibility } from "@prisma/client";
 import { ActionButton } from "@/components/ui/action-button";
 import { LfgStatusPill } from "@/components/entities/lfg-status-pill";
 import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import {
   addLfgGuest,
   closeLfgPost,
@@ -119,16 +120,16 @@ export function LfgDetailView({
               key={participant.id}
               className="flex items-center gap-2.5 text-sm"
             >
+              <MeepleAvatar
+                name={participant.displayName}
+                profilePictureUrl={participant.profilePictureUrl}
+                profilePictureVisibility={participant.profilePictureVisibility}
+                viewer={{ kind: "meeple" }}
+              />
               {participant.contact ? (
                 <ContactDialog
                   name={participant.displayName}
                   contact={participant.contact}
-                  avatar={{
-                    profilePictureUrl: participant.profilePictureUrl,
-                    profilePictureVisibility:
-                      participant.profilePictureVisibility,
-                    viewer: { kind: "meeple" },
-                  }}
                 />
               ) : (
                 participant.displayName
