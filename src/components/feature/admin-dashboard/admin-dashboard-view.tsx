@@ -45,14 +45,25 @@ export type AdminDashboardStats = {
   activeEvents: number;
 };
 
+/** Offene Anträge (#440, Live-Review) — je Kategorie `null`, wenn der
+ * Betrachter die zugehörige Berechtigung nicht hat, sonst die Anzahl (auch
+ * 0, dann trotzdem angezeigt statt die Kachel wegzulassen). */
+export type OpenRequestCounts = {
+  ibanChanges: number | null;
+  stammdatenChanges: number | null;
+  unconfirmedHoldings: number | null;
+};
+
 export function AdminDashboardView({
   stats,
+  openRequestCounts,
   blobStorageUsage,
   neonStorageUsage,
   rateLimitAlerts,
   recentAdminLogins,
 }: {
   stats: AdminDashboardStats;
+  openRequestCounts: OpenRequestCounts;
   blobStorageUsage: BlobStorageUsage | null;
   neonStorageUsage: NeonStorageUsage | null;
   rateLimitAlerts: RateLimitAlert[];
@@ -119,6 +130,27 @@ export function AdminDashboardView({
           value={stats.activeEvents}
           href="/admin/events"
         />
+        {openRequestCounts.ibanChanges !== null && (
+          <StatTile
+            label="Offene IBAN-Änderungen"
+            value={openRequestCounts.ibanChanges}
+            href="/admin/bank"
+          />
+        )}
+        {openRequestCounts.stammdatenChanges !== null && (
+          <StatTile
+            label="Offene Stammdaten-Änderungen"
+            value={openRequestCounts.stammdatenChanges}
+            href="/admin/mitglieder"
+          />
+        )}
+        {openRequestCounts.unconfirmedHoldings !== null && (
+          <StatTile
+            label="Offene Spiele-Übergaben"
+            value={openRequestCounts.unconfirmedHoldings}
+            href="/admin/bestand/unbestaetigt"
+          />
+        )}
         {blobStorageUsage && <BlobStorageUsageCard usage={blobStorageUsage} />}
         {neonStorageUsage && <NeonStorageUsageCard usage={neonStorageUsage} />}
       </div>

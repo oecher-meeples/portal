@@ -10,6 +10,9 @@ import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
 import { getNeonStorageUsage } from "@/lib/admin/neon-storage";
 import { getRateLimitAlerts } from "@/lib/auth/rate-limit-alerts";
 import { getRecentAdminLogins } from "@/lib/auth/login-log";
+import { listOpenPendingChanges } from "@/lib/members/pending-changes";
+import { countUnconfirmedHoldings } from "@/lib/ludothek/unconfirmed-holdings-queue";
+import { PendingChangeKind } from "@prisma/client";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
 
 export default async function AdminDashboardPage() {
@@ -21,6 +24,13 @@ export default async function AdminDashboardPage() {
     session.user.id,
     "admin:access",
   );
+  // #440: je Kachel nur für die passende Berechtigung — je eigener Query,
+  // damit niemand ohne bank:read z. B. IBAN-Antragszahlen sieht.
+  const [canReadBank, canManageMembers, canManageGames] = await Promise.all([
+    hasPermission(session.user.id, "bank:read"),
+    hasPermission(session.user.id, "members:manage"),
+    hasPermission(session.user.id, "games:manage"),
+  ]);
 
   const [
     meeples,
@@ -33,6 +43,8 @@ export default async function AdminDashboardPage() {
     neonStorageUsage,
     rateLimitAlerts,
     recentAdminLogins,
+    openPendingChanges,
+    unconfirmedHoldings,
   ] = await Promise.all([
     prisma.meeple.findMany({
       select: {
@@ -75,6 +87,10 @@ export default async function AdminDashboardPage() {
     getNeonStorageUsage().catch(() => null),
     getRateLimitAlerts(),
     canViewLoginHistory ? getRecentAdminLogins() : Promise.resolve([]),
+    canReadBank || canManageMembers
+      ? listOpenPendingChanges()
+      : Promise.resolve([]),
+    canManageGames ? countUnconfirmedHoldings() : Promise.resolve(0),
   ]);
 
   const activeMembers = meeples.filter(
@@ -90,6 +106,14 @@ export default async function AdminDashboardPage() {
   const unregisteredGames = games.filter(
     (g) => g.holdings[0]?.unit?.code === UNSORTIERT_CODE,
   ).length;
+  const ibanChanges = openPendingChanges.filter(
+    (change) => change.kind === PendingChangeKind.IBAN,
+  ).length;
+  const stammdatenChanges = openPendingChanges.filter(
+    (change) =>
+      change.kind === PendingChangeKind.MEMBER_STAMMDATEN ||
+      change.kind === PendingChangeKind.MEMBER_EMAIL,
+  ).length;
 
   return (
     <AdminDashboardView
@@ -101,6 +125,11 @@ export default async function AdminDashboardPage() {
         unregisteredGames,
         openChecks: uncheckedGames,
         activeEvents: countActiveEvents(events),
+      }}
+      openRequestCounts={{
+        ibanChanges: canReadBank ? ibanChanges : null,
+        stammdatenChanges: canManageMembers ? stammdatenChanges : null,
+        unconfirmedHoldings: canManageGames ? unconfirmedHoldings : null,
       }}
       blobStorageUsage={blobStorageUsage}
       neonStorageUsage={neonStorageUsage}
