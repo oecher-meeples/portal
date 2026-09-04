@@ -10,7 +10,7 @@ import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { tierAtLeast } from "@/lib/utils/nav-config";
 
 export default async function NewsPage() {
-  const [allItems, user, sessionTier] = await Promise.all([
+  const [{ items: allItems }, user, sessionTier] = await Promise.all([
     getAllContentWithCalendar(),
     getCurrentUser(),
     getSessionTier(),

@@ -176,19 +176,54 @@ async function getPublicDbEvents(limit = 50): Promise<ContentItem[]> {
   }));
 }
 
+export type ContentWithCalendarPage = {
+  items: ContentItem[];
+  /** True, solange `getAllContent()` noch weitere DB-Posts hätte liefern
+   * können (#469) — die ICS-/Event-Quellen sind serverseitig bereits auf
+   * ≤50 Einträge gedeckelt und 15 Minuten gecacht, also nie die
+   * Performance-Bremse; sie werden weiterhin immer vollständig geladen und
+   * fließen unverändert (nicht paginiert) in jede Seite mit ein. */
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
 /** Internal ICS-Termine fließen immer mit ein — die Sichtbarkeit für
  * unberechtigte Nutzer wird downstream in `/news` (`canSeeInternal`) anhand
- * von `item.internal` gefiltert, nicht hier (analog zu den DB-Beiträgen). */
-export async function getAllContentWithCalendar(): Promise<ContentItem[]> {
-  const [dbItems, calendarEvents, publicEvents, internalEvents] =
+ * von `item.internal` gefiltert, nicht hier (analog zu den DB-Beiträgen).
+ * `take`/`cursor` (#469, Hybrid-Pagination aus #462): betrifft ausschließlich
+ * die DB-Posts. Die ICS-/Event-Quellen werden bewusst nur auf der ersten
+ * Seite (kein `cursor`) geladen und eingemischt — "einmalig vollständig
+ * geladen" laut Entscheidung, nicht bei jedem Nachladen erneut, sonst
+ * erschienen sie auf jeder Folgeseite doppelt. Eine Folgeseite enthält daher
+ * ausschließlich die nächste DB-Post-Seite; der Aufrufer hängt sie an die
+ * bereits gerenderte, gemischte erste Seite an. */
+export async function getAllContentWithCalendar(options?: {
+  take?: number;
+  cursor?: string;
+}): Promise<ContentWithCalendarPage> {
+  const { take, cursor } = options ?? {};
+  const isFirstPage = cursor === undefined;
+
+  const [dbPage, calendarEvents, publicEvents, internalEvents] =
     await Promise.all([
-      getAllContent(),
-      getUpcomingCalendarEvents(50),
-      getPublicDbEvents(50),
-      fetchInternalEvents({ limit: 50 }),
+      getAllContent({ take, cursor }),
+      isFirstPage ? getUpcomingCalendarEvents(50) : Promise.resolve([]),
+      isFirstPage ? getPublicDbEvents(50) : Promise.resolve([]),
+      isFirstPage
+        ? fetchInternalEvents({ limit: 50 })
+        : Promise.resolve([]),
     ]);
 
-  return [...dbItems, ...calendarEvents, ...publicEvents, ...internalEvents].sort(
-    (a, b) => b.date.localeCompare(a.date),
-  );
+  const items = [
+    ...dbPage.items,
+    ...calendarEvents,
+    ...publicEvents,
+    ...internalEvents,
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  return {
+    items,
+    hasMore: dbPage.nextCursor !== null,
+    nextCursor: dbPage.nextCursor,
+  };
 }

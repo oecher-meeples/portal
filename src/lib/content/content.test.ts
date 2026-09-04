@@ -63,14 +63,15 @@ describe("getAllContent", () => {
   it("loads all posts from the database, including the body (#135)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
-    const items = await getAllContent();
+    const { items, nextCursor } = await getAllContent();
 
     expect(items).toHaveLength(3);
     expect(items[0].date).toBe("2026-06-15");
     expect(items[0].body).toBe("Unser Sommerfest war ein voller Erfolg.");
+    expect(nextCursor).toBeNull();
   });
 
-  it("queries posts descending by date, newest first (#252)", async () => {
+  it("queries posts descending by date, newest first, with id as tiebreaker for deterministic cursor pagination (#252, #469)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
     await getAllContent();
@@ -78,9 +79,56 @@ describe("getAllContent", () => {
     expect(prismaMock.post.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: "PUBLISHED" },
-        orderBy: { date: "desc" },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
       }),
     );
+  });
+
+  it("without take/cursor loads everything in one page, unchanged behaviour (#469)", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    await getAllContent();
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.not.objectContaining({ take: expect.anything() }),
+    );
+  });
+
+  it("returns a nextCursor and trims the lookahead row when more posts remain (#469)", async () => {
+    // take: 2 → Prisma wird mit take: 3 aufgerufen, die dritte (Lookahead-)
+    // Zeile signalisiert "es gibt noch mehr" und wird selbst nicht ausgeliefert.
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    const { items, nextCursor } = await getAllContent({ take: 2 });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 3 }),
+    );
+    expect(items).toHaveLength(2);
+    expect(items.map((item) => item.slug)).toEqual([
+      ALL_POSTS[0].slug,
+      ALL_POSTS[1].slug,
+    ]);
+    expect(nextCursor).toBe(ALL_POSTS[1].id);
+  });
+
+  it("forwards cursor as a Prisma cursor/skip pair (#469)", async () => {
+    prismaMock.post.findMany.mockResolvedValue([ALL_POSTS[2]]);
+
+    const { items, nextCursor } = await getAllContent({
+      take: 2,
+      cursor: ALL_POSTS[1].id,
+    });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cursor: { id: ALL_POSTS[1].id },
+        skip: 1,
+        take: 3,
+      }),
+    );
+    expect(items).toHaveLength(1);
+    expect(nextCursor).toBeNull();
   });
 });
 

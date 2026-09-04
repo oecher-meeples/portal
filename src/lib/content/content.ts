@@ -109,14 +109,40 @@ const POST_WITHOUT_BODY_SELECT = {
   coverImageUrl: true,
 } as const;
 
-/** Includes `body` — `/news` renders it eagerly for the preview/full-view toggle (#135), no lazy per-post fetch. */
-export async function getAllContent(): Promise<ContentItem[]> {
+export type PaginatedContent = {
+  items: ContentItem[];
+  /** Post-Id der letzten Zeile dieser Seite — als `cursor` an den nächsten
+   * Aufruf übergeben. `null`, wenn es keine weiteren DB-Posts gibt (#469). */
+  nextCursor: string | null;
+};
+
+/** Includes `body` — `/news` renders it eagerly for the preview/full-view
+ * toggle (#135), no lazy per-post fetch. `take`/`cursor` (#469, Hybrid-
+ * Pagination aus #462): ohne Angabe unverändert alle Posts auf einmal, wie
+ * bisher. `orderBy` bekommt `id` als zweites Sortierkriterium — ohne das
+ * wäre die Reihenfolge bei gleichem `date` nicht deterministisch, Cursor-
+ * Pagination könnte Zeilen doppelt liefern oder überspringen. */
+export async function getAllContent(options?: {
+  take?: number;
+  cursor?: string;
+}): Promise<PaginatedContent> {
+  const { take, cursor } = options ?? {};
   const posts = await prisma.post.findMany({
     where: { status: "PUBLISHED" },
-    orderBy: { date: "desc" },
+    orderBy: [{ date: "desc" }, { id: "desc" }],
     include: POST_RELATIONS_INCLUDE,
+    ...(take !== undefined ? { take: take + 1 } : {}),
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
   });
-  return posts.map(toContentItem);
+
+  if (take !== undefined && posts.length > take) {
+    const page = posts.slice(0, take);
+    return {
+      items: page.map(toContentItem),
+      nextCursor: page[page.length - 1].id,
+    };
+  }
+  return { items: posts.map(toContentItem), nextCursor: null };
 }
 
 /** Interne Beiträge, neueste zuerst — für den internen Newsroom und das Dashboard. */

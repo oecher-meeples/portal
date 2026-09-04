@@ -78,12 +78,15 @@ describe("getAllContentWithCalendar", () => {
   });
 
   it("sorts entries descending by date, newest first (#252)", async () => {
-    vi.mocked(getAllContent).mockResolvedValue([
-      { slug: "alt", type: "blog", title: "Alt", date: "2026-06-01" },
-      { slug: "neu", type: "blog", title: "Neu", date: "2026-08-01" },
-    ] as Awaited<ReturnType<typeof getAllContent>>);
+    vi.mocked(getAllContent).mockResolvedValue({
+      items: [
+        { slug: "alt", type: "blog", title: "Alt", date: "2026-06-01" },
+        { slug: "neu", type: "blog", title: "Neu", date: "2026-08-01" },
+      ],
+      nextCursor: null,
+    } as Awaited<ReturnType<typeof getAllContent>>);
 
-    const items = await getAllContentWithCalendar();
+    const { items } = await getAllContentWithCalendar();
 
     expect(items.map((item) => item.date)).toEqual([
       "2026-08-01",
@@ -95,11 +98,14 @@ describe("getAllContentWithCalendar", () => {
     vi.useFakeTimers();
     vi.setSystemTime(REFERENCE_NOW);
     try {
-      vi.mocked(getAllContent).mockResolvedValue([]);
+      vi.mocked(getAllContent).mockResolvedValue({
+        items: [],
+        nextCursor: null,
+      });
       process.env.ICS_FEED_URL_INTERNAL = "https://example.org/internal.ics";
       mockFetchOnce(true, FIXTURE);
 
-      const items = await getAllContentWithCalendar();
+      const { items } = await getAllContentWithCalendar();
 
       const internalItem = items.find((item) =>
         item.slug.startsWith("kalender-"),
@@ -108,6 +114,74 @@ describe("getAllContentWithCalendar", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // #469, AC 1: eine DB-Post-Seite muss mit den vollständig geladenen
+  // ICS-/Event-Daten nach Datum korrekt gemischt bleiben, nicht nur
+  // hintereinandergehängt.
+  it("merges a paginated DB-post page with the fully-loaded ICS calendar, staying sorted by date (#469)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(REFERENCE_NOW);
+    try {
+      vi.mocked(getAllContent).mockResolvedValue({
+        items: [
+          { slug: "db-neu", type: "blog", title: "DB Neu", date: "2026-09-01" },
+          { slug: "db-alt", type: "blog", title: "DB Alt", date: "2026-07-01" },
+        ] as Awaited<ReturnType<typeof getAllContent>>["items"],
+        nextCursor: "db-alt",
+      });
+      process.env.PUBLIC_CALENDAR_ICS_URL = "https://example.org/public.ics";
+      mockFetchOnce(true, FIXTURE);
+
+      const { items, hasMore, nextCursor } = await getAllContentWithCalendar();
+
+      expect(items.map((item) => item.slug)).toEqual([
+        "kalender-event-3@google.com",
+        "db-neu",
+        "kalender-event-1@google.com",
+        "db-alt",
+      ]);
+      expect(hasMore).toBe(true);
+      expect(nextCursor).toBe("db-alt");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // #469, AC 2: über mehrere Seiten hinweg dürfen die DB-Posts weder
+  // doppelt noch mit Lücke erscheinen — die ICS-/Event-Quellen (nur auf
+  // Seite 1 geladen) dürfen dabei nicht erneut auftauchen.
+  it("carries no duplicates and no gaps across consecutive DB-post pages (#469)", async () => {
+    vi.mocked(getAllContent).mockImplementation(async (options) => {
+      if (options?.cursor === undefined) {
+        return {
+          items: [
+            { slug: "post-3", type: "blog", title: "3", date: "2026-08-03" },
+          ] as Awaited<ReturnType<typeof getAllContent>>["items"],
+          nextCursor: "post-3",
+        };
+      }
+      return {
+        items: [
+          { slug: "post-2", type: "blog", title: "2", date: "2026-08-02" },
+        ] as Awaited<ReturnType<typeof getAllContent>>["items"],
+        nextCursor: null,
+      };
+    });
+
+    const firstPage = await getAllContentWithCalendar({ take: 1 });
+    expect(firstPage.hasMore).toBe(true);
+    const secondPage = await getAllContentWithCalendar({
+      take: 1,
+      cursor: firstPage.nextCursor ?? undefined,
+    });
+    expect(secondPage.hasMore).toBe(false);
+
+    const allSlugs = [...firstPage.items, ...secondPage.items].map(
+      (item) => item.slug,
+    );
+    expect(allSlugs).toEqual(["post-3", "post-2"]);
+    expect(new Set(allSlugs).size).toBe(allSlugs.length);
   });
 });
 
