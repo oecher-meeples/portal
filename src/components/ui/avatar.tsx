@@ -6,21 +6,19 @@ import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Vier Stufen zur freien Wahl (Audit ergab nur zwei tatsächlich genutzte
+ * Sechs Stufen zur freien Wahl (Audit ergab nur zwei tatsächlich genutzte
  * Kontexte, aber bewusst nicht darauf eingeschränkt — künftige
- * Aufrufstellen sollen frei entscheiden können, nicht zwischen zwei
- * Notlösungen wählen müssen). `size` bleibt Pflicht-Prop — kein stiller
- * Default, der unbemerkt eine falsche Stufe einführt (siehe die LFG-
- * Inkonsistenz, die das ausgelöst hat).
+ * Aufrufstellen sollen frei entscheiden können). `size` bleibt Pflicht-Prop
+ * — kein stiller Default, der unbemerkt eine falsche Stufe einführt (siehe
+ * die LFG-Inkonsistenz, die das ausgelöst hat).
  *
- * `sm` = 40px: die Untergrenze, ab der ein Foto überhaupt noch als Foto
- * erkennbar ist, nicht nur als Farbfläche. Jede weitere Stufe wäre
- * rechnerisch ×1.2 (48/57.6/69.12px) — gerundet auf die nächstliegenden
- * Tailwind-Bordwerte (Vielfache von 4px), damit jede Stufe eine normale
- * `size-*`-Utility bleibt statt eines krummen Arbitrary-Value:
- * sm 40 → md 48 → lg 56 → xl 64px.
+ * `sm` = 40px (Untergrenze, ab der ein Foto überhaupt noch als Foto
+ * erkennbar ist): sm 40 → md 56 → lg 72 → xl 96 → xxl 128 → xxxl 170px.
+ * Kein fester Schritt, sondern experimentell gewählte Werte. Nicht alle
+ * treffen ein Tailwind-Standard-`size-*`-Token — daher per Arbitrary-Value
+ * (`size-[…px]`).
  */
-export type AvatarSize = "sm" | "md" | "lg" | "xl";
+export type AvatarSize = "sm" | "md" | "lg" | "xl" | "xxl" | "xxxl";
 
 function Avatar({
   className,
@@ -34,7 +32,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar after:border-border relative flex shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-14 data-[size=md]:size-12 data-[size=sm]:size-10 data-[size=xl]:size-16 dark:after:mix-blend-lighten",
+        "group/avatar after:border-border relative flex shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-[72px] data-[size=md]:size-[56px] data-[size=sm]:size-[40px] data-[size=xl]:size-[96px] data-[size=xxl]:size-[128px] data-[size=xxxl]:size-[170px] dark:after:mix-blend-lighten",
         className,
       )}
       {...props}

@@ -8,16 +8,19 @@ function Tooltip({
   content,
   children,
   delay = 200,
+  side = "top",
 }: {
   content: ReactNode;
   children: ReactElement;
   delay?: number;
+  side?: "top" | "right" | "bottom" | "left";
 }) {
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger delay={delay} render={children} />
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Positioner
+          side={side}
           sideOffset={6}
           collisionPadding={{ top: 72 }}
           // `z-50` on `Popup` alone has no effect — it isn't positioned
