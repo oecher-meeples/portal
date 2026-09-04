@@ -20,6 +20,12 @@ const TABS = [
   { label: "Ersatzteillager", value: "ersatzteile" },
 ] as const;
 
+// `auto-fit`/`minmax` statt fester `sm:`/`lg:`-Spaltenzahl: die Karten
+// bleiben lesbar breit und die Spaltenzahl wächst von selbst mit, statt auf
+// sehr großen Displays bei 3 Spalten zu verharren (Feedback aus der Praxis).
+const LISTING_GRID_CLASS =
+  "grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4";
+
 export function MarktBrowser({
   listings,
   spareParts,
@@ -97,7 +103,7 @@ export function MarktBrowser({
       </div>
 
       {tab === "kleinanzeigen" ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={LISTING_GRID_CLASS}>
           {listings.map((listing) => (
             <MarketListingCard
               key={listing.id}
@@ -112,7 +118,7 @@ export function MarktBrowser({
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={LISTING_GRID_CLASS}>
           {spareParts.map((part) => (
             <SparePartListingCard
               key={part.id}
