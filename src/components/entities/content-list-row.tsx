@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import { Pencil } from "lucide-react";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { ContentTypeBadge } from "@/components/entities/content-type-badge";
 import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";

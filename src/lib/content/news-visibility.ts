@@ -1,6 +1,6 @@
 import { hasPermission } from "@/lib/auth/permissions";
 import { tierAtLeast, type Tier } from "@/lib/utils/nav-config";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 
 export type NewsVisibility = { canSeeInternal: boolean; isMember: boolean };
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {

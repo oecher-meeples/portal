@@ -6,7 +6,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { ContentType } from "@/lib/content/content";
+import type { ContentType } from "@/lib/content/content-types";
 
 const CONTENT_TYPE_ICONS: Record<ContentType, LucideIcon> = {
   termin: CalendarDays,

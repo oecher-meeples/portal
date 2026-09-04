@@ -1,6 +1,7 @@
 "use server";
 
 import { getAllContentWithCalendar } from "@/lib/content/calendar";
+import { NEWS_PAGE_SIZE } from "@/lib/content/content-types";
 import {
   filterVisibleNews,
   resolveNewsVisibility,
@@ -8,8 +9,6 @@ import {
 import { verifyLinkedEventOrUnpublish as verifyLinkedEventOrUnpublishImpl } from "@/lib/content/termin-posts";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getSessionTier } from "@/lib/auth/session";
-
-export const NEWS_PAGE_SIZE = 10;
 
 /**
  * Lädt die nächste Seite DB-Posts nach (#470) — Sichtbarkeit wird hier

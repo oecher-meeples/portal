@@ -6,7 +6,7 @@ import {
   CONTENT_TYPE_FILTERS,
   type ContentItem,
   type ContentType,
-} from "@/lib/content/content";
+} from "@/lib/content/content-types";
 import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
 import { Button } from "@/components/ui/button";
 import {

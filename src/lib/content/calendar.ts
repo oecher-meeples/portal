@@ -1,9 +1,6 @@
 import ical, { type VEvent } from "node-ical";
-import {
-  getAllContent,
-  getUpcomingEvents,
-  type ContentItem,
-} from "@/lib/content/content";
+import { getAllContent, getUpcomingEvents } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 import { findPublicUpcomingEvents } from "@/lib/events/upcoming";
 
 const REVALIDATE_SECONDS = 15 * 60;

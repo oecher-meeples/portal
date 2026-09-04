@@ -9,13 +9,13 @@ vi.mock("@/lib/content/termin-posts", () => ({
 }));
 
 const {
-  canViewContentItem,
   getAllContent,
   getContentBySlug,
   getInternalContent,
   getLatestPosts,
   getUpcomingEvents,
 } = await import("@/lib/content/content");
+const { canViewContentItem } = await import("@/lib/content/content-types");
 
 function makePost(overrides: Partial<Record<string, unknown>> = {}) {
   return {

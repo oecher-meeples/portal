@@ -9,7 +9,7 @@ import {
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
-import { TYPE_TO_DB, type ContentType } from "@/lib/content/content";
+import { TYPE_TO_DB, type ContentType } from "@/lib/content/content-types";
 import {
   canManagePostType,
   getPostPermissions,

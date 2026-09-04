@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { NewsResultsList } from "./news-results-list";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 
 vi.stubGlobal(
   "IntersectionObserver",

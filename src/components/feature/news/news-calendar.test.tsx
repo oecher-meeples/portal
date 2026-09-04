@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 
 afterEach(cleanup);
 

@@ -16,8 +16,9 @@ const { getCurrentUser } = await import("@/lib/auth/server");
 const { getSessionTier } = await import("@/lib/auth/session");
 const { hasPermission } = await import("@/lib/auth/permissions");
 const { getAllContentWithCalendar } = await import("@/lib/content/calendar");
-const { loadMoreNews, verifyLinkedEventOrUnpublish, NEWS_PAGE_SIZE } =
+const { loadMoreNews, verifyLinkedEventOrUnpublish } =
   await import("@/components/feature/news/actions");
+const { NEWS_PAGE_SIZE } = await import("@/lib/content/content-types");
 
 const PUBLIC_ITEM = {
   slug: "public",

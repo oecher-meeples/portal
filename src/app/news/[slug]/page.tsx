@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
-import { canViewContentItem, getContentBySlug } from "@/lib/content/content";
+import { getContentBySlug } from "@/lib/content/content";
+import { canViewContentItem } from "@/lib/content/content-types";
 import { canManagePostType } from "@/lib/content/post-access";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";

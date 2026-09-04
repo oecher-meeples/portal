@@ -1,6 +1,6 @@
 "use client";
 
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 import { canManagePostType } from "@/lib/content/post-access";
 import { ContentListRow } from "@/components/entities/content-list-row";
 import { ContentTimelineEntry } from "@/components/entities/content-timeline-entry";

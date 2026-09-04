@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 
 // news-browser.tsx importiert die Server Action loadMoreNews (#470), deren
 // Modulkette über @/lib/auth/server bis zu @neondatabase/auth/next/server
