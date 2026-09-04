@@ -28,15 +28,19 @@ export function PlaceholderMedia({
           className,
         )}
       >
+        {/* Eigene Datei statt der Header-Logo-Assets (#320-Folgefeedback):
+         * so lässt sich das Placeholder-Bild später austauschen, ohne den
+         * Seiten-Header mitzutreffen (und umgekehrt) — aktuell noch eine
+         * 1:1-Kopie derselben Bilddaten. */}
         <Image
-          src="/icons/Logo-Oecher-Meeples.png"
+          src="/icons/placeholder-logo-light.png"
           alt=""
           width={3840}
           height={1000}
           className="h-auto w-full object-contain dark:hidden"
         />
         <Image
-          src="/icons/oecher-meeples-header-dark.png"
+          src="/icons/placeholder-logo-dark.png"
           alt=""
           width={3840}
           height={1000}
