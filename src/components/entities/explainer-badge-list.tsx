@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/utils/format";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 
@@ -29,7 +30,10 @@ export function ExplainerBadgeList({
             viewer={{ kind: "meeple" }}
             size="sm"
           />
-          {explainer.displayName}
+          <ContactDialog
+            name={explainer.displayName}
+            meepleId={explainer.meepleId}
+          />
           <Badge variant="secondary">
             {EXPLAINER_EXPERIENCE_LEVEL_LABELS[explainer.level]}
           </Badge>
