@@ -17,7 +17,7 @@ import type { ContactDialogMeeple } from "@/lib/members/contact";
 
 /**
  * Eigenständiger, wiederverwendbarer Kontakt-Dialog — gehört zu keinem
- * Feature, wird von überall importiert, wo eine Person nur namentlich
+ * Feature, wird von überall importiert, wo eine Person
  * dargestellt wird (LFG-Teilnehmerliste, Ludothek-Standortkette,
  * Markt-Karten, Ersatzteile, …). Zeigt beim Öffnen groß und zentriert das
  * Profilbild (Fallback: Initiale) und darunter jede hinterlegte
@@ -118,7 +118,7 @@ export function ContactDialog({
           <MeepleAvatar
             name={name}
             profilePictureUrl={loaded?.profilePictureUrl ?? null}
-            size="xl"
+            size="lg"
             className="mx-auto"
           />
           <DialogTitle className="text-center">{name} kontaktieren</DialogTitle>

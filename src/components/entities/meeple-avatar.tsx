@@ -1,5 +1,10 @@
 import { ProfilePictureVisibility } from "@prisma/client";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  type AvatarSize,
+} from "@/components/ui/avatar";
 import {
   resolveVisibleProfilePictureUrl,
   type ProfilePictureViewer,
@@ -27,7 +32,7 @@ export function MeepleAvatar({
    * dann als bereits geprüft und wird unverändert übernommen. */
   profilePictureVisibility?: ProfilePictureVisibility;
   viewer?: ProfilePictureViewer;
-  size?: "default" | "sm" | "lg" | "xl";
+  size: AvatarSize;
   className?: string;
 }) {
   const visibleUrl =

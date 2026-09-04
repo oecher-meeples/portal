@@ -21,6 +21,7 @@ describe("MeepleAvatar (#412)", () => {
         profilePictureUrl="https://blob.example/pic.jpg"
         profilePictureVisibility={ProfilePictureVisibility.INTERN}
         viewer={{ kind: "meeple" }}
+        size="sm"
       />,
     );
 
@@ -34,6 +35,7 @@ describe("MeepleAvatar (#412)", () => {
         profilePictureUrl="https://blob.example/pic.jpg"
         profilePictureVisibility={ProfilePictureVisibility.INTERN}
         viewer={{ kind: "guest", isAttendingExplainerNow: true }}
+        size="sm"
       />,
     );
 
@@ -44,7 +46,13 @@ describe("MeepleAvatar (#412)", () => {
   });
 
   it("uses profilePictureUrl as-is when viewer/profilePictureVisibility are omitted (already resolved server-side, #412)", () => {
-    render(<MeepleAvatar name="Erika Musterfrau" profilePictureUrl={null} />);
+    render(
+      <MeepleAvatar
+        name="Erika Musterfrau"
+        profilePictureUrl={null}
+        size="sm"
+      />,
+    );
 
     expect(screen.getByText("E")).toBeInTheDocument();
   });
@@ -56,6 +64,7 @@ describe("MeepleAvatar (#412)", () => {
         profilePictureUrl={null}
         profilePictureVisibility={ProfilePictureVisibility.IMMER}
         viewer={{ kind: "meeple" }}
+        size="sm"
       />,
     );
 
