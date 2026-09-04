@@ -111,14 +111,15 @@ export function InviteForm({
               setMemberId(selected?.id ?? "");
             }}
           >
+            {/* #451: nicht anhand von membersWithoutLogin.length deaktivieren
+             * — die Liste kann leer sein, weil aktuell einfach alle
+             * verbleibenden Mitglieder bereits eine offene Einladung haben
+             * (temporärer, gewöhnlicher Zustand), nicht weil es grundsätzlich
+             * niemanden zu suchen gäbe. Das Feld bleibt editierbar,
+             * ComboboxEmpty zeigt bei keinem Treffer "Keine Treffer." */}
             <ComboboxInput
               id="invite-member"
-              disabled={membersWithoutLogin.length === 0}
-              placeholder={
-                membersWithoutLogin.length === 0
-                  ? "Keine Mitglieder ohne Login vorhanden"
-                  : "Mitglied ohne Login suchen …"
-              }
+              placeholder="Mitglied ohne Login suchen …"
             />
             <ComboboxPopup>
               <ComboboxEmpty>Keine Treffer.</ComboboxEmpty>

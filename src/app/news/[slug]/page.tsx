@@ -1,9 +1,11 @@
-import { notFound } from "next/navigation";
-import { canViewContentItem, getContentBySlug } from "@/lib/content/content";
+import { notFound, redirect } from "next/navigation";
+import { getContentBySlug } from "@/lib/content/content";
+import { canViewContentItem } from "@/lib/content/content-types";
 import { canManagePostType } from "@/lib/content/post-access";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
-import { hasPermissionInCurrentView } from "@/lib/auth/session";
+import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
+import { tierAtLeast } from "@/lib/utils/nav-config";
 import { PostDetailView } from "@/components/feature/news/post-detail-view";
 
 export default async function PostDetailPage({
@@ -15,7 +17,20 @@ export default async function PostDetailPage({
   const item = await getContentBySlug(slug);
   if (!item) notFound();
 
-  const user = await getCurrentUser();
+  const [user, sessionTier] = await Promise.all([
+    getCurrentUser(),
+    getSessionTier(),
+  ]);
+
+  // #424: keine öffentlichen Umfragen — nur Meeple sind abstimmungsberechtigt.
+  // Gilt unabhängig vom internal-Flag, deshalb vor dem canViewContentItem-Check.
+  // sessionTier statt bloßer Login-Prüfung, damit ein Admin in der
+  // Gäste-Vorschau ebenfalls umgeleitet wird (echter Admin bleibt sonst
+  // eingeloggt, auch wenn er "als Gast" vorschaut).
+  if (item.type === "umfrage" && !tierAtLeast(sessionTier, "mitglied")) {
+    redirect("/news");
+  }
+
   const canViewInternal = user
     ? await hasPermission(user.id, "news:internal:view")
     : false;

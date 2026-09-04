@@ -29,6 +29,8 @@ const DIRECTORY = [
         meepleId: "meeple-1",
         displayName: "Anna",
         level: "WITH_MANUAL" as const,
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN" as const,
       },
     ],
   },

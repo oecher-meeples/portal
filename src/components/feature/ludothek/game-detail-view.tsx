@@ -153,8 +153,16 @@ export function GameDetailView({
         </p>
       </div>
 
-      <div className="relative overflow-hidden rounded-md lg:col-start-1 lg:row-span-2 lg:row-start-1">
-        <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
+      {/* #467: max-lg:w-fit + mx-auto lassen den Container unterhalb `lg`
+          auf die tatsächliche Bildgröße schrumpfen, statt die volle
+          Grid-Spaltenbreite als leere Aspect-Ratio-Box vorzuhalten. Ab `lg`
+          (Grid-Layout) unverändert volle Spaltenbreite. */}
+      <div className="relative overflow-hidden rounded-md max-lg:mx-auto max-lg:w-fit lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <GameCoverMedia
+          imageUrl={game.imageUrl}
+          title={game.title}
+          heroResponsive
+        />
         {game.kind === "BOARDGAME_EXPANSION" && (
           <RibbonCorner>Erweiterung</RibbonCorner>
         )}

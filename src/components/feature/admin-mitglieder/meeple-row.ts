@@ -1,3 +1,4 @@
+import type { ProfilePictureVisibility } from "@prisma/client";
 import type { MembershipState } from "@/lib/members/meeples";
 import type { MeepleRoleAssignment } from "@/lib/auth/user-roles";
 
@@ -35,4 +36,8 @@ export type MeepleRow = {
   hasIban: boolean;
   /** "System-Konto" (#297) — aus Mitgliederzählungen ausgenommen. */
   isSystemAccount: boolean;
+  /** (#412) Profilbild — Admin ist selbst Meeple und sieht mindestens
+   * "Intern"-Freigaben immer, kein Sonderfall nötig (siehe Issue-Klärung). */
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
 };

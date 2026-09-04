@@ -20,6 +20,12 @@ const TABS = [
   { label: "Ersatzteillager", value: "ersatzteile" },
 ] as const;
 
+// `auto-fit`/`minmax` statt fester `sm:`/`lg:`-Spaltenzahl: die Karten
+// bleiben lesbar breit und die Spaltenzahl wächst von selbst mit, statt auf
+// sehr großen Displays bei 3 Spalten zu verharren (Feedback aus der Praxis).
+const LISTING_GRID_CLASS =
+  "grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4";
+
 export function MarktBrowser({
   listings,
   spareParts,
@@ -59,10 +65,10 @@ export function MarktBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <PillToggle options={[...TABS]} value={tab} onChange={setTab} />
         {tab === "kleinanzeigen" && (
-          <div className="relative w-64 max-w-full">
+          <div className="relative w-96 max-w-full">
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -82,7 +88,7 @@ export function MarktBrowser({
           </div>
         )}
         {tab === "kleinanzeigen" && (
-          <div className="flex gap-2">
+          <div className="ml-auto flex gap-2">
             {bggUsername && (
               <ImportBggListingDialog
                 ownListingTitles={listings
@@ -93,11 +99,15 @@ export function MarktBrowser({
             <CreateMarketListingDialog />
           </div>
         )}
-        {tab === "ersatzteile" && <CreateSparePartListingDialog />}
+        {tab === "ersatzteile" && (
+          <div className="ml-auto">
+            <CreateSparePartListingDialog />
+          </div>
+        )}
       </div>
 
       {tab === "kleinanzeigen" ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={LISTING_GRID_CLASS}>
           {listings.map((listing) => (
             <MarketListingCard
               key={listing.id}
@@ -112,7 +122,7 @@ export function MarktBrowser({
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={LISTING_GRID_CLASS}>
           {spareParts.map((part) => (
             <SparePartListingCard
               key={part.id}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
@@ -31,6 +32,8 @@ export type PendingChangeRow = {
   id: string;
   memberDisplayName: string;
   memberNumber: number;
+  /** Routing-Basis für `/profil/[slug]` — Name verlinkt aufs volle Profil. */
+  memberSlug: string;
   /** IBAN: maskiert (`**** 1234`) — die Klartext-IBAN geht nie an den Client,
    * bevor sie freigegeben ist. MEMBER_EMAIL: die neu beantragte Adresse. */
   displayValue: string;
@@ -76,12 +79,17 @@ function RejectDialog({ id }: { id: string }) {
  * beantragte IBAN vor der Freigabe sehen können, statt nur die maskierte
  * `displayValue` — Klartext-IBAN geht nie ungefragt an den Client. */
 export function PendingChangesPanel({
-  title,
+  titleSingular,
+  titlePlural,
   changes,
   isEmailChangePanel = false,
   revealIban,
 }: {
-  title: string;
+  /** #416: Singular-/Plural-Form statt eines fertigen Titel-Strings — die
+   * Wahl trifft das Panel selbst anhand von `changes.length`, zentral statt
+   * an jeder Aufrufstelle einzeln. */
+  titleSingular: string;
+  titlePlural: string;
   changes: PendingChangeRow[];
   isEmailChangePanel?: boolean;
   revealIban?: (changeId: string) => Promise<RevealResult>;
@@ -115,7 +123,9 @@ export function PendingChangesPanel({
 
   return (
     <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">{title}</h2>
+      <h2 className="font-serif text-lg font-bold">
+        {changes.length === 1 ? titleSingular : titlePlural}
+      </h2>
       {error && <p className="text-destructive text-sm">{error}</p>}
       {revealError && <p className="text-destructive text-sm">{revealError}</p>}
       <ul className="flex flex-col divide-y text-sm">
@@ -131,7 +141,13 @@ export function PendingChangesPanel({
                 beantragt {formatDatePlain(change.requestedAt)}
               </p>
               <p className="font-medium">
-                #{change.memberNumber} {change.memberDisplayName}
+                #{change.memberNumber}{" "}
+                <Link
+                  href={`/profil/${change.memberSlug}`}
+                  className="hover:text-primary underline underline-offset-2"
+                >
+                  {change.memberDisplayName}
+                </Link>
               </p>
               <p className="text-muted-foreground flex flex-wrap items-center gap-2">
                 <span>

@@ -22,6 +22,7 @@ export const MEEPLE_RELATED_MODELS = [
   "LfgPost",
   "MarketListing",
   "NewsletterSubscriber",
+  "PrivateEventLoan",
   "PrivateGameCollectionEntry",
   "ShiftBooking",
   "SparePartListing",
@@ -119,6 +120,7 @@ export async function collectMeeplePersonalData(
     lfgPosts,
     marketListings,
     newsletterSubscription,
+    privateEventLoans,
     privateGameCollection,
     shiftBookings,
     sparePartListings,
@@ -183,6 +185,17 @@ export async function collectMeeplePersonalData(
     prisma.lfgPost.findMany({ where: { createdByMeepleId: meepleId } }),
     prisma.marketListing.findMany({ where: { sellerMeepleId: meepleId } }),
     prisma.newsletterSubscriber.findUnique({ where: { meepleId } }),
+    // #122: eigene Freigaben als Eigentümer:in — bewusst nicht die Fälle, in
+    // denen dieses Meeple als Ausleihe-Meeple ausgegeben hat (das ist eine
+    // Vereinstätigkeit, kein personenbezogenes Datum über den Eigentümer).
+    prisma.privateEventLoan.findMany({
+      where: { ownerMeepleId: meepleId },
+      orderBy: { offeredAt: "desc" },
+      include: {
+        event: { select: { title: true, startsAt: true } },
+        boardGame: { select: { title: true } },
+      },
+    }),
     prisma.privateGameCollectionEntry.findMany({
       where: { meepleId },
       include: { boardGame: { select: { title: true } } },
@@ -236,6 +249,7 @@ export async function collectMeeplePersonalData(
       LfgPost: lfgPosts,
       MarketListing: marketListings,
       NewsletterSubscriber: newsletterSubscription,
+      PrivateEventLoan: privateEventLoans,
       PrivateGameCollectionEntry: privateGameCollection,
       ShiftBooking: shiftBookings,
       SparePartListing: sparePartListings,

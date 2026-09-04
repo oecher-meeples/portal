@@ -11,6 +11,7 @@ export type OwnPrivateCollectionEntry = {
   forTrade: boolean;
   wantToPlay: boolean;
   boardGame: {
+    id: string;
     slug: string;
     title: string;
     imageUrl: string | null;
@@ -34,7 +35,9 @@ export async function getOwnPrivateCollection(
       rating: true,
       forTrade: true,
       wantToPlay: true,
-      boardGame: { select: { slug: true, title: true, imageUrl: true } },
+      boardGame: {
+        select: { id: true, slug: true, title: true, imageUrl: true },
+      },
     },
   });
 }
@@ -110,7 +113,14 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       },
     },
     include: {
-      meeple: { select: { id: true, displayName: true } },
+      meeple: {
+        select: {
+          id: true,
+          displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+        },
+      },
       boardGame: { include: { alternateNames: { select: { name: true } } } },
     },
   });
@@ -151,6 +161,11 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       isLoanedOut: false,
       responsibleMeepleId: entry.meeple.id,
       responsibleName: entry.meeple.displayName,
+      responsibleProfilePictureUrl: entry.meeple.profilePictureUrl,
+      responsibleProfilePictureVisibility:
+        entry.meeple.profilePictureVisibility,
+      // Privatbesitz hat keine Vereins-Weitergabe/-Bestätigung (#456).
+      isUnconfirmed: false,
       unitChain: "",
       locationChain: `bei ${entry.meeple.displayName} (privat)`,
       explainerCount: 0,

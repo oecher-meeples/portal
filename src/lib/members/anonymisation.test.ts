@@ -107,6 +107,70 @@ describe("anonymiseMeepleStufe1", () => {
 
     expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/a.jpg"]);
   });
+
+  // #394: je Feld wird nur über die Autor-/Erfasser-Relation der zu
+  // anonymisierenden meepleId gefiltert — ein Datensatz mit fremder
+  // *MeepleId (Erwähnung, Halter, o. ä.) matcht diesen `where`-Filter nicht
+  // und bleibt dadurch unangetastet. Das *ist* der Mechanismus, der
+  // "fremder Text bleibt unangetastet" garantiert, nicht ein zusätzlicher
+  // Check — die Tests unten prüfen daher, dass jedes Update exakt auf die
+  // eigene Relation der Person scoped, nicht auf einen anderen Datensatz.
+  it("clears LfgPost title/description only for the meeple's own posts", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.lfgPost.updateMany).toHaveBeenCalledWith({
+      where: { createdByMeepleId: "meeple-1" },
+      data: { title: "", description: "" },
+    });
+  });
+
+  it("clears MarketListing title/description together with the existing image cleanup", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.marketListing.updateMany).toHaveBeenCalledWith({
+      where: { sellerMeepleId: "meeple-1" },
+      data: { imageUrls: [], title: "", description: null },
+    });
+  });
+
+  it("clears SparePartListing description only for the meeple's own listings", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.sparePartListing.updateMany).toHaveBeenCalledWith({
+      where: { keeperMeepleId: "meeple-1" },
+      data: { description: null },
+    });
+  });
+
+  it("clears GameHolding.note only where the meeple recorded it themselves, not where they're merely the subject", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    // recordedByMeepleId, nicht vereinsmitgliedId — sonst würde eine fremde
+    // Notiz über die anonymisierte Person gelöscht statt eine eigene.
+    expect(prismaMock.gameHolding.updateMany).toHaveBeenCalledWith({
+      where: { recordedByMeepleId: "meeple-1" },
+      data: { note: null },
+    });
+  });
+
+  it("clears StorageUnitMove.locationNote only where the meeple recorded it themselves", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.storageUnitMove.updateMany).toHaveBeenCalledWith({
+      where: { recordedByMeepleId: "meeple-1" },
+      data: { locationNote: null },
+    });
+  });
 });
 
 describe("anonymiseMeepleStufe2", () => {

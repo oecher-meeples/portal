@@ -30,13 +30,19 @@ export default async function MarktPage({
   const [marketListings, sparePartListings] = await Promise.all([
     prisma.marketListing.findMany({
       include: {
-        seller: { include: { member: { select: { email: true } } } },
+        seller: {
+          include: { member: { select: { email: true, slug: true } } },
+        },
         boardGame: { select: { slug: true, bggId: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
     prisma.sparePartListing.findMany({
-      include: { keeper: { include: { member: { select: { email: true } } } } },
+      include: {
+        keeper: {
+          include: { member: { select: { email: true, slug: true } } },
+        },
+      },
       orderBy: { createdAt: "desc" },
     }),
   ]);

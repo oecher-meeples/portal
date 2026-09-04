@@ -3,8 +3,12 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { listVisibleDownloads, listOfflineDownloadsForAdmin, formatFileSize } =
-  await import("@/lib/downloads/downloads");
+const {
+  listVisibleDownloads,
+  listOfflineDownloadsForAdmin,
+  findPublicDownloadByTitle,
+  formatFileSize,
+} = await import("@/lib/downloads/downloads");
 
 describe("listVisibleDownloads", () => {
   it("shows only PUBLIC downloads for a guest", async () => {
@@ -50,6 +54,16 @@ describe("listOfflineDownloadsForAdmin", () => {
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: "OFFLINE" },
       orderBy: { fileUpdatedAt: "desc" },
+    });
+  });
+});
+
+describe("findPublicDownloadByTitle (#423)", () => {
+  it("queries by title, restricted to PUBLIC", async () => {
+    await findPublicDownloadByTitle("Mitgliedsantrag");
+
+    expect(prismaMock.download.findFirst).toHaveBeenCalledWith({
+      where: { title: "Mitgliedsantrag", status: "PUBLIC" },
     });
   });
 });

@@ -135,7 +135,13 @@ describe("ExplainerGamePanel", () => {
         boardGameId="game-1"
         boardGameTitle="Ark Nova"
         explainers={[
-          { meepleId: "m-1", displayName: "Lea", level: "BY_HEART" },
+          {
+            meepleId: "m-1",
+            displayName: "Lea",
+            level: "BY_HEART",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
+          },
         ]}
         myLevel={null}
       />,

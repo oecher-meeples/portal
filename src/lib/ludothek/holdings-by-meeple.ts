@@ -1,4 +1,7 @@
-import type { RuleBookLanguage } from "@prisma/client";
+import {
+  ProfilePictureVisibility,
+  type RuleBookLanguage,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { formatLocationChain } from "@/lib/ludothek/holdings-lookup";
 import { memberDisplayName } from "@/lib/members/member-display-name";
@@ -13,6 +16,8 @@ export type ActiveMeepleHolding = {
   gameCopyId: string;
   boardGameId: string;
   boardGameTitle: string;
+  /** Für den Link zur Spieledetailseite (`/ludothek/[slug]`, #457). */
+  boardGameSlug: string;
   startedAt: Date;
   locationChain: string;
   condition: string | null;
@@ -30,6 +35,14 @@ export type ActiveMeepleHolding = {
 export type MeepleWithActiveHoldings = {
   vereinsmitgliedId: string;
   memberName: string;
+  /** `null` ohne verknüpftes Meeple-Konto (z. B. MiniMeeple) — `ContactDialog`
+   * bekommt dann keinen `meepleId`-Trigger, der Name bleibt reiner Text. */
+  meepleId: string | null;
+  /** Für das Hover-Popup mit Bild auf den Namen (#412-Folgefeedback) —
+   * `null`, wenn kein Meeple-Konto verknüpft ist (dann bleibt es beim
+   * Initialen-Fallback). */
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
   verfuegbar: boolean;
   street: string | null;
   postalCode: string | null;
@@ -66,7 +79,15 @@ export async function getActiveHoldingsByMeeple(): Promise<
           postalCode: true,
           city: true,
           phone: true,
-          meeple: { select: { displayName: true, neonAuthUserId: true } },
+          meeple: {
+            select: {
+              id: true,
+              displayName: true,
+              neonAuthUserId: true,
+              profilePictureUrl: true,
+              profilePictureVisibility: true,
+            },
+          },
         },
       },
       gameCopy: {
@@ -74,7 +95,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
           condition: true,
           ruleBookLanguages: true,
           inventoryNumber: true,
-          boardGame: { select: { id: true, title: true } },
+          boardGame: { select: { id: true, title: true, slug: true } },
         },
       },
     },
@@ -89,6 +110,11 @@ export async function getActiveHoldingsByMeeple(): Promise<
     const entry = byMember.get(member.id) ?? {
       vereinsmitgliedId: member.id,
       memberName: name,
+      meepleId: member.meeple?.id ?? null,
+      profilePictureUrl: member.meeple?.profilePictureUrl ?? null,
+      profilePictureVisibility:
+        member.meeple?.profilePictureVisibility ??
+        ProfilePictureVisibility.INTERN,
       verfuegbar: Boolean(member.meeple?.neonAuthUserId),
       street: member.street,
       postalCode: member.postalCode,
@@ -100,6 +126,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
       gameCopyId: holding.gameCopyId,
       boardGameId: holding.gameCopy.boardGame.id,
       boardGameTitle: holding.gameCopy.boardGame.title,
+      boardGameSlug: holding.gameCopy.boardGame.slug,
       startedAt: holding.startedAt,
       locationChain: formatLocationChain({
         responsibleName: name,
@@ -144,7 +171,7 @@ export async function getActiveHoldingsForMember(
           condition: true,
           ruleBookLanguages: true,
           inventoryNumber: true,
-          boardGame: { select: { id: true, title: true } },
+          boardGame: { select: { id: true, title: true, slug: true } },
         },
       },
     },
@@ -154,6 +181,7 @@ export async function getActiveHoldingsForMember(
     gameCopyId: holding.gameCopyId,
     boardGameId: holding.gameCopy.boardGame.id,
     boardGameTitle: holding.gameCopy.boardGame.title,
+    boardGameSlug: holding.gameCopy.boardGame.slug,
     startedAt: holding.startedAt,
     locationChain: "",
     condition: holding.gameCopy.condition,

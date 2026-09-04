@@ -16,7 +16,11 @@ function member(overrides: Partial<Record<string, unknown>> = {}) {
     postalCode: null,
     city: null,
     phone: null,
-    meeple: { displayName: "Anna", neonAuthUserId: "auth-1" },
+    meeple: {
+      id: "meeple-anna",
+      displayName: "Anna",
+      neonAuthUserId: "auth-1",
+    },
     ...overrides,
   };
 }
@@ -31,7 +35,7 @@ function holding(overrides: Partial<Record<string, unknown>> = {}) {
       condition: null,
       ruleBookLanguages: [],
       inventoryNumber: null,
-      boardGame: { id: "bg-ark-nova", title: "Ark Nova" },
+      boardGame: { id: "bg-ark-nova", title: "Ark Nova", slug: "ark-nova" },
     },
     ...overrides,
   };
@@ -59,7 +63,7 @@ describe("getActiveHoldingsByMeeple", () => {
           condition: null,
           ruleBookLanguages: [],
           inventoryNumber: null,
-          boardGame: { id: "bg-wingspan", title: "Wingspan" },
+          boardGame: { id: "bg-wingspan", title: "Wingspan", slug: "wingspan" },
         },
       }),
     ] as never);
@@ -70,6 +74,9 @@ describe("getActiveHoldingsByMeeple", () => {
       {
         vereinsmitgliedId: "member-1",
         memberName: "Anna",
+        meepleId: "meeple-anna",
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
         verfuegbar: true,
         street: null,
         postalCode: null,
@@ -80,6 +87,7 @@ describe("getActiveHoldingsByMeeple", () => {
             gameCopyId: "copy-1",
             boardGameId: "bg-ark-nova",
             boardGameTitle: "Ark Nova",
+            boardGameSlug: "ark-nova",
             startedAt: new Date("2026-08-01"),
             locationChain: "bei Anna",
             condition: null,
@@ -91,6 +99,7 @@ describe("getActiveHoldingsByMeeple", () => {
             gameCopyId: "copy-2",
             boardGameId: "bg-wingspan",
             boardGameTitle: "Wingspan",
+            boardGameSlug: "wingspan",
             startedAt: new Date("2026-08-01"),
             locationChain: "bei Anna",
             condition: null,
@@ -175,7 +184,7 @@ describe("getActiveHoldingsForMember (#383)", () => {
           condition: null,
           ruleBookLanguages: [],
           inventoryNumber: null,
-          boardGame: { id: "bg-ark-nova", title: "Ark Nova" },
+          boardGame: { id: "bg-ark-nova", title: "Ark Nova", slug: "ark-nova" },
         },
       },
     ] as never);
@@ -192,6 +201,7 @@ describe("getActiveHoldingsForMember (#383)", () => {
         gameCopyId: "copy-1",
         boardGameId: "bg-ark-nova",
         boardGameTitle: "Ark Nova",
+        boardGameSlug: "ark-nova",
         startedAt: new Date("2026-08-01"),
         locationChain: "",
         condition: null,

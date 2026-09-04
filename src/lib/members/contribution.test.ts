@@ -1,11 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
+  CONTRIBUTION_CATEGORY_LABELS,
   determineContribution,
   isMiniMeeple,
   requiresEmail,
 } from "./contribution";
 
 const NOW = new Date("2026-07-29T12:00:00Z");
+
+// #452: der erklärende Klammer-Zusatz ("ermäßigter Kinderbeitrag" etc.) ist
+// überflüssig und soll nirgends mehr auftauchen.
+describe("CONTRIBUTION_CATEGORY_LABELS", () => {
+  it("has no explanatory parenthesis, just the plain category name", () => {
+    expect(CONTRIBUTION_CATEGORY_LABELS).toEqual({
+      mini: "MiniMeeple",
+      jung: "JungMeeple",
+      meeple: "Meeple",
+      individuell: "Individueller Beitrag",
+    });
+  });
+});
 
 describe("determineContribution", () => {
   it("is unbestimmt without a birth date and without a chosen amount", () => {

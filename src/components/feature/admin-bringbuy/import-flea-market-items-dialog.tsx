@@ -99,7 +99,7 @@ export function ImportFleaMarketItemsDialog({
             id="import-event"
             value={eventId}
             onChange={(event) => setEventId(event.target.value)}
-            className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
           >
             {events.map((event) => (
               <option key={event.id} value={event.id}>

@@ -13,11 +13,7 @@ import { listDistinctMechanics, toPublicGame } from "@/lib/ludothek/browser";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
-import {
-  getContactLinks,
-  meepleEmail,
-  type ContactLinks,
-} from "@/lib/members/contact";
+import { toContactDialogMeeple, meepleEmail } from "@/lib/members/contact";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { anonymisedMeepleDisplayName } from "@/lib/members/anonymised-display-name";
 import { getExplainersForGame } from "@/lib/explainer/queries";
@@ -151,37 +147,38 @@ export default async function GameDetailPage({
         where: { id: { in: responsibleIds } },
         select: {
           id: true,
-          member: { select: { email: true } },
+          member: { select: { email: true, slug: true } },
           telegramHandle: true,
           signalHandle: true,
           discordHandle: true,
           address: true,
           shareAddress: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
         },
       })
     : [];
-  const contactById = new Map(
+  // Viewer ist hier immer "meeple" — Ludothek-Standortdaten sind member-only
+  // (siehe `toPublicGame()`).
+  const contactMeepleById = new Map(
     responsibleMeeples.map((m) => [
       m.id,
-      getContactLinks({ ...m, email: meepleEmail(m) }),
+      toContactDialogMeeple(
+        { ...m, email: meepleEmail(m) },
+        { kind: "meeple" },
+      ),
     ]),
   );
-  const NO_CONTACT: ContactLinks = {
-    mailHref: null,
-    telegramHref: null,
-    signalHref: null,
-    discordHandle: null,
-    address: null,
-  };
   const currentMeeple = await getCurrentMeeple();
   const copyRows = copies.map((copy) => ({
     id: copy.id,
     zustand: copy.zustand,
     unitChain: copy.unitChain,
     responsibleName: copy.responsibleName,
-    responsibleContact: copy.responsibleMeepleId
-      ? (contactById.get(copy.responsibleMeepleId) ?? NO_CONTACT)
-      : NO_CONTACT,
+    responsibleContactMeeple: copy.responsibleMeepleId
+      ? (contactMeepleById.get(copy.responsibleMeepleId) ?? null)
+      : null,
+    isUnconfirmed: copy.isUnconfirmed,
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
     inventoryNumber: copy.inventoryNumber,

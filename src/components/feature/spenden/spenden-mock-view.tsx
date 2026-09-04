@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DonationAmountPicker } from "@/components/feature/spenden/donation-amount-picker";
 import { PageContainer } from "@/components/ui/page-container";
+import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
 
 const PAYPAL_DONATION_URL = "https://paypal.me/oechermeeples";
 const GAME_DONATION_MAIL = "spenden@oecher-meeples.org";
@@ -45,10 +46,10 @@ export function SpendenMockView() {
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
           <h2 className="font-serif text-lg font-bold">Spiele spenden</h2>
           <p className="text-muted-foreground text-sm">
-            Du möchtest vollständige, funktionsfähige Spiele in unseren
-            Vereinsbestand geben? Wir übernehmen sie gerne in die Ludothek. Für
-            beschädigte oder unvollständige Spiele (Ersatzteillager) nutze bitte
-            den Marktplatz.
+            Du möchtest Spiele in unseren Vereinsbestand geben? Wir freuen uns
+            über jede Spende — unabhängig vom Zustand. Der Spielwart
+            entscheidet, ob dein Spiel in die Ludothek oder ins Ersatzteillager
+            kommt.
           </p>
           <Button
             variant="outline"
@@ -66,21 +67,31 @@ export function SpendenMockView() {
           </p>
           <dl className="flex flex-col divide-y border-t">
             <div className="flex items-center justify-between py-2.5">
-              <dt className="text-muted-foreground text-sm">Beitrag</dt>
-              <dd className="font-medium">60 € / Jahr</dd>
+              <dt className="text-muted-foreground text-sm">
+                {CONTRIBUTION_CATEGORY_LABELS.mini} (unter 13 Jahre)
+              </dt>
+              <dd className="font-medium">0 € / Jahr</dd>
             </div>
             <div className="flex items-center justify-between py-2.5">
-              <dt className="text-muted-foreground text-sm">Ermäßigt</dt>
+              <dt className="text-muted-foreground text-sm">
+                {CONTRIBUTION_CATEGORY_LABELS.jung} (13–18 Jahre)
+              </dt>
+              <dd className="font-medium">12 € / Jahr</dd>
+            </div>
+            <div className="flex items-center justify-between py-2.5">
+              <dt className="text-muted-foreground text-sm">
+                {CONTRIBUTION_CATEGORY_LABELS.meeple} (ab 18 Jahren)
+              </dt>
               <dd className="font-medium">36 € / Jahr</dd>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <dt className="text-muted-foreground text-sm">Aufnahme</dt>
-              <dd className="font-medium">auf Einladung eines Mitglieds</dd>
             </div>
           </dl>
           <Button
             variant="outline"
-            render={<a href="/downloads">Mitgliedsantrag herunterladen →</a>}
+            render={
+              <a href="/downloads/Mitgliedsantrag">
+                Mitgliedsantrag herunterladen →
+              </a>
+            }
           />
         </div>
       </div>

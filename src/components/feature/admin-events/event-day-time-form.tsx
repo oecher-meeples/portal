@@ -24,9 +24,19 @@ function toDateTime(dateIso: string, time: string): Date | null {
  * from the Ziel-Zeitraum shift roles get per day/role (#153). Speichert
  * automatisch beim Verlassen eines Felds (onBlur) statt über einen eigenen
  * Speichern-Button. */
+/** Neu angelegte Tage kommen ohne Zeiten (`startsAt`/`endsAt` = `null`) —
+ * #459: 12:00 als Vorbelegung statt leerer Felder, damit nicht bei jedem Tag
+ * manuell im Time-Picker gescrollt werden muss. Bereits gesetzte Zeiten
+ * bleiben unangetastet, `||` greift nur beim leeren String aus `null`. */
+const DEFAULT_OPENING_TIME = "12:00";
+
 export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
-  const [startsAt, setStartsAt] = useState(timeInputValue(day.startsAt));
-  const [endsAt, setEndsAt] = useState(timeInputValue(day.endsAt));
+  const [startsAt, setStartsAt] = useState(
+    timeInputValue(day.startsAt) || DEFAULT_OPENING_TIME,
+  );
+  const [endsAt, setEndsAt] = useState(
+    timeInputValue(day.endsAt) || DEFAULT_OPENING_TIME,
+  );
   const { run, pending, error } = useAction();
 
   function save() {

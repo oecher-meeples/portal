@@ -224,6 +224,30 @@ describe("resolveScannedCode", () => {
     expect(result).toEqual({ kind: "unknown", raw: "hallo welt" });
     expect(prismaMock.gameCopy.findMany).not.toHaveBeenCalled();
   });
+
+  // #465: persönlicher QR-Code eines Meeples.
+  it("resolves a Meeple's personal QR code", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      id: "meeple-b",
+      displayName: "Lea Demo",
+    } as never);
+
+    const result = await resolveScannedCode("OM-MEEPLE-meeple-b");
+
+    expect(result).toEqual({
+      kind: "meeple",
+      meeple: { id: "meeple-b", displayName: "Lea Demo" },
+    });
+  });
+
+  it("resolves an unknown Meeple id to unknown", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(null);
+
+    expect(await resolveScannedCode("OM-MEEPLE-nope")).toEqual({
+      kind: "unknown",
+      raw: "OM-MEEPLE-nope",
+    });
+  });
 });
 
 describe("walkUnitChain", () => {

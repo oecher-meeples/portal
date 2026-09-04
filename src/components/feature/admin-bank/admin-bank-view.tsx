@@ -94,7 +94,8 @@ export function AdminBankView({
       </div>
 
       <PendingChangesPanel
-        title="Offene IBAN-Änderungsanträge"
+        titleSingular="Offener IBAN-Änderungsantrag"
+        titlePlural="Offene IBAN-Änderungsanträge"
         changes={pendingIbanChanges}
         revealIban={async (changeId) => {
           const result = await revealPendingIban(changeId);

@@ -43,6 +43,16 @@ export function BulkRelocateScanView({
       setBusy(false);
       return;
     }
+    // #465: Meeple-QR-Code hat hier keine Bedeutung — nur die
+    // Weitergabe-/Rückgabe-Zielauswahl (TargetPicker) versteht ihn.
+    if (resolved.kind === "meeple") {
+      setLog((entries) => [
+        `„${raw}“ ist ein Meeple-Code, kein Exemplar — bitte ein Spiel scannen.`,
+        ...entries,
+      ]);
+      setBusy(false);
+      return;
+    }
 
     for (const game of resolved.games) {
       const result = await bulkRelocateGameCopy(game.id, targetUnitId);

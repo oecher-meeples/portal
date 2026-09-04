@@ -31,7 +31,7 @@ import {
   DB_TO_TYPE,
   TYPE_TO_DB,
   type ContentType,
-} from "@/lib/content/content";
+} from "@/lib/content/content-types";
 import { deletePost } from "@/components/feature/admin-news/actions";
 import { PageContainer } from "@/components/ui/page-container";
 

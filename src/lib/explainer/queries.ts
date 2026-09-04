@@ -1,10 +1,17 @@
-import type { ExplainerExperienceLevel } from "@prisma/client";
+import type {
+  ExplainerExperienceLevel,
+  ProfilePictureVisibility,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 
 export type ExplainerEntry = {
   meepleId: string;
   displayName: string;
   level: ExplainerExperienceLevel;
+  /** (#412) Profilbild — beide Konsumenten (Ludothek-Detailseite,
+   * Admin-Verzeichnis) sind member-only, Viewer daher immer "meeple". */
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
 };
 
 /** Erklärbären for one Spiel, sorted by name — used on the Ludothek detail page. */
@@ -14,13 +21,24 @@ export async function getExplainersForGame(
   const entries = await prisma.explainerGame.findMany({
     where: { boardGameId },
     orderBy: { meeple: { displayName: "asc" } },
-    include: { meeple: { select: { id: true, displayName: true } } },
+    include: {
+      meeple: {
+        select: {
+          id: true,
+          displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+        },
+      },
+    },
   });
 
   return entries.map((entry) => ({
     meepleId: entry.meeple.id,
     displayName: entry.meeple.displayName,
     level: entry.level,
+    profilePictureUrl: entry.meeple.profilePictureUrl,
+    profilePictureVisibility: entry.meeple.profilePictureVisibility,
   }));
 }
 

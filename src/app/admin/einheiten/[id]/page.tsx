@@ -24,7 +24,15 @@ export default async function AdminEinheitDetailPage({
   const [unit, meeples] = await Promise.all([
     prisma.storageUnit.findUnique({
       where: { id },
-      include: { keeper: { select: { displayName: true } } },
+      include: {
+        keeper: {
+          select: {
+            displayName: true,
+            profilePictureUrl: true,
+            profilePictureVisibility: true,
+          },
+        },
+      },
     }),
     prisma.meeple.findMany(),
   ]);
@@ -74,6 +82,9 @@ export default async function AdminEinheitDetailPage({
         category: unit.category,
         keeperMeepleId: unit.keeperMeepleId,
         keeperName: unit.keeper?.displayName ?? null,
+        keeperProfilePictureUrl: unit.keeper?.profilePictureUrl ?? null,
+        keeperProfilePictureVisibility:
+          unit.keeper?.profilePictureVisibility ?? "INTERN",
         retired: unit.retiredAt !== null,
       }}
       contents={contents.map((copy) => ({

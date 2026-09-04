@@ -14,7 +14,13 @@ const ENTRIES = [
     boardGameId: "game-1",
     boardGameTitle: "Arche Nova",
     explainers: [
-      { meepleId: "m-1", displayName: "Anna", level: "WITH_MANUAL" as const },
+      {
+        meepleId: "m-1",
+        displayName: "Anna",
+        level: "WITH_MANUAL" as const,
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN" as const,
+      },
     ],
   },
   {

@@ -32,10 +32,8 @@ function context(
 }
 
 describe("canAccessMemberProfile (#379)", () => {
-  it("denies a stranger with no relevant permission or relationship", () => {
-    expect(canAccessMemberProfile({ meepleId: "other" }, context())).toBe(
-      false,
-    );
+  it("grants access to any logged-in meeple, even a stranger", () => {
+    expect(canAccessMemberProfile({ meepleId: "other" }, context())).toBe(true);
   });
 
   it("grants access via admin:access", () => {

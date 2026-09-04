@@ -2,15 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+const getOrCreateTerminPostMock = vi.fn();
+vi.mock("@/lib/content/termin-posts", () => ({
+  getOrCreateTerminPost: (...args: unknown[]) =>
+    getOrCreateTerminPostMock(...args),
+}));
 
 const {
-  canViewContentItem,
   getAllContent,
   getContentBySlug,
   getInternalContent,
   getLatestPosts,
   getUpcomingEvents,
 } = await import("@/lib/content/content");
+const { canViewContentItem } = await import("@/lib/content/content-types");
 
 function makePost(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -35,6 +40,12 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     newsletterAttempts: 0,
     newsletterLastError: null,
     newsletterSentAt: null,
+    sourceIcsUid: null,
+    sourceEventId: null,
+    syncedTitle: null,
+    syncedLocationNote: null,
+    syncedStartsAt: null,
+    syncedEndsAt: null,
     ...overrides,
   };
 }
@@ -63,14 +74,15 @@ describe("getAllContent", () => {
   it("loads all posts from the database, including the body (#135)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
-    const items = await getAllContent();
+    const { items, nextCursor } = await getAllContent();
 
     expect(items).toHaveLength(3);
     expect(items[0].date).toBe("2026-06-15");
     expect(items[0].body).toBe("Unser Sommerfest war ein voller Erfolg.");
+    expect(nextCursor).toBeNull();
   });
 
-  it("queries posts descending by date, newest first (#252)", async () => {
+  it("queries posts descending by date, newest first, with id as tiebreaker for deterministic cursor pagination (#252, #469)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
     await getAllContent();
@@ -78,9 +90,56 @@ describe("getAllContent", () => {
     expect(prismaMock.post.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: "PUBLISHED" },
-        orderBy: { date: "desc" },
+        orderBy: [{ date: "desc" }, { id: "desc" }],
       }),
     );
+  });
+
+  it("without take/cursor loads everything in one page, unchanged behaviour (#469)", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    await getAllContent();
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.not.objectContaining({ take: expect.anything() }),
+    );
+  });
+
+  it("returns a nextCursor and trims the lookahead row when more posts remain (#469)", async () => {
+    // take: 2 → Prisma wird mit take: 3 aufgerufen, die dritte (Lookahead-)
+    // Zeile signalisiert "es gibt noch mehr" und wird selbst nicht ausgeliefert.
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    const { items, nextCursor } = await getAllContent({ take: 2 });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 3 }),
+    );
+    expect(items).toHaveLength(2);
+    expect(items.map((item) => item.slug)).toEqual([
+      ALL_POSTS[0].slug,
+      ALL_POSTS[1].slug,
+    ]);
+    expect(nextCursor).toBe(ALL_POSTS[1].id);
+  });
+
+  it("forwards cursor as a Prisma cursor/skip pair (#469)", async () => {
+    prismaMock.post.findMany.mockResolvedValue([ALL_POSTS[2]]);
+
+    const { items, nextCursor } = await getAllContent({
+      take: 2,
+      cursor: ALL_POSTS[1].id,
+    });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cursor: { id: ALL_POSTS[1].id },
+        skip: 1,
+        take: 3,
+      }),
+    );
+    expect(items).toHaveLength(1);
+    expect(nextCursor).toBeNull();
   });
 });
 
@@ -126,18 +185,46 @@ describe("getContentBySlug", () => {
     expect(item?.author).toBe("Jan Herwig");
   });
 
-  it("returns undefined for an unknown slug", async () => {
+  it("returns undefined for an unknown, non-termin slug", async () => {
     prismaMock.post.findUnique.mockResolvedValue(null);
+    getOrCreateTerminPostMock.mockResolvedValue(null);
 
     expect(await getContentBySlug("does-not-exist")).toBeUndefined();
   });
 
-  it("returns undefined for a draft post", async () => {
+  it("returns undefined for a draft post that already exists", async () => {
     prismaMock.post.findUnique.mockResolvedValue(
       makePost({ status: "DRAFT" }),
     );
 
     expect(await getContentBySlug("sommerfest-der-meeples")).toBeUndefined();
+  });
+
+  // #463: ein Termin-Slug ohne bisherigen Post bekommt lazy einen erzeugt und
+  // dessen Inhalt sofort zurückgegeben — unabhängig vom (immer DRAFT)
+  // Status, anders als beim normalen Publish-Gate oben.
+  it("lazily creates and returns a termin post instead of 404-ing", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(null); // noch kein Post
+    prismaMock.post.findUniqueOrThrow.mockResolvedValue(
+      makePost({ id: "new-post", status: "DRAFT" }),
+    ); // Reload nach dem Anlegen
+    getOrCreateTerminPostMock.mockResolvedValue({ id: "new-post" });
+
+    const item = await getContentBySlug("kalender-event-1@google.com");
+
+    expect(getOrCreateTerminPostMock).toHaveBeenCalledWith(
+      "kalender-event-1@google.com",
+    );
+    expect(item?.title).toBe("Sommerfest der Meeples");
+  });
+
+  it("returns undefined when the termin slug's source no longer exists", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(null);
+    getOrCreateTerminPostMock.mockResolvedValue(null);
+
+    expect(
+      await getContentBySlug("kalender-gone@google.com"),
+    ).toBeUndefined();
   });
 });
 
@@ -232,7 +319,7 @@ describe("canViewContentItem", () => {
 });
 
 describe("getLatestPosts", () => {
-  it("queries all posts descending by date with a limit", async () => {
+  it("queries all posts descending by date with a limit, excluding UMFRAGE by default (#424)", async () => {
     prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
 
     await getLatestPosts(3);
@@ -241,6 +328,7 @@ describe("getLatestPosts", () => {
       where: {
         OR: [{ internal: null }, { internal: false }],
         status: "PUBLISHED",
+        type: { not: "UMFRAGE" },
       },
       orderBy: { date: "desc" },
       take: 3,
@@ -249,6 +337,21 @@ describe("getLatestPosts", () => {
         surveyDetails: { select: { deadline: true } },
       },
     });
+  });
+
+  it("drops the UMFRAGE filter when includeSurveys is true (#424, eingeloggte Meeple)", async () => {
+    prismaMock.post.findMany.mockResolvedValue(ALL_POSTS);
+
+    await getLatestPosts(3, true);
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          OR: [{ internal: null }, { internal: false }],
+          status: "PUBLISHED",
+        },
+      }),
+    );
   });
 
   it("includes internal: null posts but excludes internal: true (real Prisma NULL semantics)", async () => {
@@ -267,5 +370,23 @@ describe("getLatestPosts", () => {
       "termin-public-false",
       "termin-public-null",
     ]);
+  });
+
+  it("excludes an UMFRAGE post from the guest preview even when public (#424)", async () => {
+    const withSurvey = [
+      ...INTERNAL_VARIANTS,
+      makePost({ slug: "umfrage-public-null", type: "UMFRAGE", internal: null }),
+    ];
+    prismaMock.post.findMany.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (async ({ where }: any) =>
+        withSurvey.filter((post) => evaluateWhere(post, where))) as never,
+    );
+
+    const result = await getLatestPosts(10);
+
+    expect(result.map((item) => item.slug)).not.toContain(
+      "umfrage-public-null",
+    );
   });
 });

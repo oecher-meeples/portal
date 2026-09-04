@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { LudothekResults } from "@/components/feature/ludothek/ludothek-results";
 import { LudothekFilterPanel } from "@/components/feature/ludothek/ludothek-filter-panel";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
+import { SingleSlider } from "@/components/ui/range-slider";
+import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
@@ -19,6 +21,12 @@ import type {
   PublicLudothekGame,
 } from "@/lib/ludothek/browser";
 import { cn } from "@/lib/utils/cn";
+
+/** #446: Kartengröße im Grid — persistiert je Gerät, nicht Teil der
+ * URL-Filter (rein optisch, kein Filterkriterium). */
+const CARD_MIN_WIDTH_STORAGE_KEY = "ludothek-card-min-width";
+const CARD_MIN_WIDTH_DEFAULT = 220;
+const CARD_MIN_WIDTH_RANGE = { min: 160, max: 360 };
 
 const VIEW_MODE_OPTIONS: {
   value: LudothekViewMode;
@@ -108,6 +116,10 @@ export function LudothekBrowser({
 
   const [search, setSearch] = useState(filters.search ?? "");
   const debouncedSearch = useDebouncedValue(search);
+  const [cardMinWidth, setCardMinWidth] = useLocalStorageState(
+    CARD_MIN_WIDTH_STORAGE_KEY,
+    CARD_MIN_WIDTH_DEFAULT,
+  );
 
   useEffect(() => {
     if (debouncedSearch === (filters.search ?? "")) return;
@@ -185,11 +197,26 @@ export function LudothekBrowser({
         ) : (
           <div />
         )}
-        <ViewModeSwitch
-          view={filters.view ?? "grid"}
-          canManageGames={canManageGames}
-          href={href}
-        />
+        <div className="flex items-center gap-3">
+          {/* #446: nur Grid-Ansicht, nur Desktop — auf Mobile/Tablet
+              ausgeblendet, List/Compact bleiben unbeeinflusst. */}
+          {(filters.view ?? "grid") === "grid" && (
+            <SingleSlider
+              className="hidden w-24 md:flex"
+              min={CARD_MIN_WIDTH_RANGE.min}
+              max={CARD_MIN_WIDTH_RANGE.max}
+              step={10}
+              value={cardMinWidth}
+              onValueChange={setCardMinWidth}
+              getAriaLabel={() => "Kartengröße"}
+            />
+          )}
+          <ViewModeSwitch
+            view={filters.view ?? "grid"}
+            canManageGames={canManageGames}
+            href={href}
+          />
+        </div>
       </div>
 
       <LudothekResults
@@ -197,6 +224,7 @@ export function LudothekBrowser({
         view={filters.view ?? "grid"}
         canManageGames={canManageGames}
         mechanicsOptions={mechanicsOptions}
+        cardMinWidth={cardMinWidth}
       />
     </div>
   );

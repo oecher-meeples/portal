@@ -88,7 +88,6 @@ const {
   scanPlaceGameInUnit,
   scanRelocateGame,
   scanResolveCode,
-  scanReturnToMeeple,
   scanReturnToUnit,
 } = await import("./holding-actions");
 
@@ -248,6 +247,7 @@ describe("giving actions stay allowed for a resigned meeple", () => {
       toVereinsmitgliedId: "member-other",
       recordedByMeepleId: "meeple-self",
       isSelf: false,
+      viaTargetQrScan: false,
     });
   });
 
@@ -286,26 +286,6 @@ describe("giving actions stay allowed for a resigned meeple", () => {
       recordedByMeepleId: "meeple-self",
       locationNote: "Keller",
     });
-  });
-});
-
-describe("scanReturnToMeeple", () => {
-  it("records a return to a person, distinct from a handover", async () => {
-    memberFindUniqueMock.mockImplementation(
-      ({ where }: { where: { meepleId: string } }) =>
-        Promise.resolve(
-          where.meepleId === "meeple-other" ? { id: "member-other" } : null,
-        ),
-    );
-
-    await scanReturnToMeeple("game-1", "meeple-other");
-
-    expect(returnGameMock).toHaveBeenCalledWith({
-      gameCopyId: "game-1",
-      toVereinsmitgliedId: "member-other",
-      recordedByMeepleId: "meeple-self",
-    });
-    expect(handOverGameMock).not.toHaveBeenCalled();
   });
 });
 

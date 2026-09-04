@@ -34,7 +34,7 @@ export function Pagination({
           value={pageSize}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
           aria-label="Einträge pro Seite"
-          className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+          className="border-input bg-background h-8 rounded-md border px-2 text-sm"
         >
           {pageSizeOptions.map((option) => (
             <option key={option} value={option}>

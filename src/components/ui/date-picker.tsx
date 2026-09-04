@@ -3,144 +3,26 @@
 import { useId, useState } from "react";
 import type { ReactNode } from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import { ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Field } from "@/components/ui/field";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { Validator } from "@/components/ui/constraints";
-
-const MONTH_NAMES = [
-  "Januar",
-  "Februar",
-  "März",
-  "April",
-  "Mai",
-  "Juni",
-  "Juli",
-  "August",
-  "September",
-  "Oktober",
-  "November",
-  "Dezember",
-];
-
-const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-
-const YEARS_PER_RANGE = 25;
-
-type View = "year" | "month" | "day";
-type SelectedDate = { year: number; month: number; day: number } | null;
-
-/** Startansicht beim Öffnen des Popups — siehe `DatePicker`-Prop `openAt`. */
-type OpenAt = "Year" | "Month" | "Date";
-
-function viewForOpenAt(openAt: OpenAt): View {
-  if (openAt === "Month") return "month";
-  if (openAt === "Date") return "day";
-  return "year";
-}
-
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-/** 0 = Montag, ... 6 = Sonntag — JS liefert 0 = Sonntag, deshalb verschoben. */
-function mondayFirstWeekday(year: number, month: number): number {
-  return (new Date(year, month, 1).getDay() + 6) % 7;
-}
-
-function parseValue(value: string): SelectedDate {
-  if (!value) return null;
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  return { year, month: month - 1, day };
-}
-
-function formatValue(date: SelectedDate): string {
-  if (!date) return "";
-  const mm = String(date.month + 1).padStart(2, "0");
-  const dd = String(date.day).padStart(2, "0");
-  return `${date.year}-${mm}-${dd}`;
-}
-
-/** Chevron-Navigationszeile, in allen drei Ansichten identisch aufgebaut
- * (Titel mittig klickbar, Pfeile links/rechts) — ein Layout statt dreimal
- * dasselbe Grid. */
-function NavRow({
-  onPrev,
-  onNext,
-  prevLabel,
-  nextLabel,
-  children,
-}: {
-  onPrev: () => void;
-  onNext: () => void;
-  prevLabel: string;
-  nextLabel: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <button
-        type="button"
-        aria-label={prevLabel}
-        onClick={onPrev}
-        className="hover:bg-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-md"
-      >
-        <ChevronLeft className="size-4" />
-      </button>
-      {children}
-      <button
-        type="button"
-        aria-label={nextLabel}
-        onClick={onNext}
-        className="hover:bg-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-md"
-      >
-        <ChevronRight className="size-4" />
-      </button>
-    </div>
-  );
-}
-
-/** Gemeinsames Grid/Listen-Layout für Jahres- und Monatsauswahl — ab sm ein
- * Grid, darunter eine feste, scrollbare Listenhöhe (wächst nicht mit der
- * Anzahl der Einträge). */
-function OptionGrid<T extends string | number>({
-  options,
-  isSelected,
-  label,
-  onSelect,
-  gridColsClassName,
-}: {
-  options: T[];
-  isSelected: (option: T) => boolean;
-  label: (option: T) => string;
-  onSelect: (option: T) => void;
-  gridColsClassName: string;
-}) {
-  return (
-    <div className={cn("sm:grid sm:gap-1.5", gridColsClassName)}>
-      <div className="max-h-64 overflow-y-auto sm:contents">
-        {options.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onSelect(option)}
-            aria-pressed={isSelected(option)}
-            className={cn(
-              "flex h-11 w-full items-center justify-center rounded-md text-sm",
-              isSelected(option)
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted",
-            )}
-          >
-            {label(option)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+import {
+  MONTH_NAMES,
+  WEEKDAY_LABELS,
+  YEARS_PER_RANGE,
+  NavRow,
+  OptionGrid,
+  daysInMonth,
+  mondayFirstWeekday,
+  parseValue,
+  formatValue,
+  viewForOpenAt,
+  type View,
+  type SelectedDate,
+  type OpenAt,
+} from "@/components/ui/date-picker-shared";
 
 /** Dreistufiger Auswahl-Flow (Live-Review F3) — ersetzt den nativen
  * `<input type="date">`, der je nach Browser/OS unterschiedlich aussieht

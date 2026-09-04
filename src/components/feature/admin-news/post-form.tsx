@@ -14,7 +14,7 @@ import { SurveyFields } from "@/components/feature/admin-news/survey-fields";
 import { PostPublishingOptions } from "@/components/feature/admin-news/post-publishing-options";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
-import type { ContentType } from "@/lib/content/content";
+import type { ContentType } from "@/lib/content/content-types";
 import {
   createPost,
   getUploadToken,
@@ -206,7 +206,7 @@ export function PostForm({
             id="type"
             value={type}
             onChange={(event) => setType(event.target.value as ContentType)}
-            className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
           >
             {TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>

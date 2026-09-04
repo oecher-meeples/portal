@@ -14,7 +14,10 @@ import type { ImportantLinkRow } from "@/lib/links/links";
  * bekommt Bearbeiten/Löschen, am Ende steht eine gestrichelte "Hinzufügen"-Card. */
 export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    // #454: minmax(200px,200px) statt minmax(200px,1fr) — feste statt
+    // gestreckte Kartenbreite, damit wenige Einträge nicht auf volle
+    // Container-Breite auseinandergezogen werden.
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,200px))] gap-4">
       {links.map((link) => (
         <div
           key={link.id}
@@ -56,7 +59,7 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
         trigger={
           <button
             type="button"
-            className="text-muted-foreground hover:border-primary/60 hover:text-primary flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm transition-colors"
+            className="text-muted-foreground hover:border-primary/60 hover:text-primary flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm transition-colors"
           >
             <Plus className="size-6" />
             Hinzufügen

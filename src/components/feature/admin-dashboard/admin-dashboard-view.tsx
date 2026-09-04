@@ -9,7 +9,9 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
+import { NeonStorageUsageCard } from "@/components/entities/neon-storage-usage-card";
 import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
+import type { NeonStorageUsage } from "@/lib/admin/neon-storage";
 import type { RateLimitAlert } from "@/lib/auth/rate-limit-alerts";
 import { formatDateTime } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
@@ -43,14 +45,27 @@ export type AdminDashboardStats = {
   activeEvents: number;
 };
 
+/** Offene Anträge (#440, Live-Review) — je Kategorie `null`, wenn der
+ * Betrachter die zugehörige Berechtigung nicht hat, sonst die Anzahl (auch
+ * 0, dann trotzdem angezeigt statt die Kachel wegzulassen). */
+export type OpenRequestCounts = {
+  ibanChanges: number | null;
+  stammdatenChanges: number | null;
+  unconfirmedHoldings: number | null;
+};
+
 export function AdminDashboardView({
   stats,
+  openRequestCounts,
   blobStorageUsage,
+  neonStorageUsage,
   rateLimitAlerts,
   recentAdminLogins,
 }: {
   stats: AdminDashboardStats;
+  openRequestCounts: OpenRequestCounts;
   blobStorageUsage: BlobStorageUsage | null;
+  neonStorageUsage: NeonStorageUsage | null;
   rateLimitAlerts: RateLimitAlert[];
   /** `null`, wenn der Betrachter kein `admin:access` hat (#231) — die
    * Login-Historie ist sensibel und nicht Teil des sonstigen
@@ -115,7 +130,29 @@ export function AdminDashboardView({
           value={stats.activeEvents}
           href="/admin/events"
         />
+        {openRequestCounts.ibanChanges !== null && (
+          <StatTile
+            label="Offene IBAN-Änderungen"
+            value={openRequestCounts.ibanChanges}
+            href="/admin/bank"
+          />
+        )}
+        {openRequestCounts.stammdatenChanges !== null && (
+          <StatTile
+            label="Offene Stammdaten-Änderungen"
+            value={openRequestCounts.stammdatenChanges}
+            href="/admin/mitglieder"
+          />
+        )}
+        {openRequestCounts.unconfirmedHoldings !== null && (
+          <StatTile
+            label="Offene Spiele-Übergaben"
+            value={openRequestCounts.unconfirmedHoldings}
+            href="/admin/bestand/unbestaetigt"
+          />
+        )}
         {blobStorageUsage && <BlobStorageUsageCard usage={blobStorageUsage} />}
+        {neonStorageUsage && <NeonStorageUsageCard usage={neonStorageUsage} />}
       </div>
 
       <div className="flex flex-col gap-3">

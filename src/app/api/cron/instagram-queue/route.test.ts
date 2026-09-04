@@ -20,16 +20,16 @@ vi.mock("@/lib/auth/login-log", () => ({
     deleteExpiredLoginLogsMock(...args),
 }));
 
-const anonymiseExpiredMeeplesMock = vi.fn();
-vi.mock("@/lib/members/retention", () => ({
-  anonymiseExpiredMeeples: (...args: unknown[]) =>
-    anonymiseExpiredMeeplesMock(...args),
-}));
-
 const processNewsletterQueueMock = vi.fn();
 vi.mock("@/lib/newsletter/dispatch", () => ({
   processNewsletterQueue: (...args: unknown[]) =>
     processNewsletterQueueMock(...args),
+}));
+
+const resetExplainerAttendanceMock = vi.fn();
+vi.mock("@/lib/explainer/attendance-cleanup", () => ({
+  resetExplainerAttendance: (...args: unknown[]) =>
+    resetExplainerAttendanceMock(...args),
 }));
 
 const { GET } = await import("./route");
@@ -42,12 +42,8 @@ describe("GET /api/cron/instagram-queue", () => {
     deleteExpiredBankDataAccessLogsMock.mockResolvedValue({ deleted: 0 });
     deleteExpiredLoginLogsMock.mockReset();
     deleteExpiredLoginLogsMock.mockResolvedValue({ deleted: 0 });
-    anonymiseExpiredMeeplesMock.mockReset();
-    anonymiseExpiredMeeplesMock.mockResolvedValue({
-      skipped: true,
-      anonymised: 0,
-      failed: [],
-    });
+    resetExplainerAttendanceMock.mockReset();
+    resetExplainerAttendanceMock.mockResolvedValue({ deleted: 0 });
     processNewsletterQueueMock.mockReset();
     processNewsletterQueueMock.mockResolvedValue({
       processed: 0,
@@ -115,7 +111,7 @@ describe("GET /api/cron/instagram-queue", () => {
       newsletter: { processed: 0, succeeded: 0, failed: 0 },
       bankLogCleanup: { deleted: 0 },
       loginLogCleanup: { deleted: 0 },
-      retention: { skipped: true, anonymised: 0, failed: [] },
+      explainerAttendanceCleanup: { deleted: 0 },
     });
   });
 
@@ -170,7 +166,7 @@ describe("GET /api/cron/instagram-queue", () => {
 
     expect(deleteExpiredBankDataAccessLogsMock).not.toHaveBeenCalled();
     expect(deleteExpiredLoginLogsMock).not.toHaveBeenCalled();
-    expect(anonymiseExpiredMeeplesMock).not.toHaveBeenCalled();
+    expect(resetExplainerAttendanceMock).not.toHaveBeenCalled();
   });
 
   it("prunes expired login logs on every run (#231)", async () => {
@@ -187,8 +183,9 @@ describe("GET /api/cron/instagram-queue", () => {
     expect(body.loginLogCleanup).toEqual({ deleted: 5 });
   });
 
-  it("runs the retention job and reports it as skipped while unconfigured", async () => {
-    processQueueMock.mockResolvedValue({ posted: 0 });
+  it("resets the explainer 'Ich bin da' flag on every run (#338)", async () => {
+    processQueueMock.mockResolvedValue({ processed: 0 });
+    resetExplainerAttendanceMock.mockResolvedValue({ deleted: 2 });
     const request = new Request(
       "https://example.com/api/cron/instagram-queue",
       { headers: { authorization: "Bearer test-secret" } },
@@ -196,11 +193,7 @@ describe("GET /api/cron/instagram-queue", () => {
 
     const body = await (await GET(request)).json();
 
-    expect(anonymiseExpiredMeeplesMock).toHaveBeenCalledTimes(1);
-    expect(body.retention).toEqual({
-      skipped: true,
-      anonymised: 0,
-      failed: [],
-    });
+    expect(resetExplainerAttendanceMock).toHaveBeenCalledTimes(1);
+    expect(body.explainerAttendanceCleanup).toEqual({ deleted: 2 });
   });
 });

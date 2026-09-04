@@ -69,8 +69,9 @@
 ### 2.2 Interner Newsroom
 - Wie 1.2, aber Feed mit "nur intern"-Kennzeichnung, kein Gast-Zugriff
 
-### 2.3 Interner Kalender
-- Wie 1.4, mit zusätzlichem internen Termin-Layer (z. B. Jahreshauptversammlung), farblich unterschieden von öffentlichen Terminen
+### 2.3 Interner Kalender (konsolidiert in `/news`, #209)
+- Keine eigene Seite mehr — `/news` (1.4) zeigt öffentliche und interne Termine bereits gemeinsam, gesteuert über die "Nur interne anzeigen"-Filterleiste (sichtbar nur mit `news:internal:view`)
+- Ausgetretene Mitglieder haben dadurch keinen separaten Kalenderzugriff mehr (bewusste Konsequenz der Konsolidierung, siehe `docs/mitglieder-konzept.md`)
 
 ### 2.4 Mein Profil
 - Formular: Name, E-Mail, Bankdaten (maskiert, editierbar), verknüpfte Konten (BGG-Username, BGA-Username)

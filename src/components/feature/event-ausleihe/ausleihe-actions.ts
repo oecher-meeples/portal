@@ -11,6 +11,12 @@ import {
   HoldingConflictError,
   type ResolvedScan,
 } from "@/lib/ludothek/holdings";
+import {
+  listOfferedPrivateLoansForEvent,
+  issuePrivateLoan,
+  returnPrivateLoan,
+  type OfferedPrivateLoan,
+} from "@/lib/ludothek/private-event-loans";
 
 /** Muss zum in prisma/migrations/…_add_helper_role gepflegten Rollennamen passen. */
 const AUSLEIHE_ROLE_NAME = "Leihe";
@@ -21,6 +27,14 @@ const AUSLEIHE_ROLE_NAME = "Leihe";
  * geschützte Seite erfolgt (analog requireCashierRights, ADR-0006).
  */
 async function requireAusleiheMeeple() {
+  const { meeple } = await requireAusleiheShift();
+  return meeple;
+}
+
+/** Wie `requireAusleiheMeeple()`, liefert zusätzlich die Event-ID der
+ * aktiven Schicht — für die private Ausleihe (#122), die anders als die
+ * Vereinsbestand-Aktionen event-, nicht exemplar-gebunden ist. */
+async function requireAusleiheShift() {
   const meeple = await requireMeeple();
   const activeShift = await findActiveShiftEvent(meeple.id, AUSLEIHE_ROLE_NAME);
   if (!activeShift) {
@@ -28,7 +42,7 @@ async function requireAusleiheMeeple() {
       "Keine aktive Ausleihe-Schicht — diese Seite ist nur während einer besetzten Ausleihe-Schicht nutzbar.",
     );
   }
-  return meeple;
+  return { meeple, eventId: activeShift.eventId };
 }
 
 async function toResult(run: () => Promise<unknown>) {
@@ -131,6 +145,36 @@ export async function ausleiheReturnToUnit(gameCopyId: string, unitId: string) {
       toUnitId: unitId,
       recordedByMeepleId: meeple.id,
     });
+  });
+  if ("success" in result) revalidatePath("/ausleihe");
+  return result;
+}
+
+/** Private Exemplare (#122), die für die laufende Ausleihe-Schicht zur
+ * Ausgabe angeboten wurden — separat von der Scanner-Liste, da private
+ * Exemplare keinen EAN/Einheiten-Code haben. */
+export async function ausleiheListOfferedPrivateLoans(): Promise<
+  OfferedPrivateLoan[]
+> {
+  const { eventId } = await requireAusleiheShift();
+  return listOfferedPrivateLoansForEvent(eventId);
+}
+
+export async function ausleiheIssuePrivateLoan(loanId: string) {
+  const result = await toResult(async () => {
+    const { meeple } = await requireAusleiheShift();
+    const outcome = await issuePrivateLoan(loanId, meeple.id);
+    if ("error" in outcome) throw new HoldingConflictError(outcome.error);
+  });
+  if ("success" in result) revalidatePath("/ausleihe");
+  return result;
+}
+
+export async function ausleiheReturnPrivateLoan(loanId: string) {
+  const result = await toResult(async () => {
+    await requireAusleiheShift();
+    const outcome = await returnPrivateLoan(loanId);
+    if ("error" in outcome) throw new HoldingConflictError(outcome.error);
   });
   if ("success" in result) revalidatePath("/ausleihe");
   return result;

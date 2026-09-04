@@ -97,15 +97,17 @@ export const DEMO_LEGAL_DOCUMENTS: {
         id: "auftragsverarbeiter",
         heading: "6. Auftragsverarbeiter und Empfänger",
         paragraphs: [
-          "Neon (Datenbank-Hosting und Authentifizierung), Vercel (Anwendungs-Hosting und Datei-Speicher) und Meta (Instagram, für das automatische Cross-Posting von Vereinsbeiträgen) erhalten im Rahmen ihrer jeweiligen Funktion Zugriff auf Teile der verarbeiteten Daten.",
+          "Neon (Datenbank-Hosting und Authentifizierung), Vercel (Anwendungs-Hosting, Datei-Speicher und anonymisierte Reichweitenmessung über Vercel Web Analytics) und Meta (Instagram, für das automatische Cross-Posting von Vereinsbeiträgen) erhalten im Rahmen ihrer jeweiligen Funktion Zugriff auf Teile der verarbeiteten Daten.",
           "TODO: Der Abschluss von Auftragsverarbeitungsverträgen nach Art. 28 DSGVO mit diesen Anbietern ist Vereinsarbeit und hier noch nicht bestätigt.",
         ],
       },
       {
         id: "cookies",
-        heading: "7. Cookies",
+        heading: "7. Cookies und Analyse-Tools",
         paragraphs: [
-          "Wir setzen ausschließlich technisch notwendige Session-Cookies von Neon Auth ein, um eingeloggte Mitglieder wiederzuerkennen. Es findet kein Tracking und keine Analyse des Nutzungsverhaltens durch Dritte statt.",
+          "Wir setzen ein technisch notwendiges Session-Cookie von Neon Auth ein, um eingeloggte Mitglieder wiederzuerkennen. Es ist zur Bereitstellung des Portals erforderlich und einwilligungsfrei nach § 25 Abs. 2 TDDDG.",
+          "Zur anonymisierten Reichweitenmessung nutzen wir Vercel Web Analytics. Der Dienst setzt keine Cookies und speichert keine dauerhafte, gerätebezogene Kennung — Besucher werden anhand eines aus der einzelnen Anfrage abgeleiteten Hash-Werts identifiziert, der nach 24 Stunden verfällt. Erhoben werden ausschließlich aggregierte, anonyme Daten (aufgerufene Seite, Referrer, grobe Geolocation, Browser/Betriebssystem, Gerätetyp) — keine Wiedererkennung einzelner Besucher über mehrere Sitzungen hinweg. Näheres bei Vercel: https://vercel.com/docs/analytics/privacy-policy.",
+          "Da Vercel Web Analytics ohne Cookies und ohne persistente Client-ID arbeitet, greift § 25 Abs. 2 TDDDG hier nicht — es ist kein Einwilligungsbanner erforderlich. Sollte künftig ein Analyse- oder Tracking-Tool mit nicht-notwendigen Cookies hinzukommen, wird dieser Abschnitt entsprechend erweitert.",
         ],
       },
     ],
@@ -151,7 +153,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
         links: [
           {
             label: "Third-Party-Lizenzverzeichnis",
-            href: "/THIRD-PARTY-LICENSES.md",
+            href: "/verwendete-bibliotheken",
           },
         ],
       },
@@ -200,7 +202,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
         links: [
           {
             label: "Third-Party-Lizenzverzeichnis",
-            href: "/THIRD-PARTY-LICENSES.md",
+            href: "/verwendete-bibliotheken",
           },
         ],
       },

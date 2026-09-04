@@ -5,6 +5,8 @@ import { ActionButton } from "@/components/ui/action-button";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import type { ActionResult } from "@/components/ui/use-action";
 import type { LudothekGameRef } from "@/lib/ludothek/browser";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * A linked title (base game or expansion) — cover left, title link and
@@ -27,7 +29,10 @@ export function RelatedGameCard({
   return (
     <Link
       href={`/ludothek/${game.slug}`}
-      className="hover:border-primary/60 bg-card relative flex items-center gap-3 rounded-lg border p-2 transition-colors"
+      className={cn(
+        "bg-card flex items-center gap-3 rounded-lg border p-2",
+        CARD_HOVER_CLASS,
+      )}
     >
       <GameCoverMedia
         imageUrl={game.imageUrl}

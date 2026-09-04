@@ -11,6 +11,12 @@ Der öffentliche Gäste-Bereich (Meilenstein 6.3) soll Besuchern beim Scannen ei
 - Der Gäste-Bereich erbt das Duplikat-Verhalten des internen Scans: mehrere Treffer bei gleicher EAN sind möglich und werden per Auswahlliste aufgelöst, nicht vermieden.
 - Führt der Verein später spiel-eigene QR-Codes ein (falls der Duplikatfall aus Phase 5 doch relevant wird), profitiert der Gäste-Scan automatisch mit — diese ADR steht dem nicht im Weg, verschiebt die Einführung nur auf einen konkreten Bedarf.
 
+## Nachtrag 2026-09-04: Exemplar-eigene QR-Codes eingeführt (#271)
+
+Der oben offen gelassene Fall ist eingetreten: Der Spielewart kann jetzt für einzelne oder alle Exemplare QR-Codes generieren und als ZIP mit PNG-Etiketten exportieren (`/ludothek/exemplar/[inventoryNumber]`, aufgelöst über die seit #270 vorhandene, eindeutige `GameCopy.inventoryNumber`). Das ändert nichts an der obigen Entscheidung — der **Gäste-EAN-Scan bleibt unverändert** der primäre Weg für Gäste ohne aufgeklebtes Etikett. Ein Exemplar mit eigenem QR-Code führt beim Scannen direkt zur Titel-Detailseite (`/ludothek/[slug]`), ohne den EAN-Auswahlschritt bei mehreren Exemplaren desselben Titels — das QR-Etikett identifiziert eindeutig "welcher Titel", nicht "welche Tabellenzeile"; Standort/Zustand jedes einzelnen Exemplars zeigt die Zielseite wie gehabt allen eingeloggten Meeple.
+
+Bewusst kein PDF-Aufkleber-Bogen (Labelsheet-Layout) — dafür wäre eine neue PDF-Bibliothek (kein jsPDF/pdf-lib/@react-pdf im Repo) nötig gewesen; ein ZIP mit einzelnen PNGs deckt den eigentlichen Bedarf (Etiketten drucken/zuordnen) ohne diese zusätzliche Abhängigkeit ab. Ein PDF-Labelsheet bleibt als mögliches Folge-Issue offen, falls der Bedarf entsteht.
+
 ## Nachtrag 2026-08-03: Namensumfang für Erklärbären im Gäste-Bereich (Security-Finding F10)
 
 `getGuestGameDetail` ist bewusst unauthentifiziert und gibt `attendingExplainers` mit vollem `displayName` zurück. Ein Sicherheits-Audit hat zu Recht angemerkt, dass `eventId` dabei ursprünglich nicht geprüft wurde — ein Aufrufer konnte über beliebige Event-IDs Klarnamen und Anwesenheit von Mitgliedern auslesen, auch für Events, die längst vorbei oder noch nicht begonnen hatten.

@@ -16,6 +16,7 @@ import {
   LANGUAGE_DEPENDENCE_BY_LEVEL,
   LANGUAGE_DEPENDENCE_SHORT_LABELS,
 } from "@/lib/ludothek/language-dependence";
+import { formatDurationHours } from "@/lib/ludothek/format";
 
 const MIN_YEAR = 1900;
 const MIN_RATING = 1;
@@ -206,8 +207,8 @@ export function LudothekFilterPanel({
         </FilterSliderRow>
 
         <FilterSliderRow
-          label="Dauer (Min.)"
-          value={`${durationRange[0]} – ${durationRange[1]}`}
+          label="Dauer"
+          value={`${formatDurationHours(durationRange[0])} – ${formatDurationHours(durationRange[1])}`}
         >
           <RangeSlider
             min={MIN_DURATION}

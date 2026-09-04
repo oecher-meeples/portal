@@ -14,7 +14,14 @@ export default async function ErklaerbaerenPage() {
       orderBy: { boardGame: { title: "asc" } },
       include: {
         boardGame: { select: { id: true, title: true } },
-        meeple: { select: { id: true, displayName: true } },
+        meeple: {
+          select: {
+            id: true,
+            displayName: true,
+            profilePictureUrl: true,
+            profilePictureVisibility: true,
+          },
+        },
       },
     }),
     prisma.boardGame.findMany({
@@ -37,6 +44,8 @@ export default async function ErklaerbaerenPage() {
       meepleId: entry.meeple.id,
       displayName: entry.meeple.displayName,
       level: entry.level,
+      profilePictureUrl: entry.meeple.profilePictureUrl,
+      profilePictureVisibility: entry.meeple.profilePictureVisibility,
     });
     directoryByGame.set(entry.boardGame.id, existing);
 

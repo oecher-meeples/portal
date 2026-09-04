@@ -16,9 +16,9 @@ export type YearTurnCronSummary = {
   stufe3: { deleted: number; blocked: BlockedMember[] };
 };
 
-/** Jahreswechsel-Cron (2.1., 02:00, #331) — läuft einmal jährlich (kein
- * täglicher Job wie `retention.ts`, das ist eine getrennte, weiterhin
- * config-gatete Angelegenheit, siehe #49). Zwei unabhängige Prüfungen:
+/** Jahreswechsel-Cron (2.1., 02:00, #331) — läuft einmal jährlich, einziger
+ * Anonymisierungs-/Retention-Mechanismus (#396: der ältere, inaktive
+ * `retention.ts` ist entfernt). Zwei unabhängige Prüfungen:
  * (a) heuer fälliges `membershipEndsAt` + keine offenen Ausleihen → Stufe 2,
  * (b) 12 Monate seit `membershipEndsAt` vorbei + keine offenen Ausleihen →
  * Stufe 3. Blockierte Fälle (offene Ausleihen) landen in einer Sammel-Mail. */

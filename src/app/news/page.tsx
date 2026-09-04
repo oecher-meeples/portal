@@ -1,23 +1,27 @@
 ﻿import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
+import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { getAllContentWithCalendar } from "@/lib/content/calendar";
+import { NEWS_PAGE_SIZE } from "@/lib/content/content-types";
+import {
+  filterVisibleNews,
+  resolveNewsVisibility,
+} from "@/lib/content/news-visibility";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermissionInCurrentView } from "@/lib/auth/session";
+import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
-  const [allItems, user] = await Promise.all([
-    getAllContentWithCalendar(),
-    getCurrentUser(),
-  ]);
-  const canSeeInternal = user
-    ? await hasPermissionInCurrentView(user.id, "news:internal:view")
-    : false;
-  const items = canSeeInternal
-    ? allItems
-    : allItems.filter((item) => !item.internal);
+  const [{ items: rawItems, hasMore, nextCursor }, user, sessionTier] =
+    await Promise.all([
+      getAllContentWithCalendar({ take: NEWS_PAGE_SIZE }),
+      getCurrentUser(),
+      getSessionTier(),
+    ]);
+  const visibility = await resolveNewsVisibility(user, sessionTier);
+  const items = filterVisibleNews(rawItems, visibility);
   const [canEditPublic, canEditInternal] = user
     ? await Promise.all([
         hasPermissionInCurrentView(user.id, "posts:public"),
@@ -26,7 +30,7 @@ export default async function NewsPage() {
     : [false, false];
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <PageHeading
         eyebrow="Newsroom"
         title="Termine & Blog"
@@ -42,11 +46,14 @@ export default async function NewsPage() {
       <NewsletterInlineSignup />
       <NewsBrowser
         items={items}
+        hasMore={hasMore}
+        nextCursor={nextCursor}
         icsUrl={process.env.PUBLIC_CALENDAR_ICS_URL}
         canEditPublic={canEditPublic}
         canEditInternal={canEditInternal}
-        canSeeInternal={canSeeInternal}
+        canSeeInternal={visibility.canSeeInternal}
+        canSeeSurveys={visibility.isMember}
       />
-    </div>
+    </PageContainer>
   );
 }
