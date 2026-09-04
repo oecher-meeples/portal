@@ -3,6 +3,7 @@ import { processQueue, refreshConnectionIfNeeded } from "@/lib/instagram/queue";
 import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
 import { deleteExpiredLoginLogs } from "@/lib/auth/login-log";
 import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
+import { resetExplainerAttendance } from "@/lib/explainer/attendance-cleanup";
 import { isAuthorizedCronRequest } from "@/lib/utils/cron-auth";
 
 // Brevo's free tier caps at 300 mails/day; this cron runs once a day (see vercel.json).
@@ -27,10 +28,12 @@ export async function GET(request: Request) {
   const newsletter = await processNewsletterQueue(NEWSLETTER_DAILY_LIMIT);
   const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
   const loginLogCleanup = await deleteExpiredLoginLogs();
+  const explainerAttendanceCleanup = await resetExplainerAttendance();
   return NextResponse.json({
     ...summary,
     newsletter,
     bankLogCleanup,
     loginLogCleanup,
+    explainerAttendanceCleanup,
   });
 }

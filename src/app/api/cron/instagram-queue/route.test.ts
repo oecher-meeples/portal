@@ -26,6 +26,12 @@ vi.mock("@/lib/newsletter/dispatch", () => ({
     processNewsletterQueueMock(...args),
 }));
 
+const resetExplainerAttendanceMock = vi.fn();
+vi.mock("@/lib/explainer/attendance-cleanup", () => ({
+  resetExplainerAttendance: (...args: unknown[]) =>
+    resetExplainerAttendanceMock(...args),
+}));
+
 const { GET } = await import("./route");
 
 describe("GET /api/cron/instagram-queue", () => {
@@ -36,6 +42,8 @@ describe("GET /api/cron/instagram-queue", () => {
     deleteExpiredBankDataAccessLogsMock.mockResolvedValue({ deleted: 0 });
     deleteExpiredLoginLogsMock.mockReset();
     deleteExpiredLoginLogsMock.mockResolvedValue({ deleted: 0 });
+    resetExplainerAttendanceMock.mockReset();
+    resetExplainerAttendanceMock.mockResolvedValue({ deleted: 0 });
     processNewsletterQueueMock.mockReset();
     processNewsletterQueueMock.mockResolvedValue({
       processed: 0,
@@ -103,6 +111,7 @@ describe("GET /api/cron/instagram-queue", () => {
       newsletter: { processed: 0, succeeded: 0, failed: 0 },
       bankLogCleanup: { deleted: 0 },
       loginLogCleanup: { deleted: 0 },
+      explainerAttendanceCleanup: { deleted: 0 },
     });
   });
 
@@ -157,6 +166,7 @@ describe("GET /api/cron/instagram-queue", () => {
 
     expect(deleteExpiredBankDataAccessLogsMock).not.toHaveBeenCalled();
     expect(deleteExpiredLoginLogsMock).not.toHaveBeenCalled();
+    expect(resetExplainerAttendanceMock).not.toHaveBeenCalled();
   });
 
   it("prunes expired login logs on every run (#231)", async () => {
@@ -171,5 +181,19 @@ describe("GET /api/cron/instagram-queue", () => {
 
     expect(deleteExpiredLoginLogsMock).toHaveBeenCalledTimes(1);
     expect(body.loginLogCleanup).toEqual({ deleted: 5 });
+  });
+
+  it("resets the explainer 'Ich bin da' flag on every run (#338)", async () => {
+    processQueueMock.mockResolvedValue({ processed: 0 });
+    resetExplainerAttendanceMock.mockResolvedValue({ deleted: 2 });
+    const request = new Request(
+      "https://example.com/api/cron/instagram-queue",
+      { headers: { authorization: "Bearer test-secret" } },
+    );
+
+    const body = await (await GET(request)).json();
+
+    expect(resetExplainerAttendanceMock).toHaveBeenCalledTimes(1);
+    expect(body.explainerAttendanceCleanup).toEqual({ deleted: 2 });
   });
 });
