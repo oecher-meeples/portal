@@ -6,18 +6,21 @@ import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Genau zwei Stufen, keine dritte/vierte "man weiß nie" — Audit über alle
- * `MeepleAvatar`-Aufrufstellen ergab, dass real nur zwei Kontexte
- * vorkommen: kompakt in einer Zeile/Tabelle/Badge (`sm`) und groß,
- * freistehend (Dialog-Kopf, Hover-Vorschau, `lg`). `size` ist deshalb
- * bewusst Pflicht — kein stiller Default, der unbemerkt eine dritte Größe
- * einführt.
+ * Vier Stufen zur freien Wahl (Audit ergab nur zwei tatsächlich genutzte
+ * Kontexte, aber bewusst nicht darauf eingeschränkt — künftige
+ * Aufrufstellen sollen frei entscheiden können, nicht zwischen zwei
+ * Notlösungen wählen müssen). `size` bleibt Pflicht-Prop — kein stiller
+ * Default, der unbemerkt eine falsche Stufe einführt (siehe die LFG-
+ * Inkonsistenz, die das ausgelöst hat).
  *
- * `sm` = 40px: alles darunter macht ein Foto nicht mehr erkennbar, nur noch
- * eine Farbfläche. `lg` = `sm` × 1.2 = 48px — jede weitere Stufe (falls
- * nötig) folgt derselben ×1.2-Schrittweite.
+ * `sm` = 40px: die Untergrenze, ab der ein Foto überhaupt noch als Foto
+ * erkennbar ist, nicht nur als Farbfläche. Jede weitere Stufe wäre
+ * rechnerisch ×1.2 (48/57.6/69.12px) — gerundet auf die nächstliegenden
+ * Tailwind-Bordwerte (Vielfache von 4px), damit jede Stufe eine normale
+ * `size-*`-Utility bleibt statt eines krummen Arbitrary-Value:
+ * sm 40 → md 48 → lg 56 → xl 64px.
  */
-export type AvatarSize = "sm" | "lg";
+export type AvatarSize = "sm" | "md" | "lg" | "xl";
 
 function Avatar({
   className,
@@ -31,7 +34,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar after:border-border relative flex shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-12 data-[size=sm]:size-10 dark:after:mix-blend-lighten",
+        "group/avatar after:border-border relative flex shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-14 data-[size=md]:size-12 data-[size=sm]:size-10 data-[size=xl]:size-16 dark:after:mix-blend-lighten",
         className,
       )}
       {...props}
