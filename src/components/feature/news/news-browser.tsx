@@ -21,6 +21,7 @@ import {
   NewsResultsList,
   type NewsViewMode,
 } from "@/components/feature/news/news-results-list";
+import { loadMoreNews } from "@/components/feature/news/actions";
 
 /** #424: Kategorie "Umfragen" gehört nicht in die Filterleiste für Gäste —
  * es gibt keine öffentlichen Umfragen, nur Meeple sind abstimmungsberechtigt. */
@@ -41,7 +42,9 @@ const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
 ];
 
 export function NewsBrowser({
-  items,
+  items: initialItems,
+  hasMore: initialHasMore,
+  nextCursor: initialNextCursor,
   icsUrl,
   canEditPublic,
   canEditInternal,
@@ -49,6 +52,10 @@ export function NewsBrowser({
   canSeeSurveys,
 }: {
   items: ContentItem[];
+  /** Serverseitige DB-Post-Pagination (#469/#470) — ohne Angabe (z. B. in
+   * älteren Tests) wird angenommen, dass `items` bereits alles ist. */
+  hasMore?: boolean;
+  nextCursor?: string | null;
   icsUrl?: string;
   canEditPublic?: boolean;
   canEditInternal?: boolean;
@@ -62,6 +69,27 @@ export function NewsBrowser({
   // < lg: Kalender steht sonst als Grid-Zweitspalte ganz unten unter der
   // Ergebnisliste — dort stattdessen über ein Bottom-Sheet erreichbar.
   const [calendarSheetOpen, setCalendarSheetOpen] = useState(false);
+
+  // Vom Server initial geladene Seite (#470) — wächst clientseitig, wenn
+  // useInfiniteScroll (Server-Request-Modus) das Ende erreicht. Bleibt hier
+  // in NewsBrowser (nicht in NewsResultsList), damit die Seite beim
+  // Remount von NewsResultsList (Filterwechsel, s. u.) nicht verloren geht.
+  const [items, setItems] = useState(initialItems);
+  const [hasMore, setHasMore] = useState(initialHasMore ?? false);
+  const [nextCursor, setNextCursor] = useState(initialNextCursor ?? null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  async function handleLoadMore(cursor: string) {
+    setIsLoadingMore(true);
+    try {
+      const page = await loadMoreNews(cursor);
+      setItems((current) => [...current, ...page.items]);
+      setHasMore(page.hasMore);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   function selectDateAndCloseSheet(date: string | null) {
     setSelectedDate(date);
@@ -148,6 +176,10 @@ export function NewsBrowser({
           viewMode={viewMode}
           canEditPublic={canEditPublic}
           canEditInternal={canEditInternal}
+          onLoadMore={handleLoadMore}
+          cursor={nextCursor}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
         />
         {/* < lg: Kalender nur noch über das Bottom-Sheet oben (s. "Nach
             Datum filtern") erreichbar, nicht mehr zusätzlich hier unten. */}
