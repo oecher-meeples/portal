@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionButton } from "@/components/ui/action-button";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import {
   ausleiheIssuePrivateLoan,
   ausleiheReturnPrivateLoan,
@@ -29,11 +30,18 @@ export function PrivateLoansPanel({ loans }: { loans: OfferedPrivateLoan[] }) {
             key={loan.id}
             className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2.5 text-sm"
           >
-            <span>
+            <span className="flex items-center gap-1.5">
               <span className="font-medium">{loan.boardGame.title}</span>
-              <span className="text-muted-foreground">
-                {" "}
-                — freigegeben von {loan.owner.displayName}
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                — freigegeben von
+                <MeepleAvatar
+                  name={loan.owner.displayName}
+                  profilePictureUrl={loan.owner.profilePictureUrl}
+                  profilePictureVisibility={loan.owner.profilePictureVisibility}
+                  viewer={{ kind: "meeple" }}
+                  size="sm"
+                />
+                {loan.owner.displayName}
               </span>
             </span>
             {loan.status === "OFFERED" && (

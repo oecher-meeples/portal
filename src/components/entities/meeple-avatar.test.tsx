@@ -43,6 +43,12 @@ describe("MeepleAvatar (#412)", () => {
     expect(screen.getByText("E")).toBeInTheDocument();
   });
 
+  it("uses profilePictureUrl as-is when viewer/profilePictureVisibility are omitted (already resolved server-side, #412)", () => {
+    render(<MeepleAvatar name="Erika Musterfrau" profilePictureUrl={null} />);
+
+    expect(screen.getByText("E")).toBeInTheDocument();
+  });
+
   it("falls back to the initial without an uploaded picture", () => {
     render(
       <MeepleAvatar

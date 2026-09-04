@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeading } from "@/components/ui/page-heading";
 import { CodeScanner } from "@/components/ui/code-scanner";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import {
   getGuestGameDetail,
   lookupGuestGame,
@@ -153,14 +154,15 @@ export function GuestAreaView({
                     key={explainer.meepleId}
                     className="flex items-center gap-2 py-0.5"
                   >
-                    {explainer.profilePictureUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element -- Blob-URL, kein next/image nötig für ein kleines Avatar
-                      <img
-                        src={explainer.profilePictureUrl}
-                        alt=""
-                        className="size-6 shrink-0 rounded-full object-cover"
-                      />
-                    )}
+                    {/* #412: profilePictureUrl kommt bereits serverseitig
+                     * geprüft an (getAttendingExplainers() löst die
+                     * "Events"-Freigabe aus #389 auf) — MeepleAvatar ohne
+                     * viewer/profilePictureVisibility übernimmt sie unverändert. */}
+                    <MeepleAvatar
+                      name={explainer.displayName}
+                      profilePictureUrl={explainer.profilePictureUrl}
+                      size="sm"
+                    />
                     <span>
                       {explainer.displayName} ·{" "}
                       {EXPLAINER_LEVEL_LABELS[explainer.level] ??

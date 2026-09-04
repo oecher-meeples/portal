@@ -20,15 +20,23 @@ export function MeepleAvatar({
 }: {
   name: string;
   profilePictureUrl: string | null;
-  profilePictureVisibility: ProfilePictureVisibility;
-  viewer: ProfilePictureViewer;
+  /** Weggelassen (zusammen mit `viewer`), wenn der Aufrufer die
+   * Sichtbarkeitsprüfung bereits serverseitig durchgeführt hat (z. B.
+   * Gast-Bereich, #412: die "Events"-Freigabe hängt an der laufenden
+   * Event-Anwesenheit, die nur dort bekannt ist) — `profilePictureUrl` gilt
+   * dann als bereits geprüft und wird unverändert übernommen. */
+  profilePictureVisibility?: ProfilePictureVisibility;
+  viewer?: ProfilePictureViewer;
   size?: "default" | "sm" | "lg";
   className?: string;
 }) {
-  const visibleUrl = resolveVisibleProfilePictureUrl(
-    { profilePictureUrl, profilePictureVisibility },
-    viewer,
-  );
+  const visibleUrl =
+    profilePictureVisibility && viewer
+      ? resolveVisibleProfilePictureUrl(
+          { profilePictureUrl, profilePictureVisibility },
+          viewer,
+        )
+      : profilePictureUrl;
 
   return (
     <Avatar size={size} className={className}>

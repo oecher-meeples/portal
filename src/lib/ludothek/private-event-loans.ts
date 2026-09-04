@@ -1,4 +1,7 @@
-import { PrivateEventLoanStatus } from "@prisma/client";
+import {
+  PrivateEventLoanStatus,
+  type ProfilePictureVisibility,
+} from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 
 /**
@@ -116,7 +119,12 @@ export type OfferedPrivateLoan = {
   id: string;
   status: PrivateEventLoanStatus;
   boardGame: { id: string; title: string; slug: string };
-  owner: { id: string; displayName: string };
+  owner: {
+    id: string;
+    displayName: string;
+    profilePictureUrl: string | null;
+    profilePictureVisibility: ProfilePictureVisibility;
+  };
 };
 
 /** Für die Ausleihe-Meeple-Ansicht (`/ausleihe`, #121-Zugriffsschutz):
@@ -132,7 +140,14 @@ export function listOfferedPrivateLoansForEvent(
       id: true,
       status: true,
       boardGame: { select: { id: true, title: true, slug: true } },
-      owner: { select: { id: true, displayName: true } },
+      owner: {
+        select: {
+          id: true,
+          displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+        },
+      },
     },
   });
 }
