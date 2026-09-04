@@ -356,6 +356,11 @@ model Member {
   membershipEndsAt        DateTime?
   meepleId                String?   @unique
   tshirtSizeId            String?
+  /// SHA-256-Hash des Abo-Tokens für den internen ICS-Kalender-Feed (#438) —
+  /// Rohwert nie gespeichert, siehe `lib/members/calendar-token.ts`. `null`
+  /// = noch nie erzeugt oder widerrufen, kein Vorab-Backfill für Altbestand.
+  calendarTokenHash       String?   @unique
+  calendarTokenCreatedAt  DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 

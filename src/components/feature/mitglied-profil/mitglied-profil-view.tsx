@@ -41,6 +41,7 @@ import {
 } from "@/lib/utils/crypto";
 import { StammdatenSection } from "@/components/feature/mitglied-profil/stammdaten-section";
 import { BankverbindungSection } from "@/components/feature/mitglied-profil/bankverbindung-section";
+import { KalenderTokenSection } from "@/components/feature/mitglied-profil/kalender-token-section";
 import { VereinsspieleSection } from "@/components/feature/mitglied-profil/vereinsspiele-section";
 import {
   MeepleDatenSection,
@@ -253,6 +254,16 @@ export async function MitgliedProfilView({
                 confirmed: true,
               };
             })}
+          />
+        )}
+
+        {viewer.isAdmin && (
+          <KalenderTokenSection
+            memberId={member.id}
+            hasToken={member.calendarTokenHash !== null}
+            tokenCreatedAt={
+              member.calendarTokenCreatedAt?.toISOString() ?? null
+            }
           />
         )}
 

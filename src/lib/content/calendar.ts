@@ -101,12 +101,19 @@ export function parseCalendarEvents(
     }));
 }
 
-/** Never throws — a feed outage must not break whichever calendar rendered next to it. */
-async function fetchIcsFeed(
+/** Never throws — a feed outage must not break whichever calendar rendered
+ * next to it. `null` covers every failure mode (missing URL, network error,
+ * non-2xx, oversized body) uniformly, since the caller only cares whether a
+ * usable ICS body came back.
+ *
+ * Exported for `/api/calendar/internal/[token]` (#438), das den rohen Feed
+ * unverändert durchreicht statt ihn wie hier zu parsen — ein zweiter
+ * Fetch/Timeout/Cap-Codepfad wäre eine unnötige Kopie.
+ */
+export async function fetchRawIcsText(
   icsUrl: string | undefined,
-  options: { limit?: number; now?: Date } = {},
-): Promise<ContentItem[]> {
-  if (!icsUrl) return [];
+): Promise<string | null> {
+  if (!icsUrl) return null;
 
   try {
     const response = await fetch(icsUrl, {
@@ -115,15 +122,22 @@ async function fetchIcsFeed(
     });
     if (!response.ok) {
       await response.body?.cancel();
-      return [];
+      return null;
     }
 
-    const icsText = await readCappedIcsBody(response, MAX_ICS_BYTES);
-    if (icsText === null) return [];
-    return parseCalendarEvents(icsText, options);
+    return await readCappedIcsBody(response, MAX_ICS_BYTES);
   } catch {
-    return [];
+    return null;
   }
+}
+
+async function fetchIcsFeed(
+  icsUrl: string | undefined,
+  options: { limit?: number; now?: Date } = {},
+): Promise<ContentItem[]> {
+  const icsText = await fetchRawIcsText(icsUrl);
+  if (icsText === null) return [];
+  return parseCalendarEvents(icsText, options);
 }
 
 export async function fetchPublicEvents(
