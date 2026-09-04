@@ -7,7 +7,7 @@ issues:
   324: { status: blocked-commented }
   412: { status: done }
   339: { status: pending }
-  458: { status: pending }
+  458: { status: done }
   465: { status: pending }
   474: { status: pending }
 ---
