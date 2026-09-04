@@ -55,7 +55,14 @@ export function UserMenu({
         href="/profil"
         className="text-muted-foreground hover:text-foreground hidden items-center gap-1.5 sm:inline-flex"
         onClick={(event) => {
-          if (consumeFired()) event.preventDefault();
+          if (consumeFired()) {
+            event.preventDefault();
+            // Der durchs Loslassen ausgelöste Klick bubbelt sonst bis zum
+            // Dialog-Root hoch und wird dort als Klick "außerhalb" gewertet
+            // — der gerade erst geöffnete QR-Dialog ging dadurch sofort
+            // wieder zu, noch bevor man ihn zeigen konnte.
+            event.stopPropagation();
+          }
         }}
         {...handlers}
       >

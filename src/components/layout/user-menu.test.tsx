@@ -58,3 +58,32 @@ describe("UserMenu — Logout räumt Client-Präferenzen (#472, #339)", () => {
     expect(refreshMock).toHaveBeenCalled();
   });
 });
+
+describe("UserMenu — Longpress öffnet QR-Code-Dialog (#465)", () => {
+  it("keeps the dialog open past the release click instead of it bubbling to an outside-click dismiss", async () => {
+    const outsideClickListener = vi.fn();
+    document.addEventListener("click", outsideClickListener);
+
+    render(
+      <UserMenu user={{ name: "Erika Musterfrau", meepleId: "meeple-1" }} />,
+    );
+    const profileLink = screen.getByRole("link", {
+      name: "Erika Musterfrau",
+    });
+
+    fireEvent.pointerDown(profileLink);
+    await new Promise((resolve) => setTimeout(resolve, 550));
+    // Loslassen löst auf den meisten Plattformen zusätzlich einen `click`
+    // aus, der bis zum `document` bubbelt (bubbles: true, wie im echten
+    // Browser) — genau der Fall, der den Dialog vorzeitig schloss.
+    fireEvent.pointerUp(profileLink);
+    fireEvent.click(profileLink, { bubbles: true });
+
+    expect(await screen.findByText("Mein QR-Code")).toBeInTheDocument();
+    // Der Klick darf den Dialog nicht über eine "Klick außerhalb"-Erkennung
+    // schließen — stopPropagation() verhindert, dass er das document erreicht.
+    expect(outsideClickListener).not.toHaveBeenCalled();
+
+    document.removeEventListener("click", outsideClickListener);
+  });
+});
