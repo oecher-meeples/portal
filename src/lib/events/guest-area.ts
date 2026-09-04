@@ -9,7 +9,16 @@ import {
   type LudothekFilters,
   type LudothekGame,
 } from "@/lib/ludothek/browser";
-import { resolveVisibleProfilePictureUrl } from "@/lib/members/profile-picture-visibility";
+import {
+  isProfilePictureVisible,
+  resolveVisibleProfilePictureUrl,
+  type ProfilePictureViewer,
+} from "@/lib/members/profile-picture-visibility";
+import {
+  getContactLinks,
+  meepleEmail,
+  type ContactLinks,
+} from "@/lib/members/contact";
 
 const MAX_UNIT_CHAIN_DEPTH = 20;
 
@@ -146,6 +155,15 @@ export type AttendingExplainer = {
    * aufgerufen (`isEventCurrentlyRunning()` beim Aufrufer), jede Zeile hier
    * ist also automatisch "gerade aktiv anwesend". */
   profilePictureUrl: string | null;
+  /** Freiwillige Kontaktkanäle — genau wie `profileHref` erst ab
+   * `meepleDatenVisibility` EVENTS/IMMER befüllt (nicht an
+   * `profilePictureVisibility` gekoppelt: ein Meeple kann sein Bild zeigen,
+   * ohne Kontaktdaten für Gäste freizugeben, und umgekehrt). */
+  contact: ContactLinks;
+  /** Ziel des "Profil ansehen"-Links im `ContactDialog` — `null`, solange
+   * `meepleDatenVisibility` das für diesen Gast nicht freigibt (`INTERN`
+   * bleibt für Gäste immer verborgen, auch während der Anwesenheit). */
+  profileHref: string | null;
 };
 
 /** Erklärbären present at this event who can explain this specific game. */
@@ -156,12 +174,20 @@ export async function getAttendingExplainers(
   const attendances = await prisma.explainerAttendance.findMany({
     where: { eventId, meeple: { explainerGames: { some: { boardGameId } } } },
     include: {
+      event: { select: { slug: true } },
       meeple: {
         select: {
           id: true,
           displayName: true,
           profilePictureUrl: true,
           profilePictureVisibility: true,
+          meepleDatenVisibility: true,
+          telegramHandle: true,
+          signalHandle: true,
+          discordHandle: true,
+          address: true,
+          shareAddress: true,
+          member: { select: { email: true } },
           explainerGames: {
             where: { boardGameId },
             select: { level: true },
@@ -173,15 +199,35 @@ export async function getAttendingExplainers(
 
   return attendances
     .filter((a) => a.meeple.explainerGames.length > 0)
-    .map((a) => ({
-      meepleId: a.meeple.id,
-      displayName: a.meeple.displayName,
-      level: a.meeple.explainerGames[0].level,
-      profilePictureUrl: resolveVisibleProfilePictureUrl(a.meeple, {
+    .map((a) => {
+      const viewer: ProfilePictureViewer = {
         kind: "guest",
         isAttendingExplainerNow: true,
-      }),
-    }));
+      };
+      const meepleDatenVisible = a.meeple.meepleDatenVisibility
+        ? isProfilePictureVisible(a.meeple.meepleDatenVisibility, viewer)
+        : false;
+      return {
+        meepleId: a.meeple.id,
+        displayName: a.meeple.displayName,
+        level: a.meeple.explainerGames[0].level,
+        profilePictureUrl: resolveVisibleProfilePictureUrl(a.meeple, viewer),
+        contact: meepleDatenVisible
+          ? getContactLinks({ ...a.meeple, email: meepleEmail(a.meeple) })
+          : getContactLinks({
+              email: null,
+              telegramHandle: null,
+              signalHandle: null,
+              discordHandle: null,
+              address: null,
+              shareAddress: false,
+            }),
+        profileHref:
+          meepleDatenVisible && a.event?.slug
+            ? `/events/${a.event.slug}/gast/erklaerbaer/${a.meeple.id}`
+            : null,
+      };
+    });
 }
 
 /**

@@ -32,7 +32,7 @@ export async function fetchContactDialogMeeple(
       shareAddress: true,
       profilePictureUrl: true,
       profilePictureVisibility: true,
-      member: { select: { email: true } },
+      member: { select: { email: true, slug: true } },
     },
   });
   if (!meeple) return null;

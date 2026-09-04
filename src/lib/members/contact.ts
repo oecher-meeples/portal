@@ -62,6 +62,14 @@ export type ContactDialogMeeple = {
    * nicht sichtbar — nie eine ungeprüfte URL. */
   profilePictureUrl: string | null;
   contact: ContactLinks;
+  /** Ziel des "Profil ansehen"-Links im Dialog — `null`, wenn es für diesen
+   * Meeple/Betrachter keins gibt (kein verknüpftes `Member`, z. B.
+   * Systemkonto oder anonymisierter Alt-Meeple). Für eingeloggte Meeple
+   * immer `/profil/<slug>` (jedes Meeple darf jedes fremde Profil öffnen,
+   * siehe `canAccessMemberProfile`). Der Gast-Fall baut sein eigenes
+   * `ContactDialogMeeple` nicht über diese Funktion (siehe
+   * `getAttendingExplainers`) — hier deshalb bewusst `null` für `guest`. */
+  profileHref: string | null;
 };
 
 /** Baut die `ContactDialogMeeple`-Form aus rohen Meeple-Feldern — von jeder
@@ -81,11 +89,19 @@ export function toContactDialogMeeple(
     shareAddress: boolean;
     profilePictureUrl: string | null;
     profilePictureVisibility: ProfilePictureVisibility;
+    /** Optional statt Pflichtfeld: bestehende Aufrufer/Tests, die (noch)
+     * kein `member` mitgeben, bekommen weiterhin ein gültiges Ergebnis —
+     * nur ohne Profil-Link. */
+    member?: { slug: string } | null;
   },
   viewer: ProfilePictureViewer,
 ): ContactDialogMeeple {
   return {
     profilePictureUrl: resolveVisibleProfilePictureUrl(meeple, viewer),
     contact: getContactLinks(meeple),
+    profileHref:
+      viewer.kind === "meeple" && meeple.member
+        ? `/profil/${meeple.member.slug}`
+        : null,
   };
 }

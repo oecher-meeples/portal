@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { PageHeading } from "@/components/ui/page-heading";
 import { CodeScanner } from "@/components/ui/code-scanner";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import {
   getGuestGameDetail,
   lookupGuestGame,
@@ -154,17 +155,26 @@ export function GuestAreaView({
                     key={explainer.meepleId}
                     className="flex items-center gap-2 py-0.5"
                   >
-                    {/* #412: profilePictureUrl kommt bereits serverseitig
-                     * geprüft an (getAttendingExplainers() löst die
-                     * "Events"-Freigabe aus #389 auf) — MeepleAvatar ohne
-                     * viewer/profilePictureVisibility übernimmt sie unverändert. */}
+                    {/* #412: profilePictureUrl/contact/profileHref kommen
+                     * bereits serverseitig geprüft an (getAttendingExplainers()
+                     * löst die meepleDatenVisibility-/Freigabe-Prüfung aus
+                     * #389 auf) — MeepleAvatar ohne viewer/
+                     * profilePictureVisibility übernimmt sie unverändert. */}
                     <MeepleAvatar
                       name={explainer.displayName}
                       profilePictureUrl={explainer.profilePictureUrl}
-                      size="sm"
+                      size="md"
                     />
                     <span>
-                      {explainer.displayName} ·{" "}
+                      <ContactDialog
+                        name={explainer.displayName}
+                        meeple={{
+                          profilePictureUrl: explainer.profilePictureUrl,
+                          contact: explainer.contact,
+                          profileHref: explainer.profileHref,
+                        }}
+                      />{" "}
+                      ·{" "}
                       {EXPLAINER_LEVEL_LABELS[explainer.level] ??
                         explainer.level}
                     </span>

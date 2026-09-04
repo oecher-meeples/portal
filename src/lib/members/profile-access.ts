@@ -21,23 +21,23 @@ export type ProfileViewerContext = {
 
 /** Pure access decision (analog `isEventVisible`) — separated from the
  * Prisma/session lookups in `loadProfileViewerContext` so the rule itself is
- * trivially unit-testable. */
+ * trivially unit-testable.
+ *
+ * Jedes eingeloggte Meeple darf jedes fremde Profil öffnen (bewusste
+ * Lockerung — der Profil-Link im `ContactDialog` soll für jedes Meeple
+ * funktionieren, nicht nur für Admin/Vorstand/Erziehungsberechtigte). Was
+ * dort tatsächlich zu sehen ist, entscheiden weiterhin die engeren
+ * Bereichs-Checks (`canViewBankSection` etc.), nicht diese Funktion.
+ * `_target`/`_context` bleiben Parameter (nicht ersatzlos entfernt), damit
+ * eine künftige individuelle Profil-Sperre hier weiterhin ansetzen kann,
+ * ohne die Aufrufstelle (`loadMemberProfileData`) anpassen zu müssen. */
 export function canAccessMemberProfile(
-  target: { meepleId: string | null },
-  context: ProfileViewerContext,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Signatur bewusst erhalten, siehe Kommentar oben
+  _target: { meepleId: string | null },
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Signatur bewusst erhalten, siehe Kommentar oben
+  _context: ProfileViewerContext,
 ): boolean {
-  if (
-    context.isAdmin ||
-    context.canManageMembers ||
-    context.canReadBank ||
-    context.canManageGames
-  ) {
-    return true;
-  }
-  if (target.meepleId && target.meepleId === context.currentMeepleId) {
-    return true;
-  }
-  return context.isGuardianOfTarget;
+  return true;
 }
 
 /** Enger als `canAccessMemberProfile` (#381) — der Bankverbindungs-Bereich

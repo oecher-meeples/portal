@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MailIcon, MapPinIcon, MessageCircleIcon } from "lucide-react";
+import Link from "next/link";
+import { ExternalLinkIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +11,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/ui/copy-button";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import {
+  ContactChannelsList,
+  hasAnyContactChannel,
+} from "@/components/entities/contact-channels-list";
 import { cn } from "@/lib/utils/cn";
 import type { ContactDialogMeeple } from "@/lib/members/contact";
 
@@ -82,19 +86,12 @@ export function ContactDialog({
   }
 
   const contact = loaded?.contact;
-  const hasAnyContact = Boolean(
-    contact &&
-    (contact.mailHref ||
-      contact.telegramHref ||
-      contact.signalHref ||
-      contact.discordHandle ||
-      contact.address),
-  );
+  const hasAnyContact = hasAnyContactChannel(contact);
 
   // Nur im meeple-Fall schon vorab bekannt — vermeidet einen Dialog, der
   // beim Öffnen ohnehin nichts zu zeigen hätte. Im meepleId-Fall steht das
   // erst nach dem Laden fest, dort bleibt der Trigger immer klickbar.
-  if (meeple && !hasAnyContact) {
+  if (meeple && !hasAnyContact && !meeple.profileHref) {
     return <span className={className}>{name}</span>;
   }
 
@@ -118,12 +115,25 @@ export function ContactDialog({
           <MeepleAvatar
             name={name}
             profilePictureUrl={loaded?.profilePictureUrl ?? null}
-            size="lg"
+            size="xxxl"
             className="mx-auto"
+            hideWithoutPicture
           />
           <DialogTitle className="text-center">{name} kontaktieren</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-2">
+          {loaded?.profileHref && (
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <Link href={loaded.profileHref}>
+                  <ExternalLinkIcon className="size-4" />
+                  Profil ansehen
+                </Link>
+              }
+            />
+          )}
           {loading && (
             <p className="text-muted-foreground text-center text-sm">
               Lade Kontaktdaten …
@@ -132,56 +142,7 @@ export function ContactDialog({
           {error && (
             <p className="text-destructive text-center text-sm">{error}</p>
           )}
-          {contact?.mailHref && (
-            <Button
-              className="gap-1.5"
-              render={
-                <a href={contact.mailHref}>
-                  <MailIcon className="size-4" />
-                  E-Mail
-                </a>
-              }
-            />
-          )}
-          {contact?.telegramHref && (
-            <Button
-              variant="outline"
-              className="gap-1.5"
-              render={
-                <a href={contact.telegramHref} target="_blank" rel="noreferrer">
-                  Telegram
-                </a>
-              }
-            />
-          )}
-          {contact?.signalHref && (
-            <Button
-              variant="outline"
-              className="gap-1.5"
-              render={
-                <a href={contact.signalHref} target="_blank" rel="noreferrer">
-                  Signal
-                </a>
-              }
-            />
-          )}
-          {contact?.discordHandle && (
-            <CopyButton
-              value={contact.discordHandle}
-              label={`Discord: ${contact.discordHandle}`}
-              icon={MessageCircleIcon}
-            />
-          )}
-          {contact?.address && (
-            <div className="border-input flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
-              <p className="whitespace-pre-line">{contact.address}</p>
-              <CopyButton
-                value={contact.address}
-                label="Kopieren"
-                icon={MapPinIcon}
-              />
-            </div>
-          )}
+          {contact && <ContactChannelsList contact={contact} />}
           {loaded && !hasAnyContact && !error && (
             <p className="text-muted-foreground text-center text-sm">
               Keine Kontaktmöglichkeiten hinterlegt.

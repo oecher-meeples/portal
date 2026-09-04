@@ -29,6 +29,7 @@ function meeple(
   return {
     profilePictureUrl: null,
     contact: NO_CONTACT,
+    profileHref: null,
     ...overrides,
   };
 }
@@ -41,7 +42,7 @@ describe("ContactDialog — meeple-Prop (Daten bereits geladen)", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("opens a dialog with every contact option and a centered avatar on click", () => {
+  it("opens a dialog with every contact option, without an initials fallback for a missing picture", () => {
     render(
       <ContactDialog
         name="Lea Demo"
@@ -57,17 +58,13 @@ describe("ContactDialog — meeple-Prop (Daten bereits geladen)", () => {
       />,
     );
 
-    // Vor dem Öffnen: nur der Name als Trigger-Text, kein Avatar-Fallback
-    // (Initiale) in der Zeile.
-    expect(screen.queryByText("L")).not.toBeInTheDocument();
-
     fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
 
     expect(
       screen.getByRole("heading", { name: "Lea Demo kontaktieren" }),
     ).toBeInTheDocument();
-    // Avatar-Fallback-Initiale jetzt im Dialog-Kopf sichtbar.
-    expect(screen.getByText("L")).toBeInTheDocument();
+    // Ohne Bild: kein Initialen-Kreis im Dialog-Kopf (hideWithoutPicture).
+    expect(screen.queryByText("L")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /E-Mail/ })).toHaveAttribute(
       "href",
       "mailto:lea@example.com",
@@ -84,6 +81,21 @@ describe("ContactDialog — meeple-Prop (Daten bereits geladen)", () => {
       screen.getByRole("button", { name: "Discord: leademo" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Musterstr. 1, 52062 Aachen")).toBeInTheDocument();
+  });
+
+  it("opens a dialog for the profile link alone, even without any contact channel", () => {
+    render(
+      <ContactDialog
+        name="Lea Demo"
+        meeple={meeple({ profileHref: "/profil/lea-demo" })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
+
+    expect(
+      screen.getByRole("button", { name: /Profil ansehen/ }),
+    ).toHaveAttribute("href", "/profil/lea-demo");
   });
 
   it("shows only the mail option when nothing else is set", () => {
