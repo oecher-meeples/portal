@@ -3,9 +3,9 @@ branch: feature/issue-batch-20260903
 created: 2026-09-04
 mode: autonomous (kein Stop-für-Review pro Issue — expliziter Nutzerwunsch, weicht von quick-sprint-Standard ab)
 issues:
-  320: { status: pending }
-  324: { status: pending }
-  412: { status: pending }
+  320: { status: done }
+  324: { status: blocked-commented }
+  412: { status: done }
   339: { status: pending }
   458: { status: pending }
   465: { status: pending }
