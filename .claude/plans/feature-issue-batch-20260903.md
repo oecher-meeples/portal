@@ -6,7 +6,7 @@ issues:
   320: { status: done }
   324: { status: blocked-commented }
   412: { status: done }
-  339: { status: pending }
+  339: { status: done-with-manual-followup }
   458: { status: done }
   465: { status: done }
   474: { status: done }
