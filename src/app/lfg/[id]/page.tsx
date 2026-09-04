@@ -58,7 +58,8 @@ export default async function LfgDetailPage({
   const isCreator = post.createdByMeepleId === meeple.id;
   // Kontaktdaten (#167) nur für beigetretene Betrachter — serverseitig
   // abgesichert, nicht nur clientseitig ausgeblendet: wer nicht beigetreten
-  // ist, bekommt für jeden Teilnehmer `contact: null` mitgegeben.
+  // ist, bekommt für jeden Teilnehmer `contact: null` mitgegeben. Ausnahme:
+  // der Ersteller ist immer kontaktierbar, siehe unten bei `contact:`.
   const viewerIsParticipant = post.participants.some(
     (p) => p.meepleId === meeple.id,
   );
@@ -93,8 +94,13 @@ export default async function LfgDetailPage({
           meepleDisplayName: p.meeple?.displayName,
           addedByDisplayName: p.addedBy.displayName,
         }),
+        // Ersteller bleibt Ausnahme von #167: wer noch nicht beigetreten ist,
+        // muss den Autor trotzdem kontaktieren können, um überhaupt fragen zu
+        // können — für alle übrigen Teilnehmenden gilt die Sperre unverändert.
         contact:
-          p.meepleId !== null && viewerIsParticipant && p.meeple
+          p.meepleId !== null &&
+          p.meeple &&
+          (viewerIsParticipant || p.meepleId === post.createdByMeepleId)
             ? getContactLinks({ ...p.meeple, email: meepleEmail(p.meeple) })
             : null,
         // (#412) Bild statt Initialen-Kreis, sofern hochgeladen und laut
