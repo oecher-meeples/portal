@@ -58,7 +58,7 @@ export function KuendigungsstatusSelect({
               : revokeResignation(meepleId),
           );
         }}
-        className="border-input h-8 rounded-md border bg-transparent px-2 text-sm disabled:opacity-60"
+        className="border-input bg-background h-8 rounded-md border px-2 text-sm disabled:opacity-60"
       >
         <option value="aktiv">{STATE_LABELS.registriert}</option>
         <option value="gekuendigt">{STATE_LABELS.gekuendigt}</option>

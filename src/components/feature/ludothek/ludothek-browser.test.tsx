@@ -91,6 +91,9 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     isLoanedOut: false,
     responsibleMeepleId: null,
     responsibleName: null,
+    responsibleProfilePictureUrl: null,
+    responsibleProfilePictureVisibility: "INTERN",
+    isUnconfirmed: false,
     unitChain: "Regal A",
     locationChain: "Regal A",
     explainerCount: 0,
@@ -377,5 +380,31 @@ describe("LudothekBrowser — Bearbeiten opens the title dialog (Plan-Schritt 10
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
     expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
+  });
+});
+
+// #446: Kartengröße-Slider nur in der Grid-Ansicht.
+describe("LudothekBrowser — Kartengröße-Slider (#446)", () => {
+  it("shows the card-size slider in grid view", () => {
+    render(<LudothekBrowser {...baseProps()} games={[game()]} internal />);
+
+    expect(
+      screen.getByRole("slider", { name: "Kartengröße" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the card-size slider outside grid view", () => {
+    render(
+      <LudothekBrowser
+        {...baseProps()}
+        games={[game()]}
+        filters={{ view: "liste" }}
+        internal
+      />,
+    );
+
+    expect(
+      screen.queryByRole("slider", { name: "Kartengröße" }),
+    ).not.toBeInTheDocument();
   });
 });

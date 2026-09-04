@@ -58,6 +58,9 @@ export type HelferEventGroup = {
   location: string | null;
   days: EventDayOption[];
   isAttendingAsExplainer: boolean;
+  /** #338: das An-/Abmelde-Banner ist sonst schon Tage vor Eventbeginn
+   * sichtbar, sobald der Helferplan-Akkordeon-Eintrag existiert. */
+  isCurrentlyRunning: boolean;
 };
 
 export function HelferView({
@@ -117,7 +120,7 @@ export function HelferView({
                     />
                   ))}
 
-                  {isExplainer && (
+                  {isExplainer && event.isCurrentlyRunning && (
                     <div className="bg-primary/10 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
                       <span>
                         {event.isAttendingAsExplainer

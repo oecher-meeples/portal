@@ -12,7 +12,7 @@ import {
   type VereinsmitgliedRow,
 } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
 import {
-  CONTRIBUTION_CATEGORY_SHORT_LABELS,
+  CONTRIBUTION_CATEGORY_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
 import { nextContributionFilter } from "@/components/feature/admin-mitglieder/contribution-filter";
@@ -21,6 +21,8 @@ import {
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { AnonymisationExplanation } from "@/components/entities/anonymisation-explanation";
+import { HelpDialog } from "@/components/ui/help-dialog";
 import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
 import {
   RoleManagementSection,
@@ -69,6 +71,7 @@ export function AdminMitgliederView({
   canCreateSystemkonto,
   canManageSystemAccounts,
   pendingEmailChanges,
+  pendingStammdatenChanges,
   stufe3Candidates,
 }: {
   members: VereinsmitgliedRow[];
@@ -99,6 +102,7 @@ export function AdminMitgliederView({
    * Setzen/Entfernen der System-Konto-Markierung im Meeple-Edit-Dialog aus. */
   canManageSystemAccounts: boolean;
   pendingEmailChanges: PendingChangeRow[];
+  pendingStammdatenChanges: PendingChangeRow[];
   stufe3Candidates: {
     id: string;
     memberNumber: number;
@@ -192,7 +196,7 @@ export function AdminMitgliederView({
                         : "text-muted-foreground",
                     )}
                   >
-                    <dt>{CONTRIBUTION_CATEGORY_SHORT_LABELS[key]}</dt>
+                    <dt>{CONTRIBUTION_CATEGORY_LABELS[key]}</dt>
                     <dd className="font-mono">{count}</dd>
                   </button>
                 );
@@ -285,9 +289,14 @@ export function AdminMitgliederView({
 
       {readyForAnonymisation.length > 0 && (
         <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bereit zur Anonymisierung
-          </h2>
+          <div className="flex items-center gap-1">
+            <h2 className="font-serif text-lg font-bold">
+              Bereit zur Anonymisierung
+            </h2>
+            <HelpDialog title="Anonymisierung">
+              <AnonymisationExplanation />
+            </HelpDialog>
+          </div>
           <ul className="mt-3 flex flex-col divide-y text-sm">
             {readyForAnonymisation.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
@@ -303,16 +312,28 @@ export function AdminMitgliederView({
       )}
 
       <PendingChangesPanel
-        title="Offene E-Mail-Änderungsanträge"
+        titleSingular="Offener E-Mail-Änderungsantrag"
+        titlePlural="Offene E-Mail-Änderungsanträge"
         changes={pendingEmailChanges}
         isEmailChangePanel
       />
 
+      <PendingChangesPanel
+        titleSingular="Offene Stammdaten-Änderung"
+        titlePlural="Offene Stammdaten-Änderungen"
+        changes={pendingStammdatenChanges}
+      />
+
       {stufe3Candidates.length > 0 && (
         <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bereit zur endgültigen Löschung (Stufe 3)
-          </h2>
+          <div className="flex items-center gap-1">
+            <h2 className="font-serif text-lg font-bold">
+              Bereit zur endgültigen Löschung (Stufe 3)
+            </h2>
+            <HelpDialog title="Anonymisierung">
+              <AnonymisationExplanation />
+            </HelpDialog>
+          </div>
           <p className="text-muted-foreground mt-1 text-sm">
             12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
           </p>
@@ -341,7 +362,7 @@ export function AdminMitgliederView({
         canManageInvites={canManageInvites}
         isAdmin={canCreateSystemkonto}
         contributionFilter={contributionFilter}
-        onClearContributionFilter={() => setContributionFilter(null)}
+        onContributionFilterChange={setContributionFilter}
       />
 
       <MitgliederTable

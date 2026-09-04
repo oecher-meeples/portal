@@ -126,7 +126,7 @@ export function MeepleDatenSection({
                   event.target.value as ProfilePictureVisibility,
                 )
               }
-              className="border-input h-9 w-32 shrink-0 rounded-md border bg-transparent px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="border-input bg-background h-9 w-32 shrink-0 rounded-md border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               {Object.entries(PROFILE_PICTURE_VISIBILITY_SHORT_LABELS).map(
                 ([value, label]) => (

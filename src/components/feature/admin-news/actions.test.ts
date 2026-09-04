@@ -70,47 +70,7 @@ describe("createPost", () => {
     expect(prismaMock.post.create).not.toHaveBeenCalled();
   });
 
-  it("derives the excerpt from the first 130 characters of the body when left empty", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
-    const body = "x".repeat(180);
-
-    await createPost({ ...VALID_INPUT, excerpt: "", body });
-
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ excerpt: `${"x".repeat(130)}...` }),
-    });
-  });
-
-  it("uses the full body as the excerpt when it is 130 characters or shorter", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
-    const body = "x".repeat(80);
-
-    await createPost({ ...VALID_INPUT, excerpt: "   ", body });
-
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ excerpt: body }),
-    });
-  });
-
-  it("keeps an explicitly given excerpt instead of deriving one from the body", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
-
-    await createPost({
-      ...VALID_INPUT,
-      excerpt: "Handverlesen",
-      body: "x".repeat(180),
-    });
-
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ excerpt: "Handverlesen" }),
-    });
-  });
+  // Excerpt-Ableitung (deriveExcerpt) siehe actions-excerpt.test.ts (#448).
 
   it("creates the post when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });

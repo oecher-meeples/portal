@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { GuardianLinkOption } from "@/lib/members/guardians";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 
 /** "Meine Kinder"-Sektion (#376) — nur auf der eigenen Profilseite
  * eingebunden (`mitglied-profil-view.tsx` rendert sie nur, wenn
@@ -17,13 +19,31 @@ export function MeineKinderSection({
       <h2 className="font-serif text-lg font-bold">Meine Kinder</h2>
       <ul className="flex flex-col gap-1.5 text-sm">
         {guardianChildren.map((child) => (
-          <li key={child.id}>
-            <Link
-              href={`/profil/${child.slug}`}
-              className="text-primary underline underline-offset-2"
-            >
-              {child.displayName}
-            </Link>
+          <li key={child.id} className="flex items-center gap-1.5">
+            <MeepleAvatar
+              name={child.displayName}
+              profilePictureUrl={child.profilePictureUrl}
+              profilePictureVisibility={child.profilePictureVisibility}
+              viewer={{ kind: "meeple" }}
+              size="md"
+            />
+            {child.meepleId ? (
+              <ContactDialog
+                name={child.displayName}
+                meepleId={child.meepleId}
+              />
+            ) : (
+              // Kein Meeple (MiniMeeple/JungMeeple ohne eigenen Login, #373)
+              // — kein ContactDialog möglich, aber ein Profil unter
+              // `/profil/<slug>` gibt es trotzdem (Member existiert ohne
+              // Meeple, siehe ADR 0013).
+              <Link
+                href={`/profil/${child.slug}`}
+                className="text-primary underline underline-offset-2"
+              >
+                {child.displayName}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

@@ -4,6 +4,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { GameCopiesSection } from "@/components/feature/ludothek/game-copies-section";
 import type { GameCopyRow } from "@/components/feature/ludothek/game-copies-section";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
   AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
 }));
@@ -28,13 +31,8 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     zustand: "frei",
     unitChain: "Regal A",
     responsibleName: null,
-    responsibleContact: {
-      mailHref: null,
-      telegramHref: null,
-      signalHref: null,
-      discordHandle: null,
-      address: null,
-    },
+    isUnconfirmed: false,
+    responsibleContactMeeple: null,
     condition: null,
     ruleBookLanguages: [],
     inventoryNumber: null,
@@ -142,12 +140,16 @@ describe("GameCopiesSection", () => {
           copy({
             unitChain: "Regal A",
             responsibleName: "Alex",
-            responsibleContact: {
-              mailHref: "mailto:alex@example.com",
-              telegramHref: null,
-              signalHref: null,
-              discordHandle: null,
-              address: null,
+            responsibleContactMeeple: {
+              profilePictureUrl: null,
+              contact: {
+                mailHref: "mailto:alex@example.com",
+                telegramHref: null,
+                signalHref: null,
+                discordHandle: null,
+                address: null,
+              },
+              profileHref: null,
             },
           }),
         ]}
@@ -157,8 +159,31 @@ describe("GameCopiesSection", () => {
       />,
     );
 
+    // #412-Folgefeedback: der Avatar sitzt seit diesem Feedback nur noch im
+    // Dialog-Kopf, nicht mehr inline vor dem Namen in der Zeile.
     const cell = screen.getByText(/Regal A/);
     expect(cell.textContent).toBe("bei Alex → Regal A");
+  });
+
+  // #456: unbestätigte Weitergabe war auf der Spieledetailseite nicht sichtbar.
+  it("adds '(Unbestätigt)' behind the responsible person for an unconfirmed holding", () => {
+    render(
+      <GameCopiesSection
+        copies={[
+          copy({
+            unitChain: "Regal A",
+            responsibleName: "Alex",
+            isUnconfirmed: true,
+          }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    const cell = screen.getByText(/Regal A/);
+    expect(cell.textContent).toBe("bei Alex (Unbestätigt) → Regal A");
   });
 
   it("renders a table for more than one copy", () => {

@@ -15,6 +15,7 @@ import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import { cn } from "@/lib/utils/cn";
 import { truncateText } from "@/lib/utils/truncate";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 
 /** Collapsed description length — full text only shows on hover/tap. */
 const DESCRIPTION_PREVIEW_LENGTH = 200;
@@ -51,7 +52,8 @@ export function GameListRow({
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
       className={cn(
-        "group bg-card hover:border-primary/60 relative flex items-center gap-5 border p-5 transition-colors",
+        "group bg-card flex items-center gap-5 border p-5",
+        CARD_HOVER_CLASS,
         expanded && hasOverlayContent ? "rounded-t-lg" : "rounded-lg",
       )}
       onMouseEnter={() => setExpanded(true)}

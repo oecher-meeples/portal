@@ -9,6 +9,7 @@ import { ShareButton } from "@/components/ui/share-button";
 import { formatDate } from "@/lib/utils/format";
 import { getRequestOrigin } from "@/lib/utils/request-origin";
 import type { getContentBySlug } from "@/lib/content/content";
+import { EventPostExistenceGuard } from "@/components/feature/news/event-post-existence-guard";
 
 type PostDetailViewProps = {
   item: NonNullable<Awaited<ReturnType<typeof getContentBySlug>>>;
@@ -72,6 +73,9 @@ export async function PostDetailView({ item, canEdit }: PostDetailViewProps) {
       )}
       <MarkdownContent body={item.body} />
       <ShareButton url={`${origin}/news/${item.slug}`} title={item.title} />
+      {item.hasEventSource && item.id && (
+        <EventPostExistenceGuard postId={item.id} />
+      )}
     </article>
   );
 }

@@ -102,7 +102,7 @@ export function ProfilePictureUpload({
                 event.target.value as ProfilePictureVisibility,
               )
             }
-            className="border-input h-9 w-fit rounded-md border bg-transparent px-3 text-sm"
+            className="border-input bg-background h-9 w-fit rounded-md border px-3 text-sm"
           >
             {Object.entries(PROFILE_PICTURE_VISIBILITY_LABELS).map(
               ([value, label]) => (

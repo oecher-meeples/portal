@@ -92,6 +92,12 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
       setState({ kind: "unknown", raw: resolved.raw });
       return;
     }
+    // #465: Meeple-QR-Code hat im allgemeinen Scan-Flow keine Bedeutung —
+    // nur die Weitergabe-/Rückgabe-Zielauswahl (TargetPicker) versteht ihn.
+    if (resolved.kind === "meeple") {
+      setState({ kind: "unknown", raw: resolved.meeple.displayName });
+      return;
+    }
 
     if (resolved.kind === "unit") {
       const unit = {
@@ -300,7 +306,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                     <button
                       key={game.id}
                       type="button"
-                      className="hover:bg-muted rounded-md border px-3 py-2 text-left text-sm"
+                      className="hover:bg-muted cursor-pointer rounded-md border px-3 py-2 text-left text-sm"
                       onClick={() => {
                         if (
                           state.forEinlagern &&

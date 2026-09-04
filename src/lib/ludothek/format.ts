@@ -11,3 +11,11 @@ export function playersAndDuration(game: PublicLudothekGame) {
     .filter(Boolean)
     .join(" · ");
 }
+
+/** Minuten → "H:MMh" (#427) — nur die Anzeige, der zugrunde liegende
+ * Minuten-Wert in State/URL/DB bleibt unverändert (z. B. Dauer-Filter). */
+export function formatDurationHours(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}:${remainingMinutes.toString().padStart(2, "0")}h`;
+}

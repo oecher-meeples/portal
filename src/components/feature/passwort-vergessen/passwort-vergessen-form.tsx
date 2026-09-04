@@ -14,10 +14,16 @@ import { validatePassword } from "@/lib/auth/password";
  * neues Passwort auf derselben Seite eingeben. Kein eigenes Token-Modell
  * nötig — Neon Auth verwaltet Ausstellung/Ablauf/Einmalverwendung des OTP.
  */
-export function PasswortVergessenForm() {
+export function PasswortVergessenForm({
+  initialEmail = "",
+}: {
+  /** Aus dem Login-Formular per Query-Param übergeben (#324, Live-Review-
+   * Ergänzung) — erspart das erneute Eintippen. */
+  initialEmail?: string;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<"request" | "reset">("request");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");

@@ -86,7 +86,7 @@ export function ShelfAssignmentSection({
           <select
             value={selectedUnitId}
             onChange={(event) => setSelectedUnitId(event.target.value)}
-            className="border-input h-9 flex-1 rounded-md border bg-transparent px-3 text-sm"
+            className="border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm"
           >
             {availableShelves.map((shelf) => (
               <option key={shelf.id} value={shelf.id}>

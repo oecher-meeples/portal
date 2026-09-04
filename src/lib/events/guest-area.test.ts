@@ -134,6 +134,14 @@ describe("getAttendingExplainers", () => {
         displayName: "Lea",
         level: "BY_HEART",
         profilePictureUrl: null,
+        contact: {
+          mailHref: null,
+          telegramHref: null,
+          signalHref: null,
+          discordHandle: null,
+          address: null,
+        },
+        profileHref: null,
       },
     ]);
     expect(prismaMock.explainerAttendance.findMany).toHaveBeenCalledWith(
@@ -172,6 +180,57 @@ describe("getAttendingExplainers", () => {
 
     expect(result[0].profilePictureUrl).toBe("https://blob.example/lea.jpg");
     expect(result[1].profilePictureUrl).toBeNull();
+  });
+
+  it("exposes contact info and the profile link only when meepleDatenVisibility allows it", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      {
+        event: { slug: "spieletreff-1" },
+        meeple: {
+          id: "meeple-1",
+          displayName: "Lea",
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
+          meepleDatenVisibility: "IMMER",
+          telegramHandle: "lea_tg",
+          signalHandle: null,
+          discordHandle: null,
+          address: null,
+          shareAddress: false,
+          member: { email: "lea@example.com" },
+          explainerGames: [{ level: "BY_HEART" }],
+        },
+      },
+      {
+        event: { slug: "spieletreff-1" },
+        meeple: {
+          id: "meeple-2",
+          displayName: "Ben",
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
+          meepleDatenVisibility: "INTERN",
+          telegramHandle: "ben_tg",
+          signalHandle: null,
+          discordHandle: null,
+          address: null,
+          shareAddress: false,
+          member: { email: "ben@example.com" },
+          explainerGames: [{ level: "WITH_MANUAL" }],
+        },
+      },
+    ] as never);
+
+    const result = await getAttendingExplainers("game-1", "event-1");
+
+    expect(result[0].contact.telegramHref).toBe("https://t.me/lea_tg");
+    expect(result[0].contact.mailHref).toBe("mailto:lea@example.com");
+    expect(result[0].profileHref).toBe(
+      "/events/spieletreff-1/gast/erklaerbaer/meeple-1",
+    );
+
+    expect(result[1].contact.telegramHref).toBeNull();
+    expect(result[1].contact.mailHref).toBeNull();
+    expect(result[1].profileHref).toBeNull();
   });
 });
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { CoverMedia } from "@/components/ui/cover-media";
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { cn } from "@/lib/utils/cn";
 
 export type LinkGridItem = {
   href: string;
@@ -14,7 +16,11 @@ export type LinkGridItem = {
 /** Shared card grid for Schnellzugriff and the admin-curated Wichtige Links (#110) — same layout, either a Lucide icon or an uploaded image. */
 export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    // #454: minmax(200px,200px) statt minmax(200px,1fr) — feste statt
+    // gestreckte Kartenbreite, damit wenige Einträge nicht auf volle
+    // Container-Breite auseinandergezogen werden. auto-fit sorgt weiterhin
+    // dafür, dass so viele 200px-Spalten wie möglich in eine Reihe passen.
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,200px))] gap-4">
       {items.map((item) => {
         const content = (
           <>
@@ -31,8 +37,10 @@ export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
             <span className="font-serif font-semibold">{item.label}</span>
           </>
         );
-        const className =
-          "bg-card hover:border-primary/60 flex flex-col items-center gap-2 rounded-lg border p-6 text-center transition-colors";
+        const className = cn(
+          "bg-card flex flex-col items-center gap-2 rounded-lg border p-6 text-center",
+          CARD_HOVER_CLASS,
+        );
 
         return item.external ? (
           <a

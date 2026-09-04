@@ -114,7 +114,7 @@ Verträge laufen immer bis zum Ende des Kalenderjahres, Kündigungsfrist 4 Woche
 
 In den letzten 31 Tagen der Mitgliedschaft erscheint im Dashboard eine Warnung mit der Aufforderung, ausgeliehene Spiele rechtzeitig zurückzugeben (inkl. Kontaktmöglichkeiten für die Rückgabe).
 
-Nach Ablauf der Mitgliedschaft (`membershipEndsAt` erreicht) gilt die Person als **Ausgetreten**: Login bleibt möglich, Zugriff beschränkt sich aber aufs Abwickeln — eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Kalender, Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt, annehmen darf die Person nichts mehr.
+Nach Ablauf der Mitgliedschaft (`membershipEndsAt` erreicht) gilt die Person als **Ausgetreten**: Login bleibt möglich, Zugriff beschränkt sich aber aufs Abwickeln — eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt, annehmen darf die Person nichts mehr. Der interne Kalender ist seit der News-Konsolidierung (#209) kein separater Zugriffsweg mehr — er ist Teil von `/news` und damit an `news:internal:view` gebunden, das Ausgetretenen ausdrücklich entzogen ist (kein eigener Kalenderzugang mehr).
 
 Technisch ist "Ausgetreten" eine echte `Role` mit eigenem Rechte-Satz, aber nur mit `admin:access` manuell zuweisbar (Korrekturfälle). Da alle Mitgliedschaften zum selben festen Datum enden, genügt ein einziger jährlicher Cron-Job (2.1., 02:00), der die Rolle für alle betroffenen Vereinsmitglieder in einem Rutsch setzt.
 
@@ -124,7 +124,7 @@ Technisch ist "Ausgetreten" eine echte `Role` mit eigenem Rechte-Satz, aber nur 
 
 DSGVO Art. 17 wird in drei aufeinander aufbauenden Stufen umgesetzt — jede vorherige ist Voraussetzung der nächsten:
 
-**Stufe 1 — DSGVO-Löschung optionaler Daten.** Alle optionalen Meeple-Daten (Kontaktmöglichkeiten, importierte Spiele, LFG, Marktplatzangebote etc.) werden gelöscht, der Displayname wird generisch überschrieben. Login bleibt aktiv, das Konto bleibt voll funktionsfähig. Auslösbar vom Meeple selbst oder von Vorstand/Datenschutzbeauftragtem (Recht `members:manage`). Der Vereinsmitglied-Datensatz bleibt während aktiver Mitgliedschaft komplett unberührt.
+**Stufe 1 — DSGVO-Löschung optionaler Daten.** Alle optionalen Meeple-Daten (Kontaktmöglichkeiten, importierte Spiele etc.) werden gelöscht, der Displayname wird generisch überschrieben. Zusätzlich werden Freitextfelder geleert, die die Person selbst verfasst hat: Titel/Beschreibung eigener LFG- und Marktplatz-/Ersatzteil-Angebote sowie eigene Notizen zu Spiel-Ausleihen und Lagerort-Bewegungen (#394). **Scope-Grenze:** Das gilt nur für selbst verfasste Texte, ermittelt über die jeweilige Autor-/Erfasser-Relation (z. B. `createdByMeepleId`) — nicht für Fremd-Erwähnungen der Person in Texten, die jemand anderes verfasst hat (z. B. eine `GameHolding`-Notiz, die ein Spielewart über sie geschrieben hat). Beliebigen Fließtext auf Namensnennungen Dritter zu durchsuchen ist nicht praktikabel; das bleibt bewusst außerhalb des Scopes. Login bleibt aktiv, das Konto bleibt voll funktionsfähig. Auslösbar vom Meeple selbst oder von Vorstand/Datenschutzbeauftragtem (Recht `members:manage`). Der Vereinsmitglied-Datensatz bleibt während aktiver Mitgliedschaft komplett unberührt.
 
 **Stufe 2 — Kontodeaktivierung und Trennung.** Zusätzlich zu Stufe 1 wird das Login-Konto deaktiviert/gelöscht und die Verbindung zwischen Vereinsmitglied und Meeple endgültig getrennt (keine Wiederherstellung möglich). Zwei Auslöser:
 

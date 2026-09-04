@@ -1,7 +1,18 @@
 import "@testing-library/jest-dom/vitest";
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ErziehungsberechtigteSection } from "@/components/feature/mitglied-profil/erziehungsberechtigte-section";
+
+const fetchContactDialogMeepleMock = vi.fn();
+vi.mock("@/lib/members/contact-dialog", () => ({
+  fetchContactDialogMeeple: (...args: unknown[]) =>
+    fetchContactDialogMeepleMock(...args),
+}));
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 describe("ErziehungsberechtigteSection (#385)", () => {
   it("renders nothing without linked guardians", () => {
@@ -12,23 +23,60 @@ describe("ErziehungsberechtigteSection (#385)", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("lists every linked guardian, with a link to their profile", () => {
+  it("lists every linked guardian, with a profile link in the ContactDialog", async () => {
+    fetchContactDialogMeepleMock.mockResolvedValue({
+      profilePictureUrl: null,
+      contact: {
+        mailHref: null,
+        telegramHref: null,
+        signalHref: null,
+        discordHandle: null,
+        address: null,
+      },
+      profileHref: "/profil/erika-muster",
+    });
+
     render(
       <ErziehungsberechtigteSection
         guardians={[
           {
             id: "guardian-1",
             slug: "erika-muster",
+            meepleId: "meeple-1",
             displayName: "Erika Muster",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
           },
-          { id: "guardian-2", slug: "max-muster", displayName: "Max Muster" },
         ]}
       />,
     );
 
-    const erikaLink = screen.getByRole("link", { name: "Erika Muster" });
-    expect(erikaLink).toHaveAttribute("href", "/profil/erika-muster");
-    const maxLink = screen.getByRole("link", { name: "Max Muster" });
-    expect(maxLink).toHaveAttribute("href", "/profil/max-muster");
+    fireEvent.click(screen.getByRole("button", { name: "Erika Muster" }));
+    expect(
+      await screen.findByRole("button", { name: /Profil ansehen/ }),
+    ).toHaveAttribute("href", "/profil/erika-muster");
+  });
+
+  it("links straight to the profile when the guardian has no linked Meeple", () => {
+    render(
+      <ErziehungsberechtigteSection
+        guardians={[
+          {
+            id: "guardian-1",
+            slug: "erika-muster",
+            meepleId: null,
+            displayName: "Erika Muster",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Erika Muster" })).toHaveAttribute(
+      "href",
+      "/profil/erika-muster",
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

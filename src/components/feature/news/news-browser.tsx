@@ -6,7 +6,7 @@ import {
   CONTENT_TYPE_FILTERS,
   type ContentItem,
   type ContentType,
-} from "@/lib/content/content";
+} from "@/lib/content/content-types";
 import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +21,20 @@ import {
   NewsResultsList,
   type NewsViewMode,
 } from "@/components/feature/news/news-results-list";
+import { loadMoreNews } from "@/components/feature/news/actions";
 
-const TYPE_FILTER_OPTIONS: PillOption<ContentType | "alle">[] =
-  CONTENT_TYPE_FILTERS.map((option) => ({
+/** #424: Kategorie "Umfragen" gehört nicht in die Filterleiste für Gäste —
+ * es gibt keine öffentlichen Umfragen, nur Meeple sind abstimmungsberechtigt. */
+function typeFilterOptions(
+  canSeeSurveys: boolean,
+): PillOption<ContentType | "alle">[] {
+  return CONTENT_TYPE_FILTERS.filter(
+    (option) => canSeeSurveys || option.value !== "umfrage",
+  ).map((option) => ({
     ...option,
     icon: getContentTypeIcon(option.value),
   }));
+}
 
 const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
   { label: "Vorschau", value: "vorschau", icon: Eye },
@@ -34,17 +42,25 @@ const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
 ];
 
 export function NewsBrowser({
-  items,
+  items: initialItems,
+  hasMore: initialHasMore,
+  nextCursor: initialNextCursor,
   icsUrl,
   canEditPublic,
   canEditInternal,
   canSeeInternal,
+  canSeeSurveys,
 }: {
   items: ContentItem[];
+  /** Serverseitige DB-Post-Pagination (#469/#470) — ohne Angabe (z. B. in
+   * älteren Tests) wird angenommen, dass `items` bereits alles ist. */
+  hasMore?: boolean;
+  nextCursor?: string | null;
   icsUrl?: string;
   canEditPublic?: boolean;
   canEditInternal?: boolean;
   canSeeInternal?: boolean;
+  canSeeSurveys?: boolean;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
@@ -53,6 +69,27 @@ export function NewsBrowser({
   // < lg: Kalender steht sonst als Grid-Zweitspalte ganz unten unter der
   // Ergebnisliste — dort stattdessen über ein Bottom-Sheet erreichbar.
   const [calendarSheetOpen, setCalendarSheetOpen] = useState(false);
+
+  // Vom Server initial geladene Seite (#470) — wächst clientseitig, wenn
+  // useInfiniteScroll (Server-Request-Modus) das Ende erreicht. Bleibt hier
+  // in NewsBrowser (nicht in NewsResultsList), damit die Seite beim
+  // Remount von NewsResultsList (Filterwechsel, s. u.) nicht verloren geht.
+  const [items, setItems] = useState(initialItems);
+  const [hasMore, setHasMore] = useState(initialHasMore ?? false);
+  const [nextCursor, setNextCursor] = useState(initialNextCursor ?? null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  async function handleLoadMore(cursor: string) {
+    setIsLoadingMore(true);
+    try {
+      const page = await loadMoreNews(cursor);
+      setItems((current) => [...current, ...page.items]);
+      setHasMore(page.hasMore);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   function selectDateAndCloseSheet(date: string | null) {
     setSelectedDate(date);
@@ -69,7 +106,7 @@ export function NewsBrowser({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4">
           <PillToggle
-            options={TYPE_FILTER_OPTIONS}
+            options={typeFilterOptions(!!canSeeSurveys)}
             value={filter}
             onChange={setFilter}
           />
@@ -139,6 +176,10 @@ export function NewsBrowser({
           viewMode={viewMode}
           canEditPublic={canEditPublic}
           canEditInternal={canEditInternal}
+          onLoadMore={handleLoadMore}
+          cursor={nextCursor}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
         />
         {/* < lg: Kalender nur noch über das Bottom-Sheet oben (s. "Nach
             Datum filtern") erreichbar, nicht mehr zusätzlich hier unten. */}

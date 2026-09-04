@@ -61,8 +61,22 @@ describe("listChildrenOf (#372, #376)", () => {
     const result = await listChildrenOf("guardian-1");
 
     expect(result).toEqual([
-      { id: "child-1", slug: "mitglied-1", displayName: "Anna Muster" },
-      { id: "child-2", slug: "mitglied-2", displayName: "Ben Muster" },
+      {
+        id: "child-1",
+        slug: "mitglied-1",
+        displayName: "Anna Muster",
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
+        meepleId: null,
+      },
+      {
+        id: "child-2",
+        slug: "mitglied-2",
+        displayName: "Ben Muster",
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
+        meepleId: null,
+      },
     ]);
   });
 });
@@ -94,8 +108,22 @@ describe("listGuardiansOf (#372)", () => {
 
     // slug (#385): fürs Verlinken auf `ErziehungsberechtigteSection` (Kind-Profil).
     expect(result).toEqual([
-      { id: "guardian-1", slug: "erika", displayName: "Erika" },
-      { id: "guardian-2", slug: "mitglied-6", displayName: "Mitglied Nr. 6" },
+      {
+        id: "guardian-1",
+        slug: "erika",
+        displayName: "Erika",
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
+        meepleId: null,
+      },
+      {
+        id: "guardian-2",
+        slug: "mitglied-6",
+        displayName: "Mitglied Nr. 6",
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
+        meepleId: null,
+      },
     ]);
   });
 });

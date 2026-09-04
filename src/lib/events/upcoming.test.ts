@@ -11,8 +11,55 @@ const {
   hasOpenHelperRequest,
   isBringAndBuyMarketOpen,
   isEventCurrentlyRunning,
+  isEventRunningAt,
   resolveSelectedEventId,
 } = await import("./upcoming");
+
+describe("isEventRunningAt", () => {
+  const NOW = new Date("2026-08-03T12:00:00Z");
+
+  it("is true when the event has started and has no end date", () => {
+    expect(
+      isEventRunningAt(
+        { startsAt: new Date("2026-08-01T00:00:00Z"), endsAt: null },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is false before the event has started", () => {
+    expect(
+      isEventRunningAt(
+        { startsAt: new Date("2026-08-04T00:00:00Z"), endsAt: null },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false once the event has ended", () => {
+    expect(
+      isEventRunningAt(
+        {
+          startsAt: new Date("2026-08-01T00:00:00Z"),
+          endsAt: new Date("2026-08-02T00:00:00Z"),
+        },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is true while within a multi-day event's start/end range", () => {
+    expect(
+      isEventRunningAt(
+        {
+          startsAt: new Date("2026-08-01T00:00:00Z"),
+          endsAt: new Date("2026-08-10T00:00:00Z"),
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+});
 
 describe("isEventCurrentlyRunning", () => {
   const NOW = new Date("2026-08-03T12:00:00Z");
@@ -27,29 +74,37 @@ describe("isEventCurrentlyRunning", () => {
   });
 
   it("is true when the event has started and has no end date", async () => {
-    prismaMock.event.findFirst.mockResolvedValue({ id: "event-1" } as never);
+    prismaMock.event.findFirst.mockResolvedValue({
+      startsAt: new Date("2026-08-01T00:00:00Z"),
+      endsAt: null,
+    } as never);
 
     expect(await isEventCurrentlyRunning("event-1")).toBe(true);
   });
 
   it("is false for an event that hasn't started yet or has already ended", async () => {
-    prismaMock.event.findFirst.mockResolvedValue(null);
+    prismaMock.event.findFirst.mockResolvedValue({
+      startsAt: new Date("2026-08-10T00:00:00Z"),
+      endsAt: null,
+    } as never);
 
     expect(await isEventCurrentlyRunning("event-future-or-past")).toBe(false);
   });
 
-  it("queries with a lower bound on startsAt and an open or future endsAt", async () => {
+  it("is false for an id that doesn't exist", async () => {
+    prismaMock.event.findFirst.mockResolvedValue(null);
+
+    expect(await isEventCurrentlyRunning("missing")).toBe(false);
+  });
+
+  it("queries by id only, applying the time window in JS via isEventRunningAt", async () => {
     prismaMock.event.findFirst.mockResolvedValue(null);
 
     await isEventCurrentlyRunning("event-1");
 
     expect(prismaMock.event.findFirst).toHaveBeenCalledWith({
-      where: {
-        id: "event-1",
-        startsAt: { lte: NOW },
-        OR: [{ endsAt: null }, { endsAt: { gte: NOW } }],
-      },
-      select: { id: true },
+      where: { id: "event-1" },
+      select: { startsAt: true, endsAt: true },
     });
   });
 });

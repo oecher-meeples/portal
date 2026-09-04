@@ -67,7 +67,9 @@ export function AusleiheView() {
     setMessage(null);
     const resolved = await ausleiheResolveCode(raw);
 
-    if (resolved.kind === "unknown") {
+    // #465: Meeple-QR-Code hat in der Ausleihe-Ansicht keine Bedeutung —
+    // wird hier wie ein unbekannter Code behandelt.
+    if (resolved.kind === "unknown" || resolved.kind === "meeple") {
       setState({ kind: "unknown", raw });
       return;
     }
@@ -192,7 +194,7 @@ export function AusleiheView() {
                   <button
                     key={game.id}
                     type="button"
-                    className="hover:bg-muted rounded-md border px-3 py-2 text-left text-sm"
+                    className="hover:bg-muted cursor-pointer rounded-md border px-3 py-2 text-left text-sm"
                     onClick={() => void resolveGame(game.id, game.title)}
                   >
                     {game.title}

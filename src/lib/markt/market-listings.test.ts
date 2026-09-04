@@ -27,6 +27,8 @@ describe("toMarketListingView", () => {
         discordHandle: null,
         address: null,
         shareAddress: false,
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
       },
     );
 
@@ -39,12 +41,16 @@ describe("toMarketListingView", () => {
       imageUrls: ["https://blob.example/a.png"],
       sellerMeepleId: "meeple-1",
       sellerDisplayName: "Jan",
-      sellerContact: {
-        mailHref: "mailto:jan@example.com",
-        telegramHref: null,
-        signalHref: null,
-        discordHandle: null,
-        address: null,
+      sellerContactMeeple: {
+        profilePictureUrl: null,
+        contact: {
+          mailHref: "mailto:jan@example.com",
+          telegramHref: null,
+          signalHref: null,
+          discordHandle: null,
+          address: null,
+        },
+        profileHref: null,
       },
       boardGame: null,
     });
@@ -63,12 +69,16 @@ function listing(
     imageUrls: [],
     sellerMeepleId: "meeple-1",
     sellerDisplayName: "Jan",
-    sellerContact: {
-      mailHref: "mailto:jan@example.com",
-      telegramHref: null,
-      signalHref: null,
-      discordHandle: null,
-      address: null,
+    sellerContactMeeple: {
+      profilePictureUrl: null,
+      contact: {
+        mailHref: "mailto:jan@example.com",
+        telegramHref: null,
+        signalHref: null,
+        discordHandle: null,
+        address: null,
+      },
+      profileHref: null,
     },
     boardGame: null,
     ...overrides,

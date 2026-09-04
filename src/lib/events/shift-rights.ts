@@ -67,3 +67,31 @@ export async function findActiveShiftEvent(
 
   return booking ? { eventId: booking.shift.eventId } : null;
 }
+
+/** Muss zum in prisma/migrations/…_add_helper_role gepflegten Rollennamen
+ * passen. Geteilt zwischen der Ausleihe-Seite selbst (`ausleihe/page.tsx`)
+ * und `hasActiveAusleiheShift()` unten, statt zweimal hartkodiert (#433). */
+export const AUSLEIHE_ROLE_NAME = "Leihe";
+
+/**
+ * Ob der gegebene Neon-Auth-Nutzer gerade eine aktive "Leihe"-Schichtbuchung
+ * hat (#433) — pro Nutzer, anders als das event-weite `openHelperRequest`.
+ * Für den Nav-Eintrag "Ausleihe & Rückgabe": Sichtbarkeit dieses Eintrags,
+ * nicht der Seitenzugriff selbst (der bleibt `findActiveShiftEvent()` in
+ * `ausleihe/page.tsx` überlassen). Reiner Lesezugriff auf `Meeple` (kein
+ * `ensureMeeple()`-Upsert) — eine Schichtbuchung kann ohnehin nur für ein
+ * bereits existierendes Meeple existieren.
+ */
+export async function hasActiveAusleiheShift(
+  neonAuthUserId: string | null,
+): Promise<boolean> {
+  if (!neonAuthUserId) return false;
+
+  const meeple = await prisma.meeple.findUnique({
+    where: { neonAuthUserId },
+    select: { id: true },
+  });
+  if (!meeple) return false;
+
+  return (await findActiveShiftEvent(meeple.id, AUSLEIHE_ROLE_NAME)) !== null;
+}

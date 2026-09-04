@@ -20,6 +20,22 @@ export function findUpcomingEvents<
 }
 
 /**
+ * Pure Zeitfenster-Prädikat: läuft dieses Event gerade (schon gestartet,
+ * noch nicht beendet)? Geteilte Grundlage für `isEventCurrentlyRunning()`
+ * (DB-Lookup per Id) und Aufrufer, die das Event bereits geladen haben
+ * (z. B. HelferPage, #338) — keine zweite Kopie der startsAt/endsAt-
+ * Fensterprüfung.
+ */
+export function isEventRunningAt(
+  event: { startsAt: Date; endsAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  return (
+    event.startsAt <= now && (event.endsAt === null || event.endsAt >= now)
+  );
+}
+
+/**
  * True only while an event is actually happening — started, not yet ended.
  * Stricter than `UPCOMING_EVENT_WHERE`, which also matches events that
  * haven't started yet. Used to gate unauthenticated guest-area actions,
@@ -30,14 +46,10 @@ export async function isEventCurrentlyRunning(
   eventId: string,
 ): Promise<boolean> {
   const event = await prisma.event.findFirst({
-    where: {
-      id: eventId,
-      startsAt: { lte: new Date() },
-      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
-    },
-    select: { id: true },
+    where: { id: eventId },
+    select: { startsAt: true, endsAt: true },
   });
-  return event !== null;
+  return event !== null && isEventRunningAt(event);
 }
 
 /**

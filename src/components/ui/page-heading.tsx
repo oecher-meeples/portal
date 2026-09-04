@@ -24,7 +24,10 @@ export function PageHeading({
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-4">
         {media}
-        <div className="flex flex-col gap-2">
+        {/* #408: flex-1/min-w-0 nötig, damit dieser Block die volle
+         * verfügbare Breite einnimmt — sonst hat justify-between weiter
+         * unten keinen Raum, um `action` an den rechten Rand zu schieben. */}
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
           <p className="text-primary text-xs font-semibold tracking-wider uppercase">
             {eyebrow}
           </p>

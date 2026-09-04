@@ -34,9 +34,13 @@ import { revokeResignation } from "@/components/feature/admin-mitglieder/actions
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   CONTRIBUTION_CATEGORY_LABELS,
-  CONTRIBUTION_CATEGORY_SHORT_LABELS,
   type ContributionCategory,
 } from "@/lib/members/contribution";
+import {
+  CONTRIBUTION_FILTER_CATEGORIES,
+  contributionFilterOption,
+  type ContributionFilterOption,
+} from "@/components/feature/admin-mitglieder/contribution-filter";
 import { MEMBERSHIP_STATE_LABELS, formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
 import type { VereinsmitgliedRow } from "@/components/feature/admin-mitglieder/vereinsmitglied-row";
@@ -55,6 +59,18 @@ const ZUSTAND_FILTERS: { value: ZustandFilter; label: string }[] = [
   { value: "anonymisiert", label: MEMBERSHIP_STATE_LABELS.anonymisiert },
 ];
 
+/** #432: Dropdown "Beitragsart", analog ZUSTAND_FILTERS — teilt sich den
+ * Filter-State mit dem bestehenden Stat-Tile-Klick (#340). */
+const BEITRAGSART_FILTERS: {
+  value: ContributionFilterOption;
+  label: string;
+}[] = [
+  { value: "alle", label: "Alle" },
+  { value: "mini", label: CONTRIBUTION_CATEGORY_LABELS.mini },
+  { value: "jung", label: CONTRIBUTION_CATEGORY_LABELS.jung },
+  { value: "meeple", label: CONTRIBUTION_CATEGORY_LABELS.meeple },
+];
+
 function germanDate(value: string | null) {
   return value ? formatDatePlain(value) : "—";
 }
@@ -67,7 +83,7 @@ export function VereinsmitgliederTable({
   canManageInvites,
   isAdmin = false,
   contributionFilter,
-  onClearContributionFilter,
+  onContributionFilterChange,
 }: {
   members: VereinsmitgliedRow[];
   /** = `members:manage` — gated hier zusätzlich in der UI, sonst sieht ein
@@ -82,9 +98,12 @@ export function VereinsmitgliederTable({
   /** = `admin:access` — schaltet zusammen mit `NODE_ENV === "development"`
    * den Demo-Adresse-Button in `MemberPersonendatenFields` frei. */
   isAdmin?: boolean;
-  /** Von der Beitragsart-Stat-Tile gesteuert (#340) — `null` heißt "kein Filter". */
+  /** Geteilter State mit der Beitragsart-Stat-Tile (#340) und dem
+   * "Beitragsart"-Dropdown unten (#432) — `null` heißt "kein Filter". */
   contributionFilter?: ContributionCategory[] | null;
-  onClearContributionFilter?: () => void;
+  onContributionFilterChange?: (
+    categories: ContributionCategory[] | null,
+  ) => void;
 }) {
   // Deep-Link von der Benutzer-Tabelle ("Mitglied"-Name-Link, siehe
   // `mitglieder-table.tsx`) — filtert direkt auf das verlinkte
@@ -187,7 +206,7 @@ export function VereinsmitgliederTable({
                   setZustandFilter(event.target.value as ZustandFilter)
                 }
                 aria-label="Nach Zustand filtern"
-                className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
               >
                 {ZUSTAND_FILTERS.map(({ value, label }) => (
                   <option key={value} value={value}>
@@ -201,29 +220,31 @@ export function VereinsmitgliederTable({
                   setPortalLoginFilter(event.target.value as PortalLoginFilter)
                 }
                 aria-label="Nach Portal-Login filtern"
-                className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
               >
                 <option value="alle">Portal-Login: alle</option>
                 <option value="vorhanden">Portal-Login: vorhanden</option>
                 <option value="fehlt">Portal-Login: fehlt</option>
               </select>
-              {contributionFilter && (
-                <Badge variant="secondary" className="gap-1">
-                  Beitragsart:{" "}
-                  {contributionFilter
-                    .map((c) => CONTRIBUTION_CATEGORY_LABELS[c])
-                    .join(" / ")}
-                  {onClearContributionFilter && (
-                    <button
-                      type="button"
-                      onClick={onClearContributionFilter}
-                      aria-label="Beitragsart-Filter entfernen"
-                    >
-                      ×
-                    </button>
-                  )}
-                </Badge>
-              )}
+              <select
+                value={contributionFilterOption(contributionFilter ?? null)}
+                onChange={(event) => {
+                  const option = event.target.value as ContributionFilterOption;
+                  onContributionFilterChange?.(
+                    option === "alle"
+                      ? null
+                      : CONTRIBUTION_FILTER_CATEGORIES[option],
+                  );
+                }}
+                aria-label="Nach Beitragsart filtern"
+                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+              >
+                {BEITRAGSART_FILTERS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {value === "alle" ? "Beitragsart: alle" : label}
+                  </option>
+                ))}
+              </select>
               {canManageMembers && (
                 <div className="ml-auto">
                   <CreateMemberDialog isAdmin={isAdmin} />
@@ -276,7 +297,7 @@ export function VereinsmitgliederTable({
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {member.contributionCategory
-                          ? CONTRIBUTION_CATEGORY_SHORT_LABELS[
+                          ? CONTRIBUTION_CATEGORY_LABELS[
                               member.contributionCategory
                             ]
                           : "unbestimmt"}

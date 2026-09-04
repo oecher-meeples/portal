@@ -36,6 +36,7 @@ import { SystemkontoDialog } from "@/components/feature/admin-mitglieder/systemk
 import { formatDatePlain } from "@/lib/utils/format";
 import type { MembershipState } from "@/lib/members/meeples";
 import type { MeepleRow } from "@/components/feature/admin-mitglieder/meeple-row";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 
 export type { MeepleRow };
 
@@ -236,17 +237,28 @@ export function MitgliederTable({
                             : "font-medium"
                         }
                       >
-                        {meeple.memberId ? (
-                          <Link
-                            href={`/admin/mitglieder?memberId=${meeple.memberId}#vereinsmitglieder`}
-                            className="hover:underline"
-                            title="Mitglied im Vereinsmitglieder-Akkordeon suchen"
-                          >
-                            {memberColumnLabel(meeple)}
-                          </Link>
-                        ) : (
-                          memberColumnLabel(meeple)
-                        )}
+                        <span className="inline-flex items-center gap-1.5">
+                          <MeepleAvatar
+                            name={meeple.displayName}
+                            profilePictureUrl={meeple.profilePictureUrl}
+                            profilePictureVisibility={
+                              meeple.profilePictureVisibility
+                            }
+                            viewer={{ kind: "meeple" }}
+                            size="sm"
+                          />
+                          {meeple.memberId ? (
+                            <Link
+                              href={`/admin/mitglieder?memberId=${meeple.memberId}#vereinsmitglieder`}
+                              className="hover:underline"
+                              title="Mitglied im Vereinsmitglieder-Akkordeon suchen"
+                            >
+                              {memberColumnLabel(meeple)}
+                            </Link>
+                          ) : (
+                            memberColumnLabel(meeple)
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {meeple.hasAccount ? (

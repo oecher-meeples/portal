@@ -39,17 +39,33 @@ export function nextUnitCode(kind: StorageUnitKind, existingCodes: string[]) {
   return `${prefix}${String(next).padStart(4, "0")}`;
 }
 
+/** Prefix for a Meeple's personal QR-Code (#465) — statisch an die
+ * Meeple-Id gebunden, keine Rotation/kein Ablauf (bewusste Entscheidung,
+ * siehe Issue). Eigene Familie neben `OM-BOX-`/`OM-SHELF-`/`OM-EVENT-`. */
+export const MEEPLE_CODE_PREFIX = "OM-MEEPLE-";
+
+/** Builds the QR content for a Meeple's personal code (#465). */
+export function buildMeepleCode(meepleId: string): string {
+  return `${MEEPLE_CODE_PREFIX}${meepleId}`;
+}
+
 export type ScannedCode =
   | { kind: "unit"; value: string }
   | { kind: "ean"; value: string }
+  | { kind: "meeple"; value: string }
   | { kind: "unknown"; value: string };
 
-/** Distinguishes a unit label (`OM-BOX-0001`) from an EAN-8/13 barcode. */
+/** Distinguishes a unit label (`OM-BOX-0001`), a Meeple's personal QR-Code
+ * (`OM-MEEPLE-<id>`, #465) and an EAN-8/13 barcode. */
 export function parseScannedCode(raw: string): ScannedCode {
   const value = raw.trim();
 
   if (/^(OM-BOX-|OM-SHELF-)[A-Z0-9]+$/i.test(value)) {
     return { kind: "unit", value: value.toUpperCase() };
+  }
+
+  if (value.startsWith(MEEPLE_CODE_PREFIX)) {
+    return { kind: "meeple", value: value.slice(MEEPLE_CODE_PREFIX.length) };
   }
 
   const digitsOnly = value.replace(/[\s-]/g, "");

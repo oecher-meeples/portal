@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
 
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
@@ -46,12 +46,22 @@ export function NewsCalendar({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const eventDates = new Set(items.map((item) => item.date));
+  // #10 (Folgefehler beim Live-Test): volle Zellfarbe (bg-secondary) machte
+  // die Zifferfarbe auf sich selbst unlesbar (Weiß auf Weiß im Dark Mode, da
+  // secondary = foreground-Farbe). Zwei kleine Punkte unter der Zahl statt
+  // Zellfarbe umgehen das strukturell — die Tagesfarbe (Text/Ring) bleibt
+  // unverändert lesbar, unabhängig davon welche Termine der Tag hat.
+  const publicEventDates = new Set(
+    items.filter((item) => !item.internal).map((item) => item.date),
+  );
+  const internalEventDates = new Set(
+    items.filter((item) => item.internal).map((item) => item.date),
+  );
   const cells = buildMonthGrid(viewMonth);
   const todayKey = toDateKey(new Date());
 
   return (
-    <div className="bg-card self-start rounded-lg border p-5 lg:sticky lg:top-24">
+    <div className="bg-card mx-auto max-w-sm self-start rounded-lg border p-5 lg:sticky lg:top-24">
       <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
 
       <div className="mt-3 flex items-center justify-between">
@@ -91,9 +101,15 @@ export function NewsCalendar({
         {cells.map((date, index) => {
           if (!date) return <span key={index} />;
           const key = toDateKey(date);
-          const hasEvent = eventDates.has(key);
+          const hasPublicEvent = publicEventDates.has(key);
+          const hasInternalEvent = internalEventDates.has(key);
+          const hasEvent = hasPublicEvent || hasInternalEvent;
           const isSelected = selectedDate === key;
           const isToday = key === todayKey;
+          // Aktiver Filter: alle anderen Tage mit Terminen treten optisch
+          // zurück, damit der ausgewählte Tag als einziger aktiver Filter
+          // erkennbar bleibt (statt gleichwertig neben ihm zu stehen).
+          const isDimmed = selectedDate !== null && !isSelected;
 
           return (
             <button
@@ -102,23 +118,44 @@ export function NewsCalendar({
               disabled={!hasEvent}
               onClick={() => onSelectDate(isSelected ? null : key)}
               className={cn(
-                "aspect-square rounded-md text-sm transition-colors",
-                hasEvent
-                  ? "bg-primary/15 hover:bg-primary/25 font-semibold"
-                  : "text-muted-foreground",
+                "hover:bg-accent relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-md text-sm transition-[opacity,background-color]",
+                hasEvent && "font-semibold",
+                !hasEvent && "text-muted-foreground",
                 isSelected && "bg-primary text-primary-foreground",
                 isToday && !isSelected && "ring-primary ring-1",
+                isDimmed && "opacity-35",
               )}
             >
               {date.getDate()}
+              {hasEvent && (
+                <span className="flex gap-0.5" aria-hidden>
+                  {hasPublicEvent && (
+                    <span className="bg-event-public size-1.5 rounded-full" />
+                  )}
+                  {hasInternalEvent && (
+                    <span className="bg-event-internal size-1.5 rounded-full" />
+                  )}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        <span className="flex items-center gap-1.5">
+          <span className="bg-event-public size-2 rounded-full" aria-hidden />
+          Öffentlich
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="bg-event-internal size-2 rounded-full" aria-hidden />
+          Intern
+        </span>
+      </div>
+
       <p className="text-muted-foreground mt-3 text-sm">
-        Automatisch synchronisiert aus dem öffentlichen Vereinskalender. Tage
-        mit Terminen sind markiert – anklicken filtert die Liste.
+        Automatisch synchronisiert aus dem Vereinskalender. Tage mit Terminen
+        sind markiert – anklicken filtert die Liste.
       </p>
 
       {icsUrl && (

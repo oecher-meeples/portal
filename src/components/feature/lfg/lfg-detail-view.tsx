@@ -1,7 +1,9 @@
 import { UserPlus, X } from "lucide-react";
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { ActionButton } from "@/components/ui/action-button";
 import { LfgStatusPill } from "@/components/entities/lfg-status-pill";
 import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import {
   addLfgGuest,
   closeLfgPost,
@@ -15,7 +17,7 @@ import {
   type LfgAttachmentRow,
 } from "@/components/feature/lfg/lfg-attachments-section";
 import type { LfgStatus } from "@/lib/content/lfg";
-import type { ContactLinks } from "@/lib/members/contact";
+import type { ContactDialogMeeple } from "@/lib/members/contact";
 import { PageContainer } from "@/components/ui/page-container";
 
 export type LfgParticipantRow = {
@@ -26,7 +28,11 @@ export type LfgParticipantRow = {
   displayName: string;
   /** null für Gäste und wenn der Betrachter nicht beigetreten ist (#167) —
    * serverseitig entschieden, hier nur gerendert. */
-  contact: ContactLinks | null;
+  contactMeeple: ContactDialogMeeple | null;
+  /** (#412) Profilbild statt Initialen-Kreis, sofern vorhanden und laut
+   * Freigabe (#389) sichtbar — `null` für Gäste (kein Meeple-Datensatz). */
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
   /** Wer entfernen darf (wer hinzugefügt hat, plus immer der Ersteller). */
   canRemove: boolean;
 };
@@ -114,13 +120,17 @@ export function LfgDetailView({
               key={participant.id}
               className="flex items-center gap-2.5 text-sm"
             >
-              <span className="bg-muted flex size-8 items-center justify-center rounded-full font-semibold">
-                {participant.displayName[0]?.toUpperCase()}
-              </span>
-              {participant.contact ? (
+              <MeepleAvatar
+                name={participant.displayName}
+                profilePictureUrl={participant.profilePictureUrl}
+                profilePictureVisibility={participant.profilePictureVisibility}
+                viewer={{ kind: "meeple" }}
+                size="md"
+              />
+              {participant.contactMeeple ? (
                 <ContactDialog
                   name={participant.displayName}
-                  contact={participant.contact}
+                  meeple={participant.contactMeeple}
                 />
               ) : (
                 participant.displayName

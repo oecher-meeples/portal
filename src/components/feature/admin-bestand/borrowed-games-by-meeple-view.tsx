@@ -1,17 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import Link from "next/link";
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
+import { ChevronDown, Search } from "lucide-react";
 import {
   Accordion,
   AccordionItem,
   AccordionPanel,
-  AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Input } from "@/components/ui/input";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
 import type {
@@ -106,15 +108,36 @@ export function BorrowedGamesByMeepleView({
                 key={meeple.vereinsmitgliedId}
                 value={meeple.vereinsmitgliedId}
               >
-                <AccordionTrigger className="px-5">
-                  <span className="flex items-center gap-2">
+                {/* Eigener Header statt des gemeinsamen `AccordionTrigger`
+                 * (der den kompletten Inhalt in einen `<button>` packt):
+                 * `ContactDialog` braucht selbst einen `<button>`-Trigger,
+                 * ein Button im Button ist ungültiges HTML und führt zu
+                 * Klick-Konflikten. Name/Kontakt sitzt hier als Geschwister
+                 * neben dem eigentlichen Auf-/Zuklapp-Trigger, nicht darin. */}
+                <AccordionPrimitive.Header className="flex w-full items-center gap-2 px-5 py-3 text-sm">
+                  {/* #412-Folgefeedback ursprünglich als reiner Hover-Preview
+                   * gelöst — jetzt überflüssig: `ContactDialog` zeigt beim
+                   * Öffnen selbst das große Bild (mit `hideWithoutPicture`,
+                   * kein leerer Initialen-Kreis ohne Bild). */}
+                  {meeple.meepleId ? (
+                    <ContactDialog
+                      name={meeple.memberName}
+                      meepleId={meeple.meepleId}
+                      className="font-medium"
+                    />
+                  ) : (
                     <span className="font-medium">{meeple.memberName}</span>
-                    {!meeple.verfuegbar && (
-                      <Badge variant="outline">nicht verfügbar</Badge>
-                    )}
-                    <Badge>{meeple.holdings.length}</Badge>
-                  </span>
-                </AccordionTrigger>
+                  )}
+                  <AccordionPrimitive.Trigger className="group flex flex-1 items-center justify-between gap-2 py-1 text-left font-medium transition-colors hover:underline">
+                    <span className="flex items-center gap-2">
+                      {!meeple.verfuegbar && (
+                        <Badge variant="outline">nicht verfügbar</Badge>
+                      )}
+                      <Badge>{meeple.holdings.length}</Badge>
+                    </span>
+                    <ChevronDown className="text-muted-foreground size-4 shrink-0 transition-transform duration-150 group-data-panel-open:rotate-180" />
+                  </AccordionPrimitive.Trigger>
+                </AccordionPrimitive.Header>
                 <AccordionPanel className="px-5">
                   {canManageGames && (address || phone) && (
                     <p className="text-muted-foreground mb-2 text-xs">
@@ -130,7 +153,12 @@ export function BorrowedGamesByMeepleView({
                         className="flex items-center justify-between gap-2 py-2 text-sm"
                       >
                         <span className="flex items-center gap-1.5">
-                          {holding.boardGameTitle}
+                          <Link
+                            href={`/ludothek/${holding.boardGameSlug}`}
+                            className="hover:underline"
+                          >
+                            {holding.boardGameTitle}
+                          </Link>
                           {holding.isUnconfirmed && (
                             <StatusPill label="unbestätigt" tone="warning" />
                           )}

@@ -45,11 +45,24 @@ vi.mock("@/lib/ludothek/holdings", async () => {
   };
 });
 
+const listOfferedPrivateLoansForEventMock = vi.fn();
+const issuePrivateLoanMock = vi.fn();
+const returnPrivateLoanMock = vi.fn();
+vi.mock("@/lib/ludothek/private-event-loans", () => ({
+  listOfferedPrivateLoansForEvent: (...args: unknown[]) =>
+    listOfferedPrivateLoansForEventMock(...args),
+  issuePrivateLoan: (...args: unknown[]) => issuePrivateLoanMock(...args),
+  returnPrivateLoan: (...args: unknown[]) => returnPrivateLoanMock(...args),
+}));
+
 const {
   ausleiheResolveCode,
   ausleiheGetAvailability,
   ausleiheIssueGame,
   ausleiheReturnToUnit,
+  ausleiheListOfferedPrivateLoans,
+  ausleiheIssuePrivateLoan,
+  ausleiheReturnPrivateLoan,
 } = await import("./ausleihe-actions");
 
 const MEEPLE = { id: "meeple-1" };
@@ -189,5 +202,60 @@ describe("with an active Ausleihe shift", () => {
     const result = await ausleiheResolveCode("x");
 
     expect(result).toEqual({ kind: "unknown", raw: "x" });
+  });
+
+  // #122: private Exemplare — event-, nicht exemplarbezogen.
+  it("ausleiheListOfferedPrivateLoans scopes to the active shift's event", async () => {
+    listOfferedPrivateLoansForEventMock.mockResolvedValue([]);
+
+    await ausleiheListOfferedPrivateLoans();
+
+    expect(listOfferedPrivateLoansForEventMock).toHaveBeenCalledWith("event-1");
+  });
+
+  it("ausleiheIssuePrivateLoan issues by the acting meeple", async () => {
+    issuePrivateLoanMock.mockResolvedValue({ success: true });
+
+    const result = await ausleiheIssuePrivateLoan("loan-1");
+
+    expect(result).toEqual({ success: true });
+    expect(issuePrivateLoanMock).toHaveBeenCalledWith("loan-1", "meeple-1");
+  });
+
+  it("ausleiheIssuePrivateLoan surfaces a domain error as { error }", async () => {
+    issuePrivateLoanMock.mockResolvedValue({
+      error: "Dieses Exemplar ist nicht (mehr) zur Ausgabe angeboten.",
+    });
+
+    const result = await ausleiheIssuePrivateLoan("loan-1");
+
+    expect(result).toEqual({
+      error: "Dieses Exemplar ist nicht (mehr) zur Ausgabe angeboten.",
+    });
+  });
+
+  it("ausleiheReturnPrivateLoan returns the loan", async () => {
+    returnPrivateLoanMock.mockResolvedValue({ success: true });
+
+    const result = await ausleiheReturnPrivateLoan("loan-1");
+
+    expect(result).toEqual({ success: true });
+    expect(returnPrivateLoanMock).toHaveBeenCalledWith("loan-1");
+  });
+});
+
+describe("private loans without an active Ausleihe shift", () => {
+  it("rejects every private-loan action", async () => {
+    findActiveShiftEventMock.mockResolvedValue(null);
+
+    await expect(ausleiheListOfferedPrivateLoans()).rejects.toThrow(
+      /Ausleihe-Schicht/,
+    );
+    expect(await ausleiheIssuePrivateLoan("loan-1")).toEqual({
+      error: expect.stringContaining("Ausleihe-Schicht"),
+    });
+    expect(await ausleiheReturnPrivateLoan("loan-1")).toEqual({
+      error: expect.stringContaining("Ausleihe-Schicht"),
+    });
   });
 });

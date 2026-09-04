@@ -98,12 +98,27 @@ export async function buildUnitAndKeeperMaps<T extends StorageUnitLite>(
   const keepers = keeperIds.length
     ? await prisma.meeple.findMany({
         where: { id: { in: keeperIds } },
-        select: { id: true, displayName: true },
+        select: {
+          id: true,
+          displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+        },
       })
     : [];
   const keeperNameById = new Map(keepers.map((k) => [k.id, k.displayName]));
+  // (#412) Profilbild des Keepers, für MeepleAvatar in der Standort-Kette.
+  const keeperProfileById = new Map(
+    keepers.map((k) => [
+      k.id,
+      {
+        profilePictureUrl: k.profilePictureUrl,
+        profilePictureVisibility: k.profilePictureVisibility,
+      },
+    ]),
+  );
 
-  return { unitById, keeperNameById };
+  return { unitById, keeperNameById, keeperProfileById };
 }
 
 /** The one place that decides the display order: person/event first (the
@@ -162,10 +177,22 @@ export async function ensureEventUnit(
 export type ResolvedScan =
   | { kind: "games"; games: ScannedGameCopy[] }
   | { kind: "unit"; unit: StorageUnit; contents: ScannedGameCopy[] }
+  | { kind: "meeple"; meeple: { id: string; displayName: string } }
   | { kind: "unknown"; raw: string };
 
 export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
   const parsed = parseScannedCode(raw);
+
+  if (parsed.kind === "meeple") {
+    const meeple = await prisma.meeple.findUnique({
+      where: { id: parsed.value },
+      select: { id: true, displayName: true },
+    });
+    if (!meeple) {
+      return { kind: "unknown", raw };
+    }
+    return { kind: "meeple", meeple };
+  }
 
   if (parsed.kind === "unit") {
     const unit = await prisma.storageUnit.findUnique({

@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
-import { Sidebar } from "@/components/layout/sidebar";
+import { SidebarShell } from "@/components/layout/sidebar-shell";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
+import { ensureMeeple } from "@/lib/members/meeples";
 import { hasOpenHelperRequest } from "@/lib/events/upcoming";
+import { hasActiveAusleiheShift } from "@/lib/events/shift-rights";
+import { listActiveNotificationsForViewer } from "@/lib/notifications/queries";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const [realTier, user, openHelperRequest] = await Promise.all([
@@ -15,20 +18,36 @@ export async function AppShell({ children }: { children: ReactNode }) {
   ]);
   const previewTier = realTier === "admin" ? await getPreviewTier() : null;
   const tier = previewTier ?? realTier;
-  const permissions = user ? await getUserPermissionKeys(user.id) : [];
+  // #433: activeAusleiheShift ist pro Nutzer, braucht deshalb user.id — kann
+  // erst nach dem obigen Promise.all starten, läuft dafür parallel zu
+  // permissions. #465: meepleId fürs Header-Longpress-QR-Popup, ebenfalls
+  // erst ab hier möglich (braucht `user`).
+  const [permissions, activeAusleiheShift, meeple] = await Promise.all([
+    user ? getUserPermissionKeys(user.id) : Promise.resolve([]),
+    hasActiveAusleiheShift(user?.id ?? null),
+    user ? ensureMeeple(user) : Promise.resolve(null),
+  ]);
+  // #339: Banner + Glocke teilen sich dieselbe Liste — ein Server-Lookup
+  // statt je einer eigenen Query. Braucht `permissions` (Zielgruppen-Filter),
+  // kann daher erst nach dem zweiten Promise.all starten.
+  const notifications = await listActiveNotificationsForViewer(permissions);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <Header
-        user={user ? { name: user.name } : null}
+        user={user && meeple ? { name: user.name, meepleId: meeple.id } : null}
         previewTier={realTier === "admin" ? tier : undefined}
+        notifications={notifications}
       />
-      <Sidebar
+      <SidebarShell
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest }}
-      />
+        flags={{ openHelperRequest, activeAusleiheShift }}
+        notifications={notifications}
+      >
+        {children}
+      </SidebarShell>
       {/* < md ersetzt MobileNav (#437) die dort ausgeblendete Sidebar — exakt
           an Sidebars md-Schwelle übergeben, sonst Navigations-Lücke
           zwischen 640–768px (keine der beiden sichtbar). */}
@@ -36,26 +55,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest }}
+        flags={{ openHelperRequest, activeAusleiheShift }}
         user={user ? { name: user.name } : null}
       />
-      {/* pt-[5.5rem]/sm:pt-24: header (h-16 = 4rem) + the block's own py-6/sm:py-8 top inset,
-          since the header is fixed and no longer pushes this block down via normal flow. */}
-      {/* Width cap lives on each page now via PageContainer (#398) — routes
-          differ (e.g. Ludothek uses "wide"), so AppShell no longer forces
-          one globally. */}
-      {/* ml folgt der Sidebar-Breite (#336): < md ausgeblendet (keine Margin),
-          md–lg Icon-only (w-16), ab xl volle Breite (w-64). Der Hover-/Pin-
-          Ausklappzustand der Sidebar ist ein Overlay (position: fixed) und
-          verschiebt diese Margin bewusst nicht. pb (< md): Platz für die
-          fixed MobileNav-Bottom-Bar (#437), die bis exakt md sichtbar ist. */}
-      <main className="min-w-0 flex-1 px-4 pt-[5.5rem] pb-20 sm:px-8 sm:pt-24 md:ml-16 md:pb-8 xl:ml-64">
-        {children}
-        {/* Scroll buffer: lets page content (e.g. a dropdown menu at the
-            bottom, or the last section of a long page) scroll clear of the
-            viewport bottom instead of stopping flush with it. */}
-        <div aria-hidden className="h-[20vh]" />
-      </main>
     </div>
   );
 }

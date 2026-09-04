@@ -6,7 +6,7 @@ import {
   type ProfileViewerContext,
 } from "@/lib/members/profile-access";
 import { isMiniMeeple } from "@/lib/members/contribution";
-import { resolveVisibleProfilePictureUrl } from "@/lib/members/profile-picture-visibility";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import { listOpenPendingChangesForMember } from "@/lib/members/pending-changes";
 import { getActiveHoldingsForMember } from "@/lib/ludothek/holdings-by-meeple";
 import {
@@ -14,6 +14,8 @@ import {
   getImportCooldownEndsAt,
   getOwnPrivateCollection,
 } from "@/lib/ludothek/private-collection";
+import { listOwnPrivateLoanOffers } from "@/lib/ludothek/private-event-loans";
+import { findUpcomingEventsVisibleToMembers } from "@/lib/events/upcoming";
 import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import { PrivateSpieleSection } from "@/components/feature/mitglied-profil/private-spiele-section";
 import { findMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
@@ -39,6 +41,7 @@ import {
 } from "@/lib/utils/crypto";
 import { StammdatenSection } from "@/components/feature/mitglied-profil/stammdaten-section";
 import { BankverbindungSection } from "@/components/feature/mitglied-profil/bankverbindung-section";
+import { KalenderTokenSection } from "@/components/feature/mitglied-profil/kalender-token-section";
 import { VereinsspieleSection } from "@/components/feature/mitglied-profil/vereinsspiele-section";
 import {
   MeepleDatenSection,
@@ -99,12 +102,24 @@ export async function MitgliedProfilView({
     ? await getActiveHoldingsForMember(member.id)
     : [];
 
+  // (#122) Nächstes kommendes Event als einziger Freigabe-Kontext — bewusst
+  // kein Mehrfach-Event-Picker, das Feature deckt den Regelfall "das nächste
+  // Spieletreffen" ab.
+  const upcomingEvents = isSelf
+    ? await findUpcomingEventsVisibleToMembers({ id: true, title: true })
+    : [];
+  const nextEvent = upcomingEvents[0] ?? null;
+
   const ownPrivateCollection =
     isSelf && member.meeple
       ? {
           entries: await getOwnPrivateCollection(member.meeple.id),
           cooldownEndsAt: await getImportCooldownEndsAt(member.meeple),
           canForceImport: await canForceImport(member.meeple.neonAuthUserId),
+          nextEvent,
+          ownOffers: nextEvent
+            ? await listOwnPrivateLoanOffers(member.meeple.id, nextEvent.id)
+            : [],
         }
       : null;
 
@@ -134,25 +149,24 @@ export async function MitgliedProfilView({
         }
       : null;
 
-  // Jede:r Betrachter:in dieser Seite ist ein eingeloggtes Meeple (Route ist
-  // auth-gated) — `isProfilePictureVisible()` zeigt "INTERN" damit ohnehin
-  // immer, EVENTS/IMMER sowieso; kein Gast-Fall hier möglich.
-  const profilePictureUrl = member.meeple
-    ? resolveVisibleProfilePictureUrl(member.meeple, { kind: "meeple" })
-    : null;
-
   return (
     <PageContainer className="max-w-6xl gap-6 px-4 py-8">
       <PageHeading
         eyebrow={`Mitglied Nr. ${member.memberNumber}`}
         title={memberDisplayName(member)}
         media={
-          profilePictureUrl && (
-            // eslint-disable-next-line @next/next/no-img-element -- Blob-URL, kein next/image nötig für ein Avatar (wie profile-picture-upload.tsx)
-            <img
-              src={profilePictureUrl}
-              alt=""
-              className="size-16 shrink-0 rounded-full object-cover"
+          member.meeple && (
+            // Jede:r Betrachter:in dieser Seite ist ein eingeloggtes Meeple
+            // (Route ist auth-gated) — `isProfilePictureVisible()` zeigt
+            // "INTERN" damit ohnehin immer, EVENTS/IMMER sowieso; kein
+            // Gast-Fall hier möglich.
+            <MeepleAvatar
+              name={memberDisplayName(member)}
+              profilePictureUrl={member.meeple.profilePictureUrl}
+              profilePictureVisibility={member.meeple.profilePictureVisibility}
+              viewer={{ kind: "meeple" }}
+              size="xxxl"
+              hideWithoutPicture
             />
           )
         }
@@ -201,6 +215,7 @@ export async function MitgliedProfilView({
               id: change.id,
               memberDisplayName: memberDisplayName(member),
               memberNumber: member.memberNumber,
+              memberSlug: member.slug,
               displayValue: formatStammdatenDiffSummary(
                 change.fieldsJson,
                 tshirtSizeLabelById,
@@ -231,6 +246,7 @@ export async function MitgliedProfilView({
                 id: change.id,
                 memberDisplayName: memberDisplayName(member),
                 memberNumber: member.memberNumber,
+                memberSlug: member.slug,
                 displayValue: maskIban(
                   ibanFirst2(decrypted),
                   ibanLast4(decrypted),
@@ -242,6 +258,16 @@ export async function MitgliedProfilView({
           />
         )}
 
+        {viewer.isAdmin && (
+          <KalenderTokenSection
+            memberId={member.id}
+            hasToken={member.calendarTokenHash !== null}
+            tokenCreatedAt={
+              member.calendarTokenCreatedAt?.toISOString() ?? null
+            }
+          />
+        )}
+
         {isSelf && <MeineKinderSection guardianChildren={myChildren} />}
         {!isSelf && (
           <ErziehungsberechtigteSection guardians={guardiansOfMember} />
@@ -249,7 +275,10 @@ export async function MitgliedProfilView({
 
         {canViewVereinsspiele && (
           <div className="md:col-span-2">
-            <VereinsspieleSection holdings={holdings} />
+            <VereinsspieleSection
+              holdings={holdings}
+              viewerIsSubject={isSelf}
+            />
           </div>
         )}
 
@@ -274,6 +303,8 @@ export async function MitgliedProfilView({
             cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
             canForceImport={ownPrivateCollection.canForceImport}
             visibleToOthers={member.meeple.privateCollectionVisible}
+            nextEvent={ownPrivateCollection.nextEvent}
+            ownOffers={ownPrivateCollection.ownOffers}
           />
         )}
         {/* Bewusst kein starrer `col-span-*` — nur Titel, ein Satz Text und

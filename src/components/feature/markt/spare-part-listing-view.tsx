@@ -22,7 +22,7 @@ export function SparePartListingCard({
         Abzuholen bei{" "}
         <ContactDialog
           name={part.keeperDisplayName}
-          contact={part.keeperContact}
+          meeple={part.keeperContactMeeple}
         />
       </p>
       {canManage && (

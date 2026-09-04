@@ -303,6 +303,8 @@ model Meeple {
   marketListings           MarketListing[]              @relation("MarketListingSeller")
   privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
   deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
+  privateEventLoansOffered PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
+  privateEventLoansIssued  PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
   newsletterSubscription   NewsletterSubscriber?
   member                   Member?
 
@@ -354,6 +356,11 @@ model Member {
   membershipEndsAt        DateTime?
   meepleId                String?   @unique
   tshirtSizeId            String?
+  /// SHA-256-Hash des Abo-Tokens für den internen ICS-Kalender-Feed (#438) —
+  /// Rohwert nie gespeichert, siehe `lib/members/calendar-token.ts`. `null`
+  /// = noch nie erzeugt oder widerrufen, kein Vorab-Backfill für Altbestand.
+  calendarTokenHash       String?   @unique
+  calendarTokenCreatedAt  DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
@@ -563,6 +570,27 @@ model Post {
   newsletterAttempts  Int                       @default(0)
   newsletterLastError String?
   newsletterSentAt    DateTime?
+
+  /// Herkunfts-Zuordnung für automatisch aus einem Termin erzeugte Beiträge
+  /// (#463) — genau eines von beiden gesetzt, nie beide. `sourceIcsUid`:
+  /// stabiler ICS-`UID`-Anker (öffentlicher oder interner Feed, welcher
+  /// davon ergibt sich beim lazy Abgleich). `sourceEventId`: `Event.id`
+  /// eines öffentlichen DB-Termins — bewusst kein FK/`onDelete`, die
+  /// Existenzprüfung läuft lazy beim Öffnen (`verifyLinkedEventOrUnpublish`),
+  /// nicht kaskadierend beim Löschen.
+  sourceIcsUid       String?   @unique
+  sourceEventId      String?   @unique
+  /// Sync-Snapshot der zuletzt automatisch übernommenen Quellwerte (#463) —
+  /// Grundlage des getrackten Sync: stimmt der aktuelle Post-Wert noch mit
+  /// dem Snapshot überein, hat die Redaktion das Feld nicht angefasst und es
+  /// wird beim nächsten Abgleich auf den neuen Quellwert aktualisiert;
+  /// weicht er ab, bleibt das Feld unangetastet und der Snapshot wird NICHT
+  /// nachgezogen (sonst würde eine erneute Quelländerung fälschlich wieder
+  /// als "unverändert" erkannt).
+  syncedTitle        String?
+  syncedLocationNote String?
+  syncedStartsAt     DateTime?
+  syncedEndsAt       DateTime?
 
   dispatchJobs     NewsletterDispatchJob[]
   instagramDetails PostInstagramDetails?
@@ -789,6 +817,7 @@ model BoardGame {
   lfgPosts                 LfgPost[]
   marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
+  privateEventLoans        PrivateEventLoan[]
 
   @@index([ean])
   @@map("board_games")
@@ -1044,6 +1073,7 @@ model Event {
   fleaMarketItems           FleaMarketItem[]
   fleaMarketExternalSellers FleaMarketExternalSeller[]
   fleaMarketCarts           FleaMarketCart[]
+  privateEventLoans         PrivateEventLoan[]
 
   @@map("events")
 }
@@ -1228,6 +1258,43 @@ model ExplainerAttendance {
   @@map("explainer_attendances")
 }
 
+enum PrivateEventLoanStatus {
+  /// Eigentümer:in hat das Exemplar für dieses Event freigegeben, noch nicht ausgegeben.
+  OFFERED
+  /// Ausleihe-Meeple hat das Exemplar an einen Gast ausgegeben.
+  LOANED
+  /// Nach dem Event an die Eigentümer:in zurückgegeben — Abschlusszustand,
+  /// der Datensatz kann danach gelöscht werden (#122).
+  RETURNED
+}
+
+/// Ein Meeple gibt ein Spiel aus seiner privaten Collection (#122) für die Dauer
+/// eines Events zur Ausleihe frei — bewusst kein GameCopy-Klon: kein Standort,
+/// keine GameHolding-Kette, keine Zustandsverwaltung wie beim Vereinsbestand.
+/// Explizite Freigabe pro Titel und Event; die Event-Anmeldung als Erklärbär/
+/// Helfer:in allein reicht nicht (siehe Issue-Klärung). Haftungsfragen bei
+/// Verlust/Schaden sind bewusst nicht Teil dieses Modells, siehe #277.
+model PrivateEventLoan {
+  id               String                 @id @default(cuid())
+  eventId          String
+  ownerMeepleId    String
+  boardGameId      String
+  status           PrivateEventLoanStatus @default(OFFERED)
+  offeredAt        DateTime               @default(now())
+  issuedAt         DateTime?
+  issuedByMeepleId String?
+  returnedAt       DateTime?
+
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  owner     Meeple    @relation("PrivateEventLoanOwner", fields: [ownerMeepleId], references: [id], onDelete: Cascade)
+  issuedBy  Meeple?   @relation("PrivateEventLoanIssuedBy", fields: [issuedByMeepleId], references: [id], onDelete: SetNull)
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, ownerMeepleId, boardGameId])
+  @@index([eventId, status])
+  @@map("private_event_loans")
+}
+
 /// A member's item for an event's Bring & Buy flea market. Starts PENDING and only
 /// appears in the guest area once approved (see CONTEXT.md "Flohmarkt-Artikel").
 model FleaMarketItem {
@@ -1360,4 +1427,52 @@ model ImportantLink {
   updatedAt DateTime @updatedAt
 
   @@map("important_links")
+}
+
+/// Dringlichkeit einer System-Notification (#339) — bestimmt Banner-/
+/// Glocken-Farbe und welche von mehreren aktiven im Banner gewinnt.
+enum SystemNotificationType {
+  INFO
+  WARNING
+  DANGER
+}
+
+/// Schließbarkeit im Banner (#339) — gilt nur dort, nicht für die
+/// Glocken-Liste (die zeigt immer alle aktiven, auch bereits geschlossene).
+enum SystemNotificationCloseable {
+  NO
+  TEMPORARY
+  YES
+}
+
+/// Manuell über die Admin-CRUD-Seite verwaltete System-Notification (#339).
+/// `audiencePermissionKey` null = für alle sichtbar (auch Gäste); gesetzt =
+/// nur für Meeple mit dieser Berechtigung (konsistent mit bestehendem RBAC,
+/// kein eigenes Rollen-Konzept). Automatisierte Notifications (Code-Registry,
+/// z. B. DB-Füllstand) leben bewusst nicht hier, sondern nur ihr
+/// Deaktivierungs-Flag in `AutomatedNotificationDisable` — der Code bleibt
+/// bei einer Deaktivierung unverändert.
+model SystemNotification {
+  id                    String                       @id @default(cuid())
+  name                  String
+  type                  SystemNotificationType
+  audiencePermissionKey String?
+  closeable             SystemNotificationCloseable
+  message               String
+  isActive              Boolean                      @default(true)
+  createdAt             DateTime                     @default(now())
+
+  @@map("system_notifications")
+}
+
+/// Persistiertes "aus"-Flag für eine im Code registrierte automatisierte
+/// Notification (#339) — Existenz einer Zeile bedeutet deaktiviert. Name
+/// referenziert den Registry-Key (`AutomatedNotificationDefinition.name`,
+/// siehe `src/lib/notifications/registry.ts`), kein DB-Fremdschlüssel, da
+/// die Registry selbst im Code lebt.
+model AutomatedNotificationDisable {
+  name       String   @id
+  disabledAt DateTime @default(now())
+
+  @@map("automated_notification_disables")
 }

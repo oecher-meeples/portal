@@ -54,7 +54,7 @@ export function MarketListingCard({
           Zustand: {listing.condition} · von{" "}
           <ContactDialog
             name={listing.sellerDisplayName}
-            contact={listing.sellerContact}
+            meeple={listing.sellerContactMeeple}
           />
         </p>
         {isOwn && (

@@ -19,6 +19,11 @@ import {
 } from "@/lib/ludothek/admin-bestand-filters";
 import { formatDatePlain } from "@/lib/utils/format";
 import { memberDisplayName } from "@/lib/members/member-display-name";
+import {
+  meepleEmail,
+  toContactDialogMeeple,
+  type ContactDialogMeeple,
+} from "@/lib/members/contact";
 
 /** One row per physical `GameCopy` for `/admin/bestand` (#121/#198). */
 export type AdminBoardGameRow = {
@@ -26,6 +31,8 @@ export type AdminBoardGameRow = {
   id: string;
   /** BoardGame (title) id. */
   boardGameId: string;
+  /** Für den Link zur Titel-Detailseite (`/ludothek/[slug]`). */
+  boardGameSlug: string;
   title: string;
   secondaryTitle: string | null;
   ean: string | null;
@@ -38,7 +45,23 @@ export type AdminBoardGameRow = {
    * bestätigt hat (#406) — analog der "unbestätigt"-`StatusPill` in
    * `GameHoldingPanel`. */
   isUnconfirmed: boolean;
+  /** Vorformatierte Kette (`bei X → Y`) — nur noch für den CSV-Export
+   * (`admin-bestand-csv-export-dialog.tsx`), der reinen Text statt
+   * `ContactDialog` braucht. Die Tabellenzelle selbst nutzt stattdessen
+   * `responsibleName`/`unitChain`/`responsibleContactMeeple` einzeln (analog
+   * `GameCopyRow`/`LocationChainCell`, #121). */
   locationChain: string;
+  /** Verantwortliche Person (Standort-Keeper oder direkt haltendes
+   * Vereinsmitglied) — `null` ohne Standort/Person. */
+  responsibleName: string | null;
+  /** Nur die Lagerort-Kette, ohne die Person davor (siehe `unitChain` in
+   * `GameCopyRow`). Leer, wenn ein Vereinsmitglied das Exemplar direkt hält
+   * (kein Lagerort dazwischen). */
+  unitChain: string;
+  /** `null` ohne verantwortliche Person oder ohne deren Meeple-Konto (z. B.
+   * MiniMeeple ohne Login) — `LocationChainCell` zeigt dann nur den
+   * Klartext-Namen ohne `ContactDialog`. */
+  responsibleContactMeeple: ContactDialogMeeple | null;
   bggId: number | null;
   minPlayers: number | null;
   maxPlayers: number | null;
@@ -95,7 +118,9 @@ export async function buildAdminBoardGameRows({
                 firstName: true,
                 lastName: true,
                 email: true,
-                meeple: { select: { displayName: true, neonAuthUserId: true } },
+                meeple: {
+                  select: { id: true, displayName: true, neonAuthUserId: true },
+                },
               },
             },
           },
@@ -114,74 +139,136 @@ export async function buildAdminBoardGameRows({
 
   const { unitById, keeperNameById } = await buildUnitAndKeeperMaps(units);
 
-  return copies.map((copy) => {
+  // Erster Durchlauf: Standort/Person pro Exemplar auflösen (rein lokal,
+  // keine weitere Query) — liefert je Exemplar auch die Meeple-Id, für die
+  // `ContactDialog` gleich Kontaktdaten braucht. Getrennt vom zweiten
+  // Durchlauf, damit die dafür nötigen Meeple-Kontaktdaten in genau einer
+  // gebündelten Query statt einer pro Zeile geladen werden.
+  const resolved = copies.map((copy) => {
     const holding = copy.holdings[0] ?? null;
-    const zustand = holding
-      ? zustandFromHoldingAndUnit(
-          holding,
-          holding.unit,
-          copy.status,
-          holding.vereinsmitglied,
-        )
-      : "nicht-erfasst";
-    const boardGame = copy.boardGame;
-
+    if (holding?.vereinsmitgliedId) {
+      return {
+        copy,
+        holding,
+        responsibleName: holding.vereinsmitglied
+          ? memberDisplayName(holding.vereinsmitglied)
+          : "Vereinsmitglied",
+        unitChain: "",
+        contactMeepleId: holding.vereinsmitglied?.meeple?.id ?? null,
+      };
+    }
+    if (!holding?.unitId) {
+      return {
+        copy,
+        holding,
+        responsibleName: null,
+        unitChain: "",
+        contactMeepleId: null,
+      };
+    }
+    const { unitChain, keeperMeepleId } = walkUnitChain(
+      holding.unitId,
+      unitById,
+    );
     return {
-      id: copy.id,
-      boardGameId: boardGame.id,
-      title: boardGame.title,
-      secondaryTitle: boardGame.secondaryTitle,
-      ean: boardGame.ean,
-      status: copy.status,
-      needsCompletenessCheck: copy.needsCompletenessCheck,
-      lastCheckedAt: copy.lastCheckedAt
-        ? formatDatePlain(copy.lastCheckedAt)
+      copy,
+      holding,
+      responsibleName: keeperMeepleId
+        ? (keeperNameById.get(keeperMeepleId) ?? null)
         : null,
-      archivedReason: copy.archivedReason,
-      zustand,
-      isUnconfirmed:
-        Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
-      bggId: boardGame.bggId,
-      minPlayers: boardGame.minPlayers,
-      maxPlayers: boardGame.maxPlayers,
-      playTimeMinutes: boardGame.playTimeMinutes,
-      weight: boardGame.weight,
-      averageRating: boardGame.averageRating,
-      imageUrl: boardGame.imageUrl,
-      description: boardGame.description,
-      mechanics: boardGame.mechanics,
-      categories: boardGame.categories,
-      condition: copy.condition,
-      inventoryNumber: copy.inventoryNumber,
-      kind: boardGame.kind,
-      explainerVideoUrl: boardGame.explainerVideoUrl,
-      languageDependence: boardGame.languageDependence,
-      publisher: boardGame.publisher,
-      author: boardGame.author,
-      yearPublished: boardGame.yearPublished,
-      ruleBookLanguages: copy.ruleBookLanguages,
-      alternateNames: boardGame.alternateNames.map((a) => a.name),
-      locationChain: (() => {
-        if (holding?.vereinsmitgliedId) {
-          return formatLocationChain({
-            responsibleName: holding.vereinsmitglied
-              ? memberDisplayName(holding.vereinsmitglied)
-              : "Vereinsmitglied",
-            unitChain: "",
-          });
-        }
-        if (!holding?.unitId) return "";
-        const { unitChain, keeperMeepleId } = walkUnitChain(
-          holding.unitId,
-          unitById,
-        );
-        return formatLocationChain({
-          responsibleName: keeperMeepleId
-            ? (keeperNameById.get(keeperMeepleId) ?? null)
-            : null,
-          unitChain,
-        });
-      })(),
+      unitChain,
+      contactMeepleId: keeperMeepleId,
     };
   });
+
+  const contactMeepleIds = [
+    ...new Set(
+      resolved
+        .map((r) => r.contactMeepleId)
+        .filter((id): id is string => id !== null),
+    ),
+  ];
+  const contactMeeples = contactMeepleIds.length
+    ? await prisma.meeple.findMany({
+        where: { id: { in: contactMeepleIds } },
+        select: {
+          id: true,
+          telegramHandle: true,
+          signalHandle: true,
+          discordHandle: true,
+          address: true,
+          shareAddress: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+          member: { select: { email: true, slug: true } },
+        },
+      })
+    : [];
+  const contactMeepleById = new Map(
+    contactMeeples.map((m) => [
+      m.id,
+      toContactDialogMeeple(
+        { ...m, email: meepleEmail(m) },
+        { kind: "meeple" },
+      ),
+    ]),
+  );
+
+  return resolved.map(
+    ({ copy, holding, responsibleName, unitChain, contactMeepleId }) => {
+      const zustand = holding
+        ? zustandFromHoldingAndUnit(
+            holding,
+            holding.unit,
+            copy.status,
+            holding.vereinsmitglied,
+          )
+        : "nicht-erfasst";
+      const boardGame = copy.boardGame;
+
+      return {
+        id: copy.id,
+        boardGameId: boardGame.id,
+        boardGameSlug: boardGame.slug,
+        title: boardGame.title,
+        secondaryTitle: boardGame.secondaryTitle,
+        ean: boardGame.ean,
+        status: copy.status,
+        needsCompletenessCheck: copy.needsCompletenessCheck,
+        lastCheckedAt: copy.lastCheckedAt
+          ? formatDatePlain(copy.lastCheckedAt)
+          : null,
+        archivedReason: copy.archivedReason,
+        zustand,
+        isUnconfirmed:
+          Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
+        bggId: boardGame.bggId,
+        minPlayers: boardGame.minPlayers,
+        maxPlayers: boardGame.maxPlayers,
+        playTimeMinutes: boardGame.playTimeMinutes,
+        weight: boardGame.weight,
+        averageRating: boardGame.averageRating,
+        imageUrl: boardGame.imageUrl,
+        description: boardGame.description,
+        mechanics: boardGame.mechanics,
+        categories: boardGame.categories,
+        condition: copy.condition,
+        inventoryNumber: copy.inventoryNumber,
+        kind: boardGame.kind,
+        explainerVideoUrl: boardGame.explainerVideoUrl,
+        languageDependence: boardGame.languageDependence,
+        publisher: boardGame.publisher,
+        author: boardGame.author,
+        yearPublished: boardGame.yearPublished,
+        ruleBookLanguages: copy.ruleBookLanguages,
+        alternateNames: boardGame.alternateNames.map((a) => a.name),
+        responsibleName,
+        unitChain,
+        responsibleContactMeeple: contactMeepleId
+          ? (contactMeepleById.get(contactMeepleId) ?? null)
+          : null,
+        locationChain: formatLocationChain({ responsibleName, unitChain }),
+      };
+    },
+  );
 }

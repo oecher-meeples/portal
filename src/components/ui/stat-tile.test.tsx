@@ -29,4 +29,12 @@ describe("StatTile", () => {
       "/ludothek?ausgeliehen=1",
     );
   });
+
+  // #429: die Karte muss sich auf die volle Grid-Zeilenhöhe strecken, sonst
+  // sind Karten mit 1- vs. 2-zeiligem Titel unterschiedlich hoch.
+  it("stretches to the full grid row height when linked", () => {
+    render(<StatTile label="Offene Ausleihen" value={3} href="/ludothek" />);
+
+    expect(screen.getByRole("link")).toHaveClass("h-full");
+  });
 });

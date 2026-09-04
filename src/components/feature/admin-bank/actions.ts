@@ -30,10 +30,22 @@ export async function revealPendingIban(changeId: string) {
 export async function exportBankDataCsv() {
   const actor = await requireBankReader();
 
+  // #395: Datenminimierung auf tatsächlich einzuziehende Zustände.
+  // "Gekündigt" (resignedAt gesetzt, membershipEndsAt in der Zukunft) bleibt
+  // beitragspflichtig bis Jahreswechsel und damit im Export — die Grenze ist
+  // das Zustandsdatum selbst, nicht ob der Jahreswechsel-Cron ein
+  // "Ausgetreten"-Meeple (membershipEndsAt in der Vergangenheit) bereits
+  // verarbeitet hat (z. B. wegen offener Ausleihen noch nicht).
+  const now = new Date();
   const members = await prisma.member.findMany({
     where: {
       ibanEncrypted: { not: null },
-      OR: [{ meepleId: null }, { meeple: { anonymizedAt: null } }],
+      AND: [
+        { OR: [{ meepleId: null }, { meeple: { anonymizedAt: null } }] },
+        {
+          OR: [{ membershipEndsAt: null }, { membershipEndsAt: { gte: now } }],
+        },
+      ],
     },
     orderBy: { memberNumber: "asc" },
     select: {

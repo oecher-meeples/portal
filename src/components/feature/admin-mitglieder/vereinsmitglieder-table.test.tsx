@@ -112,24 +112,46 @@ describe("VereinsmitgliederTable contribution filter (#340)", () => {
     expect(screen.queryByText("Jonas Jung")).not.toBeInTheDocument();
   });
 
-  it("calls onClearContributionFilter when the filter chip's × is clicked", async () => {
+  it("calls onContributionFilterChange with null when 'alle' is selected (#432)", async () => {
     const user = userEvent.setup();
-    const onClear = vi.fn();
+    const onChange = vi.fn();
     render(
       <VereinsmitgliederTable
         members={[MINI_MEMBER, JUNG_MEMBER]}
         canManageMembers={false}
         canManageInvites={true}
         contributionFilter={["mini"]}
-        onClearContributionFilter={onClear}
+        onContributionFilterChange={onChange}
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Beitragsart-Filter entfernen" }),
+    await user.selectOptions(
+      screen.getByLabelText("Nach Beitragsart filtern"),
+      "alle",
     );
 
-    expect(onClear).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it("calls onContributionFilterChange with the mapped categories when 'mini' is selected (#432)", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <VereinsmitgliederTable
+        members={[MINI_MEMBER, JUNG_MEMBER]}
+        canManageMembers={false}
+        canManageInvites={true}
+        contributionFilter={null}
+        onContributionFilterChange={onChange}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByLabelText("Nach Beitragsart filtern"),
+      "mini",
+    );
+
+    expect(onChange).toHaveBeenCalledWith(["mini"]);
   });
 
   it("combines the contribution filter with the text search", async () => {

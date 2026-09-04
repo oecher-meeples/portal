@@ -19,7 +19,7 @@ export default async function MarketListingPage({
   const listing = await prisma.marketListing.findUnique({
     where: { id },
     include: {
-      seller: { include: { member: { select: { email: true } } } },
+      seller: { include: { member: { select: { email: true, slug: true } } } },
       boardGame: { select: { slug: true, bggId: true } },
     },
   });

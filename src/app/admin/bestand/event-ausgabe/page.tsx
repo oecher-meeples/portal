@@ -11,7 +11,7 @@ export default async function EventAusgabePage({
 }: {
   searchParams: Promise<{ event?: string }>;
 }) {
-  await requireAdminPermission("games:manage");
+  await requireAdminPermission("events:bestand");
   const { event: requestedEventId } = await searchParams;
 
   const events = await findUpcomingEvents({

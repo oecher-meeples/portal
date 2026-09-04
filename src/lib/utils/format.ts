@@ -56,6 +56,11 @@ const DAY_MONTH = new Intl.DateTimeFormat("de-DE", {
   day: "2-digit",
   month: "2-digit",
 });
+const DAY_MONTH_YEAR = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
 
 type DateInput = string | number | Date;
 
@@ -79,10 +84,12 @@ export function formatTimePlain(value: DateInput) {
   return TIME_PLAIN.format(new Date(value));
 }
 
-/** "Donnerstag, den 27.08." — Tagesüberschrift im Helferplan-Akkordion. */
+/** "Donnerstag, den 27.08.2026" — Tagesüberschrift im Helferplan-Akkordion,
+ * auch für die "Tag"-Auswahl im Schicht-Dialog (#435). Mit Jahr, damit z. B.
+ * eine Jahreswechsel-Schicht eindeutig bleibt. */
 export function formatWeekdayDate(value: DateInput) {
   const date = new Date(value);
-  return `${WEEKDAY_LONG.format(date)}, den ${DAY_MONTH.format(date)}`;
+  return `${WEEKDAY_LONG.format(date)}, den ${DAY_MONTH_YEAR.format(date)}`;
 }
 
 /** "Donnerstag 27.08, 18:00 – 22:00" — Helferplan: zugewiesene Schicht,

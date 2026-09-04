@@ -7,6 +7,7 @@ import {
   isGameInEventRoom,
 } from "@/lib/events/guest-area";
 import { isEventCurrentlyRunning } from "@/lib/events/upcoming";
+import type { ContactLinks } from "@/lib/members/contact";
 
 export type GuestGameMatch = {
   id: string;
@@ -58,6 +59,8 @@ export type GuestGameDetail = {
     displayName: string;
     level: string;
     profilePictureUrl: string | null;
+    contact: ContactLinks;
+    profileHref: string | null;
   }[];
 };
 

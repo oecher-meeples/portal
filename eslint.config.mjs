@@ -97,6 +97,11 @@ const eslintConfig = defineConfig([
   },
   globalIgnores([
     ".next/**",
+    // #41: `vercel build`/`vercel dev` legen hier generierte Function-Bundles
+    // ab (u. a. eine Kopie von `.next/server` je Route) — ohne diesen Eintrag
+    // zieht ESLints Standard-Glob sie mit ein und landet außerhalb jedes
+    // `files:`-Blocks, in dem das `import`-Plugin registriert ist.
+    ".vercel/**",
     "out/**",
     "build/**",
     "coverage/**",

@@ -12,16 +12,9 @@ type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
   posts: Awaited<ReturnType<typeof getLatestPosts>>;
   gameCount: number;
-  /** Mitglied-Tier, nicht nur eingeloggt — ein Gast bleibt Gast, auch mit Account (#96). */
-  isMember: boolean;
 };
 
-export function HomeView({
-  events,
-  posts,
-  gameCount,
-  isMember,
-}: HomeViewProps) {
+export function HomeView({ events, posts, gameCount }: HomeViewProps) {
   return (
     <PageContainer className="gap-10">
       <section className="flex flex-col gap-2">
@@ -103,22 +96,22 @@ export function HomeView({
             </ul>
           </div>
 
-          {isMember && (
-            <div className="bg-primary/10 rounded-lg border p-5">
-              <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
-                <HeartHandshake className="size-4" />
-                Unterstütze uns
-              </h2>
-              <p className="text-muted-foreground mt-1.5 text-sm">
-                Deine Spende hält die Ludothek am Leben – neue Spiele,
-                Etiketten, Eventmaterial.
-              </p>
-              <Button
-                className="mt-3"
-                render={<Link href="/spenden">Jetzt spenden (PayPal)</Link>}
-              />
-            </div>
-          )}
+          {/* #420: Sperre aus #96 aufgehoben — der PayPal-Link war damals
+           * nur ein Mock, ist seit #267 aber real, deshalb auch für Gäste. */}
+          <div className="bg-primary/10 rounded-lg border p-5">
+            <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
+              <HeartHandshake className="size-4" />
+              Unterstütze uns
+            </h2>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              Deine Spende hält die Ludothek am Leben – neue Spiele, Etiketten,
+              Eventmaterial.
+            </p>
+            <Button
+              className="mt-3"
+              render={<Link href="/spenden">Jetzt spenden (PayPal)</Link>}
+            />
+          </div>
         </div>
       </section>
 

@@ -1,18 +1,15 @@
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { formatBytes } from "@/lib/utils/format";
-import {
-  getBlobStorageTone,
-  type BlobStorageTone,
-  type BlobStorageUsage,
-} from "@/lib/admin/blob-storage";
+import { getStorageTone, type StorageTone } from "@/lib/utils/storage-tone";
+import type { BlobStorageUsage } from "@/lib/admin/blob-storage";
 
-const TONE_LABELS: Record<BlobStorageTone, string> = {
+const TONE_LABELS: Record<StorageTone, string> = {
   ok: "Im grünen Bereich",
   warning: "Wird knapp",
   critical: "Fast voll",
 };
 
-const TONE_TO_STATUS_TONE: Record<BlobStorageTone, StatusTone> = {
+const TONE_TO_STATUS_TONE: Record<StorageTone, StatusTone> = {
   ok: "positive",
   warning: "warning",
   critical: "negative",
@@ -21,7 +18,7 @@ const TONE_TO_STATUS_TONE: Record<BlobStorageTone, StatusTone> = {
 /** Admin-only info card showing the Vercel Blob storage fill level — read-only,
  * no mutation, so it lives here rather than in `feature/`. */
 export function BlobStorageUsageCard({ usage }: { usage: BlobStorageUsage }) {
-  const tone = getBlobStorageTone(usage.percent);
+  const tone = getStorageTone(usage.percent);
 
   return (
     <div className="bg-card rounded-lg border p-5">

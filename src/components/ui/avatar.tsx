@@ -5,19 +5,34 @@ import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * Sechs Stufen zur freien Wahl (Audit ergab nur zwei tatsächlich genutzte
+ * Kontexte, aber bewusst nicht darauf eingeschränkt — künftige
+ * Aufrufstellen sollen frei entscheiden können). `size` bleibt Pflicht-Prop
+ * — kein stiller Default, der unbemerkt eine falsche Stufe einführt (siehe
+ * die LFG-Inkonsistenz, die das ausgelöst hat).
+ *
+ * `sm` = 40px (Untergrenze, ab der ein Foto überhaupt noch als Foto
+ * erkennbar ist): sm 40 → md 56 → lg 72 → xl 96 → xxl 128 → xxxl 170px.
+ * Kein fester Schritt, sondern experimentell gewählte Werte. Nicht alle
+ * treffen ein Tailwind-Standard-`size-*`-Token — daher per Arbitrary-Value
+ * (`size-[…px]`).
+ */
+export type AvatarSize = "sm" | "md" | "lg" | "xl" | "xxl" | "xxxl";
+
 function Avatar({
   className,
-  size = "default",
+  size,
   ...props
 }: AvatarPrimitive.Root.Props & {
-  size?: "default" | "sm" | "lg";
+  size: AvatarSize;
 }) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar after:border-border relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
+        "group/avatar after:border-border relative flex shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-[72px] data-[size=md]:size-[56px] data-[size=sm]:size-[40px] data-[size=xl]:size-[96px] data-[size=xxl]:size-[128px] data-[size=xxxl]:size-[170px] dark:after:mix-blend-lighten",
         className,
       )}
       {...props}
@@ -46,7 +61,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs",
+        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm",
         className,
       )}
       {...props}
@@ -61,7 +76,6 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
       className={cn(
         "bg-primary text-primary-foreground ring-background absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-blend-color ring-2 select-none",
         "group-data-[size=sm]/avatar:size-2 group-data-[size=sm]/avatar:[&>svg]:hidden",
-        "group-data-[size=default]/avatar:size-2.5 group-data-[size=default]/avatar:[&>svg]:size-2",
         "group-data-[size=lg]/avatar:size-3 group-data-[size=lg]/avatar:[&>svg]:size-2",
         className,
       )}

@@ -10,7 +10,7 @@ import {
   createShift,
   updateShift,
 } from "@/components/feature/admin-events/shift-actions";
-import { formatDateMedium, formatTimePlain } from "@/lib/utils/format";
+import { formatTimePlain, formatWeekdayDate } from "@/lib/utils/format";
 
 export type EditableShift = {
   id: string;
@@ -145,7 +145,7 @@ export function ShiftDialog({
         >
           {days.map((day) => (
             <option key={day.id} value={day.id}>
-              {formatDateMedium(day.date)}
+              {formatWeekdayDate(day.date)}
             </option>
           ))}
         </select>

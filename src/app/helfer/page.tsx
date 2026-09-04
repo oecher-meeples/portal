@@ -1,6 +1,9 @@
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
-import { findUpcomingEventsVisibleToMembers } from "@/lib/events/upcoming";
+import {
+  findUpcomingEventsVisibleToMembers,
+  isEventRunningAt,
+} from "@/lib/events/upcoming";
 import {
   HelferView,
   type HelferEventGroup,
@@ -18,6 +21,7 @@ export default async function HelferPage() {
     id: true,
     title: true,
     startsAt: true,
+    endsAt: true,
     location: true,
   });
   const eventIds = events.map((event) => event.id);
@@ -103,6 +107,8 @@ export default async function HelferPage() {
     location: event.location,
     days: daysByEventId[event.id] ?? [],
     isAttendingAsExplainer: attendingEventIds.has(event.id),
+    // #338: An-/Abmelde-Banner nur bei laufendem Event zeigen.
+    isCurrentlyRunning: isEventRunningAt(event),
   }));
 
   const assignedShifts: HelferShiftRow[] = ownBookings.map((booking) => ({

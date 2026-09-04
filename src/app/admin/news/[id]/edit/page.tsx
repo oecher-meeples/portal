@@ -1,6 +1,6 @@
 ﻿import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
-import { DB_TO_TYPE } from "@/lib/content/content";
+import { DB_TO_TYPE } from "@/lib/content/content-types";
 import {
   canManagePostType,
   requirePostPermissions,
