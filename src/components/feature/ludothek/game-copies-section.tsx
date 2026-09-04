@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { LocationChainCell } from "@/components/entities/location-chain-cell";
 import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
 import { GameCopyQrExportButton } from "@/components/widgets/board-game/game-copy-qr-export-button";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
@@ -29,7 +29,7 @@ export type GameCopyRow = {
   unitChain: string;
   responsibleName: string | null;
   /** `null` bei keiner verantwortlichen Person — `ContactDialog` bekommt
-   * dann keinen `meeple`-Prop, siehe `LocationCell`. */
+   * dann keinen `meeple`-Prop, siehe `LocationChainCell`. */
   responsibleContactMeeple: ContactDialogMeeple | null;
   /** True, solange der aktuelle Halter die Übernahme nach einer Weitergabe
    * noch nicht bestätigt hat (`Holding.confirmedAt === null`, #456). */
@@ -48,35 +48,6 @@ export type GameCopyRow = {
    * `GameCopy` dahinter, daher keine Aktionen (kein `GameActionsMenu`). */
   isPrivate: boolean;
 };
-
-/** Person (clickable via `ContactDialog`) leads, then the storage chain —
- * the pickup orientation point comes first (#121 Standort-Kette). */
-function LocationCell({ copy }: { copy: GameCopyRow }) {
-  if (!copy.responsibleName && !copy.unitChain) {
-    return <span className="text-muted-foreground text-sm">—</span>;
-  }
-
-  return (
-    <span className="text-muted-foreground text-sm">
-      {copy.responsibleName && (
-        <>
-          bei{" "}
-          {copy.responsibleContactMeeple ? (
-            <ContactDialog
-              name={copy.responsibleName}
-              meeple={copy.responsibleContactMeeple}
-            />
-          ) : (
-            copy.responsibleName
-          )}
-          {copy.isUnconfirmed && " (Unbestätigt)"}
-        </>
-      )}
-      {copy.responsibleName && copy.unitChain && " → "}
-      {copy.unitChain}
-    </span>
-  );
-}
 
 /** This section already has exactly one copy per row/card, so `GameActionsMenu`
  * never hits its ambiguous multi-copy picker here (#128). */
@@ -159,7 +130,12 @@ export function GameCopiesSection({
                   <GameZustandPill zustand={copy.zustand} />
                 </TableCell>
                 <TableCell>
-                  <LocationCell copy={copy} />
+                  <LocationChainCell
+                    responsibleName={copy.responsibleName}
+                    responsibleContactMeeple={copy.responsibleContactMeeple}
+                    unitChain={copy.unitChain}
+                    isUnconfirmed={copy.isUnconfirmed}
+                  />
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
@@ -197,7 +173,12 @@ export function GameCopiesSection({
           >
             <div className="flex flex-col gap-1">
               <GameZustandPill zustand={copy.zustand} className="w-fit" />
-              <LocationCell copy={copy} />
+              <LocationChainCell
+                responsibleName={copy.responsibleName}
+                responsibleContactMeeple={copy.responsibleContactMeeple}
+                unitChain={copy.unitChain}
+                isUnconfirmed={copy.isUnconfirmed}
+              />
               <span className="text-muted-foreground text-sm">
                 Regelheft:{" "}
                 {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}

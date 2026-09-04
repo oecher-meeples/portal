@@ -35,6 +35,9 @@ export type ActiveMeepleHolding = {
 export type MeepleWithActiveHoldings = {
   vereinsmitgliedId: string;
   memberName: string;
+  /** `null` ohne verknüpftes Meeple-Konto (z. B. MiniMeeple) — `ContactDialog`
+   * bekommt dann keinen `meepleId`-Trigger, der Name bleibt reiner Text. */
+  meepleId: string | null;
   /** Für das Hover-Popup mit Bild auf den Namen (#412-Folgefeedback) —
    * `null`, wenn kein Meeple-Konto verknüpft ist (dann bleibt es beim
    * Initialen-Fallback). */
@@ -78,6 +81,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
           phone: true,
           meeple: {
             select: {
+              id: true,
               displayName: true,
               neonAuthUserId: true,
               profilePictureUrl: true,
@@ -106,6 +110,7 @@ export async function getActiveHoldingsByMeeple(): Promise<
     const entry = byMember.get(member.id) ?? {
       vereinsmitgliedId: member.id,
       memberName: name,
+      meepleId: member.meeple?.id ?? null,
       profilePictureUrl: member.meeple?.profilePictureUrl ?? null,
       profilePictureVisibility:
         member.meeple?.profilePictureVisibility ??

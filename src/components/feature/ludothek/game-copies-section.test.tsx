@@ -149,6 +149,7 @@ describe("GameCopiesSection", () => {
                 discordHandle: null,
                 address: null,
               },
+              profileHref: null,
             },
           }),
         ]}

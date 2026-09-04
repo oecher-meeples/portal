@@ -16,7 +16,11 @@ function member(overrides: Partial<Record<string, unknown>> = {}) {
     postalCode: null,
     city: null,
     phone: null,
-    meeple: { displayName: "Anna", neonAuthUserId: "auth-1" },
+    meeple: {
+      id: "meeple-anna",
+      displayName: "Anna",
+      neonAuthUserId: "auth-1",
+    },
     ...overrides,
   };
 }
@@ -70,6 +74,7 @@ describe("getActiveHoldingsByMeeple", () => {
       {
         vereinsmitgliedId: "member-1",
         memberName: "Anna",
+        meepleId: "meeple-anna",
         profilePictureUrl: null,
         profilePictureVisibility: "INTERN",
         verfuegbar: true,

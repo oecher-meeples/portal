@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search, PackageOpen, PackageCheck } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Input } from "@/components/ui/input";
@@ -16,8 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/components/ui/use-pagination";
+import { useResponsivePageSize } from "@/components/ui/use-responsive-page-size";
 import { StatusPill } from "@/components/ui/status-pill";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { LocationChainCell } from "@/components/entities/location-chain-cell";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { BulkImportBoardGamesDialog } from "@/components/widgets/board-game/bulk-import-board-games-dialog";
 import { EditBoardGameDialog } from "@/components/widgets/board-game/edit-board-game-dialog";
@@ -73,6 +78,13 @@ export function AdminBestandView({
       return true;
     });
   }, [games, search, quickFilter]);
+
+  const [pageSize, setPageSize] = useResponsivePageSize(10, 25);
+  const { page, pageCount, setPage, start, end } = usePagination(
+    filtered.length,
+    pageSize,
+  );
+  const pageGames = filtered.slice(start, end);
 
   function toggleShowDeinventarised() {
     const url = new URL(window.location.href);
@@ -185,102 +197,125 @@ export function AdminBestandView({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Spiel</TableHead>
-              <TableHead>Inv.-Nr.</TableHead>
-              <TableHead>Standort-Kette</TableHead>
-              <TableHead>Zustand</TableHead>
-              <TableHead>Letzte Prüfung</TableHead>
-              <TableHead className="text-right"> </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((game) => {
-              const isDeinventarised = game.status === "DEINVENTARISED";
-              return (
-                <TableRow
-                  key={game.id}
-                  className={isDeinventarised ? "opacity-60" : undefined}
-                >
-                  <TableCell
-                    className={
-                      isDeinventarised
-                        ? "font-medium line-through"
-                        : "font-medium"
-                    }
+      <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+        <div className="overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Spiel</TableHead>
+                <TableHead>Inv.-Nr.</TableHead>
+                <TableHead>Standort-Kette</TableHead>
+                <TableHead>Zustand</TableHead>
+                <TableHead>Letzte Prüfung</TableHead>
+                <TableHead className="text-right"> </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pageGames.map((game) => {
+                const isDeinventarised = game.status === "DEINVENTARISED";
+                return (
+                  <TableRow
+                    key={game.id}
+                    className={isDeinventarised ? "opacity-60" : undefined}
                   >
-                    {game.title}
-                    {game.needsCompletenessCheck && (
-                      <StatusPill
-                        label="Prüfung offen"
-                        tone="warning"
-                        className="ml-2"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {game.inventoryNumber || "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {game.locationChain || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <GameZustandPill zustand={game.zustand} />
-                      {game.isUnconfirmed && (
-                        <StatusPill label="unbestätigt" tone="warning" />
+                    <TableCell
+                      className={
+                        isDeinventarised
+                          ? "font-medium line-through"
+                          : "font-medium"
+                      }
+                    >
+                      {isDeinventarised ? (
+                        game.title
+                      ) : (
+                        <Link
+                          href={`/ludothek/${game.boardGameSlug}`}
+                          className="hover:underline"
+                        >
+                          {game.title}
+                        </Link>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {game.lastCheckedAt ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {isDeinventarised ? (
-                      game.archivedReason && (
-                        <span className="text-muted-foreground text-sm">
-                          {game.archivedReason}
-                        </span>
-                      )
-                    ) : (
-                      <div className="flex justify-end gap-2">
-                        <EditBoardGameDialog game={game} />
-                        <GameActionsMenu
-                          copies={[
-                            {
-                              id: game.id,
-                              zustand: game.zustand,
-                              locationChain: game.locationChain,
-                              condition: game.condition,
-                              ruleBookLanguages: game.ruleBookLanguages,
-                              inventoryNumber: game.inventoryNumber,
-                            },
-                          ]}
-                          boardGameId={game.boardGameId}
-                          boardGameTitle={game.title}
-                          canManageGames={canManageGames}
+                      {game.needsCompletenessCheck && (
+                        <StatusPill
+                          label="Prüfung offen"
+                          tone="warning"
+                          className="ml-2"
                         />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {game.inventoryNumber || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <LocationChainCell
+                        responsibleName={game.responsibleName}
+                        responsibleContactMeeple={game.responsibleContactMeeple}
+                        unitChain={game.unitChain}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <GameZustandPill zustand={game.zustand} />
+                        {game.isUnconfirmed && (
+                          <StatusPill label="unbestätigt" tone="warning" />
+                        )}
                       </div>
-                    )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {game.lastCheckedAt ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isDeinventarised ? (
+                        game.archivedReason && (
+                          <span className="text-muted-foreground text-sm">
+                            {game.archivedReason}
+                          </span>
+                        )
+                      ) : (
+                        <div className="flex justify-end gap-2">
+                          <EditBoardGameDialog game={game} />
+                          <GameActionsMenu
+                            copies={[
+                              {
+                                id: game.id,
+                                zustand: game.zustand,
+                                locationChain: game.locationChain,
+                                condition: game.condition,
+                                ruleBookLanguages: game.ruleBookLanguages,
+                                inventoryNumber: game.inventoryNumber,
+                              },
+                            ]}
+                            boardGameId={game.boardGameId}
+                            boardGameTitle={game.title}
+                            canManageGames={canManageGames}
+                          />
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-muted-foreground py-6 text-center"
+                  >
+                    Keine Spiele gefunden.
                   </TableCell>
                 </TableRow>
-              );
-            })}
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="text-muted-foreground py-6 text-center"
-                >
-                  Keine Spiele gefunden.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <Pagination
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          totalItems={filtered.length}
+        />
       </div>
     </PageContainer>
   );
