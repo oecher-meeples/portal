@@ -96,7 +96,7 @@ describe("EventDialog — Weiterleitung nach dem Anlegen (#458)", () => {
     );
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/admin/events/neues-event");
+      expect(pushMock).toHaveBeenCalledWith("/admin/events/event-1");
     });
   });
 

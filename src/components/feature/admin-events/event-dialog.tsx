@@ -93,7 +93,9 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         // #458: nach dem Anlegen direkt zur neuen Event-Detailseite statt
         // auf der Übersicht zu bleiben.
         if ("success" in result) {
-          router.push(`/admin/events/${result.slug}`);
+          // #458-Folgefehler: die Route ist /admin/events/[id], nicht [slug]
+          // (result.slug führte zu 404).
+          router.push(`/admin/events/${result.id}`);
         }
         return result;
       }}
