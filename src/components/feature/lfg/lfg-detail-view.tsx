@@ -17,7 +17,7 @@ import {
   type LfgAttachmentRow,
 } from "@/components/feature/lfg/lfg-attachments-section";
 import type { LfgStatus } from "@/lib/content/lfg";
-import type { ContactLinks } from "@/lib/members/contact";
+import type { ContactDialogMeeple } from "@/lib/members/contact";
 import { PageContainer } from "@/components/ui/page-container";
 
 export type LfgParticipantRow = {
@@ -28,7 +28,7 @@ export type LfgParticipantRow = {
   displayName: string;
   /** null für Gäste und wenn der Betrachter nicht beigetreten ist (#167) —
    * serverseitig entschieden, hier nur gerendert. */
-  contact: ContactLinks | null;
+  contactMeeple: ContactDialogMeeple | null;
   /** (#412) Profilbild statt Initialen-Kreis, sofern vorhanden und laut
    * Freigabe (#389) sichtbar — `null` für Gäste (kein Meeple-Datensatz). */
   profilePictureUrl: string | null;
@@ -126,10 +126,10 @@ export function LfgDetailView({
                 profilePictureVisibility={participant.profilePictureVisibility}
                 viewer={{ kind: "meeple" }}
               />
-              {participant.contact ? (
+              {participant.contactMeeple ? (
                 <ContactDialog
                   name={participant.displayName}
-                  contact={participant.contact}
+                  meeple={participant.contactMeeple}
                 />
               ) : (
                 participant.displayName

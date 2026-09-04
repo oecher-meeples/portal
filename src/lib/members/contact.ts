@@ -1,3 +1,9 @@
+import type { ProfilePictureVisibility } from "@prisma/client";
+import {
+  resolveVisibleProfilePictureUrl,
+  type ProfilePictureViewer,
+} from "@/lib/members/profile-picture-visibility";
+
 export type ContactLinks = {
   mailHref: string | null;
   telegramHref: string | null;
@@ -44,5 +50,42 @@ export function getContactLinks(meeple: {
       : null,
     discordHandle: meeple.discordHandle,
     address: meeple.shareAddress ? meeple.address : null,
+  };
+}
+
+/** Fertig aufbereitete Daten für `ContactDialog` (`components/entities/`) —
+ * Bild bereits sichtbarkeitsgeprüft (#389), Kontaktkanäle bereits über
+ * `getContactLinks()` aufbereitet. Der Dialog selbst kennt weder
+ * `ProfilePictureViewer` noch Prisma-Felder, nur diese Form. */
+export type ContactDialogMeeple = {
+  /** `null` heißt: kein Bild oder für den aktuellen Betrachter laut Freigabe
+   * nicht sichtbar — nie eine ungeprüfte URL. */
+  profilePictureUrl: string | null;
+  contact: ContactLinks;
+};
+
+/** Baut die `ContactDialogMeeple`-Form aus rohen Meeple-Feldern — von jeder
+ * Anzeigestelle genutzt, die `ContactDialog` ihr `meeple`-Prop selbst befüllt
+ * (statt `meepleId`, siehe `contact-dialog.ts`s `fetchContactDialogMeeple`),
+ * damit die Sichtbarkeitsprüfung/Kontaktaufbereitung nicht mehrfach
+ * nachgebaut wird. Kein `displayName` hier — `ContactDialog` bekommt den
+ * Namen bereits separat als eigenes `name`-Prop (der Trigger braucht ihn
+ * schon vor dem Laden). */
+export function toContactDialogMeeple(
+  meeple: {
+    email: string | null;
+    telegramHandle: string | null;
+    signalHandle: string | null;
+    discordHandle: string | null;
+    address: string | null;
+    shareAddress: boolean;
+    profilePictureUrl: string | null;
+    profilePictureVisibility: ProfilePictureVisibility;
+  },
+  viewer: ProfilePictureViewer,
+): ContactDialogMeeple {
+  return {
+    profilePictureUrl: resolveVisibleProfilePictureUrl(meeple, viewer),
+    contact: getContactLinks(meeple),
   };
 }

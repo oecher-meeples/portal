@@ -32,15 +32,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     unitChain: "Regal A",
     responsibleName: null,
     isUnconfirmed: false,
-    responsibleContact: {
-      mailHref: null,
-      telegramHref: null,
-      signalHref: null,
-      discordHandle: null,
-      address: null,
-    },
-    responsibleProfilePictureUrl: null,
-    responsibleProfilePictureVisibility: "INTERN",
+    responsibleContactMeeple: null,
     condition: null,
     ruleBookLanguages: [],
     inventoryNumber: null,
@@ -148,12 +140,15 @@ describe("GameCopiesSection", () => {
           copy({
             unitChain: "Regal A",
             responsibleName: "Alex",
-            responsibleContact: {
-              mailHref: "mailto:alex@example.com",
-              telegramHref: null,
-              signalHref: null,
-              discordHandle: null,
-              address: null,
+            responsibleContactMeeple: {
+              profilePictureUrl: null,
+              contact: {
+                mailHref: "mailto:alex@example.com",
+                telegramHref: null,
+                signalHref: null,
+                discordHandle: null,
+                address: null,
+              },
             },
           }),
         ]}

@@ -17,12 +17,9 @@ import {
 } from "@/components/feature/ludothek/game-copy-accordion";
 import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
 import type { GameZustand } from "@/lib/ludothek/holdings";
-import type { ContactLinks } from "@/lib/members/contact";
+import type { ContactDialogMeeple } from "@/lib/members/contact";
 import { formatRuleBookLanguages } from "@/lib/ludothek/language-dependence";
-import type {
-  ProfilePictureVisibility,
-  RuleBookLanguage,
-} from "@prisma/client";
+import type { RuleBookLanguage } from "@prisma/client";
 
 export type GameCopyRow = {
   /** GameCopy id. */
@@ -31,12 +28,9 @@ export type GameCopyRow = {
   /** Storage units only, outermost → innermost — the person leads separately (below). */
   unitChain: string;
   responsibleName: string | null;
-  responsibleContact: ContactLinks;
-  /** (#412) Profilbild der verantwortlichen Person, sofern hochgeladen und
-   * sichtbar — Viewer ist hier immer "meeple" (Ludothek-Standortdaten sind
-   * member-only, siehe `toPublicGame()`). */
-  responsibleProfilePictureUrl: string | null;
-  responsibleProfilePictureVisibility: ProfilePictureVisibility;
+  /** `null` bei keiner verantwortlichen Person — `ContactDialog` bekommt
+   * dann keinen `meeple`-Prop, siehe `LocationCell`. */
+  responsibleContactMeeple: ContactDialogMeeple | null;
   /** True, solange der aktuelle Halter die Übernahme nach einer Weitergabe
    * noch nicht bestätigt hat (`Holding.confirmedAt === null`, #456). */
   isUnconfirmed: boolean;
@@ -67,16 +61,14 @@ function LocationCell({ copy }: { copy: GameCopyRow }) {
       {copy.responsibleName && (
         <>
           bei{" "}
-          <ContactDialog
-            name={copy.responsibleName}
-            contact={copy.responsibleContact}
-            avatar={{
-              profilePictureUrl: copy.responsibleProfilePictureUrl,
-              profilePictureVisibility:
-                copy.responsibleProfilePictureVisibility,
-              viewer: { kind: "meeple" },
-            }}
-          />
+          {copy.responsibleContactMeeple ? (
+            <ContactDialog
+              name={copy.responsibleName}
+              meeple={copy.responsibleContactMeeple}
+            />
+          ) : (
+            copy.responsibleName
+          )}
           {copy.isUnconfirmed && " (Unbestätigt)"}
         </>
       )}

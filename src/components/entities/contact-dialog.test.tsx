@@ -1,47 +1,73 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ContactDialog } from "@/components/entities/contact-dialog";
+import type { ContactDialogMeeple } from "@/lib/members/contact";
+
+const fetchContactDialogMeepleMock = vi.fn();
+vi.mock("@/lib/members/contact-dialog", () => ({
+  fetchContactDialogMeeple: (...args: unknown[]) =>
+    fetchContactDialogMeepleMock(...args),
+}));
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
-describe("ContactDialog", () => {
-  const NO_CONTACT = {
-    mailHref: null,
-    telegramHref: null,
-    signalHref: null,
-    discordHandle: null,
-    address: null,
-  };
+const NO_CONTACT = {
+  mailHref: null,
+  telegramHref: null,
+  signalHref: null,
+  discordHandle: null,
+  address: null,
+};
 
+function meeple(
+  overrides: Partial<ContactDialogMeeple> = {},
+): ContactDialogMeeple {
+  return {
+    profilePictureUrl: null,
+    contact: NO_CONTACT,
+    ...overrides,
+  };
+}
+
+describe("ContactDialog — meeple-Prop (Daten bereits geladen)", () => {
   it("renders the name as plain text when there is no contact option", () => {
-    render(<ContactDialog name="Lea Demo" contact={NO_CONTACT} />);
+    render(<ContactDialog name="Lea Demo" meeple={meeple()} />);
 
     expect(screen.getByText("Lea Demo").tagName).toBe("SPAN");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("opens a dialog with every contact option on click", () => {
+  it("opens a dialog with every contact option and a centered avatar on click", () => {
     render(
       <ContactDialog
         name="Lea Demo"
-        contact={{
-          mailHref: "mailto:lea@example.com",
-          telegramHref: "https://t.me/leademo",
-          signalHref: "https://signal.me/#eu/leademo",
-          discordHandle: "leademo",
-          address: "Musterstr. 1, 52062 Aachen",
-        }}
+        meeple={meeple({
+          contact: {
+            mailHref: "mailto:lea@example.com",
+            telegramHref: "https://t.me/leademo",
+            signalHref: "https://signal.me/#eu/leademo",
+            discordHandle: "leademo",
+            address: "Musterstr. 1, 52062 Aachen",
+          },
+        })}
       />,
     );
+
+    // Vor dem Öffnen: nur der Name als Trigger-Text, kein Avatar-Fallback
+    // (Initiale) in der Zeile.
+    expect(screen.queryByText("L")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
 
     expect(
       screen.getByRole("heading", { name: "Lea Demo kontaktieren" }),
     ).toBeInTheDocument();
+    // Avatar-Fallback-Initiale jetzt im Dialog-Kopf sichtbar.
+    expect(screen.getByText("L")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /E-Mail/ })).toHaveAttribute(
       "href",
       "mailto:lea@example.com",
@@ -60,33 +86,13 @@ describe("ContactDialog", () => {
     expect(screen.getByText("Musterstr. 1, 52062 Aachen")).toBeInTheDocument();
   });
 
-  it("shows the avatar only inside the dialog header, not next to the trigger (#412-Folgefeedback)", () => {
-    render(
-      <ContactDialog
-        name="Lea Demo"
-        contact={{ ...NO_CONTACT, mailHref: "mailto:lea@example.com" }}
-        avatar={{
-          profilePictureUrl: null,
-          profilePictureVisibility: "INTERN",
-          viewer: { kind: "meeple" },
-        }}
-      />,
-    );
-
-    // Vor dem Öffnen: nur der Name als Trigger-Text, kein Avatar-Fallback
-    // (Initiale) in der Zeile.
-    expect(screen.queryByText("L")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
-
-    expect(screen.getByText("L")).toBeInTheDocument();
-  });
-
   it("shows only the mail option when nothing else is set", () => {
     render(
       <ContactDialog
         name="Lea Demo"
-        contact={{ ...NO_CONTACT, mailHref: "mailto:lea@example.com" }}
+        meeple={meeple({
+          contact: { ...NO_CONTACT, mailHref: "mailto:lea@example.com" },
+        })}
       />,
     );
 
@@ -105,5 +111,54 @@ describe("ContactDialog", () => {
     expect(
       screen.queryByRole("button", { name: "Kopieren" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ContactDialog — meepleId-Prop (Selbstlade-Pfad)", () => {
+  it("stays a clickable trigger without knowing upfront whether contact options exist", () => {
+    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+
+    expect(
+      screen.getByRole("button", { name: "Lea Demo" }),
+    ).toBeInTheDocument();
+    expect(fetchContactDialogMeepleMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches only on open, not eagerly on render", async () => {
+    fetchContactDialogMeepleMock.mockResolvedValue(
+      meeple({
+        contact: { ...NO_CONTACT, mailHref: "mailto:lea@example.com" },
+      }),
+    );
+    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
+
+    expect(
+      await screen.findByRole("button", { name: /E-Mail/ }),
+    ).toHaveAttribute("href", "mailto:lea@example.com");
+    expect(fetchContactDialogMeepleMock).toHaveBeenCalledWith("meeple-1");
+  });
+
+  it("shows a fallback message once loaded without any contact option", async () => {
+    fetchContactDialogMeepleMock.mockResolvedValue(meeple());
+    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
+
+    expect(
+      await screen.findByText("Keine Kontaktmöglichkeiten hinterlegt."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows an error message when the meeple could not be loaded", async () => {
+    fetchContactDialogMeepleMock.mockResolvedValue(null);
+    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
+
+    expect(
+      await screen.findByText("Kontaktdaten konnten nicht geladen werden."),
+    ).toBeInTheDocument();
   });
 });

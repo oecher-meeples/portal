@@ -110,13 +110,7 @@ export function MarketListingDetailView({
             Zustand: {listing.condition} · von{" "}
             <ContactDialog
               name={listing.sellerDisplayName}
-              contact={listing.sellerContact}
-              avatar={{
-                profilePictureUrl: listing.sellerProfilePictureUrl,
-                profilePictureVisibility:
-                  listing.sellerProfilePictureVisibility,
-                viewer: { kind: "meeple" },
-              }}
+              meeple={listing.sellerContactMeeple}
             />
           </p>
           {listing.description && (

@@ -33,15 +33,16 @@ describe("toSparePartListingView", () => {
       description: "Tableaus und Holzressourcen zur Weiterverwendung.",
       keeperMeepleId: "meeple-1",
       keeperDisplayName: "Jan",
-      keeperContact: {
-        mailHref: "mailto:jan@example.com",
-        telegramHref: null,
-        signalHref: null,
-        discordHandle: null,
-        address: null,
+      keeperContactMeeple: {
+        profilePictureUrl: null,
+        contact: {
+          mailHref: "mailto:jan@example.com",
+          telegramHref: null,
+          signalHref: null,
+          discordHandle: null,
+          address: null,
+        },
       },
-      keeperProfilePictureUrl: null,
-      keeperProfilePictureVisibility: "INTERN",
     });
   });
 

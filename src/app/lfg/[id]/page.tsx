@@ -10,7 +10,7 @@ import {
   getLfgStatus,
   isLfgAttachmentEligible,
 } from "@/lib/content/lfg";
-import { getContactLinks, meepleEmail } from "@/lib/members/contact";
+import { toContactDialogMeeple, meepleEmail } from "@/lib/members/contact";
 import { LfgDetailView } from "@/components/feature/lfg/lfg-detail-view";
 import { formatDateMedium } from "@/lib/utils/format";
 
@@ -97,11 +97,14 @@ export default async function LfgDetailPage({
         // Ersteller bleibt Ausnahme von #167: wer noch nicht beigetreten ist,
         // muss den Autor trotzdem kontaktieren können, um überhaupt fragen zu
         // können — für alle übrigen Teilnehmenden gilt die Sperre unverändert.
-        contact:
+        contactMeeple:
           p.meepleId !== null &&
           p.meeple &&
           (viewerIsParticipant || p.meepleId === post.createdByMeepleId)
-            ? getContactLinks({ ...p.meeple, email: meepleEmail(p.meeple) })
+            ? toContactDialogMeeple(
+                { ...p.meeple, email: meepleEmail(p.meeple) },
+                { kind: "meeple" },
+              )
             : null,
         // (#412) Bild statt Initialen-Kreis, sofern hochgeladen und laut
         // Freigabe sichtbar — Betrachter ist hier immer "meeple" (LFG ist

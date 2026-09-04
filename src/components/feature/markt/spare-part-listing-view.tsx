@@ -22,12 +22,7 @@ export function SparePartListingCard({
         Abzuholen bei{" "}
         <ContactDialog
           name={part.keeperDisplayName}
-          contact={part.keeperContact}
-          avatar={{
-            profilePictureUrl: part.keeperProfilePictureUrl,
-            profilePictureVisibility: part.keeperProfilePictureVisibility,
-            viewer: { kind: "meeple" },
-          }}
+          meeple={part.keeperContactMeeple}
         />
       </p>
       {canManage && (
