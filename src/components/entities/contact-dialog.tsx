@@ -41,13 +41,18 @@ export function ContactDialog({
   className?: string;
   avatar?: ContactDialogAvatar;
 }) {
+  // #412-Folgefeedback: das kleine Avatar-Bild direkt in der Zeile (Trigger)
+  // sprengte dort das Layout (Ludothek-Exemplarübersicht, Markt-Karten) und
+  // war zu klein, um überhaupt etwas zu erkennen. Erscheint jetzt nur noch
+  // zentriert im Kopfbereich des Dialogs selbst, nicht mehr in der Zeile.
   const avatarElement = avatar && (
     <MeepleAvatar
       name={name}
       profilePictureUrl={avatar.profilePictureUrl}
       profilePictureVisibility={avatar.profilePictureVisibility}
       viewer={avatar.viewer}
-      size="sm"
+      size="lg"
+      className="mx-auto"
     />
   );
 
@@ -58,12 +63,7 @@ export function ContactDialog({
     !contact.discordHandle &&
     !contact.address
   ) {
-    return (
-      <span className={cn("inline-flex items-center gap-1.5", className)}>
-        {avatarElement}
-        {name}
-      </span>
-    );
+    return <span className={className}>{name}</span>;
   }
 
   return (
@@ -73,18 +73,18 @@ export function ContactDialog({
           <button
             type="button"
             className={cn(
-              "hover:text-primary inline-flex items-center gap-1.5 underline-offset-2 hover:underline",
+              "hover:text-primary underline-offset-2 hover:underline",
               className,
             )}
           >
-            {avatarElement}
             {name}
           </button>
         }
       />
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{name} kontaktieren</DialogTitle>
+          {avatarElement}
+          <DialogTitle className="text-center">{name} kontaktieren</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           {contact.mailHref && (

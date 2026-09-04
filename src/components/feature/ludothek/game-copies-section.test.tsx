@@ -163,10 +163,10 @@ describe("GameCopiesSection", () => {
       />,
     );
 
-    // "A" vor dem Namen ist die MeepleAvatar-Fallback-Initiale (#412), da
-    // jsdom das Bild nie lädt — siehe meeple-avatar.test.tsx.
+    // #412-Folgefeedback: der Avatar sitzt seit diesem Feedback nur noch im
+    // Dialog-Kopf, nicht mehr inline vor dem Namen in der Zeile.
     const cell = screen.getByText(/Regal A/);
-    expect(cell.textContent).toBe("bei AAlex → Regal A");
+    expect(cell.textContent).toBe("bei Alex → Regal A");
   });
 
   // #456: unbestätigte Weitergabe war auf der Spieledetailseite nicht sichtbar.
@@ -187,7 +187,7 @@ describe("GameCopiesSection", () => {
     );
 
     const cell = screen.getByText(/Regal A/);
-    expect(cell.textContent).toBe("bei AAlex (Unbestätigt) → Regal A");
+    expect(cell.textContent).toBe("bei Alex (Unbestätigt) → Regal A");
   });
 
   it("renders a table for more than one copy", () => {

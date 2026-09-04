@@ -70,6 +70,8 @@ describe("getActiveHoldingsByMeeple", () => {
       {
         vereinsmitgliedId: "member-1",
         memberName: "Anna",
+        profilePictureUrl: null,
+        profilePictureVisibility: "INTERN",
         verfuegbar: true,
         street: null,
         postalCode: null,

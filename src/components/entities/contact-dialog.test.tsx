@@ -60,6 +60,28 @@ describe("ContactDialog", () => {
     expect(screen.getByText("Musterstr. 1, 52062 Aachen")).toBeInTheDocument();
   });
 
+  it("shows the avatar only inside the dialog header, not next to the trigger (#412-Folgefeedback)", () => {
+    render(
+      <ContactDialog
+        name="Lea Demo"
+        contact={{ ...NO_CONTACT, mailHref: "mailto:lea@example.com" }}
+        avatar={{
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
+          viewer: { kind: "meeple" },
+        }}
+      />,
+    );
+
+    // Vor dem Öffnen: nur der Name als Trigger-Text, kein Avatar-Fallback
+    // (Initiale) in der Zeile.
+    expect(screen.queryByText("L")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
+
+    expect(screen.getByText("L")).toBeInTheDocument();
+  });
+
   it("shows only the mail option when nothing else is set", () => {
     render(
       <ContactDialog

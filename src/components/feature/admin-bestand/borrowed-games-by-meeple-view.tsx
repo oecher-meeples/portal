@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Input } from "@/components/ui/input";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
+import { Tooltip } from "@/components/ui/tooltip";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import { formatDatePlain } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
 import type {
@@ -108,7 +110,23 @@ export function BorrowedGamesByMeepleView({
               >
                 <AccordionTrigger className="px-5">
                   <span className="flex items-center gap-2">
-                    <span className="font-medium">{meeple.memberName}</span>
+                    {/* #412-Folgefeedback: Bild nicht inline in der Zeile,
+                     * sondern nur als Hover-Popup über dem Namen. */}
+                    <Tooltip
+                      content={
+                        <MeepleAvatar
+                          name={meeple.memberName}
+                          profilePictureUrl={meeple.profilePictureUrl}
+                          profilePictureVisibility={
+                            meeple.profilePictureVisibility
+                          }
+                          viewer={{ kind: "meeple" }}
+                          size="lg"
+                        />
+                      }
+                    >
+                      <span className="font-medium">{meeple.memberName}</span>
+                    </Tooltip>
                     {!meeple.verfuegbar && (
                       <Badge variant="outline">nicht verfügbar</Badge>
                     )}
