@@ -21,6 +21,11 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // #324 (Live-Review-Ergänzung): "Passwort vergessen?" erst nach einem
+  // Fehlversuch zeigen, nicht direkt beim ersten Formularaufruf — bleibt
+  // danach dauerhaft sichtbar, auch wenn `error` bei einem weiteren Versuch
+  // zwischenzeitlich wieder auf null gesetzt wird.
+  const [hasFailedOnce, setHasFailedOnce] = useState(false);
   // #425: client-seitige Näherung des Server-Backoffs (#326) — der Server
   // bestätigt nie, ob ein Fehlversuch am Passwort oder am Cooldown lag, also
   // spiegelt diese Zahl nur nach, ohne je serverseitig bestätigt zu sein.
@@ -49,6 +54,7 @@ export function LoginForm() {
         recordLoginFailureClient(email);
         setNow(Date.now());
         setError(translateAuthError(signInError.message));
+        setHasFailedOnce(true);
         return;
       }
 
@@ -105,12 +111,14 @@ export function LoginForm() {
         <Button type="submit" disabled={isSubmitting || cooldownSeconds > 0}>
           {isSubmitting ? "Anmelden…" : "Anmelden"}
         </Button>
-        <Link
-          href="/passwort-vergessen"
-          className="text-primary text-center text-sm hover:underline"
-        >
-          Passwort vergessen?
-        </Link>
+        {hasFailedOnce && (
+          <Link
+            href={`/passwort-vergessen${email ? `?email=${encodeURIComponent(email)}` : ""}`}
+            className="text-primary text-center text-sm hover:underline"
+          >
+            Passwort vergessen?
+          </Link>
+        )}
       </form>
       <p className="text-muted-foreground text-center text-sm">
         Einladung erhalten?{" "}
