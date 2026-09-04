@@ -1,12 +1,13 @@
 ﻿import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
+import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { getAllContentWithCalendar } from "@/lib/content/calendar";
+import { NEWS_PAGE_SIZE } from "@/lib/content/content-types";
 import {
   filterVisibleNews,
   resolveNewsVisibility,
 } from "@/lib/content/news-visibility";
-import { NEWS_PAGE_SIZE } from "@/components/feature/news/actions";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -29,7 +30,7 @@ export default async function NewsPage() {
     : [false, false];
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <PageHeading
         eyebrow="Newsroom"
         title="Termine & Blog"
@@ -53,6 +54,6 @@ export default async function NewsPage() {
         canSeeInternal={visibility.canSeeInternal}
         canSeeSurveys={visibility.isMember}
       />
-    </div>
+    </PageContainer>
   );
 }
