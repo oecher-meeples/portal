@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPinIcon, MessageCircleIcon } from "lucide-react";
+import { MailIcon, MapPinIcon, MessageCircleIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -135,7 +135,12 @@ export function ContactDialog({
           {contact?.mailHref && (
             <Button
               className="gap-1.5"
-              render={<a href={contact.mailHref}>✉️ E-Mail</a>}
+              render={
+                <a href={contact.mailHref}>
+                  <MailIcon className="size-4" />
+                  E-Mail
+                </a>
+              }
             />
           )}
           {contact?.telegramHref && (
