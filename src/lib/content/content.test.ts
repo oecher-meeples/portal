@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+const getOrCreateTerminPostMock = vi.fn();
+vi.mock("@/lib/content/termin-posts", () => ({
+  getOrCreateTerminPost: (...args: unknown[]) =>
+    getOrCreateTerminPostMock(...args),
+}));
 
 const {
   canViewContentItem,
@@ -35,6 +40,12 @@ function makePost(overrides: Partial<Record<string, unknown>> = {}) {
     newsletterAttempts: 0,
     newsletterLastError: null,
     newsletterSentAt: null,
+    sourceIcsUid: null,
+    sourceEventId: null,
+    syncedTitle: null,
+    syncedLocationNote: null,
+    syncedStartsAt: null,
+    syncedEndsAt: null,
     ...overrides,
   };
 }
@@ -174,18 +185,46 @@ describe("getContentBySlug", () => {
     expect(item?.author).toBe("Jan Herwig");
   });
 
-  it("returns undefined for an unknown slug", async () => {
+  it("returns undefined for an unknown, non-termin slug", async () => {
     prismaMock.post.findUnique.mockResolvedValue(null);
+    getOrCreateTerminPostMock.mockResolvedValue(null);
 
     expect(await getContentBySlug("does-not-exist")).toBeUndefined();
   });
 
-  it("returns undefined for a draft post", async () => {
+  it("returns undefined for a draft post that already exists", async () => {
     prismaMock.post.findUnique.mockResolvedValue(
       makePost({ status: "DRAFT" }),
     );
 
     expect(await getContentBySlug("sommerfest-der-meeples")).toBeUndefined();
+  });
+
+  // #463: ein Termin-Slug ohne bisherigen Post bekommt lazy einen erzeugt und
+  // dessen Inhalt sofort zurückgegeben — unabhängig vom (immer DRAFT)
+  // Status, anders als beim normalen Publish-Gate oben.
+  it("lazily creates and returns a termin post instead of 404-ing", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(null); // noch kein Post
+    prismaMock.post.findUniqueOrThrow.mockResolvedValue(
+      makePost({ id: "new-post", status: "DRAFT" }),
+    ); // Reload nach dem Anlegen
+    getOrCreateTerminPostMock.mockResolvedValue({ id: "new-post" });
+
+    const item = await getContentBySlug("kalender-event-1@google.com");
+
+    expect(getOrCreateTerminPostMock).toHaveBeenCalledWith(
+      "kalender-event-1@google.com",
+    );
+    expect(item?.title).toBe("Sommerfest der Meeples");
+  });
+
+  it("returns undefined when the termin slug's source no longer exists", async () => {
+    prismaMock.post.findUnique.mockResolvedValue(null);
+    getOrCreateTerminPostMock.mockResolvedValue(null);
+
+    expect(
+      await getContentBySlug("kalender-gone@google.com"),
+    ).toBeUndefined();
   });
 });
 

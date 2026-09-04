@@ -112,12 +112,16 @@ export function parseCalendarEvents(
  */
 export async function fetchRawIcsText(
   icsUrl: string | undefined,
+  /** #463: der Existenz-/Sync-Check auf der Beitrags-Detailseite braucht den
+   * echten, ungecachten Stand (Termin könnte gerade eben abgesagt worden
+   * sein) — die Übersicht (`/news`) bleibt bewusst beim 15-Minuten-Cache. */
+  { noCache = false }: { noCache?: boolean } = {},
 ): Promise<string | null> {
   if (!icsUrl) return null;
 
   try {
     const response = await fetch(icsUrl, {
-      next: { revalidate: REVALIDATE_SECONDS },
+      ...(noCache ? { cache: "no-store" } : { next: { revalidate: REVALIDATE_SECONDS } }),
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) {
@@ -158,6 +162,58 @@ export async function getUpcomingCalendarEvents(
   limit = 3,
 ): Promise<ContentItem[]> {
   return fetchPublicEvents({ limit });
+}
+
+export type IcsEventSource = {
+  title: string;
+  location: string | null;
+  startsAt: Date;
+  endsAt: Date | null;
+  internal: boolean;
+};
+
+/**
+ * Findet ein VEVENT anhand seiner stabilen `UID`, ungecacht und ohne die
+ * `now`-Zukunftsfilterung von `parseCalendarEvents()` — für #463s
+ * Existenz-/Sync-Check auf der Beitrags-Detailseite muss auch ein bereits
+ * vergangener Termin noch auffindbar sein (sonst würde der zugehörige Post
+ * fälschlich einen Tag nach dem Event depubliziert). Prüft öffentlichen und
+ * internen Feed, `null` wenn in keinem gefunden (Termin abgesagt/gelöscht
+ * oder Feed nicht erreichbar — beide Fälle sind für den Aufrufer identisch:
+ * "nicht mehr da").
+ */
+export async function findIcsEventByUid(
+  uid: string,
+): Promise<IcsEventSource | null> {
+  const feeds: { url: string | undefined; internal: boolean }[] = [
+    { url: process.env.PUBLIC_CALENDAR_ICS_URL, internal: false },
+    { url: process.env.ICS_FEED_URL_INTERNAL, internal: true },
+  ];
+
+  for (const feed of feeds) {
+    const icsText = await fetchRawIcsText(feed.url, { noCache: true });
+    if (icsText === null) continue;
+
+    const parsed = ical.parseICS(icsText);
+    const event = Object.values(parsed).find(
+      (component): component is VEvent =>
+        !!component &&
+        component.type === "VEVENT" &&
+        component.uid === uid &&
+        component.start instanceof Date,
+    );
+    if (event) {
+      return {
+        title: toText(event.summary) ?? "Termin",
+        location: toText(event.location) ?? null,
+        startsAt: event.start,
+        endsAt: event.end instanceof Date ? event.end : null,
+        internal: feed.internal,
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function getUpcomingEventsWithCalendar(

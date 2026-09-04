@@ -31,6 +31,10 @@ export type ContentItem = {
    * `ContentItem`: sensibel, nur im Admin-Editor sichtbar (siehe
    * post-permissions.ts), nie auf `/news`. */
   surveyDeadline?: string;
+  /** True für einen automatisch aus einem Termin erzeugten Beitrag (#463,
+   * `Post.sourceIcsUid`/`sourceEventId` gesetzt) — steuert, ob die
+   * Detailseite den nachgelagerten Existenz-/Sync-Check auslöst. */
+  hasEventSource?: boolean;
 };
 
 const TYPE_TO_DB: Record<ContentType, "BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE"> = {
@@ -61,6 +65,8 @@ type PostWithoutBody = {
   instagramDetails: { postUrl: string | null } | null;
   surveyDetails: { deadline: Date | null } | null;
   coverImageUrl: string | null;
+  sourceIcsUid: string | null;
+  sourceEventId: string | null;
 };
 
 function toContentItemBase(post: PostWithoutBody): Omit<ContentItem, "body"> {
@@ -79,6 +85,8 @@ function toContentItemBase(post: PostWithoutBody): Omit<ContentItem, "body"> {
     coverImageUrl: post.coverImageUrl ?? undefined,
     surveyDeadline:
       post.surveyDetails?.deadline?.toISOString().slice(0, 10) ?? undefined,
+    hasEventSource:
+      post.sourceIcsUid !== null || post.sourceEventId !== null,
   };
 }
 
@@ -107,6 +115,8 @@ const POST_WITHOUT_BODY_SELECT = {
   instagramDetails: INSTAGRAM_DETAILS_SELECT,
   surveyDetails: SURVEY_DETAILS_SELECT,
   coverImageUrl: true,
+  sourceIcsUid: true,
+  sourceEventId: true,
 } as const;
 
 export type PaginatedContent = {
@@ -158,12 +168,29 @@ export async function getInternalContent(
   return posts.map(toContentItemBase);
 }
 
+/** #463: ein Termin-Slug (`kalender-*`/`event-*`) ohne bisherigen `Post`
+ * bekommt hier lazy einen `DRAFT`-Post erzeugt, statt 404 zurückzugeben —
+ * dessen Inhalt wird direkt beim ersten Aufruf gezeigt (unabhängig vom
+ * Status), ein normaler `Post` bleibt beim bisherigen Publish-Gate. */
 export async function getContentBySlug(slug: string) {
   const post = await prisma.post.findUnique({
     where: { slug },
     include: POST_RELATIONS_INCLUDE,
   });
-  return post && post.status === "PUBLISHED" ? toContentItem(post) : undefined;
+  if (post) {
+    return post.status === "PUBLISHED" ? toContentItem(post) : undefined;
+  }
+
+  const { getOrCreateTerminPost } = await import(
+    "@/lib/content/termin-posts"
+  );
+  const created = await getOrCreateTerminPost(slug);
+  if (!created) return undefined;
+  const full = await prisma.post.findUniqueOrThrow({
+    where: { id: created.id },
+    include: POST_RELATIONS_INCLUDE,
+  });
+  return toContentItem(full);
 }
 
 /** Kalender-Termine — bewusst `TERMIN`/`TURNIER` statt `type: { not: "BLOG" }`:

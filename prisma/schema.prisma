@@ -571,6 +571,27 @@ model Post {
   newsletterLastError String?
   newsletterSentAt    DateTime?
 
+  /// Herkunfts-Zuordnung für automatisch aus einem Termin erzeugte Beiträge
+  /// (#463) — genau eines von beiden gesetzt, nie beide. `sourceIcsUid`:
+  /// stabiler ICS-`UID`-Anker (öffentlicher oder interner Feed, welcher
+  /// davon ergibt sich beim lazy Abgleich). `sourceEventId`: `Event.id`
+  /// eines öffentlichen DB-Termins — bewusst kein FK/`onDelete`, die
+  /// Existenzprüfung läuft lazy beim Öffnen (`verifyLinkedEventOrUnpublish`),
+  /// nicht kaskadierend beim Löschen.
+  sourceIcsUid       String?   @unique
+  sourceEventId      String?   @unique
+  /// Sync-Snapshot der zuletzt automatisch übernommenen Quellwerte (#463) —
+  /// Grundlage des getrackten Sync: stimmt der aktuelle Post-Wert noch mit
+  /// dem Snapshot überein, hat die Redaktion das Feld nicht angefasst und es
+  /// wird beim nächsten Abgleich auf den neuen Quellwert aktualisiert;
+  /// weicht er ab, bleibt das Feld unangetastet und der Snapshot wird NICHT
+  /// nachgezogen (sonst würde eine erneute Quelländerung fälschlich wieder
+  /// als "unverändert" erkannt).
+  syncedTitle        String?
+  syncedLocationNote String?
+  syncedStartsAt     DateTime?
+  syncedEndsAt       DateTime?
+
   dispatchJobs     NewsletterDispatchJob[]
   instagramDetails PostInstagramDetails?
   surveyDetails    PostSurveyDetails?

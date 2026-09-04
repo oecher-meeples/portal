@@ -14,6 +14,7 @@ const { getAllContent } = await import("@/lib/content/content");
 const {
   fetchInternalEvents,
   fetchPublicEvents,
+  findIcsEventByUid,
   getAllContentWithCalendar,
   parseCalendarEvents,
 } = await import("@/lib/content/calendar");
@@ -194,6 +195,57 @@ function mockFetchOnce(ok: boolean, text: string, headers?: HeadersInit) {
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+describe("findIcsEventByUid (#463)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.PUBLIC_CALENDAR_ICS_URL;
+    delete process.env.ICS_FEED_URL_INTERNAL;
+  });
+
+  it("finds an already-past event, unlike parseCalendarEvents (no now-filter)", async () => {
+    process.env.PUBLIC_CALENDAR_ICS_URL = "https://example.org/public.ics";
+    mockFetchOnce(true, FIXTURE);
+
+    const result = await findIcsEventByUid("event-2@google.com");
+
+    expect(result).toMatchObject({
+      title: "Vergangener Spieleabend",
+      internal: false,
+    });
+  });
+
+  it("checks the internal feed when the uid isn't in the public one", async () => {
+    process.env.PUBLIC_CALENDAR_ICS_URL = "https://example.org/public.ics";
+    process.env.ICS_FEED_URL_INTERNAL = "https://example.org/internal.ics";
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve({
+        ok: true,
+        text: async () => (url.includes("internal") ? FIXTURE : ""),
+        headers: new Headers(),
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await findIcsEventByUid("event-1@google.com");
+
+    expect(result).toMatchObject({ title: "Offener Spieleabend", internal: true });
+  });
+
+  it("returns null when the uid is in neither feed (event cancelled/deleted)", async () => {
+    process.env.PUBLIC_CALENDAR_ICS_URL = "https://example.org/public.ics";
+    mockFetchOnce(true, FIXTURE);
+
+    expect(await findIcsEventByUid("unknown-uid")).toBeNull();
+  });
+
+  it("returns null (not a crash) when both feeds are unreachable", async () => {
+    process.env.PUBLIC_CALENDAR_ICS_URL = "https://example.org/public.ics";
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    expect(await findIcsEventByUid("event-1@google.com")).toBeNull();
+  });
+});
 
 describe("fetchInternalEvents", () => {
   afterEach(() => {

@@ -5,6 +5,7 @@ import {
   filterVisibleNews,
   resolveNewsVisibility,
 } from "@/lib/content/news-visibility";
+import { verifyLinkedEventOrUnpublish as verifyLinkedEventOrUnpublishImpl } from "@/lib/content/termin-posts";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getSessionTier } from "@/lib/auth/session";
 
@@ -35,4 +36,15 @@ export async function loadMoreNews(cursor: string) {
     hasMore,
     nextCursor,
   };
+}
+
+/**
+ * Ungecachter, nicht-blockierender Existenz-/Sync-Check für einen
+ * auto-generierten Termin-Beitrag (#463) — von der Beitrags-Detailseite
+ * nachgelagert aufgerufen (Inhalt ist bereits gerendert). Keine
+ * Berechtigungsprüfung nötig: liest/schreibt nur den einen bereits über
+ * `postId` bekannten Post, kein Zugriff auf fremde Daten.
+ */
+export async function verifyLinkedEventOrUnpublish(postId: string) {
+  return verifyLinkedEventOrUnpublishImpl(postId);
 }

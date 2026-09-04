@@ -6,12 +6,17 @@ vi.mock("@/lib/auth/permissions", () => ({ hasPermission: vi.fn() }));
 vi.mock("@/lib/content/calendar", () => ({
   getAllContentWithCalendar: vi.fn(),
 }));
+const verifyLinkedEventOrUnpublishMock = vi.fn();
+vi.mock("@/lib/content/termin-posts", () => ({
+  verifyLinkedEventOrUnpublish: (...args: unknown[]) =>
+    verifyLinkedEventOrUnpublishMock(...args),
+}));
 
 const { getCurrentUser } = await import("@/lib/auth/server");
 const { getSessionTier } = await import("@/lib/auth/session");
 const { hasPermission } = await import("@/lib/auth/permissions");
 const { getAllContentWithCalendar } = await import("@/lib/content/calendar");
-const { loadMoreNews, NEWS_PAGE_SIZE } =
+const { loadMoreNews, verifyLinkedEventOrUnpublish, NEWS_PAGE_SIZE } =
   await import("@/components/feature/news/actions");
 
 const PUBLIC_ITEM = {
@@ -77,5 +82,16 @@ describe("loadMoreNews (#470)", () => {
     const page = await loadMoreNews("cursor-1");
 
     expect(page.items.map((item) => item.slug)).toEqual(["public", "internal"]);
+  });
+});
+
+describe("verifyLinkedEventOrUnpublish (#463)", () => {
+  it("delegates straight through to the lib implementation", async () => {
+    verifyLinkedEventOrUnpublishMock.mockResolvedValue({ stillExists: true });
+
+    const result = await verifyLinkedEventOrUnpublish("post-1");
+
+    expect(verifyLinkedEventOrUnpublishMock).toHaveBeenCalledWith("post-1");
+    expect(result).toEqual({ stillExists: true });
   });
 });
