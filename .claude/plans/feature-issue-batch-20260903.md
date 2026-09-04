@@ -9,7 +9,7 @@ issues:
   339: { status: pending }
   458: { status: done }
   465: { status: pending }
-  474: { status: pending }
+  474: { status: done }
 ---
 
 # Plan: 7 Ready-Issues im bestehenden Branch abarbeiten
