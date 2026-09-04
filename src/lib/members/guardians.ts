@@ -12,6 +12,11 @@ export type GuardianLinkOption = {
    * `listGuardianCandidates` liefert eine Auswahl-Liste, kein Avatar nötig. */
   profilePictureUrl: string | null;
   profilePictureVisibility: ProfilePictureVisibility;
+  /** `null` ohne verknüpftes Meeple (MiniMeeple/Erziehungsberechtigte:r ohne
+   * eigenen Login, #373) — die Anzeigestelle zeigt dann Name/Avatar ohne
+   * `ContactDialog` (kein Meeple, keine Kontaktdaten möglich). Nur von
+   * `listChildrenOf`/`listGuardiansOf` befüllt, analog `profilePictureUrl`. */
+  meepleId: string | null;
 };
 
 const MEMBER_DISPLAY_SELECT = {
@@ -22,6 +27,7 @@ const MEMBER_DISPLAY_SELECT = {
   memberNumber: true,
   meeple: {
     select: {
+      id: true,
       displayName: true,
       profilePictureUrl: true,
       profilePictureVisibility: true,
@@ -63,6 +69,7 @@ export async function listChildrenOf(
     profilePictureUrl: link.child.meeple?.profilePictureUrl ?? null,
     profilePictureVisibility:
       link.child.meeple?.profilePictureVisibility ?? "INTERN",
+    meepleId: link.child.meeple?.id ?? null,
   }));
 }
 
@@ -84,6 +91,7 @@ export async function listGuardiansOf(
     profilePictureUrl: link.guardian.meeple?.profilePictureUrl ?? null,
     profilePictureVisibility:
       link.guardian.meeple?.profilePictureVisibility ?? "INTERN",
+    meepleId: link.guardian.meeple?.id ?? null,
   }));
 }
 
@@ -103,6 +111,7 @@ export async function listGuardianCandidates(
     profilePictureUrl: member.meeple?.profilePictureUrl ?? null,
     profilePictureVisibility:
       member.meeple?.profilePictureVisibility ?? "INTERN",
+    meepleId: member.meeple?.id ?? null,
   }));
 }
 

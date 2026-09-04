@@ -28,7 +28,7 @@ export function ExplainerBadgeList({
             profilePictureUrl={explainer.profilePictureUrl}
             profilePictureVisibility={explainer.profilePictureVisibility}
             viewer={{ kind: "meeple" }}
-            size="sm"
+            size="md"
           />
           <ContactDialog
             name={explainer.displayName}

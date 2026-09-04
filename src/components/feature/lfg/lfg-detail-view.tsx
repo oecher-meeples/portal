@@ -125,7 +125,7 @@ export function LfgDetailView({
                 profilePictureUrl={participant.profilePictureUrl}
                 profilePictureVisibility={participant.profilePictureVisibility}
                 viewer={{ kind: "meeple" }}
-                size="sm"
+                size="md"
               />
               {participant.contactMeeple ? (
                 <ContactDialog

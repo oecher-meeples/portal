@@ -30,7 +30,7 @@ export default async function LfgDetailPage({
           meeple: {
             select: {
               displayName: true,
-              member: { select: { email: true } },
+              member: { select: { email: true, slug: true } },
               telegramHandle: true,
               signalHandle: true,
               discordHandle: true,

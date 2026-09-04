@@ -67,6 +67,7 @@ describe("listChildrenOf (#372, #376)", () => {
         displayName: "Anna Muster",
         profilePictureUrl: null,
         profilePictureVisibility: "INTERN",
+        meepleId: null,
       },
       {
         id: "child-2",
@@ -74,6 +75,7 @@ describe("listChildrenOf (#372, #376)", () => {
         displayName: "Ben Muster",
         profilePictureUrl: null,
         profilePictureVisibility: "INTERN",
+        meepleId: null,
       },
     ]);
   });
@@ -112,6 +114,7 @@ describe("listGuardiansOf (#372)", () => {
         displayName: "Erika",
         profilePictureUrl: null,
         profilePictureVisibility: "INTERN",
+        meepleId: null,
       },
       {
         id: "guardian-2",
@@ -119,6 +122,7 @@ describe("listGuardiansOf (#372)", () => {
         displayName: "Mitglied Nr. 6",
         profilePictureUrl: null,
         profilePictureVisibility: "INTERN",
+        meepleId: null,
       },
     ]);
   });

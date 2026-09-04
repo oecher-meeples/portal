@@ -29,6 +29,7 @@ import {
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
 import { PageContainer } from "@/components/ui/page-container";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 import type { ProfilePictureVisibility } from "@prisma/client";
 
 export type UnitDetail = {
@@ -159,10 +160,17 @@ export function UnitDetailView({
                   profilePictureUrl={unit.keeperProfilePictureUrl}
                   profilePictureVisibility={unit.keeperProfilePictureVisibility}
                   viewer={{ kind: "meeple" }}
-                  size="sm"
+                  size="md"
                 />
               ) : null}
-              {unit.keeperName ?? "keiner"}
+              {unit.keeperName && unit.keeperMeepleId ? (
+                <ContactDialog
+                  name={unit.keeperName}
+                  meepleId={unit.keeperMeepleId}
+                />
+              ) : (
+                (unit.keeperName ?? "keiner")
+              )}
             </p>
             {!unit.retired && (
               <AssignKeeperDialog

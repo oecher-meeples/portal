@@ -43,6 +43,7 @@ export function toMarketListingView(
     shareAddress: boolean;
     profilePictureUrl: string | null;
     profilePictureVisibility: ProfilePictureVisibility;
+    member?: { slug: string } | null;
   },
 ): MarketListingView {
   return {

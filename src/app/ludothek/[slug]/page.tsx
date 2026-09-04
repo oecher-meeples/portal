@@ -147,7 +147,7 @@ export default async function GameDetailPage({
         where: { id: { in: responsibleIds } },
         select: {
           id: true,
-          member: { select: { email: true } },
+          member: { select: { email: true, slug: true } },
           telegramHandle: true,
           signalHandle: true,
           discordHandle: true,

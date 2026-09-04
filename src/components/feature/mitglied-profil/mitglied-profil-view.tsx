@@ -6,7 +6,7 @@ import {
   type ProfileViewerContext,
 } from "@/lib/members/profile-access";
 import { isMiniMeeple } from "@/lib/members/contribution";
-import { resolveVisibleProfilePictureUrl } from "@/lib/members/profile-picture-visibility";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import { listOpenPendingChangesForMember } from "@/lib/members/pending-changes";
 import { getActiveHoldingsForMember } from "@/lib/ludothek/holdings-by-meeple";
 import {
@@ -149,25 +149,24 @@ export async function MitgliedProfilView({
         }
       : null;
 
-  // Jede:r Betrachter:in dieser Seite ist ein eingeloggtes Meeple (Route ist
-  // auth-gated) — `isProfilePictureVisible()` zeigt "INTERN" damit ohnehin
-  // immer, EVENTS/IMMER sowieso; kein Gast-Fall hier möglich.
-  const profilePictureUrl = member.meeple
-    ? resolveVisibleProfilePictureUrl(member.meeple, { kind: "meeple" })
-    : null;
-
   return (
     <PageContainer className="max-w-6xl gap-6 px-4 py-8">
       <PageHeading
         eyebrow={`Mitglied Nr. ${member.memberNumber}`}
         title={memberDisplayName(member)}
         media={
-          profilePictureUrl && (
-            // eslint-disable-next-line @next/next/no-img-element -- Blob-URL, kein next/image nötig für ein Avatar (wie profile-picture-upload.tsx)
-            <img
-              src={profilePictureUrl}
-              alt=""
-              className="size-16 shrink-0 rounded-full object-cover"
+          member.meeple && (
+            // Jede:r Betrachter:in dieser Seite ist ein eingeloggtes Meeple
+            // (Route ist auth-gated) — `isProfilePictureVisible()` zeigt
+            // "INTERN" damit ohnehin immer, EVENTS/IMMER sowieso; kein
+            // Gast-Fall hier möglich.
+            <MeepleAvatar
+              name={memberDisplayName(member)}
+              profilePictureUrl={member.meeple.profilePictureUrl}
+              profilePictureVisibility={member.meeple.profilePictureVisibility}
+              viewer={{ kind: "meeple" }}
+              size="xxxl"
+              hideWithoutPicture
             />
           )
         }

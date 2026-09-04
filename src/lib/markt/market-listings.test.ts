@@ -50,6 +50,7 @@ describe("toMarketListingView", () => {
           discordHandle: null,
           address: null,
         },
+        profileHref: null,
       },
       boardGame: null,
     });
@@ -77,6 +78,7 @@ function listing(
         discordHandle: null,
         address: null,
       },
+      profileHref: null,
     },
     boardGame: null,
     ...overrides,

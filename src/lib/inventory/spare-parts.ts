@@ -34,6 +34,7 @@ export function toSparePartListingView(
     shareAddress: boolean;
     profilePictureUrl: string | null;
     profilePictureVisibility: ProfilePictureVisibility;
+    member?: { slug: string } | null;
   },
 ): SparePartListingView {
   return {

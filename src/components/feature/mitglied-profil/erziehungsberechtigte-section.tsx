@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { GuardianLinkOption } from "@/lib/members/guardians";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import { ContactDialog } from "@/components/entities/contact-dialog";
 
 /** Erziehungsberechtigten-Sektion auf dem Kind-Profil (#385, Gegenstück zu
  * `MeineKinderSection`) — sichtbar für Vorstand (`isAdmin`/`canManageMembers`)
@@ -25,14 +26,24 @@ export function ErziehungsberechtigteSection({
               profilePictureUrl={guardian.profilePictureUrl}
               profilePictureVisibility={guardian.profilePictureVisibility}
               viewer={{ kind: "meeple" }}
-              size="sm"
+              size="md"
             />
-            <Link
-              href={`/profil/${guardian.slug}`}
-              className="text-primary underline underline-offset-2"
-            >
-              {guardian.displayName}
-            </Link>
+            {guardian.meepleId ? (
+              <ContactDialog
+                name={guardian.displayName}
+                meepleId={guardian.meepleId}
+              />
+            ) : (
+              // Kein Meeple (Erziehungsberechtigte:r ohne eigenen Login) —
+              // kein ContactDialog möglich, aber ein Profil unter
+              // `/profil/<slug>` gibt es trotzdem.
+              <Link
+                href={`/profil/${guardian.slug}`}
+                className="text-primary underline underline-offset-2"
+              >
+                {guardian.displayName}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

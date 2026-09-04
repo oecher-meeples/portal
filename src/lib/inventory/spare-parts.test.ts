@@ -42,6 +42,7 @@ describe("toSparePartListingView", () => {
           discordHandle: null,
           address: null,
         },
+        profileHref: null,
       },
     });
   });
