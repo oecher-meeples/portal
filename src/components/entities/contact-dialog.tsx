@@ -51,7 +51,7 @@ export function ContactDialog({
       profilePictureUrl={avatar.profilePictureUrl}
       profilePictureVisibility={avatar.profilePictureVisibility}
       viewer={avatar.viewer}
-      size="lg"
+      size="xl"
       className="mx-auto"
     />
   );

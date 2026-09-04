@@ -27,7 +27,7 @@ export function MeepleAvatar({
    * dann als bereits geprüft und wird unverändert übernommen. */
   profilePictureVisibility?: ProfilePictureVisibility;
   viewer?: ProfilePictureViewer;
-  size?: "default" | "sm" | "lg";
+  size?: "default" | "sm" | "lg" | "xl";
   className?: string;
 }) {
   const visibleUrl =
