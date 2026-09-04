@@ -65,8 +65,13 @@ export function LoginForm() {
       // Netzwerkfehler o.ä. — ohne dieses catch bliebe der Button dauerhaft
       // im "Anmelden…"-Zustand hängen, ohne dass der Nutzer je eine
       // Rückmeldung bekommt. Kein echter Login-Fehlversuch, zählt daher
-      // nicht in den Cooldown-Zähler.
+      // nicht in den Cooldown-Zähler. #324-Folgefehler: authClient.signIn.email()
+      // wirft bei falschen Zugangsdaten in der Praxis tatsächlich, statt
+      // { error } zurückzugeben (anders als im Mock angenommen) — landete
+      // dadurch immer hier statt im if-Zweig unten, und
+      // "Passwort vergessen?" blieb für jeden Fehlversuch unsichtbar.
       setError("Das hat leider nicht funktioniert. Bitte versuche es erneut.");
+      setHasFailedOnce(true);
     } finally {
       setIsSubmitting(false);
     }

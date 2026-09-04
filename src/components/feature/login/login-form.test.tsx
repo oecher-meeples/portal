@@ -112,6 +112,28 @@ describe('LoginForm — "Passwort vergessen?"-Link (#324, Live-Review-Ergänzung
     );
   });
 
+  it("shows the link even when signIn throws instead of returning { error } (#324-Folgefehler)", async () => {
+    // Der echte authClient wirft bei falschen Zugangsdaten in der Praxis
+    // tatsächlich, statt { error } zurückzugeben — der Mock in den obigen
+    // Tests bildet nur den einen (falschen) angenommenen Weg ab.
+    const user = userEvent.setup();
+    signInEmailMock.mockRejectedValue(new Error("INVALID_EMAIL_OR_PASSWORD"));
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("E-Mail"), "me@example.com");
+    await user.type(screen.getByLabelText("Passwort"), "wrong");
+    await user.click(screen.getByRole("button", { name: "Anmelden" }));
+
+    expect(
+      screen.getByText(
+        "Das hat leider nicht funktioniert. Bitte versuche es erneut.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Passwort vergessen?" }),
+    ).toBeInTheDocument();
+  });
+
   it("keeps the link visible even once the error is cleared by a later attempt", async () => {
     const user = userEvent.setup();
     signInEmailMock.mockResolvedValueOnce({
