@@ -216,6 +216,7 @@ export async function MitgliedProfilView({
               id: change.id,
               memberDisplayName: memberDisplayName(member),
               memberNumber: member.memberNumber,
+              memberSlug: member.slug,
               displayValue: formatStammdatenDiffSummary(
                 change.fieldsJson,
                 tshirtSizeLabelById,
@@ -246,6 +247,7 @@ export async function MitgliedProfilView({
                 id: change.id,
                 memberDisplayName: memberDisplayName(member),
                 memberNumber: member.memberNumber,
+                memberSlug: member.slug,
                 displayValue: maskIban(
                   ibanFirst2(decrypted),
                   ibanLast4(decrypted),

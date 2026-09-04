@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Check, Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
@@ -31,6 +32,8 @@ export type PendingChangeRow = {
   id: string;
   memberDisplayName: string;
   memberNumber: number;
+  /** Routing-Basis für `/profil/[slug]` — Name verlinkt aufs volle Profil. */
+  memberSlug: string;
   /** IBAN: maskiert (`**** 1234`) — die Klartext-IBAN geht nie an den Client,
    * bevor sie freigegeben ist. MEMBER_EMAIL: die neu beantragte Adresse. */
   displayValue: string;
@@ -138,7 +141,13 @@ export function PendingChangesPanel({
                 beantragt {formatDatePlain(change.requestedAt)}
               </p>
               <p className="font-medium">
-                #{change.memberNumber} {change.memberDisplayName}
+                #{change.memberNumber}{" "}
+                <Link
+                  href={`/profil/${change.memberSlug}`}
+                  className="hover:text-primary underline underline-offset-2"
+                >
+                  {change.memberDisplayName}
+                </Link>
               </p>
               <p className="text-muted-foreground flex flex-wrap items-center gap-2">
                 <span>

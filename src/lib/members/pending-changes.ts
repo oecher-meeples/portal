@@ -347,6 +347,7 @@ export async function listOpenPendingChanges() {
       member: {
         select: {
           id: true,
+          slug: true,
           email: true,
           memberNumber: true,
           firstName: true,

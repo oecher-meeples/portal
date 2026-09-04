@@ -273,6 +273,7 @@ export default async function AdminMitgliederPage() {
           id: change.id,
           memberDisplayName: memberDisplayName(change.member),
           memberNumber: change.member.memberNumber,
+          memberSlug: change.member.slug,
           displayValue: change.newValue,
           requestedAt: change.requestedAt.toISOString(),
           confirmed: change.confirmedAt !== null,

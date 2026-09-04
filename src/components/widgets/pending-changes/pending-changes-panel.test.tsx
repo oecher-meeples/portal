@@ -20,6 +20,7 @@ function change(id: string) {
     id,
     memberDisplayName: "Erika Muster",
     memberNumber: 1,
+    memberSlug: "erika-muster",
     displayValue: "Neuer Wert",
     requestedAt: new Date("2026-08-01").toISOString(),
     confirmed: true,

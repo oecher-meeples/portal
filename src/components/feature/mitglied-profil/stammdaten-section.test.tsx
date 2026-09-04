@@ -126,6 +126,7 @@ describe("StammdatenSection (#380)", () => {
             id: "pc-1",
             memberDisplayName: "Erika Muster",
             memberNumber: 1,
+            memberSlug: "erika-muster",
             displayValue: "Vorname: Neu",
             requestedAt: new Date("2026-08-01").toISOString(),
             confirmed: true,
