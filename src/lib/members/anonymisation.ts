@@ -56,9 +56,20 @@ export async function anonymiseMeepleStufe1(
   await deleteBlobs(listingsWithImages.flatMap((listing) => listing.imageUrls));
 
   await prisma.$transaction(async (tx) => {
+    // #394: `title`/`description` hier zusammen mit `imageUrls` in einem
+    // Update — weitere selbst verfasste Freitextfelder mit möglichem
+    // Personenbezug. Scope-Grenze (Entscheidung 2026-09-03): nur geleert,
+    // wenn die zu anonymisierende Person selbst über die jeweilige
+    // `*MeepleId`-Relation Autor:in/Erfasser:in ist — robuster als der
+    // Namensabgleich bei `Post` unten, weil es über die Relation statt
+    // einen Freitext-Namensvergleich läuft. Erwähnt jemand die Person nur
+    // in einem fremden Text (z. B. eine `GameHolding.note` eines
+    // Spielewarts), bleibt der Text bewusst unangetastet — das ist keine
+    // Lücke, sondern die dokumentierte Grenze: beliebigen Fließtext auf
+    // Fremd-Erwähnungen zu durchsuchen ist nicht praktikabel.
     await tx.marketListing.updateMany({
       where: { sellerMeepleId: meepleId },
-      data: { imageUrls: [] },
+      data: { imageUrls: [], title: "", description: null },
     });
 
     // `Post.author` is free text with no relation to Meeple, so the display name
@@ -67,6 +78,23 @@ export async function anonymiseMeepleStufe1(
     await tx.post.updateMany({
       where: { author: previousDisplayName },
       data: { author: null },
+    });
+
+    await tx.lfgPost.updateMany({
+      where: { createdByMeepleId: meepleId },
+      data: { title: "", description: "" },
+    });
+    await tx.sparePartListing.updateMany({
+      where: { keeperMeepleId: meepleId },
+      data: { description: null },
+    });
+    await tx.gameHolding.updateMany({
+      where: { recordedByMeepleId: meepleId },
+      data: { note: null },
+    });
+    await tx.storageUnitMove.updateMany({
+      where: { recordedByMeepleId: meepleId },
+      data: { locationNote: null },
     });
 
     await tx.meeple.update({
