@@ -8,7 +8,7 @@ issues:
   412: { status: done }
   339: { status: pending }
   458: { status: done }
-  465: { status: pending }
+  465: { status: done }
   474: { status: done }
 ---
 
