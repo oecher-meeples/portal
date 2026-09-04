@@ -21,6 +21,7 @@ import {
   CalendarClock,
   HandHeart,
   PackageOpen,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -135,6 +136,7 @@ export const ADMIN_PERMISSIONS = [
   "events:manage",
   "events:bestand",
   "instagram:connect",
+  "notifications:manage",
 ] as const;
 
 export const MITGLIEDER_PERMISSIONS = ["members:manage", "invites:manage"];
@@ -329,6 +331,13 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Settings,
         section: "Administration",
         permission: EINSTELLUNGEN_PERMISSIONS,
+      },
+      {
+        label: "System-Notifications",
+        href: "/admin/notifications",
+        icon: Bell,
+        section: "Administration",
+        permission: "notifications:manage",
       },
     ],
   },

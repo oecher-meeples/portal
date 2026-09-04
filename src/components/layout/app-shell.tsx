@@ -8,6 +8,7 @@ import { getUserPermissionKeys } from "@/lib/auth/permissions";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { hasOpenHelperRequest } from "@/lib/events/upcoming";
 import { hasActiveAusleiheShift } from "@/lib/events/shift-rights";
+import { listActiveNotificationsForViewer } from "@/lib/notifications/queries";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const [realTier, user, openHelperRequest] = await Promise.all([
@@ -26,18 +27,24 @@ export async function AppShell({ children }: { children: ReactNode }) {
     hasActiveAusleiheShift(user?.id ?? null),
     user ? ensureMeeple(user) : Promise.resolve(null),
   ]);
+  // #339: Banner + Glocke teilen sich dieselbe Liste — ein Server-Lookup
+  // statt je einer eigenen Query. Braucht `permissions` (Zielgruppen-Filter),
+  // kann daher erst nach dem zweiten Promise.all starten.
+  const notifications = await listActiveNotificationsForViewer(permissions);
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <Header
         user={user && meeple ? { name: user.name, meepleId: meeple.id } : null}
         previewTier={realTier === "admin" ? tier : undefined}
+        notifications={notifications}
       />
       <SidebarShell
         tier={tier}
         realTier={realTier}
         permissions={permissions}
         flags={{ openHelperRequest, activeAusleiheShift }}
+        notifications={notifications}
       >
         {children}
       </SidebarShell>

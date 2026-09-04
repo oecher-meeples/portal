@@ -7,7 +7,6 @@ import { LogIn, LogOut, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
 import { clearPreviewTier } from "@/components/feature/admin-preview-tier/actions";
-import { PINNED_STORAGE_KEY } from "@/components/layout/sidebar";
 import { MeepleQrDialog } from "@/components/layout/meeple-qr-dialog";
 import { useLongPress } from "@/components/ui/use-long-press";
 
@@ -38,10 +37,12 @@ export function UserMenu({
 
   async function handleSignOut() {
     await Promise.all([authClient.signOut(), clearPreviewTier()]);
-    // #472: Client-Präferenzen sind geräte-, nicht kontogebunden — ohne das
+    // #472/#339: Client-Präferenzen (Sidebar-Pin, geschlossene
+    // Notification-Hinweise) sind geräte-, nicht kontogebunden — ohne das
     // hier zu räumen, würde die nächste Person am selben Gerät (auch ein
-    // anderes Meeple) im zuletzt angehefteten Sidebar-Zustand starten.
-    localStorage.removeItem(PINNED_STORAGE_KEY);
+    // anderes Meeple) im zuletzt angehefteten Sidebar-Zustand starten bzw.
+    // eine für die vorige Person geschlossene Notification nie mehr sehen.
+    localStorage.clear();
     router.push("/");
     router.refresh();
   }

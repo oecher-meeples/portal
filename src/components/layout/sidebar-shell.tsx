@@ -2,9 +2,11 @@
 
 import type { ReactNode } from "react";
 import { Sidebar, PINNED_STORAGE_KEY } from "@/components/layout/sidebar";
+import { NotificationBanner } from "@/components/layout/notification-banner";
 import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
 import { cn } from "@/lib/utils/cn";
 import type { NavFlag, Tier } from "@/lib/utils/nav-config";
+import type { ActiveNotification } from "@/lib/notifications/types";
 
 /**
  * Hält den Sidebar-Pin-Zustand als einzige Quelle der Wahrheit (#471) —
@@ -22,12 +24,14 @@ export function SidebarShell({
   realTier,
   permissions,
   flags,
+  notifications,
   children,
 }: {
   tier: Tier;
   realTier: Tier;
   permissions: readonly string[];
   flags: Readonly<Record<NavFlag, boolean>>;
+  notifications: ActiveNotification[];
   children: ReactNode;
 }) {
   const [pinned, setPinned] = useLocalStorageState(PINNED_STORAGE_KEY, false);
@@ -57,6 +61,9 @@ export function SidebarShell({
           pinned ? "md:ml-64" : "md:ml-16",
         )}
       >
+        {/* #339: oberhalb der Seiten-Headline, auf jeder Seite — main ist
+            der einzige Ort, durch den jede Seite läuft. */}
+        <NotificationBanner notifications={notifications} />
         {children}
         {/* Scroll buffer: lets page content (e.g. a dropdown menu at the
             bottom, or the last section of a long page) scroll clear of the

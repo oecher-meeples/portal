@@ -91,6 +91,11 @@ const PERMISSIONS = [
     key: "market:participate",
     description: "Marktplatz-Angebote anlegen und darauf reagieren",
   },
+  {
+    key: "notifications:manage",
+    description:
+      "Globale System-Notifications verwalten: manuelle anlegen/deaktivieren/löschen, automatisierte deaktivieren (#339)",
+  },
 ];
 
 /** Regulärer Funktionsumfang eines eingeloggten Meeples ohne Sonderrolle
@@ -140,6 +145,7 @@ const ROLES = [
       "downloads:manage",
       "legal:manage",
       "links:manage",
+      "notifications:manage",
     ],
   },
   {

@@ -23,6 +23,7 @@ describe("SidebarShell — Pin verschiebt main-Margin synchron (#471)", () => {
         realTier="mitglied"
         permissions={[]}
         flags={FLAGS}
+        notifications={[]}
       >
         <p>Inhalt</p>
       </SidebarShell>,
@@ -40,6 +41,7 @@ describe("SidebarShell — Pin verschiebt main-Margin synchron (#471)", () => {
         realTier="mitglied"
         permissions={[]}
         flags={FLAGS}
+        notifications={[]}
       >
         <p>Inhalt</p>
       </SidebarShell>,

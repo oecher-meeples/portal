@@ -1402,3 +1402,51 @@ model ImportantLink {
 
   @@map("important_links")
 }
+
+/// Dringlichkeit einer System-Notification (#339) — bestimmt Banner-/
+/// Glocken-Farbe und welche von mehreren aktiven im Banner gewinnt.
+enum SystemNotificationType {
+  INFO
+  WARNING
+  DANGER
+}
+
+/// Schließbarkeit im Banner (#339) — gilt nur dort, nicht für die
+/// Glocken-Liste (die zeigt immer alle aktiven, auch bereits geschlossene).
+enum SystemNotificationCloseable {
+  NO
+  TEMPORARY
+  YES
+}
+
+/// Manuell über die Admin-CRUD-Seite verwaltete System-Notification (#339).
+/// `audiencePermissionKey` null = für alle sichtbar (auch Gäste); gesetzt =
+/// nur für Meeple mit dieser Berechtigung (konsistent mit bestehendem RBAC,
+/// kein eigenes Rollen-Konzept). Automatisierte Notifications (Code-Registry,
+/// z. B. DB-Füllstand) leben bewusst nicht hier, sondern nur ihr
+/// Deaktivierungs-Flag in `AutomatedNotificationDisable` — der Code bleibt
+/// bei einer Deaktivierung unverändert.
+model SystemNotification {
+  id                    String                       @id @default(cuid())
+  name                  String
+  type                  SystemNotificationType
+  audiencePermissionKey String?
+  closeable             SystemNotificationCloseable
+  message               String
+  isActive              Boolean                      @default(true)
+  createdAt             DateTime                     @default(now())
+
+  @@map("system_notifications")
+}
+
+/// Persistiertes "aus"-Flag für eine im Code registrierte automatisierte
+/// Notification (#339) — Existenz einer Zeile bedeutet deaktiviert. Name
+/// referenziert den Registry-Key (`AutomatedNotificationDefinition.name`,
+/// siehe `src/lib/notifications/registry.ts`), kein DB-Fremdschlüssel, da
+/// die Registry selbst im Code lebt.
+model AutomatedNotificationDisable {
+  name       String   @id
+  disabledAt DateTime @default(now())
+
+  @@map("automated_notification_disables")
+}

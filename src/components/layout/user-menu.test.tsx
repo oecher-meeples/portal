@@ -26,9 +26,10 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("UserMenu — Logout räumt Sidebar-Pin-Zustand (#472)", () => {
-  it("removes the sidebar-pinned key from localStorage on sign-out", async () => {
+describe("UserMenu — Logout räumt Client-Präferenzen (#472, #339)", () => {
+  it("clears the entire localStorage on sign-out, not just one key", async () => {
     localStorage.setItem(PINNED_STORAGE_KEY, "true");
+    localStorage.setItem("notification-closed:manual:abc", "1");
     signOutMock.mockResolvedValue(undefined);
     clearPreviewTierMock.mockResolvedValue(undefined);
 
@@ -38,7 +39,7 @@ describe("UserMenu — Logout räumt Sidebar-Pin-Zustand (#472)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Abmelden/ }));
 
     await vi.waitFor(() => {
-      expect(localStorage.getItem(PINNED_STORAGE_KEY)).toBeNull();
+      expect(localStorage.length).toBe(0);
     });
   });
 
