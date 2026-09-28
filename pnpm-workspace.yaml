@@ -8,6 +8,10 @@ overrides:
   brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
   fast-uri: ^3.1.7
   nanoid@<3.3.18: ^3.3.18
+  # GHSA-2883-xcg3-v3hh: js-yaml maxTotalMergeKeys CPU-DoS, transitiv über
+  # gray-matter (3.x) und eslint-Kette (4.x).
+  js-yaml@3: ^3.15.2
+  js-yaml@4: ^4.3.2
   # GHSA-ggr8-5vv4-36mx: deepmerge-ts stack exhaustion, gepinnt auf 7.1.5 in
   # @prisma/config@7.9.1 (kein stabiler Prisma-Release mit der Fix-Version
   # verfügbar). @prisma/config nutzt nur die einfache deepmerge()-Funktion,
@@ -46,7 +50,7 @@ minimumReleaseAgeExclude:
   - better-auth@1.6.2 || 1.6.11
   - "@hono/node-server@2.0.5"
   - hono@4.12.34
-  - js-yaml@3.15.1 || 4.3.1
+  - js-yaml@3.15.2 || 4.3.2
   - brace-expansion@1.1.18 || 5.0.9
   - fast-uri@3.1.7
   - nanoid@3.3.18
