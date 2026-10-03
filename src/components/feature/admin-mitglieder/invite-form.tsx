@@ -17,7 +17,7 @@ import { createInvite } from "@/components/feature/admin-mitglieder/invite-actio
 import {
   buildRegistrationLink,
   formatInviteMessage,
-} from "@/lib/members/invites";
+} from "@/lib/members/invite-format";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
 /** Suchschlüssel eines Mitglieds in der Combobox — eindeutig (führt die
