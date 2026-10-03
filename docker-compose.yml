@@ -1,7 +1,91 @@
 # Self-hosting stack (see docs/deployment-docker.md and
-# .claude/plans/docker-self-hosted-migration.md). Further services (app,
-# proxy) are added in later migration phases.
+# .claude/plans/docker-self-hosted-migration.md).
+#
+#   cp docker/.env.example .env      # fill in, then:
+#   docker compose up -d --build                      # own reverse proxy
+#   docker compose --profile with-proxy up -d --build # bundled Caddy + TLS
+#
+# Services: app, postgres, minio, minio-init (one-shot), cron-sidecar and the
+# optional caddy (profile `with-proxy`). Everything except caddy binds to
+# 127.0.0.1 only — an existing reverse proxy on the host points at
+# 127.0.0.1:3000 (app) and 127.0.0.1:9000 (blob storage, S3_PUBLIC_ENDPOINT).
+#
+# `${VAR:?…}` = must be set, compose refuses to start otherwise;
+# `${VAR:-x}` = optional, x is the default.
 services:
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      # Entrypoint runs `prisma migrate deploy` + seed on every start — wait
+      # for a ready DB and a configured bucket/app access key.
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      # Built from the postgres service's credentials (keep POSTGRES_PASSWORD
+      # URL-safe, e.g. `openssl rand -hex 24`); set DATABASE_URL to override.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-meeples}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-meeples}}
+      # --- Auth (better-auth) ---
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL must be set}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?PUBLIC_SITE_URL must be set}
+      MEMBER_DATA_ENCRYPTION_KEY: ${MEMBER_DATA_ENCRYPTION_KEY:?MEMBER_DATA_ENCRYPTION_KEY must be set}
+      # Same secret the cron-sidecar sends as bearer token.
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
+      # --- Seed (entrypoint, only on an empty database) ---
+      # Not `:?` on purpose: only needed for the very first start; the seed
+      # itself refuses to run on an empty DB without them.
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
+      # --- Blob storage (MinIO, see minio / minio-init) ---
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT must be set}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-meeples}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set}
+      S3_STORAGE_LIMIT_BYTES: ${S3_STORAGE_LIMIT_BYTES:-}
+      # --- E-Mail (optional; without SMTP_HOST mails are logged, not sent) ---
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # --- Calendar feeds (optional) ---
+      PUBLIC_CALENDAR_ICS_URL: ${PUBLIC_CALENDAR_ICS_URL:-}
+      ICS_FEED_URL_INTERNAL: ${ICS_FEED_URL_INTERNAL:-}
+      # --- External APIs, bring your own keys (optional per feature) ---
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_REDIRECT_URI: ${META_REDIRECT_URI:-}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-v21.0}
+      BGG_BEARER_TOKEN: ${BGG_BEARER_TOKEN:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      TRANSLATION_CONTACT_EMAIL: ${TRANSLATION_CONTACT_EMAIL:-}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+    ports:
+      # Localhost only: a reverse proxy (own or the caddy profile) is what
+      # faces the internet.
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    # Same check as the Dockerfile's HEALTHCHECK, restated so `docker compose
+    # ps` shows it and the caddy service can wait for it.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
   postgres:
     image: postgres:16
     restart: unless-stopped
@@ -39,7 +123,7 @@ services:
       - minio-data:/data
     ports:
       # Localhost only, like postgres; the public endpoint (images, uploads)
-      # is exposed through the reverse proxy in a later phase.
+      # is exposed through the reverse proxy (own one or the caddy profile).
       - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
@@ -76,16 +160,53 @@ services:
 
   # Replaces Vercel Cron: busybox crond calls the existing bearer-protected
   # /api/cron/* routes on the schedules from docker/cron/crontab (mirrors
-  # vercel.json). Expects an `app` service listening on app:3000 — that
-  # service arrives in Phase 8/9; add `depends_on: [app]` here then.
+  # vercel.json) against the app service on app:3000.
   cron-sidecar:
     build: ./docker/cron
     restart: unless-stopped
+    depends_on:
+      - app
     environment:
       # Same variable the app service reads — one secret, not a second one.
       CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
       APP_URL: ${CRON_APP_URL:-http://app:3000}
 
+  # OPTIONAL TLS-terminating reverse proxy with automatic Let's Encrypt
+  # certificates (docker/caddy/Caddyfile). Only started with
+  #   docker compose --profile with-proxy up -d
+  # Operators who already run a reverse proxy (nginx, Traefik, …) skip the
+  # profile and point their proxy at 127.0.0.1:3000 (app) and
+  # 127.0.0.1:9000 (MinIO, the S3_PUBLIC_ENDPOINT host) instead.
+  # Both domains need DNS records pointing at this host, and ports 80/443
+  # must be reachable from the internet for the ACME challenge.
+  caddy:
+    image: caddy:2
+    profiles: ["with-proxy"]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Not `:?` — compose interpolates the whole file even when the profile
+      # is inactive, which would break `docker compose up` without a proxy.
+      # Required whenever the profile is used (Caddy fails to start without).
+      APP_DOMAIN: ${APP_DOMAIN:-}
+      S3_DOMAIN: ${S3_DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates + ACME account — losing this means re-issuing (and
+      # possibly hitting Let's Encrypt rate limits).
+      - caddy-data:/data
+      - caddy-config:/config
+
 volumes:
   postgres-data:
   minio-data:
+  caddy-data:
+  caddy-config:

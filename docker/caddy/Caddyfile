@@ -1,0 +1,22 @@
+# Optional reverse proxy for the self-hosting stack — only used with
+#   docker compose --profile with-proxy up -d
+# Caddy obtains and renews Let's Encrypt certificates for both domains on its
+# own (HTTP-01/TLS-ALPN challenge: DNS must point here, ports 80/443 open).
+# Certificates live in the `caddy-data` volume.
+#
+# APP_DOMAIN / S3_DOMAIN come from .env (see docker/.env.example). They must
+# match BETTER_AUTH_URL / PUBLIC_SITE_URL and S3_PUBLIC_ENDPOINT:
+#   BETTER_AUTH_URL=https://{APP_DOMAIN}   S3_PUBLIC_ENDPOINT=https://{S3_DOMAIN}
+
+# The portal itself. Caddy sets X-Forwarded-For/-Proto/-Host by default.
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+# Blob storage (MinIO): public images and the browsers' direct presigned
+# uploads. Separate host because stored blob URLs are path-style
+# (https://{S3_DOMAIN}/<bucket>/<key>) and must not collide with app routes.
+{$S3_DOMAIN} {
+	reverse_proxy minio:9000
+}
