@@ -4,14 +4,20 @@ overrides:
   "@hono/node-server@<2.0.5": ^2.0.5
   better-auth@<1.6.2: ^1.6.2
   better-auth@>=0.3.4 <1.6.11: ^1.6.11
-  brace-expansion@<1.1.17: ^1.1.18
-  brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
+  brace-expansion@<1.1.20: ^1.1.20
+  brace-expansion@>=4.0.0 <5.0.11: ^5.0.11
   fast-uri: ^3.1.7
   nanoid@<3.3.18: ^3.3.18
   # GHSA-2883-xcg3-v3hh: js-yaml maxTotalMergeKeys CPU-DoS, transitiv über
   # gray-matter (3.x) und eslint-Kette (4.x).
   js-yaml@3: ^3.15.2
   js-yaml@4: ^4.3.2
+  # GHSA-rfgv-xxqx-mfg5 / GHSA-w293-vg96-wgc3 / GHSA-vp8m-p9jh-q5pm: undici
+  # DoS/TLS-Bypass/Cache-Poisoning, transitiv über @vercel/blob (6.x), shadcn
+  # (7.x) und jsdom/better-auth/vitest (8.x).
+  undici@6: ^6.28.1
+  undici@7: ^7.29.1
+  undici@8: ^8.10.2
   # GHSA-ggr8-5vv4-36mx: deepmerge-ts stack exhaustion, gepinnt auf 7.1.5 in
   # @prisma/config@7.9.1 (kein stabiler Prisma-Release mit der Fix-Version
   # verfügbar). @prisma/config nutzt nur die einfache deepmerge()-Funktion,
@@ -46,11 +52,19 @@ auditConfig:
     # mysql2 (better-auth → prisma → mysql2, transitiv) — Projekt nutzt
     # ausschließlich Postgres/Neon, mysql2 wird nie tatsächlich verwendet.
     - GHSA-3f6p-5ww8-9rcr
+    # braces Stack-Exhaustion-DoS (transitiv über eslint-config-next/shadcn →
+    # fast-glob → micromatch → braces) — kein Fix verfügbar, npm führt
+    # aktuell nur bis 3.0.3 (Stand 2026-10-03), die von der Advisory
+    # geforderte 3.0.4 existiert noch nicht. Erneut prüfen, sobald ein
+    # Patch-Release erscheint.
+    - GHSA-vfj7-8cjw-p6xm
 minimumReleaseAgeExclude:
   - better-auth@1.6.2 || 1.6.11
   - "@hono/node-server@2.0.5"
   - hono@4.12.34
   - js-yaml@3.15.2 || 4.3.2
-  - brace-expansion@1.1.18 || 5.0.9
+  - brace-expansion@1.1.20 || 5.0.11
   - fast-uri@3.1.7
   - nanoid@3.3.18
+  - next@16.3.8
+  - undici@6.28.1 || 7.29.1 || 8.10.2
