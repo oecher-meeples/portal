@@ -1,0 +1,33 @@
+# Build-Kontext fürs App-Image (Dockerfile). prisma/, package.json,
+# pnpm-lock.yaml und pnpm-workspace.yaml werden gebraucht — nicht ignorieren.
+node_modules
+.next
+.git
+.github
+.husky
+.vscode
+.devcontainer
+.claude
+graphify-out
+coverage
+docs
+# nur Wurzel-Ebene (.dockerignore-Muster sind am Kontext-Root verankert) —
+# public/THIRD-PARTY-LICENSES.md bleibt drin, /verwendete-bibliotheken liest sie.
+*.md
+
+# Secrets nie ins Image/den Build-Kontext
+.env*
+!.env.example
+
+# Tests
+**/*.test.ts
+**/*.test.tsx
+**/*.live.test.ts
+vitest.config.ts
+vitest.setup.ts
+
+# Self-Hosting-Artefakte, die nicht ins App-Image gehören
+docker-compose*.yml
+docker/cron
+Dockerfile
+.dockerignore
