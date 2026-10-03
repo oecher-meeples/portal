@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { DownloadStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -150,12 +150,16 @@ export async function reorderDownloads(orderedIds: string[]) {
   return { success: true as const };
 }
 
-export async function getDownloadUploadToken(pathname: string) {
+export async function getDownloadUploadToken(
+  pathname: string,
+  contentType: string,
+) {
   const forbidden = await requireManagePermission();
   if (forbidden) throw new Error(forbidden.error);
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "downloads"),
+    contentType,
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,
   });

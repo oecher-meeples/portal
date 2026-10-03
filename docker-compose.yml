@@ -1,6 +1,6 @@
 # Self-hosting stack (see docs/deployment-docker.md and
 # .claude/plans/docker-self-hosted-migration.md). Further services (app,
-# blob storage, cron sidecar, proxy) are added in later migration phases.
+# cron sidecar, proxy) are added in later migration phases.
 services:
   postgres:
     image: postgres:16
@@ -21,5 +21,59 @@ services:
       timeout: 5s
       retries: 5
 
+  # S3-compatible blob storage (uploads, generated images) — replaces Vercel
+  # Blob. The app reaches it via S3_ENDPOINT, browsers via S3_PUBLIC_ENDPOINT.
+  # NOTE: MinIO no longer publishes new community images (source-only since
+  # late 2025) — pin a tested tag here before going to production.
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      # Browsers POST uploads straight to the bucket (presigned POST), so the
+      # app's origin must pass CORS. Default "*" = MinIO's own default.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_CORS_ALLOW_ORIGIN:-*}
+    volumes:
+      - minio-data:/data
+    ports:
+      # Localhost only, like postgres; the public endpoint (images, uploads)
+      # is exposed through the reverse proxy in a later phase.
+      - "127.0.0.1:${MINIO_API_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot bucket setup, idempotent on every `docker compose up`: creates
+  # the bucket, makes it anonymously readable (stored blob URLs are public,
+  # like on Vercel Blob) and creates the app's own access key with readwrite
+  # rights instead of handing it the root credentials.
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      S3_BUCKET: ${S3_BUCKET:-meeples}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$S3_BUCKET"
+        mc anonymous set download "local/$$S3_BUCKET"
+        mc admin user add local "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY"
+        mc admin policy attach local readwrite --user "$$S3_ACCESS_KEY" || true
+    restart: "no"
+
 volumes:
   postgres-data:
+  minio-data:

@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 import { extractPdfText } from "@/lib/legal/pdf-extract";
 
@@ -39,12 +39,16 @@ function revalidateLegalPaths(slug: string) {
   revalidatePath("/downloads");
 }
 
-export async function getLegalUploadToken(pathname: string) {
+export async function getLegalUploadToken(
+  pathname: string,
+  contentType: string,
+) {
   const forbidden = await requireManagePermission();
   if (forbidden) throw new Error(forbidden.error);
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "legal"),
+    contentType,
     allowedContentTypes: ["application/pdf"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,

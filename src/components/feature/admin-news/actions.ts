@@ -1,6 +1,5 @@
 "use server";
 
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import {
   InstagramStatus,
   type NewsletterCategory,
@@ -17,6 +16,7 @@ import {
 import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { stripMarkdown } from "@/lib/utils/strip-markdown";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
@@ -236,15 +236,16 @@ export async function updatePost(id: string, input: PostInput) {
   return { success: true as const };
 }
 
-export async function getUploadToken(pathname: string) {
+export async function getUploadToken(pathname: string, contentType: string) {
   const user = await getCurrentUser();
   const perms = user ? await getPostPermissions(user.id) : null;
   if (!perms || (!perms.canEditPublic && !perms.canEditInternal)) {
     throw new Error("Keine Berechtigung.");
   }
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "instagram-covers"),
+    contentType,
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,

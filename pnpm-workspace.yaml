@@ -13,7 +13,7 @@ overrides:
   js-yaml@3: ^3.15.2
   js-yaml@4: ^4.3.2
   # GHSA-rfgv-xxqx-mfg5 / GHSA-w293-vg96-wgc3 / GHSA-vp8m-p9jh-q5pm: undici
-  # DoS/TLS-Bypass/Cache-Poisoning, transitiv über @vercel/blob (6.x), shadcn
+  # DoS/TLS-Bypass/Cache-Poisoning, transitiv über shadcn
   # (7.x) und jsdom/better-auth/vitest (8.x).
   undici@6: ^6.28.1
   undici@7: ^7.29.1

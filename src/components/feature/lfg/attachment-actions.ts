@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeplePermission } from "@/lib/members/meeples";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 import { isLfgAttachmentEligible } from "@/lib/content/lfg";
 
@@ -43,10 +43,11 @@ async function requireEligiblePost(postId: string) {
 
 /** Token-Ausstellung für `useBlobUpload()` — wirft statt `{ error }`
  * zurückzugeben, weil `getToken` laut `useBlobUpload`-Vertrag
- * `Promise<string>` liefert; der Aufrufer fängt das im try/catch auf. */
+ * `Promise<BlobUploadToken>` liefert; der Aufrufer fängt das im try/catch auf. */
 export async function getLfgAttachmentUploadToken(
   postId: string,
   pathname: string,
+  contentType: string,
 ) {
   const meeple = await requireMeeplePermission("lfg:participate");
 
@@ -56,8 +57,9 @@ export async function getLfgAttachmentUploadToken(
   const participant = await requireLfgParticipant(postId, meeple.id);
   if ("error" in participant) throw new Error(participant.error);
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "lfg-attachments"),
+    contentType,
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_LFG_ATTACHMENT_BYTES,
   });

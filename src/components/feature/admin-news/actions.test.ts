@@ -15,10 +15,10 @@ vi.mock("@/lib/newsletter/dispatch", () => ({
   queueNewsletterForPost: vi.fn(),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const {
@@ -408,32 +408,33 @@ describe("getUploadToken", () => {
   it("rejects when there is no logged-in user", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    await expect(getUploadToken("instagram-covers/a.png")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getUploadToken("instagram-covers/a.png", "image/png"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("rejects when the user lacks the posts:public/posts:internal permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(0);
 
-    await expect(getUploadToken("instagram-covers/a.png")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getUploadToken("instagram-covers/a.png", "image/png"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises a client-chosen prefix to the instagram-covers namespace", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getUploadToken("posts/../../evil.png");
+    const token = await getUploadToken("posts/../../evil.png", "image/png");
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "instagram-covers/evil.png",
+      contentType: "image/png",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,

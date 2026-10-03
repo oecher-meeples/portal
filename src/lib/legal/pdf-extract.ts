@@ -1,7 +1,7 @@
 import { extractText } from "unpdf";
 
 /**
- * Downloads a PDF from a Vercel Blob URL and returns its raw text — no
+ * Downloads a PDF from a blob storage URL and returns its raw text — no
  * heading/paragraph parsing, no heuristics. The admin copy-pastes the result
  * into the sections editor by hand (see the plan's "keine automatische
  * KI-Gliederung"-Entscheidung).

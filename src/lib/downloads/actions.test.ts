@@ -17,10 +17,10 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const {
@@ -298,32 +298,36 @@ describe("getDownloadUploadToken", () => {
   it("rejects when there is no logged-in user", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    await expect(getDownloadUploadToken("downloads/a.pdf")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getDownloadUploadToken("downloads/a.pdf", "application/pdf"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("rejects when the user lacks the downloads:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(false);
 
-    await expect(getDownloadUploadToken("downloads/a.pdf")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getDownloadUploadToken("downloads/a.pdf", "application/pdf"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises the pathname to the downloads namespace without a content-type restriction", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getDownloadUploadToken("../evil.pdf");
+    const token = await getDownloadUploadToken(
+      "../evil.pdf",
+      "application/pdf",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "downloads/evil.pdf",
+      contentType: "application/pdf",
       addRandomSuffix: true,
       maximumSizeInBytes: 20 * 1024 * 1024,
     });

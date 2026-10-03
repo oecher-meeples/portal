@@ -51,6 +51,19 @@ describe("proxy CSP", () => {
     expect(response.headers.get("Content-Security-Policy")).toBeNull();
   });
 
+  it("allows the blob store origin for images and uploads", async () => {
+    vi.stubEnv("S3_PUBLIC_ENDPOINT", "https://files.example.org/");
+
+    const response = await proxy(makeRequest({ pathname: "/news" }));
+
+    const csp = response.headers.get("Content-Security-Policy-Report-Only");
+    expect(csp).toContain(
+      "img-src 'self' data: blob: https://files.example.org;",
+    );
+    expect(csp).toContain("connect-src 'self' https://files.example.org;");
+    vi.unstubAllEnvs();
+  });
+
   it("forwards the nonce to the request so the layout can read it via headers()", async () => {
     let seenRequest: NextRequest | undefined;
     const originalNext = NextResponse.next.bind(NextResponse);

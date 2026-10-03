@@ -38,8 +38,8 @@ export function ProfilePictureUpload({
     uploadFiles,
     isUploading,
     error: uploadError,
-  } = useBlobUpload("meeple-profile-pictures", (pathname) =>
-    getMeepleProfilePictureUploadToken(meepleId, pathname),
+  } = useBlobUpload("meeple-profile-pictures", (pathname, contentType) =>
+    getMeepleProfilePictureUploadToken(meepleId, pathname, contentType),
   );
   const { run, pending, error } = useAction();
 

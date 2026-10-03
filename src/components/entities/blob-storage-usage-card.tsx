@@ -15,7 +15,7 @@ const TONE_TO_STATUS_TONE: Record<StorageTone, StatusTone> = {
   critical: "negative",
 };
 
-/** Admin-only info card showing the Vercel Blob storage fill level — read-only,
+/** Admin-only info card showing the blob storage (MinIO) fill level — read-only,
  * no mutation, so it lives here rather than in `feature/`. */
 export function BlobStorageUsageCard({ usage }: { usage: BlobStorageUsage }) {
   const tone = getStorageTone(usage.percent);

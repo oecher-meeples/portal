@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-Automatisch erzeugt aus `pnpm licenses list --prod` (690 Production-Pakete). Nicht von Hand bearbeiten — mit `pnpm run licenses:generate` neu erzeugen, wenn sich die Dependencies ändern.
+Automatisch erzeugt aus `pnpm licenses list --prod` (545 Production-Pakete). Nicht von Hand bearbeiten — mit `pnpm run licenses:generate` neu erzeugen, wenn sich die Dependencies ändern.
 
 ## Prüfpflichtige Lizenzen
 
@@ -48,25 +48,20 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@base-ui/react@1.7.0` — https://base-ui.com
 - `@base-ui/utils@0.3.2` — https://github.com/mui/base-ui#readme
 - `@bcoe/v8-coverage@1.0.2` — https://github.com/bcoe/v8-coverage#readme
-- `@better-auth/core@1.4.18, 1.7.2` — https://www.better-auth.com
+- `@better-auth/core@1.7.2` — https://www.better-auth.com
 - `@better-auth/drizzle-adapter@1.7.2` — https://www.better-auth.com/docs/adapters/drizzle
 - `@better-auth/kysely-adapter@1.7.2` — https://www.better-auth.com/docs/adapters/kysely
 - `@better-auth/memory-adapter@1.7.2` — https://www.better-auth.com
 - `@better-auth/mongo-adapter@1.7.2` — https://www.better-auth.com/docs/adapters/mongodb
-- `@better-auth/passkey@1.4.18` — https://www.better-auth.com/docs/plugins/passkey
 - `@better-auth/prisma-adapter@1.7.2` — https://www.better-auth.com/docs/adapters/prisma
 - `@better-auth/telemetry@1.7.2` — https://www.better-auth.com
-- `@better-auth/utils@0.3.0, 0.4.2, 0.5.0` — https://github.com/better-auth/utils#readme
-- `@better-fetch/fetch@1.1.21, 1.3.1` — https://github.com/better-auth/better-fetch#readme
+- `@better-auth/utils@0.4.2, 0.5.0` — https://github.com/better-auth/utils#readme
+- `@better-fetch/fetch@1.3.1` — https://github.com/better-auth/better-fetch#readme
 - `@bramus/specificity@2.4.2` — https://github.com/bramus/specificity#readme
-- `@captchafox/react@1.13.0` — https://github.com/CaptchaFox/javascript-integrations#readme
-- `@captchafox/types@1.6.0` — https://github.com/CaptchaFox/javascript-integrations#readme
 - `@csstools/css-calc@3.3.0` — https://github.com/csstools/postcss-plugins/tree/main/packages/css-calc#readme
 - `@csstools/css-color-parser@4.1.10` — https://github.com/csstools/postcss-plugins/tree/main/packages/css-color-parser#readme
 - `@csstools/css-parser-algorithms@4.0.0` — https://github.com/csstools/postcss-plugins/tree/main/packages/css-parser-algorithms#readme
 - `@csstools/css-tokenizer@4.0.0` — https://github.com/csstools/postcss-plugins/tree/main/packages/css-tokenizer#readme
-- `@daveyplate/better-auth-tanstack@1.3.6` — https://github.com/daveyplate/better-auth-tanstack
-- `@daveyplate/better-auth-ui@3.3.9` — https://better-auth-ui.com
 - `@dnd-kit/accessibility@3.1.1` — https://github.com/clauderic/dnd-kit#readme
 - `@dnd-kit/core@6.3.1` — https://github.com/clauderic/dnd-kit#readme
 - `@dnd-kit/utilities@3.2.2` — https://github.com/clauderic/dnd-kit#readme
@@ -76,106 +71,30 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@floating-ui/dom@1.8.0` — https://floating-ui.com
 - `@floating-ui/react-dom@2.1.9` — https://floating-ui.com/docs/react-dom
 - `@floating-ui/utils@0.2.12` — https://floating-ui.com
-- `@hcaptcha/loader@2.4.2` — https://github.com/hCaptcha/hcaptcha-loader#readme
-- `@hcaptcha/react-hcaptcha@1.17.4` — https://github.com/hCaptcha/react-hcaptcha#readme
-- `@hexagon/base64@1.1.28` — https://base64.56k.guru
-- `@hookform/resolvers@5.5.7` — https://react-hook-form.com
 - `@img/colour@1.1.0` — https://github.com/lovell/colour#readme
 - `@jridgewell/gen-mapping@0.3.13` — https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping
 - `@jridgewell/remapping@2.3.5` — https://github.com/jridgewell/sourcemaps/tree/main/packages/remapping
 - `@jridgewell/resolve-uri@3.1.2` — https://github.com/jridgewell/resolve-uri#readme
 - `@jridgewell/sourcemap-codec@1.5.5` — https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec
 - `@jridgewell/trace-mapping@0.3.31` — https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping
-- `@levischuck/tiny-cbor@0.2.11` — https://github.com/levischuck/tiny-cbor#readme
-- `@marsidev/react-turnstile@1.5.3` — https://github.com/marsidev/react-turnstile
 - `@next/env@16.3.8` — https://github.com/vercel/next.js#readme
 - `@next/swc-win32-x64-msvc@16.3.8` — https://github.com/vercel/next.js#readme
 - `@noble/ciphers@2.4.0` — https://paulmillr.com/noble/
-- `@noble/hashes@2.3.0, 2.4.0` — https://paulmillr.com/noble/
+- `@noble/hashes@2.4.0` — https://paulmillr.com/noble/
 - `@nodable/entities@3.0.0` — https://github.com/nodable/val-parsers#readme
 - `@oxc-project/types@0.139.0` — https://oxc.rs
-- `@peculiar/asn1-android@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/android#readme
-- `@peculiar/asn1-cms@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/cms#readme
-- `@peculiar/asn1-csr@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/csr#readme
-- `@peculiar/asn1-ecc@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/ecc#readme
-- `@peculiar/asn1-pfx@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/pfx#readme
-- `@peculiar/asn1-pkcs8@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/pkcs8#readme
-- `@peculiar/asn1-pkcs9@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/pkcs9#readme
-- `@peculiar/asn1-rsa@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/rsa#readme
-- `@peculiar/asn1-schema@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/schema#readme
-- `@peculiar/asn1-x509@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/x509#readme
-- `@peculiar/asn1-x509-attr@2.8.0` — https://github.com/PeculiarVentures/asn1-schema/tree/master/packages/x509-attr#readme
-- `@peculiar/utils@2.0.3` — https://github.com/PeculiarVentures/pvtsutils#readme
-- `@peculiar/x509@1.14.3` — https://github.com/PeculiarVentures/x509#readme
-- `@radix-ui/number@1.1.3` — https://radix-ui.com/primitives
-- `@radix-ui/primitive@1.1.3, 1.1.7` — https://radix-ui.com/primitives
-- `@radix-ui/react-arrow@1.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-avatar@1.2.6` — https://radix-ui.com/primitives
-- `@radix-ui/react-checkbox@1.3.11` — https://radix-ui.com/primitives
-- `@radix-ui/react-collection@1.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-compose-refs@1.1.2, 1.1.5` — https://radix-ui.com/primitives
-- `@radix-ui/react-context@1.2.2` — https://radix-ui.com/primitives
-- `@radix-ui/react-dialog@1.1.23` — https://radix-ui.com/primitives
-- `@radix-ui/react-direction@1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-dismissable-layer@1.1.19` — https://radix-ui.com/primitives
-- `@radix-ui/react-dropdown-menu@2.1.24` — https://radix-ui.com/primitives
-- `@radix-ui/react-focus-guards@1.1.6` — https://radix-ui.com/primitives
-- `@radix-ui/react-focus-scope@1.1.16` — https://radix-ui.com/primitives
-- `@radix-ui/react-id@1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-label@2.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-menu@2.1.24` — https://radix-ui.com/primitives
-- `@radix-ui/react-popper@1.3.7` — https://radix-ui.com/primitives
-- `@radix-ui/react-portal@1.1.17` — https://radix-ui.com/primitives
-- `@radix-ui/react-presence@1.1.10` — https://radix-ui.com/primitives
-- `@radix-ui/react-primitive@2.1.3, 2.1.10` — https://radix-ui.com/primitives
-- `@radix-ui/react-roving-focus@1.1.19` — https://radix-ui.com/primitives
-- `@radix-ui/react-select@2.3.7` — https://radix-ui.com/primitives
-- `@radix-ui/react-separator@1.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-slot@1.2.3, 1.3.3` — https://radix-ui.com/primitives
-- `@radix-ui/react-tabs@1.1.21` — https://radix-ui.com/primitives
+- `@radix-ui/primitive@1.1.3` — https://radix-ui.com/primitives
+- `@radix-ui/react-compose-refs@1.1.2` — https://radix-ui.com/primitives
+- `@radix-ui/react-primitive@2.1.3` — https://radix-ui.com/primitives
+- `@radix-ui/react-slot@1.2.3` — https://radix-ui.com/primitives
 - `@radix-ui/react-toggle@1.1.10` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-callback-ref@1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-controllable-state@1.2.2, 1.2.6` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-effect-event@0.0.2, 0.0.5` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-is-hydrated@0.1.3` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-layout-effect@1.1.1, 1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-previous@1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-rect@1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-size@1.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-visually-hidden@1.2.11` — https://radix-ui.com/primitives
-- `@radix-ui/rect@1.1.3` — https://radix-ui.com/primitives
-- `@react-email/body@0.3.0` — https://github.com/resend/react-email#readme
-- `@react-email/button@0.2.1` — https://github.com/resend/react-email#readme
-- `@react-email/code-block@0.2.1` — https://github.com/resend/react-email#readme
-- `@react-email/code-inline@0.0.6`
-- `@react-email/column@0.0.14` — https://github.com/resend/react-email#readme
-- `@react-email/components@1.0.12` — https://github.com/resend/react-email#readme
-- `@react-email/container@0.0.16` — https://github.com/resend/react-email#readme
-- `@react-email/font@0.0.10`
-- `@react-email/head@0.0.13` — https://github.com/resend/react-email#readme
-- `@react-email/heading@0.0.16` — https://github.com/resend/react-email#readme
-- `@react-email/hr@0.0.12` — https://github.com/resend/react-email#readme
-- `@react-email/html@0.0.12` — https://github.com/resend/react-email#readme
-- `@react-email/img@0.0.12` — https://github.com/resend/react-email#readme
-- `@react-email/link@0.0.13` — https://github.com/resend/react-email#readme
-- `@react-email/markdown@0.0.18` — https://github.com/resend/react-email#readme
-- `@react-email/preview@0.0.14` — https://github.com/resend/react-email#readme
-- `@react-email/render@2.0.6` — https://github.com/resend/react-email#readme
-- `@react-email/row@0.0.13` — https://github.com/resend/react-email#readme
-- `@react-email/section@0.0.17` — https://github.com/resend/react-email#readme
-- `@react-email/tailwind@2.0.7` — https://github.com/resend/react-email#readme
-- `@react-email/text@0.1.6` — https://github.com/resend/react-email#readme
+- `@radix-ui/react-use-controllable-state@1.2.2` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-effect-event@0.0.2` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-layout-effect@1.1.1` — https://radix-ui.com/primitives
 - `@rolldown/binding-win32-x64-msvc@1.1.5` — https://rolldown.rs/
 - `@rolldown/pluginutils@1.0.1` — https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme
-- `@selderee/plugin-htmlparser2@0.11.0` — https://github.com/mxxii/selderee
 - `@shuding/opentype.js@1.4.0-beta.0` — https://github.com/opentypejs/opentype.js#readme
-- `@simplewebauthn/browser@13.3.0` — https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/browser#readme
-- `@simplewebauthn/server@13.3.2` — https://github.com/MasterKale/SimpleWebAuthn/tree/master/packages/server#readme
 - `@standard-schema/spec@1.1.0` — https://standardschema.dev
-- `@standard-schema/utils@0.3.0` — https://github.com/standard-schema/standard-schema#readme
-- `@supabase/auth-js@2.79.0` — https://github.com/supabase/supabase-js/tree/master/packages/core/auth-js
-- `@tanstack/query-core@5.101.4` — https://tanstack.com/query
-- `@tanstack/react-query@5.101.4` — https://tanstack.com/query
 - `@types/chai@5.2.3` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/chai
 - `@types/d3-array@3.0.3` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-array
 - `@types/d3-color@3.1.0, 3.1.3` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-color
@@ -219,25 +138,22 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@vitest/snapshot@4.1.11` — https://vitest.dev/guide/snapshot
 - `@vitest/spy@4.1.11` — https://vitest.dev/api/mock
 - `@vitest/utils@4.1.11` — https://github.com/vitest-dev/vitest/tree/main/packages/utils
-- `@wojtekmaj/react-recaptcha-v3@0.1.4` — https://github.com/wojtekmaj/react-recaptcha-v3#readme
 - `@zxing/browser@0.2.1` — https://github.com/zxing-js/browser#readme
 - `ajv@8.20.0` — https://ajv.js.org
-- `ajv-formats@2.1.1` — https://github.com/ajv-validator/ajv-formats#readme
 - `ansi-regex@5.0.1` — https://github.com/chalk/ansi-regex#readme
 - `ansi-styles@4.3.0` — https://github.com/chalk/ansi-styles#readme
 - `anynum@1.0.1` — https://github.com/NaturalIntelligence/anynum#readme
 - `argparse@1.0.10` — https://github.com/nodeca/argparse#readme
-- `aria-hidden@1.2.6` — https://github.com/theKashey/aria-hidden#readme
 - `assertion-error@2.0.1` — https://github.com/chaijs/assertion-error#readme
 - `ast-v8-to-istanbul@1.0.5` — https://github.com/AriPerkkio/ast-v8-to-istanbul
-- `async-retry@1.3.3` — https://github.com/vercel/async-retry#readme
 - `aws-ssl-profiles@1.1.2` — https://github.com/mysqljs/aws-ssl-profiles#readme
 - `bail@2.0.2` — https://github.com/wooorm/bail#readme
 - `base64-js@0.0.8` — https://github.com/beatgammit/base64-js#readme
 - `better-auth@1.7.2` — https://better-auth.com
-- `better-call@1.1.8, 1.4.0` — https://github.com/better-auth/better-call#readme
+- `better-call@1.4.0` — https://github.com/better-auth/better-call#readme
 - `better-result@2.10.0` — https://better-result.dev
 - `bidi-js@1.0.3` — https://github.com/lojjic/bidi-js#readme
+- `bowser@2.14.1` — https://github.com/bowser-js/bowser
 - `browserslist@4.28.8` — https://github.com/browserslist/browserslist#readme
 - `c12@3.3.4` — https://github.com/unjs/c12#readme
 - `camelcase@5.3.1` — https://github.com/sindresorhus/camelcase#readme
@@ -257,8 +173,6 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `comma-separated-tokens@2.0.3` — https://github.com/wooorm/comma-separated-tokens#readme
 - `confbox@0.2.4` — https://github.com/unjs/confbox#readme
 - `convert-source-map@2.0.0` — https://github.com/thlorenz/convert-source-map
-- `copy-anything@4.0.5` — https://github.com/mesqueeb/copy-anything#readme
-- `core-js@3.49.0` — https://core-js.io
 - `core-util-is@1.0.3` — https://github.com/isaacs/core-util-is#readme
 - `cross-spawn@7.0.6` — https://github.com/moxystudio/node-cross-spawn
 - `css-background-parser@0.1.0` — https://github.com/gilmoreorless/css-background-parser#readme
@@ -272,17 +186,12 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `decamelize@1.2.0` — https://github.com/sindresorhus/decamelize#readme
 - `decimal.js@10.6.0` — https://github.com/MikeMcl/decimal.js#readme
 - `decode-named-character-reference@1.3.0` — https://github.com/wooorm/decode-named-character-reference#readme
-- `deepmerge@4.3.1` — https://github.com/TehShrike/deepmerge
 - `defu@6.1.7` — https://github.com/unjs/defu#readme
 - `dequal@2.0.3` — https://github.com/lukeed/dequal#readme
 - `destr@2.0.5` — https://github.com/unjs/destr#readme
-- `detect-europe-js@0.1.2` — https://github.com/faisalman/detect-europe-js#readme
-- `detect-node-es@1.1.0` — https://github.com/thekashey/detect-node
 - `devlop@1.1.0` — https://github.com/wooorm/devlop#readme
 - `dijkstrajs@1.0.3` — https://github.com/tcort/dijkstrajs
-- `dom-serializer@2.0.0` — https://github.com/cheeriojs/dom-serializer#readme
-- `effect@3.20.0, 3.21.0` — https://effect.website
-- `elen@1.0.10` — https://github.com/ealmansi/elen#readme
+- `effect@3.20.0` — https://effect.website
 - `emoji-regex@8.0.0` — https://mths.be/emoji-regex
 - `emoji-regex-xs@2.0.1` — https://github.com/slevithan/emoji-regex-xs#readme
 - `empathic@2.0.0` — https://github.com/lukeed/empathic#readme
@@ -294,9 +203,6 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `escape-string-regexp@5.0.0` — https://github.com/sindresorhus/escape-string-regexp#readme
 - `estree-util-is-identifier-name@3.0.0` — https://github.com/syntax-tree/estree-util-is-identifier-name#readme
 - `estree-walker@3.0.3` — https://github.com/Rich-Harris/estree-walker#readme
-- `eventsource@4.1.0` — https://github.com/EventSource/eventsource#readme
-- `eventsource-parser@3.1.1` — https://github.com/rexxars/eventsource-parser#readme
-- `execa@5.1.1` — https://github.com/sindresorhus/execa#readme
 - `exsolve@1.1.1` — https://github.com/unjs/exsolve#readme
 - `extend@3.0.2` — https://github.com/justmoon/node-extend#readme
 - `extend-shallow@2.0.1` — https://github.com/jonschlinkert/extend-shallow
@@ -312,9 +218,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `find-up@4.1.0` — https://github.com/sindresorhus/find-up#readme
 - `generate-function@2.3.1` — https://github.com/mafintosh/generate-function
 - `gensync@1.0.0-beta.2` — https://github.com/loganfsmyth/gensync
-- `get-nonce@1.0.1` — https://github.com/theKashey/get-nonce
 - `get-port-please@3.2.0` — https://github.com/unjs/get-port-please#readme
-- `get-stream@6.0.1` — https://github.com/sindresorhus/get-stream#readme
 - `giget@3.3.1` — https://github.com/unjs/giget#readme
 - `grammex@3.1.13` — https://github.com/fabiospampinato/grammex#readme
 - `graphmatch@1.1.1` — https://github.com/fabiospampinato/graphmatch#readme
@@ -326,31 +230,23 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `hex-rgb@4.3.0` — https://github.com/sindresorhus/hex-rgb#readme
 - `html-encoding-sniffer@6.0.0` — https://github.com/jsdom/html-encoding-sniffer#readme
 - `html-escaper@2.0.2` — https://github.com/WebReflection/html-escaper
-- `html-to-text@9.0.5` — https://github.com/html-to-text/node-html-to-text
 - `html-url-attributes@3.0.1` — https://github.com/rehypejs/rehype-minify/tree/main#readme
-- `htmlparser2@8.0.2` — https://github.com/fb55/htmlparser2#readme
 - `iconv-lite@0.7.3` — https://github.com/pillarjs/iconv-lite
 - `immediate@3.0.6` — https://github.com/calvinmetcalf/immediate#readme
 - `inline-style-parser@0.2.7` — https://github.com/remarkablemark/inline-style-parser#readme
-- `input-otp@1.4.2` — https://input-otp.rodz.dev/
 - `is-alphabetical@2.0.1` — https://github.com/wooorm/is-alphabetical#readme
 - `is-alphanumerical@2.0.1` — https://github.com/wooorm/is-alphanumerical#readme
-- `is-buffer@2.0.5` — https://github.com/feross/is-buffer#readme
 - `is-decimal@2.0.1` — https://github.com/wooorm/is-decimal#readme
 - `is-extendable@0.1.1` — https://github.com/jonschlinkert/is-extendable
 - `is-fullwidth-code-point@3.0.0` — https://github.com/sindresorhus/is-fullwidth-code-point#readme
 - `is-hexadecimal@2.0.1` — https://github.com/wooorm/is-hexadecimal#readme
-- `is-node-process@1.2.0` — https://github.com/mswjs/is-node-process#readme
 - `is-plain-obj@4.1.0` — https://github.com/sindresorhus/is-plain-obj#readme
 - `is-potential-custom-element-name@1.0.1` — https://github.com/mathiasbynens/is-potential-custom-element-name
 - `is-property@1.0.2` — https://github.com/mikolalysenko/is-property#readme
-- `is-standalone-pwa@0.1.1` — https://github.com/faisalman/is-standalone-pwa#readme
-- `is-stream@2.0.1` — https://github.com/sindresorhus/is-stream#readme
 - `is-unsafe@2.0.2` — https://github.com/NaturalIntelligence/is-unsafe#readme
-- `is-what@5.5.0` — https://github.com/mesqueeb/is-what#readme
 - `isarray@1.0.0` — https://github.com/juliangruber/isarray
 - `jiti@2.7.0` — https://github.com/unjs/jiti#readme
-- `jose@5.10.0, 6.1.2, 6.2.10` — https://github.com/panva/jose
+- `jose@6.2.10` — https://github.com/panva/jose
 - `js-tokens@4.0.0, 10.0.0` — https://github.com/lydell/js-tokens#readme
 - `js-yaml@3.15.2` — https://github.com/nodeca/js-yaml
 - `jsdom@30.0.1` — https://github.com/jsdom/jsdom#readme
@@ -359,19 +255,16 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `json5@2.2.3` — http://json5.org/
 - `kind-of@6.0.3` — https://github.com/jonschlinkert/kind-of
 - `kysely@0.29.5` — https://kysely.dev
-- `leac@0.6.0` — https://github.com/mxxii/leac
 - `lie@3.3.0` — https://github.com/calvinmetcalf/lie#readme
 - `linebreak@1.1.0` — https://github.com/devongovett/linebreaker
 - `locate-path@5.0.0` — https://github.com/sindresorhus/locate-path#readme
 - `lodash@4.18.1` — https://lodash.com/
 - `longest-streak@3.1.0` — https://github.com/wooorm/longest-streak#readme
-- `loose-envify@1.4.0` — https://github.com/zertosh/loose-envify
 - `lru.min@1.1.4` — https://github.com/wellwelwel/lru.min#readme
 - `magic-string@0.30.21` — https://github.com/Rich-Harris/magic-string#readme
 - `magicast@0.5.4` — https://github.com/unjs/magicast#readme
 - `make-dir@4.0.0` — https://github.com/sindresorhus/make-dir#readme
 - `markdown-table@3.0.4` — https://github.com/wooorm/markdown-table#readme
-- `marked@15.0.12` — https://marked.js.org
 - `mdast-util-find-and-replace@3.0.2` — https://github.com/syntax-tree/mdast-util-find-and-replace#readme
 - `mdast-util-from-markdown@2.0.3` — https://github.com/syntax-tree/mdast-util-from-markdown#readme
 - `mdast-util-gfm@3.1.0` — https://github.com/syntax-tree/mdast-util-gfm#readme
@@ -387,7 +280,6 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `mdast-util-to-hast@13.2.1` — https://github.com/syntax-tree/mdast-util-to-hast#readme
 - `mdast-util-to-markdown@2.1.2` — https://github.com/syntax-tree/mdast-util-to-markdown#readme
 - `mdast-util-to-string@4.0.0` — https://github.com/syntax-tree/mdast-util-to-string#readme
-- `merge-stream@2.0.0` — https://github.com/grncdr/merge-stream#readme
 - `micromark@4.0.2` — https://github.com/micromark/micromark/tree/main#readme
 - `micromark-core-commonmark@2.0.3` — https://github.com/micromark/micromark/tree/main#readme
 - `micromark-extension-gfm@3.0.0` — https://github.com/micromark/micromark-extension-gfm#readme
@@ -416,22 +308,16 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `micromark-util-subtokenize@2.1.0` — https://github.com/micromark/micromark/tree/main#readme
 - `micromark-util-symbol@2.0.1` — https://github.com/micromark/micromark/tree/main#readme
 - `micromark-util-types@2.0.2` — https://github.com/micromark/micromark/tree/main#readme
-- `mimic-fn@2.1.0` — https://github.com/sindresorhus/mimic-fn#readme
 - `ms@2.1.3` — https://github.com/vercel/ms#readme
-- `mutative@1.3.0` — https://mutative.js.org/
 - `mysql2@3.15.3` — https://sidorares.github.io/node-mysql2/docs
 - `named-placeholders@1.1.6` — https://github.com/mysqljs/named-placeholders#readme
-- `nanoid@3.3.18, 5.1.16` — https://github.com/ai/nanoid#readme
+- `nanoid@3.3.18` — https://github.com/ai/nanoid#readme
 - `nanostores@1.5.2` — https://github.com/nanostores/nanostores#readme
 - `next@16.3.8` — https://nextjs.org
 - `next-themes@0.4.6` — https://github.com/pacocoursey/next-themes#readme
 - `node-releases@2.0.54` — https://github.com/chicoxyzzy/node-releases#readme
-- `npm-run-path@4.0.1` — https://github.com/sindresorhus/npm-run-path#readme
-- `object-assign@4.1.1` — https://github.com/sindresorhus/object-assign#readme
 - `obug@2.1.4` — https://github.com/sxzz/obug#readme
 - `ohash@2.0.12` — https://github.com/unjs/ohash#readme
-- `onetime@5.1.2` — https://github.com/sindresorhus/onetime#readme
-- `os-paths@4.4.0` — https://github.com/rivy/js.os-paths#readme
 - `p-limit@2.3.0` — https://github.com/sindresorhus/p-limit#readme
 - `p-locate@4.1.0` — https://github.com/sindresorhus/p-locate#readme
 - `p-try@2.2.0` — https://github.com/sindresorhus/p-try#readme
@@ -439,12 +325,10 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `parse-css-color@0.2.1` — https://github.com/noeldelgado/parse-css-color#readme
 - `parse-entities@4.0.2` — https://github.com/wooorm/parse-entities#readme
 - `parse5@8.0.1` — https://parse5.js.org
-- `parseley@0.12.1` — https://github.com/mxxii/parseley
 - `path-exists@4.0.0` — https://github.com/sindresorhus/path-exists#readme
 - `path-expression-matcher@1.6.2` — https://github.com/NaturalIntelligence/path-expression-matcher#readme
 - `path-key@3.1.1` — https://github.com/sindresorhus/path-key#readme
 - `pathe@2.0.3` — https://github.com/unjs/pathe#readme
-- `peberminta@0.9.0` — https://github.com/mxxii/peberminta
 - `perfect-debounce@2.1.0` — https://github.com/unjs/perfect-debounce#readme
 - `pg@8.23.1` — https://github.com/brianc/node-postgres
 - `pg-cloudflare@1.4.1` — https://github.com/brianc/node-postgres#readme
@@ -462,30 +346,16 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `postgres-bytea@1.0.1` — https://github.com/bendrucker/postgres-bytea#readme
 - `postgres-date@1.0.7` — https://github.com/bendrucker/postgres-date#readme
 - `postgres-interval@1.2.0` — https://github.com/bendrucker/postgres-interval#readme
-- `prettier@3.9.6` — https://prettier.io
-- `prismjs@1.30.0` — https://github.com/PrismJS/prism#readme
 - `process-nextick-args@2.0.1` — https://github.com/calvinmetcalf/process-nextick-args
-- `prop-types@15.8.1` — https://facebook.github.io/react/
 - `proper-lockfile@4.1.2` — https://github.com/moxystudio/node-proper-lockfile
 - `property-information@7.2.0` — https://github.com/wooorm/property-information#readme
 - `punycode@2.3.1` — https://mths.be/punycode
 - `pure-rand@6.1.0` — https://github.com/dubzzz/pure-rand#readme
-- `pvtsutils@1.3.6` — https://github.com/PeculiarVentures/pvtsutils#readme
-- `pvutils@1.1.5` — https://github.com/PeculiarVentures/pvutils#readme
 - `qrcode@1.5.4` — http://github.com/soldair/node-qrcode
-- `qrcode-generator@2.0.4` — https://github.com/kazuhikoarase/qrcode-generator#readme
 - `rc9@3.0.1` — https://github.com/unjs/rc9#readme
 - `react@19.2.8` — https://react.dev/
-- `react-async-script@1.2.0` — https://github.com/dozoisch/react-async-script
 - `react-dom@19.2.8` — https://react.dev/
-- `react-google-recaptcha@3.1.0` — https://github.com/dozoisch/react-google-recaptcha
-- `react-hook-form@7.83.0` — https://react-hook-form.com
-- `react-is@16.13.1` — https://reactjs.org/
 - `react-markdown@10.1.0` — https://github.com/remarkjs/react-markdown#readme
-- `react-qr-code@2.2.0` — https://github.com/rosskhanas/react-qr-code#readme
-- `react-remove-scroll@2.7.2` — https://github.com/theKashey/react-remove-scroll#readme
-- `react-remove-scroll-bar@2.3.8` — https://github.com/theKashey/react-remove-scroll-bar#readme
-- `react-style-singleton@2.2.3` — https://github.com/theKashey/react-style-singleton#readme
 - `readable-stream@2.3.8` — https://github.com/nodejs/readable-stream#readme
 - `readdirp@5.1.1` — https://github.com/paulmillr/readdirp
 - `remark-gfm@4.0.1` — https://github.com/remarkjs/remark-gfm#readme
@@ -497,24 +367,21 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `require-from-string@2.0.2` — https://github.com/floatdrop/require-from-string#readme
 - `reselect@5.2.0` — https://github.com/reduxjs/reselect#readme
 - `ret@0.5.0` — https://github.com/fent/ret.js#readme
-- `retry@0.12.0, 0.13.1` — https://github.com/tim-kos/node-retry
+- `retry@0.12.0` — https://github.com/tim-kos/node-retry
 - `rolldown@1.1.5` — https://rolldown.rs/
-- `rou3@0.7.12, 0.9.2` — https://github.com/h3js/rou3#readme
+- `rou3@0.9.2` — https://github.com/h3js/rou3#readme
 - `rrule-temporal@2.0.2` — https://ggaabe.github.io/rrule-temporal/
 - `safe-buffer@5.1.2` — https://github.com/feross/safe-buffer
 - `safe-regex2@5.1.1` — https://github.com/fastify/safe-regex2
 - `safer-buffer@2.1.2` — https://github.com/ChALkeR/safer-buffer#readme
 - `scheduler@0.27.0` — https://react.dev/
 - `section-matter@1.0.0` — https://github.com/jonschlinkert/section-matter
-- `selderee@0.11.0` — https://github.com/mxxii/selderee
 - `seq-queue@0.0.5` — https://github.com/changchang/seq-queue
 - `server-only@0.0.1` — https://reactjs.org/
-- `set-cookie-parser@2.7.2, 3.1.2` — https://github.com/nfriedly/set-cookie-parser
+- `set-cookie-parser@3.1.2` — https://github.com/nfriedly/set-cookie-parser
 - `setimmediate@1.0.5` — https://github.com/YuzuJS/setImmediate#readme
 - `shebang-command@2.0.0` — https://github.com/kevva/shebang-command#readme
 - `shebang-regex@3.0.0` — https://github.com/sindresorhus/shebang-regex#readme
-- `sonner@2.0.7` — https://sonner.emilkowal.ski/
-- `sorted-btree@1.8.1` — https://github.com/qwertie/btree-typescript#readme
 - `space-separated-tokens@2.0.2` — https://github.com/wooorm/space-separated-tokens#readme
 - `sqlstring@2.3.3` — https://github.com/mysqljs/sqlstring#readme
 - `stackback@0.0.2` — https://github.com/shtylman/node-stackback#readme
@@ -525,19 +392,15 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `stringify-entities@4.0.4` — https://github.com/wooorm/stringify-entities#readme
 - `strip-ansi@6.0.1` — https://github.com/chalk/strip-ansi#readme
 - `strip-bom-string@1.0.0` — https://github.com/jonschlinkert/strip-bom-string
-- `strip-final-newline@2.0.0` — https://github.com/sindresorhus/strip-final-newline#readme
 - `strnum@2.4.2` — https://github.com/NaturalIntelligence/strnum#readme
 - `style-to-js@1.1.21` — https://github.com/remarkablemark/style-to-js#readme
 - `style-to-object@1.0.14` — https://github.com/remarkablemark/style-to-object#readme
 - `styled-jsx@5.1.6` — https://github.com/vercel/styled-jsx#readme
-- `superjson@2.2.6` — https://github.com/blitz-js/superjson#readme
 - `supports-color@7.2.0` — https://github.com/chalk/supports-color#readme
 - `symbol-tree@3.2.4` — https://github.com/jsdom/js-symbol-tree#symbol-tree
 - `tailwind-merge@3.6.0` — https://github.com/dcastil/tailwind-merge
-- `tailwindcss@4.2.1, 4.3.3` — https://tailwindcss.com
 - `temporal-polyfill@1.0.1` — https://github.com/fullcalendar/temporal-polyfill#readme
 - `temporal-utils@1.0.1` — https://github.com/fullcalendar/temporal-polyfill#readme
-- `throttleit@2.1.0` — https://github.com/sindresorhus/throttleit#readme
 - `tiny-inflate@1.0.3` — https://github.com/devongovett/tiny-inflate
 - `tinybench@2.9.0` — https://github.com/tinylibs/tinybench#readme
 - `tinyexec@1.3.0` — https://github.com/tinylibs/tinyexec#readme
@@ -550,10 +413,8 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `trough@2.2.0` — https://github.com/wooorm/trough#readme
 - `ts-custom-error@3.3.1` — https://github.com/adriengibrat/ts-custom-error#readme
 - `tsx@4.23.13` — https://tsx.hirok.io
-- `tsyringe@4.10.0` — https://github.com/Microsoft/tsyringe#readme
 - `tw-animate-css@1.4.0` — https://github.com/Wombosvideo/tw-animate-css#readme
-- `ua-is-frozen@0.1.2` — https://github.com/faisalman/ua-is-frozen#readme
-- `undici@6.29.0, 8.11.2` — https://undici.nodejs.org
+- `undici@8.11.2` — https://undici.nodejs.org
 - `undici-types@8.3.0` — https://undici.nodejs.org
 - `unicode-trie@2.0.0` — https://github.com/devongovett/unicode-trie
 - `unified@11.0.5` — https://unifiedjs.com
@@ -564,50 +425,51 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `unist-util-visit-parents@6.0.2` — https://github.com/syntax-tree/unist-util-visit-parents#readme
 - `unpdf@1.8.1` — https://github.com/unjs/unpdf#readme
 - `update-browserslist-db@1.3.2` — https://github.com/browserslist/update-db#readme
-- `use-callback-ref@1.3.3` — https://github.com/theKashey/use-callback-ref#readme
-- `use-sidecar@1.1.3` — https://github.com/theKashey/use-sidecar
 - `use-sync-external-store@1.6.0` — https://github.com/facebook/react#readme
 - `util-deprecate@1.0.2` — https://github.com/TooTallNate/util-deprecate
-- `uuid@11.1.1` — https://github.com/uuidjs/uuid#readme
 - `valibot@1.4.2` — https://valibot.dev
-- `vaul@1.1.2` — https://vaul.emilkowal.ski/
 - `vfile@6.0.3` — https://github.com/vfile/vfile#readme
 - `vfile-message@4.0.3` — https://github.com/vfile/vfile-message#readme
 - `vite@8.1.5` — https://vite.dev
 - `vitest@4.1.11` — https://vitest.dev
 - `w3c-xmlserializer@5.0.0` — https://github.com/jsdom/w3c-xmlserializer#readme
-- `warning@4.0.3` — https://github.com/BerkeleyTrue/warning
 - `whatwg-mimetype@5.0.0` — https://github.com/jsdom/whatwg-mimetype#readme
 - `whatwg-url@16.0.1, 17.1.0` — https://github.com/jsdom/whatwg-url#readme
 - `why-is-node-running@2.3.0` — https://github.com/mafintosh/why-is-node-running
 - `wrap-ansi@6.2.0` — https://github.com/chalk/wrap-ansi#readme
-- `xdg-app-paths@5.5.1` — https://github.com/rivy/js.xdg-app-paths#readme
-- `xdg-portable@7.3.0` — https://github.com/rivy/js.xdg-portable#readme
 - `xml-naming@0.3.0` — https://github.com/NaturalIntelligence/xml-naming#readme
 - `xmlchars@2.2.0` — https://github.com/lddubeau/xmlchars#readme
 - `xtend@4.0.2` — https://github.com/Raynos/xtend
 - `yargs@15.4.1` — https://yargs.js.org/
 - `yoga-layout@3.2.1` — https://yogalayout.dev/
 - `zeptomatch@2.1.0` — https://github.com/fabiospampinato/zeptomatch#readme
-- `zod@4.1.11, 4.3.6, 4.5.4` — https://zod.dev
+- `zod@4.5.4` — https://zod.dev
 - `zwitch@2.0.4` — https://github.com/wooorm/zwitch#readme
-
-### MIT-0
-
-- `@csstools/color-helpers@6.1.0` — https://github.com/csstools/postcss-plugins/tree/main/packages/color-helpers#readme
-- `@csstools/css-syntax-patches-for-csstree@1.1.7` — https://github.com/csstools/postcss-plugins/tree/main/packages/css-syntax-patches-for-csstree#readme
 
 ### Apache-2.0
 
+- `@aws-sdk/checksums@3.1001.1` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/checksums
+- `@aws-sdk/client-s3@3.1146.0` — https://github.com/aws/aws-sdk-js-v3/tree/main/clients/client-s3
+- `@aws-sdk/core@3.978.1` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/core
+- `@aws-sdk/credential-provider-env@3.972.72` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-env
+- `@aws-sdk/credential-provider-http@3.972.74` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-http
+- `@aws-sdk/credential-provider-ini@3.973.17` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-ini
+- `@aws-sdk/credential-provider-login@3.972.79` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-login
+- `@aws-sdk/credential-provider-node@3.972.84` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-node
+- `@aws-sdk/credential-provider-process@3.972.72` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-process
+- `@aws-sdk/credential-provider-sso@3.973.16` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-sso
+- `@aws-sdk/credential-provider-web-identity@3.972.78` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/credential-provider-web-identity
+- `@aws-sdk/middleware-sdk-s3@3.972.77` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/middleware-sdk-s3
+- `@aws-sdk/nested-clients@3.997.46` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages/nested-clients
+- `@aws-sdk/s3-presigned-post@3.1146.0` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages/s3-presigned-post
+- `@aws-sdk/signature-v4-multi-region@3.996.47` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages/signature-v4-multi-region
+- `@aws-sdk/token-providers@3.1138.0` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages/token-providers
+- `@aws-sdk/types@3.974.6` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/types
+- `@aws-sdk/xml-builder@3.972.41` — https://github.com/aws/aws-sdk-js-v3/tree/main/packages-internal/xml-builder
+- `@aws/lambda-invoke-store@0.3.0` — https://github.com/awslabs/aws-lambda-invoke-store
 - `@electric-sql/pglite@0.4.3` — https://pglite.dev
 - `@electric-sql/pglite-socket@0.1.3` — https://pglite.dev
 - `@electric-sql/pglite-tools@0.3.3` — https://pglite.dev
-- `@instantdb/core@1.0.52` — https://github.com/instantdb/instant/tree/main/client/packages/core
-- `@instantdb/react@1.0.52` — https://github.com/instantdb/instant/tree/main/client/packages/react
-- `@instantdb/react-common@1.0.52` — https://github.com/instantdb/instant/tree/main/client/packages/react-common
-- `@instantdb/version@1.0.52` — https://github.com/instantdb/instant/tree/main/client/packages/version
-- `@neondatabase/auth@0.4.2-beta` — https://github.com/neondatabase/neon-js/tree/main/packages/auth#readme
-- `@neondatabase/auth-ui@0.2.1-beta` — https://github.com/neondatabase/neon-js/tree/main/packages/auth-ui#readme
 - `@opentelemetry/semantic-conventions@1.43.0` — https://github.com/open-telemetry/opentelemetry-js/tree/main/semantic-conventions
 - `@prisma/adapter-pg@7.10.0` — https://github.com/prisma/prisma#readme
 - `@prisma/client@7.10.0` — https://www.prisma.io
@@ -622,28 +484,31 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@prisma/query-plan-executor@7.2.0` — https://github.com/prisma/prisma#readme
 - `@prisma/streams-local@0.1.11` — https://github.com/prisma/streams/tree/main/docs
 - `@prisma/studio-core@0.33.0` — https://github.com/prisma/studio#readme
+- `@smithy/core@3.35.1` — https://github.com/smithy-lang/smithy-typescript/tree/main/packages/core
+- `@smithy/credential-provider-imds@4.5.2` — https://github.com/smithy-lang/smithy-typescript/tree/main/packages/credential-provider-imds
+- `@smithy/fetch-http-handler@5.8.0` — https://github.com/smithy-lang/smithy-typescript/tree/main/packages/fetch-http-handler
+- `@smithy/node-http-handler@4.12.1` — https://github.com/smithy-lang/smithy-typescript/tree/main/packages/node-http-handler
+- `@smithy/signature-v4@5.7.4` — https://github.com/smithy-lang/smithy-typescript/tree/main/packages/signature-v4
+- `@smithy/types@4.19.0` — https://github.com/smithy-lang/smithy-typescript/tree/main/packages/types
 - `@swc/helpers@0.5.23` — https://swc.rs
-- `@vercel/blob@2.8.0` — https://vercel.com/storage/blob
-- `@vercel/cli-config@0.2.3` — https://vercel.com/docs/projects/project-configuration/global-configuration
-- `@vercel/cli-exec@1.0.1` — https://vercel.com
-- `@vercel/oidc@3.8.4` — https://vercel.com
 - `@zxing/library@0.23.0` — https://zxing-js.github.io/library/
 - `baseline-browser-mapping@2.11.21` — https://github.com/web-platform-dx/baseline-browser-mapping#readme
 - `class-variance-authority@0.7.1` — https://github.com/joe-bell/cva#readme
-- `comlink@4.4.2` — https://github.com/GoogleChromeLabs/comlink#readme
 - `denque@2.1.0` — https://docs.page/invertase/denque
 - `detect-libc@2.1.2` — https://github.com/lovell/detect-libc#readme
 - `expect-type@1.4.0` — https://github.com/mmkal/expect-type#readme
-- `human-signals@2.1.0` — https://git.io/JeluP
 - `long@5.3.2` — https://github.com/dcodeIO/long.js#readme
 - `node-ical@0.27.1` — https://github.com/jens-maus/node-ical
 - `prisma@7.10.0` — https://www.prisma.io
-- `reflect-metadata@0.2.2` — http://rbuckton.github.io/reflect-metadata
 - `sharp@0.35.4` — https://sharp.pixelplumbing.com
 - `temporal-spec@1.0.0` — https://github.com/fullcalendar/temporal-polyfill#readme
 - `typescript@5.9.3` — https://www.typescriptlang.org/
-- `web-worker@1.5.0` — https://github.com/developit/web-worker
 - `xml-name-validator@5.0.0` — https://github.com/jsdom/xml-name-validator#readme
+
+### MIT-0
+
+- `@csstools/color-helpers@6.1.0` — https://github.com/csstools/postcss-plugins/tree/main/packages/color-helpers#readme
+- `@csstools/css-syntax-patches-for-csstree@1.1.7` — https://github.com/csstools/postcss-plugins/tree/main/packages/css-syntax-patches-for-csstree#readme
 
 ### ISC
 
@@ -671,7 +536,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `internmap@2.0.3` — https://github.com/mbostock/internmap/
 - `isexe@2.0.0` — https://github.com/isaacs/isexe#readme
 - `lru-cache@5.1.1` — https://github.com/isaacs/node-lru-cache#readme
-- `lucide-react@0.555.0, 1.40.0` — https://lucide.dev
+- `lucide-react@1.40.0` — https://lucide.dev
 - `pg-int8@1.0.1` — https://github.com/charmander/pg-int8#readme
 - `picocolors@1.1.1` — https://github.com/alexeyraspopov/picocolors#readme
 - `require-main-filename@2.0.0` — https://github.com/yargs/require-main-filename#readme
@@ -687,16 +552,6 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `yallist@3.1.1` — https://github.com/isaacs/yallist#readme
 - `yargs-parser@18.1.3` — https://github.com/yargs/yargs-parser#readme
 
-### AGPL-3.0-only
-
-- `@triplit/client@1.0.50` — https://triplit.dev
-
-### Unknown
-
-- `@triplit/db@1.1.10`
-- `@triplit/logger@0.0.3`
-- `@triplit/react@1.0.51`
-
 ### MIT and ISC
 
 - `@visx/vendor@4.0.0-alpha.0` — https://github.com/airbnb/visx#readme
@@ -707,10 +562,8 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 
 ### BSD-3-Clause
 
-- `asn1js@3.0.10` — https://github.com/PeculiarVentures/ASN1.js#readme
 - `deepmerge-ts@8.0.2` — https://github.com/RebeccaStevens/deepmerge-ts#readme
 - `fast-uri@3.1.7` — https://github.com/fastify/fast-uri
-- `hoist-non-react-statics@3.3.2` — https://github.com/mridgway/hoist-non-react-statics#readme
 - `istanbul-lib-coverage@3.2.2` — https://istanbul.js.org/
 - `istanbul-lib-report@3.0.1` — https://istanbul.js.org/
 - `istanbul-reports@3.2.0` — https://istanbul.js.org/
@@ -720,11 +573,8 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 
 ### BSD-2-Clause
 
-- `domelementtype@2.3.0` — https://github.com/fb55/domelementtype#readme
-- `domhandler@5.0.3` — https://github.com/fb55/domhandler#readme
-- `domutils@3.2.2` — https://github.com/fb55/domutils#readme
 - `dotenv@17.4.2` — https://github.com/motdotla/dotenv#readme
-- `entities@4.5.0, 8.0.0` — https://github.com/fb55/entities#readme
+- `entities@8.0.0` — https://github.com/fb55/entities#readme
 - `esprima@4.0.1` — http://esprima.org
 - `webidl-conversions@8.0.1` — https://github.com/jsdom/webidl-conversions#readme
 
@@ -755,8 +605,4 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 
 ### 0BSD
 
-- `tslib@1.14.1, 2.8.1` — https://www.typescriptlang.org/
-
-### AGPL-3.0-or-later
-
-- `ua-parser-js@2.0.10` — https://uaparser.dev
+- `tslib@2.8.1` — https://www.typescriptlang.org/

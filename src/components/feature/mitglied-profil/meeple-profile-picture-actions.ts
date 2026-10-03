@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { ProfilePictureVisibility } from "@prisma/client";
 import { requirePermission } from "@/lib/auth/permissions";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
@@ -22,11 +22,13 @@ async function assertMayEdit(meepleId: string) {
 export async function getMeepleProfilePictureUploadToken(
   meepleId: string,
   pathname: string,
+  contentType: string,
 ) {
   await assertMayEdit(meepleId);
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "meeple-profile-pictures"),
+    contentType,
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,

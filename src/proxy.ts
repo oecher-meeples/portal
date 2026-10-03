@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
 import { PATHNAME_HEADER } from "@/lib/auth/session";
+import { getBlobPublicOrigin } from "@/lib/utils/s3";
 
 /** Routes that require a session here; everything else stays public. */
 const AUTH_PROTECTED_PREFIX = "/admin";
@@ -14,16 +15,20 @@ const LOGIN_PATH = "/login";
  *
  * `connect-src 'self'` is enough: the auth client talks to our own
  * `/api/auth/*` route since the move to self-hosted better-auth (ADR 0015),
- * there is no external auth origin anymore.
+ * there is no external auth origin anymore. The one extra origin is the
+ * self-hosted blob store (MinIO): images are loaded from it and uploads are
+ * POSTed to it directly from the browser (see `use-blob-upload.ts`).
  */
 function buildCsp(nonce: string) {
+  const blobOrigin = getBlobPublicOrigin();
+  const blobSource = blobOrigin ? ` ${blobOrigin}` : "";
   return [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`,
-    `img-src 'self' data: blob: https://*.public.blob.vercel-storage.com`,
+    `img-src 'self' data: blob:${blobSource}`,
     `font-src 'self'`,
-    `connect-src 'self'`,
+    `connect-src 'self'${blobSource}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

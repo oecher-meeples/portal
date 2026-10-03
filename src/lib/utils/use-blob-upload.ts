@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { put } from "@vercel/blob/client";
+import type { BlobUploadToken } from "@/lib/utils/blob-upload-token";
 
 /**
- * Shared client-side upload orchestration for `@vercel/blob/client`. Token
- * issuance stays with the caller (`getToken`) so each feature keeps its own
- * permission check — only the upload mechanics (pathname, `put()`, state) are shared.
+ * Shared client-side upload orchestration against the S3-compatible blob
+ * store (MinIO). Token issuance stays with the caller (`getToken`) so each
+ * feature keeps its own permission check — only the upload mechanics
+ * (pathname, presigned POST, state) are shared.
+ *
+ * `getToken` receives the file's MIME type too: the server signs it into the
+ * POST policy (and checks it against the feature's allowlist), so the bucket
+ * rejects a file sent with a different type.
  */
 export function useBlobUpload(
   pathPrefix: string,
-  getToken: (pathname: string) => Promise<string>,
+  getToken: (pathname: string, contentType: string) => Promise<BlobUploadToken>,
 ) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,9 +27,9 @@ export function useBlobUpload(
       const urls: string[] = [];
       for (const file of files) {
         const pathname = `${pathPrefix}/${file.name}`;
-        const token = await getToken(pathname);
-        const blob = await put(pathname, file, { access: "public", token });
-        urls.push(blob.url);
+        const contentType = file.type || "application/octet-stream";
+        const token = await getToken(pathname, contentType);
+        urls.push(await postToBucket(token, file));
       }
       return urls;
     } catch (error) {
@@ -41,4 +46,20 @@ export function useBlobUpload(
   }
 
   return { uploadFiles, isUploading, error };
+}
+
+/** Browser → bucket directly (no proxy through the app server). The file
+ * must be the last form field, S3 ignores everything after it. */
+async function postToBucket(token: BlobUploadToken, file: File) {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(token.fields)) {
+    form.append(name, value);
+  }
+  form.append("file", file);
+
+  const response = await fetch(token.url, { method: "POST", body: form });
+  if (!response.ok) {
+    throw new Error(`Speicher antwortete mit HTTP ${response.status}`);
+  }
+  return token.publicUrl;
 }

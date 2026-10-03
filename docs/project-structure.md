@@ -70,8 +70,9 @@ src/lib/
 ├── newsletter/ Brevo-Mailer (`mailer.ts`), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
-└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook), `search-params.ts`,
-                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `blob-delete.ts` (Vercel-Blob-Löschung, mehrfach genutzt)
+└── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → MinIO per Presigned POST), `search-params.ts`,
+                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für MinIO, Public-URL ↔ Key, `putBlob()`),
+                `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt)
 ```
 
 Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.

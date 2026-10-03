@@ -1,7 +1,7 @@
 "use server";
 
-import { put } from "@vercel/blob";
 import { prisma } from "@/lib/utils/prisma";
+import { putBlob } from "@/lib/utils/s3";
 import { requireMeeple } from "@/lib/members/meeples";
 import {
   BggCollectionUnavailableError,
@@ -79,12 +79,11 @@ async function uploadBggImageToBlob(
         : "jpg";
     const bytes = await response.arrayBuffer();
 
-    const blob = await put(
+    return await putBlob(
       `market-listings/bgg-${bggId}.${extension}`,
       Buffer.from(bytes),
-      { access: "public", contentType, addRandomSuffix: true },
+      contentType,
     );
-    return blob.url;
   } catch {
     return null;
   }

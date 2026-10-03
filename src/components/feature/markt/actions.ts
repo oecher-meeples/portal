@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeplePermission } from "@/lib/members/meeples";
 import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
@@ -123,11 +123,15 @@ export async function deleteMarketListingImage(url: string) {
   return { success: true as const };
 }
 
-export async function getMarketListingUploadToken(pathname: string) {
+export async function getMarketListingUploadToken(
+  pathname: string,
+  contentType: string,
+) {
   await requireMeeplePermission("market:participate");
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "market-listings"),
+    contentType,
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,

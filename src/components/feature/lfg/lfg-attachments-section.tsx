@@ -42,8 +42,8 @@ export function LfgAttachmentsSection({
     uploadFiles,
     isUploading,
     error: uploadError,
-  } = useBlobUpload("lfg-attachments", (pathname) =>
-    getLfgAttachmentUploadToken(postId, pathname),
+  } = useBlobUpload("lfg-attachments", (pathname, contentType) =>
+    getLfgAttachmentUploadToken(postId, pathname, contentType),
   );
   const { run, pending, error } = useAction({
     onSuccess: () => {
