@@ -1,6 +1,6 @@
 # Self-hosting stack (see docs/deployment-docker.md and
 # .claude/plans/docker-self-hosted-migration.md). Further services (app,
-# cron sidecar, proxy) are added in later migration phases.
+# proxy) are added in later migration phases.
 services:
   postgres:
     image: postgres:16
@@ -73,6 +73,18 @@ services:
         mc admin user add local "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY"
         mc admin policy attach local readwrite --user "$$S3_ACCESS_KEY" || true
     restart: "no"
+
+  # Replaces Vercel Cron: busybox crond calls the existing bearer-protected
+  # /api/cron/* routes on the schedules from docker/cron/crontab (mirrors
+  # vercel.json). Expects an `app` service listening on app:3000 — that
+  # service arrives in Phase 8/9; add `depends_on: [app]` here then.
+  cron-sidecar:
+    build: ./docker/cron
+    restart: unless-stopped
+    environment:
+      # Same variable the app service reads — one secret, not a second one.
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
+      APP_URL: ${CRON_APP_URL:-http://app:3000}
 
 volumes:
   postgres-data:

@@ -178,3 +178,47 @@ Testmail an `SMTP_LIVE_TEST_TO`, liest `.env.local`). Zum lokalen Entwickeln
 eignet sich ein Mail-Catcher wie Mailpit
 (`docker run -p 1025:1025 -p 8025:8025 axllent/mailpit`, `SMTP_HOST=localhost`,
 `SMTP_PORT=1025`, Weboberfläche auf `http://localhost:8025`).
+
+## Cron (`cron-sidecar`-Service)
+
+Ersetzt Vercel Cron. Ein kleiner `alpine`-Container (`docker/cron/`) mit
+busybox-`crond` (bringt alpine selbst mit) und `curl` ruft die bestehenden,
+per Bearer-Token geschützten Routen der App auf — derselbe `GET`-Request mit
+`Authorization: Bearer $CRON_SECRET`, den Vercel Cron schickt. Kein
+Docker-Socket-Zugriff nötig.
+
+| Route                        | Zeitplan (UTC) |
+| ---------------------------- | -------------- |
+| `/api/cron/instagram-queue`  | `0 5 * * *`    |
+| `/api/cron/market-digest`    | `0 17 * * *`   |
+| `/api/cron/year-turn`        | `0 2 2 1 *`    |
+
+| Variable       | Zweck                                                                        |
+| -------------- | ---------------------------------------------------------------------------- |
+| `CRON_SECRET`  | Pflicht; **dieselbe** Variable, die auch die App liest                       |
+| `CRON_APP_URL` | Optional, Default `http://app:3000` (Service-Name + Port im Compose-Netz)    |
+
+Cron-Jobs erben die Container-Umgebung nicht. Das Entrypoint-Script schreibt
+deshalb beim Start den fertigen Header in `/run/cron/auth-header` (nur für
+`nobody` lesbar); `run-cron-job` übergibt ihn per `curl -H @datei` — das
+Secret steht so weder in der Crontab noch in der Prozessliste. `crond` läuft
+als root (muss es, um Jobs auszuführen), `curl` selbst als `nobody`. Fehlt
+`CRON_SECRET`, startet der Container gar nicht erst.
+
+**Prüfen:**
+
+```bash
+docker compose logs -f cron-sidecar   # Start-Zeile + pro Lauf: GET …, HTTP-Status, exit=…
+# Einen Job sofort auslösen, ohne auf den Zeitplan zu warten:
+docker compose exec cron-sidecar run-cron-job market-digest
+docker compose logs cron-sidecar | tail
+```
+
+`exit=0` heißt HTTP 2xx; `exit=22` heißt die Route hat mit ≥ 400 geantwortet
+(z. B. 401 bei falschem Secret), `exit=6/7` heißt die App war nicht erreichbar.
+
+**Zeitpläne ändern:** in `docker/cron/crontab` (danach
+`docker compose up -d --build cron-sidecar`). Solange die App parallel noch auf
+Vercel läuft, gleichzeitig in `vercel.json` — sonst laufen die beiden
+Deployments auseinander. `vercel.json` bleibt bis zur Abschaltung des
+Vercel-Deployments bewusst im Repo; erst danach kann es entfallen.
