@@ -133,3 +133,48 @@ angelegt per `prisma migrate deploy`).
   die Tabelle klein halten will, dünnt sie per SQL aus, z. B.
   `DELETE FROM page_views WHERE "createdAt" < now() - interval '1 year';`.
 - Alte Vercel-Analytics-Daten werden nicht übernommen.
+
+## E-Mail (SMTP, kein eigener Service)
+
+Alle Mails der App — Newsletter, Double-Opt-in, „Passwort vergessen"-Codes,
+Reset-Links, Mitglieder-Benachrichtigungen, Jahreswechsel-Cron,
+Flohmarkt-Verkäufer — laufen über `sendTransactionalEmail`
+(`src/lib/newsletter/mailer.ts`), einen provider-neutralen SMTP-Client auf
+Basis von `nodemailer`. **`docker-compose.yml` bringt bewusst keinen
+Mailserver-Container mit.**
+
+| Variable    | Zweck                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------- |
+| `SMTP_HOST` | SMTP-Server. **Leer = Versand deaktiviert** (siehe unten)                              |
+| `SMTP_PORT` | Optional, Default `587` (STARTTLS); `465` schaltet auf implizites TLS                  |
+| `SMTP_USER` | Optional; leer = ohne Authentifizierung (z. B. interner Relay)                         |
+| `SMTP_PASS` | Passwort/App-Token zu `SMTP_USER`                                                      |
+| `SMTP_FROM` | Optional, Default `"Oecher Meeples" <newsletter@oecher-meeples.org>`; muss vom Provider als Absender erlaubt sein |
+
+**Ohne `SMTP_HOST`** ist der Versand ein kontrollierter No-op: Die App startet
+und läuft normal, beim ersten Mailversuch erscheint einmalig die Warnung
+`[mailer] SMTP_HOST ist nicht gesetzt — E-Mail-Versand ist deaktiviert` im Log,
+danach pro verworfener Mail eine Info-Zeile mit dem Betreff (ohne Empfänger).
+Die Aufrufer behandeln die Mail dabei als erfolgreich verschickt — Newsletter-
+Jobs landen z. B. auf `SENT`, und „Passwort vergessen" sowie Einladungen von
+Systemkonten funktionieren nicht. Für den Produktivbetrieb SMTP also
+konfigurieren.
+
+**Empfehlung:** einen bestehenden Mail-Provider bzw. dessen SMTP-Relay nutzen
+(Hoster-Postfach der Vereinsdomain, Brevo/Mailjet/Postmark/Amazon SES per
+SMTP-Zugang …). SPF/DKIM für die Absender-Domain einrichten.
+
+> **Eigener Mailserver (z. B. [`docker-mailserver`](https://github.com/docker-mailserver/docker-mailserver)):**
+> möglich, aber bewusst nicht Teil des Defaults. Mails von einem selbst
+> betriebenen Server landen schnell im Spam oder werden abgelehnt, wenn die
+> **IP-Reputation** des Servers schlecht ist (typisch bei VPS-/Heim-IPs, fehlendem
+> Reverse-DNS/PTR, fehlendem SPF/DKIM/DMARC). Viele Hoster und Heimanschlüsse
+> **sperren ausgehenden Port 25**, ohne den ein eigener Server gar nicht an
+> fremde Mailserver zustellen kann. Wer das trotzdem will, betreibt den
+> Mailserver separat und trägt ihn hier nur als `SMTP_HOST` ein.
+
+Prüfen lässt sich die Konfiguration mit `pnpm run test:live` (verschickt eine
+Testmail an `SMTP_LIVE_TEST_TO`, liest `.env.local`). Zum lokalen Entwickeln
+eignet sich ein Mail-Catcher wie Mailpit
+(`docker run -p 1025:1025 -p 8025:8025 axllent/mailpit`, `SMTP_HOST=localhost`,
+`SMTP_PORT=1025`, Weboberfläche auf `http://localhost:8025`).

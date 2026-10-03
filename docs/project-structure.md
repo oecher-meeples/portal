@@ -69,7 +69,7 @@ src/lib/
 ├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`)
 ├── instagram/  Cross-Posting
-├── newsletter/ Brevo-Mailer (`mailer.ts`), Abonnenten beider Quellen — anonym mit Double-Opt-in
+├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, No-op ohne `SMTP_HOST`), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → MinIO per Presigned POST), `search-params.ts`,

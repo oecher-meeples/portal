@@ -82,6 +82,9 @@ importers:
       node-ical:
         specifier: ^0.27.1
         version: 0.27.1
+      nodemailer:
+        specifier: ^10.0.13
+        version: 10.0.13
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -131,6 +134,9 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      '@types/nodemailer':
+        specifier: ^8.0.2
+        version: 8.0.2
       '@types/qrcode':
         specifier: ^1.5.6
         version: 1.5.6
@@ -1672,6 +1678,9 @@ packages:
 
   '@types/node@26.4.1':
     resolution: {integrity: sha512-k97ENvZWtvA6yqz5/FS6a7duDgOPEeOQOc2iKS/nY6mX6qJUKtLnWzQS+Xj6tXweyj6ZcTAK2Qecetnvi9nCLA==}
+
+  '@types/nodemailer@8.0.2':
+    resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
 
   '@types/pg@8.23.1':
     resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
@@ -4098,6 +4107,10 @@ packages:
   node-releases@2.0.54:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
     engines: {node: '>=18'}
+
+  nodemailer@10.0.13:
+    resolution: {integrity: sha512-SzG86OlvcW/NNhUFC6uROMwRTL4n7MswfQqC/T8mhkmnY1YVa23zUEMYi4ijSeXSl9GLz9ZeTJDUatEDuY5FeQ==}
+    engines: {node: '>=20.0.0'}
 
   npm-run-path@4.0.1:
     resolution: {integrity: sha512-S48WzZW777zhNIrn7gxOlISNAqi9ZC/uQFnRdbeIHhZhCA6UqpkOT8T1G7BvfdgP4Er8gF4sUbaS0i7QvIfCWw==}
@@ -6853,6 +6866,10 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
+  '@types/nodemailer@8.0.2':
+    dependencies:
+      '@types/node': 26.4.1
+
   '@types/pg@8.23.1':
     dependencies:
       '@types/node': 26.4.1
@@ -9589,6 +9606,8 @@ snapshots:
       temporal-polyfill: 1.0.1
 
   node-releases@2.0.54: {}
+
+  nodemailer@10.0.13: {}
 
   npm-run-path@4.0.1:
     dependencies:
