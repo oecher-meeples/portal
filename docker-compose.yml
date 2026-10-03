@@ -42,7 +42,10 @@ services:
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
-      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-}
+      # An empty string here would beat the seed script's own "demo1234"
+      # fallback (`??` only catches null/undefined, not ""), leaving demo
+      # accounts with an empty password hash — so default matches the code.
+      SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-demo1234}
       # --- Blob storage (MinIO, see minio / minio-init) ---
       S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT must be set}
