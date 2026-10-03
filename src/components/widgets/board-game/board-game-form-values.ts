@@ -1,5 +1,6 @@
 import {
   BoardGameKind,
+  type BoardGameTrait,
   type LanguageDependence,
   type RuleBookLanguage,
 } from "@prisma/client";
@@ -48,6 +49,12 @@ export type BoardGameFormValues = {
   author: string;
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: string;
+  /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — Mehrfach-
+   * auswahl, Teil des BGG-Abgleichs (anders als `notes`). */
+  traits: BoardGameTrait[];
+  /** Freier Admin-Hinweis je Titel (#487-Konzept) — nie aus BGG befüllt, kein
+   * Teil des BGG-Abgleichs. */
+  notes: string;
 };
 
 export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
@@ -72,6 +79,8 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   publisher: "",
   author: "",
   yearPublished: "",
+  traits: [],
+  notes: "",
 };
 
 /** The subset of a BoardGame record needed to seed the edit form. */
@@ -97,6 +106,8 @@ export type BoardGameRecord = {
   publisher: string[];
   author: string[];
   yearPublished: number | null;
+  traits: BoardGameTrait[];
+  notes: string | null;
 };
 
 export function boardGameToFormValues(
@@ -124,6 +135,8 @@ export function boardGameToFormValues(
     publisher: formatCommaSeparatedList(game.publisher),
     author: formatCommaSeparatedList(game.author),
     yearPublished: game.yearPublished?.toString() ?? "",
+    traits: game.traits,
+    notes: game.notes ?? "",
   };
 }
 
@@ -153,6 +166,8 @@ export function boardGameFormToTitleInput(
     publisher: parseCommaSeparatedList(form.publisher),
     author: parseCommaSeparatedList(form.author),
     yearPublished: form.yearPublished ? Number(form.yearPublished) : undefined,
+    traits: form.traits,
+    notes: form.notes || undefined,
   };
 }
 

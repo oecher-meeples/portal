@@ -21,6 +21,7 @@ import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser"
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
 import { getPresentGameCopyIds } from "@/lib/events/guest-area";
+import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
 
 export default async function LudothekPage({
   searchParams,
@@ -59,6 +60,7 @@ export default async function LudothekPage({
       ? await buildPrivateLudothekGames()
       : [];
   const allGames = [...clubGames, ...privateGames];
+  const traitTexts = await loadBoardGameTraitTextsByTrait();
 
   // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
   // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
@@ -132,6 +134,7 @@ export default async function LudothekPage({
         meepleOptions={meepleOptions}
         showExplainerFilter={showExplainerFilter}
         showPresentFilter={showPresentFilter}
+        traitTexts={traitTexts}
       />
     </PageContainer>
   );

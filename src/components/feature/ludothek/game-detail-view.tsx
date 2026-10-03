@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
-import type { ExplainerExperienceLevel } from "@prisma/client";
+import type { BoardGameTrait, ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/page-container";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
@@ -9,6 +9,8 @@ import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { YoutubeIcon } from "@/components/ui/youtube-icon";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
@@ -57,6 +59,7 @@ export function GameDetailView({
   openLfgPosts,
   createLfgTrigger,
   marketListingSection,
+  traitTexts,
 }: {
   game: PublicLudothekGame;
   /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
@@ -96,6 +99,9 @@ export function GameDetailView({
    * "Verkaufen"), von der Seite komponiert — analog `createLfgTrigger`, hält
    * diesen Titel von `components/feature/markt` isoliert (#278). */
   marketListingSection?: ReactNode;
+  /** Admin-editierbare Anzeige-Texte je gesetztem Trait (#487-Konzept) — für
+   * alle (auch Gäste) geladen, analog `game.traits` selbst. */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
   return (
     // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
@@ -198,6 +204,17 @@ export function GameDetailView({
             </span>
           ))}
         </div>
+
+        <BoardGameTraitsDisplay
+          traits={game.traits}
+          textsByTrait={traitTexts ?? {}}
+        />
+
+        {game.notes && (
+          <div className="bg-card rounded-lg border p-4">
+            <p className="text-sm whitespace-pre-line">{game.notes}</p>
+          </div>
+        )}
 
         {availability && (
           <p className="text-muted-foreground text-sm">

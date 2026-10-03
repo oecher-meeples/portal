@@ -1,10 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Layers } from "lucide-react";
+import type { BoardGameTrait } from "@prisma/client";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
@@ -17,6 +20,7 @@ import { cn } from "@/lib/utils/cn";
 export function GameCard({
   game,
   actions,
+  traitTexts,
 }: {
   game: (PublicLudothekGame | (LudothekGame & { zustand: GameZustand })) & {
     /** Set once several copies of this title are folded into one card (#121/#122). */
@@ -26,6 +30,9 @@ export function GameCard({
   };
   /** Caller-supplied overlay, e.g. an edit button — GameCard just places it. */
   actions?: ReactNode;
+  /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept) — ein einmal pro
+   * Seite geladenes Objekt, hier nur durchgereicht. */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
   const zustand = "zustand" in game ? game.zustand : undefined;
   const isExpansion = game.kind === "BOARDGAME_EXPANSION";
@@ -84,6 +91,10 @@ export function GameCard({
           )}
           <LanguageIndependentPill
             languageDependence={game.languageDependence}
+          />
+          <BoardGameTraitsDisplay
+            traits={game.traits}
+            textsByTrait={traitTexts ?? {}}
           />
         </div>
       </div>

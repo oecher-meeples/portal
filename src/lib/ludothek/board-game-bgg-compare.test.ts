@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { BoardGameKind, LanguageDependence } from "@prisma/client";
+import {
+  BoardGameKind,
+  BoardGameTrait,
+  LanguageDependence,
+} from "@prisma/client";
 import { compareBoardGameWithBgg } from "./board-game-bgg-compare";
 import type { BggGameData } from "@/lib/bgg/client";
 
@@ -16,6 +20,7 @@ const EMPTY_FORM = {
   mechanics: "",
   categories: "",
   languageDependence: null,
+  traits: [],
 };
 
 const BGG_DATA: BggGameData = {
@@ -29,6 +34,7 @@ const BGG_DATA: BggGameData = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
   categories: [],
+  traits: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,
   author: [],
@@ -70,7 +76,29 @@ describe("compareBoardGameWithBgg", () => {
       mechanics: true,
       categories: true,
       languageDependence: true,
+      traits: true,
     });
+  });
+
+  it("treats traits as matching regardless of order (#487)", () => {
+    const result = compareBoardGameWithBgg(
+      {
+        ...MATCHING_FORM,
+        traits: [BoardGameTrait.CAMPAIGN, BoardGameTrait.LEGACY],
+      },
+      { ...BGG_DATA, traits: [BoardGameTrait.LEGACY, BoardGameTrait.CAMPAIGN] },
+    );
+
+    expect(result.traits).toBe(true);
+  });
+
+  it("marks traits as a mismatch when they differ", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, traits: [] },
+      { ...BGG_DATA, traits: [BoardGameTrait.LEGACY] },
+    );
+
+    expect(result.traits).toBe(false);
   });
 
   it("marks averageRating as a mismatch when BGG's rating changed (#214)", () => {

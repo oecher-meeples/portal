@@ -26,6 +26,12 @@ export default async function AdminSettingsPage() {
       href: "/admin/einheiten",
       count: storageUnitCount,
     },
+    {
+      title: "Spiel-Traits",
+      description:
+        "Anzeige-Texte & Dringlichkeit je BGG-Trait (Legacy, Kampagne, …) pflegen.",
+      href: "/admin/spiel-traits",
+    },
   ];
 
   return (

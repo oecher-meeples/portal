@@ -73,6 +73,8 @@ const GAME_WITHOUT_BGG_ID = {
   mechanics: [],
   categories: [],
   explainerVideoUrl: null,
+  traits: [],
+  notes: null,
 };
 
 const GAME_WITH_BGG_ID = { ...GAME_WITHOUT_BGG_ID, bggId: 342942 };
@@ -88,6 +90,7 @@ const BGG_DATA = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel"],
   categories: [],
+  traits: [],
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],

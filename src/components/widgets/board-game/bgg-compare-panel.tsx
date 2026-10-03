@@ -9,6 +9,7 @@ import {
   formatCommaSeparatedList,
 } from "@/lib/ludothek/bgg-id";
 import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
+import { BOARD_GAME_TRAIT_FALLBACK_LABELS } from "@/lib/ludothek/board-game-traits";
 import type { BggGameData } from "@/lib/bgg/client";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
@@ -148,6 +149,19 @@ export function BggComparePanel({
         ? LANGUAGE_DEPENDENCE_LABELS[bggData.languageDependence]
         : "—",
       apply: () => onChange({ languageDependence: bggData.languageDependence }),
+    },
+    {
+      field: "traits",
+      label: "Traits",
+      oldValue:
+        form.traits
+          .map((trait) => BOARD_GAME_TRAIT_FALLBACK_LABELS[trait])
+          .join(", ") || "—",
+      newValue:
+        bggData.traits
+          .map((trait) => BOARD_GAME_TRAIT_FALLBACK_LABELS[trait])
+          .join(", ") || "—",
+      apply: () => onChange({ traits: bggData.traits }),
     },
   ];
 

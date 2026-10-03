@@ -194,6 +194,7 @@ export function CreateBoardGameDialog({
         mechanics: result.data.mechanics.join(", "),
         categories: result.data.categories.join(", "),
         languageDependence: result.data.languageDependence,
+        traits: result.data.traits,
         author: result.data.author.join(", "),
         yearPublished: result.data.yearPublished?.toString() ?? "",
         // Nur übernehmen, wenn über alle (ggf. deutschen) Versionen

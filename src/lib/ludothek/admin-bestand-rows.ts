@@ -1,5 +1,6 @@
 import type {
   BoardGameKind,
+  BoardGameTrait,
   LanguageDependence,
   RuleBookLanguage,
 } from "@prisma/client";
@@ -87,6 +88,10 @@ export type AdminBoardGameRow = {
   /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
    * selbst (#187). */
   alternateNames: string[];
+  /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept). */
+  traits: BoardGameTrait[];
+  /** Freier Admin-Hinweis je Titel (#487-Konzept). */
+  notes: string | null;
 };
 
 /**
@@ -262,6 +267,8 @@ export async function buildAdminBoardGameRows({
         yearPublished: boardGame.yearPublished,
         ruleBookLanguages: copy.ruleBookLanguages,
         alternateNames: boardGame.alternateNames.map((a) => a.name),
+        traits: boardGame.traits,
+        notes: boardGame.notes,
         responsibleName,
         unitChain,
         responsibleContactMeeple: contactMeepleId

@@ -53,6 +53,22 @@ enum BoardGameKind {
   BOARDGAME_EXPANSION
 }
 
+/// BGGs Mechanism/Misc/Players/Components-Family-Signale mit Verleih-
+/// Auswirkung (#487-Konzept) — Whitelist in `lib/bgg/client.ts`.
+enum BoardGameTrait {
+  LEGACY
+  CAMPAIGN
+  LIMITED_REPLAYABILITY
+  SOLITAIRE_SUPPORTED
+  DIGITAL_HYBRID
+}
+
+enum BoardGameTraitTone {
+  INFO
+  WARNING
+  DANGER
+}
+
 /// Regal-Kategorien für die feste Einteilung des Bestands (#276) — vom Admin
 /// manuell pro `StorageUnit` vergeben. Die Zuordnung Spiel→Kategorie selbst
 /// ist keine gespeicherte Relation, sondern eine reine Ableitungsfunktion
@@ -805,6 +821,13 @@ model BoardGame {
   /// Erstveröffentlichungsjahr — das älteste Jahr über alle BGG-Versionen,
   /// unabhängig von der für `publisher` gewählten Version (#205).
   yearPublished      Int?
+  /// BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — beim BGG-
+  /// Import über eine Family-ID-Whitelist automatisch vorbefüllt, vom Admin
+  /// frei änderbar (gleiche Philosophie wie `languageDependence`).
+  traits             BoardGameTrait[]
+  /// Freier Admin-Hinweis je Titel (z. B. "App zwingend nötig") — nicht aus
+  /// BGG automatisch befüllt, Titel-Ebene (nicht `GameCopy`).
+  notes              String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -821,6 +844,21 @@ model BoardGame {
 
   @@index([ean])
   @@map("board_games")
+}
+
+/// Pro-Trait editierbare Anzeige-Texte, von games:manage im Admin-Bereich
+/// pflegbar (#487-Konzept) — Gegenstück zu `TRAIT_RENDER_CONFIG`
+/// (Darstellungsform bleibt Code, nur Wortlaut/Dringlichkeit ist hier).
+model BoardGameTraitText {
+  trait          BoardGameTrait     @id
+  label          String?
+  tooltip        String?
+  tone           BoardGameTraitTone @default(INFO)
+  loanMessage    String?
+  detailsMessage String?
+  updatedAt      DateTime           @updatedAt
+
+  @@map("board_game_trait_texts")
 }
 
 /// A second name for a title — populated ungefiltert aus BGG `name type="alternate"`

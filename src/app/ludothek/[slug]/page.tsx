@@ -20,6 +20,7 @@ import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getGuestCopyAvailability } from "@/lib/events/guest-area";
+import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
 import {
   GameDetailView,
   type HoldingHistoryEntry,
@@ -75,6 +76,8 @@ export default async function GameDetailPage({
   if (!game) notFound();
   const copies = games.filter((g) => g.boardGameId === game.boardGameId);
 
+  const traitTexts = await loadBoardGameTraitTextsByTrait();
+
   if (!internal) {
     const currentEvent = await findCurrentEvent();
     const availability = await getGuestCopyAvailability(
@@ -86,6 +89,7 @@ export default async function GameDetailPage({
         game={toPublicGame(game)}
         bggId={game.bggId}
         availability={availability}
+        traitTexts={traitTexts}
       />
     );
   }
@@ -246,6 +250,8 @@ export default async function GameDetailPage({
         publisher: game.publisher,
         author: game.author,
         yearPublished: game.yearPublished,
+        traits: game.traits,
+        notes: game.notes,
       }
     : undefined;
 
@@ -308,6 +314,7 @@ export default async function GameDetailPage({
       openLfgPosts={openLfgPosts}
       createLfgTrigger={createLfgTrigger}
       marketListingSection={marketListingSection}
+      traitTexts={traitTexts}
     />
   );
 }

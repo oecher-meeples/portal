@@ -30,6 +30,7 @@ import {
   seedDemoAnonymisedMeeple,
 } from "./seed-departed";
 import { seedDemoLoanHistory } from "./seed-loans";
+import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
 import { seedDemoLfgPosts } from "./seed-lfg";
 import { seedDemoMarketListings } from "./seed-marketplace";
 import {
@@ -386,6 +387,7 @@ async function main() {
   const adminUserId = await upsertNeonAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
+  await seedBoardGameTraitTexts();
   await assignRole(adminUserId, "sysadmin");
 
   const adminMeeple = await ensureMeeple(adminUserId, ADMIN_ACCOUNT.name);

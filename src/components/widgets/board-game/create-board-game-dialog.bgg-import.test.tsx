@@ -85,6 +85,7 @@ const BASE_PREVIEW_DATA = {
   description: null as string | null,
   mechanics: [] as string[],
   categories: [] as string[],
+  traits: [] as string[],
   explainerVideoUrl: null as string | null,
   germanExplainerVideos: [] as {
     title: string;

@@ -239,6 +239,7 @@ describe("CreateBoardGameDialog — Wizard-Navigation", () => {
         imageUrl: null,
         description: null,
         mechanics: [],
+        traits: [],
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],

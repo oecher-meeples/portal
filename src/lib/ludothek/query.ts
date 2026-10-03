@@ -128,6 +128,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       publisher: boardGame.publisher,
       author: boardGame.author,
       yearPublished: boardGame.yearPublished,
+      traits: boardGame.traits,
+      notes: boardGame.notes,
       baseGames: boardGame.expansionCollections.map((c) => c.baseGame),
       expansions: boardGame.baseGameCollections.map((c) => c.expansion),
       explainerCount: explainerCounts.get(boardGame.id) ?? 0,

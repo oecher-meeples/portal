@@ -1,5 +1,6 @@
 import {
   BoardGameKind,
+  type BoardGameTrait,
   type LanguageDependence,
   type Prisma,
   type PrismaClient,
@@ -50,6 +51,11 @@ export type BoardGameTitleInput = {
   author?: string[];
   /** Erstveröffentlichungsjahr — ältestes Jahr über alle BGG-Versionen (#205). */
   yearPublished?: number | null;
+  /** BGGs Family-Signale mit Verleih-Auswirkung, als Vorschlag beim BGG-
+   * Import übernommen, vom Admin frei änderbar (#487-Konzept). */
+  traits?: BoardGameTrait[];
+  /** Freier Admin-Hinweis je Titel — nie aus BGG befüllt (#487-Konzept). */
+  notes?: string | null;
 };
 
 export function toBoardGameTitleData(input: BoardGameTitleInput) {
@@ -71,6 +77,8 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
     publisher: input.publisher ?? [],
     author: input.author ?? [],
     yearPublished: input.yearPublished ?? null,
+    traits: input.traits ?? [],
+    notes: input.notes || null,
     ...(input.kind ? { kind: input.kind } : {}),
   };
 }

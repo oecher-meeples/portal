@@ -20,6 +20,7 @@ const BASE_PREVIEW: BggGameData = {
   description: null,
   mechanics: [],
   categories: [],
+  traits: [],
   kind: "BOARDGAME" as never,
   languageDependence: null,
   author: [],

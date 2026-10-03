@@ -112,6 +112,7 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         description: null,
         mechanics: [],
         categories: [],
+        traits: [],
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
@@ -240,6 +241,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       publisher: [],
       author: [],
       yearPublished: null,
+      traits: [],
+      notes: null,
     });
     updateBoardGameMock.mockResolvedValue({ success: true, hint: undefined });
     createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });
