@@ -109,3 +109,27 @@ umschreiben.
 > (nur noch Quellcode). `docker-compose.yml` nutzt vorerst `:latest` — vor dem
 > Produktivbetrieb einen getesteten Tag pinnen oder einen Fork/Alternative
 > (z. B. Garage, SeaweedFS) prüfen; die App braucht nur die S3-API.
+
+## Analytics (In-App, kein eigener Service)
+
+Vercel Web Analytics (`@vercel/analytics`) ist durch ein eigenes, schlankes
+Seitenaufruf-Tracking ersetzt — kein zusätzlicher Container, keine Env-Vars,
+die Daten liegen in der bestehenden Postgres-Datenbank (Tabelle `page_views`,
+angelegt per `prisma migrate deploy`).
+
+- Der Browser meldet jeden Seitenaufruf per `navigator.sendBeacon` an
+  `POST /api/analytics/collect` (`components/layout/page-view-beacon.tsx`).
+- Gespeichert werden nur Pfad (ohne Query-String), Host einer externen
+  Herkunftsseite sowie eine grobe Browser-/Geräteklasse (z. B. „Chrome" /
+  „Mobil"). **Keine IP-Adresse, kein roher User-Agent, keine Cookies**, keine
+  Besucher-Kennung. Bots sowie Besucher mit „Do Not Track"/GPC werden nicht
+  gezählt.
+- Auswertung unter **`/admin/analytics`** (Navigation „Seitenaufrufe"), nur
+  mit der Berechtigung `admin:access`.
+- Hinter einem Reverse Proxy muss der `Host`- bzw. `X-Forwarded-Host`-Header
+  durchgereicht werden, sonst wird eigene Navigation fälschlich als externe
+  Herkunft gezählt.
+- Keine automatische Löschfrist: die Zeilen sind nicht personenbezogen. Wer
+  die Tabelle klein halten will, dünnt sie per SQL aus, z. B.
+  `DELETE FROM page_views WHERE "createdAt" < now() - interval '1 year';`.
+- Alte Vercel-Analytics-Daten werden nicht übernommen.

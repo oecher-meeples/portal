@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { PageViewBeacon } from "@/components/layout/page-view-beacon";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { AppShell } from "@/components/layout/app-shell";
 import { BackgroundPattern } from "@/components/layout/background-pattern";
@@ -52,7 +52,7 @@ export default async function RootLayout({
         >
           <AppShell>{children}</AppShell>
         </ThemeProvider>
-        <Analytics />
+        <PageViewBeacon />
       </body>
     </html>
   );

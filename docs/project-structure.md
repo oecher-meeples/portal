@@ -34,6 +34,8 @@ Aktueller Stand: **0 Verstöße** repo-weit.
 
 ```text
 src/lib/
+├── analytics/  Selbstgehostetes Seitenaufruf-Tracking (`PageView`, keine IP/PII): Beacon-Prüfung + User-Agent-Klassifizierung
+│               (`collect.ts`, Schreibseite der Route `/api/analytics/collect`), Aggregationen fürs Admin-Dashboard (`queries.ts`)
 ├── auth/       better-auth-Instanz + Config (self-hosted, ADR 0015), Session, Tier-Ermittlung, Auth-Client
 ├── bgg/        BoardGameGeek-Integration
 ├── bringbuy/   Flohmarkt-Regeln + Server Actions: Statuswechsel/Warenkorb (`actions.ts`), Token-Anmeldung externer
@@ -94,6 +96,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
+| `bar-row.tsx` | `BarRow` — beschriftete Balkenzeile (Label, Wert, relativer Balken) ohne Chart-Library; von Statistiken und Admin-Seitenaufrufen geteilt |
 | `page-heading`, `stat-tile`, `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
 | `page-container.tsx` | `PageContainer` — Seiten-Breitendeckel (`variant: "default" \| "wide"`); jede `*-view.tsx` legt ihre eigene Breite fest, statt dass `AppShell` global `max-w-6xl` erzwingt (#398) |
 

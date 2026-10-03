@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-Automatisch erzeugt aus `pnpm licenses list --prod` (545 Production-Pakete). Nicht von Hand bearbeiten — mit `pnpm run licenses:generate` neu erzeugen, wenn sich die Dependencies ändern.
+Automatisch erzeugt aus `pnpm licenses list --prod` (544 Production-Pakete). Nicht von Hand bearbeiten — mit `pnpm run licenses:generate` neu erzeugen, wenn sich die Dependencies ändern.
 
 ## Prüfpflichtige Lizenzen
 
@@ -121,7 +121,6 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@types/react@19.2.18` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react
 - `@types/react-dom@19.2.7` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom
 - `@types/unist@2.0.11, 3.0.3` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/unist
-- `@vercel/analytics@2.0.1` — https://github.com/vercel/analytics#readme
 - `@visx/curve@4.0.1-alpha.0` — https://github.com/airbnb/visx#readme
 - `@visx/event@4.0.1-alpha.0` — https://github.com/airbnb/visx#readme
 - `@visx/grid@4.0.1-alpha.0` — https://github.com/airbnb/visx#readme

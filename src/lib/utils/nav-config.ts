@@ -22,6 +22,7 @@ import {
   HandHeart,
   PackageOpen,
   Bell,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -338,6 +339,13 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Bell,
         section: "Administration",
         permission: "notifications:manage",
+      },
+      {
+        label: "Seitenaufrufe",
+        href: "/admin/analytics",
+        icon: Activity,
+        section: "Administration",
+        permission: "admin:access",
       },
     ],
   },
