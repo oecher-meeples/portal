@@ -39,7 +39,7 @@ export function AnonymiseMeepleDialog({
       onReset={() => setConfirmText("")}
     >
       <ul className="text-muted-foreground list-disc pl-5 text-sm">
-        <li>Login-Konto und Sitzungen (Neon Auth)</li>
+        <li>Login-Konto und Sitzungen</li>
         <li>Anzeigename, E-Mail, BGG-/BGA-Username</li>
         <li>Kontoinhaber, IBAN</li>
       </ul>

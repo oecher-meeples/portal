@@ -14,7 +14,7 @@ Die Fachsprache (Meeple, Aufenthalt, Aufbewahrungseinheit, Ausleihe, Weitergabe,
 
 ## 1. Benutzer und Berechtigungen
 
-**Benutzerkonten liegen nicht in diesem Schema.** Authentifizierung läuft über Neon Auth, die Konten liegen im separaten DB-Schema `neon_auth."user"`. Prisma kann darauf keinen Fremdschlüssel setzen — die Verknüpfung ist überall ein reines String-Feld (`neonAuthUserId`). Rollen und Rechte liegen dagegen in diesem Schema, damit sie ohne Abhängigkeit vom Auth-Anbieter erweiterbar sind.
+**Benutzerkonten** liegen in den better-auth-Tabellen `auth_users`/`auth_accounts`/`auth_sessions`/`auth_verifications` (Prisma-Modelle `AuthUser` …, self-hosted seit [ADR 0015](adr/0015-self-hosted-better-auth-statt-neon-auth.md); vorher Neon Auths Schema `neon_auth`). Fachtabellen verweisen bewusst **ohne** Fremdschlüssel darauf — die Verknüpfung ist überall ein reines String-Feld (`neonAuthUserId`, Name historisch), damit Fachdaten nicht an das Datenmodell der Auth-Library gekoppelt sind. Rollen und Rechte liegen in eigenen Tabellen, damit sie ohne Abhängigkeit vom Auth-Anbieter erweiterbar sind.
 
 Berechtigungen sind **nicht** als Rollen-Rangordnung modelliert, sondern als Permissions, die Rollen zugeordnet werden. Eine Person kann mehrere Rollen haben; geprüft wird immer die Permission, nie die Rolle.
 
@@ -38,7 +38,7 @@ erDiagram
     }
 
     UserRole {
-        String neonAuthUserId PK "kein FK — Neon-Auth-Schema"
+        String neonAuthUserId PK "kein FK — AuthUser.id"
         String roleId PK "FK"
     }
 

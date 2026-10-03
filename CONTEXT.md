@@ -21,7 +21,7 @@ _Avoid_: Meeple als Synonym (das ist der Portal-Account), Member im Fließtext (
 _Avoid_: Als eigene DB-Entität oder Rolle missverstehen
 
 **Systemkonto**:
-Ein `Meeple` ohne `Vereinsmitglied`-Referenz, aber mit Login — für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` in einem Schritt: Neon-Auth-User per `auth.admin.createUser()`, `Meeple` mit vorgegebenem Displaynamen, danach ein Passwort-Reset-Link an die angegebene E-Mail — kein Invite-Mechanismus (der ließe für die kurze Zeit bis zur Einlösung einen Zwischenzustand entstehen, der von einem Anonymen Konto nicht unterscheidbar wäre).
+Ein `Meeple` ohne `Vereinsmitglied`-Referenz, aber mit Login — für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` in einem Schritt: Login per `createLoginAccount()` (self-hosted better-auth, ADR 0015), `Meeple` mit vorgegebenem Displaynamen, danach ein Passwort-Reset-Link an die angegebene E-Mail — kein Invite-Mechanismus (der ließe für die kurze Zeit bis zur Einlösung einen Zwischenzustand entstehen, der von einem Anonymen Konto nicht unterscheidbar wäre).
 _Avoid_: Verwechslung mit Anonymem Konto (das hat kein Login mehr), Systemkonto per Einladung anlegen
 
 **Anonymes Konto**:
@@ -55,7 +55,7 @@ IBAN wird nie direkt vom Meeple überschrieben — nur beantragt. Ein neuer Antr
 _Avoid_: Direktes Überschreiben der IBAN durchs Profilformular, Ablehnen ohne Benachrichtigung des Meeples, IBAN separat von der Vereinsmitglied-Löschung behandeln
 
 **E-Mail-Änderung** (neu, 3 unabhängige Adressen):
-Login-E-Mail (Neon Auth) und Profil-Kontakt-E-Mail (`Meeple.email`) ändert das Meeple direkt selbst, wirksam nach Bestätigungslink an die neue Adresse. Die `Vereinsmitglied.email` läuft dagegen wie die IBAN als Änderungsantrag (inkl. Ablehnen mit Mail) — Bestätigungslink verifiziert nur die Erreichbarkeit, ersetzt aber nicht die Freigabe durch den Vorstand.
+Login-E-Mail (`AuthUser`) und Profil-Kontakt-E-Mail (`Meeple.email`) ändert das Meeple direkt selbst, wirksam nach Bestätigungslink an die neue Adresse. Die `Vereinsmitglied.email` läuft dagegen wie die IBAN als Änderungsantrag (inkl. Ablehnen mit Mail) — Bestätigungslink verifiziert nur die Erreichbarkeit, ersetzt aber nicht die Freigabe durch den Vorstand.
 _Avoid_: Vereinsmitglied-E-Mail ohne Vorstandsfreigabe direkt ändern lassen, alle drei E-Mail-Adressen für dieselbe halten
 
 **Kassenwart**:

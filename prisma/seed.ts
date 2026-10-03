@@ -34,7 +34,7 @@ import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
 import { seedDemoLfgPosts } from "./seed-lfg";
 import { seedDemoMarketListings } from "./seed-marketplace";
 import {
-  upsertNeonAuthUser,
+  upsertAuthUser,
   ensureMeeple,
   ensureDemoMember,
   nextMemberNumber,
@@ -267,7 +267,7 @@ async function ensureDemoAccountWithMember(
   account: (typeof DEMO_ROLE_ACCOUNTS)[number] | typeof ADMIN_ACCOUNT,
   role: string,
 ) {
-  const userId = await upsertNeonAuthUser(account);
+  const userId = await upsertAuthUser(account);
   await assignRole(userId, role);
   const meeple = await ensureMeeple(userId, account.name);
   await prisma.meeple.update({
@@ -384,7 +384,7 @@ async function seedDemoLegalDocuments() {
 }
 
 async function main() {
-  const adminUserId = await upsertNeonAuthUser(ADMIN_ACCOUNT);
+  const adminUserId = await upsertAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
   await seedBoardGameTraitTexts();

@@ -5,18 +5,14 @@ import {
   DEMO_ANONYMISED_MEEPLE,
 } from "./seed-data/demo-departed";
 import { randomDemoContactFields } from "./seed-data/demo-contacts";
-import {
-  upsertNeonAuthUser,
-  ensureMeeple,
-  ensureDemoMember,
-} from "./seed-shared";
+import { upsertAuthUser, ensureMeeple, ensureDemoMember } from "./seed-shared";
 import { assignRole } from "./seed-roles";
 
 /** Login, Meeple und `Member` mit `resignedAt`/`membershipEndsAt` in der
  * Vergangenheit — Status "ausgetreten", aber noch nicht anonymisiert (siehe
  * `seed-data/demo-departed.ts`). */
 export async function seedDemoResignedMember() {
-  const userId = await upsertNeonAuthUser(DEMO_RESIGNED_MEMBER);
+  const userId = await upsertAuthUser(DEMO_RESIGNED_MEMBER);
   await assignRole(userId, "Meeple");
   const meeple = await ensureMeeple(userId, DEMO_RESIGNED_MEMBER.name);
   await prisma.meeple.update({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth/server";
 import {
   checkFixedCooldown,
@@ -8,7 +9,7 @@ import {
 } from "@/lib/utils/rate-limit";
 import { getRequestIp } from "@/lib/utils/request-ip";
 
-const { GET, POST: authPost } = auth.handler();
+const { GET, POST: authPost } = toNextJsHandler(auth);
 export { GET };
 
 /** Reiner Spam-/Lastschutz, keine Brute-Force-Grenze für sich genommen (#326,
@@ -49,17 +50,14 @@ async function extractEmail(request: NextRequest): Promise<string | null> {
  * `authClient.signIn.email()` spricht, das auf diese Route läuft, ohne einen
  * eigenen Server-Action-Zwischenschritt.
  */
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
+export async function POST(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.endsWith("/forget-password/email-otp")) {
-    return handleForgotPasswordRequest(request, context);
+  if (pathname.endsWith("/email-otp/request-password-reset")) {
+    return handleForgotPasswordRequest(request);
   }
   if (!pathname.endsWith("/sign-in/email")) {
-    return authPost(request, context);
+    return authPost(request);
   }
 
   const ip = await getRequestIp();
@@ -81,7 +79,7 @@ export async function POST(
     }
   }
 
-  const response = await authPost(request, context);
+  const response = await authPost(request);
 
   if (emailKey) {
     if (response.status === 200) {
@@ -94,19 +92,17 @@ export async function POST(
   return response;
 }
 
-async function handleForgotPasswordRequest(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
+async function handleForgotPasswordRequest(request: NextRequest) {
   const ip = await getRequestIp();
   const cooldown = await checkFixedCooldown(
     `forgot-password:ip:${ip ?? "unknown"}`,
     FORGOT_PASSWORD_IP_COOLDOWN_SECONDS,
   );
   if (!cooldown.allowed) {
-    // Gleiche Antwort wie ein echter Erfolg — Neon Auth meldet hier ohnehin
-    // immer `{success:true}`, unabhängig davon, ob das Konto existiert.
+    // Gleiche Antwort wie ein echter Erfolg — better-auths email-OTP-Plugin
+    // meldet hier ohnehin immer `{success:true}`, unabhängig davon, ob das
+    // Konto existiert.
     return NextResponse.json({ success: true }, { status: 200 });
   }
-  return authPost(request, context);
+  return authPost(request);
 }

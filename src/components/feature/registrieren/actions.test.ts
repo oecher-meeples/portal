@@ -10,7 +10,7 @@ vi.mock("@/lib/members/invites", () => ({
 
 const signUpEmail = vi.fn();
 vi.mock("@/lib/auth/server", () => ({
-  auth: { signUp: { email: (...args: unknown[]) => signUpEmail(...args) } },
+  createLoginAccount: (...args: unknown[]) => signUpEmail(...args),
 }));
 
 const getRequestIpMock = vi.fn();
@@ -59,7 +59,7 @@ function mockHappyPath() {
   validateInviteToken.mockResolvedValue({ valid: true });
   prismaMock.invite.findUniqueOrThrow.mockResolvedValue(BOUND_INVITE);
   prismaMock.role.findUniqueOrThrow.mockResolvedValue(ROLE);
-  signUpEmail.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  signUpEmail.mockResolvedValue({ userId: "user-1" });
   prismaMock.member.findUnique.mockResolvedValue(MEMBER as never);
   prismaMock.meeple.upsert.mockResolvedValue({ id: "meeple-1" } as never);
 }

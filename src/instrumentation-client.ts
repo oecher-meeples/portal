@@ -1,7 +1,8 @@
 // crypto.randomUUID() is only defined in secure contexts (https, or the
 // literal hostname "localhost"). Accessing the dev server via a LAN IP or
 // any other non-"localhost" host over http therefore leaves it undefined,
-// which crashes "@neondatabase/auth" at import time. Polyfill it from
+// which crashed the former "@neondatabase/auth" client at import time and may
+// still trip auth/UI libraries that assume it exists. Polyfill it from
 // crypto.getRandomValues(), which is available in insecure contexts too.
 if (typeof crypto !== "undefined" && typeof crypto.randomUUID !== "function") {
   crypto.randomUUID = (() => {

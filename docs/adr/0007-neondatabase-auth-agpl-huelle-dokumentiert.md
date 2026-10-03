@@ -1,8 +1,11 @@
 ---
-status: accepted
+status: superseded
+superseded-by: 0015-self-hosted-better-auth-statt-neon-auth.md
 ---
 
 # `@neondatabase/auth`-Unterbaum: AGPL-Risiko dokumentiert, Vercel-Trace verifiziert
+
+> **Überholt durch [ADR 0015](0015-self-hosted-better-auth-statt-neon-auth.md):** `@neondatabase/auth` ist entfernt, die hier dokumentierte AGPL-Kette ist nicht mehr im Dependency-Baum.
 
 `@neondatabase/auth` löst transitiv über `@neondatabase/auth-ui` → `@daveyplate/better-auth-ui` → `@triplit/client`/`@triplit/db`/`@triplit/react` auf. `@triplit/client` deklariert im eigenen `package.json` ausdrücklich `"license": "AGPL-3.0-only"`. `@triplit/db` und `@triplit/logger` haben **kein** `license`-Feld im npm-Manifest — ohne ausdrückliche Lizenz besteht per Urheberrecht kein Nutzungsrecht, das ist der ungünstigste Ausgangspunkt, nicht der harmloseste. Da beide Pakete Teil desselben Triplit-Monorepos sind wie das AGPL-lizenzierte `@triplit/client`, ist AGPL-3.0-only auch für sie die naheliegende Annahme — bestätigt ist das aber nicht; das müsste am Upstream-Repository (nicht am npm-Manifest) geklärt werden, was in diesem Lauf nicht möglich war.
 

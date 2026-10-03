@@ -40,6 +40,16 @@ DATABASE_URL="postgresql://meeples:<pw>@localhost:5432/meeples" pnpm prisma migr
 ```
 
 `--no-owner --no-acl` verhindert Fehler durch Neon-spezifische Rollen.
-Warnungen zu Neon-eigenen Schemas/Extensions (z. B. `neon_auth`) beim Restore
-betreffen nicht die App-Tabellen; die Auth-Migration ist ein eigener Schritt
-(Phase 3).
+Warnungen zu Neon-eigenen Schemas/Extensions beim Restore betreffen nicht die
+App-Tabellen. Das Schema `neon_auth` (Logins aus Neon Auth) wird mit
+eingespielt und ist wichtig: Die Migration `self_hosted_better_auth`
+übernimmt daraus einmalig alle Konten samt Passwort-Hash in die eigenen
+`auth_*`-Tabellen (gleiche User-IDs, siehe [ADR 0015](adr/0015-self-hosted-better-auth-statt-neon-auth.md)).
+Läuft die Migration schon vor dem Umzug gegen die Neon-Datenbank, sind die
+Konten bereits im Dump enthalten. Danach kann `neon_auth` gelöscht werden.
+Bestehende Sessions werden nicht übernommen — alle melden sich einmal neu an.
+Google-SSO-Konten ohne Passwort gibt es nicht mehr; Betroffene setzen über
+„Passwort vergessen" ein Passwort.
+
+Pflicht-Variablen für den Login: `BETTER_AUTH_URL` (öffentliche URL der App)
+und `BETTER_AUTH_SECRET` (`openssl rand -base64 32`), siehe `.env.example`.

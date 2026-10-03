@@ -34,7 +34,7 @@ Aktueller Stand: **0 Verstöße** repo-weit.
 
 ```text
 src/lib/
-├── auth/       Session, Tier-Ermittlung, Auth-Client
+├── auth/       better-auth-Instanz + Config (self-hosted, ADR 0015), Session, Tier-Ermittlung, Auth-Client
 ├── bgg/        BoardGameGeek-Integration
 ├── bringbuy/   Flohmarkt-Regeln + Server Actions: Statuswechsel/Warenkorb (`actions.ts`), Token-Anmeldung externer
 │               Verkäufer:innen (`external-sellers.ts`), eigene Artikel für Meeple **und** externe Verkäufer:innen

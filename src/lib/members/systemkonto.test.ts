@@ -11,10 +11,12 @@ vi.mock("@/lib/auth/permissions", () => ({
 const createUserMock = vi.fn();
 const requestPasswordResetMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({
+  createLoginAccount: (...args: unknown[]) => createUserMock(...args),
   auth: {
-    admin: { createUser: (...args: unknown[]) => createUserMock(...args) },
-    requestPasswordReset: (...args: unknown[]) =>
-      requestPasswordResetMock(...args),
+    api: {
+      requestPasswordReset: (...args: unknown[]) =>
+        requestPasswordResetMock(...args),
+    },
   },
 }));
 
@@ -46,10 +48,7 @@ describe("createSystemkonto", () => {
   });
 
   it("surfaces the error when the auth service rejects user creation", async () => {
-    createUserMock.mockResolvedValue({
-      data: null,
-      error: { message: "FORBIDDEN" },
-    });
+    createUserMock.mockResolvedValue({ error: "User already exists" });
 
     const result = await createSystemkonto({
       email: "bot@example.com",
@@ -57,13 +56,13 @@ describe("createSystemkonto", () => {
     });
 
     expect(result).toEqual({
-      error: "Systemkonto konnte nicht angelegt werden: FORBIDDEN",
+      error: "Systemkonto konnte nicht angelegt werden: User already exists",
     });
     expect(prismaMock.meeple.create).not.toHaveBeenCalled();
   });
 
   it("creates the auth user, the Meeple and triggers a password reset", async () => {
-    createUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    createUserMock.mockResolvedValue({ userId: "user-1" });
     prismaMock.meeple.create.mockResolvedValue({ id: "meeple-1" } as never);
 
     const result = await createSystemkonto({
@@ -82,8 +81,10 @@ describe("createSystemkonto", () => {
       data: { neonAuthUserId: "user-1", displayName: "Kassenbot" },
     });
     expect(requestPasswordResetMock).toHaveBeenCalledWith({
-      email: "bot@example.com",
-      redirectTo: "https://example.com/passwort-vergessen/einloesen",
+      body: {
+        email: "bot@example.com",
+        redirectTo: "https://example.com/passwort-vergessen/einloesen",
+      },
     });
   });
 });

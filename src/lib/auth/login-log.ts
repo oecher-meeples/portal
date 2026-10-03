@@ -25,8 +25,8 @@ export async function deleteExpiredLoginLogs(now: Date = new Date()) {
  * (kollisionsfrei innerhalb desselben Kontos), sodass ein wiederholter
  * Aufruf über mehrere Seitenaufrufe derselben Session hinweg keinen
  * zweiten Eintrag erzeugt. Aufgerufen aus `requireAdminPermission()`
- * (Server Component) — Credentials- und Google-SSO-Logins gleichermaßen,
- * da beide auf dieselbe Session-Form hinauslaufen (#231).
+ * (Server Component) — für jeden Login (seit ADR 0015 gibt es nur noch
+ * E-Mail + Passwort; Google SSO ist ersatzlos entfallen).
  */
 export async function logAdminLoginOnce(
   neonAuthUserId: string,

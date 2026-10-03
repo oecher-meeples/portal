@@ -57,7 +57,7 @@ function cookiePair(setCookieHeader: string) {
 
 describe("GET /api/auth/instagram/callback", () => {
   beforeEach(() => {
-    process.env.NEON_AUTH_COOKIE_SECRET = "test-cookie-secret";
+    process.env.BETTER_AUTH_SECRET = "test-cookie-secret";
     process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString(
       "base64",
     );

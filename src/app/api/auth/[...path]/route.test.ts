@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const upstreamGet = vi.fn();
+// `toNextJsHandler(auth)` (real, from better-auth/next-js) delegates every
+// method to `auth.handler(request)` — that's the upstream call to observe.
 const upstreamPost = vi.fn();
 vi.mock("@/lib/auth/server", () => ({
-  auth: { handler: () => ({ GET: upstreamGet, POST: upstreamPost }) },
+  auth: { handler: (request: Request) => upstreamPost(request) },
 }));
 
 const checkFixedCooldownMock = vi.fn();
@@ -25,8 +26,6 @@ vi.mock("@/lib/utils/request-ip", () => ({
 }));
 
 const { POST } = await import("./route");
-
-const CONTEXT = { params: Promise.resolve({ path: ["sign-in", "email"] }) };
 
 function signInRequest(body: Record<string, unknown>) {
   return new NextRequest("https://example.com/api/auth/sign-in/email", {
@@ -50,11 +49,10 @@ describe("POST /api/auth/sign-in/email", () => {
       "https://example.com/api/auth/get-session",
       { method: "POST" },
     );
-    const context = { params: Promise.resolve({ path: ["get-session"] }) };
 
-    await POST(request, context);
+    await POST(request);
 
-    expect(upstreamPost).toHaveBeenCalledWith(request, context);
+    expect(upstreamPost).toHaveBeenCalledWith(request);
     expect(checkFixedCooldownMock).not.toHaveBeenCalled();
   });
 
@@ -66,7 +64,6 @@ describe("POST /api/auth/sign-in/email", () => {
 
     const response = await POST(
       signInRequest({ email: "a@b.de", password: "x" }),
-      CONTEXT,
     );
 
     expect(response.status).toBe(401);
@@ -85,7 +82,6 @@ describe("POST /api/auth/sign-in/email", () => {
 
     const response = await POST(
       signInRequest({ email: "a@b.de", password: "x" }),
-      CONTEXT,
     );
 
     expect(response.status).toBe(401);
@@ -101,7 +97,6 @@ describe("POST /api/auth/sign-in/email", () => {
 
     const response = await POST(
       signInRequest({ email: "A@B.de", password: "wrong" }),
-      CONTEXT,
     );
 
     expect(response.status).toBe(401);
@@ -115,7 +110,6 @@ describe("POST /api/auth/sign-in/email", () => {
   it("resets the backoff on a successful login", async () => {
     const response = await POST(
       signInRequest({ email: "A@B.de", password: "right" }),
-      CONTEXT,
     );
 
     expect(response.status).toBe(200);
@@ -132,14 +126,11 @@ describe("POST /api/auth/sign-in/email", () => {
       retryAfterSeconds: 30,
     });
     const request = new NextRequest(
-      "https://example.com/api/auth/forget-password/email-otp",
+      "https://example.com/api/auth/email-otp/request-password-reset",
       { method: "POST", body: JSON.stringify({ email: "a@b.de" }) },
     );
-    const context = {
-      params: Promise.resolve({ path: ["forget-password", "email-otp"] }),
-    };
 
-    const response = await POST(request, context);
+    const response = await POST(request);
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true });
@@ -148,16 +139,13 @@ describe("POST /api/auth/sign-in/email", () => {
 
   it("forwards a forget-password request once the cooldown has elapsed", async () => {
     const request = new NextRequest(
-      "https://example.com/api/auth/forget-password/email-otp",
+      "https://example.com/api/auth/email-otp/request-password-reset",
       { method: "POST", body: JSON.stringify({ email: "a@b.de" }) },
     );
-    const context = {
-      params: Promise.resolve({ path: ["forget-password", "email-otp"] }),
-    };
 
-    await POST(request, context);
+    await POST(request);
 
-    expect(upstreamPost).toHaveBeenCalledWith(request, context);
+    expect(upstreamPost).toHaveBeenCalledWith(request);
   });
 
   it("still applies the IP cooldown even when the body carries no email", async () => {
@@ -166,7 +154,7 @@ describe("POST /api/auth/sign-in/email", () => {
       { method: "POST", body: "not json" },
     );
 
-    const response = await POST(request, CONTEXT);
+    const response = await POST(request);
 
     expect(response.status).toBe(200);
     expect(recordLoginFailureMock).not.toHaveBeenCalled();

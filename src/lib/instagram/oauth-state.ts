@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const STATE_COOKIE_NAME = "instagram_oauth_state";
 
 function sign(userId: string, nonce: string): string {
-  const secret = process.env.NEON_AUTH_COOKIE_SECRET ?? "";
+  const secret = process.env.BETTER_AUTH_SECRET ?? "";
   return createHmac("sha256", secret)
     .update(`${userId}:${nonce}`)
     .digest("hex");

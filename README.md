@@ -49,17 +49,17 @@ Eine ausführliche Beschreibung aller Funktionsbereiche findet sich in [`docs/Co
 
 ## 🛠️ Technologie-Stack
 
-| Kategorie         | Entscheidung                     |
-| ----------------- | -------------------------------- |
-| Framework         | Next.js 16 (App Router)          |
-| Sprache           | TypeScript                       |
-| Datenbank         | PostgreSQL via Neon              |
-| ORM               | Prisma                           |
-| Styling           | Tailwind CSS v4                  |
-| Komponenten       | shadcn/ui-Stil auf Base UI       |
-| Authentifizierung | Neon Auth (`@neondatabase/auth`) |
-| Tests             | Vitest + Testing Library         |
-| Hosting           | Vercel                           |
+| Kategorie         | Entscheidung               |
+| ----------------- | -------------------------- |
+| Framework         | Next.js 16 (App Router)    |
+| Sprache           | TypeScript                 |
+| Datenbank         | PostgreSQL via Neon        |
+| ORM               | Prisma                     |
+| Styling           | Tailwind CSS v4            |
+| Komponenten       | shadcn/ui-Stil auf Base UI |
+| Authentifizierung | better-auth (self-hosted)  |
+| Tests             | Vitest + Testing Library   |
+| Hosting           | Vercel                     |
 
 Details und Begründungen siehe [`docs/setup.md`](./docs/setup.md), Architektur- und Coding-Regeln in [`docs/project-structure.md`](./docs/project-structure.md) und [`docs/coding-guidelines.md`](./docs/coding-guidelines.md).
 

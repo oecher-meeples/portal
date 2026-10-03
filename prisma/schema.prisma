@@ -175,6 +175,81 @@ enum ProfilePictureVisibility {
   IMMER
 }
 
+/// Login-Identität für das self-hosted better-auth (docs/adr/0015). Feld- und
+/// Modellnamen sind von better-auth vorgegeben (`modelName`-Mapping in
+/// `src/lib/auth/config.ts`) — nicht umbenennen, ohne die Auth-Config
+/// mitzuziehen. `id` bleibt UUID wie zuvor in Neon Auths `neon_auth."user"`,
+/// damit bestehende `neonAuthUserId`-Werte nach dem Umzug weiter passen.
+/// Keine Fremdschlüssel von Fachtabellen hierher: die Verknüpfung bleibt das
+/// reine String-Feld `neonAuthUserId` (Name historisch).
+model AuthUser {
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+  sessions      AuthSession[]
+  accounts      AuthAccount[]
+
+  @@map("auth_users")
+}
+
+model AuthSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime @db.Timestamptz(6)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("auth_sessions")
+}
+
+/// `issuer` + `accountId` identifizieren ein Konto (better-auth ≥ 1.7). Für
+/// Passwort-Logins gilt `providerId = "credential"`, `issuer =
+/// "local:credential"`, `accountId = userId` — better-auths Sign-in findet das
+/// Passwort nur unter genau dieser Kombination.
+model AuthAccount {
+  id                    String    @id @default(uuid()) @db.Uuid
+  issuer                String
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  user                  AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(6)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(6)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@unique([issuer, accountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+/// Kurzlebige Tokens (Passwort-Reset-Link, E-Mail-OTP).
+model AuthVerification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@index([identifier])
+  @@map("auth_verifications")
+}
+
 model Permission {
   id          String           @id @default(cuid())
   key         String           @unique
@@ -550,8 +625,8 @@ model RateLimitAttempt {
 }
 
 /// Login-Audit-Trail für privilegierte Konten (#231) — protokolliert wird
-/// nur, wer zum Login-Zeitpunkt `admin:access` besitzt (Credentials- **und**
-/// Google-SSO-Logins). Aufbewahrung: 24 Monate, analog zu
+/// nur, wer zum Login-Zeitpunkt `admin:access` besitzt (E-Mail + Passwort,
+/// der einzige Login-Weg seit ADR 0015). Aufbewahrung: 24 Monate, analog zu
 /// `BankDataAccessLog` (docs/adr/0003).
 model LoginLog {
   id             String   @id @default(cuid())
