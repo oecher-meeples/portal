@@ -71,6 +71,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     expansions: [],
     explainerCount: 0,
     hasOpenLfg: false,
+    traits: [],
+    notes: null,
     isPrivate: false,
     ...overrides,
   };
@@ -138,6 +140,8 @@ const TITLE_EDIT_FIXTURE = {
   mechanics: [],
   categories: [],
   explainerVideoUrl: null,
+  traits: [],
+  notes: null,
 };
 
 describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {

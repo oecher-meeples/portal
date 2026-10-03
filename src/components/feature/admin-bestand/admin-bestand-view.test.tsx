@@ -85,6 +85,8 @@ const games = [
     publisher: [],
     author: [],
     yearPublished: null,
+    traits: [],
+    notes: null,
   },
   {
     id: "2",
@@ -123,6 +125,8 @@ const games = [
     publisher: [],
     author: [],
     yearPublished: null,
+    traits: [],
+    notes: null,
   },
 ];
 

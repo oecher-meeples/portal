@@ -19,6 +19,7 @@ vi.mock("@/lib/events/shift-rights", () => ({
 
 const gameHoldingFindFirstMock = vi.fn();
 const memberFindUniqueMock = vi.fn();
+const boardGameTraitTextFindManyMock = vi.fn();
 vi.mock("@/lib/utils/prisma", () => ({
   prisma: {
     gameHolding: {
@@ -26,6 +27,9 @@ vi.mock("@/lib/utils/prisma", () => ({
     },
     member: {
       findUnique: (...args: unknown[]) => memberFindUniqueMock(...args),
+    },
+    boardGameTraitText: {
+      findMany: (...args: unknown[]) => boardGameTraitTextFindManyMock(...args),
     },
   },
 }));
@@ -70,6 +74,7 @@ const MEEPLE = { id: "meeple-1" };
 beforeEach(() => {
   requireMeepleMock.mockResolvedValue(MEEPLE);
   memberFindUniqueMock.mockResolvedValue({ id: "member-1" });
+  boardGameTraitTextFindManyMock.mockResolvedValue([]);
 });
 
 describe("without an active Ausleihe shift", () => {
@@ -105,11 +110,43 @@ describe("with an active Ausleihe shift", () => {
     gameHoldingFindFirstMock.mockResolvedValue({
       vereinsmitgliedId: null,
       unitId: "unit-1",
+      gameCopy: { boardGame: { traits: [] } },
     } as never);
 
     const result = await ausleiheGetAvailability("copy-1");
 
-    expect(result).toEqual({ kind: "available" });
+    expect(result).toEqual({ kind: "available", loanWarnings: [] });
+  });
+
+  it("ausleiheGetAvailability includes loan warnings for a copy with Verleih-relevant traits", async () => {
+    gameHoldingFindFirstMock.mockResolvedValue({
+      vereinsmitgliedId: null,
+      unitId: "unit-1",
+      gameCopy: { boardGame: { traits: ["LEGACY"] } },
+    } as never);
+    boardGameTraitTextFindManyMock.mockResolvedValue([
+      {
+        trait: "LEGACY",
+        label: "Legacy",
+        tooltip: null,
+        tone: "WARNING",
+        loanMessage: "Legacy-Spiel — Vorsicht.",
+        detailsMessage: null,
+      },
+    ]);
+
+    const result = await ausleiheGetAvailability("copy-1");
+
+    expect(result).toEqual({
+      kind: "available",
+      loanWarnings: [
+        {
+          trait: "LEGACY",
+          tone: "WARNING",
+          loanMessage: "Legacy-Spiel — Vorsicht.",
+        },
+      ],
+    });
   });
 
   it("ausleiheGetAvailability returns on-loan with the previous unit for a checked-out copy", async () => {

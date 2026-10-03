@@ -14,6 +14,8 @@ import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
+import type { BoardGameTrait } from "@prisma/client";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import type {
   LudothekFilters,
   LudothekGame,
@@ -86,6 +88,7 @@ export function LudothekBrowser({
   meepleOptions,
   showExplainerFilter = true,
   showPresentFilter = false,
+  traitTexts,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   internal: boolean;
@@ -109,6 +112,8 @@ export function LudothekBrowser({
    * läuft, für Meeples wie Gäste gleichermaßen. Default aus, da meistens
    * kein Event läuft. */
   showPresentFilter?: boolean;
+  /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept). */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
   const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
@@ -225,6 +230,7 @@ export function LudothekBrowser({
         canManageGames={canManageGames}
         mechanicsOptions={mechanicsOptions}
         cardMinWidth={cardMinWidth}
+        traitTexts={traitTexts}
       />
     </div>
   );

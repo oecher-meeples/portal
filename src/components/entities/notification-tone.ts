@@ -1,3 +1,10 @@
+import {
+  Info,
+  OctagonAlert,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
+import { BoardGameTraitTone } from "@prisma/client";
 import type { StatusTone } from "@/components/ui/status-pill";
 import type { NotificationType } from "@/lib/notifications/types";
 
@@ -21,4 +28,23 @@ export const NOTIFICATION_ICON_CLASS: Record<NotificationType, string> = {
   info: "text-sky-600 dark:text-sky-400",
   warning: "text-amber-600 dark:text-amber-400",
   danger: "text-rose-600 dark:text-rose-400",
+};
+
+export const NOTIFICATION_TONE_ICON: Record<NotificationType, LucideIcon> = {
+  info: Info,
+  warning: TriangleAlert,
+  danger: OctagonAlert,
+};
+
+/** `BoardGameTraitTone` (DB-Enum) → `NotificationType` (Banner-Farbcode) —
+ * vermeidet eine zweite Farb-Map, beide kennen exakt dieselben drei
+ * Dringlichkeiten (#487-Konzept). Geteilt zwischen dem Verleih-Warnbanner
+ * (`ausleihe-view.tsx`) und dem Admin-Formular für Trait-Texte. */
+export const BOARD_GAME_TRAIT_TONE_TO_NOTIFICATION_TYPE: Record<
+  BoardGameTraitTone,
+  NotificationType
+> = {
+  [BoardGameTraitTone.INFO]: "info",
+  [BoardGameTraitTone.WARNING]: "warning",
+  [BoardGameTraitTone.DANGER]: "danger",
 };

@@ -169,6 +169,7 @@ async function refreshOne(row: Row): Promise<Outcome> {
         publisher: publisher.value ?? [],
         author: data.author,
         yearPublished: data.yearPublished,
+        traits: data.traits,
       },
     });
 

@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { BoardGameTrait } from "@prisma/client";
 import { GameCard } from "@/components/entities/game-card";
 import { GameListRow } from "@/components/entities/game-list-row";
 import { GameCompactRow } from "@/components/entities/game-compact-row";
@@ -7,6 +8,7 @@ import { EditBoardGameTitleDialog } from "@/components/widgets/board-game/edit-b
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import { groupGamesByTitle } from "@/lib/ludothek/title-grouping";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import type {
   LudothekGame,
   LudothekViewMode,
@@ -69,6 +71,7 @@ export function LudothekResults({
   canManageGames,
   mechanicsOptions,
   cardMinWidth,
+  traitTexts,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   view: LudothekViewMode;
@@ -79,6 +82,9 @@ export function LudothekResults({
   /** #446: `minmax(...)`-Minimalwert der Grid-Karten in px — nur für
    * `view === "grid"` relevant, wird dort per Slider eingestellt. */
   cardMinWidth?: number;
+  /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept) — einmal pro
+   * Seite geladen, hier nur durchgereicht an Card/List-Row. */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
   // One card/row per title in all three views (Plan-Schritt 8) — a title
   // with several copies shows a single entry with the aggregated zustand.
@@ -113,6 +119,7 @@ export function LudothekResults({
                 ? rowActions(game, mechanicsOptions ?? [])
                 : undefined
             }
+            traitTexts={traitTexts}
           />
         ))}
         {rows.length === 0 && (
@@ -137,6 +144,7 @@ export function LudothekResults({
         <GameCard
           key={game.boardGameSlug}
           game={game}
+          traitTexts={traitTexts}
           actions={
             canManageGames && "ean" in game ? (
               <div className="flex items-center gap-1">

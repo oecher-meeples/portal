@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BoardGameKind, LanguageDependence } from "@prisma/client";
+import {
+  BoardGameKind,
+  BoardGameTrait,
+  LanguageDependence,
+} from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -53,6 +57,7 @@ describe("fetchBggGame", () => {
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
       categories: ["Animals"],
+      traits: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
       author: ["Mathias Wigge"],
@@ -81,6 +86,7 @@ describe("fetchBggGame", () => {
       description: null,
       mechanics: [],
       categories: [],
+      traits: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
       author: [],
@@ -184,6 +190,22 @@ describe("fetchBggGame", () => {
       expect.stringContaining("versions=1"),
       expect.anything(),
     );
+  });
+
+  it("maps whitelisted boardgamefamily links to traits, deduping solitaire and ignoring unrelated families (#487)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-traits.xml"));
+
+    const result = await fetchBggGame(161936);
+
+    expect(result.traits).toEqual(
+      expect.arrayContaining([
+        BoardGameTrait.LEGACY,
+        BoardGameTrait.CAMPAIGN,
+        BoardGameTrait.LIMITED_REPLAYABILITY,
+        BoardGameTrait.SOLITAIRE_SUPPORTED,
+      ]),
+    );
+    expect(result.traits).toHaveLength(4);
   });
 
   it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {

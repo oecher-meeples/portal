@@ -1,4 +1,8 @@
-import type { BoardGameKind, LanguageDependence } from "@prisma/client";
+import type {
+  BoardGameKind,
+  BoardGameTrait,
+  LanguageDependence,
+} from "@prisma/client";
 import type { BggGameData } from "@/lib/bgg/client";
 import { parseMechanics, parseCommaSeparatedList } from "@/lib/ludothek/bgg-id";
 
@@ -19,6 +23,10 @@ type ComparableFormValues = {
   mechanics: string;
   categories: string;
   languageDependence: LanguageDependence | null;
+  /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — Mehrfach-
+   * auswahl als Array, anders als `mechanics`/`categories` kein kommagetrennter
+   * Text. */
+  traits: BoardGameTrait[];
 };
 
 /** Felder mit einer 1:1-BGG-Entsprechung — Grundlage für die Randfärbung im
@@ -38,14 +46,17 @@ export type BoardGameCompareField =
   | "description"
   | "mechanics"
   | "categories"
-  | "languageDependence";
+  | "languageDependence"
+  | "traits";
 
 function parseFormNumber(value: string): number | null {
   return value.trim() ? Number(value) : null;
 }
 
-/** Order-independent set comparison — shared by `mechanics` and `categories`. */
-function sameStringSet(a: string[], b: string[]): boolean {
+/** Order-independent set comparison — shared by `mechanics`, `categories`
+ * and `traits` (#487-Konzept generalisiert dies von zuvor `string[]`-only auf
+ * jeden sortierbaren Wert, z. B. das `BoardGameTrait`-Enum). */
+function sameSet<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) return false;
   const sortedA = [...a].sort();
   const sortedB = [...b].sort();
@@ -74,11 +85,12 @@ export function compareBoardGameWithBgg(
     imageUrl: (form.imageUrl.trim() || null) === bgg.imageUrl,
     description:
       (form.description.trim() || null) === (bgg.description ?? null),
-    mechanics: sameStringSet(parseMechanics(form.mechanics), bgg.mechanics),
-    categories: sameStringSet(
+    mechanics: sameSet(parseMechanics(form.mechanics), bgg.mechanics),
+    categories: sameSet(
       parseCommaSeparatedList(form.categories),
       bgg.categories,
     ),
     languageDependence: form.languageDependence === bgg.languageDependence,
+    traits: sameSet(form.traits, bgg.traits),
   };
 }

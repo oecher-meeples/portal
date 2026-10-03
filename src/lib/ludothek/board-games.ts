@@ -230,6 +230,8 @@ export async function getBoardGameTitleForEdit(id: string) {
       publisher: true,
       author: true,
       yearPublished: true,
+      traits: true,
+      notes: true,
     },
   });
 }

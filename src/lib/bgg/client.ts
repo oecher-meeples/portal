@@ -1,8 +1,13 @@
 import { XMLParser } from "fast-xml-parser";
-import { BoardGameKind, type LanguageDependence } from "@prisma/client";
+import {
+  BoardGameKind,
+  type BoardGameTrait,
+  type LanguageDependence,
+} from "@prisma/client";
 import { requireEnv } from "@/lib/utils/require-env";
 import { decodeHtmlEntities } from "@/lib/utils/decode-html-entities";
 import { LANGUAGE_DEPENDENCE_BY_LEVEL } from "@/lib/ludothek/language-dependence";
+import { parseTraits } from "@/lib/bgg/traits";
 
 const BGG_API_BASE = "https://boardgamegeek.com/xmlapi2";
 
@@ -54,6 +59,10 @@ export interface BggGameData {
   /** BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
    * analog `mechanics` geparst (#404). */
   categories: string[];
+  /** BGG-Family-Signale mit Verleih-Auswirkung (#487-Konzept), über eine
+   * Family-ID-Whitelist aus `boardgamefamily`-Links erkannt. Nur ein
+   * Vorschlag, der Admin kann ihn vor dem Speichern ändern. */
+  traits: BoardGameTrait[];
   /** Direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item — anders als
    * `publisher` nicht versionsabhängig (#205). */
   author: string[];
@@ -113,6 +122,7 @@ interface BggNameEntry {
 
 interface BggLinkEntry {
   type?: string;
+  id?: string;
   value: string;
 }
 
@@ -388,6 +398,7 @@ function mapItem(item: BggItem): BggGameData {
         : decodeHtmlEntities(item.description),
     mechanics,
     categories,
+    traits: parseTraits(item.link),
     kind: parseKind(item.type),
     languageDependence: parseLanguageDependence(item.poll),
     author: parseAuthor(item.link),

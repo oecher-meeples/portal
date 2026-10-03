@@ -2,10 +2,13 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import type { BoardGameTrait } from "@prisma/client";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
@@ -30,6 +33,7 @@ const DESCRIPTION_PREVIEW_LENGTH = 200;
 export function GameListRow({
   game,
   actions,
+  traitTexts,
 }: {
   game: (PublicLudothekGame | (LudothekGame & { zustand: GameZustand })) & {
     /** Set once several copies of this title are folded into one row (#121/#122). */
@@ -39,6 +43,8 @@ export function GameListRow({
   };
   /** Caller-supplied admin controls (edit/actions menu) — GameListRow just places them (#121/#122). */
   actions?: ReactNode;
+  /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept). */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const zustand = "zustand" in game ? game.zustand : undefined;
@@ -110,6 +116,10 @@ export function GameListRow({
           />
         )}
         <LanguageIndependentPill languageDependence={game.languageDependence} />
+        <BoardGameTraitsDisplay
+          traits={game.traits}
+          textsByTrait={traitTexts ?? {}}
+        />
       </div>
 
       {actions && (

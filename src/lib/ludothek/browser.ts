@@ -1,6 +1,7 @@
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import {
   BoardGameKind,
+  type BoardGameTrait,
   type LanguageDependence,
   type RuleBookLanguage,
   type ProfilePictureVisibility,
@@ -71,6 +72,13 @@ export type LudothekGame = {
   author: string[];
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: number | null;
+  /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — für alle
+   * sichtbar (auch Gäste), analog `mechanics`/`categories` nicht gestrippt
+   * in `toPublicGame()`. */
+  traits: BoardGameTrait[];
+  /** Freier Admin-Hinweis je Titel (#487-Konzept) — für alle sichtbar, kein
+   * Bestandsdatum wie `condition`/`inventoryNumber`. */
+  notes: string | null;
   /** Base game(s) this expansion belongs to — empty unless `kind` is BOARDGAME_EXPANSION. */
   baseGames: LudothekGameRef[];
   /** Expansions in the collection that belong to this base game. */

@@ -6,6 +6,7 @@ import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
+import { BoardGameTraitsField } from "@/components/widgets/board-game/board-game-traits-field";
 import { EanField } from "@/components/widgets/board-game/ean-field";
 import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
 import { TitleOverviewDialog } from "@/components/widgets/board-game/title-overview-dialog";
@@ -334,6 +335,21 @@ export function EditBoardGameTitle({
         value={values.explainerVideoUrl}
         bggIdText={values.bggId}
         onChange={(url) => onChange({ explainerVideoUrl: url })}
+      />
+
+      <BoardGameTraitsField
+        idPrefix={idPrefix}
+        value={values.traits}
+        onChange={(traits) => onChange({ traits })}
+        diffTone={compareStatus?.traits}
+      />
+      <TextAreaField
+        id={`${idPrefix}-notes`}
+        label="Hinweis (Verleih-relevant, z. B. „App zwingend nötig“)"
+        fieldClassName="sm:col-span-2"
+        value={values.notes}
+        onChange={(event) => onChange({ notes: event.target.value })}
+        hint="Wird für alle im Detail-View angezeigt, nie aus BGG befüllt."
       />
 
       <div className="flex flex-col gap-1.5 sm:col-span-2">

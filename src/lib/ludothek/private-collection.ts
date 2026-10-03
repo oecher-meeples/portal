@@ -155,6 +155,8 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       publisher: boardGame.publisher,
       author: boardGame.author,
       yearPublished: boardGame.yearPublished,
+      traits: boardGame.traits,
+      notes: boardGame.notes,
       baseGames: [],
       expansions: [],
       zustand: "privat" as const,

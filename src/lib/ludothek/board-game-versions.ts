@@ -76,6 +76,7 @@ export function bggDataToTitleInput(bggId: number, data: BggGameData) {
     publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
     author: data.author,
     yearPublished: data.yearPublished ?? undefined,
+    traits: data.traits,
   };
 }
 

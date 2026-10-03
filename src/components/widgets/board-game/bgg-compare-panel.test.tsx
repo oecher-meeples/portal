@@ -23,6 +23,7 @@ const BGG_DATA: BggGameData = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
   categories: [],
+  traits: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,
   author: [],
@@ -56,6 +57,8 @@ const FORM: BoardGameFormValues = {
   publisher: "",
   author: "",
   yearPublished: "",
+  traits: [],
+  notes: "",
 };
 
 function renderPanel(

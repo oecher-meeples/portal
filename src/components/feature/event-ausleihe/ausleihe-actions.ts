@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { BoardGameTraitTone } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
 import { findActiveShiftEvent } from "@/lib/events/shift-rights";
+import { resolveBoardGameTraits } from "@/lib/ludothek/board-game-traits";
+import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
 import {
   borrowGame,
   returnGame,
@@ -65,8 +68,22 @@ export async function ausleiheResolveCode(raw: string): Promise<ResolvedScan> {
   }
 }
 
+/** Nur die für den Verleih-Warnbanner nötigen Felder — bewusst ohne `icon`
+ * (eine Lucide-Komponente ist über eine Server Action nicht serialisierbar,
+ * s. `ResolvedBoardGameTrait`) und ohne Traits ohne `loanMessage` (#487-Konzept). */
+export type LoanWarningTrait = {
+  trait: string;
+  tone: BoardGameTraitTone;
+  loanMessage: string;
+};
+
 export type CopyAvailability =
-  | { kind: "available" }
+  | {
+      kind: "available";
+      /** Grundlage für den Verleih-Warnbanner direkt vor "Ausgeben" —
+       * rein informativ, blockiert die Ausgabe nicht (#487-Konzept). */
+      loanWarnings: LoanWarningTrait[];
+    }
   | {
       kind: "on-loan";
       previousUnit: { id: string; code: string; label: string } | null;
@@ -85,11 +102,26 @@ export async function ausleiheGetAvailability(
 
   const holding = await prisma.gameHolding.findFirst({
     where: { gameCopyId, endedAt: null },
+    include: {
+      gameCopy: { include: { boardGame: { select: { traits: true } } } },
+    },
   });
   if (!holding) return null;
 
   if (!holding.vereinsmitgliedId) {
-    return { kind: "available" };
+    const textsByTrait = await loadBoardGameTraitTextsByTrait();
+    const resolved = resolveBoardGameTraits(
+      holding.gameCopy.boardGame.traits,
+      textsByTrait,
+    );
+    const loanWarnings: LoanWarningTrait[] = resolved
+      .filter((trait) => Boolean(trait.loanMessage))
+      .map((trait) => ({
+        trait: trait.trait,
+        tone: trait.tone,
+        loanMessage: trait.loanMessage!,
+      }));
+    return { kind: "available", loanWarnings };
   }
 
   const previous = await prisma.gameHolding.findFirst({
