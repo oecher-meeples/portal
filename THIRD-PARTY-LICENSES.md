@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-Automatisch erzeugt aus `pnpm licenses list --prod` (677 Production-Pakete). Nicht von Hand bearbeiten — mit `pnpm run licenses:generate` neu erzeugen, wenn sich die Dependencies ändern.
+Automatisch erzeugt aus `pnpm licenses list --prod` (690 Production-Pakete). Nicht von Hand bearbeiten — mit `pnpm run licenses:generate` neu erzeugen, wenn sich die Dependencies ändern.
 
 ## Prüfpflichtige Lizenzen
 
@@ -20,7 +20,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 
 ### CC-BY-4.0
 
-- `caniuse-lite@1.0.30001809, 1.0.30001810` — https://github.com/browserslist/caniuse-lite#readme
+- `caniuse-lite@1.0.30001810` — https://github.com/browserslist/caniuse-lite#readme
 
 ## Übrige Lizenzen
 
@@ -88,9 +88,8 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@jridgewell/trace-mapping@0.3.31` — https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping
 - `@levischuck/tiny-cbor@0.2.11` — https://github.com/levischuck/tiny-cbor#readme
 - `@marsidev/react-turnstile@1.5.3` — https://github.com/marsidev/react-turnstile
-- `@neondatabase/serverless@1.1.0` — https://neon.com
-- `@next/env@16.3.3` — https://github.com/vercel/next.js#readme
-- `@next/swc-win32-x64-msvc@16.3.3` — https://github.com/vercel/next.js#readme
+- `@next/env@16.3.8` — https://github.com/vercel/next.js#readme
+- `@next/swc-win32-x64-msvc@16.3.8` — https://github.com/vercel/next.js#readme
 - `@noble/ciphers@2.4.0` — https://paulmillr.com/noble/
 - `@noble/hashes@2.3.0, 2.4.0` — https://paulmillr.com/noble/
 - `@nodable/entities@3.0.0` — https://github.com/nodable/val-parsers#readme
@@ -198,9 +197,10 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@types/lodash@4.17.25` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/lodash
 - `@types/mdast@4.0.4` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdast
 - `@types/ms@2.1.0` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ms
-- `@types/node@26.4.0` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node
+- `@types/node@26.4.1` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node
+- `@types/pg@8.23.1` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pg
 - `@types/react@19.2.18` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react
-- `@types/react-dom@19.2.5` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom
+- `@types/react-dom@19.2.7` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom
 - `@types/unist@2.0.11, 3.0.3` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/unist
 - `@vercel/analytics@2.0.1` — https://github.com/vercel/analytics#readme
 - `@visx/curve@4.0.1-alpha.0` — https://github.com/airbnb/visx#readme
@@ -352,7 +352,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `jiti@2.7.0` — https://github.com/unjs/jiti#readme
 - `jose@5.10.0, 6.1.2, 6.2.10` — https://github.com/panva/jose
 - `js-tokens@4.0.0, 10.0.0` — https://github.com/lydell/js-tokens#readme
-- `js-yaml@3.15.1` — https://github.com/nodeca/js-yaml
+- `js-yaml@3.15.2` — https://github.com/nodeca/js-yaml
 - `jsdom@30.0.1` — https://github.com/jsdom/jsdom#readme
 - `jsesc@3.1.0` — https://mths.be/jsesc
 - `json-schema-traverse@1.0.0` — https://github.com/epoberezkin/json-schema-traverse#readme
@@ -423,9 +423,9 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `named-placeholders@1.1.6` — https://github.com/mysqljs/named-placeholders#readme
 - `nanoid@3.3.18, 5.1.16` — https://github.com/ai/nanoid#readme
 - `nanostores@1.5.2` — https://github.com/nanostores/nanostores#readme
-- `next@16.3.3` — https://nextjs.org
+- `next@16.3.8` — https://nextjs.org
 - `next-themes@0.4.6` — https://github.com/pacocoursey/next-themes#readme
-- `node-releases@2.0.53` — https://github.com/chicoxyzzy/node-releases#readme
+- `node-releases@2.0.54` — https://github.com/chicoxyzzy/node-releases#readme
 - `npm-run-path@4.0.1` — https://github.com/sindresorhus/npm-run-path#readme
 - `object-assign@4.1.1` — https://github.com/sindresorhus/object-assign#readme
 - `obug@2.1.4` — https://github.com/sxzz/obug#readme
@@ -446,12 +446,22 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `pathe@2.0.3` — https://github.com/unjs/pathe#readme
 - `peberminta@0.9.0` — https://github.com/mxxii/peberminta
 - `perfect-debounce@2.1.0` — https://github.com/unjs/perfect-debounce#readme
-- `picomatch@4.0.5` — https://github.com/micromatch/picomatch
+- `pg@8.23.1` — https://github.com/brianc/node-postgres
+- `pg-cloudflare@1.4.1` — https://github.com/brianc/node-postgres#readme
+- `pg-connection-string@2.14.1` — https://github.com/brianc/node-postgres/tree/master/packages/pg-connection-string
+- `pg-pool@3.14.0` — https://github.com/brianc/node-postgres/tree/master/packages/pg-pool#readme
+- `pg-protocol@1.16.1` — https://github.com/brianc/node-postgres#readme
+- `pg-types@2.2.0` — https://github.com/brianc/node-pg-types
+- `pgpass@1.0.5` — https://github.com/hoegaarden/pgpass#readme
+- `picomatch@4.0.5, 4.0.7` — https://github.com/micromatch/picomatch
 - `pkg-types@2.3.1` — https://github.com/unjs/pkg-types#readme
 - `pngjs@5.0.0` — https://github.com/lukeapage/pngjs
-- `postcss@8.5.26` — https://postcss.org/
+- `postcss@8.5.28` — https://postcss.org/
 - `postcss-value-parser@4.2.0` — https://github.com/TrySound/postcss-value-parser
-- `postgres-array@3.0.4` — https://github.com/bendrucker/postgres-array#readme
+- `postgres-array@2.0.0, 3.0.4` — https://github.com/bendrucker/postgres-array#readme
+- `postgres-bytea@1.0.1` — https://github.com/bendrucker/postgres-bytea#readme
+- `postgres-date@1.0.7` — https://github.com/bendrucker/postgres-date#readme
+- `postgres-interval@1.2.0` — https://github.com/bendrucker/postgres-interval#readme
 - `prettier@3.9.6` — https://prettier.io
 - `prismjs@1.30.0` — https://github.com/PrismJS/prism#readme
 - `process-nextick-args@2.0.1` — https://github.com/calvinmetcalf/process-nextick-args
@@ -539,11 +549,11 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `trim-lines@3.0.1` — https://github.com/wooorm/trim-lines#readme
 - `trough@2.2.0` — https://github.com/wooorm/trough#readme
 - `ts-custom-error@3.3.1` — https://github.com/adriengibrat/ts-custom-error#readme
-- `tsx@4.23.12` — https://tsx.hirok.io
+- `tsx@4.23.13` — https://tsx.hirok.io
 - `tsyringe@4.10.0` — https://github.com/Microsoft/tsyringe#readme
 - `tw-animate-css@1.4.0` — https://github.com/Wombosvideo/tw-animate-css#readme
 - `ua-is-frozen@0.1.2` — https://github.com/faisalman/ua-is-frozen#readme
-- `undici@6.28.0, 8.10.0` — https://undici.nodejs.org
+- `undici@6.29.0, 8.11.2` — https://undici.nodejs.org
 - `undici-types@8.3.0` — https://undici.nodejs.org
 - `unicode-trie@2.0.0` — https://github.com/devongovett/unicode-trie
 - `unified@11.0.5` — https://unifiedjs.com
@@ -553,7 +563,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `unist-util-visit@5.1.0` — https://github.com/syntax-tree/unist-util-visit#readme
 - `unist-util-visit-parents@6.0.2` — https://github.com/syntax-tree/unist-util-visit-parents#readme
 - `unpdf@1.8.1` — https://github.com/unjs/unpdf#readme
-- `update-browserslist-db@1.3.1` — https://github.com/browserslist/update-db#readme
+- `update-browserslist-db@1.3.2` — https://github.com/browserslist/update-db#readme
 - `use-callback-ref@1.3.3` — https://github.com/theKashey/use-callback-ref#readme
 - `use-sidecar@1.1.3` — https://github.com/theKashey/use-sidecar
 - `use-sync-external-store@1.6.0` — https://github.com/facebook/react#readme
@@ -575,10 +585,11 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `xdg-portable@7.3.0` — https://github.com/rivy/js.xdg-portable#readme
 - `xml-naming@0.3.0` — https://github.com/NaturalIntelligence/xml-naming#readme
 - `xmlchars@2.2.0` — https://github.com/lddubeau/xmlchars#readme
+- `xtend@4.0.2` — https://github.com/Raynos/xtend
 - `yargs@15.4.1` — https://yargs.js.org/
 - `yoga-layout@3.2.1` — https://yogalayout.dev/
 - `zeptomatch@2.1.0` — https://github.com/fabiospampinato/zeptomatch#readme
-- `zod@4.1.11, 4.3.6, 4.4.3` — https://zod.dev
+- `zod@4.1.11, 4.3.6, 4.5.4` — https://zod.dev
 - `zwitch@2.0.4` — https://github.com/wooorm/zwitch#readme
 
 ### MIT-0
@@ -598,7 +609,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@neondatabase/auth@0.4.2-beta` — https://github.com/neondatabase/neon-js/tree/main/packages/auth#readme
 - `@neondatabase/auth-ui@0.2.1-beta` — https://github.com/neondatabase/neon-js/tree/main/packages/auth-ui#readme
 - `@opentelemetry/semantic-conventions@1.43.0` — https://github.com/open-telemetry/opentelemetry-js/tree/main/semantic-conventions
-- `@prisma/adapter-neon@7.10.0` — https://github.com/prisma/prisma#readme
+- `@prisma/adapter-pg@7.10.0` — https://github.com/prisma/prisma#readme
 - `@prisma/client@7.10.0` — https://www.prisma.io
 - `@prisma/client-runtime-utils@7.10.0` — https://github.com/prisma/prisma#readme
 - `@prisma/config@7.10.0` — https://github.com/prisma/prisma#readme
@@ -617,7 +628,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `@vercel/cli-exec@1.0.1` — https://vercel.com
 - `@vercel/oidc@3.8.4` — https://vercel.com
 - `@zxing/library@0.23.0` — https://zxing-js.github.io/library/
-- `baseline-browser-mapping@2.11.17, 2.11.20` — https://github.com/web-platform-dx/baseline-browser-mapping#readme
+- `baseline-browser-mapping@2.11.21` — https://github.com/web-platform-dx/baseline-browser-mapping#readme
 - `class-variance-authority@0.7.1` — https://github.com/joe-bell/cva#readme
 - `comlink@4.4.2` — https://github.com/GoogleChromeLabs/comlink#readme
 - `denque@2.1.0` — https://docs.page/invertase/denque
@@ -652,7 +663,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `d3-time@3.1.0` — https://d3js.org/d3-time/
 - `d3-time-format@4.1.0` — https://d3js.org/d3-time-format/
 - `delaunator@5.1.0` — https://github.com/mapbox/delaunator#readme
-- `electron-to-chromium@1.5.412` — https://github.com/Kilian/electron-to-chromium#readme
+- `electron-to-chromium@1.5.422` — https://github.com/Kilian/electron-to-chromium#readme
 - `foreground-child@3.3.1` — https://github.com/tapjs/foreground-child#readme
 - `get-caller-file@2.0.5` — https://github.com/stefanpenner/get-caller-file#readme
 - `graceful-fs@4.2.11` — https://github.com/isaacs/node-graceful-fs#readme
@@ -660,7 +671,8 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `internmap@2.0.3` — https://github.com/mbostock/internmap/
 - `isexe@2.0.0` — https://github.com/isaacs/isexe#readme
 - `lru-cache@5.1.1` — https://github.com/isaacs/node-lru-cache#readme
-- `lucide-react@0.555.0, 1.35.0` — https://lucide.dev
+- `lucide-react@0.555.0, 1.40.0` — https://lucide.dev
+- `pg-int8@1.0.1` — https://github.com/charmander/pg-int8#readme
 - `picocolors@1.1.1` — https://github.com/alexeyraspopov/picocolors#readme
 - `require-main-filename@2.0.0` — https://github.com/yargs/require-main-filename#readme
 - `saxes@6.0.0` — https://github.com/lddubeau/saxes#readme
@@ -668,6 +680,7 @@ Diese Lizenzen verlangen mehr als die reine Namensnennung, die MIT/BSD/ISC ohneh
 - `set-blocking@2.0.0` — https://github.com/yargs/set-blocking#readme
 - `siginfo@2.0.0` — https://github.com/emilbayes/siginfo#readme
 - `signal-exit@3.0.7, 4.1.0` — https://github.com/tapjs/signal-exit#readme
+- `split2@4.2.0` — https://github.com/mcollina/split2#readme
 - `which@2.0.2` — https://github.com/isaacs/node-which#readme
 - `which-module@2.0.1` — https://github.com/nexdrew/which-module#readme
 - `y18n@4.0.3` — https://github.com/yargs/y18n

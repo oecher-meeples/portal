@@ -1,0 +1,25 @@
+# Self-hosting stack (see docs/deployment-docker.md and
+# .claude/plans/docker-self-hosted-migration.md). Further services (app,
+# blob storage, cron sidecar, proxy) are added in later migration phases.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meeples}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-meeples}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # Bound to localhost only, so `prisma migrate` / pg_restore from the
+      # host work without exposing the database to the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
