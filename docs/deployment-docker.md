@@ -223,7 +223,9 @@ Voraussetzungen siehe [8.1](#81-variante-b-mitgelieferter-caddy-profil-with-prox
 Startreihenfolge (automatisch über `depends_on`):
 
 1. `postgres` und `seaweedfs` starten; ihre Healthchecks (`pg_isready` bzw.
-   `wget --spider http://127.0.0.1:8333/`) melden Bereitschaft.
+   ein mitgebautes Healthcheck-Script, da eine unauthentifizierte Anfrage an
+   die S3-API korrekt mit 403 antwortet, sobald der Server bereit ist) melden
+   Bereitschaft.
 2. `seaweedfs-init` läuft einmal durch und beendet sich mit Exit-Code 0
    (in `docker compose ps -a` als `exited (0)` — das ist korrekt).
 3. Erst dann startet `app`. Ein „DB noch nicht bereit"-Fehler beim ersten
