@@ -172,13 +172,22 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
       data: {
         title: game.title,
         slug,
+        bggId: game.bggId,
         imageUrl: game.imageUrl,
         minPlayers: game.minPlayers,
         maxPlayers: game.maxPlayers,
         playTimeMinutes: game.playTimeMinutes,
         weight: game.weight,
+        averageRating: game.averageRating,
         description: game.description,
         mechanics: game.mechanics,
+        categories: game.categories,
+        explainerVideoUrl: game.explainerVideoUrl,
+        languageDependence: game.languageDependence,
+        publisher: game.publisher,
+        author: game.author,
+        yearPublished: game.yearPublished,
+        traits: game.traits,
         kind: expansionTitles.has(game.title)
           ? BoardGameKind.BOARDGAME_EXPANSION
           : BoardGameKind.BOARDGAME,

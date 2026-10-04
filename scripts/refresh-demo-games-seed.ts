@@ -4,19 +4,22 @@
  * `refresh-board-games-from-bgg.ts` (schreibt in die DB) bleibt dieser Lauf
  * auf der Seed-Quelldatei, rührt also keine laufende Dev-/Prod-DB an. Nutzt
  * bewusst dieselben Bausteine wie der reguläre BGG-Import (`fetchBggGame`,
- * `searchBggGamesExact`, `translateToGerman`, `translateMechanics`) statt die
- * BGG-Mapping-Logik zu duplizieren.
+ * `searchBggGamesExact`, `translateToGerman`, `translateMechanics`,
+ * `translateCategories`, `bggDataToTitleInput`) statt die BGG-Mapping-Logik
+ * zu duplizieren.
  *
  * `title` bleibt in jedem Fall der bisherige Marketingname (siehe Dateikopf
- * von `demo-games.ts`) — nur imageUrl/Spielerzahlen/Spieldauer/Gewichtung/
- * Beschreibung/Mechaniken werden aus dem BGG-Treffer übernommen. Titel ohne
- * eindeutigen BGG-Treffer (0 oder >1 Ergebnis) bleiben unverändert.
+ * von `demo-games.ts`) — alle anderen `DemoGame`-Felder werden aus dem
+ * BGG-Treffer übernommen. Titel ohne eindeutigen BGG-Treffer (0 oder >1
+ * Ergebnis) behalten ihre bisherigen Werte (bzw. `null`/`[]`, falls ein Feld
+ * noch nie befüllt war).
  *
  * Aufruf:
  *   DOTENV_CONFIG_PATH=.env.local npx tsx -r dotenv/config scripts/refresh-demo-games-seed.ts
  */
 import fs from "node:fs";
 import path from "node:path";
+import { BoardGameTrait, LanguageDependence } from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -26,6 +29,8 @@ import {
 } from "../src/lib/bgg/client";
 import { translateToGerman } from "../src/lib/bgg/translate";
 import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
+import { translateCategories } from "../src/lib/ludothek/category-translations";
+import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
 import { sleep } from "../src/lib/utils/sleep";
 import {
   BGG_SCRIPT_THROTTLE_MS as THROTTLE_MS,
@@ -40,18 +45,54 @@ type Outcome =
   | { status: "needs-review"; title: string; candidateCount: number }
   | { status: "unchanged"; title: string; reason: string };
 
-async function translateGameData(data: BggGameData): Promise<BggGameData> {
+/** Alle BGG-Felder, die ein Titel ohne (neuen) Treffer behält — entweder vom
+ * vorigen Lauf (Rerun) oder `null`/`[]`, falls dieser Lauf die Felder zum
+ * ersten Mal einführt. */
+function withoutBggMatch(game: DemoGame): DemoGame {
+  return {
+    title: game.title,
+    bggId: game.bggId ?? null,
+    imageUrl: game.imageUrl ?? null,
+    minPlayers: game.minPlayers ?? null,
+    maxPlayers: game.maxPlayers ?? null,
+    playTimeMinutes: game.playTimeMinutes ?? null,
+    weight: game.weight ?? null,
+    averageRating: game.averageRating ?? null,
+    description: game.description ?? "",
+    mechanics: game.mechanics ?? [],
+    categories: game.categories ?? [],
+    explainerVideoUrl: game.explainerVideoUrl ?? null,
+    languageDependence: game.languageDependence ?? null,
+    publisher: game.publisher ?? [],
+    author: game.author ?? [],
+    yearPublished: game.yearPublished ?? null,
+    traits: game.traits ?? [],
+  };
+}
+
+async function translateGameData(
+  data: BggGameData,
+): Promise<{ data: BggGameData; descriptionTranslationFailed: boolean }> {
   const mechanics = translateMechanics(data.mechanics);
-  if (!data.description) return { ...data, mechanics };
+  const categories = translateCategories(data.categories);
+  if (!data.description) {
+    return {
+      data: { ...data, mechanics, categories },
+      descriptionTranslationFailed: false,
+    };
+  }
   try {
     const description = await translateToGerman(data.description);
-    return { ...data, description, mechanics };
+    return {
+      data: { ...data, description, mechanics, categories },
+      descriptionTranslationFailed: false,
+    };
   } catch (error) {
-    // Schlägt die Übersetzung fehl (z. B. MyMemorys Tageslimit), bleibt die
-    // englische Beschreibung stehen statt sie zu leeren — ein späterer
-    // Rerun (nach Reset der Tagesquote) holt den Rest nach.
     console.warn(`  Übersetzung fehlgeschlagen für "${data.title}":`, error);
-    return { ...data, mechanics };
+    return {
+      data: { ...data, mechanics, categories },
+      descriptionTranslationFailed: true,
+    };
   }
 }
 
@@ -68,7 +109,7 @@ async function refreshOne(
         title: game.title,
         candidateCount: candidates.length,
       },
-      updated: game,
+      updated: withoutBggMatch(game),
     };
   }
 
@@ -84,13 +125,24 @@ async function refreshOne(
           title: game.title,
           reason: error.message,
         },
-        updated: game,
+        updated: withoutBggMatch(game),
       };
     }
     throw error;
   }
 
-  const data = await translateGameData(raw);
+  const { data, descriptionTranslationFailed } = await translateGameData(raw);
+  const mapped = bggDataToTitleInput(candidates[0].bggId, data);
+  // Schlägt die Übersetzung fehl (z. B. MyMemorys Tageslimit), bleibt eine
+  // bereits vorhandene (vermutlich deutsche) Beschreibung aus einem früheren
+  // Lauf stehen, statt sie mit frischem, unübersetztem Englisch zu
+  // überschreiben — nur ohne jede bisherige Beschreibung wird die englische
+  // übernommen (besser als leer). Ein späterer Rerun (nach Reset der
+  // Tagesquote) holt die Übersetzung nach.
+  const description =
+    descriptionTranslationFailed && game.description
+      ? game.description
+      : (mapped.description ?? game.description);
 
   return {
     outcome: {
@@ -100,33 +152,74 @@ async function refreshOne(
     },
     updated: {
       title: game.title,
-      imageUrl: data.imageUrl,
-      minPlayers: data.minPlayers,
-      maxPlayers: data.maxPlayers,
-      playTimeMinutes: data.playTimeMinutes,
-      weight: data.weight,
-      description: data.description ?? game.description,
-      mechanics: data.mechanics,
+      bggId: mapped.bggId,
+      imageUrl: mapped.imageUrl ?? null,
+      minPlayers: mapped.minPlayers ?? null,
+      maxPlayers: mapped.maxPlayers ?? null,
+      playTimeMinutes: mapped.playTimeMinutes ?? null,
+      weight: mapped.weight ?? null,
+      averageRating: mapped.averageRating ?? null,
+      description,
+      mechanics: mapped.mechanics,
+      categories: mapped.categories,
+      explainerVideoUrl: mapped.explainerVideoUrl ?? null,
+      languageDependence: mapped.languageDependence ?? null,
+      publisher: mapped.publisher ?? [],
+      author: mapped.author,
+      yearPublished: mapped.yearPublished ?? null,
+      traits: mapped.traits,
     },
   };
 }
 
-function serializeEntry(game: DemoGame): string {
+function enumRef(
+  enumName: "BoardGameTrait" | "LanguageDependence",
+  enumObj: Record<string, string>,
+  value: string,
+): string {
+  const key = Object.keys(enumObj).find((k) => enumObj[k] === value);
+  if (!key) throw new Error(`Unbekannter ${enumName}-Wert: ${value}`);
+  return `${enumName}.${key}`;
+}
+
+export function serializeEntry(game: DemoGame): string {
   const num = (n: number | null) => (n === null ? "null" : String(n));
+  const strArray = (values: string[]) =>
+    `[${values.map((v) => JSON.stringify(v)).join(", ")}]`;
+  const traitsArray = (values: BoardGameTrait[]) =>
+    `[${values.map((v) => enumRef("BoardGameTrait", BoardGameTrait, v)).join(", ")}]`;
+
   const parts = [
     `title: ${JSON.stringify(game.title)}`,
+    `bggId: ${num(game.bggId)}`,
     `imageUrl: ${game.imageUrl === null ? "null" : JSON.stringify(game.imageUrl)}`,
     `minPlayers: ${num(game.minPlayers)}`,
     `maxPlayers: ${num(game.maxPlayers)}`,
     `playTimeMinutes: ${num(game.playTimeMinutes)}`,
     `weight: ${num(game.weight)}`,
+    `averageRating: ${num(game.averageRating)}`,
     `description: ${JSON.stringify(game.description)}`,
-    `mechanics: [${game.mechanics.map((m) => JSON.stringify(m)).join(", ")}]`,
+    `mechanics: ${strArray(game.mechanics)}`,
+    `categories: ${strArray(game.categories)}`,
+    `explainerVideoUrl: ${game.explainerVideoUrl === null ? "null" : JSON.stringify(game.explainerVideoUrl)}`,
+    `languageDependence: ${
+      game.languageDependence === null
+        ? "null"
+        : enumRef(
+            "LanguageDependence",
+            LanguageDependence,
+            game.languageDependence,
+          )
+    }`,
+    `publisher: ${strArray(game.publisher)}`,
+    `author: ${strArray(game.author)}`,
+    `yearPublished: ${num(game.yearPublished)}`,
+    `traits: ${traitsArray(game.traits)}`,
   ];
   return `  { ${parts.join(", ")} },`;
 }
 
-function rewriteSeedFile(updatedGames: DemoGame[], runDate: string) {
+export function rewriteSeedFile(updatedGames: DemoGame[], runDate: string) {
   const raw = fs.readFileSync(SEED_FILE, "utf-8");
   const lines = raw.split("\n");
 
@@ -146,15 +239,24 @@ function rewriteSeedFile(updatedGames: DemoGame[], runDate: string) {
   }
 
   const newHeader = [
+    'import { BoardGameTrait, LanguageDependence } from "@prisma/client";',
+    "",
     "/**",
     ` * 199 real, published board games. Refreshed against a live BGG import`,
     ` * (${runDate}, \`scripts/refresh-demo-games-seed.ts\`) for every title BGG`,
     " * resolved to exactly one exact-name match; ambiguous titles (multiple or",
-    " * zero exact BGG hits) kept their previous values. `title` always keeps the",
-    " * familiar marketing name used in this file, even where BGG's canonical",
-    ' * name differs (e.g. "6 Nimmt!" vs. BGG\'s "Take 5", "Dobble" vs. "Spot',
-    ' * it!"). A translation-API failure (daily quota) leaves a description in',
-    " * English rather than clearing it — a later rerun backfills the rest.",
+    " * zero exact BGG hits) kept their previous values (`bggId: null` and empty/",
+    " * null for every BGG-only field below). `title` always keeps the familiar",
+    " * marketing name used in this file, even where BGG's canonical name differs",
+    ' * (e.g. "6 Nimmt!" vs. BGG\'s "Take 5", "Dobble" vs. "Spot it!"). A',
+    " * translation-API failure (daily quota) leaves a description in English",
+    " * rather than clearing it — a later rerun backfills the rest.",
+    " *",
+    " * Mirrors every `BoardGame` field BGG can supply (see",
+    " * `lib/bgg/board-game-versions.ts#bggDataToTitleInput`) except `ean` and",
+    " * `notes` (never from BGG), `secondaryTitle` (admin-only, never auto-set",
+    " * even during a regular import) and `kind` (decided by `DEMO_EXPANSIONS` in",
+    " * `seed.ts`, not by BGG's `type` attribute).",
     " */",
   ];
 
@@ -223,7 +325,7 @@ async function main() {
         title: game.title,
         reason: message,
       });
-      updatedGames.push(game);
+      updatedGames.push(withoutBggMatch(game));
       console.log(`unchanged (${message})`);
     }
     await sleep(THROTTLE_MS);
