@@ -5,19 +5,21 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { requireEnv } from "@/lib/utils/require-env";
 
 /**
- * Shared access to the S3-compatible blob store (self-hosted MinIO, see
+ * Shared access to the S3-compatible blob store (self-hosted SeaweedFS, see
  * docker-compose.yml and docs/deployment-docker.md). Replaces `@vercel/blob`.
  *
  * Two endpoints on purpose: the app talks to `S3_ENDPOINT` (inside Docker
- * e.g. `http://minio:9000`), while browsers load images and post uploads to
- * `S3_PUBLIC_ENDPOINT` (e.g. `https://files.oecher-meeples.org`). Without a
- * separate public endpoint both are the same URL (local dev).
+ * e.g. `http://seaweedfs:8333`), while browsers load images and post uploads
+ * to `S3_PUBLIC_ENDPOINT` (e.g. `https://files.oecher-meeples.org`). Without
+ * a separate public endpoint both are the same URL (local dev).
  *
- * Objects are addressed path-style (`<endpoint>/<bucket>/<key>`) — MinIO
+ * Objects are addressed path-style (`<endpoint>/<bucket>/<key>`) — SeaweedFS
  * needs `forcePathStyle`, and it keeps the public URL independent of DNS
  * wildcards. The bucket has anonymous read access (set up by the
- * `minio-init` compose service), so the public URL is the permanent URL
- * stored in the database, just like the former Vercel Blob URLs.
+ * `seaweedfs-init` compose service via a standard S3 bucket policy — unlike
+ * MinIO, SeaweedFS has no root console user to grant/restrict this with), so
+ * the public URL is the permanent URL stored in the database, just like the
+ * former Vercel Blob URLs.
  */
 const DEFAULT_REGION = "us-east-1";
 

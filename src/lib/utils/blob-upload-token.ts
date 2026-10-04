@@ -25,7 +25,7 @@ export type BlobUploadTokenOptions = {
   /** Already normalised via `normaliseBlobPath()`. */
   pathname: string;
   /** MIME type the client declared for the file — signed into the policy,
-   * so S3/MinIO rejects an upload with any other `Content-Type`. */
+   * so S3/SeaweedFS rejects an upload with any other `Content-Type`. */
   contentType: string;
   /** Omit for "any type" (downloads, LFG attachments). */
   allowedContentTypes?: string[];
@@ -36,7 +36,7 @@ export type BlobUploadTokenOptions = {
 /**
  * Server-side upload grant, the S3 counterpart of Vercel Blob's
  * `generateClientTokenFromReadWriteToken()`. A presigned POST (not PUT) on
- * purpose: its policy conditions make MinIO itself enforce the size limit
+ * purpose: its policy conditions make the S3-compatible store itself enforce the size limit
  * (`content-length-range`) and the content type — a presigned PUT can't cap
  * the size, so a member could upload arbitrarily large files.
  */

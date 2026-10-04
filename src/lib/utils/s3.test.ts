@@ -86,7 +86,7 @@ describe("getS3Client", () => {
     expect(() => getS3Client()).toThrow("S3_ACCESS_KEY");
   });
 
-  it("uses path-style addressing (required by MinIO)", () => {
+  it("uses path-style addressing (required by SeaweedFS)", () => {
     expect(getS3Client().config.forcePathStyle).toBe(true);
   });
 });

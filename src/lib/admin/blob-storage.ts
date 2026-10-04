@@ -3,7 +3,7 @@ import { getS3Bucket, getS3Client } from "@/lib/utils/s3";
 
 /**
  * Soft quota for the admin dashboard's fill-level card. The self-hosted
- * MinIO store (see docker-compose.yml) has no plan limit — it is bounded only
+ * blob store (SeaweedFS, see docker-compose.yml) has no plan limit — it is bounded only
  * by the host's disk — so this keeps the 1 GB the club had on Vercel Blob as
  * the "time to clean up" reference value. Override with
  * `S3_STORAGE_LIMIT_BYTES` once the server's disk budget is known.
@@ -28,7 +28,7 @@ export type BlobStorageUsage = {
 
 /** Fetches the current blob storage usage by paginating through every
  * object in the bucket and summing their sizes — S3 has no "bucket size"
- * call, and MinIO's admin API would need extra credentials/scope. */
+ * call, and the store's own API would need extra credentials/scope. */
 export async function getBlobStorageUsage(): Promise<BlobStorageUsage> {
   const client = getS3Client();
   const bucket = getS3Bucket();

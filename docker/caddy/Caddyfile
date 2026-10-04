@@ -14,9 +14,9 @@
 	reverse_proxy app:3000
 }
 
-# Blob storage (MinIO): public images and the browsers' direct presigned
+# Blob storage (SeaweedFS): public images and the browsers' direct presigned
 # uploads. Separate host because stored blob URLs are path-style
 # (https://{S3_DOMAIN}/<bucket>/<key>) and must not collide with app routes.
 {$S3_DOMAIN} {
-	reverse_proxy minio:9000
+	reverse_proxy seaweedfs:8333
 }

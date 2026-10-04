@@ -16,7 +16,7 @@ const LOGIN_PATH = "/login";
  * `connect-src 'self'` is enough: the auth client talks to our own
  * `/api/auth/*` route since the move to self-hosted better-auth (ADR 0015),
  * there is no external auth origin anymore. The one extra origin is the
- * self-hosted blob store (MinIO): images are loaded from it and uploads are
+ * self-hosted blob store (SeaweedFS): images are loaded from it and uploads are
  * POSTed to it directly from the browser (see `use-blob-upload.ts`).
  */
 function buildCsp(nonce: string) {

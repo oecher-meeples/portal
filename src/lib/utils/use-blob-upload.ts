@@ -5,7 +5,7 @@ import type { BlobUploadToken } from "@/lib/utils/blob-upload-token";
 
 /**
  * Shared client-side upload orchestration against the S3-compatible blob
- * store (MinIO). Token issuance stays with the caller (`getToken`) so each
+ * store (SeaweedFS). Token issuance stays with the caller (`getToken`) so each
  * feature keeps its own permission check — only the upload mechanics
  * (pathname, presigned POST, state) are shared.
  *
