@@ -8,7 +8,8 @@ Zugangsdaten angebunden.
 
 Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
 `docker-compose.yml`, [`docker/.env.example`](../docker/.env.example),
-`Dockerfile`, `docker/app/entrypoint.sh`, `docker/cron/`, `docker/caddy/Caddyfile`.
+`Dockerfile`, `docker/app/entrypoint.sh`, `docker/cron/`, `docker/seaweedfs/`,
+`docker/caddy/Caddyfile`.
 
 ## Inhalt
 
@@ -33,8 +34,8 @@ Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
 | -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | `app`          | `Dockerfile` (Repo-Wurzel)   | Next.js-Server; führt bei jedem Start Migrationen und ggf. den Seed aus                             | `3000` (`APP_PORT`)                |
 | `postgres`     | `postgres:16`                | Datenbank, Volume `postgres-data`                                                                   | `5432` (`POSTGRES_PORT`)           |
-| `minio`        | `minio/minio:latest`         | S3-kompatibler Datei-Speicher (Uploads, erzeugte Bilder), Volume `minio-data`                       | `9000` API, `9001` Konsole         |
-| `minio-init`   | `minio/mc:latest`            | One-Shot: legt Bucket und App-Zugang an, beendet sich danach                                        | —                                  |
+| `seaweedfs`    | `docker/seaweedfs/Dockerfile` (Basis `chrislusf/seaweedfs:4.48`) | S3-kompatibler Datei-Speicher (Uploads, erzeugte Bilder), Volume `seaweedfs-data` | `8333` S3-API (`S3_API_PORT`)      |
+| `seaweedfs-init` | `amazon/aws-cli:2.33.0`    | One-Shot: legt Bucket und öffentliche Lese-Policy an, beendet sich danach                           | —                                  |
 | `cron-sidecar` | `docker/cron/Dockerfile`     | Ruft die geplanten Hintergrund-Jobs der App auf                                                     | —                                  |
 | `caddy`        | `caddy:2`                    | **Optional** (Profil `with-proxy`): TLS-Reverse-Proxy mit Let's-Encrypt-Zertifikaten                | `80`, `443` (öffentlich)           |
 
@@ -85,12 +86,13 @@ anmelden.
 ## 4. Image bauen
 
 ```bash
-docker compose build              # baut app (Dockerfile) und cron-sidecar (docker/cron/)
+docker compose build              # baut app (Dockerfile), seaweedfs (docker/seaweedfs/) und cron-sidecar (docker/cron/)
 ```
 
 `docker compose up -d --build` baut implizit mit; ein separater Build lohnt
-sich nur, um Build-Fehler getrennt vom Start zu sehen. Die übrigen Images
-(`postgres`, `minio`, `minio/mc`, `caddy`) werden beim ersten `up` gezogen.
+sich nur, um Build-Fehler getrennt vom Start zu sehen. Das Basis-Image
+`chrislusf/seaweedfs:4.48` wird beim Bauen von `seaweedfs` gezogen, die
+übrigen Images (`postgres`, `amazon/aws-cli`, `caddy`) beim ersten `up`.
 
 Das App-Image ist ein Multi-Stage-Build (`node:22-slim`):
 
@@ -144,9 +146,10 @@ gar kein Container, nicht nur die App nicht.
 | `MEMBER_DATA_ENCRYPTION_KEY` | AES-256-GCM-Schlüssel für gespeicherte IBANs ([ADR 0003](adr/0003-bankdaten-verschluesselt-mit-protokolliertem-leseweg.md)). **Außerhalb des Servers sichern**, siehe 11   | `openssl rand -base64 32`           |
 | `CRON_SECRET`                | Bearer-Token zwischen `cron-sidecar` und `/api/cron/*`                                                         | `openssl rand -hex 32`              |
 | `POSTGRES_PASSWORD`          | Passwort des DB-Users; landet in der `DATABASE_URL`, daher URL-sicher halten                                   | `openssl rand -hex 24`              |
-| `MINIO_ROOT_PASSWORD`        | Root-Passwort von MinIO (Konsole, `minio-init`) — die App nutzt es nicht                                       | `openssl rand -hex 20`              |
-| `S3_ACCESS_KEY`              | Name des App-Zugangs zu MinIO; `minio-init` legt ihn an                                                        | `meeples-app`                       |
-| `S3_SECRET_KEY`              | Secret dazu                                                                                                    | `openssl rand -hex 20`              |
+| `SEAWEEDFS_ADMIN_ACCESS_KEY` | Access-Key der SeaweedFS-Identität `admin` (Bucket + Policy anlegen, nur `seaweedfs-init`) — die App nutzt ihn nicht | `openssl rand -hex 20`        |
+| `SEAWEEDFS_ADMIN_SECRET_KEY` | Secret-Key dazu                                                                                                | `openssl rand -hex 20`              |
+| `S3_ACCESS_KEY`              | Access-Key der SeaweedFS-Identität `app` (Lesen/Schreiben, keine Policy-Rechte), mit der die App arbeitet       | `meeples-app`                       |
+| `S3_SECRET_KEY`              | Secret-Key dazu                                                                                                | `openssl rand -hex 20`              |
 
 ### Bedingt Pflicht
 
@@ -168,16 +171,14 @@ aber in der jeweiligen Situation nötig:
 | `DATABASE_URL`                                    | aus `POSTGRES_*` gebaut, Host `postgres:5432`      | Nur setzen, um statt des Containers eine **externe** Postgres-Instanz zu nutzen           |
 | `BETTER_AUTH_TRUSTED_ORIGINS`                     | leer                                               | Weitere Origins (kommagetrennt), die `/api/auth` aufrufen dürfen                          |
 | `SEED_DEMO_DATA`                                  | `false`                                            | `true` = Demo-Daten beim ersten Start ([7](#7-erster-start-migration-und-seed))            |
-| `MINIO_ROOT_USER`                                 | `minio-admin`                                      | Root-Login der MinIO-Konsole                                                              |
 | `S3_BUCKET`                                       | `meeples`                                          | Bucket-Name                                                                               |
-| `S3_ENDPOINT`                                     | `http://minio:9000`                                | Endpoint, über den die **App** MinIO im Compose-Netz erreicht                             |
-| `S3_REGION`                                       | `us-east-1`                                        | Nur für das AWS-SDK, MinIO ignoriert sie                                                  |
+| `S3_ENDPOINT`                                     | `http://seaweedfs:8333`                            | Endpoint, über den die **App** SeaweedFS im Compose-Netz erreicht                         |
+| `S3_REGION`                                       | `us-east-1`                                        | Region für das AWS-SDK der App und für `seaweedfs-init`; der Default passt                |
 | `S3_STORAGE_LIMIT_BYTES`                          | 1 GB                                               | Soft-Quota der Füllstandskarte im Admin-Dashboard                                         |
-| `MINIO_CORS_ALLOW_ORIGIN`                         | `*`                                                | CORS für Browser-Uploads; produktiv auf `BETTER_AUTH_URL` setzen (so in `docker/.env.example`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | leer bzw. Port `587`                 | Mailversand, ohne `SMTP_HOST` deaktiviert ([9.3](#93-e-mail-smtp))                        |
 | `PUBLIC_CALENDAR_ICS_URL`, `ICS_FEED_URL_INTERNAL` | leer                                              | Öffentlicher bzw. interner Kalender-Feed (ICS-URL, kein API-Key)                          |
 | `META_*`, `BGG_BEARER_TOKEN`, `YOUTUBE_API_KEY`, `GITHUB_TOKEN`, `TRANSLATION_CONTACT_EMAIL` | leer (`META_GRAPH_API_VERSION`: `v21.0`) | Externe Dienste, je Feature optional ([10](#10-externe-zugangsdaten-beschaffen)) |
-| `APP_PORT`, `POSTGRES_PORT`, `MINIO_API_PORT`, `MINIO_CONSOLE_PORT` | `3000`, `5432`, `9000`, `9001`  | Host-Ports (immer nur auf `127.0.0.1`)                                                    |
+| `APP_PORT`, `POSTGRES_PORT`, `S3_API_PORT`        | `3000`, `5432`, `8333`                             | Host-Ports (immer nur auf `127.0.0.1`)                                                    |
 | `CRON_APP_URL`                                    | `http://app:3000`                                  | Ziel des Cron-Sidecars, nur bei umbenanntem App-Service                                   |
 
 Fehlt ein optionaler Schlüssel eines externen Dienstes, startet die App
@@ -187,8 +188,8 @@ trotzdem; nur die betroffene Funktion meldet beim Benutzen einen Fehler.
 
 Zum Ausprobieren auf dem eigenen Rechner geht es auch ohne Proxy und TLS:
 `BETTER_AUTH_URL` und `PUBLIC_SITE_URL` auf `http://localhost:3000`,
-`S3_PUBLIC_ENDPOINT` auf `http://localhost:9000`, `MINIO_CORS_ALLOW_ORIGIN`
-auf `http://localhost:3000`, dann `docker compose up -d --build`.
+`S3_PUBLIC_ENDPOINT` auf `http://localhost:8333`, dann
+`docker compose up -d --build`.
 Einschränkung: Die Textextraktion von hochgeladenen Rechtliches-PDFs lädt die
 Datei über `S3_PUBLIC_ENDPOINT` — aus dem App-Container heraus zeigt
 `localhost` aber auf den Container selbst, das schlägt in diesem Modus fehl.
@@ -204,8 +205,8 @@ Proxy des Hosters …):
 docker compose up -d --build
 ```
 
-Startet `postgres`, `minio`, `minio-init`, `app` und `cron-sidecar`. Der
-vorhandene Proxy wird auf `127.0.0.1:3000` (Portal) und `127.0.0.1:9000`
+Startet `postgres`, `seaweedfs`, `seaweedfs-init`, `app` und `cron-sidecar`. Der
+vorhandene Proxy wird auf `127.0.0.1:3000` (Portal) und `127.0.0.1:8333`
 (Datei-Speicher) gerichtet, siehe [8.2](#82-variante-a-vorhandener-reverse-proxy).
 
 **Variante B — kein Proxy vorhanden**, Caddy soll TLS übernehmen:
@@ -221,9 +222,9 @@ Voraussetzungen siehe [8.1](#81-variante-b-mitgelieferter-caddy-profil-with-prox
 
 Startreihenfolge (automatisch über `depends_on`):
 
-1. `postgres` und `minio` starten; ihre Healthchecks (`pg_isready`,
-   `mc ready`) melden Bereitschaft.
-2. `minio-init` läuft einmal durch und beendet sich mit Exit-Code 0
+1. `postgres` und `seaweedfs` starten; ihre Healthchecks (`pg_isready` bzw.
+   `wget --spider http://127.0.0.1:8333/`) melden Bereitschaft.
+2. `seaweedfs-init` läuft einmal durch und beendet sich mit Exit-Code 0
    (in `docker compose ps -a` als `exited (0)` — das ist korrekt).
 3. Erst dann startet `app`. Ein „DB noch nicht bereit"-Fehler beim ersten
    Start ist dadurch ausgeschlossen.
@@ -291,7 +292,7 @@ seeden; dafür braucht es eine leere DB.
 Das Portal braucht zwei öffentliche Hostnamen:
 
 - **Portal** (`BETTER_AUTH_URL`/`PUBLIC_SITE_URL`) → App auf Port 3000.
-- **Datei-Speicher** (`S3_PUBLIC_ENDPOINT`) → MinIO auf Port 9000. Bilder
+- **Datei-Speicher** (`S3_PUBLIC_ENDPOINT`) → SeaweedFS auf Port 8333. Bilder
   werden direkt von dort geladen, Uploads gehen direkt vom Browser dorthin.
   Eigener Hostname, weil die Datei-URLs pfadbasiert sind
   (`https://<host>/<bucket>/<key>`) und nicht mit App-Routen kollidieren
@@ -303,7 +304,7 @@ Anfang an unter HTTPS betreiben.
 ### 8.1 Variante B: mitgelieferter Caddy (Profil `with-proxy`)
 
 `docker/caddy/Caddyfile` leitet `APP_DOMAIN` an `app:3000` und `S3_DOMAIN` an
-`minio:9000` weiter und holt/erneuert Let's-Encrypt-Zertifikate selbst.
+`seaweedfs:8333` weiter und holt/erneuert Let's-Encrypt-Zertifikate selbst.
 
 Vor dem Start:
 
@@ -320,7 +321,6 @@ Vor dem Start:
    BETTER_AUTH_URL="https://portal.example.org"
    PUBLIC_SITE_URL="https://portal.example.org"
    S3_PUBLIC_ENDPOINT="https://files.portal.example.org"
-   MINIO_CORS_ALLOW_ORIGIN="https://portal.example.org"
    ```
 
 4. `docker compose --profile with-proxy up -d --build`, dann
@@ -336,7 +336,7 @@ Ohne Profil startet kein Caddy. Der eigene Proxy auf demselben Host zeigt auf:
 | Hostname                                 | Ziel             |
 | ---------------------------------------- | ---------------- |
 | Portal (`BETTER_AUTH_URL`)               | `127.0.0.1:3000` |
-| Datei-Speicher (`S3_PUBLIC_ENDPOINT`)    | `127.0.0.1:9000` |
+| Datei-Speicher (`S3_PUBLIC_ENDPOINT`)    | `127.0.0.1:8333` |
 
 Worauf es ankommt:
 
@@ -346,7 +346,7 @@ Worauf es ankommt:
 - Request-Body-Limit am Datei-Host auf **mindestens 25 MB** anheben; die
   größten Uploads (PDFs, Anhänge) dürfen 20 MB haben. nginx erlaubt
   standardmäßig nur 1 MB.
-- TLS terminiert der eigene Proxy; App und MinIO sprechen intern nur HTTP.
+- TLS terminiert der eigene Proxy; App und SeaweedFS sprechen intern nur HTTP.
 
 Beispiel nginx (Zertifikats-Direktiven weggelassen):
 
@@ -365,7 +365,7 @@ server {
     server_name files.portal.example.org;
     client_max_body_size 25m;
     location / {
-        proxy_pass http://127.0.0.1:9000;
+        proxy_pass http://127.0.0.1:8333;
         proxy_set_header Host $host;
     }
 }
@@ -374,7 +374,7 @@ server {
 Läuft der Proxy auf **einem anderen Rechner**, reicht die
 `127.0.0.1`-Bindung nicht. Dann in einer `docker-compose.override.yml`
 zusätzliche Port-Bindungen auf eine interne IP ergänzen (z. B.
-`"10.0.0.5:3000:3000"` bei `app`, `"10.0.0.5:9000:9000"` bei `minio`) und
+`"10.0.0.5:3000:3000"` bei `app`, `"10.0.0.5:8333:8333"` bei `seaweedfs`) und
 per Firewall auf den Proxy beschränken.
 
 Der Proxy-Host muss außerdem selbst `S3_PUBLIC_ENDPOINT` erreichen können:
@@ -414,47 +414,76 @@ Eine externe Postgres-Instanz (≥ 16) ist möglich: `DATABASE_URL` setzen
 (ggf. mit `?sslmode=require`). Der `postgres`-Container läuft dann trotzdem
 mit (`POSTGRES_PASSWORD` bleibt Pflicht), wird aber nicht benutzt.
 
-### 9.2 Datei-Speicher (`minio`, `minio-init`)
+### 9.2 Datei-Speicher (`seaweedfs`, `seaweedfs-init`)
 
 Uploads (Bilder, PDFs, Downloads, Anhänge) und serverseitig erzeugte Bilder
-liegen in einem S3-kompatiblen **MinIO**-Container, Volume `minio-data`. Die
-App spricht ihn über `@aws-sdk/client-s3` an (`src/lib/utils/s3.ts`,
-pfadbasierte Adressierung) — intern über `S3_ENDPOINT`, Browser über
-`S3_PUBLIC_ENDPOINT`.
+liegen in einem S3-kompatiblen **SeaweedFS**-Container, Volume
+`seaweedfs-data`. Die App spricht ihn über `@aws-sdk/client-s3` an
+(`src/lib/utils/s3.ts`, pfadbasierte Adressierung) — intern über
+`S3_ENDPOINT` (`http://seaweedfs:8333`), Browser über `S3_PUBLIC_ENDPOINT`.
+Es gibt nur die S3-API auf Port 8333, keine Admin-Weboberfläche.
 
-**Bucket-Init:** `minio-init` läuft bei jedem `docker compose up` idempotent
-nach dem MinIO-Healthcheck und
+**Image:** `docker/seaweedfs/Dockerfile` baut auf `chrislusf/seaweedfs:4.48`
+auf und ergänzt nur einen Entrypoint (`docker/seaweedfs/entrypoint.sh`). Der
+erzeugt bei jedem Containerstart aus
+`docker/seaweedfs/s3-config.json.template` und den Env-Vars die
+Zugangsdatei `/etc/seaweedfs/s3-config.json` (per `sed`, das Basis-Image hat
+eine Shell, aber kein `envsubst`) und startet dann `weed server` mit S3-API.
 
-1. legt den Bucket `S3_BUCKET` an (falls nicht vorhanden),
-2. setzt ihn auf anonymes Lesen (`mc anonymous set download`) — Datei-URLs
-   sind öffentlich abrufbar, der Bucket aber nicht auflistbar,
-3. legt den App-Zugang `S3_ACCESS_KEY`/`S3_SECRET_KEY` mit `readwrite`-Policy
-   an, damit die App nicht mit den Root-Credentials läuft.
+**Zwei Identitäten** statt eines Root-Users — SeaweedFS kennt keinen
+Root-Login, die Zugänge stehen statisch in der Zugangsdatei:
 
-Bewusst kein automatisches Bucket-Anlegen im App-Code: Bucket-Policy und
-User-Anlage brauchen Admin-Rechte, die die App nicht haben soll.
+| Identität | Zugangsdaten                                                 | Rechte                                   | Genutzt von              |
+| --------- | ------------------------------------------------------------ | ---------------------------------------- | ------------------------ |
+| `admin`   | `SEAWEEDFS_ADMIN_ACCESS_KEY` / `SEAWEEDFS_ADMIN_SECRET_KEY`  | `Admin`, `Read`, `Write`, `List`, `Tagging` | nur `seaweedfs-init`  |
+| `app`     | `S3_ACCESS_KEY` / `S3_SECRET_KEY`                            | `Read`, `Write`, `List`, `Tagging`       | App-Container            |
+
+Da die Datei bei jedem Start neu erzeugt wird, wirkt ein geänderter Schlüssel
+in `.env` nach `docker compose up -d` (Container werden mit der neuen Umgebung
+neu erstellt). Die Schlüssel werden ungeprüft per `sed` in JSON eingesetzt —
+Zeichen wie `|`, `&`, `\` oder `"` darin brechen die Datei; mit
+`openssl rand -hex 20` erzeugte Werte sind unproblematisch.
+
+**Bucket-Init:** `seaweedfs-init` (Image `amazon/aws-cli:2.33.0`, mit der
+`admin`-Identität als AWS-Zugangsdaten) läuft bei jedem `docker compose up`
+idempotent nach dem SeaweedFS-Healthcheck und
+
+1. legt den Bucket `S3_BUCKET` an (`aws s3 mb`, falls nicht vorhanden),
+2. setzt per `aws s3api put-bucket-policy` eine Bucket-Policy, die anonymes
+   Lesen einzelner Dateien erlaubt (`Principal: "*"`, `Action: s3:GetObject`)
+   — Datei-URLs sind öffentlich abrufbar, wie früher bei Vercel Blob; das
+   Auflisten des Buckets gibt die Policy nicht frei.
+
+Bewusst kein automatisches Bucket-Anlegen im App-Code: Bucket-Policy braucht
+Admin-Rechte, die die App-Identität nicht hat.
 
 **Upload-Ablauf:** Der Browser lädt direkt in den Bucket hoch, nicht über den
 App-Server. Die zugehörige Server-Action prüft die Berechtigung und stellt
 einen **Presigned POST** aus (`src/lib/utils/blob-upload-token.ts`), dessen
-Policy Maximalgröße und Content-Type festlegt — MinIO selbst lehnt zu große
-oder falsch typisierte Dateien ab. Deshalb muss `MINIO_CORS_ALLOW_ORIGIN` den
-Portal-Origin erlauben.
+Policy Maximalgröße und Content-Type festlegt — SeaweedFS selbst lehnt zu
+große oder falsch typisierte Dateien ab. CORS für diese Direkt-Uploads ist
+ohne weitere Konfiguration aktiv: SeaweedFS erlaubt standardmäßig alle
+Origins (`-s3.allowedOrigins` hat den Default `*`); dafür gibt es keine
+Env-Var. Wer das einschränken will, ergänzt das Flag in
+`docker/seaweedfs/entrypoint.sh` beim Aufruf von `weed server` und baut
+`seaweedfs` neu (`docker compose up -d --build seaweedfs`).
 
 **`S3_PUBLIC_ENDPOINT` nicht nachträglich ändern:** Gespeicherte Datei-URLs
 enthalten ihn. Ein Wechsel lässt alle bisherigen Bilder/Dateien ins Leere
 zeigen (Reparatur nur per SQL-`replace()` auf den URL-Spalten). Die
 Content-Security-Policy erlaubt den Origin automatisch.
 
-**MinIO-Konsole:** `http://127.0.0.1:9001` auf dem Server, Login
-`MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`. Von außen per SSH-Tunnel:
-`ssh -L 9001:127.0.0.1:9001 <server>`.
+**Lizenz:** SeaweedFS steht unter Apache-2.0. Der Stack nutzte ursprünglich
+MinIO, dessen Kern unter AGPLv3 steht; mit dem Wechsel enthält der
+Self-Hosting-Stack keinen AGPL-Baustein mehr für den Datei-Speicher.
 
-> **Image-Pinning:** MinIO veröffentlicht seit Ende 2025 keine neuen
-> Community-Images mehr (nur noch Quellcode). `docker-compose.yml` nutzt
-> `minio/minio:latest` und `minio/mc:latest` — vor dem Produktivbetrieb einen
-> getesteten Tag pinnen oder eine Alternative (z. B. Garage, SeaweedFS)
-> prüfen; die App braucht nur die S3-API.
+> **Image-Pinning:** `chrislusf/seaweedfs:4.48` (in
+> `docker/seaweedfs/Dockerfile`) und `amazon/aws-cli:2.33.0` (in
+> `docker-compose.yml`) sind die getesteten Versionen. Vor einem Wechsel des
+> Tags die Release-Notes prüfen und das Update erst auf einer Testinstanz
+> ausprobieren; die App braucht nur die S3-API. Hintergrund des Wechsels:
+> MinIO hat im September 2026 seine Docker-Hub-Images (`minio/minio`,
+> `minio/mc`) entfernt.
 
 ### 9.3 E-Mail (SMTP)
 
@@ -559,7 +588,7 @@ zusätzlicher Container, keine Env-Vars; die Daten liegen in der Tabelle
 ### 9.6 Healthcheck
 
 `GET /api/health` antwortet mit `{"status":"ok"}`, sobald der Next.js-Server
-läuft. Er prüft **nicht** Datenbank oder MinIO — er ist ein
+läuft. Er prüft **nicht** Datenbank oder SeaweedFS — er ist ein
 Lebenszeichen-Check, den Docker und Caddy nutzen (`interval 30s`,
 `start_period 60s`). Externe Monitoring-Dienste können dieselbe URL abfragen.
 
@@ -603,7 +632,7 @@ Drei Dinge sind zu sichern — fehlt eines, ist die Instanz nicht vollständig
 wiederherstellbar:
 
 1. **Datenbank** (Volume `postgres-data`),
-2. **Dateien** im MinIO-Bucket (Volume `minio-data`) — alle hochgeladenen
+2. **Dateien** im SeaweedFS-Bucket (Volume `seaweedfs-data`) — alle hochgeladenen
    Bilder, PDFs, Anhänge; die Datenbank enthält nur deren URLs,
 3. **`.env`**, vor allem `MEMBER_DATA_ENCRYPTION_KEY`: Ohne diesen Schlüssel
    sind alle gespeicherten IBANs auch aus einem intakten Datenbank-Backup
@@ -636,23 +665,28 @@ docker compose exec -T postgres \
 docker compose start app cron-sidecar
 ```
 
-### Dateien (MinIO)
+### Dateien (SeaweedFS)
 
-Den Bucket über den `minio/mc`-Container des Stacks in ein Host-Verzeichnis
-spiegeln (`minio-init` hat bereits alle nötigen Variablen):
+Den Bucket mit `aws s3 sync` in ein Host-Verzeichnis spiegeln — über einen
+Wegwerf-Container aus dem `seaweedfs-init`-Service (Image `amazon/aws-cli`,
+hängt im Compose-Netz und hat die `admin`-Zugangsdaten
+`SEAWEEDFS_ADMIN_ACCESS_KEY`/`SEAWEEDFS_ADMIN_SECRET_KEY` sowie `S3_BUCKET`
+bereits als Variablen):
 
 ```bash
-docker compose run --rm -v "$PWD/minio-backup:/backup" minio-init \
-  'mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" && mc mirror --overwrite "local/$S3_BUCKET" /backup'
+docker compose run --rm -v "$PWD/seaweedfs-backup:/backup" seaweedfs-init \
+  'aws --endpoint-url http://seaweedfs:8333 s3 sync "s3://$S3_BUCKET" /backup'
 ```
 
-`mc mirror` überträgt bei Folgeläufen nur neue/geänderte Dateien. Das
-Verzeichnis `minio-backup/` anschließend wie jedes andere Backup wegsichern.
-Wiederherstellen in umgekehrter Richtung:
-`… mc mirror --overwrite /backup "local/$S3_BUCKET"`.
+(Der Befehl steht in einfachen Anführungszeichen, damit `$S3_BUCKET` erst im
+Container aufgelöst wird.) `aws s3 sync` überträgt bei Folgeläufen nur
+neue/geänderte Dateien. Das Verzeichnis `seaweedfs-backup/` anschließend wie
+jedes andere Backup wegsichern. Wiederherstellen in umgekehrter Richtung:
+`… 'aws --endpoint-url http://seaweedfs:8333 s3 sync /backup "s3://$S3_BUCKET"'`.
 
-Alternativ das Volume `minio-data` bei gestopptem `minio` als Ganzes
-archivieren (Volume-Name mit Projekt-Präfix, siehe `docker volume ls`).
+Alternativ das Volume `seaweedfs-data` bei gestopptem `seaweedfs`
+(`docker compose stop seaweedfs`) als Ganzes archivieren (Volume-Name mit
+Projekt-Präfix, siehe `docker volume ls`).
 
 Das Volume `caddy-data` (Zertifikate) muss nicht gesichert werden; Caddy
 stellt bei Verlust neu aus.
@@ -669,9 +703,14 @@ Der neue App-Container spielt fehlende Migrationen beim Start automatisch ein
 ([7](#7-erster-start-migration-und-seed)). Vor einem Update ein
 Datenbank-Backup ziehen ([11](#11-backup-und-wiederherstellung)) — Migrationen
 lassen sich nicht automatisch zurückdrehen. Fremd-Images (`postgres`,
-`minio`, `caddy`) aktualisiert `docker compose pull` gefolgt von
+`amazon/aws-cli`, `caddy`) aktualisiert `docker compose pull` gefolgt von
 `docker compose up -d`; die Postgres-**Major**-Version (`postgres:16`) nur mit
-Dump/Restore wechseln, nie durch bloßes Ändern des Tags.
+Dump/Restore wechseln, nie durch bloßes Ändern des Tags. SeaweedFS ist auf
+einen festen Tag gepinnt (`FROM chrislusf/seaweedfs:4.48` in
+`docker/seaweedfs/Dockerfile`) und ändert sich nur, wenn dieser Tag
+angehoben wird — dann mit `docker compose up -d --build` neu bauen
+([9.2](#92-datei-speicher-seaweedfs-seaweedfs-init)); vorher die Dateien
+sichern ([11](#11-backup-und-wiederherstellung)).
 
 ## 13. Umzug von Vercel/Neon
 
@@ -733,7 +772,7 @@ Hinweise:
 Optional prüfen (mit Repo-Checkout und pnpm auf dem Host):
 `DATABASE_URL="postgresql://meeples:<pw>@localhost:5432/meeples" pnpm prisma migrate status`.
 
-### 13.2 Dateien (Vercel Blob → MinIO)
+### 13.2 Dateien (Vercel Blob → SeaweedFS)
 
 Nicht automatisch migriert. Alte `*.public.blob.vercel-storage.com`-URLs in
 der Datenbank funktionieren weiter, **solange der Vercel-Blob-Store
@@ -741,8 +780,15 @@ existiert**; `deleteBlobs()` überspringt sie (im eigenen Bucket gibt es nichts
 zu löschen). Für einen vollständigen Umzug:
 
 1. Dateien aus dem Vercel-Blob-Store herunterladen (Pfade beibehalten).
-2. Mit `mc cp --recursive` (z. B. über den `minio-init`-Container wie in
-   [11](#dateien-minio)) in den Bucket `S3_BUCKET` legen.
+2. Mit `aws s3 cp --recursive` über einen Wegwerf-`amazon/aws-cli`-Container
+   (den `seaweedfs-init`-Service wie in [11](#dateien-seaweedfs)) in den
+   Bucket `S3_BUCKET` legen, z. B. mit dem Download in `./vercel-blob/`:
+
+   ```bash
+   docker compose run --rm -v "$PWD/vercel-blob:/import:ro" seaweedfs-init \
+     'aws --endpoint-url http://seaweedfs:8333 s3 cp --recursive /import "s3://$S3_BUCKET"'
+   ```
+
 3. Die URL-Spalten per SQL-`replace()` von
    `https://<store>.public.blob.vercel-storage.com/` auf
    `<S3_PUBLIC_ENDPOINT>/<S3_BUCKET>/` umschreiben.
@@ -781,15 +827,30 @@ der Repo-Wurzel neben `docker-compose.yml` liegen (nicht in `docker/`).
   `DATABASE_URL` — URL-sicher erzeugen (`openssl rand -hex 24`).
 - **Ein „DB noch nicht bereit"-Fehler** sollte nicht vorkommen: `app` startet
   erst, wenn der `postgres`-Healthcheck (`pg_isready`) grün ist und
-  `minio-init` erfolgreich war. Tritt er doch auf (z. B. externe
+  `seaweedfs-init` erfolgreich war. Tritt er doch auf (z. B. externe
   `DATABASE_URL`), startet Docker den Container einfach neu.
 
 ### `app` wartet ewig / startet gar nicht
 
-`minio-init` ist fehlgeschlagen, `app` hängt an
-`service_completed_successfully`. `docker compose logs minio-init` prüfen —
-häufig ein falsches `MINIO_ROOT_PASSWORD` gegenüber dem ersten Start oder ein
-`S3_SECRET_KEY` unter 8 Zeichen (MinIO verlangt mindestens 8).
+`seaweedfs-init` ist fehlgeschlagen (oder `seaweedfs` wird nicht healthy),
+`app` hängt an `service_completed_successfully`. `docker compose logs
+seaweedfs-init` und `docker compose logs seaweedfs` prüfen:
+
+- **`InvalidAccessKeyId` / `SignatureDoesNotMatch`** beim
+  `put-bucket-policy` → `seaweedfs` läuft noch mit anderen
+  `SEAWEEDFS_ADMIN_ACCESS_KEY`/`SEAWEEDFS_ADMIN_SECRET_KEY` als
+  `seaweedfs-init` (z. B. nur einer der Dienste neu erstellt). Beide aus
+  derselben `.env` neu erstellen: `docker compose up -d`. Die Zugangsdatei
+  wird bei jedem Start von `seaweedfs` neu erzeugt ([9.2](#92-datei-speicher-seaweedfs-seaweedfs-init)).
+- **`seaweedfs` startet nicht oder Zugänge funktionieren nie** → ein
+  Schlüssel enthält Zeichen, die das `sed`-Ersetzen bzw. das JSON der
+  Zugangsdatei brechen (`|`, `&`, `\`, `"`). Schlüssel mit
+  `openssl rand -hex 20` neu erzeugen.
+
+Dieselbe Logik gilt für die App: Schlägt jeder S3-Zugriff mit
+`InvalidAccessKeyId`/`SignatureDoesNotMatch` fehl, unterscheiden sich
+`S3_ACCESS_KEY`/`S3_SECRET_KEY` zwischen `app` und `seaweedfs` — beide mit
+`docker compose up -d` neu erstellen.
 
 ### `app` ist `unhealthy`, Caddy startet nicht
 
@@ -813,10 +874,17 @@ Browser aufgerufen wird (Schema, Host, ohne `/` am Ende). Weitere Origins in
 ### Bilder fehlen oder Uploads schlagen fehl
 
 - `S3_PUBLIC_ENDPOINT` ist im Browser nicht erreichbar → Proxy-Eintrag für
-  den Datei-Host prüfen; `https://<S3_DOMAIN>/<S3_BUCKET>/` sollte ein
-  XML-`AccessDenied` liefern (Bucket ist nicht auflistbar — das ist korrekt).
-- Upload bricht mit CORS-Fehler ab → `MINIO_CORS_ALLOW_ORIGIN` auf den
-  Portal-Origin setzen, `docker compose up -d minio`.
+  den Datei-Host prüfen; `https://<S3_DOMAIN>/<S3_BUCKET>/` sollte eine
+  XML-Fehlerantwort von SeaweedFS liefern (die Bucket-Policy gibt nur das
+  Lesen einzelner Dateien frei, nicht das Auflisten).
+- Upload bricht mit CORS-Fehler ab → SeaweedFS erlaubt standardmäßig alle
+  Origins, eine Einschränkung im Datei-Speicher ist also unwahrscheinlich.
+  Meist erreicht der Browser `S3_PUBLIC_ENDPOINT` gar nicht richtig (falscher
+  Hostname/Schema, Proxy liefert eine eigene Fehlerseite ohne CORS-Header,
+  HTTP statt HTTPS → Mixed Content). In den Browser-Entwicklertools prüfen,
+  welche URL der Upload anfragt und was zurückkommt. Nur wenn
+  `docker/seaweedfs/entrypoint.sh` von Hand um `-s3.allowedOrigins`
+  ergänzt wurde, muss dort der Portal-Origin enthalten sein.
 - Upload > 1 MB scheitert mit `413` → Body-Limit des eigenen Proxys anheben
   ([8.2](#82-variante-a-vorhandener-reverse-proxy)).
 - PDF-Textextraktion oder Instagram-Posting scheitert, Bilder im Browser gehen
