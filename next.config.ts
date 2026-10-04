@@ -22,6 +22,9 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Für Docker-Self-Hosting: kopiert nur die benötigten node_modules in
+  // .next/standalone statt des ganzen Projekts (siehe Dockerfile).
+  output: "standalone",
   // Erlaubt Zugriff auf den Dev-Server über die LAN-IP (z. B. zum Testen vom
   // Handy) – ohne das bricht die React-Hydration bei Cross-Origin-Zugriffen.
   // Bei Bedarf um die eigene LAN-IP ergänzen.

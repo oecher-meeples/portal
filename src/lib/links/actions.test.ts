@@ -17,10 +17,10 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const {
@@ -160,9 +160,9 @@ describe("getImportantLinkUploadToken", () => {
     getCurrentUserMock.mockResolvedValue(null);
 
     await expect(
-      getImportantLinkUploadToken("important-links/a.webp"),
+      getImportantLinkUploadToken("important-links/a.webp", "image/webp"),
     ).rejects.toThrow("Keine Berechtigung.");
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("rejects when the user lacks the links:manage permission", async () => {
@@ -170,21 +170,25 @@ describe("getImportantLinkUploadToken", () => {
     hasPermissionMock.mockResolvedValue(false);
 
     await expect(
-      getImportantLinkUploadToken("important-links/a.webp"),
+      getImportantLinkUploadToken("important-links/a.webp", "image/webp"),
     ).rejects.toThrow("Keine Berechtigung.");
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises the pathname to the important-links namespace", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getImportantLinkUploadToken("../evil.webp");
+    const token = await getImportantLinkUploadToken(
+      "../evil.webp",
+      "image/webp",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "important-links/evil.webp",
+      contentType: "image/webp",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,

@@ -157,10 +157,11 @@ export async function requireMember() {
  * auf einen Route Handler (`/api/auth/force-logout`), weil Server
  * Components selbst keine Cookies schreiben dürfen (#242).
  *
- * Bewusst hier statt in `src/proxy.ts` verankert: `auth.getSession()`
- * braucht den `next/headers`-Request-Context, den Middleware nicht hat —
- * dieser Check greift dafür bei jedem Zugriff auf eine `/admin`-Seite,
- * was für ein praktisch admin-only genutztes Konto ausreicht.
+ * Bewusst hier statt in `src/proxy.ts` verankert: der Check braucht die
+ * Permission-Abfrage (`hasPermission`) und `logAdminLoginOnce()` (liest
+ * `next/headers`) — beides gehört in den Render-Pfad, nicht in jeden
+ * Proxy-Durchlauf. Er greift bei jedem Zugriff auf eine `/admin`-Seite, was
+ * für ein praktisch admin-only genutztes Konto ausreicht.
  */
 const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
@@ -170,10 +171,10 @@ async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
   const session = await getCurrentSession();
   if (!session) return;
 
-  // #371: `auth.getSession()` normalisiert `createdAt` nur auf seinem
-  // Cache-Hit-Pfad zu einem echten `Date` — im Fallback-Pfad (Cache-Cookie
-  // fehlt/abgelaufen, z. B. direkt nach einem Server-Neustart) kommt ein
-  // roher ISO-String durch, obwohl die SDK-Typen immer `Date` versprechen.
+  // #371: Neon Auths SDK lieferte `createdAt` im Fallback-Pfad als rohen
+  // ISO-String statt `Date`. Das self-hosted better-auth (Prisma-Adapter)
+  // liefert ein echtes `Date`; die Normalisierung bleibt als billige
+  // Absicherung gegen Adapter-/Serialisierungswechsel.
   const createdAt =
     session.session.createdAt instanceof Date
       ? session.session.createdAt

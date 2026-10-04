@@ -9,8 +9,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/auth/client", () => ({
   authClient: {
-    forgetPassword: { emailOtp: vi.fn().mockResolvedValue(undefined) },
-    emailOtp: { resetPassword: vi.fn() },
+    emailOtp: {
+      requestPasswordReset: vi.fn().mockResolvedValue(undefined),
+      resetPassword: vi.fn(),
+    },
   },
 }));
 

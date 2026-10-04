@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/utils/prisma";
-import { auth } from "@/lib/auth/server";
+import { createLoginAccount } from "@/lib/auth/server";
 import { validateInviteToken } from "@/lib/members/invites";
 import { translateAuthError, validatePassword } from "@/lib/auth/password";
 import { checkFixedCooldown } from "@/lib/utils/rate-limit";
@@ -50,10 +50,13 @@ export async function redeemInvite({
     return { error: passwordError };
   }
 
-  const { data, error } = await auth.signUp.email({ email, password, name });
-  if (error || !data?.user) {
-    return { error: translateAuthError(error?.message) };
+  // Legt das Login ohne Session an — das Formular schickt danach ohnehin
+  // auf /login (öffentliches Sign-up ist deaktiviert, s. lib/auth/config.ts).
+  const created = await createLoginAccount({ email, password, name });
+  if ("error" in created) {
+    return { error: translateAuthError(created.error) };
   }
+  const userId = created.userId;
 
   const role = await prisma.role.findUniqueOrThrow({
     where: { name: DEFAULT_ROLE },
@@ -69,7 +72,7 @@ export async function redeemInvite({
       data: { redeemedAt: new Date() },
     });
     await tx.userRole.create({
-      data: { neonAuthUserId: data.user.id, roleId: role.id },
+      data: { neonAuthUserId: userId, roleId: role.id },
     });
 
     const member = await tx.member.findUnique({
@@ -81,9 +84,9 @@ export async function redeemInvite({
       email.split("@")[0];
 
     const meeple = await tx.meeple.upsert({
-      where: { neonAuthUserId: data.user.id },
+      where: { neonAuthUserId: userId },
       update: { displayName },
-      create: { neonAuthUserId: data.user.id, displayName },
+      create: { neonAuthUserId: userId, displayName },
     });
 
     if (member && !member.meepleId) {

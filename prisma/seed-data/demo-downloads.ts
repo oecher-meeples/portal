@@ -2,7 +2,7 @@
  * The four downloads previously hard-coded in src/data/downloads.ts, migrated
  * as Download rows so an admin can manage their visibility from now on.
  * `fileUrl` still points at the static file under public/downloads/ — a
- * future re-upload through the admin UI replaces it with a Vercel Blob URL.
+ * future re-upload through the admin UI replaces it with a blob storage URL.
  */
 export const DEMO_DOWNLOADS = [
   {

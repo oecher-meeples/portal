@@ -14,10 +14,10 @@ vi.mock("@/lib/auth/session", () => ({
   requireMember: () => requireMemberMock(),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const deleteBlobsMock = vi.fn();
@@ -35,7 +35,7 @@ const {
 beforeEach(() => {
   requirePermissionMock.mockReset().mockResolvedValue({ id: "admin-1" });
   requireMemberMock.mockReset();
-  generateClientTokenMock.mockReset().mockResolvedValue("token-123");
+  createBlobUploadTokenMock.mockReset().mockResolvedValue("token-123");
   deleteBlobsMock.mockReset().mockResolvedValue(undefined);
   prismaMock.meeple.findUniqueOrThrow.mockResolvedValue({
     profilePictureUrl: null,
@@ -50,10 +50,14 @@ describe("assertMayEdit gate (#389)", () => {
   it("allows the meeple themselves without members:manage", async () => {
     requireMemberMock.mockResolvedValue({ meeple: { id: "meeple-1" } });
 
-    await getMeepleProfilePictureUploadToken("meeple-1", "pic.jpg");
+    await getMeepleProfilePictureUploadToken(
+      "meeple-1",
+      "pic.jpg",
+      "image/jpeg",
+    );
 
     expect(requirePermissionMock).not.toHaveBeenCalled();
-    expect(generateClientTokenMock).toHaveBeenCalled();
+    expect(createBlobUploadTokenMock).toHaveBeenCalled();
   });
 
   it("refuses a stranger without members:manage", async () => {
@@ -61,7 +65,7 @@ describe("assertMayEdit gate (#389)", () => {
     requirePermissionMock.mockRejectedValue(new Error("/403"));
 
     await expect(
-      getMeepleProfilePictureUploadToken("meeple-1", "pic.jpg"),
+      getMeepleProfilePictureUploadToken("meeple-1", "pic.jpg", "image/jpeg"),
     ).rejects.toThrow();
   });
 });

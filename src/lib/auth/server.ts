@@ -1,46 +1,68 @@
-import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { headers } from "next/headers";
+import { prisma } from "@/lib/utils/prisma";
 import { requireEnv } from "@/lib/utils/require-env";
+import {
+  buildAuthOptions,
+  createCredentialUser,
+  parseTrustedOrigins,
+} from "@/lib/auth/config";
 
-export const auth = createNeonAuth({
-  baseUrl: requireEnv("NEON_AUTH_BASE_URL"),
-  cookies: {
-    secret: requireEnv("NEON_AUTH_COOKIE_SECRET"),
-  },
-});
+/**
+ * Self-hosted better-auth (docs/adr/0015) on our own Postgres, through the
+ * same Prisma client as the rest of the app — no second connection pool.
+ */
+export const auth = betterAuth(
+  buildAuthOptions({
+    baseURL: requireEnv("BETTER_AUTH_URL"),
+    secret: requireEnv("BETTER_AUTH_SECRET"),
+    trustedOrigins: parseTrustedOrigins(
+      process.env.BETTER_AUTH_TRUSTED_ORIGINS,
+    ),
+    database: prismaAdapter(prisma, { provider: "postgresql" }),
+  }),
+);
+
+/** Invite redemption / Systemkonto: create a login without a session, see
+ * `createCredentialUser` in config.ts. */
+export function createLoginAccount(input: {
+  email: string;
+  name: string;
+  password: string;
+}) {
+  return createCredentialUser(auth.$context, input);
+}
 
 /**
  * disableRefresh: both callers below run during Server Component render,
- * where Next.js forbids writing cookies. auth.getSession() otherwise tries to
- * refresh/write the session cookie and throws "Cookies can only be modified…".
- * If session refresh is needed, it belongs in middleware or a Route Handler,
- * not here.
+ * where Next.js forbids writing cookies. Refreshing the session (sliding
+ * `expiresAt` forward once `updateAge` has passed) would update the DB row
+ * but could not deliver the matching cookie — so render never refreshes.
+ * Session refresh happens in `src/proxy.ts` (for /admin routes), where
+ * cookies can be written.
  *
- * disableRefresh only prevents session-expiry refresh, not cookie writes in
- * general: when the local session-data cache cookie is missing/stale (its
- * TTL is ~5min, and only /admin routes are covered by src/proxy.ts's
- * refresh), auth.getSession() falls through to an upstream fetch that still
- * tries to mint a fresh cache cookie — and throws the same error. Catch that
- * specific case and degrade to "logged out" for this render rather than
- * crashing the whole page.
+ * Neon Auth background (#242): Neon's SDK kept a ~5-min session-data cache
+ * cookie and, on a cache miss, fetched upstream and tried to mint a new
+ * cache cookie even with disableRefresh — which threw "Cookies can only be
+ * modified…" during render, so this degraded to "logged out" for that
+ * render (the accepted "Gast"-flicker on public pages). The self-hosted
+ * setup has no cache cookie (`session.cookieCache` stays off): every call
+ * is one indexed lookup in our own `auth_sessions` table, and the
+ * `nextCookies()` plugin swallows cookie writes Next.js forbids instead of
+ * throwing. The flicker is therefore gone, not just accepted.
  *
- * Decision (#242, needs-refinement): this degrade-to-"logged out" flicker
- * on non-/admin routes (an already-logged-in member briefly renders as
- * "Gast" on public pages roughly every ~5min, until the cache cookie is
- * next minted) is accepted deliberately, not fixed by widening
- * `src/proxy.ts`'s session refresh to every route. That would trade a
- * rare, harmless render-glitch for an upstream get-session call on *every*
- * page view from *every* visitor, including anonymous ones — the
- * Middleware/Route-Handler-cookie-write constraint means the refresh can
- * only happen there, not here. For this site's size, that permanent
- * latency/request-volume cost outweighs the flicker it would remove.
- * Revisit if the flicker turns out more visible in practice than expected.
+ * The catch below is kept deliberately as a safety net: should any
+ * better-auth code path still attempt a cookie write outside nextCookies'
+ * guard, a page render degrades to "logged out" instead of crashing — the
+ * same contract as before. Unrelated errors (e.g. DB down) still throw.
  */
 async function getSessionData() {
   try {
-    const { data } = await auth.getSession({
+    return await auth.api.getSession({
+      headers: await headers(),
       query: { disableRefresh: true },
     });
-    return data ?? null;
   } catch (error) {
     if (
       error instanceof Error &&

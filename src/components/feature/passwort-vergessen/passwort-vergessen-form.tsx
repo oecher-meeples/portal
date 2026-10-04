@@ -8,11 +8,12 @@ import { authClient } from "@/lib/auth/client";
 import { validatePassword } from "@/lib/auth/password";
 
 /**
- * Zwei-Schritt-Flow (#324): erst E-Mail anfordern (Neon Auth verschickt den
- * OTP-Code selbst — sendet immer `{success:true}`, unabhängig davon, ob ein
- * Konto existiert, siehe `authClient.forgetPassword.emailOtp`), dann Code +
- * neues Passwort auf derselben Seite eingeben. Kein eigenes Token-Modell
- * nötig — Neon Auth verwaltet Ausstellung/Ablauf/Einmalverwendung des OTP.
+ * Zwei-Schritt-Flow (#324): erst E-Mail anfordern (better-auths
+ * email-OTP-Plugin verschickt den Code über `src/lib/auth/config.ts` — Antwort
+ * immer `{success:true}`, unabhängig davon, ob ein Konto existiert, siehe
+ * `authClient.emailOtp.requestPasswordReset`), dann Code + neues Passwort auf
+ * derselben Seite eingeben. Kein eigenes Token-Modell nötig — better-auth
+ * verwaltet Ausstellung/Ablauf/Einmalverwendung des OTP.
  */
 export function PasswortVergessenForm({
   initialEmail = "",
@@ -35,7 +36,7 @@ export function PasswortVergessenForm({
     setError(null);
     setIsSubmitting(true);
     try {
-      await authClient.forgetPassword.emailOtp({ email });
+      await authClient.emailOtp.requestPasswordReset({ email });
     } catch {
       // Absichtlich keine Fehleranzeige — sonst wäre erkennbar, ob die
       // E-Mail-Adresse existiert (Enumeration-Schutz, #324/#326).

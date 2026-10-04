@@ -42,7 +42,7 @@ import {
   buildRegistrationLink,
   formatInviteMessage,
   type InviteStatus,
-} from "@/lib/members/invites";
+} from "@/lib/members/invite-format";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
 export type InviteRow = {

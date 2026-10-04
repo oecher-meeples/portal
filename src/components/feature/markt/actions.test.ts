@@ -13,10 +13,10 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeplePermission: requireMeeplePermissionMock };
 });
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const deleteBlobsMock = vi.fn();
@@ -85,7 +85,7 @@ describe("without a session", () => {
       RedirectError,
     );
     await expect(
-      getMarketListingUploadToken("market-listings/foo.png"),
+      getMarketListingUploadToken("market-listings/foo.png", "image/png"),
     ).rejects.toThrow(RedirectError);
 
     expect(prismaMock.marketListing.create).not.toHaveBeenCalled();
@@ -269,13 +269,17 @@ describe("deleteMarketListingImage", () => {
 
 describe("getMarketListingUploadToken", () => {
   it("issues a token scoped to image content types", async () => {
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getMarketListingUploadToken("market-listings/a.png");
+    const token = await getMarketListingUploadToken(
+      "market-listings/a.png",
+      "image/png",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "market-listings/a.png",
+      contentType: "image/png",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,
@@ -283,11 +287,11 @@ describe("getMarketListingUploadToken", () => {
   });
 
   it("normalises a client-chosen prefix to the market-listings namespace", async () => {
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    await getMarketListingUploadToken("posts/../../evil.png");
+    await getMarketListingUploadToken("posts/../../evil.png", "image/png");
 
-    expect(generateClientTokenMock).toHaveBeenCalledWith(
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: "market-listings/evil.png" }),
     );
   });

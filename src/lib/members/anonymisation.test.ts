@@ -222,7 +222,9 @@ describe("anonymiseMeepleStufe2", () => {
     expect(await anonymiseMeepleStufe2("meeple-1", NOW)).toEqual({
       success: true,
     });
-    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(3);
+    expect(prismaMock.authUser.deleteMany).toHaveBeenCalledWith({
+      where: { id: "11111111-1111-1111-1111-111111111111" },
+    });
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { id: "member-1" },
       data: { meepleId: null },
@@ -254,9 +256,9 @@ describe("anonymiseMeepleStufe2", () => {
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
   });
 
-  it("rolls back when the raw sql fails", async () => {
+  it("rolls back when deleting the login fails", async () => {
     givenAnonymisableMeeple();
-    prismaMock.$executeRaw.mockRejectedValueOnce(new Error("db boom"));
+    prismaMock.authUser.deleteMany.mockRejectedValueOnce(new Error("db boom"));
 
     await expect(anonymiseMeepleStufe2("meeple-1", NOW)).rejects.toThrow(
       "db boom",

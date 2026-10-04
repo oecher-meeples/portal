@@ -14,8 +14,8 @@ vi.mock("@/lib/newsletter/dispatch", () => ({
     queueNewsletterForPostMock(...args),
 }));
 
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: vi.fn(),
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: vi.fn(),
 }));
 
 const { createPost, updatePost } = await import("./actions");

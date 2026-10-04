@@ -75,8 +75,8 @@ jobs:
         run: pnpm run build
         env:
           DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
-          NEON_AUTH_BASE_URL: "https://example.neonauth.example/auth"
-          NEON_AUTH_COOKIE_SECRET: "ci-build-dummy-secret-32-characters-min"
+          BETTER_AUTH_URL: "http://localhost:3000"
+          BETTER_AUTH_SECRET: "ci-build-dummy-secret-32-characters-min"
           MEMBER_DATA_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
           CRON_SECRET: "ci-build-dummy-cron-secret"
           PUBLIC_SITE_URL: "https://example.org"

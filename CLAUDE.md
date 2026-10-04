@@ -36,21 +36,23 @@ Eine Schicht importiert **nur aus Schichten links von sich**. Zusätzlich:
 
 Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst — das gibt es schon:
 
-| Baustein                                                                                  | Statt                                                           |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `useAction()` (`ui/use-action.ts`)                                                        | eigenem `isSubmitting`/`setError`/`router.refresh()`            |
-| `<ActionButton action={fn.bind(null, id)}>`                                               | eigenem `Delete…Button`-Wrapper                                 |
-| `<ActionDialog>`                                                                          | eigenem Dialog-Skelett mit open-State und Error-Slot            |
-| `<TextField>` / `<TextAreaField>` / `<Field>`                                             | `<div className="flex flex-col gap-1.5"><Label/><Input/></div>` |
-| `<CodeScanner onDetected={…}>`                                                            | eigener Kamera-/Scanner-Logik                                   |
-| `<CopyButton value label icon>` (`ui/copy-button.tsx`)                                    | eigenem `navigator.clipboard.writeText`-Aufruf pro Feature      |
-| `formatDateTime/​Medium/​Plain/​TimeRange` (`lib/utils/format.ts`)                        | eigener `new Intl.DateTimeFormat(…)`                            |
-| `findUpcomingEvents()` / `resolveSelectedEventId()` (`lib/events/upcoming.ts`)            | eigener „kommende Events"-Query                                 |
-| `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                         |
-| `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                    | eigenem `@vercel/blob/client`-Upload-State pro Formular         |
-| `getContactLinks(meeple)` (`lib/members/contact.ts`)                                      | eigenem Mail-/Telegram-Link-Aufbau                              |
-| `requireEnv(name)` (`lib/utils/require-env.ts`)                                           | `process.env.X!` mit unklarer Fehlermeldung bei fehlendem Wert  |
-| `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                          | eigenem `@vercel/blob`-Löschaufruf pro Feature                  |
+| Baustein                                                                                  | Statt                                                            |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `useAction()` (`ui/use-action.ts`)                                                        | eigenem `isSubmitting`/`setError`/`router.refresh()`             |
+| `<ActionButton action={fn.bind(null, id)}>`                                               | eigenem `Delete…Button`-Wrapper                                  |
+| `<ActionDialog>`                                                                          | eigenem Dialog-Skelett mit open-State und Error-Slot             |
+| `<TextField>` / `<TextAreaField>` / `<Field>`                                             | `<div className="flex flex-col gap-1.5"><Label/><Input/></div>`  |
+| `<CodeScanner onDetected={…}>`                                                            | eigener Kamera-/Scanner-Logik                                    |
+| `<CopyButton value label icon>` (`ui/copy-button.tsx`)                                    | eigenem `navigator.clipboard.writeText`-Aufruf pro Feature       |
+| `formatDateTime/​Medium/​Plain/​TimeRange` (`lib/utils/format.ts`)                        | eigener `new Intl.DateTimeFormat(…)`                             |
+| `findUpcomingEvents()` / `resolveSelectedEventId()` (`lib/events/upcoming.ts`)            | eigener „kommende Events"-Query                                  |
+| `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                          |
+| `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                    | eigenem S3-Presigned-POST-Upload-State pro Formular              |
+| `getContactLinks(meeple)` (`lib/members/contact.ts`)                                      | eigenem Mail-/Telegram-Link-Aufbau                               |
+| `requireEnv(name)` (`lib/utils/require-env.ts`)                                           | `process.env.X!` mit unklarer Fehlermeldung bei fehlendem Wert   |
+| `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                          | eigenem S3-`DeleteObjects`-Aufruf pro Feature                    |
+| `createBlobUploadToken({ pathname, contentType, … })` (`lib/utils/blob-upload-token.ts`)  | eigenem `createPresignedPost` im `get…UploadToken`-Server-Action |
+| `putBlob(pathname, body, contentType)` (`lib/utils/s3.ts`)                                | eigenem `PutObjectCommand` für serverseitige Uploads             |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 

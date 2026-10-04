@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
-const middlewareMock = vi.fn();
+const getSessionMock = vi.fn();
 
 vi.mock("@/lib/auth/server", () => ({
-  auth: { middleware: () => middlewareMock },
+  auth: {
+    api: { getSession: (...args: unknown[]) => getSessionMock(...args) },
+  },
 }));
 
 const proxy = (await import("@/proxy")).default;
@@ -23,6 +25,20 @@ function makeRequest({
   return new NextRequest(`http://localhost${pathname}`, { method, headers });
 }
 
+function sessionResult(
+  session: unknown,
+  setCookies: string[] = [],
+): { headers: Headers; response: unknown } {
+  const headers = new Headers();
+  for (const cookie of setCookies) headers.append("set-cookie", cookie);
+  return { headers, response: session };
+}
+
+const VALID_SESSION = {
+  session: { id: "s-1", createdAt: new Date() },
+  user: { id: "user-1" },
+};
+
 describe("proxy CSP", () => {
   it("sets a report-only CSP with a nonce on a public route", async () => {
     const response = await proxy(makeRequest({ pathname: "/news" }));
@@ -30,8 +46,22 @@ describe("proxy CSP", () => {
     const csp = response.headers.get("Content-Security-Policy-Report-Only");
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("connect-src 'self';");
     expect(csp).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
     expect(response.headers.get("Content-Security-Policy")).toBeNull();
+  });
+
+  it("allows the blob store origin for images and uploads", async () => {
+    vi.stubEnv("S3_PUBLIC_ENDPOINT", "https://files.example.org/");
+
+    const response = await proxy(makeRequest({ pathname: "/news" }));
+
+    const csp = response.headers.get("Content-Security-Policy-Report-Only");
+    expect(csp).toContain(
+      "img-src 'self' data: blob: https://files.example.org;",
+    );
+    expect(csp).toContain("connect-src 'self' https://files.example.org;");
+    vi.unstubAllEnvs();
   });
 
   it("forwards the nonce to the request so the layout can read it via headers()", async () => {
@@ -58,7 +88,7 @@ describe("proxy CSP", () => {
   });
 
   it("also sets the CSP on an authenticated protected-route response", async () => {
-    middlewareMock.mockResolvedValue(NextResponse.next());
+    getSessionMock.mockResolvedValue(sessionResult(VALID_SESSION));
 
     const response = await proxy(makeRequest({ pathname: "/admin/bestand" }));
 
@@ -66,45 +96,60 @@ describe("proxy CSP", () => {
       response.headers.get("Content-Security-Policy-Report-Only"),
     ).toContain("default-src 'self'");
   });
-
-  it("falls back to a placeholder origin when NEON_AUTH_BASE_URL is unset, instead of throwing", async () => {
-    // Assigning `undefined` to process.env stringifies to "undefined" and
-    // would poison every later test's URL parsing — delete instead of restore.
-    const original = process.env.NEON_AUTH_BASE_URL;
-    delete process.env.NEON_AUTH_BASE_URL;
-
-    const response = await proxy(makeRequest({ pathname: "/news" }));
-
-    expect(
-      response.headers.get("Content-Security-Policy-Report-Only"),
-    ).toContain("connect-src 'self'");
-
-    if (original !== undefined) process.env.NEON_AUTH_BASE_URL = original;
-  });
 });
 
 describe("proxy", () => {
-  it("passes through a plain redirect for a normal page navigation to a protected route", async () => {
-    middlewareMock.mockResolvedValue(
-      NextResponse.redirect(new URL("http://localhost/login")),
+  it("never looks up a session on a public route (#242: no per-page-view session cost)", async () => {
+    getSessionMock.mockClear();
+
+    await proxy(makeRequest({ pathname: "/news" }));
+
+    expect(getSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("checks the session for a protected route with the request's own headers, refresh allowed", async () => {
+    getSessionMock.mockResolvedValue(sessionResult(VALID_SESSION));
+    const request = makeRequest({ pathname: "/admin/bestand" });
+
+    await proxy(request);
+
+    const [args] = getSessionMock.mock.calls.at(-1)!;
+    expect(args.headers).toBe(request.headers);
+    expect(args.returnHeaders).toBe(true);
+    expect(args.query?.disableRefresh).toBeUndefined();
+  });
+
+  it("passes the refreshed session cookie through to the response", async () => {
+    getSessionMock.mockResolvedValue(
+      sessionResult(VALID_SESSION, [
+        "better-auth.session_token=new; Path=/; HttpOnly; SameSite=Lax",
+      ]),
     );
 
     const response = await proxy(makeRequest({ pathname: "/admin/bestand" }));
 
+    expect(response.status).toBe(200);
+    expect(response.headers.getSetCookie()).toContain(
+      "better-auth.session_token=new; Path=/; HttpOnly; SameSite=Lax",
+    );
+  });
+
+  it("redirects a normal page navigation without a session to /login", async () => {
+    getSessionMock.mockResolvedValue(sessionResult(null));
+
+    const response = await proxy(makeRequest({ pathname: "/admin/bestand" }));
+
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/login");
+    expect(response.headers.get("location")).toBe("http://localhost/login");
   });
 
   it("never forwards a raw 3xx redirect for an unauthenticated Server Action request", async () => {
     // Next.js's server-action client (server-action-reducer.js) only recognises a
     // response as a redirect via the `x-action-redirect` header. A plain 3xx
-    // Location redirect (what @neondatabase/auth's `redirect_login` branch returns)
-    // is neither that nor a `text/x-component` RSC response, so the client throws
-    // "An unexpected response was received from the server" (Next error code E394)
-    // instead of showing a comprehensible message.
-    middlewareMock.mockResolvedValue(
-      NextResponse.redirect(new URL("http://localhost/login")),
-    );
+    // Location redirect is neither that nor a `text/x-component` RSC response,
+    // so the client throws "An unexpected response was received from the
+    // server" (Next error code E394) instead of showing a comprehensible message.
+    getSessionMock.mockResolvedValue(sessionResult(null));
 
     const response = await proxy(
       makeRequest({
@@ -114,20 +159,17 @@ describe("proxy", () => {
       }),
     );
 
-    const isRedirect = response.status >= 300 && response.status < 400;
-    expect(isRedirect).toBe(false);
+    expect(response.status).toBe(401);
     expect(response.headers.get("location")).toBeNull();
   });
 
-  it("always probes the auth middleware with GET, regardless of the request's own method", async () => {
-    // Regression test for a @neondatabase/auth bug (0.4.2-beta): its
-    // middleware proxies the get-session check upstream using the original
-    // request's method. Neon Auth's get-session endpoint only accepts GET,
-    // so a POST/HEAD request (e.g. a Server Action submit) was always
-    // treated as unauthenticated, even with a valid session cookie.
-    middlewareMock.mockResolvedValue(NextResponse.next());
+  it("lets an authenticated Server Action POST through", async () => {
+    // Regression guard for the old @neondatabase/auth bug (0.4.2-beta), where
+    // a POST was proxied upstream as POST to a GET-only endpoint and a valid
+    // session counted as logged-out. The session lookup is method-agnostic now.
+    getSessionMock.mockResolvedValue(sessionResult(VALID_SESSION));
 
-    await proxy(
+    const response = await proxy(
       makeRequest({
         pathname: "/admin/news/new",
         nextAction: true,
@@ -135,8 +177,7 @@ describe("proxy", () => {
       }),
     );
 
-    const probeRequest = middlewareMock.mock.calls.at(-1)?.[0];
-    expect(probeRequest.method).toBe("GET");
-    expect(probeRequest.nextUrl.pathname).toBe("/admin/news/new");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
   });
 });

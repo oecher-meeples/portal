@@ -18,7 +18,7 @@ export type AnonymisationResult = { error: string } | { success: true };
  *   `Post.author`, Marktplatzbilder — jederzeit selbst auslösbar, keine
  *   Kündigungs-Vorbedingung, `anonymizedAt` bleibt unberührt.
  * - **Stufe 2** ({@link anonymiseMeepleStufe2}): baut auf Stufe 1 auf (ruft
- *   sie idempotent mit auf) und löscht zusätzlich hart das Neon-Auth-Login,
+ *   sie idempotent mit auf) und löscht zusätzlich hart das Login (`AuthUser`),
  *   trennt `Member.meepleId`, setzt `Meeple.anonymizedAt`. Braucht
  *   "ausgetreten" + keine offenen Ausleihen.
  * - **Stufe 3** ({@link anonymiseMemberStufe3}): löscht die `Member`-Zeile
@@ -166,9 +166,11 @@ export async function anonymiseMeepleStufe2(
 
   await prisma.$transaction(async (tx) => {
     if (neonAuthUserId) {
-      await tx.$executeRaw`DELETE FROM neon_auth."session" WHERE "userId" = ${neonAuthUserId}::uuid`;
-      await tx.$executeRaw`DELETE FROM neon_auth."account" WHERE "userId" = ${neonAuthUserId}::uuid`;
-      await tx.$executeRaw`DELETE FROM neon_auth."user" WHERE id = ${neonAuthUserId}::uuid`;
+      // Sessions und Konten (inkl. Passwort-Hash) hängen per
+      // `onDelete: Cascade` am AuthUser und verschwinden mit ihm.
+      // `deleteMany` statt `delete`: ein bereits fehlendes Login ist kein
+      // Fehler (wie zuvor beim Raw-SQL-DELETE).
+      await tx.authUser.deleteMany({ where: { id: neonAuthUserId } });
     }
 
     if (member) {

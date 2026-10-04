@@ -1,6 +1,7 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageContainer } from "@/components/ui/page-container";
+import { BarRow } from "@/components/ui/bar-row";
 import type {
   MostBorrowedGame,
   WeekdayCount,
@@ -97,20 +98,13 @@ export function StatistikenView({
               </p>
             )}
             {mostBorrowed.map((game) => (
-              <div key={game.boardGameId} className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="font-medium">{game.title}</span>
-                  <span className="text-muted-foreground">{game.count}×</span>
-                </div>
-                <div className="bg-muted h-2 overflow-hidden rounded-full">
-                  <div
-                    className="bg-primary h-full rounded-full"
-                    style={{
-                      width: `${(game.count / maxBorrowCount) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
+              <BarRow
+                key={game.boardGameId}
+                label={game.title}
+                value={game.count}
+                max={maxBorrowCount}
+                valueLabel={`${game.count}×`}
+              />
             ))}
           </CardContent>
         </Card>
@@ -121,22 +115,13 @@ export function StatistikenView({
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             {weekdays.map((day) => (
-              <div key={day.weekday} className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="font-medium">
-                    {WEEKDAY_LABELS[day.weekday]}
-                  </span>
-                  <span className="text-muted-foreground">{day.count}×</span>
-                </div>
-                <div className="bg-muted h-2 overflow-hidden rounded-full">
-                  <div
-                    className="bg-primary h-full rounded-full"
-                    style={{
-                      width: `${(day.count / maxWeekdayCount) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
+              <BarRow
+                key={day.weekday}
+                label={WEEKDAY_LABELS[day.weekday]}
+                value={day.count}
+                max={maxWeekdayCount}
+                valueLabel={`${day.count}×`}
+              />
             ))}
           </CardContent>
         </Card>

@@ -17,10 +17,10 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const extractPdfTextMock = vi.fn();
@@ -44,22 +44,23 @@ describe("getLegalUploadToken", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(false);
 
-    await expect(getLegalUploadToken("legal/a.pdf")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getLegalUploadToken("legal/a.pdf", "application/pdf"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises the pathname to the legal namespace, PDF only", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getLegalUploadToken("../evil.pdf");
+    const token = await getLegalUploadToken("../evil.pdf", "application/pdf");
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "legal/evil.pdf",
+      contentType: "application/pdf",
       allowedContentTypes: ["application/pdf"],
       addRandomSuffix: true,
       maximumSizeInBytes: 20 * 1024 * 1024,

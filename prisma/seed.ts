@@ -34,7 +34,7 @@ import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
 import { seedDemoLfgPosts } from "./seed-lfg";
 import { seedDemoMarketListings } from "./seed-marketplace";
 import {
-  upsertNeonAuthUser,
+  upsertAuthUser,
   ensureMeeple,
   ensureDemoMember,
   nextMemberNumber,
@@ -267,7 +267,7 @@ async function ensureDemoAccountWithMember(
   account: (typeof DEMO_ROLE_ACCOUNTS)[number] | typeof ADMIN_ACCOUNT,
   role: string,
 ) {
-  const userId = await upsertNeonAuthUser(account);
+  const userId = await upsertAuthUser(account);
   await assignRole(userId, role);
   const meeple = await ensureMeeple(userId, account.name);
   await prisma.meeple.update({
@@ -383,19 +383,61 @@ async function seedDemoLegalDocuments() {
   );
 }
 
-async function main() {
-  const adminUserId = await upsertNeonAuthUser(ADMIN_ACCOUNT);
+/**
+ * Grundbestand, den jede Instanz braucht — auch eine frische Self-Hosting-
+ * Installation ohne Demo-Daten: Admin-Login (sysadmin), Rechte/Rollen,
+ * Spieleigenschafts-Texte sowie Rechtliches/Downloads (früher hart codiert,
+ * im Admin-UI nur bearbeitbar, nicht neu anlegbar bzw. auf Dateien unter
+ * `public/downloads/` zeigend).
+ */
+async function seedBase() {
+  const adminUserId = await upsertAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
   await seedBoardGameTraitTexts();
   await assignRole(adminUserId, "sysadmin");
+  await seedDemoDownloads();
+  await seedDemoLegalDocuments();
+  return ensureMeeple(adminUserId, ADMIN_ACCOUNT.name);
+}
 
-  const adminMeeple = await ensureMeeple(adminUserId, ADMIN_ACCOUNT.name);
+/**
+ * Docker-Entrypoint (`docker/app/entrypoint.sh`) setzt
+ * `SEED_ONLY_IF_EMPTY=true`: dann wird nur eine DB ohne Auth-User geseedet,
+ * damit ein Container-Neustart weder Admin-Passwort noch Daten überschreibt.
+ * `SEED_DEMO_DATA=false` beschränkt den Seed auf `seedBase()`; ungesetzt
+ * bleibt es (für `pnpm db:seed` lokal) beim vollen Demo-Seed.
+ */
+async function main() {
+  if (process.env.SEED_ONLY_IF_EMPTY === "true") {
+    if ((await prisma.authUser.count()) > 0) {
+      console.log("Seed übersprungen: Datenbank enthält bereits Auth-User.");
+      return;
+    }
+    // Kein Fallback auf das Dev-Default-Passwort "admin" in einer frischen
+    // Self-Hosting-Instanz.
+    if (!process.env.SEED_ADMIN_EMAIL || !process.env.SEED_ADMIN_PASSWORD) {
+      throw new Error(
+        "Leere Datenbank: SEED_ADMIN_EMAIL und SEED_ADMIN_PASSWORD müssen für den ersten Start gesetzt sein.",
+      );
+    }
+  }
+
+  const adminMeeple = await seedBase();
+  if (process.env.SEED_DEMO_DATA !== "false") {
+    await seedDemoData(adminMeeple.id);
+  }
+  await ensureAnonymerMeeple();
+
+  console.log("Seed abgeschlossen.");
+}
+
+async function seedDemoData(adminMeepleId: string) {
   await prisma.meeple.update({
-    where: { id: adminMeeple.id },
+    where: { id: adminMeepleId },
     data: randomDemoContactFields(ADMIN_ACCOUNT.email),
   });
-  const adminMember = await ensureDemoMember(adminMeeple.id, ADMIN_ACCOUNT);
+  const adminMember = await ensureDemoMember(adminMeepleId, ADMIN_ACCOUNT);
 
   const { meepleIdByRole, memberIds: roleMemberIds } =
     await seedDemoRoleAccounts();
@@ -403,7 +445,7 @@ async function main() {
   if (!spielewartMeepleId) {
     throw new Error("Spielewart-Demo-Account wurde nicht angelegt.");
   }
-  await seedDemoGames(adminMeeple.id, spielewartMeepleId);
+  await seedDemoGames(adminMeepleId, spielewartMeepleId);
   const {
     leaMeepleId,
     tobiasMeepleId,
@@ -416,15 +458,12 @@ async function main() {
   } = await seedDemoFamily();
   const { memberId: resignedMemberId } = await seedDemoResignedMember();
   await seedDemoAnonymisedMeeple();
-  await ensureAnonymerMeeple();
   await seedDemoPosts();
-  await seedDemoDownloads();
-  await seedDemoLegalDocuments();
 
   // Schlüssel für LFG-/Marktplatz-Demo-Daten (`seed-data/demo-lfg.ts`,
   // `seed-data/demo-marketplace.ts`) — lowercase, unabhängig vom Rollennamen.
   const meepleIdByKey = new Map<string, string>([
-    ["admin", adminMeeple.id],
+    ["admin", adminMeepleId],
     ["lea", leaMeepleId],
     ["tobias", tobiasMeepleId],
     ["vater", vaterMeepleId],
@@ -450,8 +489,6 @@ async function main() {
     ],
     spielewartMeepleId,
   );
-
-  console.log("Seed abgeschlossen.");
 }
 
 main()

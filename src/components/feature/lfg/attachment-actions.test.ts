@@ -13,10 +13,10 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeplePermission: requireMeeplePermissionMock };
 });
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const deleteBlobsMock = vi.fn();
@@ -60,12 +60,16 @@ beforeEach(() => {
 describe("getLfgAttachmentUploadToken", () => {
   it("issues a token for a participant of an eligible post", async () => {
     prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
-    generateClientTokenMock.mockResolvedValue({ token: "tok" });
+    createBlobUploadTokenMock.mockResolvedValue({ token: "tok" });
 
-    const result = await getLfgAttachmentUploadToken("post-1", "foo.png");
+    const result = await getLfgAttachmentUploadToken(
+      "post-1",
+      "foo.png",
+      "image/png",
+    );
 
     expect(result).toEqual({ token: "tok" });
-    expect(generateClientTokenMock).toHaveBeenCalledWith(
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: "lfg-attachments/foo.png" }),
     );
   });
@@ -76,9 +80,9 @@ describe("getLfgAttachmentUploadToken", () => {
     );
 
     await expect(
-      getLfgAttachmentUploadToken("post-1", "foo.png"),
+      getLfgAttachmentUploadToken("post-1", "foo.png", "image/png"),
     ).rejects.toThrow("Uploads sind erst am oder nach dem geplanten Termin");
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("rejects a future post's uploads", async () => {
@@ -87,7 +91,7 @@ describe("getLfgAttachmentUploadToken", () => {
     );
 
     await expect(
-      getLfgAttachmentUploadToken("post-1", "foo.png"),
+      getLfgAttachmentUploadToken("post-1", "foo.png", "image/png"),
     ).rejects.toThrow("Uploads sind erst am oder nach dem geplanten Termin");
   });
 
@@ -97,7 +101,7 @@ describe("getLfgAttachmentUploadToken", () => {
     prismaMock.lfgParticipant.findFirst.mockResolvedValue(null);
 
     await expect(
-      getLfgAttachmentUploadToken("post-1", "foo.png"),
+      getLfgAttachmentUploadToken("post-1", "foo.png", "image/png"),
     ).rejects.toThrow("Nur Teilnehmende können darauf zugreifen.");
   });
 });

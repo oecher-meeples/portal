@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAction } from "@/components/ui/use-action";
-import { MAX_INVITE_DAYS } from "@/lib/members/invites";
+import { MAX_INVITE_DAYS } from "@/lib/members/invite-format";
 import { updateDefaultInviteDays } from "@/components/feature/admin-settings/actions";
 
 export function InviteSettingsForm({ defaultDays }: { defaultDays: number }) {
