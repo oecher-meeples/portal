@@ -156,7 +156,11 @@ services:
       - |
         set -e
         ENDPOINT="http://seaweedfs:8333"
-        aws --endpoint-url "$$ENDPOINT" s3 mb "s3://$$S3_BUCKET" || true
+        # Idempotent on every `docker compose up`: head-bucket first so a
+        # bucket that already exists (every run after the first) doesn't
+        # print aws-cli's (harmless) BucketAlreadyOwnedByYou error.
+        aws --endpoint-url "$$ENDPOINT" s3api head-bucket --bucket "$$S3_BUCKET" 2>/dev/null \
+          || aws --endpoint-url "$$ENDPOINT" s3 mb "s3://$$S3_BUCKET"
         cat > /tmp/policy.json <<JSON
         {
           "Version": "2012-10-17",
