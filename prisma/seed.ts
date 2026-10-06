@@ -185,8 +185,6 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
-        publisher: game.publisher,
-        author: game.author,
         yearPublished: game.yearPublished,
         traits: game.traits,
         kind: expansionTitles.has(game.title)

@@ -64,8 +64,6 @@ function withoutBggMatch(game: DemoGame): DemoGame {
     categories: game.categories ?? [],
     explainerVideoUrl: game.explainerVideoUrl ?? null,
     languageDependence: game.languageDependence ?? null,
-    publisher: game.publisher ?? [],
-    author: game.author ?? [],
     contributors: game.contributors ?? [],
     yearPublished: game.yearPublished ?? null,
     traits: game.traits ?? [],
@@ -166,8 +164,6 @@ async function refreshOne(
       categories: mapped.categories,
       explainerVideoUrl: mapped.explainerVideoUrl ?? null,
       languageDependence: mapped.languageDependence ?? null,
-      publisher: mapped.publisher ?? [],
-      author: mapped.author,
       contributors: bggContributorInputs(
         data,
         (mapped.publisher ?? []).join(", "),
@@ -217,8 +213,6 @@ export function serializeEntry(game: DemoGame): string {
             game.languageDependence,
           )
     }`,
-    `publisher: ${strArray(game.publisher)}`,
-    `author: ${strArray(game.author)}`,
     `contributors: ${JSON.stringify(game.contributors)}`,
     `yearPublished: ${num(game.yearPublished)}`,
     `traits: ${traitsArray(game.traits)}`,

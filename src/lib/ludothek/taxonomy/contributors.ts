@@ -107,3 +107,12 @@ export async function replacePublisherAndAuthorLinksByName(
     });
   }
 }
+
+export async function replaceBggContributors(
+  tx: Tx,
+  boardGameId: string,
+  inputs: ContributorInput[],
+) {
+  await tx.boardGameContributor.deleteMany({ where: { boardGameId } });
+  await linkContributors(tx, boardGameId, inputs);
+}
