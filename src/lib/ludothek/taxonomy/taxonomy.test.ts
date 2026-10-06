@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { normalizeTaxonomyName, taxonomyDedupKey } from "./normalize";
 import { bggContributorInputs } from "./bgg-contributors";
+import { contributorNamesByRole } from "./contributors-read";
 import { linkContributors, upsertContributor } from "./contributors";
 import type { BggGameData } from "@/lib/bgg/client";
 
@@ -142,5 +143,23 @@ describe("bggContributorInputs", () => {
 
   it("returns nothing without a preview", () => {
     expect(bggContributorInputs(null, "Verlag X")).toEqual([]);
+  });
+});
+
+describe("contributorNamesByRole", () => {
+  it("groups names per role, sorted alphabetically and without duplicates", () => {
+    expect(
+      contributorNamesByRole([
+        { role: "PUBLISHER", contributor: { name: "Kosmos" } },
+        { role: "PUBLISHER", contributor: { name: "Amigo" } },
+        { role: "PUBLISHER", contributor: { name: "Kosmos" } },
+        { role: "AUTHOR", contributor: { name: "Klaus Teuber" } },
+        { role: "ILLUSTRATOR", contributor: { name: "Michael Menzel" } },
+      ]),
+    ).toEqual({
+      publisher: ["Amigo", "Kosmos"],
+      author: ["Klaus Teuber"],
+      illustrator: ["Michael Menzel"],
+    });
   });
 });

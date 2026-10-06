@@ -11,6 +11,7 @@ import { uniqueSlug } from "@/lib/utils/slug";
 import {
   type ContributorInput,
   linkContributors,
+  replacePublisherAndAuthorLinksByName,
 } from "@/lib/ludothek/taxonomy/contributors";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
@@ -138,6 +139,13 @@ export async function findOrCreateBoardGameTitle(
   const created = await tx.boardGame.create({
     data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
-  await linkContributors(tx, created.id, input.contributors ?? []);
+  if (input.contributors?.length) {
+    await linkContributors(tx, created.id, input.contributors);
+  } else {
+    await replacePublisherAndAuthorLinksByName(tx, created.id, {
+      publisher: input.publisher ?? [],
+      author: input.author ?? [],
+    });
+  }
   return created;
 }

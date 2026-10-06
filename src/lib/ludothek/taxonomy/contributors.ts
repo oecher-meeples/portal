@@ -72,3 +72,38 @@ export async function linkContributors(
     skipDuplicates: true,
   });
 }
+
+export async function replacePublisherAndAuthorLinksByName(
+  tx: Tx,
+  boardGameId: string,
+  names: { publisher: string[]; author: string[] },
+) {
+  const inputs: ContributorInput[] = [
+    ...names.publisher.map((name) => ({
+      role: "PUBLISHER" as const,
+      bggId: null,
+      name,
+    })),
+    ...names.author.map((name) => ({
+      role: "AUTHOR" as const,
+      bggId: null,
+      name,
+    })),
+  ];
+
+  await tx.boardGameContributor.deleteMany({
+    where: { boardGameId, role: { in: ["PUBLISHER", "AUTHOR"] } },
+  });
+
+  for (const input of inputs) {
+    const existing = await tx.contributor.findFirst({
+      where: { normalizedName: normalizeTaxonomyName(input.name) },
+      orderBy: { bggId: "asc" },
+    });
+    const contributor = existing ?? (await upsertContributor(tx, input));
+    await tx.boardGameContributor.createMany({
+      data: [{ boardGameId, contributorId: contributor.id, role: input.role }],
+      skipDuplicates: true,
+    });
+  }
+}

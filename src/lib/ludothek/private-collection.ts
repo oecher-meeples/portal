@@ -1,3 +1,7 @@
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { prisma } from "@/lib/utils/prisma";
@@ -121,7 +125,12 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
           profilePictureVisibility: true,
         },
       },
-      boardGame: { include: { alternateNames: { select: { name: true } } } },
+      boardGame: {
+        include: {
+          alternateNames: { select: { name: true } },
+          contributors: CONTRIBUTOR_LINKS_INCLUDE,
+        },
+      },
     },
   });
 
@@ -152,8 +161,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       kind: boardGame.kind,
       languageDependence: boardGame.languageDependence,
       ruleBookLanguages: [],
-      publisher: boardGame.publisher,
-      author: boardGame.author,
+      ...contributorNamesByRole(boardGame.contributors),
       yearPublished: boardGame.yearPublished,
       traits: boardGame.traits,
       notes: boardGame.notes,
