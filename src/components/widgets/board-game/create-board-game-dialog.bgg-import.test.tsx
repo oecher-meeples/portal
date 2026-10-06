@@ -98,6 +98,8 @@ const BASE_PREVIEW_DATA = {
     channel: string;
   }[],
   author: [] as string[],
+  designers: [] as { bggId: number; name: string }[],
+  illustrators: [] as { bggId: number; name: string }[],
   yearPublished: null as number | null,
   versions: [] as unknown[],
 };

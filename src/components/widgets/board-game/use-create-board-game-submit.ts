@@ -15,6 +15,7 @@ import {
 } from "@/components/widgets/board-game/board-game-form-values";
 import type { LocationPlacement } from "@/components/widgets/board-game/create-board-game-location-field";
 import type { BggGameData } from "@/lib/bgg/client";
+import { bggContributorInputs } from "@/lib/ludothek/taxonomy/bgg-contributors";
 
 /**
  * Owns the Anlegen-Dialog's Speichern-Flow — pulled out of
@@ -87,6 +88,7 @@ export function useCreateBoardGameSubmit({
           ...(placement ? { placement } : {}),
           ...eanPatch,
           alternateNames: preview?.alternateNames,
+          contributors: bggContributorInputs(preview, form.publisher),
         };
         const result = await createBoardGame(input);
         if (result.error) {

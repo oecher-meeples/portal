@@ -67,6 +67,8 @@ describe("fetchBggGame", () => {
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [{ bggId: 1, name: "Mathias Wigge" }],
+      illustrators: [],
     });
   });
 
@@ -96,6 +98,8 @@ describe("fetchBggGame", () => {
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [],
+      illustrators: [],
     });
   });
 
@@ -152,12 +156,14 @@ describe("fetchBggGame", () => {
       {
         yearPublished: 2021,
         publisher: ["Capstone Games"],
+        publisherLinks: [{ bggId: 1, name: "Capstone Games" }],
         productCode: "CAPS001",
         languages: ["English"],
       },
       {
         yearPublished: 2022,
         publisher: ["Feuerland Spiele"],
+        publisherLinks: [{ bggId: 2, name: "Feuerland Spiele" }],
         productCode: "FEU001",
         languages: ["German"],
       },

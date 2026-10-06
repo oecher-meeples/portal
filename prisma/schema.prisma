@@ -916,6 +916,7 @@ model BoardGame {
   marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
   privateEventLoans        PrivateEventLoan[]
+  contributors             BoardGameContributor[]
 
   @@index([ean])
   @@map("board_games")
@@ -952,6 +953,45 @@ model BoardGameAlternateName {
 
   @@index([boardGameId])
   @@map("board_game_alternate_names")
+}
+
+enum ContributorRole {
+  PUBLISHER
+  AUTHOR
+  ILLUSTRATOR
+}
+
+/// Verlag, Autor oder Illustrator — eine Person/Firma über alle Titel hinweg.
+/// `dedupKey` ist die Eindeutigkeit: `bgg:<bggId>` bzw. `name:<normalizedName>`
+/// ohne BGG-ID, berechnet in `lib/ludothek/taxonomy/normalize.ts`.
+model Contributor {
+  id             String   @id @default(cuid())
+  dedupKey       String   @unique
+  name           String
+  normalizedName String
+  bggId          Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  boardGames BoardGameContributor[]
+
+  @@index([bggId])
+  @@map("contributors")
+}
+
+/// Rolle eines Mitwirkenden an einem Titel — die Rolle liegt auf der
+/// Zwischentabelle, damit dieselbe Firma z. B. Verlag und Autor sein kann.
+model BoardGameContributor {
+  boardGameId   String
+  contributorId String
+  role          ContributorRole
+
+  boardGame   BoardGame   @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  contributor Contributor @relation(fields: [contributorId], references: [id], onDelete: Restrict)
+
+  @@id([boardGameId, contributorId, role])
+  @@index([contributorId])
+  @@map("board_game_contributors")
 }
 
 /// A single physical copy of a title — condition, inventory status and (via
@@ -1566,14 +1606,14 @@ enum SystemNotificationCloseable {
 /// Deaktivierungs-Flag in `AutomatedNotificationDisable` — der Code bleibt
 /// bei einer Deaktivierung unverändert.
 model SystemNotification {
-  id                    String                       @id @default(cuid())
+  id                    String                      @id @default(cuid())
   name                  String
   type                  SystemNotificationType
   audiencePermissionKey String?
   closeable             SystemNotificationCloseable
   message               String
-  isActive              Boolean                      @default(true)
-  createdAt             DateTime                     @default(now())
+  isActive              Boolean                     @default(true)
+  createdAt             DateTime                    @default(now())
 
   @@map("system_notifications")
 }
