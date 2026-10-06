@@ -12,6 +12,14 @@ overrides:
   # anderer Stelle im Baum auf 0.7.5 gefixt).
   fflate: ^0.7.5
   nanoid@<3.3.18: ^3.3.18
+  # GHSA-jqcg-44mw-7w3h: proxy-addr IP-Spoofing über IPv4-mapped-IPv6-Subnetze,
+  # transitiv über shadcn (CLI, nicht Laufzeit) > @modelcontextprotocol/sdk >
+  # express(-rate-limit) > proxy-addr.
+  proxy-addr: ^2.0.8
+  # GHSA-68fv-2mgg-jv7q: source-map-js Event-Loop-DoS über indizierte
+  # Source-Map-Section-Offsets, transitiv über @prisma/config > c12 >
+  # magicast > source-map-js (und dieselbe Kette über better-auth).
+  source-map-js: ^1.2.2
   # GHSA-2883-xcg3-v3hh: js-yaml maxTotalMergeKeys CPU-DoS, transitiv über
   # gray-matter (3.x) und eslint-Kette (4.x).
   js-yaml@3: ^3.15.2
@@ -74,3 +82,5 @@ minimumReleaseAgeExclude:
   - nanoid@3.3.18
   - next@16.3.8
   - undici@6.28.1 || 7.29.1 || 8.10.2
+  - proxy-addr@2.0.8
+  - source-map-js@1.2.2
