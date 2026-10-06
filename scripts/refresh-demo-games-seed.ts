@@ -31,6 +31,7 @@ import { translateToGerman } from "../src/lib/bgg/translate";
 import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
 import { translateCategories } from "../src/lib/ludothek/category-translations";
 import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
+import { bggContributorInputs } from "../src/lib/ludothek/taxonomy/bgg-contributors";
 import { sleep } from "../src/lib/utils/sleep";
 import {
   BGG_SCRIPT_THROTTLE_MS as THROTTLE_MS,
@@ -65,6 +66,7 @@ function withoutBggMatch(game: DemoGame): DemoGame {
     languageDependence: game.languageDependence ?? null,
     publisher: game.publisher ?? [],
     author: game.author ?? [],
+    contributors: game.contributors ?? [],
     yearPublished: game.yearPublished ?? null,
     traits: game.traits ?? [],
   };
@@ -166,6 +168,10 @@ async function refreshOne(
       languageDependence: mapped.languageDependence ?? null,
       publisher: mapped.publisher ?? [],
       author: mapped.author,
+      contributors: bggContributorInputs(
+        data,
+        (mapped.publisher ?? []).join(", "),
+      ),
       yearPublished: mapped.yearPublished ?? null,
       traits: mapped.traits,
     },
@@ -213,6 +219,7 @@ export function serializeEntry(game: DemoGame): string {
     }`,
     `publisher: ${strArray(game.publisher)}`,
     `author: ${strArray(game.author)}`,
+    `contributors: ${JSON.stringify(game.contributors)}`,
     `yearPublished: ${num(game.yearPublished)}`,
     `traits: ${traitsArray(game.traits)}`,
   ];
