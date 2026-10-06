@@ -70,6 +70,8 @@ export type LudothekGame = {
   publisher: string[];
   /** Autor(en)/Designer (#205). */
   author: string[];
+  /** Illustrator(en) aus den Mitwirkenden (Epic #490). */
+  illustrator: string[];
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: number | null;
   /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — für alle
@@ -168,6 +170,8 @@ export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
+  /** Teilstring-Filter über die Illustratoren (Epic #490). */
+  illustrator?: string;
   /** Exakte Spieleranzahl — matcht jeden Titel, dessen min/maxPlayers diese
    * Zahl einschließt (Ein-Knoten-Slider statt fester Buckets, #214-Folge). */
   players?: number;
@@ -278,6 +282,7 @@ export function parseLudothekSearchParams(
 
   const filters: LudothekFilters = {
     search: firstString(searchParams.q) || undefined,
+    illustrator: firstString(searchParams.illustrator) || undefined,
     view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
       ? (view as LudothekViewMode)
       : "grid",
@@ -334,6 +339,7 @@ export function matchesLudothekSearch(
     | "alternateNames"
     | "publisher"
     | "author"
+    | "illustrator"
   >,
   search: string,
 ): boolean {
@@ -349,6 +355,8 @@ export function matchesLudothekSearch(
   if (game.publisher.some((name) => name.toLowerCase().includes(term)))
     return true;
   if (game.author.some((name) => name.toLowerCase().includes(term)))
+    return true;
+  if (game.illustrator.some((name) => name.toLowerCase().includes(term)))
     return true;
 
   return false;
@@ -374,6 +382,11 @@ export function filterLudothekGames(
   return games.filter((game) => {
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
       return false;
+    }
+    if (filters.illustrator) {
+      const term = filters.illustrator.trim().toLowerCase();
+      if (!game.illustrator.some((name) => name.toLowerCase().includes(term)))
+        return false;
     }
     if (!matchesPlayerCount(game, filters.players)) {
       return false;

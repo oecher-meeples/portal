@@ -1,3 +1,6 @@
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -278,9 +281,9 @@ describe("EditBoardGameTitle", () => {
         />,
       );
 
-      fireEvent.change(screen.getByLabelText("Verlag(e)"), {
-        target: { value: "Feuerland Spiele" },
-      });
+      const input = screen.getByLabelText("Verlag(e)");
+      fireEvent.change(input, { target: { value: "Feuerland Spiele" } });
+      fireEvent.keyDown(input, { key: "Enter" });
 
       expect(onChange).toHaveBeenCalledWith({ publisher: "Feuerland Spiele" });
     });

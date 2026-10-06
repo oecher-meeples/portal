@@ -30,6 +30,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     ruleBookLanguages: [],
     publisher: [],
     author: [],
+    illustrator: [],
     yearPublished: null,
     description: null,
     explainerVideoUrl: null,
