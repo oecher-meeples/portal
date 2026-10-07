@@ -16,6 +16,13 @@ const ROLE_FILTER_LABELS: Record<"ALL" | ContributorRole, string> = {
   ILLUSTRATOR: "Illustrator",
 };
 
+type SortOption = "name" | "titleCount";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name: "Alphabetisch",
+  titleCount: "Nach Anzahl Titel",
+};
+
 export function AdminContributorsView({
   rows,
 }: {
@@ -23,15 +30,22 @@ export function AdminContributorsView({
 }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | ContributorRole>("ALL");
+  const [sort, setSort] = useState<SortOption>("name");
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return rows.filter(
-      (row) =>
-        (!term || row.name.toLowerCase().includes(term)) &&
-        (roleFilter === "ALL" || row.roles.includes(roleFilter)),
-    );
-  }, [rows, search, roleFilter]);
+    return rows
+      .filter(
+        (row) =>
+          (!term || row.name.toLowerCase().includes(term)) &&
+          (roleFilter === "ALL" || row.roles.includes(roleFilter)),
+      )
+      .sort((a, b) =>
+        sort === "titleCount"
+          ? b.titleCount - a.titleCount
+          : a.name.localeCompare(b.name, "de"),
+      );
+  }, [rows, search, roleFilter, sort]);
 
   return (
     <PageContainer>
@@ -41,7 +55,7 @@ export function AdminContributorsView({
         description="Verlage, Autoren und Illustratoren über alle Titel. Zusammenführen nur, wenn höchstens ein Eintrag eine BGG-ID hat."
       />
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+      <div className="grid gap-3 sm:grid-cols-[1fr_200px_200px]">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="contributor-search">Suche</Label>
           <Input
@@ -70,13 +84,28 @@ export function AdminContributorsView({
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="contributor-sort">Sortierung</Label>
+          <select
+            id="contributor-sort"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as SortOption)}
+            className="border-input bg-background h-8 rounded-lg border px-2.5 text-sm"
+          >
+            {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+              <option key={option} value={option}>
+                {SORT_LABELS[option]}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <p className="text-muted-foreground text-sm">
         {visible.length} von {rows.length} Einträgen
       </p>
 
-      <ul className="flex flex-col divide-y">
+      <ul className="flex flex-col gap-3">
         {visible.map((row) => (
           <ContributorAdminRow key={row.id} row={row} allRows={rows} />
         ))}
