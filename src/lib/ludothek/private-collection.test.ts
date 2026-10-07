@@ -42,6 +42,7 @@ function entry(
       mechanics: [],
       bggId: 316554,
       alternateNames: [],
+      contributors: [],
       secondaryTitle: null,
       description: null,
       explainerVideoUrl: null,

@@ -7,6 +7,7 @@ import { RangeSlider, SingleSlider } from "@/components/ui/range-slider";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import { LudothekMultiSelectFilter } from "@/components/feature/ludothek/ludothek-multi-select-filter";
+import { LudothekIllustratorFilter } from "@/components/feature/ludothek/ludothek-illustrator-filter";
 import {
   MAX_PLAYERS_FILTER,
   type LudothekFilters,
@@ -220,6 +221,13 @@ export function LudothekFilterPanel({
             getAriaLabel={(index) => (index === 0 ? "Dauer von" : "Dauer bis")}
           />
         </FilterSliderRow>
+
+        <LudothekIllustratorFilter
+          value={filters.illustrator}
+          onCommit={(illustrator) =>
+            router.replace(href({ illustrator: illustrator || undefined }))
+          }
+        />
 
         <FilterSliderRow
           label="Erstveröffentlichung"

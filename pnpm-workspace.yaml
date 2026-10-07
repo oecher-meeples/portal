@@ -1,5 +1,6 @@
 overrides:
-  sharp: ">=0.35.0"
+  # GHSA-wq5f-xc86-pv6w: librsvg-Schwachstelle, transitiv über next/@vercel/og/better-auth
+  sharp: ">=0.35.5"
   postcss: ">=8.5.18"
   "@hono/node-server@<2.0.5": ^2.0.5
   better-auth@<1.6.2: ^1.6.2
@@ -16,6 +17,9 @@ overrides:
   # transitiv über shadcn (CLI, nicht Laufzeit) > @modelcontextprotocol/sdk >
   # express(-rate-limit) > proxy-addr.
   proxy-addr: ^2.0.8
+  # GHSA-6qxp-vccf-f47h: OAuth-Client sendet Credentials an vom MCP-Server gewählten
+  # Autorisierungsserver, transitiv über shadcn (CLI, nicht Laufzeit).
+  "@modelcontextprotocol/sdk@>=1.12.0 <1.31.0": ">=1.31.0"
   # GHSA-68fv-2mgg-jv7q: source-map-js Event-Loop-DoS über indizierte
   # Source-Map-Section-Offsets, transitiv über @prisma/config > c12 >
   # magicast > source-map-js (und dieselbe Kette über better-auth).

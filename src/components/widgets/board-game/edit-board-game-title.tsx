@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
+import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
@@ -204,19 +205,19 @@ export function EditBoardGameTitle({
         </select>
       </div>
 
-      <TextField
-        id={`${idPrefix}-publisher`}
+      <ContributorNamesField
         label="Verlag(e)"
+        role="PUBLISHER"
         value={values.publisher}
-        onChange={(event) => onChange({ publisher: event.target.value })}
-        placeholder="Kommagetrennt, z. B. Feuerland Spiele"
+        onChange={(publisher) => onChange({ publisher })}
+        placeholder="Name eingeben und Enter drücken, z. B. Feuerland Spiele"
       />
-      <TextField
-        id={`${idPrefix}-author`}
+      <ContributorNamesField
         label="Autor(en)"
+        role="AUTHOR"
         value={values.author}
-        onChange={(event) => onChange({ author: event.target.value })}
-        placeholder="Kommagetrennt, z. B. Uwe Rosenberg"
+        onChange={(author) => onChange({ author })}
+        placeholder="Name eingeben und Enter drücken, z. B. Uwe Rosenberg"
       />
       <TextField
         id={`${idPrefix}-year-published`}

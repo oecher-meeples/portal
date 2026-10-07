@@ -10,6 +10,7 @@ import {
   findOrCreateBoardGameTitle,
   uniqueBoardGameSlug,
 } from "../src/lib/ludothek/board-game-title-lookup";
+import { linkContributors } from "../src/lib/ludothek/taxonomy/contributors";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -184,8 +185,6 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
-        publisher: game.publisher,
-        author: game.author,
         yearPublished: game.yearPublished,
         traits: game.traits,
         kind: expansionTitles.has(game.title)
@@ -193,6 +192,7 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
           : BoardGameKind.BOARDGAME,
       },
     });
+    await linkContributors(prisma, created.id, game.contributors);
     gameIdByTitle.set(game.title, created.id);
     createdTitleCount += 1;
 

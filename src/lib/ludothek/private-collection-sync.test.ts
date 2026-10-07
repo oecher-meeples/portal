@@ -65,6 +65,9 @@ const MEEPLE = {
 };
 
 beforeEach(() => {
+  prismaMock.$transaction.mockImplementation(((
+    fn: (tx: typeof prismaMock) => unknown,
+  ) => fn(prismaMock)) as never);
   vi.clearAllMocks();
   getCurrentMeepleMock.mockResolvedValue(MEEPLE);
   prismaMock.role.count.mockResolvedValue(0);

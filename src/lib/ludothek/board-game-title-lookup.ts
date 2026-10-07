@@ -8,6 +8,11 @@ import {
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { uniqueSlug } from "@/lib/utils/slug";
+import {
+  type ContributorInput,
+  linkContributors,
+  replacePublisherAndAuthorLinksByName,
+} from "@/lib/ludothek/taxonomy/contributors";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -56,6 +61,9 @@ export type BoardGameTitleInput = {
   traits?: BoardGameTrait[];
   /** Freier Admin-Hinweis je Titel — nie aus BGG befüllt (#487-Konzept). */
   notes?: string | null;
+  /** Mitwirkende mit BGG-ID (Epic #490) — werden zusätzlich zu den
+   * Namenslisten `publisher`/`author` als Relation gespeichert. */
+  contributors?: ContributorInput[];
 };
 
 export function toBoardGameTitleData(input: BoardGameTitleInput) {
@@ -121,11 +129,23 @@ export async function findOrCreateBoardGameTitle(
     const existing = await tx.boardGame.findUnique({
       where: { bggId: input.bggId },
     });
-    if (existing) return existing;
+    if (existing) {
+      await linkContributors(tx, existing.id, input.contributors ?? []);
+      return existing;
+    }
   }
 
   const slug = await uniqueBoardGameSlug(tx, input.title);
-  return tx.boardGame.create({
+  const created = await tx.boardGame.create({
     data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
+  if (input.contributors?.length) {
+    await linkContributors(tx, created.id, input.contributors);
+  } else {
+    await replacePublisherAndAuthorLinksByName(tx, created.id, {
+      publisher: input.publisher ?? [],
+      author: input.author ?? [],
+    });
+  }
+  return created;
 }

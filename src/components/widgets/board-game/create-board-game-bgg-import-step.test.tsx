@@ -30,6 +30,8 @@ const BASE_PREVIEW: BggGameData = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
 };
 
 const NOOP_PROPS = {
@@ -62,6 +64,7 @@ describe("CreateBoardGameBggImportStep — Verlags-Auswahl bei mehreren Editione
               publisher: ["Feuerland Spiele"],
               productCode: "FEU001",
               languages: ["German"],
+              publisherLinks: [],
             },
           ],
         }}
@@ -85,12 +88,14 @@ describe("CreateBoardGameBggImportStep — Verlags-Auswahl bei mehreren Editione
               publisher: ["Capstone Games"],
               productCode: "CAPS001",
               languages: ["English"],
+              publisherLinks: [],
             },
             {
               yearPublished: 2022,
               publisher: ["Feuerland Spiele"],
               productCode: "FEU001",
               languages: ["German"],
+              publisherLinks: [],
             },
           ],
         }}
@@ -117,12 +122,14 @@ describe("CreateBoardGameBggImportStep — Verlags-Auswahl bei mehreren Editione
               publisher: ["Feuerland Spiele"],
               productCode: "FEU001",
               languages: ["German"],
+              publisherLinks: [],
             },
             {
               yearPublished: 2023,
               publisher: ["Frosted Games"],
               productCode: "FRO001",
               languages: ["German"],
+              publisherLinks: [],
             },
           ],
         }}
@@ -143,6 +150,7 @@ describe("CreateBoardGameBggImportStep — Verlags-Auswahl bei mehreren Editione
       publisher: ["Feuerland Spiele"],
       productCode: "FEU001",
       languages: ["German"],
+      publisherLinks: [],
     });
   });
 });

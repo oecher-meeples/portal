@@ -11,6 +11,7 @@ const ENGLISH_VERSION: BggVersion = {
   publisher: ["Capstone Games"],
   productCode: "CAPS001",
   languages: ["English"],
+  publisherLinks: [],
 };
 
 const GERMAN_VERSION: BggVersion = {
@@ -18,6 +19,7 @@ const GERMAN_VERSION: BggVersion = {
   publisher: ["Feuerland Spiele"],
   productCode: "FEU001",
   languages: ["German"],
+  publisherLinks: [],
 };
 
 describe("selectRelevantVersions", () => {

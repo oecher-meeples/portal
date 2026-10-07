@@ -33,6 +33,8 @@ const BGG_DATA: BggGameData = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
 };
 
 const FORM: BoardGameFormValues = {

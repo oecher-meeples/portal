@@ -13,11 +13,10 @@ import {
   BggNotFoundError,
   fetchBggGame,
 } from "@/lib/bgg/client";
-import {
-  bggDataToTitleInput,
-  toBoardGameTitleData,
-} from "@/lib/ludothek/board-game-versions";
+import { bggDataToTitleInput } from "@/lib/ludothek/board-game-versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
+import { toBoardGameTitleData } from "@/lib/ludothek/board-game-title-lookup";
+import { replaceBggContributors } from "@/lib/ludothek/taxonomy/contributors";
 import { translateBggGameData } from "@/lib/ludothek/board-games-bgg-import";
 import {
   canForceImport,
@@ -65,9 +64,13 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
     await sleep(BGG_REQUEST_THROTTLE_MS);
 
     if (existing) {
-      return await prisma.boardGame.update({
-        where: { id: existing.id },
-        data: { title: input.title, ...toBoardGameTitleData(input) },
+      return await prisma.$transaction(async (tx) => {
+        const updated = await tx.boardGame.update({
+          where: { id: existing.id },
+          data: { title: input.title, ...toBoardGameTitleData(input) },
+        });
+        await replaceBggContributors(tx, existing.id, input.contributors ?? []);
+        return updated;
       });
     }
     return await findOrCreateBoardGameTitle(input);

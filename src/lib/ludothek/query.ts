@@ -1,3 +1,7 @@
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import { prisma } from "@/lib/utils/prisma";
 import {
   BoardGameKind,
@@ -51,6 +55,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
               },
             },
             alternateNames: { select: { name: true } },
+            contributors: CONTRIBUTOR_LINKS_INCLUDE,
           },
         },
         holdings: {
@@ -125,8 +130,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       explainerVideoUrl: boardGame.explainerVideoUrl,
       kind: boardGame.kind,
       languageDependence: boardGame.languageDependence,
-      publisher: boardGame.publisher,
-      author: boardGame.author,
+      ...contributorNamesByRole(boardGame.contributors),
       yearPublished: boardGame.yearPublished,
       traits: boardGame.traits,
       notes: boardGame.notes,

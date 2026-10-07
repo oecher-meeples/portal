@@ -1,3 +1,7 @@
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import type {
   BoardGameKind,
   BoardGameTrait,
@@ -112,7 +116,12 @@ export async function buildAdminBoardGameRows({
       where: gameCopyAdminWhere({ showDeinventarised, filter }),
       orderBy: { boardGame: { title: "asc" } },
       include: {
-        boardGame: { include: { alternateNames: { select: { name: true } } } },
+        boardGame: {
+          include: {
+            alternateNames: { select: { name: true } },
+            contributors: CONTRIBUTOR_LINKS_INCLUDE,
+          },
+        },
         holdings: {
           where: { endedAt: null },
           include: {
@@ -262,8 +271,7 @@ export async function buildAdminBoardGameRows({
         kind: boardGame.kind,
         explainerVideoUrl: boardGame.explainerVideoUrl,
         languageDependence: boardGame.languageDependence,
-        publisher: boardGame.publisher,
-        author: boardGame.author,
+        ...contributorNamesByRole(boardGame.contributors),
         yearPublished: boardGame.yearPublished,
         ruleBookLanguages: copy.ruleBookLanguages,
         alternateNames: boardGame.alternateNames.map((a) => a.name),
