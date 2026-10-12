@@ -2,14 +2,21 @@
 
 import { useState, type KeyboardEvent } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
-/** Freitext-Filter nach Illustrator (Teilstring, Groß-/Kleinschreibung egal).
- * Übernommen wird bei Enter oder Verlassen des Feldes. */
-export function LudothekIllustratorFilter({
+/** Freitext-Filter über einen Mitwirkenden-Namen (Teilstring,
+ * Groß-/Kleinschreibung egal) — gemeinsame Basis für die Verlag-, Autor- und
+ * Illustrator-Filter im Ludothek-Panel (Epic #490). Übernommen wird bei
+ * Enter oder Verlassen des Feldes. */
+export function LudothekContributorFilter({
+  id,
+  label,
+  placeholder,
   value,
   onCommit,
 }: {
+  id: string;
+  label: string;
+  placeholder: string;
   value: string | undefined;
   onCommit: (value: string) => void;
 }) {
@@ -25,12 +32,17 @@ export function LudothekIllustratorFilter({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor="ludothek-illustrator-filter">Illustrator</Label>
+    <div className="flex min-w-56 flex-1 flex-col gap-1.5">
+      <label
+        htmlFor={id}
+        className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
+      >
+        {label}
+      </label>
       <Input
-        id="ludothek-illustrator-filter"
+        id={id}
         value={draft}
-        placeholder="z. B. Klemens Franz"
+        placeholder={placeholder}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={commit}
         onKeyDown={handleKeyDown}

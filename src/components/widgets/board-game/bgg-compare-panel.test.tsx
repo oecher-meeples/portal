@@ -58,6 +58,7 @@ const FORM: BoardGameFormValues = {
   ruleBookLanguages: [],
   publisher: "",
   author: "",
+  illustrator: "",
   yearPublished: "",
   traits: [],
   notes: "",

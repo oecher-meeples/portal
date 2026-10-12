@@ -88,6 +88,7 @@ export type AdminBoardGameRow = {
   ruleBookLanguages: RuleBookLanguage[];
   publisher: string[];
   author: string[];
+  illustrator: string[];
   yearPublished: number | null;
   /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
    * selbst (#187). */

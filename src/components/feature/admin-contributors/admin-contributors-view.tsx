@@ -4,16 +4,16 @@ import { useMemo, useState } from "react";
 import type { ContributorRole } from "@prisma/client";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
+import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
 import { ContributorAdminRow } from "@/components/feature/admin-contributors/contributor-admin-row";
+import { CONTRIBUTOR_ROLE_LABELS } from "@/lib/ludothek/taxonomy/contributor-labels";
 
 const ROLE_FILTER_LABELS: Record<"ALL" | ContributorRole, string> = {
   ALL: "Alle Rollen",
-  PUBLISHER: "Verlag",
-  AUTHOR: "Autor",
-  ILLUSTRATOR: "Illustrator",
+  ...CONTRIBUTOR_ROLE_LABELS,
 };
 
 type SortOption = "name" | "titleCount";
@@ -31,6 +31,18 @@ export function AdminContributorsView({
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | ContributorRole>("ALL");
   const [sort, setSort] = useState<SortOption>("name");
+
+  const roleCounts = useMemo(() => {
+    const counts: Record<ContributorRole, number> = {
+      AUTHOR: 0,
+      ILLUSTRATOR: 0,
+      PUBLISHER: 0,
+    };
+    for (const row of rows) {
+      for (const role of row.roles) counts[role] += 1;
+    }
+    return counts;
+  }, [rows]);
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -54,6 +66,12 @@ export function AdminContributorsView({
         title="Mitwirkende"
         description="Verlage, Autoren und Illustratoren über alle Titel. Zusammenführen nur, wenn höchstens ein Eintrag eine BGG-ID hat."
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatTile label="Autoren" value={roleCounts.AUTHOR} />
+        <StatTile label="Illustratoren" value={roleCounts.ILLUSTRATOR} />
+        <StatTile label="Verlage" value={roleCounts.PUBLISHER} />
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_200px_200px]">
         <div className="flex flex-col gap-1.5">

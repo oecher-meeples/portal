@@ -2,8 +2,8 @@
 branch: feature/epic-490-mitwirkende
 created: 2026-10-07
 issues:
-  494: { status: pending }
-  493: { status: pending }
+  494: { status: done }
+  493: { status: done }
 ---
 
 # Plan: quick-sprint #494, #493 (Mitwirkende, Live-Review-Nachträge)

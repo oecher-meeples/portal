@@ -9,6 +9,8 @@ import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { YoutubeIcon } from "@/components/ui/youtube-icon";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { ContributorPill } from "@/components/entities/contributor-pill";
+import { groupGameContributorsByName } from "@/lib/ludothek/taxonomy/game-contributors-display";
 import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
 import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -103,6 +105,8 @@ export function GameDetailView({
    * alle (auch Gäste) geladen, analog `game.traits` selbst. */
   traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
+  const contributors = groupGameContributorsByName(game);
+
   return (
     // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
     // Displays stapeln sie in Quelltext-Reihenfolge — Titelblock, Bild,
@@ -157,6 +161,17 @@ export function GameDetailView({
           {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
           {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
         </p>
+        {contributors.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {contributors.map((contributor) => (
+              <ContributorPill
+                key={contributor.name}
+                name={contributor.name}
+                roles={contributor.roles}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* #467: max-lg:w-fit + mx-auto lassen den Container unterhalb `lg`

@@ -245,6 +245,7 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       explainerVideoUrl: null,
       publisher: [],
       author: [],
+      illustrator: [],
       yearPublished: null,
       traits: [],
       notes: null,

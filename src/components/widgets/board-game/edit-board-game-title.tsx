@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
@@ -38,8 +38,9 @@ function diffClassName(status: boolean | undefined): string | undefined {
  * title (see ADR 0008). `condition` lives in `EditBoardGameExemplar`
  * instead: it's per-copy, not per-title.
  *
- * Row layout (#124): Titel+Art, EAN+BGG-ID, Spielerzahl+Dauer+Komplexität,
- * Mechaniken, Bild+Erklärvideo, Beschreibung.
+ * Row layout (#124, #493-Folge): Titel+Art, Verlag+Autor+Illustrator (eine
+ * Zeile), Sprachabhängigkeit+Erstveröffentlichung, EAN+BGG-ID,
+ * Spielerzahl+Dauer+Komplexität, Mechaniken, Bild+Erklärvideo, Beschreibung.
  */
 export function EditBoardGameTitle({
   idPrefix,
@@ -54,6 +55,7 @@ export function EditBoardGameTitle({
   eanAlternateTitles,
   boardGameId,
   bggProductCode,
+  onContributorsValidityChange,
 }: {
   idPrefix: string;
   values: BoardGameFormValues;
@@ -92,9 +94,27 @@ export function EditBoardGameTitle({
   /** BGGs Alternativnamen (#187) — Fallback-Reihenfolge für die EAN-Suche,
    * wenn der Haupttitel keinen Treffer liefert (#197-Folgeanfrage). */
   eanAlternateTitles?: string[];
+  /** Meldet, ob alle drei Mitwirkende-Felder nur bekannte Namen enthalten —
+   * die aufrufende Seite blockiert das Speichern, solange das nicht der Fall
+   * ist (#493). */
+  onContributorsValidityChange?: (valid: boolean) => void;
 }) {
   const [isTranslating, setIsTranslating] = useState(false);
+  const [contributorsValid, setContributorsValid] = useState({
+    publisher: true,
+    author: true,
+    illustrator: true,
+  });
   const [translationError, setTranslationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onContributorsValidityChange?.(
+      contributorsValid.publisher &&
+        contributorsValid.author &&
+        contributorsValid.illustrator,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onContributorsValidityChange ist typischerweise ein frischer Closure pro Render
+  }, [contributorsValid]);
 
   async function handleTranslateDescription() {
     setIsTranslating(true);
@@ -178,6 +198,39 @@ export function EditBoardGameTitle({
         </select>
       </div>
 
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:col-span-2 sm:grid-flow-col sm:grid-cols-3 sm:grid-rows-3">
+        <ContributorNamesField
+          label="Verlag(e)"
+          role="PUBLISHER"
+          value={values.publisher}
+          onChange={(publisher) => onChange({ publisher })}
+          placeholder="z. B. Feuerland Spiele"
+          onValidityChange={(valid) =>
+            setContributorsValid((prev) => ({ ...prev, publisher: valid }))
+          }
+        />
+        <ContributorNamesField
+          label="Autor(en)"
+          role="AUTHOR"
+          value={values.author}
+          onChange={(author) => onChange({ author })}
+          placeholder="z. B. Uwe Rosenberg"
+          onValidityChange={(valid) =>
+            setContributorsValid((prev) => ({ ...prev, author: valid }))
+          }
+        />
+        <ContributorNamesField
+          label="Illustrator(en)"
+          role="ILLUSTRATOR"
+          value={values.illustrator}
+          onChange={(illustrator) => onChange({ illustrator })}
+          placeholder="z. B. Klemens Franz"
+          onValidityChange={(valid) =>
+            setContributorsValid((prev) => ({ ...prev, illustrator: valid }))
+          }
+        />
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${idPrefix}-language-dependence`}>
           Sprachabhängigkeit (BGG-Skala, optional)
@@ -205,20 +258,6 @@ export function EditBoardGameTitle({
         </select>
       </div>
 
-      <ContributorNamesField
-        label="Verlag(e)"
-        role="PUBLISHER"
-        value={values.publisher}
-        onChange={(publisher) => onChange({ publisher })}
-        placeholder="Name eingeben und Enter drücken, z. B. Feuerland Spiele"
-      />
-      <ContributorNamesField
-        label="Autor(en)"
-        role="AUTHOR"
-        value={values.author}
-        onChange={(author) => onChange({ author })}
-        placeholder="Name eingeben und Enter drücken, z. B. Uwe Rosenberg"
-      />
       <TextField
         id={`${idPrefix}-year-published`}
         label="Erstveröffentlichung"

@@ -249,6 +249,7 @@ export default async function GameDetailPage({
         languageDependence: game.languageDependence,
         publisher: game.publisher,
         author: game.author,
+        illustrator: game.illustrator,
         yearPublished: game.yearPublished,
         traits: game.traits,
         notes: game.notes,

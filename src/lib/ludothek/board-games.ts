@@ -12,7 +12,7 @@ import {
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
-import { replacePublisherAndAuthorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
+import { replacePublisherAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
 import {
   CONTRIBUTOR_LINKS_INCLUDE,
   contributorNamesByRole,
@@ -197,9 +197,10 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
       where: { id },
       data: { title: input.title, ...toBoardGameTitleData(input) },
     });
-    await replacePublisherAndAuthorLinksByName(tx, id, {
+    await replacePublisherAuthorIllustratorLinksByName(tx, id, {
       publisher: input.publisher ?? [],
       author: input.author ?? [],
+      illustrator: input.illustrator ?? [],
     });
     return updated;
   });

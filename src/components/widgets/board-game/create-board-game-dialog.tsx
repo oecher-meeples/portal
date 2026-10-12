@@ -80,6 +80,7 @@ export function CreateBoardGameDialog({
     ean: defaultEan ?? "",
   });
   const [placement, setPlacement] = useState<LocationPlacement | null>(null);
+  const [contributorsValid, setContributorsValid] = useState(true);
 
   const {
     activeDuplicate,
@@ -309,7 +310,9 @@ export function CreateBoardGameDialog({
 
   // Ohne bekannten Zieltitel braucht es einen Titel, um einen neuen anzulegen;
   // mit bekanntem Zieltitel legen wir ohnehin nur ein weiteres Exemplar an.
-  const canSubmit = existingBoardGame ? true : form.title.trim().length > 0;
+  const canSubmit = existingBoardGame
+    ? true
+    : form.title.trim().length > 0 && contributorsValid;
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -377,6 +380,7 @@ export function CreateBoardGameDialog({
                     ? resolveProductCodeFromVersions(preview.versions).value
                     : null
                 }
+                onContributorsValidityChange={setContributorsValid}
               />
             </div>
           )}

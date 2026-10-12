@@ -47,6 +47,8 @@ export type BoardGameFormValues = {
   publisher: string;
   /** Autor(en)/Designer, kommagetrennt (#205). */
   author: string;
+  /** Illustrator(en), kommagetrennt (Epic #490). */
+  illustrator: string;
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: string;
   /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — Mehrfach-
@@ -78,6 +80,7 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   ruleBookLanguages: [],
   publisher: "",
   author: "",
+  illustrator: "",
   yearPublished: "",
   traits: [],
   notes: "",
@@ -105,6 +108,7 @@ export type BoardGameRecord = {
   ruleBookLanguages: RuleBookLanguage[];
   publisher: string[];
   author: string[];
+  illustrator: string[];
   yearPublished: number | null;
   traits: BoardGameTrait[];
   notes: string | null;
@@ -134,6 +138,7 @@ export function boardGameToFormValues(
     ruleBookLanguages: game.ruleBookLanguages,
     publisher: formatCommaSeparatedList(game.publisher),
     author: formatCommaSeparatedList(game.author),
+    illustrator: formatCommaSeparatedList(game.illustrator),
     yearPublished: game.yearPublished?.toString() ?? "",
     traits: game.traits,
     notes: game.notes ?? "",
@@ -165,6 +170,7 @@ export function boardGameFormToTitleInput(
     languageDependence: form.languageDependence,
     publisher: parseCommaSeparatedList(form.publisher),
     author: parseCommaSeparatedList(form.author),
+    illustrator: parseCommaSeparatedList(form.illustrator),
     yearPublished: form.yearPublished ? Number(form.yearPublished) : undefined,
     traits: form.traits,
     notes: form.notes || undefined,

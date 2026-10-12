@@ -73,10 +73,10 @@ export async function linkContributors(
   });
 }
 
-export async function replacePublisherAndAuthorLinksByName(
+export async function replacePublisherAuthorIllustratorLinksByName(
   tx: Tx,
   boardGameId: string,
-  names: { publisher: string[]; author: string[] },
+  names: { publisher: string[]; author: string[]; illustrator: string[] },
 ) {
   const inputs: ContributorInput[] = [
     ...names.publisher.map((name) => ({
@@ -89,10 +89,18 @@ export async function replacePublisherAndAuthorLinksByName(
       bggId: null,
       name,
     })),
+    ...names.illustrator.map((name) => ({
+      role: "ILLUSTRATOR" as const,
+      bggId: null,
+      name,
+    })),
   ];
 
   await tx.boardGameContributor.deleteMany({
-    where: { boardGameId, role: { in: ["PUBLISHER", "AUTHOR"] } },
+    where: {
+      boardGameId,
+      role: { in: ["PUBLISHER", "AUTHOR", "ILLUSTRATOR"] },
+    },
   });
 
   for (const input of inputs) {

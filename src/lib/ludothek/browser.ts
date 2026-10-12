@@ -170,7 +170,9 @@ export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
-  /** Teilstring-Filter über die Illustratoren (Epic #490). */
+  /** Teilstring-Filter über Verlag/Autor/Illustrator (Epic #490). */
+  publisher?: string;
+  author?: string;
   illustrator?: string;
   /** Exakte Spieleranzahl — matcht jeden Titel, dessen min/maxPlayers diese
    * Zahl einschließt (Ein-Knoten-Slider statt fester Buckets, #214-Folge). */
@@ -257,6 +259,17 @@ export function matchesDurationRange(
   return true;
 }
 
+/** Teilstring-Filter über Verlag/Autor/Illustrator — Groß-/Kleinschreibung
+ * egal, `undefined`/leer matcht alles (Epic #490). */
+export function matchesContributorFilter(
+  names: string[],
+  term: string | undefined,
+): boolean {
+  if (!term) return true;
+  const needle = term.trim().toLowerCase();
+  return names.some((name) => name.toLowerCase().includes(needle));
+}
+
 const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
   "grid",
   "liste",
@@ -282,6 +295,8 @@ export function parseLudothekSearchParams(
 
   const filters: LudothekFilters = {
     search: firstString(searchParams.q) || undefined,
+    publisher: firstString(searchParams.verlag) || undefined,
+    author: firstString(searchParams.autor) || undefined,
     illustrator: firstString(searchParams.illustrator) || undefined,
     view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
       ? (view as LudothekViewMode)
@@ -383,10 +398,14 @@ export function filterLudothekGames(
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
       return false;
     }
-    if (filters.illustrator) {
-      const term = filters.illustrator.trim().toLowerCase();
-      if (!game.illustrator.some((name) => name.toLowerCase().includes(term)))
-        return false;
+    if (!matchesContributorFilter(game.publisher, filters.publisher)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.author, filters.author)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.illustrator, filters.illustrator)) {
+      return false;
     }
     if (!matchesPlayerCount(game, filters.players)) {
       return false;

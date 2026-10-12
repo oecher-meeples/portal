@@ -6,6 +6,7 @@ import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { GameContributorSummary } from "@/components/entities/game-contributor-summary";
 import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
 import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
@@ -69,11 +70,10 @@ export function GameCard({
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
-        {game.publisher.length > 0 && (
-          <p className="text-muted-foreground text-sm">
-            {game.publisher.join(", ")}
-          </p>
-        )}
+        <GameContributorSummary
+          publisher={game.publisher}
+          illustrator={game.illustrator}
+        />
         {expansionCount > 0 && (
           <p className="text-muted-foreground flex items-center gap-1 text-sm">
             <Layers className="size-4" />

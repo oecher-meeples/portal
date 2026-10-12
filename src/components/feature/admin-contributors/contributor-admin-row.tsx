@@ -2,23 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContributorRole } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ContributorRolePill } from "@/components/entities/contributor-role-pill";
 import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
 import {
   deleteContributor,
   mergeContributors,
   renameContributor,
 } from "@/lib/ludothek/taxonomy/contributor-admin-actions";
-
-const ROLE_BADGE_LABELS: Record<ContributorRole, string> = {
-  PUBLISHER: "Verlag",
-  AUTHOR: "Autor",
-  ILLUSTRATOR: "Illustrator",
-};
 
 type ActionResult = { success?: true; error?: string };
 
@@ -56,31 +49,30 @@ export function ContributorAdminRow({
   return (
     <li>
       <Card size="sm">
-        <CardContent className="grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {editing ? (
-              <Input
-                aria-label="Neuer Name"
-                value={nameDraft}
-                onChange={(event) => setNameDraft(event.target.value)}
-                className="max-w-xs"
-              />
-            ) : (
-              <span className="font-medium">{row.name}</span>
-            )}
-            {row.roles.map((role) => (
-              <Badge key={role} variant="secondary">
-                {ROLE_BADGE_LABELS[role]}
-              </Badge>
-            ))}
+        <CardContent className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3">
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {editing ? (
+                <Input
+                  aria-label="Neuer Name"
+                  value={nameDraft}
+                  onChange={(event) => setNameDraft(event.target.value)}
+                  className="max-w-xs"
+                />
+              ) : (
+                <span className="font-medium">{row.name}</span>
+              )}
+              {row.roles.map((role) => (
+                <ContributorRolePill key={role} role={role} />
+              ))}
+            </div>
+            <span className="text-muted-foreground text-xs">
+              {row.titleCount} Titel
+              {row.bggId !== null && ` · BGG-ID ${row.bggId}`}
+            </span>
           </div>
 
-          <span className="text-muted-foreground text-right text-xs text-nowrap">
-            {row.titleCount} Titel
-            {row.bggId !== null && ` · BGG-ID ${row.bggId}`}
-          </span>
-
-          <div className="col-span-2 flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {editing ? (
               <>
                 <Button
@@ -151,7 +143,9 @@ export function ContributorAdminRow({
             </Button>
           </div>
 
-          {error && <p className="text-destructive text-sm">{error}</p>}
+          {error && (
+            <p className="text-destructive col-span-2 text-sm">{error}</p>
+          )}
         </CardContent>
       </Card>
     </li>

@@ -11,7 +11,7 @@ import { uniqueSlug } from "@/lib/utils/slug";
 import {
   type ContributorInput,
   linkContributors,
-  replacePublisherAndAuthorLinksByName,
+  replacePublisherAuthorIllustratorLinksByName,
 } from "@/lib/ludothek/taxonomy/contributors";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
@@ -50,10 +50,15 @@ export type BoardGameTitleInput = {
   languageDependence?: LanguageDependence | null;
   /** Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen bei
    * identischem Wert über alle (ggf. deutschen) BGG-Versionen, sonst wählt
-   * der Admin (#205, siehe `resolvePublisherFromVersions()`). */
+   * der Admin (#205, siehe `resolvePublisherFromVersions()`). Nur über
+   * `BoardGameContributor` gespeichert, keine eigene Spalte (seit #6fdd6f8). */
   publisher?: string[];
-  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205). */
+  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205).
+   * Nur über `BoardGameContributor` gespeichert, keine eigene Spalte. */
   author?: string[];
+  /** Illustrator(en) (Epic #490) — analog `publisher`/`author`, nur über
+   * `BoardGameContributor` gespeichert, keine eigene Spalte. */
+  illustrator?: string[];
   /** Erstveröffentlichungsjahr — ältestes Jahr über alle BGG-Versionen (#205). */
   yearPublished?: number | null;
   /** BGGs Family-Signale mit Verleih-Auswirkung, als Vorschlag beim BGG-
@@ -62,10 +67,14 @@ export type BoardGameTitleInput = {
   /** Freier Admin-Hinweis je Titel — nie aus BGG befüllt (#487-Konzept). */
   notes?: string | null;
   /** Mitwirkende mit BGG-ID (Epic #490) — werden zusätzlich zu den
-   * Namenslisten `publisher`/`author` als Relation gespeichert. */
+   * Namenslisten `publisher`/`author`/`illustrator` als Relation gespeichert. */
   contributors?: ContributorInput[];
 };
 
+/** `publisher`/`author`/`illustrator` sind bewusst nicht Teil dieses
+ * Rückgabewerts — sie sind keine `BoardGame`-Spalten, sondern werden separat
+ * über `replacePublisherAuthorIllustratorLinksByName()`/`linkContributors()`
+ * als `BoardGameContributor`-Relation gespeichert. */
 export function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
     secondaryTitle: input.secondaryTitle || null,
@@ -82,8 +91,6 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
     categories: input.categories ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
     languageDependence: input.languageDependence ?? null,
-    publisher: input.publisher ?? [],
-    author: input.author ?? [],
     yearPublished: input.yearPublished ?? null,
     traits: input.traits ?? [],
     notes: input.notes || null,
@@ -142,9 +149,10 @@ export async function findOrCreateBoardGameTitle(
   if (input.contributors?.length) {
     await linkContributors(tx, created.id, input.contributors);
   } else {
-    await replacePublisherAndAuthorLinksByName(tx, created.id, {
+    await replacePublisherAuthorIllustratorLinksByName(tx, created.id, {
       publisher: input.publisher ?? [],
       author: input.author ?? [],
+      illustrator: input.illustrator ?? [],
     });
   }
   return created;
