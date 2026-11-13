@@ -561,8 +561,7 @@ es), `curl` selbst als `nobody`. Fehlt `CRON_SECRET`, startet der Container
 nicht.
 
 **Zeitpläne ändern:** in `docker/cron/crontab`, danach
-`docker compose up -d --build cron-sidecar`. Läuft parallel noch ein
-Vercel-Deployment, gleichzeitig `vercel.json` anpassen ([13.3](#133-vercel-cron-und-verceljson)).
+`docker compose up -d --build cron-sidecar`.
 
 Prüfen, ob die Jobs laufen: [14](#cron-jobs-laufen-nicht-oder-schlagen-fehl).
 
@@ -796,14 +795,6 @@ zu löschen). Für einen vollständigen Umzug:
    `<S3_PUBLIC_ENDPOINT>/<S3_BUCKET>/` umschreiben.
 
 Erst danach den Vercel-Blob-Store löschen.
-
-### 13.3 Vercel Cron und `vercel.json`
-
-Die Zeitpläne in `docker/cron/crontab` spiegeln `vercel.json`. Solange die App
-parallel noch auf Vercel läuft, beide synchron halten — und beachten, dass
-dann **beide** Deployments die Jobs ausführen (z. B. doppelte
-Instagram-Posts, wenn beide auf dieselbe Datenbank zeigen). `vercel.json`
-bleibt bis zur Abschaltung des Vercel-Deployments im Repo.
 
 ## 14. Fehlerbehebung
 
