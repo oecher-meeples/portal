@@ -29,7 +29,7 @@ function digestEmailHtml(
  * (`Meeple.marketNewsletterOptIn`). Bei 0 neuen Angeboten wird nicht
  * versendet (keine Leer-Mail).
  *
- * Der Cron läuft laut `vercel.json` genau einmal täglich, daher genügt ein
+ * Der Cron läuft laut `docker/cron/crontab` genau einmal täglich, daher genügt ein
  * festes 24h-Fenster als "seit dem letzten Versand" — kein zusätzlicher
  * persistierter Zeitstempel nötig.
  */

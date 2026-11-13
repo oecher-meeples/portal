@@ -6,7 +6,7 @@ import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
 import { resetExplainerAttendance } from "@/lib/explainer/attendance-cleanup";
 import { isAuthorizedCronRequest } from "@/lib/utils/cron-auth";
 
-// Brevo's free tier caps at 300 mails/day; this cron runs once a day (see vercel.json).
+// Brevo's free tier caps at 300 mails/day; this cron runs once a day (see docker/cron/crontab).
 const NEWSLETTER_DAILY_LIMIT = 300;
 
 export async function GET(request: Request) {

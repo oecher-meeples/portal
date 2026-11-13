@@ -12,7 +12,7 @@
     // Der Schlüssel muss eine tatsächlich existierende Datei sein — ein
     // virtueller "config"-Knoten funktioniert nicht. Daher package.json als
     // Anker für die gesamte Werkzeug-Konfiguration im Root.
-    "package.json": "pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc, .editorconfig, .prettierrc*, .prettierignore, eslint.config.*, .eslintrc*, tsconfig*, next.config.*, postcss.config.*, vitest.config.*, components.json, vercel.json, .jscpd.json, .gitignore, .gitattributes",
+    "package.json": "pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc, .editorconfig, .prettierrc*, .prettierignore, eslint.config.*, .eslintrc*, tsconfig*, next.config.*, postcss.config.*, vitest.config.*, components.json, .jscpd.json, .gitignore, .gitattributes",
     // Umgebungsvariablen unter dem Beispiel bündeln.
     ".env.example": ".env, .env.*",
     // Test neben Subjekt — spiegelt die Colocation-Regel aus
@@ -29,7 +29,6 @@
   "files.exclude": {
     "**/.git": true,
     "**/.next": true,
-    "**/.vercel": true,
     "**/node_modules": true,
     "**/*.tsbuildinfo": true,
     "**/next-env.d.ts": true,
