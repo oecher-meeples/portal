@@ -177,9 +177,8 @@ services:
         aws --endpoint-url "$$ENDPOINT" s3api put-bucket-policy --bucket "$$S3_BUCKET" --policy file:///tmp/policy.json
     restart: "no"
 
-  # Replaces Vercel Cron: busybox crond calls the existing bearer-protected
-  # /api/cron/* routes on the schedules from docker/cron/crontab (mirrors
-  # vercel.json) against the app service on app:3000.
+  # busybox crond calls the bearer-protected /api/cron/* routes on the
+  # schedules from docker/cron/crontab against the app service on app:3000.
   cron-sidecar:
     build: ./docker/cron
     restart: unless-stopped
