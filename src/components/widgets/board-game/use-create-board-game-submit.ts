@@ -75,6 +75,7 @@ export function useCreateBoardGameSubmit({
 
         const result = await createGameCopy(existingBoardGame.id, {
           condition: form.condition || undefined,
+          ruleBookLanguages: form.ruleBookLanguages,
           edition: editionSelectionFromForm(form),
           ...(placement ? { placement } : {}),
         });

@@ -175,6 +175,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     await waitFor(() =>
       expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
         condition: undefined,
+        ruleBookLanguages: ["EN"],
+        edition: null,
       }),
     );
     expect(createBoardGameMock).not.toHaveBeenCalled();
@@ -304,6 +306,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     );
     expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
       condition: undefined,
+      ruleBookLanguages: [],
+      edition: null,
     });
     expect(createBoardGameMock).not.toHaveBeenCalled();
     await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));
