@@ -4,32 +4,39 @@ import { slugify } from "../../src/lib/utils/slug";
 import { upsertBoardGameVersion } from "../../src/lib/ludothek/taxonomy/versions";
 import type { DemoGame } from "./demo-games";
 
-/** Demo-Titel mit englischer Edition — zeigt die Flagge an Karte und
- * Detailseite. Alle anderen Demo-Editionen sind deutsch (keine Flagge). */
-const DEMO_ENGLISH_EDITION_TITLES = ["Pandemic"];
-
-/** Legt die Edition der Demo-Exemplare an: der Demo-Verlag aus den
- * Mitwirkenden, deutsch bzw. englisch. `null` ohne Verlag und ohne
- * englische Edition — das Exemplar bleibt dann ohne Edition. */
+/** Legt die deutsche Version der Demo-Exemplare an, mit dem Demo-Verlag aus
+ * den Mitwirkenden (falls vorhanden). Idempotent: `upsertBoardGameVersion`
+ * findet eine gleiche Version (Sprache + Verlage) wieder. */
 export async function seedDemoEdition(boardGameId: string, game: DemoGame) {
-  const publishers = game.contributors.filter((c) => c.role === "PUBLISHER");
-  const english = DEMO_ENGLISH_EDITION_TITLES.includes(game.title);
-  if (publishers.length === 0 && !english) return null;
-
   return upsertBoardGameVersion(prisma, boardGameId, {
-    languages: [english ? "English" : "German"],
-    publishers,
+    languages: ["German"],
+    publishers: game.contributors.filter((c) => c.role === "PUBLISHER"),
   });
 }
 
-/** Ein Demo-Exemplar samt Anfangs-Standort — optional mit Edition. */
+/** Nachzug für Demo-Titel aus früheren Seed-Läufen (vor den Versionen):
+ * deutsche Version anlegen und den Exemplaren ohne Version zuordnen. Gibt die
+ * Zahl der zugeordneten Exemplare zurück. */
+export async function backfillDemoEdition(
+  boardGameId: string,
+  game: DemoGame,
+): Promise<number> {
+  const edition = await seedDemoEdition(boardGameId, game);
+  const { count } = await prisma.gameCopy.updateMany({
+    where: { boardGameId, versionId: null },
+    data: { versionId: edition.id },
+  });
+  return count;
+}
+
+/** Ein Demo-Exemplar samt Anfangs-Standort, in der Demo-Version. */
 export async function createDemoGameCopy(
   boardGameId: string,
   title: string,
   unitId: string,
   adminMeepleId: string,
   usedSlugs: Set<string>,
-  versionId: string | null,
+  versionId: string,
 ) {
   const base = slugify(title);
   let slug = base;

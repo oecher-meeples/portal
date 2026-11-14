@@ -10,7 +10,11 @@ import {
   uniqueBoardGameSlug,
 } from "../src/lib/ludothek/board-game-title-lookup";
 import { linkContributors } from "../src/lib/ludothek/taxonomy/contributors";
-import { seedDemoEdition, createDemoGameCopy } from "./seed-data/demo-editions";
+import {
+  backfillDemoEdition,
+  seedDemoEdition,
+  createDemoGameCopy,
+} from "./seed-data/demo-editions";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -129,8 +133,14 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
 
   let createdTitleCount = 0;
   let createdCopyCount = 0;
+  let backfilledCopyCount = 0;
 
   for (const game of DEMO_GAMES) {
+    const existingId = existingIdByTitle.get(game.title);
+    if (existingId) {
+      backfilledCopyCount += await backfillDemoEdition(existingId, game);
+      continue;
+    }
     // `gameIdByTitle` (unlike `existingIdByTitle`) also picks up titles
     // created earlier in *this* loop — guards against an accidental
     // duplicate title within `DEMO_GAMES` itself, not just against titles
@@ -180,12 +190,17 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         unsortiert.id,
         adminMeepleId,
         usedSlugs,
-        demoEdition?.id ?? null,
+        demoEdition.id,
       );
       createdCopyCount += 1;
     }
   }
 
+  if (backfilledCopyCount > 0) {
+    console.log(
+      `${backfilledCopyCount} vorhandene Demo-Exemplare der deutschen Version zugeordnet.`,
+    );
+  }
   console.log(
     `${createdTitleCount} Demo-Titel angelegt (${createdCopyCount} Exemplare), ${DEMO_GAMES.length - createdTitleCount} Titel bereits vorhanden übersprungen.`,
   );
