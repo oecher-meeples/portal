@@ -13,6 +13,7 @@ import {
   GameContributorList,
   GameIllustratorsCard,
 } from "@/components/entities/game-contributor-list";
+import { EditionFlag } from "@/components/entities/edition-flag";
 import {
   groupGameContributorsByName,
   splitContributorsForDetail,
@@ -128,6 +129,10 @@ export function GameDetailView({
             <div>
               <h1 className="font-serif text-3xl font-bold tracking-tight">
                 {game.title}
+                <EditionFlag
+                  languages={game.editionLanguages}
+                  className="ml-2 text-base"
+                />
               </h1>
               {game.secondaryTitle && (
                 <p className="text-muted-foreground">{game.secondaryTitle}</p>
