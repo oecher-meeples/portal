@@ -25,6 +25,7 @@ import {
 } from "./seed-data/demo-accounts";
 import { randomDemoContactFields } from "./seed-data/demo-contacts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
+import { seedHelperRoles } from "./seed-helper-roles";
 import { seedDemoFamily } from "./seed-family";
 import {
   seedDemoResignedMember,
@@ -403,6 +404,7 @@ async function seedBase() {
   const adminUserId = await upsertAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
+  await seedHelperRoles();
   await seedBoardGameTraitTexts();
   await assignRole(adminUserId, "sysadmin");
   await seedDemoDownloads();
