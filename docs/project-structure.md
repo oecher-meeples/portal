@@ -50,7 +50,11 @@ src/lib/
 │               ohne Gliederungslogik (`pdf-extract.ts`, via `unpdf`), Zod-Validierung der `sections`-Json-Spalte in `actions.ts`
 ├── links/      Kuratierte „Wichtige Links" fürs Dashboard (`ImportantLink`) — Reihenfolge nach `createdAt`, keine manuelle Sortierung
 ├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
-│               ├── taxonomy/          Mitwirkende (Verlag/Autor/Illustrator) & Normalisierung/`dedupKey` (Epic #490): Import, Lese-Helfer, Admin-Actions
+│               ├── taxonomy/          Mitwirkende (Verlag/Autor/Illustrator) & Normalisierung/`dedupKey` (Epic #490): Import, Lese-Helfer, Admin-Actions;
+│               │                      Versionen (`BoardGameVersion`): `versions.ts` (`upsertBoardGameVersion`, dedupliziert per BGG-Version-ID bzw. Name+Sprachen+Verlage),
+│               │                      `version-actions.ts` (gespeicherte Versionen eines Titels + noch nicht gespeicherte BGG-Versionen), `version-label.ts` (Anzeigetext)
+│               ├── board-game-versions.ts BGG-Versionen auswerten: deutsche bevorzugen, Verlag/Product-Code auflösen, BGG-Version → `VersionInput`
+│               ├── edition-language.ts BGG-Sprachname → Flaggen-Ländercode (Anzeige über `entities/edition-flag.tsx`)
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-external.ts Übergänge mit externem Ziel (#333): an extern weitergeben/ausgeben, Umbuchen, Rückgabe-von-extern-Bestätigung
 │               ├── holdings-lookup.ts  Leseseite (Zustand inkl. verfügbar/nicht-verfügbar, Scan auflösen, Verantwortliche)
@@ -115,6 +119,7 @@ entities/
 ├── game-list-row.tsx            Spiele-Zeile (Liste)
 ├── game-compact-row.tsx         Dichte Spiele-Zeile (Kompakt, nur `games:manage`)
 ├── related-game-card.tsx        Basisspiel-/Erweiterungs-Referenz: Cover + Titel-Link + Standort (#121/#122)
+├── edition-flag.tsx             Sprachflagge einer nicht-deutschen Version (Ländercode aus `lib/ludothek/edition-language.ts`)
 ├── contact-dialog.tsx            Name → Dialog mit allen Kontaktoptionen (Mail/Telegram) — ersetzt Icon-Zeilen pro Stelle
 ├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung (nicht erfasst rendert bewusst nichts, #121)
 ├── lfg-status-pill.tsx         offen / voll / abgelaufen / geschlossen
@@ -131,7 +136,8 @@ widgets/
 ├── important-links-grid.tsx  Card-Grid für Link-Kacheln, geteilt von Schnellzugriff (fest) und den admin-kuratierten Wichtige Links (#110)
 ├── game-holding/
 │   ├── game-holding-panel.tsx     Detailseiten-Panel: ausleihen, bestätigen, weitergeben, zurückgeben, einlagern
-│   ├── game-actions-menu.tsx      Rechtebasiertes Aktionen-Dropdown für Listen-/Kompakt-Zeilen (#121/#122)
+│   ├── game-actions-menu.tsx      Rechtebasiertes Aktionen-Dropdown für Listen-/Kompakt-Zeilen (#121/#122) — Dialoge werden außerhalb des Menüs
+│   │                              gerendert (die Typeahead-Suche des Menüs würde sonst Tastatureingaben in deren Textfeldern schlucken)
 │   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
 ├── bringbuy/
 │   └── register-external-seller-dialog.tsx  Self-Service-Anmeldung externer Bring & Buy-Verkäufer:innen (#266) — vom Gäste-Bereich (`feature/guest-area`) genutzt, darf aber nicht aus `feature/bringbuy` importieren (Layer-Regel), deshalb hier
@@ -139,13 +145,17 @@ widgets/
 │   └── pending-changes-panel.tsx  Offene IBAN-/E-Mail-Änderungsanträge freigeben/ablehnen (#330) — von `/admin/bank` (kind: IBAN) **und** `/admin/mitglieder` (kind: MEMBER_EMAIL) eingebunden, deshalb hier statt in einem der beiden Features
 └── board-game/
     ├── board-game-form-values.ts        Form-State ↔ Titel-/Exemplar-Input (`BoardGameFormValues`, `boardGameFormTo…`) — geteilt von allen Formularen unten
-    ├── edit-board-game-title.tsx        Titel-Stammdaten-Formularfelder (Titel, EAN, `kind`, BGG-Felder, Spieleranzahl, Beschreibung, …)
-    ├── edit-board-game-exemplar.tsx     Exemplar-Formularfeld (Mängelvermerk/`condition`) — pro `GameCopy`, nicht pro Titel
+    ├── edit-board-game-title.tsx        Titel-Stammdaten-Formularfelder (Titel, EAN, `kind`, BGG-Felder, Spieleranzahl, Beschreibung, …) — EAN per `hideEan` ausblendbar
+    ├── edit-board-game-exemplar.tsx     Exemplar-Formularfelder (Version, Regelheft-Sprachen, Mängelvermerk) — pro `GameCopy`, nicht pro Titel
+    ├── edition-fields.tsx               Versions-Dropdown: ohne Version / vorhandene / noch nicht gespeicherte BGG-Versionen / manuell (Verlag + Sprache der Version)
+    ├── contributor-names-field.tsx      Namensliste für Mitwirkende mit Register-Abgleich (unbekannte Namen markiert, `knownNames` ausgenommen)
     ├── ean-field.tsx                    EAN-Input + Scan-Icon, geteilt von jedem Formular mit EAN-Feld
     ├── edit-board-game-title-dialog.tsx     Titel-Stammdaten bearbeiten (Detailseiten-Header, #121/#122)
     ├── edit-board-game-exemplar-dialog.tsx  Ein Exemplar bearbeiten (Listen-/Kompakt-Zeile, Exemplar-Tabelle)
     ├── edit-board-game-dialog.tsx       Titel **und** Exemplar in einem Formular (Admin-Bestand-Tabellenzeile, Grid-Kachel-Overlay)
-    ├── create-board-game-dialog.tsx     Neuen Titel anlegen (manuell oder per BGG-ID) — inkl. optionalem Standort-Feld
+    ├── create-board-game-dialog.tsx     Neuen Titel anlegen, Wizard in drei Schritten: BGG-Suche/Import → Angaben prüfen → Exemplar anlegen
+    ├── create-board-game-bgg-import-step.tsx  Schritt 1: Suche (Titel/Link/BGG-ID), Trefferliste, Vorschau
+    ├── create-board-game-exemplar-step.tsx    Schritt 3: Version, EAN, Exemplar-Felder, Standort
     ├── create-board-game-location-field.tsx  Standort fürs erste Exemplar: Scan-Auflösung gegen Einheiten, Anlegen+Selbstzuweisung bei Fehltreffer, oder direkt „Mir zuweisen“
     ├── add-game-copy-dialog.tsx         Weiteres Exemplar zu einem bestehenden Titel anlegen (ADR 0008)
     ├── deinventorise-board-game-dialog.tsx  Exemplar deinventarisieren, optional ins Ersatzteillager
@@ -172,6 +182,11 @@ Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `en
 ## `src/components/layout/` — App-Rahmen
 
 `app-shell`, `header`, `sidebar`, `logo`, `theme-provider`, `theme-toggle`, `user-menu`, `brand-watermark`. Reine Struktur/Positionierung; darf als oberste Schicht aus allen anderen importieren.
+
+## `prisma/seed-data/` & `scripts/` — Demo-Daten
+
+- `prisma/seed-data/demo-games.ts` — Demo-Titel inkl. ihrer BGG-Version (`version`); `demo-editions.ts` legt die Version samt Verlagen an und übernimmt bei bestehender DB ältere Demo-Versionen ohne BGG-Bezug.
+- `scripts/lib/demo-games-seed-file.ts` — Lesen/Schreiben von `demo-games.ts` und Versionswahl (`pickDemoVersion`), geteilt von `refresh-demo-games-seed.ts` (alle Felder) und `backfill-demo-game-versions.ts` (nur die Version).
 
 ## Wartungsregeln
 
