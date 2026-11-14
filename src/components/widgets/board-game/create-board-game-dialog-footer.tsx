@@ -57,7 +57,7 @@ export function CreateBoardGameDialogFooter({
             </Button>
           ) : (
             <Button type="button" onClick={onNext} disabled={!canSubmit}>
-              Weiter
+              Exemplar anlegen…
             </Button>
           )}
         </>

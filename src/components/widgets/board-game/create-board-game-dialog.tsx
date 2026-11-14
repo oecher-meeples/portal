@@ -17,10 +17,7 @@ import {
 } from "@/lib/ludothek/board-games-bgg-import";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
 import { isValidEan } from "@/lib/inventory/ean";
-import {
-  resolvePublisherFromVersions,
-  resolveProductCodeFromVersions,
-} from "@/lib/ludothek/board-game-versions";
+import { versionInputFromBgg } from "@/lib/ludothek/board-game-versions";
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
 import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
 import { BoardGameDuplicateWarning } from "@/components/widgets/board-game/board-game-duplicate-warning";
@@ -33,6 +30,7 @@ import { type LocationPlacement } from "@/components/widgets/board-game/create-b
 import {
   EMPTY_BOARD_GAME_FORM,
   boardGameToFormValues,
+  versionInputToFormPatch,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
 import type {
@@ -44,9 +42,9 @@ import type {
 type Step = 1 | 2 | 3;
 
 const STEP_LABELS: Record<Step, string> = {
-  1: "BGG-Import",
-  2: "Angaben prüfen",
-  3: "Exemplar-Daten",
+  1: "Spiel suchen & importieren",
+  2: "Angaben prüfen & ergänzen",
+  3: "Exemplar anlegen",
 };
 
 export function CreateBoardGameDialog({
@@ -198,13 +196,9 @@ export function CreateBoardGameDialog({
         traits: result.data.traits,
         author: result.data.author.join(", "),
         yearPublished: result.data.yearPublished?.toString() ?? "",
-        // Nur übernehmen, wenn über alle (ggf. deutschen) Versionen
-        // identisch — sonst zeigt die Versions-Auswahl unten den Konflikt,
-        // das Feld bleibt bis zur manuellen Auswahl leer (#205).
-        publisher:
-          resolvePublisherFromVersions(result.data.versions).value?.join(
-            ", ",
-          ) ?? "",
+        // Die Version wählt der Admin bewusst in Schritt 3 (oder „Ohne
+        // Version fortfahren") — bis dahin bleibt die Edition leer.
+        ...versionInputToFormPatch(null),
         // Bei mehreren/einzelnen deutschsprachigen Treffern entscheidet der
         // Admin bewusst über die Auswahlliste (#185) — sonst wie bisher der
         // erste instruktive Video-Treffer, automatisch übernommen.
@@ -292,11 +286,11 @@ export function CreateBoardGameDialog({
     }
   }
 
-  /** Übernimmt Verlag + Product Code (als EAN) der gewählten BGG-Edition
-   * (#205) — nur, wenn der Code eine gültige EAN ist (#322). */
+  /** Übernimmt Verlag, Sprache + Product Code (als EAN) der gewählten
+   * BGG-Edition (#205) — die EAN nur, wenn der Code gültig ist (#322). */
   function handleSelectVersion(version: BggVersion) {
     patchForm({
-      publisher: version.publisher.join(", "),
+      ...versionInputToFormPatch(versionInputFromBgg(version)),
       ...(version.productCode && isValidEan(version.productCode)
         ? { ean: version.productCode }
         : {}),
@@ -339,7 +333,7 @@ export function CreateBoardGameDialog({
             </Button>
           }
         />
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Neues Spiel anlegen</DialogTitle>
             <DialogDescription>
@@ -360,7 +354,6 @@ export function CreateBoardGameDialog({
               onSelectExplainerVideo={(url) =>
                 patchForm({ explainerVideoUrl: url })
               }
-              onSelectVersion={handleSelectVersion}
             />
           )}
 
@@ -373,13 +366,7 @@ export function CreateBoardGameDialog({
                 titleWarning={Boolean(activeDuplicate)}
                 onLoadExistingTitle={handleLoadExistingTitle}
                 loadingExistingTitle={isLoadingTitle}
-                eanAutoSearch
-                eanAlternateTitles={preview?.alternateNames}
-                bggProductCode={
-                  preview
-                    ? resolveProductCodeFromVersions(preview.versions).value
-                    : null
-                }
+                hideEan
                 onContributorsValidityChange={setContributorsValid}
               />
             </div>
@@ -393,6 +380,8 @@ export function CreateBoardGameDialog({
               placement={placement}
               existingBoardGame={existingBoardGame}
               correctingExistingTitle={correctingExistingTitle}
+              preview={preview}
+              onSelectVersion={handleSelectVersion}
             />
           )}
 

@@ -28,7 +28,12 @@ export async function goNext(
   dialog: HTMLElement,
   user: ReturnType<typeof userEvent.setup>,
 ) {
-  await user.click(within(dialog).getByRole("button", { name: "Weiter" }));
+  // Schritt 1 → 2 heißt „Weiter", Schritt 2 → 3 „Exemplar anlegen…".
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: /^(Weiter|Exemplar anlegen…)$/,
+    }),
+  );
 }
 
 export async function submitBggInput(

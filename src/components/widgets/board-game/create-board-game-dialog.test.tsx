@@ -1,6 +1,9 @@
 vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
   listContributorNames: async () => [],
 }));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+}));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -104,9 +107,9 @@ describe("CreateBoardGameDialog — manueller Wizard-Durchlauf (EAN-Scan)", () =
     const dialog = await screen.findByRole("dialog");
 
     await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
-
     await goNext(dialog, user);
+    // EAN gehört zur Version — sie steht erst im Exemplar-Schritt.
+    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
     await user.click(submitButton(dialog));
 
     await waitFor(() => expect(createBoardGameMock).toHaveBeenCalledTimes(1));
@@ -126,6 +129,8 @@ describe("CreateBoardGameDialog — manueller Wizard-Durchlauf (EAN-Scan)", () =
     render(<CreateBoardGameDialog />);
     const dialog = await openDialog(user);
     await skipImportStep(dialog, user);
+    await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
+    await goNext(dialog, user);
 
     await user.click(within(dialog).getByText("simulate-scan"));
 
@@ -225,7 +230,7 @@ describe("CreateBoardGameDialog — Wizard-Navigation", () => {
 
     expect(within(dialog).getByLabelText("Titel")).toHaveValue("");
     expect(
-      within(dialog).getByText("Schritt 2 von 3 — Angaben prüfen"),
+      within(dialog).getByText("Schritt 2 von 3 — Angaben prüfen & ergänzen"),
     ).toBeInTheDocument();
   });
 
@@ -266,7 +271,7 @@ describe("CreateBoardGameDialog — Wizard-Navigation", () => {
     await user.click(within(dialog).getByRole("button", { name: "Zurück" }));
 
     expect(
-      within(dialog).getByText("Schritt 1 von 3 — BGG-Import"),
+      within(dialog).getByText("Schritt 1 von 3 — Spiel suchen & importieren"),
     ).toBeInTheDocument();
     expect(within(dialog).getByText("Ark Nova")).toBeInTheDocument();
   });
@@ -279,7 +284,7 @@ describe("CreateBoardGameDialog — Wizard-Navigation", () => {
     await skipImportStep(dialog, user);
 
     expect(
-      within(dialog).getByRole("button", { name: "Weiter" }),
+      within(dialog).getByRole("button", { name: "Exemplar anlegen…" }),
     ).toBeDisabled();
   });
 });
