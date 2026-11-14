@@ -17,9 +17,6 @@
  * Aufruf:
  *   DOTENV_CONFIG_PATH=.env.local npx tsx -r dotenv/config scripts/refresh-demo-games-seed.ts
  */
-import fs from "node:fs";
-import path from "node:path";
-import { BoardGameTrait, LanguageDependence } from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -38,8 +35,14 @@ import {
   withRateLimitRetry,
 } from "./lib/bgg-rate-limit";
 import { DEMO_GAMES, type DemoGame } from "../prisma/seed-data/demo-games";
-
-const SEED_FILE = path.join(__dirname, "../prisma/seed-data/demo-games.ts");
+import {
+  SEED_FILE,
+  demoPublisherBggIds,
+  pickDemoVersion,
+  rewriteSeedFile,
+  toDemoVersion,
+  withVersionPublishers,
+} from "./lib/demo-games-seed-file";
 
 type Outcome =
   | { status: "updated"; title: string; matchedTitle: string }
@@ -67,6 +70,7 @@ function withoutBggMatch(game: DemoGame): DemoGame {
     contributors: game.contributors ?? [],
     yearPublished: game.yearPublished ?? null,
     traits: game.traits ?? [],
+    version: game.version ?? null,
   };
 }
 
@@ -144,6 +148,19 @@ async function refreshOne(
       ? game.description
       : (mapped.description ?? game.description);
 
+  const publishers = (mapped.version?.publishers ?? []).map((publisher) => ({
+    role: "PUBLISHER" as const,
+    bggId: publisher.bggId,
+    name: publisher.name,
+  }));
+  // Konkrete BGG-Version zu diesen Verlagen — die Demo-Exemplare gehören zu
+  // ihr. Ohne eindeutigen Verlag liefert sie die Verlage gleich mit.
+  const demoVersion = pickDemoVersion(
+    data.versions,
+    demoPublisherBggIds({ ...game, contributors: publishers }),
+  );
+  const contributors = [...publishers, ...bggContributorInputs(data)];
+
   return {
     outcome: {
       status: "updated",
@@ -166,148 +183,15 @@ async function refreshOne(
       languageDependence: mapped.languageDependence ?? null,
       // Verlage hängen in der Seed-Datei weiter am Titel (der Seed legt daraus
       // die Edition der Demo-Exemplare an), Autoren/Illustratoren am Spiel.
-      contributors: [
-        ...(mapped.version?.publishers ?? []).map((publisher) => ({
-          role: "PUBLISHER" as const,
-          bggId: publisher.bggId,
-          name: publisher.name,
-        })),
-        ...bggContributorInputs(data),
-      ],
+      contributors:
+        demoVersion && publishers.length === 0
+          ? withVersionPublishers(contributors, demoVersion)
+          : contributors,
       yearPublished: mapped.yearPublished ?? null,
       traits: mapped.traits,
+      version: demoVersion ? toDemoVersion(demoVersion) : null,
     },
   };
-}
-
-function enumRef(
-  enumName: "BoardGameTrait" | "LanguageDependence",
-  enumObj: Record<string, string>,
-  value: string,
-): string {
-  const key = Object.keys(enumObj).find((k) => enumObj[k] === value);
-  if (!key) throw new Error(`Unbekannter ${enumName}-Wert: ${value}`);
-  return `${enumName}.${key}`;
-}
-
-export function serializeEntry(game: DemoGame): string {
-  const num = (n: number | null) => (n === null ? "null" : String(n));
-  const strArray = (values: string[]) =>
-    `[${values.map((v) => JSON.stringify(v)).join(", ")}]`;
-  const traitsArray = (values: BoardGameTrait[]) =>
-    `[${values.map((v) => enumRef("BoardGameTrait", BoardGameTrait, v)).join(", ")}]`;
-
-  const parts = [
-    `title: ${JSON.stringify(game.title)}`,
-    `bggId: ${num(game.bggId)}`,
-    `imageUrl: ${game.imageUrl === null ? "null" : JSON.stringify(game.imageUrl)}`,
-    `minPlayers: ${num(game.minPlayers)}`,
-    `maxPlayers: ${num(game.maxPlayers)}`,
-    `playTimeMinutes: ${num(game.playTimeMinutes)}`,
-    `weight: ${num(game.weight)}`,
-    `averageRating: ${num(game.averageRating)}`,
-    `description: ${JSON.stringify(game.description)}`,
-    `mechanics: ${strArray(game.mechanics)}`,
-    `categories: ${strArray(game.categories)}`,
-    `explainerVideoUrl: ${game.explainerVideoUrl === null ? "null" : JSON.stringify(game.explainerVideoUrl)}`,
-    `languageDependence: ${
-      game.languageDependence === null
-        ? "null"
-        : enumRef(
-            "LanguageDependence",
-            LanguageDependence,
-            game.languageDependence,
-          )
-    }`,
-    `contributors: ${JSON.stringify(game.contributors)}`,
-    `yearPublished: ${num(game.yearPublished)}`,
-    `traits: ${traitsArray(game.traits)}`,
-  ];
-  return `  { ${parts.join(", ")} },`;
-}
-
-export function rewriteSeedFile(updatedGames: DemoGame[], runDate: string) {
-  const raw = fs.readFileSync(SEED_FILE, "utf-8");
-  const lines = raw.split("\n");
-
-  const typeStartIdx = lines.findIndex(
-    (l) => l.trim() === "export type DemoGame = {",
-  );
-  const arrayStartIdx = lines.findIndex(
-    (l) => l.trim() === "export const DEMO_GAMES: DemoGame[] = [",
-  );
-  const arrayEndIdx = lines.findIndex(
-    (l, i) => i > arrayStartIdx && l.trim() === "];",
-  );
-  if (typeStartIdx === -1 || arrayStartIdx === -1 || arrayEndIdx === -1) {
-    throw new Error(
-      "Erwartete Marker (`export type DemoGame = {`, `export const DEMO_GAMES...[`, `];`) nicht gefunden — Datei manuell prüfen.",
-    );
-  }
-
-  const newHeader = [
-    'import { BoardGameTrait, LanguageDependence } from "@prisma/client";',
-    "",
-    "/**",
-    ` * 199 real, published board games. Refreshed against a live BGG import`,
-    ` * (${runDate}, \`scripts/refresh-demo-games-seed.ts\`) for every title BGG`,
-    " * resolved to exactly one exact-name match; ambiguous titles (multiple or",
-    " * zero exact BGG hits) kept their previous values (`bggId: null` and empty/",
-    " * null for every BGG-only field below). `title` always keeps the familiar",
-    " * marketing name used in this file, even where BGG's canonical name differs",
-    ' * (e.g. "6 Nimmt!" vs. BGG\'s "Take 5", "Dobble" vs. "Spot it!"). A',
-    " * translation-API failure (daily quota) leaves a description in English",
-    " * rather than clearing it — a later rerun backfills the rest.",
-    " *",
-    " * Mirrors every `BoardGame` field BGG can supply (see",
-    " * `lib/bgg/board-game-versions.ts#bggDataToTitleInput`) except `ean` and",
-    " * `notes` (never from BGG), `secondaryTitle` (admin-only, never auto-set",
-    " * even during a regular import) and `kind` (decided by `DEMO_EXPANSIONS` in",
-    " * `seed.ts`, not by BGG's `type` attribute).",
-    " */",
-  ];
-
-  let entryIndex = 0;
-  const bodyLines: string[] = [];
-  for (let i = arrayStartIdx + 1; i < arrayEndIdx; i++) {
-    const line = lines[i];
-    if (
-      line.trim().startsWith("{ title:") ||
-      line.trim().startsWith("// Batch")
-    ) {
-      if (line.trim().startsWith("// Batch")) {
-        bodyLines.push(line);
-        continue;
-      }
-      const game = updatedGames[entryIndex];
-      if (!game) {
-        throw new Error(
-          `Mehr Entry-Zeilen in der Datei als Einträge in DEMO_GAMES (Index ${entryIndex}).`,
-        );
-      }
-      bodyLines.push(serializeEntry(game));
-      entryIndex++;
-    } else if (line.trim() === "") {
-      bodyLines.push(line);
-    } else {
-      throw new Error(`Unerwartete Zeile beim Umschreiben: "${line}"`);
-    }
-  }
-  if (entryIndex !== updatedGames.length) {
-    throw new Error(
-      `${entryIndex} Entry-Zeilen gefunden, aber ${updatedGames.length} Einträge in DEMO_GAMES — Abgleich abgebrochen, Datei NICHT geschrieben.`,
-    );
-  }
-
-  const output = [
-    ...newHeader,
-    ...lines.slice(typeStartIdx, arrayStartIdx + 1),
-    ...bodyLines,
-    "];",
-    "",
-  ].join("\n");
-
-  fs.writeFileSync(SEED_FILE, output);
 }
 
 async function main() {
