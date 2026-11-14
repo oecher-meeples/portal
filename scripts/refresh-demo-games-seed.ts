@@ -164,10 +164,16 @@ async function refreshOne(
       categories: mapped.categories,
       explainerVideoUrl: mapped.explainerVideoUrl ?? null,
       languageDependence: mapped.languageDependence ?? null,
-      contributors: bggContributorInputs(
-        data,
-        (mapped.publisher ?? []).join(", "),
-      ),
+      // Verlage hängen in der Seed-Datei weiter am Titel (der Seed legt daraus
+      // die Edition der Demo-Exemplare an), Autoren/Illustratoren am Spiel.
+      contributors: [
+        ...(mapped.version?.publishers ?? []).map((publisher) => ({
+          role: "PUBLISHER" as const,
+          bggId: publisher.bggId,
+          name: publisher.name,
+        })),
+        ...bggContributorInputs(data),
+      ],
       yearPublished: mapped.yearPublished ?? null,
       traits: mapped.traits,
     },

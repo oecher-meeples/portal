@@ -11,8 +11,9 @@ import { uniqueSlug } from "@/lib/utils/slug";
 import {
   type ContributorInput,
   linkContributors,
-  replacePublisherAuthorIllustratorLinksByName,
+  replaceAuthorIllustratorLinksByName,
 } from "@/lib/ludothek/taxonomy/contributors";
+import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -48,11 +49,10 @@ export type BoardGameTitleInput = {
   /** BGGs Language-Dependence-Poll-Level, als Vorschlag beim BGG-Import
    * übernommen, vom Admin frei änderbar (#188). */
   languageDependence?: LanguageDependence | null;
-  /** Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen bei
-   * identischem Wert über alle (ggf. deutschen) BGG-Versionen, sonst wählt
-   * der Admin (#205, siehe `resolvePublisherFromVersions()`). Nur über
-   * `BoardGameContributor` gespeichert, keine eigene Spalte (seit #6fdd6f8). */
-  publisher?: string[];
+  /** Edition (BGG-Version) des ersten Exemplars samt Verlagen — Auto
+   * übernommen, wenn eindeutig, sonst wählt der Admin (#205, siehe
+   * `resolveVersionInput()`). Wird an der Edition gespeichert, nicht am Titel. */
+  version?: VersionInput;
   /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205).
    * Nur über `BoardGameContributor` gespeichert, keine eigene Spalte. */
   author?: string[];
@@ -71,10 +71,10 @@ export type BoardGameTitleInput = {
   contributors?: ContributorInput[];
 };
 
-/** `publisher`/`author`/`illustrator` sind bewusst nicht Teil dieses
+/** `author`/`illustrator`/`version` sind bewusst nicht Teil dieses
  * Rückgabewerts — sie sind keine `BoardGame`-Spalten, sondern werden separat
- * über `replacePublisherAuthorIllustratorLinksByName()`/`linkContributors()`
- * als `BoardGameContributor`-Relation gespeichert. */
+ * über `replaceAuthorIllustratorLinksByName()`/`linkContributors()` bzw.
+ * `upsertBoardGameVersion()` gespeichert. */
 export function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
     secondaryTitle: input.secondaryTitle || null,
@@ -149,8 +149,7 @@ export async function findOrCreateBoardGameTitle(
   if (input.contributors?.length) {
     await linkContributors(tx, created.id, input.contributors);
   } else {
-    await replacePublisherAuthorIllustratorLinksByName(tx, created.id, {
-      publisher: input.publisher ?? [],
+    await replaceAuthorIllustratorLinksByName(tx, created.id, {
       author: input.author ?? [],
       illustrator: input.illustrator ?? [],
     });

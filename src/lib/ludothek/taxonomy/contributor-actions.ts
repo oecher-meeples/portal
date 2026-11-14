@@ -15,7 +15,11 @@ export async function listContributorNames(
   if (!user) return [];
 
   const contributors = await prisma.contributor.findMany({
-    where: { boardGames: { some: { role } } },
+    // Verlage hängen an Editionen, Autoren/Illustratoren am Titel.
+    where:
+      role === "PUBLISHER"
+        ? { versionPublishers: { some: {} } }
+        : { boardGames: { some: { role } } },
     select: { name: true },
     orderBy: { name: "asc" },
   });

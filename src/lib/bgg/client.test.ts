@@ -154,6 +154,8 @@ describe("fetchBggGame", () => {
 
     expect(result.versions).toEqual([
       {
+        bggVersionId: 500001,
+        name: "Ark Nova (English first edition)",
         yearPublished: 2021,
         publisher: ["Capstone Games"],
         publisherLinks: [{ bggId: 1, name: "Capstone Games" }],
@@ -161,6 +163,8 @@ describe("fetchBggGame", () => {
         languages: ["English"],
       },
       {
+        bggVersionId: 500002,
+        name: "Ark Nova (Deutsche Ausgabe)",
         yearPublished: 2022,
         publisher: ["Feuerland Spiele"],
         publisherLinks: [{ bggId: 2, name: "Feuerland Spiele" }],

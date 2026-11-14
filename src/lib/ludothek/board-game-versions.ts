@@ -1,4 +1,5 @@
 import type { BggGameData, BggVersion } from "@/lib/bgg/client";
+import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 import { bggContributorInputs } from "@/lib/ludothek/taxonomy/bgg-contributors";
 
 const GERMAN_LANGUAGE_PATTERN = /german|deutsch/i;
@@ -45,6 +46,57 @@ export function resolvePublisherFromVersions(
   return { value: null, needsSelection: true };
 }
 
+/** Sprachen, die alle Versionen teilen — bei deutschen Editionen also
+ * `German`. Mischt sich die Sprache (z. B. mehrere Fremdsprachen), bleibt das
+ * Ergebnis leer: lieber keine Flagge als die einer Edition, die wir nicht
+ * besitzen. */
+function commonLanguages(versions: BggVersion[]): string[] {
+  const [first, ...rest] = versions;
+  if (!first) return [];
+  return first.languages.filter((language) =>
+    rest.every((version) => version.languages.includes(language)),
+  );
+}
+
+/** Eine konkrete BGG-Version als Edition des Vereins — Verlage mit BGG-ID. */
+export function versionInputFromBgg(version: BggVersion): VersionInput {
+  return {
+    bggVersionId: version.bggVersionId,
+    name: version.name,
+    yearPublished: version.yearPublished,
+    productCode: version.productCode,
+    languages: version.languages,
+    publishers: version.publisherLinks.map((link) => ({
+      bggId: link.bggId,
+      name: link.name,
+    })),
+  };
+}
+
+/**
+ * Edition ohne Rückfrage — nur, wenn sie eindeutig ist (#205): genau eine
+ * relevante Version, oder mehrere mit identischen Verlagen (dann ohne
+ * konkrete Versions-ID, mit den gemeinsamen Sprachen). Sonst `null`: der
+ * Admin wählt im Import-Dialog, im Massenimport bleibt die Edition leer.
+ */
+export function resolveVersionInput(
+  versions: BggVersion[],
+): VersionInput | null {
+  const relevant = selectRelevantVersions(versions);
+  if (relevant.length === 0) return null;
+  if (relevant.length === 1) return versionInputFromBgg(relevant[0]);
+  if (resolvePublisherFromVersions(versions).needsSelection) return null;
+
+  return {
+    bggVersionId: null,
+    name: null,
+    yearPublished: null,
+    productCode: resolveProductCodeFromVersions(versions).value,
+    languages: commonLanguages(relevant),
+    publishers: versionInputFromBgg(relevant[0]).publishers,
+  };
+}
+
 /**
  * Maps raw `fetchBggGame()`-Daten auf `BoardGameTitleInput`-Shape — von
  * Massenimport (#186) und privatem BGG-Collection-Sync (#255-Folge)
@@ -72,12 +124,9 @@ export function bggDataToTitleInput(bggId: number, data: BggGameData) {
     categories: data.categories,
     explainerVideoUrl: data.explainerVideoUrl ?? undefined,
     languageDependence: data.languageDependence,
-    publisher: resolvePublisherFromVersions(data.versions).value ?? undefined,
+    version: resolveVersionInput(data.versions) ?? undefined,
     author: data.author,
-    contributors: bggContributorInputs(
-      data,
-      (resolvePublisherFromVersions(data.versions).value ?? []).join(", "),
-    ),
+    contributors: bggContributorInputs(data),
     yearPublished: data.yearPublished ?? undefined,
     traits: data.traits,
   };

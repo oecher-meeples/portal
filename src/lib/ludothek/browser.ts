@@ -51,6 +51,9 @@ export type LudothekGame = {
   condition: string | null;
   /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
   inventoryNumber: string | null;
+  /** Edition (BGG-Version) dieses Exemplars - nur zum Vorbelegen des
+   * Exemplar-Editors fuer `games:manage`, nicht zur Anzeige. */
+  versionId?: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
    * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
@@ -74,6 +77,8 @@ export type LudothekGame = {
   illustrator: string[];
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: number | null;
+  /** BGG-Sprachnamen der Vereinsedition — Grundlage der Flagge an der Karte. */
+  editionLanguages: string[];
   /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — für alle
    * sichtbar (auch Gäste), analog `mechanics`/`categories` nicht gestrippt
    * in `toPublicGame()`. */
@@ -136,6 +141,7 @@ export type PublicLudothekGame = Omit<
   | "ean"
   | "condition"
   | "inventoryNumber"
+  | "versionId"
   | "bggId"
 >;
 
@@ -155,6 +161,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     ean: _ean,
     condition: _condition,
     inventoryNumber: _inventoryNumber,
+    versionId: _versionId,
     bggId: _bggId,
     ...rest
   } = game;

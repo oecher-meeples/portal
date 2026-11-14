@@ -35,6 +35,8 @@ export type GameActionsCopy = {
   ruleBookLanguages: RuleBookLanguage[];
   /** Freie Inventarnummer des Exemplars (#270). */
   inventoryNumber: string | null;
+  /** Edition (BGG-Version) des Exemplars - Vorbelegung im Exemplar-Editor. */
+  versionId?: string | null;
   /** Whether the current session holds this copy right now — gates
    * "Weitergeben" for the non-ambiguous case (#128). Omitted callers keep
    * showing it unconditionally, matching the previous behaviour. */
@@ -214,6 +216,8 @@ export function GameActionsMenu({
                         condition={sole.condition}
                         ruleBookLanguages={sole.ruleBookLanguages}
                         inventoryNumber={sole.inventoryNumber}
+                        boardGameId={boardGameId}
+                        versionId={sole.versionId}
                         triggerLabel={ACTION_LABELS.condition}
                       />
                     </div>
@@ -284,6 +288,8 @@ export function GameActionsMenu({
           condition={chosenCondition}
           ruleBookLanguages={chosenCopy?.ruleBookLanguages ?? []}
           inventoryNumber={chosenCopy?.inventoryNumber ?? null}
+          boardGameId={boardGameId}
+          versionId={chosenCopy?.versionId}
           triggerLabel={ACTION_LABELS.condition}
           open
           onOpenChange={closeChosen}

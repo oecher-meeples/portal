@@ -32,6 +32,7 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     author: [],
     illustrator: [],
     yearPublished: null,
+    editionLanguages: [],
     description: "Baue den modernsten Zoo der Welt.",
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,

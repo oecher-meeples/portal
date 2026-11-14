@@ -24,7 +24,9 @@ import {
  * Formular unverändert bleibt. Ein Name ohne Treffer in den Vorschlägen
  * bekommt ein Warnsymbol und einen "+"-Button, der ihn als Mitwirkenden
  * anlegt — bis dahin meldet `onValidityChange(false)`, damit die aufrufende
- * Seite das Speichern blockieren kann.
+ * Seite das Speichern blockieren kann. `knownNames` gelten zusätzlich als
+ * bekannt (z. B. Verlage einer BGG-Version, die beim Speichern mit ihrer
+ * BGG-ID angelegt werden).
  *
  * Übernommen wird nur per Enter/Komma oder Klick auf einen Vorschlag im
  * Popup, nie beim bloßen Verlassen des Felds (Fokuswechsel) — ein
@@ -37,6 +39,7 @@ export function ContributorNamesField({
   onChange,
   placeholder,
   onValidityChange,
+  knownNames = [],
 }: {
   label: string;
   role: ContributorRole;
@@ -44,6 +47,7 @@ export function ContributorNamesField({
   onChange: (value: string) => void;
   placeholder?: string;
   onValidityChange?: (valid: boolean) => void;
+  knownNames?: string[];
 }) {
   const id = useId();
   const [draft, setDraft] = useState("");
@@ -51,7 +55,9 @@ export function ContributorNamesField({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [creating, setCreating] = useState<string | null>(null);
   const names = parseCommaSeparatedList(value);
-  const unknownNames = names.filter((name) => !suggestions.includes(name));
+  const unknownNames = names.filter(
+    (name) => !suggestions.includes(name) && !knownNames.includes(name),
+  );
   const availableSuggestions = suggestions.filter(
     (name) => !names.includes(name),
   );

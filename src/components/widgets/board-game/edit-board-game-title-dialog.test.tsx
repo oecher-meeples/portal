@@ -64,6 +64,7 @@ const GAME_WITHOUT_BGG_ID = {
   author: [],
   illustrator: [],
   yearPublished: null,
+  editionLanguages: [],
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -103,6 +104,7 @@ const BGG_DATA = {
   illustrators: [],
   author: [],
   yearPublished: null,
+  editionLanguages: [],
   versions: [],
 };
 

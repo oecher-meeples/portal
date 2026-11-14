@@ -1,6 +1,8 @@
 import {
   CONTRIBUTOR_LINKS_INCLUDE,
   contributorNamesByRole,
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
 } from "@/lib/ludothek/taxonomy/contributors-read";
 import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
@@ -117,6 +119,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       },
     },
     include: {
+      version: VERSION_DISPLAY_SELECT,
       meeple: {
         select: {
           id: true,
@@ -162,6 +165,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       languageDependence: boardGame.languageDependence,
       ruleBookLanguages: [],
       ...contributorNamesByRole(boardGame.contributors),
+      ...versionDisplay(entry.version),
       yearPublished: boardGame.yearPublished,
       traits: boardGame.traits,
       notes: boardGame.notes,

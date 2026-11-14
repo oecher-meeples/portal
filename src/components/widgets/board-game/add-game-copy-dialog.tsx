@@ -6,6 +6,12 @@ import type { RuleBookLanguage } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
+import { EditionFields } from "@/components/widgets/board-game/edition-fields";
+import {
+  EMPTY_BOARD_GAME_FORM,
+  editionSelectionFromForm,
+  type BoardGameFormValues,
+} from "@/components/widgets/board-game/board-game-form-values";
 import { RuleBookLanguagesField } from "@/components/widgets/board-game/rule-book-languages-field";
 import {
   createGameCopy,
@@ -31,6 +37,9 @@ export function AddGameCopyDialog({
     RuleBookLanguage[]
   >([]);
   const [inventoryNumber, setInventoryNumber] = useState("");
+  const [edition, setEdition] = useState<BoardGameFormValues>(
+    EMPTY_BOARD_GAME_FORM,
+  );
 
   return (
     <ActionDialog
@@ -51,12 +60,14 @@ export function AddGameCopyDialog({
           condition: condition || undefined,
           ruleBookLanguages,
           inventoryNumber,
+          edition: editionSelectionFromForm(edition),
         })
       }
       onReset={() => {
         setCondition("");
         setRuleBookLanguages([]);
         setInventoryNumber("");
+        setEdition(EMPTY_BOARD_GAME_FORM);
       }}
     >
       <TextField
@@ -75,6 +86,12 @@ export function AddGameCopyDialog({
         idPrefix={`add-copy-${boardGameId}`}
         value={ruleBookLanguages}
         onChange={setRuleBookLanguages}
+      />
+      <EditionFields
+        idPrefix={`add-copy-${boardGameId}`}
+        values={edition}
+        onChange={(patch) => setEdition((prev) => ({ ...prev, ...patch }))}
+        boardGameId={boardGameId}
       />
     </ActionDialog>
   );

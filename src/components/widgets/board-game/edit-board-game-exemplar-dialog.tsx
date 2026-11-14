@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
-import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
+import {
+  EMPTY_BOARD_GAME_FORM,
+  editionSelectionFromForm,
+  type BoardGameFormValues,
+} from "@/components/widgets/board-game/board-game-form-values";
 
 /** Edits one physical copy's condition (Mängelvermerk) and Regelheft-Sprache(n)
  * (#188) — the counterpart to `EditBoardGameTitleDialog`, scoped to a single
@@ -22,6 +26,8 @@ export function EditBoardGameExemplarDialog({
   condition,
   ruleBookLanguages,
   inventoryNumber,
+  boardGameId,
+  versionId,
   triggerLabel = "Bearbeiten",
   open,
   onOpenChange,
@@ -31,6 +37,10 @@ export function EditBoardGameExemplarDialog({
   ruleBookLanguages: RuleBookLanguage[];
   /** Freie Inventarnummer des Exemplars (#270). */
   inventoryNumber?: string | null;
+  /** Titel des Exemplars — liefert die zur Auswahl stehenden Editionen. */
+  boardGameId?: string;
+  /** Aktuelle Edition des Exemplars. */
+  versionId?: string | null;
   triggerLabel?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -41,7 +51,15 @@ export function EditBoardGameExemplarDialog({
     inventoryNumber ?? "",
   );
 
+  const initialEdition = (): BoardGameFormValues => ({
+    ...EMPTY_BOARD_GAME_FORM,
+    editionMode: versionId ? "existing" : "none",
+    editionVersionId: versionId ?? "",
+  });
+  const [edition, setEdition] = useState(initialEdition);
+
   function reset() {
+    setEdition(initialEdition());
     setValue(condition ?? "");
     setLanguages(ruleBookLanguages);
     setInventoryNumberValue(inventoryNumber ?? "");
@@ -66,6 +84,7 @@ export function EditBoardGameExemplarDialog({
           condition: value || undefined,
           ruleBookLanguages: languages,
           inventoryNumber: inventoryNumberValue,
+          edition: editionSelectionFromForm(edition),
         })
       }
       onReset={reset}
@@ -78,8 +97,9 @@ export function EditBoardGameExemplarDialog({
       />
       <EditBoardGameExemplar
         idPrefix={`copy-${copyId}`}
+        boardGameId={boardGameId}
         values={{
-          ...EMPTY_BOARD_GAME_FORM,
+          ...edition,
           condition: value,
           ruleBookLanguages: languages,
         }}
@@ -87,6 +107,7 @@ export function EditBoardGameExemplarDialog({
           if (patch.condition !== undefined) setValue(patch.condition);
           if (patch.ruleBookLanguages !== undefined)
             setLanguages(patch.ruleBookLanguages);
+          setEdition((prev) => ({ ...prev, ...patch }));
         }}
       />
     </ActionDialog>

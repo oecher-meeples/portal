@@ -18,6 +18,9 @@ export async function listContributorsForAdmin(): Promise<
       name: true,
       bggId: true,
       boardGames: { select: { role: true, boardGameId: true } },
+      versionPublishers: {
+        select: { version: { select: { boardGameId: true } } },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -26,7 +29,15 @@ export async function listContributorsForAdmin(): Promise<
     id: row.id,
     name: row.name,
     bggId: row.bggId,
-    roles: [...new Set(row.boardGames.map((link) => link.role))],
-    titleCount: new Set(row.boardGames.map((link) => link.boardGameId)).size,
+    roles: [
+      ...new Set([
+        ...row.boardGames.map((link) => link.role),
+        ...(row.versionPublishers.length > 0 ? (["PUBLISHER"] as const) : []),
+      ]),
+    ],
+    titleCount: new Set([
+      ...row.boardGames.map((link) => link.boardGameId),
+      ...row.versionPublishers.map((link) => link.version.boardGameId),
+    ]).size,
   }));
 }

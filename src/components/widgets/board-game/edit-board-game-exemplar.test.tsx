@@ -4,6 +4,13 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
 
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+}));
+
 afterEach(() => {
   cleanup();
 });

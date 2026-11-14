@@ -126,23 +126,15 @@ describe("bggContributorInputs", () => {
     ],
   } as unknown as BggGameData;
 
-  it("uses the publisher links of the edition matching the publisher text", () => {
-    expect(bggContributorInputs(preview, "Verlag Y")).toEqual([
-      { role: "PUBLISHER", bggId: 4, name: "Verlag Y" },
-      { role: "AUTHOR", bggId: 1, name: "Designer A" },
-      { role: "ILLUSTRATOR", bggId: 3, name: "Artist C" },
-    ]);
-  });
-
-  it("drops publisher links when the publisher text matches no edition", () => {
-    expect(bggContributorInputs(preview, "Eigener Verlag")).toEqual([
+  it("returns authors and illustrators, but no publishers (those belong to the edition)", () => {
+    expect(bggContributorInputs(preview)).toEqual([
       { role: "AUTHOR", bggId: 1, name: "Designer A" },
       { role: "ILLUSTRATOR", bggId: 3, name: "Artist C" },
     ]);
   });
 
   it("returns nothing without a preview", () => {
-    expect(bggContributorInputs(null, "Verlag X")).toEqual([]);
+    expect(bggContributorInputs(null)).toEqual([]);
   });
 });
 
@@ -150,16 +142,14 @@ describe("contributorNamesByRole", () => {
   it("groups names per role, sorted alphabetically and without duplicates", () => {
     expect(
       contributorNamesByRole([
-        { role: "PUBLISHER", contributor: { name: "Kosmos" } },
-        { role: "PUBLISHER", contributor: { name: "Amigo" } },
-        { role: "PUBLISHER", contributor: { name: "Kosmos" } },
+        { role: "ILLUSTRATOR", contributor: { name: "Michael Menzel" } },
         { role: "AUTHOR", contributor: { name: "Klaus Teuber" } },
+        { role: "ILLUSTRATOR", contributor: { name: "Franz Vohwinkel" } },
         { role: "ILLUSTRATOR", contributor: { name: "Michael Menzel" } },
       ]),
     ).toEqual({
-      publisher: ["Amigo", "Kosmos"],
       author: ["Klaus Teuber"],
-      illustrator: ["Michael Menzel"],
+      illustrator: ["Franz Vohwinkel", "Michael Menzel"],
     });
   });
 });

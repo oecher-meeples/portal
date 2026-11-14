@@ -60,6 +60,10 @@ const FORM: BoardGameFormValues = {
   author: "",
   illustrator: "",
   yearPublished: "",
+  editionLanguages: "",
+  editionMode: "none",
+  editionVersionId: "",
+  bggVersion: null,
   traits: [],
   notes: "",
 };

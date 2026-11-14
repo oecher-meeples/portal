@@ -15,9 +15,24 @@ const ZUSTAND_PRIORITY: Record<GameZustand, number> = {
   privat: 4,
 };
 
-export type LudothekTitleGroup<
-  G extends { id: string; boardGameId: string; zustand?: GameZustand },
-> = G & {
+type GroupableGame = {
+  id: string;
+  boardGameId: string;
+  zustand?: GameZustand;
+  /** Verlage/Sprachen der Edition dieses Exemplars. */
+  publisher?: string[];
+  editionLanguages?: string[];
+};
+
+/** Vereinigung der Werte über alle Exemplare, ohne Dubletten. */
+function unionOf(
+  copies: GroupableGame[],
+  key: "publisher" | "editionLanguages",
+) {
+  return [...new Set(copies.flatMap((copy) => copy[key] ?? []))];
+}
+
+export type LudothekTitleGroup<G extends GroupableGame> = G & {
   /** Number of physical copies of this title in the (already filtered) input. */
   copyCount: number;
   /** GameCopy ids of every copy folded into this row — needed once actions
@@ -44,9 +59,9 @@ export type LudothekTitleGroup<
  * Guest rows (`PublicLudothekGame`) have no `zustand` at all — the
  * representative copy is then just the first one, no priority to compare.
  */
-export function groupGamesByTitle<
-  G extends { id: string; boardGameId: string; zustand?: GameZustand },
->(games: G[]): LudothekTitleGroup<G>[] {
+export function groupGamesByTitle<G extends GroupableGame>(
+  games: G[],
+): LudothekTitleGroup<G>[] {
   const byTitle = new Map<string, G[]>();
   for (const game of games) {
     const existing = byTitle.get(game.boardGameId);
@@ -66,6 +81,14 @@ export function groupGamesByTitle<
     });
     return {
       ...representative,
+      // Karte/Zeile zeigen die Editionen aller Exemplare, nicht nur die des
+      // repräsentativen — sonst fehlte der Verlag eines anderen Exemplars.
+      ...(representative.publisher
+        ? { publisher: unionOf(copies, "publisher") }
+        : {}),
+      ...(representative.editionLanguages
+        ? { editionLanguages: unionOf(copies, "editionLanguages") }
+        : {}),
       copyCount: copies.length,
       copyIds: copies.map((c) => c.id),
       copies,

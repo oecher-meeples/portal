@@ -1,6 +1,5 @@
 import {
   BoardGameKind,
-  HoldingOrigin,
   InstagramStatus,
   StorageUnitKind,
 } from "@prisma/client";
@@ -11,6 +10,7 @@ import {
   uniqueBoardGameSlug,
 } from "../src/lib/ludothek/board-game-title-lookup";
 import { linkContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import { seedDemoEdition, createDemoGameCopy } from "./seed-data/demo-editions";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -102,37 +102,6 @@ async function ensureAnonymerMeeple() {
  * (401/403 auf jede Anfrage an boardgamegeek.com). Titel, Spielerzahlen und Coverbilder
  * sind reale, per Wikipedia verifizierte Daten — kein BGG-Import, aber echte Spiele.
  */
-async function createDemoGameCopy(
-  boardGameId: string,
-  title: string,
-  unitId: string,
-  adminMeepleId: string,
-  usedSlugs: Set<string>,
-) {
-  const base = slugify(title);
-  let slug = base;
-  let suffix = 2;
-  while (usedSlugs.has(slug)) {
-    slug = `${base}-${suffix}`;
-    suffix += 1;
-  }
-  usedSlugs.add(slug);
-
-  const copy = await prisma.gameCopy.create({ data: { slug, boardGameId } });
-
-  await prisma.gameHolding.create({
-    data: {
-      gameCopyId: copy.id,
-      unitId,
-      origin: HoldingOrigin.INITIAL,
-      confirmedAt: new Date(),
-      recordedByMeepleId: adminMeepleId,
-    },
-  });
-
-  return copy;
-}
-
 async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
   const unsortiert = await prisma.storageUnit.upsert({
     where: { code: UNSORTIERT_CODE },
@@ -193,7 +162,13 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
           : BoardGameKind.BOARDGAME,
       },
     });
-    await linkContributors(prisma, created.id, game.contributors);
+    await linkContributors(
+      prisma,
+      created.id,
+      game.contributors.filter((c) => c.role !== "PUBLISHER"),
+    );
+    // Verlage hängen an der Edition, nicht am Titel.
+    const demoEdition = await seedDemoEdition(created.id, game);
     gameIdByTitle.set(game.title, created.id);
     createdTitleCount += 1;
 
@@ -205,6 +180,7 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         unsortiert.id,
         adminMeepleId,
         usedSlugs,
+        demoEdition?.id ?? null,
       );
       createdCopyCount += 1;
     }

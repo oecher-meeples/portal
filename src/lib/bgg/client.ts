@@ -45,6 +45,10 @@ export interface BggLink {
 }
 
 export interface BggVersion {
+  /** BGGs ID dieses Versions-Items (`boardgameversion`). */
+  bggVersionId: number | null;
+  /** Versionsname, z. B. "German first edition". */
+  name: string | null;
   yearPublished: number | null;
   /** Alle `boardgamepublisher`-Links dieser Version — mehrere bei Co-Publishern. */
   publisher: string[];
@@ -163,6 +167,7 @@ interface BggPoll {
 }
 
 interface BggVersionItem {
+  id?: string;
   name?: BggNameEntry | BggNameEntry[];
   yearpublished?: { value?: string };
   productcode?: { value?: string };
@@ -283,6 +288,8 @@ function parseVersions(versions: BggItem["versions"]): BggVersion[] {
   return toArray(versions?.item).map((version) => {
     const links = toArray(version.link);
     return {
+      bggVersionId: parseNumber(version.id),
+      name: toArray(version.name)[0]?.value ?? null,
       yearPublished: parseNumber(version.yearpublished?.value),
       publisher: links
         .filter((link) => link.type === "boardgamepublisher")

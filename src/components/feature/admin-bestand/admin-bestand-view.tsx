@@ -283,6 +283,7 @@ export function AdminBestandView({
                                 condition: game.condition,
                                 ruleBookLanguages: game.ruleBookLanguages,
                                 inventoryNumber: game.inventoryNumber,
+                                versionId: game.versionId,
                               },
                             ]}
                             boardGameId={game.boardGameId}

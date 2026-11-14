@@ -74,14 +74,23 @@ describe("mergeContributors", () => {
       } as never)
       .mockResolvedValueOnce({ id: "bgg", bggId: 7 } as never);
     prismaMock.boardGameContributor.findMany.mockResolvedValueOnce([
-      { boardGameId: "g1", contributorId: "named", role: "PUBLISHER" },
+      { boardGameId: "g1", contributorId: "named", role: "AUTHOR" },
+    ] as never);
+    prismaMock.boardGameVersionPublisher.findMany.mockResolvedValueOnce([
+      { versionId: "v1", contributorId: "named" },
     ] as never);
 
     const result = await mergeContributors("named", "bgg");
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.boardGameContributor.createMany).toHaveBeenCalledWith({
-      data: [{ boardGameId: "g1", contributorId: "bgg", role: "PUBLISHER" }],
+      data: [{ boardGameId: "g1", contributorId: "bgg", role: "AUTHOR" }],
+      skipDuplicates: true,
+    });
+    expect(
+      prismaMock.boardGameVersionPublisher.createMany,
+    ).toHaveBeenCalledWith({
+      data: [{ versionId: "v1", contributorId: "bgg" }],
       skipDuplicates: true,
     });
     expect(prismaMock.contributor.delete).toHaveBeenCalledWith({
@@ -93,6 +102,17 @@ describe("mergeContributors", () => {
 describe("deleteContributor", () => {
   it("refuses while the entry is still linked to titles", async () => {
     prismaMock.boardGameContributor.count.mockResolvedValueOnce(2);
+    prismaMock.boardGameVersionPublisher.count.mockResolvedValueOnce(0);
+
+    const result = await deleteContributor("c1");
+
+    expect(result).toEqual({ error: expect.stringContaining("verknüpft") });
+    expect(prismaMock.contributor.delete).not.toHaveBeenCalled();
+  });
+
+  it("refuses while the entry is still a publisher of an edition", async () => {
+    prismaMock.boardGameContributor.count.mockResolvedValueOnce(0);
+    prismaMock.boardGameVersionPublisher.count.mockResolvedValueOnce(1);
 
     const result = await deleteContributor("c1");
 

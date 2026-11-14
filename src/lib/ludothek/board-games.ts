@@ -12,7 +12,8 @@ import {
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
-import { replacePublisherAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
+import { replaceAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
+import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import {
   CONTRIBUTOR_LINKS_INCLUDE,
   contributorNamesByRole,
@@ -149,9 +150,13 @@ export async function createBoardGame(input: CreateBoardGameInput) {
         });
       }
 
+      const versionId = input.version
+        ? (await upsertBoardGameVersion(tx, title.id, input.version)).id
+        : null;
       const copy = await createGameCopyTx(tx, {
         boardGameId: title.id,
         boardGameTitle: title.title,
+        versionId,
         condition: input.condition,
         ruleBookLanguages: input.ruleBookLanguages,
         actorId: actor.id,
@@ -197,8 +202,7 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
       where: { id },
       data: { title: input.title, ...toBoardGameTitleData(input) },
     });
-    await replacePublisherAuthorIllustratorLinksByName(tx, id, {
-      publisher: input.publisher ?? [],
+    await replaceAuthorIllustratorLinksByName(tx, id, {
       author: input.author ?? [],
       illustrator: input.illustrator ?? [],
     });

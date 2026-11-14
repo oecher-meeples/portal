@@ -83,6 +83,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     author: [],
     illustrator: [],
     yearPublished: null,
+    editionLanguages: [],
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,

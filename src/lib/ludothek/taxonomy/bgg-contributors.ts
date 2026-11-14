@@ -2,22 +2,14 @@ import type { BggGameData } from "@/lib/bgg/client";
 import type { ContributorInput } from "@/lib/ludothek/taxonomy/contributors";
 
 /**
- * Mitwirkende aus einer BGG-Vorschau. Verlage stammen aus der Edition, deren
- * Verlagsname dem aktuellen Textfeld entspricht — so bleiben die BGG-IDs der
- * gewählten Edition erhalten, auch wenn der Admin eine andere Edition nimmt.
+ * Autoren und Illustratoren aus einer BGG-Vorschau — beide gelten für das
+ * ganze Spiel. Verlage hängen an der Edition (`VersionInput`), nicht hier.
  */
 export function bggContributorInputs(
   preview: BggGameData | null,
-  publisherText: string,
 ): ContributorInput[] {
   if (!preview) return [];
 
-  const publisherVersion = preview.versions.find(
-    (version) => version.publisher.join(", ") === publisherText,
-  );
-  const publishers: ContributorInput[] = (
-    publisherVersion?.publisherLinks ?? []
-  ).map((link) => ({ role: "PUBLISHER", bggId: link.bggId, name: link.name }));
   const authors: ContributorInput[] = preview.designers.map((link) => ({
     role: "AUTHOR",
     bggId: link.bggId,
@@ -29,5 +21,5 @@ export function bggContributorInputs(
     name: link.name,
   }));
 
-  return [...publishers, ...authors, ...illustrators];
+  return [...authors, ...illustrators];
 }

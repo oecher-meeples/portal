@@ -67,9 +67,14 @@ export async function mergeContributors(sourceId: string, targetId: string) {
 
   const keep = source.bggId !== null ? source : target;
   const drop = keep === source ? target : source;
-  const dropLinks = await prisma.boardGameContributor.findMany({
-    where: { contributorId: drop.id },
-  });
+  const [dropLinks, dropPublisherLinks] = await Promise.all([
+    prisma.boardGameContributor.findMany({
+      where: { contributorId: drop.id },
+    }),
+    prisma.boardGameVersionPublisher.findMany({
+      where: { contributorId: drop.id },
+    }),
+  ]);
 
   await prisma.$transaction(async (tx) => {
     if (dropLinks.length > 0) {
@@ -85,6 +90,18 @@ export async function mergeContributors(sourceId: string, targetId: string) {
     await tx.boardGameContributor.deleteMany({
       where: { contributorId: drop.id },
     });
+    if (dropPublisherLinks.length > 0) {
+      await tx.boardGameVersionPublisher.createMany({
+        data: dropPublisherLinks.map((link) => ({
+          versionId: link.versionId,
+          contributorId: keep.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await tx.boardGameVersionPublisher.deleteMany({
+      where: { contributorId: drop.id },
+    });
     await tx.contributor.delete({ where: { id: drop.id } });
   });
 
@@ -96,9 +113,11 @@ export async function deleteContributor(id: string) {
   const user = await requireGamesManagePermission();
   if (!user) return { error: "Keine Berechtigung." };
 
-  const linkCount = await prisma.boardGameContributor.count({
-    where: { contributorId: id },
-  });
+  const [titleLinks, publisherLinks] = await Promise.all([
+    prisma.boardGameContributor.count({ where: { contributorId: id } }),
+    prisma.boardGameVersionPublisher.count({ where: { contributorId: id } }),
+  ]);
+  const linkCount = titleLinks + publisherLinks;
   if (linkCount > 0) {
     return {
       error:

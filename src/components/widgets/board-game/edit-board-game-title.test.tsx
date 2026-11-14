@@ -255,8 +255,8 @@ describe("EditBoardGameTitle", () => {
     });
   });
 
-  describe("Verlag, Autor, Erstveröffentlichung (#205)", () => {
-    it("renders the three fields", () => {
+  describe("Autor, Erstveröffentlichung (#205)", () => {
+    it("renders the author and year fields but no publisher field (that belongs to the edition)", () => {
       render(
         <EditBoardGameTitle
           idPrefix="test"
@@ -265,27 +265,9 @@ describe("EditBoardGameTitle", () => {
         />,
       );
 
-      expect(screen.getByLabelText("Verlag(e)")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Verlag(e)")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Autor(en)")).toBeInTheDocument();
       expect(screen.getByLabelText("Erstveröffentlichung")).toBeInTheDocument();
-    });
-
-    it("reports a publisher change via onChange", async () => {
-      const { fireEvent } = await import("@testing-library/react");
-      const onChange = vi.fn();
-      render(
-        <EditBoardGameTitle
-          idPrefix="test"
-          values={EMPTY_BOARD_GAME_FORM}
-          onChange={onChange}
-        />,
-      );
-
-      const input = screen.getByLabelText("Verlag(e)");
-      fireEvent.change(input, { target: { value: "Feuerland Spiele" } });
-      fireEvent.keyDown(input, { key: "Enter" });
-
-      expect(onChange).toHaveBeenCalledWith({ publisher: "Feuerland Spiele" });
     });
 
     it("reports a year change via onChange", async () => {

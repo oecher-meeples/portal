@@ -14,8 +14,8 @@ export type ContributorLinkRow = {
   contributor: { name: string };
 };
 
-/** Namen je Rolle, alphabetisch sortiert und ohne Dubletten (Co-Publisher mit
- * gleichem Namen). */
+/** Autoren und Illustratoren, alphabetisch sortiert und ohne Dubletten.
+ * Verlage hängen an der Edition (`versionDisplay()`), nicht am Titel. */
 export function contributorNamesByRole(links: ContributorLinkRow[]) {
   const namesFor = (role: ContributorRole) =>
     [
@@ -27,8 +27,34 @@ export function contributorNamesByRole(links: ContributorLinkRow[]) {
     ].sort((a, b) => a.localeCompare(b, "de"));
 
   return {
-    publisher: namesFor("PUBLISHER"),
     author: namesFor("AUTHOR"),
     illustrator: namesFor("ILLUSTRATOR"),
+  };
+}
+
+/** Prisma-`select` der Edition eines Exemplars/Privateintrags — Verlage und
+ * Sprachen für die Anzeige. */
+export const VERSION_DISPLAY_SELECT = {
+  select: {
+    languages: true,
+    publishers: { select: { contributor: { select: { name: true } } } },
+  },
+} as const;
+
+export type VersionDisplayRow = {
+  languages: string[];
+  publishers: { contributor: { name: string } }[];
+} | null;
+
+/** Verlage (alphabetisch) und BGG-Sprachnamen einer Edition; ohne Edition
+ * bleiben beide leer. */
+export function versionDisplay(version: VersionDisplayRow) {
+  return {
+    publisher: version
+      ? version.publishers
+          .map((p) => p.contributor.name)
+          .sort((a, b) => a.localeCompare(b, "de"))
+      : [],
+    editionLanguages: version?.languages ?? [],
   };
 }

@@ -38,7 +38,7 @@ function diffClassName(status: boolean | undefined): string | undefined {
  * title (see ADR 0008). `condition` lives in `EditBoardGameExemplar`
  * instead: it's per-copy, not per-title.
  *
- * Row layout (#124, #493-Folge): Titel+Art, Verlag+Autor+Illustrator (eine
+ * Row layout (#124, #493-Folge): Titel+Art, Autor+Illustrator (eine
  * Zeile), Sprachabhängigkeit+Erstveröffentlichung, EAN+BGG-ID,
  * Spielerzahl+Dauer+Komplexität, Mechaniken, Bild+Erklärvideo, Beschreibung.
  */
@@ -51,10 +51,8 @@ export function EditBoardGameTitle({
   onLoadExistingTitle,
   loadingExistingTitle,
   compareStatus,
-  eanAutoSearch,
-  eanAlternateTitles,
   boardGameId,
-  bggProductCode,
+  hideEan,
   onContributorsValidityChange,
 }: {
   idPrefix: string;
@@ -66,10 +64,6 @@ export function EditBoardGameTitle({
    * neuen Titels gibt es noch keine ID, also auch keine
    * Alternativtitel-Verwaltung. */
   boardGameId?: string;
-  /** Eindeutiger BGG-Product-Code aus der frisch geladenen Import-Vorschau
-   * (#205) — nur im Anlegen-Wizard gesetzt, hat dort Vorrang vor der
-   * UPCitemdb-EAN-Suche. */
-  bggProductCode?: string | null;
   /** Autocomplete suggestions for the Mechaniken multiselect, sourced from
    * the existing Bestand — omit to keep the plain comma-separated text
    * field (e.g. when creating a brand-new title with no suggestions yet
@@ -88,20 +82,16 @@ export function EditBoardGameTitle({
    * im "Daten mit BGG abgleichen"-Modus gesetzt (#189). Felder ohne
    * BGG-Entsprechung (EAN, Art, BGG-ID, Erklärvideo) bleiben unberührt. */
   compareStatus?: Partial<Record<BoardGameCompareField, boolean>>;
-  /** Löst im EAN-Feld automatisch eine EAN-Suche aus, wenn das Feld beim
-   * Mounten leer ist — nur in Schritt 2 des Anlegen-Wizards gesetzt (#197). */
-  eanAutoSearch?: boolean;
-  /** BGGs Alternativnamen (#187) — Fallback-Reihenfolge für die EAN-Suche,
-   * wenn der Haupttitel keinen Treffer liefert (#197-Folgeanfrage). */
-  eanAlternateTitles?: string[];
-  /** Meldet, ob alle drei Mitwirkende-Felder nur bekannte Namen enthalten —
+  /** Blendet das EAN-Feld aus — der Anlegen-Wizard zeigt es erst im
+   * Exemplar-Schritt, neben der Version, zu der die EAN gehört. */
+  hideEan?: boolean;
+  /** Meldet, ob beide Mitwirkende-Felder nur bekannte Namen enthalten —
    * die aufrufende Seite blockiert das Speichern, solange das nicht der Fall
    * ist (#493). */
   onContributorsValidityChange?: (valid: boolean) => void;
 }) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [contributorsValid, setContributorsValid] = useState({
-    publisher: true,
     author: true,
     illustrator: true,
   });
@@ -109,9 +99,7 @@ export function EditBoardGameTitle({
 
   useEffect(() => {
     onContributorsValidityChange?.(
-      contributorsValid.publisher &&
-        contributorsValid.author &&
-        contributorsValid.illustrator,
+      contributorsValid.author && contributorsValid.illustrator,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onContributorsValidityChange ist typischerweise ein frischer Closure pro Render
   }, [contributorsValid]);
@@ -198,17 +186,7 @@ export function EditBoardGameTitle({
         </select>
       </div>
 
-      <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:col-span-2 sm:grid-flow-col sm:grid-cols-3 sm:grid-rows-3">
-        <ContributorNamesField
-          label="Verlag(e)"
-          role="PUBLISHER"
-          value={values.publisher}
-          onChange={(publisher) => onChange({ publisher })}
-          placeholder="z. B. Feuerland Spiele"
-          onValidityChange={(valid) =>
-            setContributorsValid((prev) => ({ ...prev, publisher: valid }))
-          }
-        />
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:col-span-2 sm:grid-cols-2">
         <ContributorNamesField
           label="Autor(en)"
           role="AUTHOR"
@@ -267,16 +245,15 @@ export function EditBoardGameTitle({
         placeholder="z. B. 2021"
       />
 
-      <EanField
-        idPrefix={idPrefix}
-        value={values.ean}
-        onChange={(ean) => onChange({ ean })}
-        title={values.title}
-        autoSearchOnMount={eanAutoSearch}
-        alternateTitles={eanAlternateTitles}
-        bggProductCode={bggProductCode}
-        publisherForSorting={parseCommaSeparatedList(values.publisher)}
-      />
+      {!hideEan && (
+        <EanField
+          idPrefix={idPrefix}
+          value={values.ean}
+          onChange={(ean) => onChange({ ean })}
+          title={values.title}
+          publisherForSorting={parseCommaSeparatedList(values.publisher)}
+        />
+      )}
       <BggIdField
         idPrefix={idPrefix}
         value={values.bggId}

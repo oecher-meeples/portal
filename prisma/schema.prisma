@@ -910,6 +910,7 @@ model BoardGame {
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
   privateEventLoans        PrivateEventLoan[]
   contributors             BoardGameContributor[]
+  versions                 BoardGameVersion[]
 
   @@index([ean])
   @@map("board_games")
@@ -966,7 +967,8 @@ model Contributor {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  boardGames BoardGameContributor[]
+  boardGames        BoardGameContributor[]
+  versionPublishers BoardGameVersionPublisher[]
 
   @@index([bggId])
   @@map("contributors")
@@ -987,12 +989,55 @@ model BoardGameContributor {
   @@map("board_game_contributors")
 }
 
+/// Eine Edition (BGG-Version) eines Titels, die der Verein besitzt — nur
+/// Versionen, die ein Exemplar oder ein Privatsammlungs-Eintrag tatsächlich
+/// hat, werden gespeichert. `bggVersionId` ist `null` bei manuell angelegten
+/// Editionen (Postgres behandelt NULL im Unique-Index als verschieden).
+model BoardGameVersion {
+  id            String   @id @default(cuid())
+  boardGameId   String
+  bggVersionId  Int?
+  name          String?
+  yearPublished Int?
+  /// BGG-Product-Code der Edition (häufig die EAN, aber selten gepflegt).
+  productCode   String?
+  /// BGG-Sprachnamen (z. B. `German`, `English`) — Grundlage der Flagge, die
+  /// nur bei nicht-deutschen Editionen erscheint.
+  languages     String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  boardGame                BoardGame                    @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  publishers               BoardGameVersionPublisher[]
+  copies                   GameCopy[]
+  privateCollectionEntries PrivateGameCollectionEntry[]
+
+  @@unique([boardGameId, bggVersionId])
+  @@index([boardGameId])
+  @@map("board_game_versions")
+}
+
+/// Verlag(e) einer Edition — mehrere bei Co-Publishern.
+model BoardGameVersionPublisher {
+  versionId     String
+  contributorId String
+
+  version     BoardGameVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  contributor Contributor      @relation(fields: [contributorId], references: [id], onDelete: Restrict)
+
+  @@id([versionId, contributorId])
+  @@index([contributorId])
+  @@map("board_game_version_publishers")
+}
+
 /// A single physical copy of a title — condition, inventory status and (via
 /// GameHolding) the location chain. See ADR 0008.
 model GameCopy {
   id                     String              @id @default(cuid())
   slug                   String              @unique
   boardGameId            String
+  /// Die Edition (BGG-Version) dieses Exemplars — `null` = unbekannt.
+  versionId              String?
   /// The single condition note — a defect is recorded here, not in a second field.
   condition              String?
   /// Regelheft-Sprache(n) dieses Exemplars (#188) — mehrere möglich, z. B. eine
@@ -1009,10 +1054,12 @@ model GameCopy {
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
-  boardGame BoardGame     @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  version   BoardGameVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
   holdings  GameHolding[]
 
   @@index([boardGameId])
+  @@index([versionId])
   @@index([status])
   @@map("game_copies")
 }
@@ -1069,6 +1116,9 @@ model PrivateGameCollectionEntry {
   id          String   @id @default(cuid())
   meepleId    String
   boardGameId String
+  /// Optionale Edition dieses Privateintrags — ohne Version bleiben Verlag
+  /// und Sprache leer.
+  versionId   String?
   syncedAt    DateTime
   /// Persönliche BGG-Bewertung (`stats.rating`), `null` wenn unbewertet.
   rating      Float?
@@ -1077,8 +1127,9 @@ model PrivateGameCollectionEntry {
   forTrade    Boolean  @default(false)
   wantToPlay  Boolean  @default(false)
 
-  meeple    Meeple    @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
-  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  meeple    Meeple            @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  version   BoardGameVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
 
   @@unique([meepleId, boardGameId])
   @@index([meepleId])
