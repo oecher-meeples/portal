@@ -52,6 +52,7 @@ export function AddGameCopyDialog({
       title={`Weiteres Exemplar von „${boardGameTitle}“ anlegen`}
       description="Das neue Exemplar liegt zunächst in „Unsortiert“ — Standort per Scan einlagern."
       submitLabel="Anlegen"
+      contentClassName="sm:max-w-2xl"
       onOpen={async () => {
         setInventoryNumber(await getSuggestedInventoryNumber());
       }}

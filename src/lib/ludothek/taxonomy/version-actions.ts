@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/utils/prisma";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { describeVersion } from "@/lib/ludothek/taxonomy/version-label";
+import { fetchBggGame, type BggVersion } from "@/lib/bgg/client";
 
 export type EditionOption = {
   id: string;
@@ -39,4 +40,31 @@ export async function getBoardGameEditions(
       name: version.name,
     }),
   }));
+}
+
+/** BGG-Versionen eines Titels, die noch nicht als Version gespeichert sind —
+ * im Exemplar-Dialog direkt auswählbar. Ohne BGG-ID oder bei einem
+ * BGG-Fehler leer: die Auswahl gespeicherter oder manueller Versionen bleibt
+ * davon unberührt. */
+export async function getUnsavedBggVersions(
+  boardGameId: string,
+): Promise<BggVersion[]> {
+  const user = await requireGamesManagePermission();
+  if (!user) return [];
+
+  const game = await prisma.boardGame.findUnique({
+    where: { id: boardGameId },
+    select: { bggId: true, versions: { select: { bggVersionId: true } } },
+  });
+  if (!game?.bggId) return [];
+
+  const saved = new Set(game.versions.map((v) => v.bggVersionId));
+  try {
+    const data = await fetchBggGame(game.bggId);
+    return data.versions.filter(
+      (v) => v.bggVersionId === null || !saved.has(v.bggVersionId),
+    );
+  } catch {
+    return [];
+  }
 }

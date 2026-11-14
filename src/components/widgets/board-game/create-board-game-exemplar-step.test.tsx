@@ -11,6 +11,7 @@ vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
 }));
 vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
   getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
 }));
 vi.mock("@/lib/ludothek/ean-search", () => ({
   searchEanForBoardGame: vi

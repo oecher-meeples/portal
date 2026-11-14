@@ -78,6 +78,7 @@ export function EditBoardGameExemplarDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Exemplar bearbeiten"
+      contentClassName="sm:max-w-2xl"
       submitLabel="Speichern"
       action={() =>
         updateGameCopy(copyId, {

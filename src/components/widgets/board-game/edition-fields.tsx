@@ -4,12 +4,21 @@ import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { TextField } from "@/components/ui/field";
 import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
-import { getBoardGameEditions } from "@/lib/ludothek/taxonomy/version-actions";
+import {
+  getBoardGameEditions,
+  getUnsavedBggVersions,
+} from "@/lib/ludothek/taxonomy/version-actions";
 import type { EditionOption } from "@/lib/ludothek/taxonomy/version-actions";
-import { selectRelevantVersions } from "@/lib/ludothek/board-game-versions";
+import {
+  selectRelevantVersions,
+  versionInputFromBgg,
+} from "@/lib/ludothek/board-game-versions";
 import { describeVersion } from "@/lib/ludothek/taxonomy/version-label";
 import type { BggVersion } from "@/lib/bgg/client";
-import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
+import {
+  versionInputToFormPatch,
+  type BoardGameFormValues,
+} from "@/components/widgets/board-game/board-game-form-values";
 
 const NEW_EDITION = "__new__";
 const BGG_PREFIX = "bgg:";
@@ -24,9 +33,10 @@ function germanFirst(versions: BggVersion[]): BggVersion[] {
  * Version (Edition) eines Exemplars — Verlag(e) und Sprache(n). Gehört zum
  * Exemplar, nicht zum Titel: zwei Exemplare desselben Spiels können
  * verschiedene Versionen sein. Ein Dropdown für alles: ohne Version, eine
- * bereits gespeicherte Version des Titels (`boardGameId`), eine Version aus
- * der BGG-Vorschau (`bggVersions`, nur im Anlegen-Wizard) oder eine manuell
- * eingegebene. BGG- und manuelle Versionen bleiben in den Feldern darunter
+ * bereits gespeicherte Version des Titels (`boardGameId`), eine Version von
+ * BGG oder eine manuell eingegebene. Die BGG-Versionen kommen im
+ * Anlegen-Wizard aus der Vorschau (`bggVersions`), sonst lädt das Feld die
+ * noch nicht gespeicherten Versionen des Titels selbst von BGG. BGG- und manuelle Versionen bleiben in den Feldern darunter
  * editierbar.
  */
 export function EditionFields({
@@ -34,7 +44,7 @@ export function EditionFields({
   values,
   onChange,
   boardGameId,
-  bggVersions = [],
+  bggVersions,
   onSelectBggVersion,
 }: {
   idPrefix: string;
@@ -42,11 +52,18 @@ export function EditionFields({
   onChange: (patch: Partial<BoardGameFormValues>) => void;
   boardGameId?: string;
   bggVersions?: BggVersion[];
-  /** Übernimmt eine BGG-Version (Verlag, Sprache, Product Code) ins Formular. */
+  /** Übernimmt eine BGG-Version ins Formular — ohne Angabe nur Verlag,
+   * Sprache und Product Code der Version. */
   onSelectBggVersion?: (version: BggVersion) => void;
 }) {
   const [options, setOptions] = useState<EditionOption[]>([]);
-  const sortedBggVersions = germanFirst(bggVersions);
+  const [loadedBggVersions, setLoadedBggVersions] = useState<BggVersion[]>([]);
+  // Titel, für den die BGG-Abfrage abgeschlossen ist — „lädt" ist abgeleitet,
+  // statt im Effect synchron einen Lade-State zu setzen.
+  const [bggLoadedFor, setBggLoadedFor] = useState<string | null>(null);
+  const sortedBggVersions = germanFirst(bggVersions ?? loadedBggVersions);
+  const loadFromBgg = Boolean(boardGameId) && bggVersions === undefined;
+  const loadingBgg = loadFromBgg && bggLoadedFor !== boardGameId;
 
   useEffect(() => {
     if (!boardGameId) return;
@@ -62,6 +79,24 @@ export function EditionFields({
       cancelled = true;
     };
   }, [boardGameId]);
+
+  useEffect(() => {
+    if (!loadFromBgg || !boardGameId) return;
+    let cancelled = false;
+    getUnsavedBggVersions(boardGameId)
+      .then((loaded) => {
+        if (!cancelled) setLoadedBggVersions(loaded);
+      })
+      .catch(() => {
+        // BGG nicht erreichbar — gespeicherte und manuelle Versionen bleiben.
+      })
+      .finally(() => {
+        if (!cancelled) setBggLoadedFor(boardGameId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [boardGameId, loadFromBgg]);
 
   const selectedBggIndex =
     values.editionMode === "new" && values.bggVersion?.bggVersionId != null
@@ -81,7 +116,9 @@ export function EditionFields({
   function handleSelect(next: string) {
     if (next.startsWith(BGG_PREFIX)) {
       const version = sortedBggVersions[Number(next.slice(BGG_PREFIX.length))];
-      if (version) onSelectBggVersion?.(version);
+      if (!version) return;
+      if (onSelectBggVersion) onSelectBggVersion(version);
+      else onChange(versionInputToFormPatch(versionInputFromBgg(version)));
       return;
     }
     if (next === NEW_EDITION) {
@@ -143,6 +180,11 @@ export function EditionFields({
           )}
           <option value={NEW_EDITION}>Neue Version manuell eingeben …</option>
         </select>
+        {loadingBgg && (
+          <p className="text-muted-foreground text-xs">
+            Versionen von BGG werden geladen …
+          </p>
+        )}
       </div>
       {values.editionMode === "new" && (
         <div className="flex flex-col gap-3 border-l-2 pl-3">

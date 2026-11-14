@@ -3,6 +3,7 @@ vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
 }));
 vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
   getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
 }));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
