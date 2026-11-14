@@ -15,6 +15,7 @@ import type {
   BoardGameTitleInput,
   CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
+import type { GameCopyInput } from "@/lib/ludothek/game-copies";
 import type { BggLink } from "@/lib/bgg/client";
 import type {
   EditionSelection,
@@ -245,6 +246,20 @@ export function editionSelectionFromForm(
   }
   const version = formToVersionInput(form);
   return version ? { version } : null;
+}
+
+/** Exemplar-Felder für `createGameCopy`/`updateGameCopy` — von den beiden
+ * Exemplar-Dialogen geteilt. */
+export function exemplarFormToCopyInput(
+  form: BoardGameFormValues,
+  inventoryNumber: string,
+): GameCopyInput {
+  return {
+    condition: form.condition || undefined,
+    ruleBookLanguages: form.ruleBookLanguages,
+    inventoryNumber,
+    edition: editionSelectionFromForm(form),
+  };
 }
 
 /** Title-level fields only — for `updateBoardGame`, which never touches `condition`. */

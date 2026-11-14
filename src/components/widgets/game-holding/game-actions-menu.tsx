@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
@@ -62,12 +62,39 @@ const ACTION_LABELS: Record<ActionKey, string> = {
   "completeness-check": "Prüfung anfordern",
 };
 
-const AUFENTHALT_ACTIONS: ActionKey[] = [
+type AufenthaltAction = "borrow" | "give" | "return" | "relocate";
+
+const AUFENTHALT_ACTIONS: AufenthaltAction[] = [
   "borrow",
   "give",
   "return",
   "relocate",
 ];
+
+const VERWALTUNG_ACTIONS: ActionKey[] = [
+  "completeness-check",
+  "condition",
+  "deinventorise",
+];
+
+/** Mini-Dialog je Aufenthalts-Aktion — alle mit derselben Signatur. */
+const AUFENTHALT_DIALOGS: Record<
+  AufenthaltAction,
+  ComponentType<{
+    gameCopyId: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }>
+> = {
+  borrow: BorrowGameDialog,
+  give: GiveToMeepleDialog,
+  return: AcceptReturnDialog,
+  relocate: RelocateGameDialog,
+};
+
+function isAufenthaltAction(action: ActionKey): action is AufenthaltAction {
+  return action in AUFENTHALT_DIALOGS;
+}
 
 /** "Weitergeben" setzt voraus, dass das Exemplar gerade bei einer Person
  * liegt (#405) — sonst gibt es niemanden, der es weitergeben könnte. Ein
@@ -81,11 +108,6 @@ function canGiveAway(copy: GameActionsCopy, canManageGames: boolean): boolean {
   if (!heldByPerson) return false;
   return canManageGames || (copy.isMine ?? true);
 }
-const VERWALTUNG_ACTIONS: ActionKey[] = [
-  "completeness-check",
-  "condition",
-  "deinventorise",
-];
 
 /**
  * Rights-based aufenthalt/admin actions for one title's exemplare, replacing
@@ -156,7 +178,10 @@ export function GameActionsMenu({
   const chosenCopy = chosen
     ? copies.find((c) => c.id === chosen.copyId)
     : undefined;
-  const chosenCondition = chosenCopy?.condition ?? null;
+  const ChosenAufenthaltDialog =
+    chosen && isAufenthaltAction(chosen.action)
+      ? AUFENTHALT_DIALOGS[chosen.action]
+      : null;
 
   return (
     <>
@@ -220,29 +245,8 @@ export function GameActionsMenu({
         />
       )}
 
-      {chosen?.action === "borrow" && (
-        <BorrowGameDialog
-          gameCopyId={chosen.copyId}
-          open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "give" && (
-        <GiveToMeepleDialog
-          gameCopyId={chosen.copyId}
-          open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "return" && (
-        <AcceptReturnDialog
-          gameCopyId={chosen.copyId}
-          open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "relocate" && (
-        <RelocateGameDialog
+      {chosen && ChosenAufenthaltDialog && (
+        <ChosenAufenthaltDialog
           gameCopyId={chosen.copyId}
           open
           onOpenChange={closeChosen}
@@ -251,7 +255,7 @@ export function GameActionsMenu({
       {chosen?.action === "condition" && (
         <EditBoardGameExemplarDialog
           copyId={chosen.copyId}
-          condition={chosenCondition}
+          condition={chosenCopy?.condition ?? null}
           ruleBookLanguages={chosenCopy?.ruleBookLanguages ?? []}
           inventoryNumber={chosenCopy?.inventoryNumber ?? null}
           boardGameId={boardGameId}

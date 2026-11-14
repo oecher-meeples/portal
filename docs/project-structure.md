@@ -141,6 +141,9 @@ widgets/
 │   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
 ├── bringbuy/
 │   └── register-external-seller-dialog.tsx  Self-Service-Anmeldung externer Bring & Buy-Verkäufer:innen (#266) — vom Gäste-Bereich (`feature/guest-area`) genutzt, darf aber nicht aus `feature/bringbuy` importieren (Layer-Regel), deshalb hier
+├── private-collection/
+│   ├── private-collection-card.tsx    Profil-Karte „Meine privaten Spiele“: BGG-Import, Sichtbarkeit für andere Meeple
+│   └── private-collection-dialog.tsx  Liste der Privatspiele: Suche, Sortierung, Status-Filter, Version, Event-Freigabe (#122)
 ├── pending-changes/
 │   └── pending-changes-panel.tsx  Offene IBAN-/E-Mail-Änderungsanträge freigeben/ablehnen (#330) — von `/admin/bank` (kind: IBAN) **und** `/admin/mitglieder` (kind: MEMBER_EMAIL) eingebunden, deshalb hier statt in einem der beiden Features
 └── board-game/

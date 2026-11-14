@@ -30,9 +30,9 @@ vi.mock(
       setVisibleMock(visible),
   }),
 );
-const setVisibleMock = vi.fn(async (_visible: boolean) => ({
-  success: true as const,
-}));
+const setVisibleMock = vi.fn<(visible: boolean) => Promise<{ success: true }>>(
+  async () => ({ success: true }),
+);
 
 function entry(
   overrides: Partial<OwnPrivateCollectionEntry> = {},

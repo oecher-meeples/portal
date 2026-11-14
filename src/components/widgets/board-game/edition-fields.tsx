@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Label } from "@/components/ui/label";
-import { TextField } from "@/components/ui/field";
+import { Field, TextField } from "@/components/ui/field";
 import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
 import {
   getBoardGameEditions,
@@ -23,6 +22,42 @@ import {
 const NEW_EDITION = "__new__";
 const BGG_PREFIX = "bgg:";
 
+/** Lädt per Server Action die Daten zu `key`, solange `key` gesetzt ist.
+ * `loadedFor` ist der Schlüssel der zuletzt abgeschlossenen Abfrage — daraus
+ * leitet der Aufrufer „lädt noch" ab, statt im Effect einen Lade-State zu
+ * setzen. Fehler lassen den bisherigen Wert stehen: beide Listen sind
+ * optional, der Dialog bleibt bedienbar. */
+function useLoadedFor<T>(
+  key: string | null,
+  load: (key: string) => Promise<T>,
+  initial: T,
+) {
+  const [value, setValue] = useState<T>(initial);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!key) return;
+    let cancelled = false;
+    load(key)
+      .then((loaded) => {
+        if (!cancelled) setValue(loaded);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadedFor(key);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `load` ist eine stabile Server Action, neu geladen wird nur bei neuem Schlüssel
+  }, [key]);
+
+  return { value, loadedFor };
+}
+
+const NO_EDITIONS: EditionOption[] = [];
+const NO_BGG_VERSIONS: BggVersion[] = [];
+
 /** Deutsche Versionen zuerst (meist die relevanten), dann der Rest. */
 function germanFirst(versions: BggVersion[]): BggVersion[] {
   const relevant = selectRelevantVersions(versions);
@@ -36,8 +71,8 @@ function germanFirst(versions: BggVersion[]): BggVersion[] {
  * bereits gespeicherte Version des Titels (`boardGameId`), eine Version von
  * BGG oder eine manuell eingegebene. Die BGG-Versionen kommen im
  * Anlegen-Wizard aus der Vorschau (`bggVersions`), sonst lädt das Feld die
- * noch nicht gespeicherten Versionen des Titels selbst von BGG. BGG- und manuelle Versionen bleiben in den Feldern darunter
- * editierbar.
+ * noch nicht gespeicherten Versionen des Titels selbst von BGG. BGG- und
+ * manuelle Versionen bleiben in den Feldern darunter editierbar.
  */
 export function EditionFields({
   idPrefix,
@@ -56,47 +91,21 @@ export function EditionFields({
    * Sprache und Product Code der Version. */
   onSelectBggVersion?: (version: BggVersion) => void;
 }) {
-  const [options, setOptions] = useState<EditionOption[]>([]);
-  const [loadedBggVersions, setLoadedBggVersions] = useState<BggVersion[]>([]);
-  // Titel, für den die BGG-Abfrage abgeschlossen ist — „lädt" ist abgeleitet,
-  // statt im Effect synchron einen Lade-State zu setzen.
-  const [bggLoadedFor, setBggLoadedFor] = useState<string | null>(null);
+  const { value: options } = useLoadedFor(
+    boardGameId ?? null,
+    getBoardGameEditions,
+    NO_EDITIONS,
+  );
+  // Im Wizard liefert die Vorschau die BGG-Versionen, sonst fragt das Feld
+  // BGG selbst nach den noch nicht gespeicherten Versionen des Titels.
+  const bggKey = boardGameId && bggVersions === undefined ? boardGameId : null;
+  const { value: loadedBggVersions, loadedFor: bggLoadedFor } = useLoadedFor(
+    bggKey,
+    getUnsavedBggVersions,
+    NO_BGG_VERSIONS,
+  );
   const sortedBggVersions = germanFirst(bggVersions ?? loadedBggVersions);
-  const loadFromBgg = Boolean(boardGameId) && bggVersions === undefined;
-  const loadingBgg = loadFromBgg && bggLoadedFor !== boardGameId;
-
-  useEffect(() => {
-    if (!boardGameId) return;
-    let cancelled = false;
-    getBoardGameEditions(boardGameId)
-      .then((loaded) => {
-        if (!cancelled) setOptions(loaded);
-      })
-      .catch(() => {
-        // Ohne Liste bleibt nur „neue Version" — kein Grund, den Dialog zu blockieren.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [boardGameId]);
-
-  useEffect(() => {
-    if (!loadFromBgg || !boardGameId) return;
-    let cancelled = false;
-    getUnsavedBggVersions(boardGameId)
-      .then((loaded) => {
-        if (!cancelled) setLoadedBggVersions(loaded);
-      })
-      .catch(() => {
-        // BGG nicht erreichbar — gespeicherte und manuelle Versionen bleiben.
-      })
-      .finally(() => {
-        if (!cancelled) setBggLoadedFor(boardGameId);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [boardGameId, loadFromBgg]);
+  const loadingBgg = bggKey !== null && bggLoadedFor !== bggKey;
 
   const selectedBggIndex =
     values.editionMode === "new" && values.bggVersion?.bggVersionId != null
@@ -140,8 +149,11 @@ export function EditionFields({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`${idPrefix}-edition`}>Version</Label>
+      <Field
+        label="Version"
+        htmlFor={`${idPrefix}-edition`}
+        hint={loadingBgg && "Versionen von BGG werden geladen …"}
+      >
         <select
           id={`${idPrefix}-edition`}
           value={selectValue}
@@ -180,12 +192,7 @@ export function EditionFields({
           )}
           <option value={NEW_EDITION}>Neue Version manuell eingeben …</option>
         </select>
-        {loadingBgg && (
-          <p className="text-muted-foreground text-xs">
-            Versionen von BGG werden geladen …
-          </p>
-        )}
-      </div>
+      </Field>
       {values.editionMode === "new" && (
         <div className="flex flex-col gap-3 border-l-2 pl-3">
           <div className="flex flex-col gap-1.5">

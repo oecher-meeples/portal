@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import { CopyPlus } from "lucide-react";
-import type { RuleBookLanguage } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
-import { EditionFields } from "@/components/widgets/board-game/edition-fields";
+import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import {
   EMPTY_BOARD_GAME_FORM,
-  editionSelectionFromForm,
+  exemplarFormToCopyInput,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
-import { RuleBookLanguagesField } from "@/components/widgets/board-game/rule-book-languages-field";
 import {
   createGameCopy,
   getSuggestedInventoryNumber,
@@ -38,14 +36,8 @@ export function AddGameCopyDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const [condition, setCondition] = useState("");
-  const [ruleBookLanguages, setRuleBookLanguages] = useState<
-    RuleBookLanguage[]
-  >([]);
+  const [form, setForm] = useState<BoardGameFormValues>(EMPTY_BOARD_GAME_FORM);
   const [inventoryNumber, setInventoryNumber] = useState("");
-  const [edition, setEdition] = useState<BoardGameFormValues>(
-    EMPTY_BOARD_GAME_FORM,
-  );
 
   return (
     <ActionDialog
@@ -67,18 +59,14 @@ export function AddGameCopyDialog({
         setInventoryNumber(await getSuggestedInventoryNumber());
       }}
       action={() =>
-        createGameCopy(boardGameId, {
-          condition: condition || undefined,
-          ruleBookLanguages,
-          inventoryNumber,
-          edition: editionSelectionFromForm(edition),
-        })
+        createGameCopy(
+          boardGameId,
+          exemplarFormToCopyInput(form, inventoryNumber),
+        )
       }
       onReset={() => {
-        setCondition("");
-        setRuleBookLanguages([]);
+        setForm(EMPTY_BOARD_GAME_FORM);
         setInventoryNumber("");
-        setEdition(EMPTY_BOARD_GAME_FORM);
       }}
     >
       <TextField
@@ -87,21 +75,10 @@ export function AddGameCopyDialog({
         value={inventoryNumber}
         onChange={(event) => setInventoryNumber(event.target.value)}
       />
-      <TextField
-        id={`add-copy-${boardGameId}-condition`}
-        label="Mängelvermerk"
-        value={condition}
-        onChange={(event) => setCondition(event.target.value)}
-      />
-      <RuleBookLanguagesField
+      <EditBoardGameExemplar
         idPrefix={`add-copy-${boardGameId}`}
-        value={ruleBookLanguages}
-        onChange={setRuleBookLanguages}
-      />
-      <EditionFields
-        idPrefix={`add-copy-${boardGameId}`}
-        values={edition}
-        onChange={(patch) => setEdition((prev) => ({ ...prev, ...patch }))}
+        values={form}
+        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
         boardGameId={boardGameId}
       />
     </ActionDialog>
