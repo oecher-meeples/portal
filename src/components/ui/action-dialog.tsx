@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -73,11 +73,19 @@ export function ActionDialog({
     },
   });
 
+  // Ein von außen gesteuerter Dialog öffnet sich ohne eigenes
+  // `onOpenChange` (z. B. nach der Exemplar-Auswahl) — `onOpen` hängt daher
+  // am Wechsel von `open`, nicht am Trigger-Klick.
+  useEffect(() => {
+    if (controlledOpen) void onOpen?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Öffnen, `onOpen` ist meist ein frischer Closure
+  }, [controlledOpen]);
+
   async function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     setError(null);
     if (nextOpen) {
-      await onOpen?.();
+      if (controlledOpen === undefined) await onOpen?.();
     } else {
       onReset?.();
     }

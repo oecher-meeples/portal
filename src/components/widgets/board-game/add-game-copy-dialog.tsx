@@ -28,9 +28,15 @@ import {
 export function AddGameCopyDialog({
   boardGameId,
   boardGameTitle,
+  open,
+  onOpenChange,
 }: {
   boardGameId: string;
   boardGameTitle: string;
+  /** Von außen gesteuert (z. B. aus `GameActionsMenu`) — dann ohne eigenen
+   * Trigger-Button. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [condition, setCondition] = useState("");
   const [ruleBookLanguages, setRuleBookLanguages] = useState<
@@ -44,11 +50,15 @@ export function AddGameCopyDialog({
   return (
     <ActionDialog
       trigger={
-        <Button variant="ghost" size="sm">
-          <CopyPlus className="size-4" />
-          Weiteres Exemplar
-        </Button>
+        open === undefined ? (
+          <Button variant="ghost" size="sm">
+            <CopyPlus className="size-4" />
+            Weiteres Exemplar
+          </Button>
+        ) : undefined
       }
+      open={open}
+      onOpenChange={onOpenChange}
       title={`Weiteres Exemplar von „${boardGameTitle}“ anlegen`}
       description="Das neue Exemplar liegt zunächst in „Unsortiert“ — Standort per Scan einlagern."
       submitLabel="Anlegen"

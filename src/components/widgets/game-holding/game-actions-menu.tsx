@@ -121,6 +121,22 @@ export function GameActionsMenu({
   const giveEligibleCopies = copies.filter((c) =>
     canGiveAway(c, canManageGames),
   );
+  const canGive = giveEligibleCopies.length > 0;
+  const [addCopyOpen, setAddCopyOpen] = useState(false);
+
+  /** Bei mehreren Exemplaren erst die Exemplar-Auswahl, sonst direkt der
+   * Dialog für das eine Exemplar. */
+  function startAction(action: ActionKey) {
+    if (ambiguous) {
+      setPendingPick(action);
+      return;
+    }
+    if (action === "completeness-check") {
+      void run(() => requestCompletenessCheck(sole.id));
+      return;
+    }
+    setChosen({ action, copyId: sole.id });
+  }
 
   async function pickCopy(copyId: string) {
     const action = pendingPick;
@@ -154,34 +170,19 @@ export function GameActionsMenu({
           }
         />
         <DropdownMenuContent align="end">
+          {/* Nur Einträge, keine eingebetteten Dialoge: das Menü fängt für
+              seine Tippsuche Buchstaben-Tasten ab, auch aus per Portal
+              gerenderten Kind-Dialogen — deren Textfelder wären sonst nicht
+              beschreibbar. Die Dialoge stehen unten außerhalb des Menüs. */}
           <DropdownMenuGroup>
             <DropdownMenuLabel>Aufenthalt</DropdownMenuLabel>
             <DropdownMenuItem disabled>Geprüft</DropdownMenuItem>
-            {ambiguous ? (
-              AUFENTHALT_ACTIONS.filter(
-                (key) => key !== "give" || giveEligibleCopies.length > 0,
-              ).map((key) => (
-                <DropdownMenuItem key={key} onClick={() => setPendingPick(key)}>
+            {AUFENTHALT_ACTIONS.filter((key) => key !== "give" || canGive).map(
+              (key) => (
+                <DropdownMenuItem key={key} onClick={() => startAction(key)}>
                   {ACTION_LABELS[key]}
                 </DropdownMenuItem>
-              ))
-            ) : (
-              <>
-                <div className="px-1.5 py-1">
-                  <BorrowGameDialog gameCopyId={sole.id} />
-                </div>
-                {canGiveAway(sole, canManageGames) && (
-                  <div className="px-1.5 py-1">
-                    <GiveToMeepleDialog gameCopyId={sole.id} />
-                  </div>
-                )}
-                <div className="px-1.5 py-1">
-                  <AcceptReturnDialog gameCopyId={sole.id} />
-                </div>
-                <div className="px-1.5 py-1">
-                  <RelocateGameDialog gameCopyId={sole.id} />
-                </div>
-              </>
+              ),
             )}
           </DropdownMenuGroup>
 
@@ -190,53 +191,18 @@ export function GameActionsMenu({
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Verwaltung</DropdownMenuLabel>
-                {ambiguous ? (
-                  VERWALTUNG_ACTIONS.map((key) => (
-                    <DropdownMenuItem
-                      key={key}
-                      disabled={key === "completeness-check" && pending}
-                      onClick={() => setPendingPick(key)}
-                    >
-                      {ACTION_LABELS[key]}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <>
-                    <DropdownMenuItem
-                      disabled={pending}
-                      onClick={() =>
-                        run(() => requestCompletenessCheck(sole.id))
-                      }
-                    >
-                      {ACTION_LABELS["completeness-check"]}
-                    </DropdownMenuItem>
-                    <div className="px-1.5 py-1">
-                      <EditBoardGameExemplarDialog
-                        copyId={sole.id}
-                        condition={sole.condition}
-                        ruleBookLanguages={sole.ruleBookLanguages}
-                        inventoryNumber={sole.inventoryNumber}
-                        boardGameId={boardGameId}
-                        versionId={sole.versionId}
-                        triggerLabel={ACTION_LABELS.condition}
-                      />
-                    </div>
-                  </>
-                )}
-                <div className="px-1.5 py-1">
-                  <AddGameCopyDialog
-                    boardGameId={boardGameId}
-                    boardGameTitle={boardGameTitle}
-                  />
-                </div>
-                {!ambiguous && (
-                  <div className="px-1.5 py-1">
-                    <DeinventoriseBoardGameDialog
-                      gameId={sole.id}
-                      gameTitle={boardGameTitle}
-                    />
-                  </div>
-                )}
+                {VERWALTUNG_ACTIONS.map((key) => (
+                  <DropdownMenuItem
+                    key={key}
+                    disabled={key === "completeness-check" && pending}
+                    onClick={() => startAction(key)}
+                  >
+                    {ACTION_LABELS[key]}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem onClick={() => setAddCopyOpen(true)}>
+                  Weiteres Exemplar
+                </DropdownMenuItem>
               </DropdownMenuGroup>
             </>
           )}
@@ -293,6 +259,14 @@ export function GameActionsMenu({
           triggerLabel={ACTION_LABELS.condition}
           open
           onOpenChange={closeChosen}
+        />
+      )}
+      {addCopyOpen && (
+        <AddGameCopyDialog
+          boardGameId={boardGameId}
+          boardGameTitle={boardGameTitle}
+          open
+          onOpenChange={setAddCopyOpen}
         />
       )}
       {chosen?.action === "deinventorise" && (
