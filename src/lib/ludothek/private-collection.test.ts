@@ -110,6 +110,36 @@ describe("buildPrivateLudothekGames (#255-Folge)", () => {
 });
 
 describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
+  it("returns the BGG version with its publishers and languages", async () => {
+    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([
+      {
+        id: "entry-1",
+        rating: null,
+        forTrade: false,
+        wantToPlay: false,
+        boardGame: { id: "bg-1", slug: "ark-nova", title: "Ark Nova" },
+        version: {
+          name: "German edition",
+          yearPublished: 2022,
+          languages: ["German"],
+          publishers: [
+            { contributor: { name: "Schmidt Spiele" } },
+            { contributor: { name: "Feuerland Spiele" } },
+          ],
+        },
+      },
+    ] as never);
+
+    const [entry] = await getOwnPrivateCollection("meeple-1");
+
+    expect(entry.version).toEqual({
+      name: "German edition",
+      yearPublished: 2022,
+      languages: ["German"],
+      publishers: ["Feuerland Spiele", "Schmidt Spiele"],
+    });
+  });
+
   it("returns the private fields plus the boardGame relation for title/image/slug", async () => {
     prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([
       {
@@ -123,6 +153,7 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
           title: "Ark Nova",
           imageUrl: null,
         },
+        version: null,
       },
     ] as never);
 
@@ -140,6 +171,7 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
           title: "Ark Nova",
           imageUrl: null,
         },
+        version: null,
       },
     ]);
     expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(

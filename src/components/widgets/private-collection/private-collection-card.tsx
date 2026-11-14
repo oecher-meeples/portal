@@ -17,13 +17,19 @@ import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { useAction } from "@/components/ui/use-action";
+import { EditionFlag } from "@/components/entities/edition-flag";
 import { cn } from "@/lib/utils/cn";
+import { describeVersion } from "@/lib/ludothek/taxonomy/version-label";
 import { syncPrivateBggCollection } from "@/lib/ludothek/private-collection-sync";
 import { formatTimePlain } from "@/lib/utils/format";
 import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
 import type { OwnPrivateLoanOffer } from "@/lib/ludothek/private-event-loans";
 import {
   offerPrivateGameForEventAction,
+  setPrivateCollectionVisibleAction,
   withdrawPrivateGameOfferAction,
 } from "@/components/widgets/private-collection/private-collection-actions";
 
@@ -58,7 +64,7 @@ export function PrivateCollectionCard({
   canForceImport: boolean;
   /** `Meeple.privateCollectionVisible` — importierte Spiele erscheinen erst
    * in der Ludothek ("Auch Privatbesitz anzeigen"), wenn dieses Flag an ist
-   * (#255-Folge: sonst „nicht auffindbar“, obwohl der Import geklappt hat). */
+   * (#255-Folge); umschaltbar direkt auf der Karte. */
   visibleToOthers: boolean;
   /** (#122) Nächstes kommendes Event — einziger Freigabe-Kontext, `null`/
    * fehlend ohne kommendes Event (dann keine Freigabe-Steuerung). */
@@ -156,22 +162,7 @@ export function PrivateCollectionCard({
         <p className="mt-2 font-serif text-3xl font-bold">{entries.length}</p>
       </div>
 
-      {entries.length > 0 && !visibleToOthers && (
-        <p
-          className="text-muted-foreground mt-2 text-xs"
-          onClick={(event) => event.stopPropagation()}
-        >
-          Noch nicht in der Ludothek auffindbar —{" "}
-          <Link
-            href="#privateCollectionVisible"
-            className="text-foreground underline"
-          >
-            „Private BGG-Collection anderen Meeple anzeigen“
-          </Link>{" "}
-          unten aktivieren, damit sie über „Auch Privatbesitz anzeigen“ gefunden
-          werden.
-        </p>
-      )}
+      <PrivateCollectionVisibleSwitch initialVisible={visibleToOthers} />
 
       {bggUsername && (
         <div className="mt-4 flex flex-col gap-1.5 border-t pt-4">
@@ -317,6 +308,12 @@ export function PrivateCollectionCard({
                           </span>
                           <ExternalLink className="size-3.5 shrink-0" />
                         </Link>
+                        {entry.version && (
+                          <EditionFlag
+                            languages={entry.version.languages}
+                            className="shrink-0"
+                          />
+                        )}
                         {entry.rating !== null && (
                           <span className="text-muted-foreground shrink-0 text-xs">
                             ★ {entry.rating.toFixed(1)}
@@ -332,6 +329,11 @@ export function PrivateCollectionCard({
                         )}
                       </span>
                     </div>
+                    {entry.version && (
+                      <p className="text-muted-foreground text-xs">
+                        Version: {describeVersion(entry.version)}
+                      </p>
+                    )}
                     {nextEvent && (
                       <PrivateEventLoanToggle
                         eventId={nextEvent.id}
@@ -354,6 +356,49 @@ export function PrivateCollectionCard({
         </Dialog>
       </StopRowNavigation>
     </div>
+  );
+}
+
+/** Freigabe der ganzen Collection für andere Meeple (#255) — speichert sofort
+ * beim Umschalten, wie die Sichtbarkeits-Auswahl der Meeple-Daten. Ohne
+ * Freigabe sind die Spiele in der Ludothek nicht auffindbar.
+ * `refresh={false}`/lokaler State aus demselben Grund wie bei
+ * `PrivateEventLoanToggle`. */
+function PrivateCollectionVisibleSwitch({
+  initialVisible,
+}: {
+  initialVisible: boolean;
+}) {
+  const [visible, setVisible] = useState(initialVisible);
+  const { run, pending, error } = useAction({ refresh: false });
+
+  async function handleChange(next: boolean) {
+    setVisible(next);
+    const ok = await run(() => setPrivateCollectionVisibleAction(next));
+    if (!ok) setVisible(!next);
+  }
+
+  return (
+    <StopRowNavigation className="mt-4 flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <Switch
+          id="private-collection-visible"
+          checked={visible}
+          disabled={pending}
+          onCheckedChange={handleChange}
+        />
+        <Label htmlFor="private-collection-visible">
+          Private BGG-Collection anderen Meeple anzeigen
+        </Label>
+      </div>
+      {!visible && (
+        <p className="text-muted-foreground text-xs">
+          Aus, deine Spiele sind in der Ludothek über „Auch Privatbesitz
+          anzeigen“ nicht auffindbar.
+        </p>
+      )}
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </StopRowNavigation>
   );
 }
 

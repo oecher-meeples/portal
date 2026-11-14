@@ -498,4 +498,11 @@ export async function searchBggGamesExact(
   return searchBggGamesInternal(query, { exact: true });
 }
 
-export { fetchBggXml, parser, toArray, parseNumber, SEARCH_REVALIDATE_SECONDS };
+export {
+  fetchBggXml,
+  parser,
+  parseVersions,
+  toArray,
+  parseNumber,
+  SEARCH_REVALIDATE_SECONDS,
+};

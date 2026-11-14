@@ -22,6 +22,13 @@ export type OwnPrivateCollectionEntry = {
     title: string;
     imageUrl: string | null;
   };
+  /** Die auf BGG hinterlegte Version, `null` ohne Angabe. */
+  version: {
+    name: string | null;
+    yearPublished: number | null;
+    languages: string[];
+    publishers: string[];
+  } | null;
 };
 
 /**
@@ -33,7 +40,7 @@ export type OwnPrivateCollectionEntry = {
 export async function getOwnPrivateCollection(
   meepleId: string,
 ): Promise<OwnPrivateCollectionEntry[]> {
-  return prisma.privateGameCollectionEntry.findMany({
+  const entries = await prisma.privateGameCollectionEntry.findMany({
     where: { meepleId },
     orderBy: { boardGame: { title: "asc" } },
     select: {
@@ -44,7 +51,27 @@ export async function getOwnPrivateCollection(
       boardGame: {
         select: { id: true, slug: true, title: true, imageUrl: true },
       },
+      version: {
+        select: {
+          name: true,
+          yearPublished: true,
+          ...VERSION_DISPLAY_SELECT.select,
+        },
+      },
     },
+  });
+  return entries.map(({ version, ...entry }) => {
+    if (!version) return { ...entry, version: null };
+    const { publisher, editionLanguages } = versionDisplay(version);
+    return {
+      ...entry,
+      version: {
+        name: version.name,
+        yearPublished: version.yearPublished,
+        languages: editionLanguages,
+        publishers: publisher,
+      },
+    };
   });
 }
 

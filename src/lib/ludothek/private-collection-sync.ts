@@ -13,7 +13,11 @@ import {
   BggNotFoundError,
   fetchBggGame,
 } from "@/lib/bgg/client";
-import { bggDataToTitleInput } from "@/lib/ludothek/board-game-versions";
+import {
+  bggDataToTitleInput,
+  versionInputFromBgg,
+} from "@/lib/ludothek/board-game-versions";
+import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
 import { toBoardGameTitleData } from "@/lib/ludothek/board-game-title-lookup";
 import { replaceBggContributors } from "@/lib/ludothek/taxonomy/contributors";
@@ -86,13 +90,30 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
   }
 }
 
+/** Die auf BGG gewählte Version samt Verlagen im Katalog anlegen bzw.
+ * aktualisieren — dieselbe Edition, die auch ein Vereinsexemplar bekäme
+ * (eindeutig per BGG-Version-ID). Ohne gewählte Version `null`. */
+async function resolvePrivateVersionId(
+  boardGameId: string,
+  entry: BggCollectionEntry,
+): Promise<string | null> {
+  if (!entry.version) return null;
+  const version = await upsertBoardGameVersion(
+    prisma,
+    boardGameId,
+    versionInputFromBgg(entry.version),
+  );
+  return version.id;
+}
+
 /**
  * Manueller "Meine BGG-Collection importieren"-Trigger im eigenen Profil
  * (#255) — schreibt nur `PrivateGameCollectionEntry`, nie `GameCopy`
  * (kein Exemplar-Tracking für Privatbesitz). Jeder Titel wird per BGG-ID
  * gegen den bestehenden Katalog abgeglichen (`resolvePrivateTitle()`) — ein
  * wirklich neuer Titel bekommt volle BGG-Metadaten, genau wie beim
- * Vereinsexemplar-Import (#255-Folge). Bestehende Einträge werden vor dem
+ * Vereinsexemplar-Import (#255-Folge); die auf BGG gewählte Version und ihre
+ * Verlage landen ebenfalls im Katalog. Bestehende Einträge werden vor dem
  * Import gelöscht statt gemergt — Titel, die nicht mehr `owned=true` sind,
  * sollen verschwinden, kein reiner Upsert. 1h-Cooldown zwischen zwei
  * Importen (sysadmin ausgenommen), siehe `getImportCooldownEndsAt()`.
@@ -145,10 +166,12 @@ export async function syncPrivateBggCollection(ignoreCooldown = false) {
   });
   for (const entry of entries) {
     const title = await resolvePrivateTitle(entry);
+    const versionId = await resolvePrivateVersionId(title.id, entry);
     await prisma.privateGameCollectionEntry.create({
       data: {
         meepleId: meeple.id,
         boardGameId: title.id,
+        versionId,
         syncedAt,
         rating: entry.rating,
         forTrade: entry.forTrade,
