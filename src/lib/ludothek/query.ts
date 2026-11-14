@@ -1,3 +1,9 @@
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import { prisma } from "@/lib/utils/prisma";
 import {
   BoardGameKind,
@@ -34,6 +40,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
         { boardGame: { title: "asc" } },
       ],
       include: {
+        version: VERSION_DISPLAY_SELECT,
         boardGame: {
           include: {
             baseGameCollections: {
@@ -51,6 +58,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
               },
             },
             alternateNames: { select: { name: true } },
+            contributors: CONTRIBUTOR_LINKS_INCLUDE,
           },
         },
         holdings: {
@@ -118,6 +126,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       condition: copy.condition,
       ruleBookLanguages: copy.ruleBookLanguages,
       inventoryNumber: copy.inventoryNumber,
+      versionId: copy.versionId,
       bggId: boardGame.bggId,
       alternateNames: boardGame.alternateNames.map((a) => a.name),
       secondaryTitle: boardGame.secondaryTitle,
@@ -125,8 +134,8 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       explainerVideoUrl: boardGame.explainerVideoUrl,
       kind: boardGame.kind,
       languageDependence: boardGame.languageDependence,
-      publisher: boardGame.publisher,
-      author: boardGame.author,
+      ...contributorNamesByRole(boardGame.contributors),
+      ...versionDisplay(copy.version),
       yearPublished: boardGame.yearPublished,
       traits: boardGame.traits,
       notes: boardGame.notes,

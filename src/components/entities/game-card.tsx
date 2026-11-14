@@ -6,6 +6,8 @@ import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { EditionFlag } from "@/components/entities/edition-flag";
+import { GameContributorSummary } from "@/components/entities/game-contributor-summary";
 import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
 import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
@@ -64,16 +66,16 @@ export function GameCard({
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {game.title}
+          <EditionFlag languages={game.editionLanguages} className="ml-1.5" />
           <CopyCountSuffix copyCount={game.copyCount} />
         </h3>
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
-        {game.publisher.length > 0 && (
-          <p className="text-muted-foreground text-sm">
-            {game.publisher.join(", ")}
-          </p>
-        )}
+        <GameContributorSummary
+          publisher={game.publisher}
+          illustrator={game.illustrator}
+        />
         {expansionCount > 0 && (
           <p className="text-muted-foreground flex items-center gap-1 text-sm">
             <Layers className="size-4" />

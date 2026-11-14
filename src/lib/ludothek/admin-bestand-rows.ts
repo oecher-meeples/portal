@@ -1,3 +1,9 @@
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import type {
   BoardGameKind,
   BoardGameTrait,
@@ -78,13 +84,16 @@ export type AdminBoardGameRow = {
   condition: string | null;
   /** Freie Inventarnummer des Exemplars (#270). */
   inventoryNumber: string | null;
+  versionId: string | null;
   kind: BoardGameKind;
   explainerVideoUrl: string | null;
   languageDependence: LanguageDependence | null;
   ruleBookLanguages: RuleBookLanguage[];
   publisher: string[];
   author: string[];
+  illustrator: string[];
   yearPublished: number | null;
+  editionLanguages: string[];
   /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
    * selbst (#187). */
   alternateNames: string[];
@@ -112,7 +121,13 @@ export async function buildAdminBoardGameRows({
       where: gameCopyAdminWhere({ showDeinventarised, filter }),
       orderBy: { boardGame: { title: "asc" } },
       include: {
-        boardGame: { include: { alternateNames: { select: { name: true } } } },
+        version: VERSION_DISPLAY_SELECT,
+        boardGame: {
+          include: {
+            alternateNames: { select: { name: true } },
+            contributors: CONTRIBUTOR_LINKS_INCLUDE,
+          },
+        },
         holdings: {
           where: { endedAt: null },
           include: {
@@ -259,11 +274,12 @@ export async function buildAdminBoardGameRows({
         categories: boardGame.categories,
         condition: copy.condition,
         inventoryNumber: copy.inventoryNumber,
+        versionId: copy.versionId,
         kind: boardGame.kind,
         explainerVideoUrl: boardGame.explainerVideoUrl,
         languageDependence: boardGame.languageDependence,
-        publisher: boardGame.publisher,
-        author: boardGame.author,
+        ...contributorNamesByRole(boardGame.contributors),
+        ...versionDisplay(copy.version),
         yearPublished: boardGame.yearPublished,
         ruleBookLanguages: copy.ruleBookLanguages,
         alternateNames: boardGame.alternateNames.map((a) => a.name),

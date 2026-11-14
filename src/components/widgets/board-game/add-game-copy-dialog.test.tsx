@@ -15,6 +15,14 @@ vi.mock("@/lib/ludothek/game-copies", () => ({
   getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
 }));
 
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -57,6 +65,7 @@ describe("AddGameCopyDialog", () => {
       condition: "Leicht bespielt",
       ruleBookLanguages: ["DE", "EN"],
       inventoryNumber: "1",
+      edition: null,
     });
   });
 
@@ -74,6 +83,35 @@ describe("AddGameCopyDialog", () => {
       condition: undefined,
       ruleBookLanguages: [],
       inventoryNumber: "1",
+      edition: null,
     });
+  });
+
+  it("sends a new edition with its language when 'Neue Edition' is chosen", async () => {
+    const user = userEvent.setup();
+    createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });
+    render(
+      <AddGameCopyDialog boardGameId="game-1" boardGameTitle="Arche Nova" />,
+    );
+    await openDialog(user);
+
+    await user.selectOptions(
+      screen.getByLabelText("Version"),
+      "Neue Version manuell eingeben …",
+    );
+    await user.type(screen.getByLabelText("Sprache(n) der Version"), "English");
+    await user.click(screen.getByRole("button", { name: "Anlegen" }));
+
+    expect(createGameCopyMock).toHaveBeenCalledWith(
+      "game-1",
+      expect.objectContaining({
+        edition: {
+          version: expect.objectContaining({
+            languages: ["English"],
+            publishers: [],
+          }),
+        },
+      }),
+    );
   });
 });

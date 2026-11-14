@@ -26,7 +26,12 @@ vi.mock(
   () => ({
     offerPrivateGameForEventAction: vi.fn(),
     withdrawPrivateGameOfferAction: vi.fn(),
+    setPrivateCollectionVisibleAction: (visible: boolean) =>
+      setVisibleMock(visible),
   }),
+);
+const setVisibleMock = vi.fn<(visible: boolean) => Promise<{ success: true }>>(
+  async () => ({ success: true }),
 );
 
 function entry(
@@ -43,11 +48,45 @@ function entry(
       title: "Ark Nova",
       imageUrl: null,
     },
+    version: null,
     ...overrides,
   };
 }
 
 describe("PrivateCollectionCard (#308)", () => {
+  it("shows the version chosen on BGG with a flag for a non-German one", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[
+          entry({
+            version: {
+              name: "English first edition",
+              yearPublished: 2017,
+              languages: ["English"],
+              publishers: ["Serious Poulp"],
+            },
+          }),
+        ]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Aus BGG importiert/ }),
+    );
+
+    expect(
+      screen.getByText("Version: Serious Poulp · English (2017)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Edition: English" }),
+    ).toBeInTheDocument();
+  });
+
   it("links each title to its Ludothek detail page, with a link icon", async () => {
     const user = userEvent.setup();
     render(
@@ -67,6 +106,34 @@ describe("PrivateCollectionCard (#308)", () => {
     const link = screen.getByRole("link", { name: /Ark Nova/ });
     expect(link).toHaveAttribute("href", "/ludothek/ark-nova");
     expect(link.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("toggles the visibility for other meeples right on the card, without opening the dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={false}
+      />,
+    );
+
+    const toggle = screen.getByRole("switch", {
+      name: "Private BGG-Collection anderen Meeple anzeigen",
+    });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText(/nicht auffindbar/)).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(setVisibleMock).toHaveBeenCalledWith(true);
+    expect(toggle).toBeChecked();
+    expect(screen.queryByText(/nicht auffindbar/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /Meine privaten Spiele \(/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the dialog when clicking anywhere on the card (#Live-Review F9)", async () => {

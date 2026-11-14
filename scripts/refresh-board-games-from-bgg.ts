@@ -32,7 +32,8 @@ import {
 } from "../src/lib/bgg/client";
 import { translateToGerman } from "../src/lib/bgg/translate";
 import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
-import { resolvePublisherFromVersions } from "../src/lib/ludothek/board-game-versions";
+import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
+import { replaceBggContributors } from "../src/lib/ludothek/taxonomy/contributors";
 import {
   BGG_SCRIPT_THROTTLE_MS as THROTTLE_MS,
   withRateLimitRetry,
@@ -126,7 +127,7 @@ async function refreshOne(row: Row): Promise<Outcome> {
   }
 
   const data = await translateGameData(raw);
-  const publisher = resolvePublisherFromVersions(data.versions);
+  const mapped = bggDataToTitleInput(resolved.bggId, data);
 
   await prisma.$transaction(async (tx) => {
     await tx.boardGame.update({
@@ -145,12 +146,12 @@ async function refreshOne(row: Row): Promise<Outcome> {
         mechanics: data.mechanics,
         explainerVideoUrl: data.explainerVideoUrl,
         languageDependence: data.languageDependence,
-        publisher: publisher.value ?? [],
-        author: data.author,
         yearPublished: data.yearPublished,
         traits: data.traits,
       },
     });
+
+    await replaceBggContributors(tx, row.id, mapped.contributors);
 
     // Alternativnamen komplett aus BGG neu aufbauen — die Demodaten hatten
     // hier keine belastbare Auswahl.

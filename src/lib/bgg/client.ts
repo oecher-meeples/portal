@@ -1,5 +1,10 @@
 import { XMLParser } from "fast-xml-parser";
 import {
+  selectEnglishExplainerVideos,
+  selectGermanExplainerVideos,
+} from "./explainer-videos";
+import { parseNumber, toArray } from "./xml-helpers";
+import {
   BoardGameKind,
   type BoardGameTrait,
   type LanguageDependence,
@@ -32,10 +37,22 @@ export class BggApiError extends Error {
  * Product Code können je Edition abweichen (z. B. deutsche vs. englische
  * Auflage bei unterschiedlichem Verlag), das Erstveröffentlichungsjahr wird
  * unabhängig davon als ältestes über alle Versionen bestimmt. */
+/** Ein BGG-Link mit stabiler `id` (Verlag, Autor, Illustrator) — Grundlage für
+ * das Mitwirkenden-Register (Epic #490). */
+export interface BggLink {
+  bggId: number;
+  name: string;
+}
+
 export interface BggVersion {
+  /** BGGs ID dieses Versions-Items (`boardgameversion`). */
+  bggVersionId: number | null;
+  /** Versionsname, z. B. "German first edition". */
+  name: string | null;
   yearPublished: number | null;
   /** Alle `boardgamepublisher`-Links dieser Version — mehrere bei Co-Publishern. */
   publisher: string[];
+  publisherLinks: BggLink[];
   productCode: string | null;
   /** Rohe `link type="language"`-Werte dieser Version, z. B. `["German"]` —
    * Grundlage für die Erkennung der deutschen Edition (#205). */
@@ -66,6 +83,8 @@ export interface BggGameData {
   /** Direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item — anders als
    * `publisher` nicht versionsabhängig (#205). */
   author: string[];
+  designers: BggLink[];
+  illustrators: BggLink[];
   /** Ältestes Jahr über alle `versions` (falls vorhanden), sonst das
    * Haupt-Items eigenes `yearpublished` (#205). */
   yearPublished: number | null;
@@ -126,7 +145,7 @@ interface BggLinkEntry {
   value: string;
 }
 
-interface BggVideoEntry {
+export interface BggVideoEntry {
   title?: string;
   category?: string;
   link?: string;
@@ -148,13 +167,14 @@ interface BggPoll {
 }
 
 interface BggVersionItem {
+  id?: string;
   name?: BggNameEntry | BggNameEntry[];
   yearpublished?: { value?: string };
   productcode?: { value?: string };
   link?: BggLinkEntry | BggLinkEntry[];
 }
 
-interface BggItem {
+export interface BggItem {
   type?: string;
   name?: BggNameEntry | BggNameEntry[];
   description?: string;
@@ -217,77 +237,6 @@ const parser = new XMLParser({
       name === "result"),
 });
 
-function toArray<T>(value: T | T[] | undefined): T[] {
-  if (value === undefined) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function parseNumber(value: string | undefined): number | null {
-  if (value === undefined) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "youtu.be"]);
-
-function isYoutubeLink(link: string): boolean {
-  try {
-    const url = new URL(link);
-    return url.protocol === "https:" && YOUTUBE_HOSTS.has(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Alle instruktiven YouTube-Videos im gelieferten Videofenster, deren Sprache
- * `predicate` erfüllt (#185). BEKANNTE GRENZE: der `thing`-Endpunkt liefert im
- * `videos`-Block nur ein festes Fenster der ~15 aktuellsten Videos, auch wenn
- * `<videos total>` mehr meldet — ein existierendes Video außerhalb dieses
- * Fensters wird nicht gefunden. Das ist eine BGG-API-Einschränkung, keine
- * Regression: die Website selbst filtert Sprache nur clientseitig/serverseitig
- * auf einer eigenen, nicht über die XML-API erreichbaren Route.
- */
-function selectExplainerVideosByLanguage(
-  videos: BggItem["videos"],
-  predicate: (language: string | undefined) => boolean,
-): BggExplainerVideo[] {
-  return toArray(videos?.video)
-    .filter(
-      (video): video is BggVideoEntry & { link: string } =>
-        video.category === "instructional" &&
-        predicate(video.language) &&
-        video.link !== undefined &&
-        isYoutubeLink(video.link),
-    )
-    .map((video) => ({
-      title: video.title ?? "",
-      url: video.link,
-      channel: video.username ?? "",
-    }));
-}
-
-function selectGermanExplainerVideos(
-  videos: BggItem["videos"],
-): BggExplainerVideo[] {
-  return selectExplainerVideosByLanguage(
-    videos,
-    (language) => language === "German",
-  );
-}
-
-/** Videos ohne Sprachangabe gelten als Englisch — BGG setzt das Attribut nur
- * für nicht-englische Videos, viele ältere/englische Einträge tragen daher
- * gar kein `language`-Attribut (#185-Folgeanfrage). */
-function selectEnglishExplainerVideos(
-  videos: BggItem["videos"],
-): BggExplainerVideo[] {
-  return selectExplainerVideosByLanguage(
-    videos,
-    (language) => language === undefined || language === "English",
-  );
-}
-
 function parseKind(type: string | undefined): BoardGameKind {
   return type === "boardgameexpansion"
     ? BoardGameKind.BOARDGAME_EXPANSION
@@ -318,14 +267,18 @@ function parseLanguageDependence(
   return LANGUAGE_DEPENDENCE_BY_LEVEL[level - 1] ?? null;
 }
 
-/** Alle `boardgamedesigner`-Links des Haupt-Items (#205) — nicht
- * versionsabhängig, anders als `publisher`. */
-function parseAuthor(
+/** Alle Links eines Typs mit BGG-`id` — Links ohne gültige `id` werden
+ * verworfen, weil sie sich nicht eindeutig zuordnen lassen. */
+function parseBggLinks(
   links: BggLinkEntry | BggLinkEntry[] | undefined,
-): string[] {
+  type: string,
+): BggLink[] {
   return toArray(links)
-    .filter((link) => link.type === "boardgamedesigner")
-    .map((link) => link.value);
+    .filter((link) => link.type === type)
+    .flatMap((link) => {
+      const bggId = parseNumber(link.id);
+      return bggId === null ? [] : [{ bggId, name: link.value }];
+    });
 }
 
 /** Jede BGG-Edition aus `versions=1` (#205) — Verlag/Product-Code können je
@@ -335,10 +288,13 @@ function parseVersions(versions: BggItem["versions"]): BggVersion[] {
   return toArray(versions?.item).map((version) => {
     const links = toArray(version.link);
     return {
+      bggVersionId: parseNumber(version.id),
+      name: toArray(version.name)[0]?.value ?? null,
       yearPublished: parseNumber(version.yearpublished?.value),
       publisher: links
         .filter((link) => link.type === "boardgamepublisher")
         .map((link) => link.value),
+      publisherLinks: parseBggLinks(links, "boardgamepublisher"),
       productCode: version.productcode?.value?.trim() || null,
       languages: links
         .filter((link) => link.type === "language")
@@ -401,7 +357,9 @@ function mapItem(item: BggItem): BggGameData {
     traits: parseTraits(item.link),
     kind: parseKind(item.type),
     languageDependence: parseLanguageDependence(item.poll),
-    author: parseAuthor(item.link),
+    author: parseBggLinks(item.link, "boardgamedesigner").map((d) => d.name),
+    designers: parseBggLinks(item.link, "boardgamedesigner"),
+    illustrators: parseBggLinks(item.link, "boardgameartist"),
     yearPublished: resolveYearPublished(item, versions),
     versions,
     alternateNames,
@@ -540,4 +498,11 @@ export async function searchBggGamesExact(
   return searchBggGamesInternal(query, { exact: true });
 }
 
-export { fetchBggXml, parser, toArray, parseNumber, SEARCH_REVALIDATE_SECONDS };
+export {
+  fetchBggXml,
+  parser,
+  parseVersions,
+  toArray,
+  parseNumber,
+  SEARCH_REVALIDATE_SECONDS,
+};

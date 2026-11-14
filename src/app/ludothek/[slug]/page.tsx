@@ -186,6 +186,8 @@ export default async function GameDetailPage({
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
     inventoryNumber: copy.inventoryNumber,
+    versionId: copy.versionId ?? null,
+    publisher: copy.publisher,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
@@ -249,7 +251,9 @@ export default async function GameDetailPage({
         languageDependence: game.languageDependence,
         publisher: game.publisher,
         author: game.author,
+        illustrator: game.illustrator,
         yearPublished: game.yearPublished,
+        editionLanguages: game.editionLanguages,
         traits: game.traits,
         notes: game.notes,
       }

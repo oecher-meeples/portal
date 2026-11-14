@@ -349,6 +349,8 @@ describe("fetchExplainerVideoOptions", () => {
       title: "Ark Nova",
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [],
+      illustrators: [],
     });
     searchYoutubeVideosMock.mockResolvedValue([]);
 

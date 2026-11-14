@@ -9,6 +9,15 @@ import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { YoutubeIcon } from "@/components/ui/youtube-icon";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import {
+  GameContributorList,
+  GameIllustratorsCard,
+} from "@/components/entities/game-contributor-list";
+import { EditionFlag } from "@/components/entities/edition-flag";
+import {
+  groupGameContributorsByName,
+  splitContributorsForDetail,
+} from "@/lib/ludothek/taxonomy/game-contributors-display";
 import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
 import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -103,6 +112,9 @@ export function GameDetailView({
    * alle (auch Gäste) geladen, analog `game.traits` selbst. */
   traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
+  const { inline: inlineContributors, illustrators } =
+    splitContributorsForDetail(groupGameContributorsByName(game));
+
   return (
     // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
     // Displays stapeln sie in Quelltext-Reihenfolge — Titelblock, Bild,
@@ -117,6 +129,10 @@ export function GameDetailView({
             <div>
               <h1 className="font-serif text-3xl font-bold tracking-tight">
                 {game.title}
+                <EditionFlag
+                  languages={game.editionLanguages}
+                  className="ml-2 text-base"
+                />
               </h1>
               {game.secondaryTitle && (
                 <p className="text-muted-foreground">{game.secondaryTitle}</p>
@@ -157,6 +173,7 @@ export function GameDetailView({
           {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
           {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
         </p>
+        <GameContributorList contributors={inlineContributors} />
       </div>
 
       {/* #467: max-lg:w-fit + mx-auto lassen den Container unterhalb `lg`
@@ -387,6 +404,8 @@ export function GameDetailView({
             canManageGames={Boolean(canManageGames)}
           />
         )}
+
+        <GameIllustratorsCard illustrators={illustrators} />
       </div>
     </PageContainer>
   );

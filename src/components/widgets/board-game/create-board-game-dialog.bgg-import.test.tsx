@@ -1,3 +1,10 @@
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
+}));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, waitFor, within } from "@testing-library/react";
@@ -98,6 +105,8 @@ const BASE_PREVIEW_DATA = {
     channel: string;
   }[],
   author: [] as string[],
+  designers: [] as { bggId: number; name: string }[],
+  illustrators: [] as { bggId: number; name: string }[],
   yearPublished: null as number | null,
   versions: [] as unknown[],
 };

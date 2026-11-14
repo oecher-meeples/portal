@@ -41,6 +41,7 @@ const BASE_BOARD_GAME = {
   baseGameCollections: [],
   expansionCollections: [],
   alternateNames: [],
+  contributors: [],
 };
 
 function gameCopyWithHolding(holding: Record<string, unknown>) {

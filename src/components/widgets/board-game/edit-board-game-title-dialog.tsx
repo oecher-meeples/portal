@@ -57,6 +57,7 @@ export function EditBoardGameTitleDialog({
   );
   const [isComparing, setIsComparing] = useState(false);
   const [compareError, setCompareError] = useState<string | null>(null);
+  const [contributorsValid, setContributorsValid] = useState(true);
 
   function patchForm(patch: Partial<BoardGameFormValues>) {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -137,7 +138,7 @@ export function EditBoardGameTitleDialog({
       description="Stammdaten korrigieren, u. a. das automatisch übernommene Erklärvideo."
       contentClassName="sm:max-w-4xl"
       submitLabel="Speichern"
-      canSubmit={form.title.trim().length > 0}
+      canSubmit={form.title.trim().length > 0 && contributorsValid}
       action={handleUpdate}
       onReset={() => {
         setForm(toFormValues(game));
@@ -182,6 +183,7 @@ export function EditBoardGameTitleDialog({
             mechanicsOptions={mechanicsOptions}
             compareStatus={compareStatus}
             boardGameId={game.boardGameId}
+            onContributorsValidityChange={setContributorsValid}
           />
         )}
       </div>

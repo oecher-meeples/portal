@@ -11,10 +11,12 @@ import { createGameCopy } from "@/lib/ludothek/game-copies";
 import {
   boardGameFormToInput,
   boardGameFormToTitleInput,
+  editionSelectionFromForm,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
 import type { LocationPlacement } from "@/components/widgets/board-game/create-board-game-location-field";
 import type { BggGameData } from "@/lib/bgg/client";
+import { bggContributorInputs } from "@/lib/ludothek/taxonomy/bgg-contributors";
 
 /**
  * Owns the Anlegen-Dialog's Speichern-Flow — pulled out of
@@ -73,6 +75,8 @@ export function useCreateBoardGameSubmit({
 
         const result = await createGameCopy(existingBoardGame.id, {
           condition: form.condition || undefined,
+          ruleBookLanguages: form.ruleBookLanguages,
+          edition: editionSelectionFromForm(form),
           ...(placement ? { placement } : {}),
         });
         if (result.error) {
@@ -87,6 +91,7 @@ export function useCreateBoardGameSubmit({
           ...(placement ? { placement } : {}),
           ...eanPatch,
           alternateNames: preview?.alternateNames,
+          contributors: bggContributorInputs(preview),
         };
         const result = await createBoardGame(input);
         if (result.error) {

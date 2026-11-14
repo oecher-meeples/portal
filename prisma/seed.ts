@@ -1,6 +1,5 @@
 import {
   BoardGameKind,
-  HoldingOrigin,
   InstagramStatus,
   StorageUnitKind,
 } from "@prisma/client";
@@ -10,6 +9,12 @@ import {
   findOrCreateBoardGameTitle,
   uniqueBoardGameSlug,
 } from "../src/lib/ludothek/board-game-title-lookup";
+import { linkContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import {
+  backfillDemoEdition,
+  seedDemoEdition,
+  createDemoGameCopy,
+} from "./seed-data/demo-editions";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -24,6 +29,7 @@ import {
 } from "./seed-data/demo-accounts";
 import { randomDemoContactFields } from "./seed-data/demo-contacts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
+import { seedHelperRoles } from "./seed-helper-roles";
 import { seedDemoFamily } from "./seed-family";
 import {
   seedDemoResignedMember,
@@ -100,37 +106,6 @@ async function ensureAnonymerMeeple() {
  * (401/403 auf jede Anfrage an boardgamegeek.com). Titel, Spielerzahlen und Coverbilder
  * sind reale, per Wikipedia verifizierte Daten — kein BGG-Import, aber echte Spiele.
  */
-async function createDemoGameCopy(
-  boardGameId: string,
-  title: string,
-  unitId: string,
-  adminMeepleId: string,
-  usedSlugs: Set<string>,
-) {
-  const base = slugify(title);
-  let slug = base;
-  let suffix = 2;
-  while (usedSlugs.has(slug)) {
-    slug = `${base}-${suffix}`;
-    suffix += 1;
-  }
-  usedSlugs.add(slug);
-
-  const copy = await prisma.gameCopy.create({ data: { slug, boardGameId } });
-
-  await prisma.gameHolding.create({
-    data: {
-      gameCopyId: copy.id,
-      unitId,
-      origin: HoldingOrigin.INITIAL,
-      confirmedAt: new Date(),
-      recordedByMeepleId: adminMeepleId,
-    },
-  });
-
-  return copy;
-}
-
 async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
   const unsortiert = await prisma.storageUnit.upsert({
     where: { code: UNSORTIERT_CODE },
@@ -158,8 +133,14 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
 
   let createdTitleCount = 0;
   let createdCopyCount = 0;
+  let backfilledCopyCount = 0;
 
   for (const game of DEMO_GAMES) {
+    const existingId = existingIdByTitle.get(game.title);
+    if (existingId) {
+      backfilledCopyCount += await backfillDemoEdition(existingId, game);
+      continue;
+    }
     // `gameIdByTitle` (unlike `existingIdByTitle`) also picks up titles
     // created earlier in *this* loop — guards against an accidental
     // duplicate title within `DEMO_GAMES` itself, not just against titles
@@ -184,8 +165,6 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
-        publisher: game.publisher,
-        author: game.author,
         yearPublished: game.yearPublished,
         traits: game.traits,
         kind: expansionTitles.has(game.title)
@@ -193,6 +172,13 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
           : BoardGameKind.BOARDGAME,
       },
     });
+    await linkContributors(
+      prisma,
+      created.id,
+      game.contributors.filter((c) => c.role !== "PUBLISHER"),
+    );
+    // Verlage hängen an der Edition, nicht am Titel.
+    const demoEdition = await seedDemoEdition(created.id, game);
     gameIdByTitle.set(game.title, created.id);
     createdTitleCount += 1;
 
@@ -204,11 +190,17 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         unsortiert.id,
         adminMeepleId,
         usedSlugs,
+        demoEdition.id,
       );
       createdCopyCount += 1;
     }
   }
 
+  if (backfilledCopyCount > 0) {
+    console.log(
+      `${backfilledCopyCount} vorhandene Demo-Exemplare der deutschen Version zugeordnet.`,
+    );
+  }
   console.log(
     `${createdTitleCount} Demo-Titel angelegt (${createdCopyCount} Exemplare), ${DEMO_GAMES.length - createdTitleCount} Titel bereits vorhanden übersprungen.`,
   );
@@ -403,6 +395,7 @@ async function seedBase() {
   const adminUserId = await upsertAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
+  await seedHelperRoles();
   await seedBoardGameTraitTexts();
   await assignRole(adminUserId, "sysadmin");
   await seedDemoDownloads();

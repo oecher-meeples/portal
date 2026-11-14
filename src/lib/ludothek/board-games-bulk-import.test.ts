@@ -73,6 +73,8 @@ const VALID_BGG_DATA = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
   author: [],
   yearPublished: null,
   versions: [],

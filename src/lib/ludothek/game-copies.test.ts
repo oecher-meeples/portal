@@ -148,6 +148,9 @@ describe("updateGameCopy", () => {
   it("updates the condition when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
     prismaMock.gameCopy.update.mockResolvedValue({
       boardGame: { slug: "catan" },
     } as never);
@@ -160,6 +163,72 @@ describe("updateGameCopy", () => {
       data: { condition: "Gebraucht" },
       include: { boardGame: { select: { slug: true } } },
     });
+  });
+
+  it("assigns an existing edition of the same title to the copy", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
+    prismaMock.boardGameVersion.findFirst.mockResolvedValue({
+      id: "version-1",
+    } as never);
+    prismaMock.gameCopy.update.mockResolvedValue({
+      boardGame: { slug: "catan" },
+    } as never);
+
+    const result = await updateGameCopy("copy-1", {
+      edition: { versionId: "version-1" },
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.boardGameVersion.findFirst).toHaveBeenCalledWith({
+      where: { id: "version-1", boardGameId: "game-1" },
+      select: { id: true },
+    });
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ versionId: "version-1" }),
+      }),
+    );
+  });
+
+  it("refuses an edition that belongs to another title", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
+    prismaMock.boardGameVersion.findFirst.mockResolvedValue(null);
+
+    const result = await updateGameCopy("copy-1", {
+      edition: { versionId: "foreign" },
+    });
+
+    expect(result).toEqual({
+      error: "Edition gehört nicht zu diesem Titel.",
+    });
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
+  });
+
+  it("removes the edition when null is passed", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
+    prismaMock.gameCopy.update.mockResolvedValue({
+      boardGame: { slug: "catan" },
+    } as never);
+
+    await updateGameCopy("copy-1", { edition: null });
+
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ versionId: null }),
+      }),
+    );
   });
 
   it("rejects an inventoryNumber already used by another copy (#270)", async () => {
@@ -178,6 +247,9 @@ describe("updateGameCopy", () => {
   it("updates the inventoryNumber when it is free", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
     prismaMock.gameCopy.update.mockResolvedValue({
       boardGame: { slug: "catan" },
     } as never);

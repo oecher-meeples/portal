@@ -51,6 +51,9 @@ export type LudothekGame = {
   condition: string | null;
   /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
   inventoryNumber: string | null;
+  /** Edition (BGG-Version) dieses Exemplars - nur zum Vorbelegen des
+   * Exemplar-Editors fuer `games:manage`, nicht zur Anzeige. */
+  versionId?: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
    * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
@@ -70,8 +73,12 @@ export type LudothekGame = {
   publisher: string[];
   /** Autor(en)/Designer (#205). */
   author: string[];
+  /** Illustrator(en) aus den Mitwirkenden (Epic #490). */
+  illustrator: string[];
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: number | null;
+  /** BGG-Sprachnamen der Vereinsedition — Grundlage der Flagge an der Karte. */
+  editionLanguages: string[];
   /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — für alle
    * sichtbar (auch Gäste), analog `mechanics`/`categories` nicht gestrippt
    * in `toPublicGame()`. */
@@ -134,6 +141,7 @@ export type PublicLudothekGame = Omit<
   | "ean"
   | "condition"
   | "inventoryNumber"
+  | "versionId"
   | "bggId"
 >;
 
@@ -153,6 +161,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     ean: _ean,
     condition: _condition,
     inventoryNumber: _inventoryNumber,
+    versionId: _versionId,
     bggId: _bggId,
     ...rest
   } = game;
@@ -168,6 +177,10 @@ export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
+  /** Teilstring-Filter über Verlag/Autor/Illustrator (Epic #490). */
+  publisher?: string;
+  author?: string;
+  illustrator?: string;
   /** Exakte Spieleranzahl — matcht jeden Titel, dessen min/maxPlayers diese
    * Zahl einschließt (Ein-Knoten-Slider statt fester Buckets, #214-Folge). */
   players?: number;
@@ -253,6 +266,17 @@ export function matchesDurationRange(
   return true;
 }
 
+/** Teilstring-Filter über Verlag/Autor/Illustrator — Groß-/Kleinschreibung
+ * egal, `undefined`/leer matcht alles (Epic #490). */
+export function matchesContributorFilter(
+  names: string[],
+  term: string | undefined,
+): boolean {
+  if (!term) return true;
+  const needle = term.trim().toLowerCase();
+  return names.some((name) => name.toLowerCase().includes(needle));
+}
+
 const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
   "grid",
   "liste",
@@ -278,6 +302,9 @@ export function parseLudothekSearchParams(
 
   const filters: LudothekFilters = {
     search: firstString(searchParams.q) || undefined,
+    publisher: firstString(searchParams.verlag) || undefined,
+    author: firstString(searchParams.autor) || undefined,
+    illustrator: firstString(searchParams.illustrator) || undefined,
     view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
       ? (view as LudothekViewMode)
       : "grid",
@@ -334,6 +361,7 @@ export function matchesLudothekSearch(
     | "alternateNames"
     | "publisher"
     | "author"
+    | "illustrator"
   >,
   search: string,
 ): boolean {
@@ -349,6 +377,8 @@ export function matchesLudothekSearch(
   if (game.publisher.some((name) => name.toLowerCase().includes(term)))
     return true;
   if (game.author.some((name) => name.toLowerCase().includes(term)))
+    return true;
+  if (game.illustrator.some((name) => name.toLowerCase().includes(term)))
     return true;
 
   return false;
@@ -373,6 +403,15 @@ export function filterLudothekGames(
 ): LudothekGame[] {
   return games.filter((game) => {
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.publisher, filters.publisher)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.author, filters.author)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.illustrator, filters.illustrator)) {
       return false;
     }
     if (!matchesPlayerCount(game, filters.players)) {

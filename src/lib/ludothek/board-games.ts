@@ -12,6 +12,12 @@ import {
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
+import { replaceAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
+import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import {
   type BoardGameTitleInput,
   findOrCreateBoardGameTitle,
@@ -144,9 +150,13 @@ export async function createBoardGame(input: CreateBoardGameInput) {
         });
       }
 
+      const versionId = input.version
+        ? (await upsertBoardGameVersion(tx, title.id, input.version)).id
+        : null;
       const copy = await createGameCopyTx(tx, {
         boardGameId: title.id,
         boardGameTitle: title.title,
+        versionId,
         condition: input.condition,
         ruleBookLanguages: input.ruleBookLanguages,
         actorId: actor.id,
@@ -187,9 +197,16 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
 
   const hint = await duplicateEanHint(input.ean, id);
 
-  const game = await prisma.boardGame.update({
-    where: { id },
-    data: { title: input.title, ...toBoardGameTitleData(input) },
+  const game = await prisma.$transaction(async (tx) => {
+    const updated = await tx.boardGame.update({
+      where: { id },
+      data: { title: input.title, ...toBoardGameTitleData(input) },
+    });
+    await replaceAuthorIllustratorLinksByName(tx, id, {
+      author: input.author ?? [],
+      illustrator: input.illustrator ?? [],
+    });
+    return updated;
   });
 
   revalidatePath("/ludothek");
@@ -208,7 +225,7 @@ export async function getBoardGameTitleForEdit(id: string) {
   const user = await requireGamesManagePermission();
   if (!user) return null;
 
-  return prisma.boardGame.findUnique({
+  const record = await prisma.boardGame.findUnique({
     where: { id },
     select: {
       title: true,
@@ -227,13 +244,16 @@ export async function getBoardGameTitleForEdit(id: string) {
       mechanics: true,
       categories: true,
       explainerVideoUrl: true,
-      publisher: true,
-      author: true,
+      contributors: CONTRIBUTOR_LINKS_INCLUDE,
       yearPublished: true,
       traits: true,
       notes: true,
     },
   });
+  if (!record) return null;
+
+  const { contributors, ...rest } = record;
+  return { ...rest, ...contributorNamesByRole(contributors) };
 }
 
 export type DuplicateBoardGameMatch = { id: string; title: string };
