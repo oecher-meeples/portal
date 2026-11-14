@@ -211,13 +211,12 @@ model AuthSession {
   @@map("auth_sessions")
 }
 
-/// `issuer` + `accountId` identifizieren ein Konto (better-auth ≥ 1.7). Für
-/// Passwort-Logins gilt `providerId = "credential"`, `issuer =
-/// "local:credential"`, `accountId = userId` — better-auths Sign-in findet das
-/// Passwort nur unter genau dieser Kombination.
+/// `providerId` + `accountId` identifizieren ein Konto (better-auth ≥ 1.7.3 —
+/// die `issuer`-Spalte aus 1.7.0–1.7.2 ist wieder entfallen). Für
+/// Passwort-Logins gilt `providerId = "credential"`, `accountId = userId` —
+/// better-auths Sign-in findet das Passwort nur unter genau dieser Kombination.
 model AuthAccount {
   id                    String    @id @default(uuid()) @db.Uuid
-  issuer                String
   accountId             String
   providerId            String
   userId                String    @db.Uuid
@@ -232,7 +231,7 @@ model AuthAccount {
   createdAt             DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
 
-  @@unique([issuer, accountId])
+  @@unique([providerId, accountId])
   @@index([userId])
   @@map("auth_accounts")
 }
