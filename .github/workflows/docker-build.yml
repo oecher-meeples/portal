@@ -1,6 +1,8 @@
 name: Docker build
 
 on:
+  push:
+    branches: [feature/autodeploy-workflows, develop, release, main]
   workflow_dispatch:
 
 # Ein laufender Build pro Ref reicht — verhindert auch, dass ein älterer Lauf
