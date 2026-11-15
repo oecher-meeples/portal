@@ -28,6 +28,6 @@ vitest.setup.ts
 
 # Self-Hosting-Artefakte, die nicht ins App-Image gehören
 docker-compose*.yml
-docker/cron
+crontab
 Dockerfile
 .dockerignore
