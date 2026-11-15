@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.dist
 
 # vercel
 .vercel
@@ -53,3 +54,4 @@ next-env.d.ts
 .claude/TODO.md
 .claude/epics.md
 .claude/progress.md
+.idea/
