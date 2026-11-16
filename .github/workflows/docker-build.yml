@@ -67,7 +67,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref_name == 'release' }}
-            type=raw,value=preview,enable=${{ github.ref_name == 'preview' }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || github.ref_name == 'feature/autodeploy-workflows' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
@@ -153,7 +153,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref_name == 'release' }}
-            type=raw,value=preview,enable=${{ github.ref_name == 'preview' }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || github.ref_name == 'feature/autodeploy-workflows' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
