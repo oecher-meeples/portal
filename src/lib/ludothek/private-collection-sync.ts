@@ -21,6 +21,7 @@ import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
 import { toBoardGameTitleData } from "@/lib/ludothek/board-game-title-lookup";
 import { replaceBggContributors } from "@/lib/ludothek/taxonomy/contributors";
+import { replaceBggTags } from "@/lib/ludothek/taxonomy/tags";
 import { translateBggGameData } from "@/lib/ludothek/board-games-bgg-import";
 import {
   canForceImport,
@@ -74,6 +75,7 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
           data: { title: input.title, ...toBoardGameTitleData(input) },
         });
         await replaceBggContributors(tx, existing.id, input.contributors ?? []);
+        await replaceBggTags(tx, existing.id, input.tags);
         return updated;
       });
     }

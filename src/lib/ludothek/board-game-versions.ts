@@ -1,6 +1,7 @@
 import type { BggGameData, BggVersion } from "@/lib/bgg/client";
 import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 import { bggContributorInputs } from "@/lib/ludothek/taxonomy/bgg-contributors";
+import { bggTagInputs } from "@/lib/ludothek/taxonomy/tags";
 
 const GERMAN_LANGUAGE_PATTERN = /german|deutsch/i;
 
@@ -127,6 +128,7 @@ export function bggDataToTitleInput(bggId: number, data: BggGameData) {
     version: resolveVersionInput(data.versions) ?? undefined,
     author: data.author,
     contributors: bggContributorInputs(data),
+    tags: bggTagInputs(data),
     yearPublished: data.yearPublished ?? undefined,
     traits: data.traits,
   };

@@ -61,6 +61,8 @@ const VALID_BGG_DATA = {
   englishExplainerVideos: [],
   designers: [],
   illustrators: [],
+  mechanicLinks: [],
+  categoryLinks: [],
   author: [],
   yearPublished: null,
   versions: [],

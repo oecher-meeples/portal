@@ -13,6 +13,7 @@ import {
 } from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { replaceAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
+import { replaceTitleTagsByLabel } from "@/lib/ludothek/taxonomy/tags";
 import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import {
   CONTRIBUTOR_LINKS_INCLUDE,
@@ -205,6 +206,10 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
     await replaceAuthorIllustratorLinksByName(tx, id, {
       author: input.author ?? [],
       illustrator: input.illustrator ?? [],
+    });
+    await replaceTitleTagsByLabel(tx, id, {
+      mechanics: input.mechanics ?? [],
+      categories: input.categories ?? [],
     });
     return updated;
   });

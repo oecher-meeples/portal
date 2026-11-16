@@ -76,6 +76,10 @@ export interface BggGameData {
   /** BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
    * analog `mechanics` geparst (#404). */
   categories: string[];
+  /** Mechaniken/Kategorien mit BGG-`id` — Grundlage für das Tag-Register
+   * (Epic #490 Strang B). `mechanics`/`categories` bleiben bis zum Cutover. */
+  mechanicLinks: BggLink[];
+  categoryLinks: BggLink[];
   /** BGG-Family-Signale mit Verleih-Auswirkung (#487-Konzept), über eine
    * Family-ID-Whitelist aus `boardgamefamily`-Links erkannt. Nur ein
    * Vorschlag, der Admin kann ihn vor dem Speichern ändern. */
@@ -354,6 +358,8 @@ function mapItem(item: BggItem): BggGameData {
         : decodeHtmlEntities(item.description),
     mechanics,
     categories,
+    mechanicLinks: parseBggLinks(item.link, "boardgamemechanic"),
+    categoryLinks: parseBggLinks(item.link, "boardgamecategory"),
     traits: parseTraits(item.link),
     kind: parseKind(item.type),
     languageDependence: parseLanguageDependence(item.poll),

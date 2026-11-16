@@ -13,6 +13,11 @@ import {
   linkContributors,
   replaceAuthorIllustratorLinksByName,
 } from "@/lib/ludothek/taxonomy/contributors";
+import {
+  linkTags,
+  replaceTitleTagsByLabel,
+  type TagInput,
+} from "@/lib/ludothek/taxonomy/tags";
 import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
@@ -69,6 +74,9 @@ export type BoardGameTitleInput = {
   /** Mitwirkende mit BGG-ID (Epic #490) — werden zusätzlich zu den
    * Namenslisten `publisher`/`author`/`illustrator` als Relation gespeichert. */
   contributors?: ContributorInput[];
+  /** Mechaniken/Kategorien mit BGG-ID (Epic #490 Strang B) — zusätzlich zu
+   * den Namenslisten `mechanics`/`categories` als Relation gespeichert. */
+  tags?: TagInput[];
 };
 
 /** `author`/`illustrator`/`version` sind bewusst nicht Teil dieses
@@ -138,6 +146,7 @@ export async function findOrCreateBoardGameTitle(
     });
     if (existing) {
       await linkContributors(tx, existing.id, input.contributors ?? []);
+      await linkTags(tx, existing.id, input.tags ?? []);
       return existing;
     }
   }
@@ -152,6 +161,14 @@ export async function findOrCreateBoardGameTitle(
     await replaceAuthorIllustratorLinksByName(tx, created.id, {
       author: input.author ?? [],
       illustrator: input.illustrator ?? [],
+    });
+  }
+  if (input.tags?.length) {
+    await linkTags(tx, created.id, input.tags);
+  } else {
+    await replaceTitleTagsByLabel(tx, created.id, {
+      mechanics: input.mechanics ?? [],
+      categories: input.categories ?? [],
     });
   }
   return created;

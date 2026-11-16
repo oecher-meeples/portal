@@ -34,6 +34,7 @@ import { translateToGerman } from "../src/lib/bgg/translate";
 import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
 import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
 import { replaceBggContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import { replaceBggTags } from "../src/lib/ludothek/taxonomy/tags";
 import {
   BGG_SCRIPT_THROTTLE_MS as THROTTLE_MS,
   withRateLimitRetry,
@@ -152,6 +153,7 @@ async function refreshOne(row: Row): Promise<Outcome> {
     });
 
     await replaceBggContributors(tx, row.id, mapped.contributors);
+    await replaceBggTags(tx, row.id, mapped.tags);
 
     // Alternativnamen komplett aus BGG neu aufbauen — die Demodaten hatten
     // hier keine belastbare Auswahl.
