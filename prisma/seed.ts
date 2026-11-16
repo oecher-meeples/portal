@@ -10,6 +10,7 @@ import {
   uniqueBoardGameSlug,
 } from "../src/lib/ludothek/board-game-title-lookup";
 import { linkContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import { linkTags } from "../src/lib/ludothek/taxonomy/tags";
 import {
   backfillDemoEdition,
   seedDemoEdition,
@@ -37,6 +38,7 @@ import {
 } from "./seed-departed";
 import { seedDemoLoanHistory } from "./seed-loans";
 import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
+import { seedTagDisplayNames } from "./seed-tags";
 import { seedDemoLfgPosts } from "./seed-lfg";
 import { seedDemoMarketListings } from "./seed-marketplace";
 import {
@@ -177,6 +179,7 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
       created.id,
       game.contributors.filter((c) => c.role !== "PUBLISHER"),
     );
+    await linkTags(prisma, created.id, game.tags);
     // Verlage hängen an der Edition, nicht am Titel.
     const demoEdition = await seedDemoEdition(created.id, game);
     gameIdByTitle.set(game.title, created.id);
@@ -280,10 +283,10 @@ async function ensureDemoAccountWithMember(
 }
 
 async function seedDemoMeeples() {
-  const [lea, tobias] = await Promise.all([
-    ensureDemoAccountWithMember(DEMO_MEEPLE_1, "Meeple"),
-    ensureDemoAccountWithMember(DEMO_MEEPLE_2, "Meeple"),
-  ]);
+  // Nacheinander, nicht per Promise.all: beide ziehen sonst dieselbe
+  // `nextMemberNumber()` und verletzen auf einer frischen DB den Unique-Key.
+  const lea = await ensureDemoAccountWithMember(DEMO_MEEPLE_1, "Meeple");
+  const tobias = await ensureDemoAccountWithMember(DEMO_MEEPLE_2, "Meeple");
 
   await seedPrivateGameCollection(
     lea.meepleId,
@@ -387,7 +390,7 @@ async function seedDemoLegalDocuments() {
 /**
  * Grundbestand, den jede Instanz braucht — auch eine frische Self-Hosting-
  * Installation ohne Demo-Daten: Admin-Login (sysadmin), Rechte/Rollen,
- * Spieleigenschafts-Texte sowie Rechtliches/Downloads (früher hart codiert,
+ * Spieleigenschafts-Texte, Tag-Anzeigenamen sowie Rechtliches/Downloads (früher hart codiert,
  * im Admin-UI nur bearbeitbar, nicht neu anlegbar bzw. auf Dateien unter
  * `public/downloads/` zeigend).
  */
@@ -397,6 +400,7 @@ async function seedBase() {
   await seedRoles();
   await seedHelperRoles();
   await seedBoardGameTraitTexts();
+  await seedTagDisplayNames();
   await assignRole(adminUserId, "sysadmin");
   await seedDemoDownloads();
   await seedDemoLegalDocuments();

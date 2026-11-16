@@ -68,6 +68,7 @@ function withoutBggMatch(game: DemoGame): DemoGame {
     explainerVideoUrl: game.explainerVideoUrl ?? null,
     languageDependence: game.languageDependence ?? null,
     contributors: game.contributors ?? [],
+    tags: game.tags ?? [],
     yearPublished: game.yearPublished ?? null,
     traits: game.traits ?? [],
     version: game.version ?? null,
@@ -187,6 +188,7 @@ async function refreshOne(
         demoVersion && publishers.length === 0
           ? withVersionPublishers(contributors, demoVersion)
           : contributors,
+      tags: mapped.tags,
       yearPublished: mapped.yearPublished ?? null,
       traits: mapped.traits,
       version: demoVersion ? toDemoVersion(demoVersion) : null,

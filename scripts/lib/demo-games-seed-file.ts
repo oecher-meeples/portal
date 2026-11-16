@@ -53,6 +53,7 @@ export function serializeEntry(game: DemoGame): string {
           )
     }`,
     `contributors: ${JSON.stringify(game.contributors)}`,
+    `tags: ${JSON.stringify(game.tags)}`,
     `yearPublished: ${num(game.yearPublished)}`,
     `traits: ${traitsArray(game.traits)}`,
     `version: ${JSON.stringify(game.version ?? null)}`,
