@@ -1,3 +1,9 @@
+import {
+  CONTRIBUTOR_LINKS_INCLUDE,
+  contributorNamesByRole,
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
+} from "@/lib/ludothek/taxonomy/contributors-read";
 import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { prisma } from "@/lib/utils/prisma";
@@ -16,6 +22,13 @@ export type OwnPrivateCollectionEntry = {
     title: string;
     imageUrl: string | null;
   };
+  /** Die auf BGG hinterlegte Version, `null` ohne Angabe. */
+  version: {
+    name: string | null;
+    yearPublished: number | null;
+    languages: string[];
+    publishers: string[];
+  } | null;
 };
 
 /**
@@ -27,7 +40,7 @@ export type OwnPrivateCollectionEntry = {
 export async function getOwnPrivateCollection(
   meepleId: string,
 ): Promise<OwnPrivateCollectionEntry[]> {
-  return prisma.privateGameCollectionEntry.findMany({
+  const entries = await prisma.privateGameCollectionEntry.findMany({
     where: { meepleId },
     orderBy: { boardGame: { title: "asc" } },
     select: {
@@ -38,7 +51,27 @@ export async function getOwnPrivateCollection(
       boardGame: {
         select: { id: true, slug: true, title: true, imageUrl: true },
       },
+      version: {
+        select: {
+          name: true,
+          yearPublished: true,
+          ...VERSION_DISPLAY_SELECT.select,
+        },
+      },
     },
+  });
+  return entries.map(({ version, ...entry }) => {
+    if (!version) return { ...entry, version: null };
+    const { publisher, editionLanguages } = versionDisplay(version);
+    return {
+      ...entry,
+      version: {
+        name: version.name,
+        yearPublished: version.yearPublished,
+        languages: editionLanguages,
+        publishers: publisher,
+      },
+    };
   });
 }
 
@@ -113,6 +146,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       },
     },
     include: {
+      version: VERSION_DISPLAY_SELECT,
       meeple: {
         select: {
           id: true,
@@ -121,7 +155,12 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
           profilePictureVisibility: true,
         },
       },
-      boardGame: { include: { alternateNames: { select: { name: true } } } },
+      boardGame: {
+        include: {
+          alternateNames: { select: { name: true } },
+          contributors: CONTRIBUTOR_LINKS_INCLUDE,
+        },
+      },
     },
   });
 
@@ -152,8 +191,8 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       kind: boardGame.kind,
       languageDependence: boardGame.languageDependence,
       ruleBookLanguages: [],
-      publisher: boardGame.publisher,
-      author: boardGame.author,
+      ...contributorNamesByRole(boardGame.contributors),
+      ...versionDisplay(entry.version),
       yearPublished: boardGame.yearPublished,
       traits: boardGame.traits,
       notes: boardGame.notes,

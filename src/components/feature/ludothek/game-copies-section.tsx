@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Table,
   TableBody,
@@ -39,6 +40,10 @@ export type GameCopyRow = {
   ruleBookLanguages: RuleBookLanguage[];
   /** Freie Inventarnummer des Exemplars (#270). */
   inventoryNumber: string | null;
+  /** Edition (BGG-Version) dieses Exemplars - Vorbelegung im Exemplar-Editor. */
+  versionId: string | null;
+  /** Verlag(e) der Edition dieses Exemplars; leer ohne Edition. */
+  publisher: string[];
   /** Whether the current session holds this copy — gates "Weitergeben" in
    * its actions menu (#128). */
   isMine: boolean;
@@ -59,8 +64,37 @@ function actionsMenuCopy(copy: GameCopyRow) {
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
     inventoryNumber: copy.inventoryNumber,
+    versionId: copy.versionId,
     isMine: copy.isMine,
   };
+}
+
+/** Ein Verlag pro Zeile — bei Co-Publishern stehen alle untereinander. */
+function PublisherLines({ publisher }: { publisher: string[] }) {
+  if (publisher.length === 0) return <>—</>;
+  return (
+    <ul className="flex flex-col">
+      {publisher.map((name) => (
+        <li key={name}>{name}</li>
+      ))}
+    </ul>
+  );
+}
+
+/** Beschriftete Zelle der Ein-Zeilen-Detailansicht eines einzelnen Exemplars. */
+function CopyDetail({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <div className="text-sm">{children}</div>
+    </div>
+  );
 }
 
 /**
@@ -110,6 +144,7 @@ export function GameCopiesSection({
               <TableHead>Inv.-Nr.</TableHead>
               <TableHead>Zustand</TableHead>
               <TableHead>Standort/Kontakt</TableHead>
+              <TableHead>Verlag</TableHead>
               <TableHead>Regelheft</TableHead>
               <TableHead className="text-right" />
               <TableHead className="text-right" />
@@ -121,7 +156,7 @@ export function GameCopiesSection({
                 key={copy.id}
                 gameCopyId={copy.id}
                 history={copy.history}
-                colSpan={6}
+                colSpan={7}
               >
                 <TableCell className="text-muted-foreground text-sm">
                   {copy.inventoryNumber || "—"}
@@ -136,6 +171,9 @@ export function GameCopiesSection({
                     unitChain={copy.unitChain}
                     isUnconfirmed={copy.isUnconfirmed}
                   />
+                </TableCell>
+                <TableCell className="text-muted-foreground text-sm">
+                  <PublisherLines publisher={copy.publisher} />
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
@@ -171,21 +209,29 @@ export function GameCopiesSection({
               )
             }
           >
-            <div className="flex flex-col gap-1">
-              <GameZustandPill zustand={copy.zustand} className="w-fit" />
-              <LocationChainCell
-                responsibleName={copy.responsibleName}
-                responsibleContactMeeple={copy.responsibleContactMeeple}
-                unitChain={copy.unitChain}
-                isUnconfirmed={copy.isUnconfirmed}
-              />
-              <span className="text-muted-foreground text-sm">
-                Regelheft:{" "}
+            {/* Eine Zeile als Grid (wie die Tabellenspalten bei mehreren
+                Exemplaren), auf schmalen Displays umgebrochen. */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-[auto_minmax(0,1.5fr)_1fr_auto_auto]">
+              <CopyDetail label="Zustand">
+                <GameZustandPill zustand={copy.zustand} className="w-fit" />
+              </CopyDetail>
+              <CopyDetail label="Standort/Kontakt">
+                <LocationChainCell
+                  responsibleName={copy.responsibleName}
+                  responsibleContactMeeple={copy.responsibleContactMeeple}
+                  unitChain={copy.unitChain}
+                  isUnconfirmed={copy.isUnconfirmed}
+                />
+              </CopyDetail>
+              <CopyDetail label="Verlag">
+                <PublisherLines publisher={copy.publisher} />
+              </CopyDetail>
+              <CopyDetail label="Regelheft">
                 {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
-              </span>
-              <span className="text-muted-foreground text-sm">
-                Inv.-Nr.: {copy.inventoryNumber || "—"}
-              </span>
+              </CopyDetail>
+              <CopyDetail label="Inv.-Nr.">
+                {copy.inventoryNumber || "—"}
+              </CopyDetail>
             </div>
           </GameCopyCard>
         ))

@@ -1,3 +1,10 @@
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
+}));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -87,7 +94,7 @@ const { CreateBoardGameDialog } = await import("./create-board-game-dialog");
 
 function reviewNextButton(dialog: HTMLElement) {
   return within(dialog).getByRole("button", {
-    name: "Weiter",
+    name: "Exemplar anlegen…",
   });
 }
 
@@ -116,6 +123,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         explainerVideoUrl: null,
         germanExplainerVideos: [],
         englishExplainerVideos: [],
+        designers: [],
+        illustrators: [],
         author: [],
         yearPublished: null,
         versions: [],
@@ -145,20 +154,21 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         exact: false,
       }),
     ).toBeInTheDocument();
-    // "Weiter" no longer creates a second title once a duplicate is known.
+    // "Exemplar anlegen…" no longer creates a second title once a duplicate is known.
     expect(
-      within(dialog).queryByRole("button", { name: "Weiter" }),
+      within(dialog).queryByRole("button", { name: "Exemplar anlegen…" }),
     ).not.toBeInTheDocument();
 
     await user.click(useExistingCopyButton(dialog));
 
     expect(
-      within(dialog).getByText("Schritt 3 von 3 — Exemplar-Daten"),
+      within(dialog).getByText("Schritt 3 von 3 — Exemplar anlegen"),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByText("Ark Nova", { exact: false }),
     ).toBeInTheDocument();
 
+    await user.click(within(dialog).getByLabelText("Englisch"));
     await user.click(
       within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),
     );
@@ -166,6 +176,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     await waitFor(() =>
       expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
         condition: undefined,
+        ruleBookLanguages: ["EN"],
+        edition: null,
       }),
     );
     expect(createBoardGameMock).not.toHaveBeenCalled();
@@ -206,13 +218,13 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       "border-amber-600",
     );
     expect(
-      within(dialog).queryByRole("button", { name: "Weiter" }),
+      within(dialog).queryByRole("button", { name: "Exemplar anlegen…" }),
     ).not.toBeInTheDocument();
 
     await user.click(useExistingCopyButton(dialog));
 
     expect(
-      within(dialog).getByText("Schritt 3 von 3 — Exemplar-Daten"),
+      within(dialog).getByText("Schritt 3 von 3 — Exemplar anlegen"),
     ).toBeInTheDocument();
   });
 
@@ -240,7 +252,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       explainerVideoUrl: null,
       publisher: [],
       author: [],
+      illustrator: [],
       yearPublished: null,
+      editionLanguages: [],
       traits: [],
       notes: null,
     });
@@ -270,14 +284,17 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         "game-existing",
       ),
     );
-    // The warning clears once the loaded title matches itself — "Weiter"
-    // reappears and lets the admin continue after correcting fields.
+    // The warning clears once the loaded title matches itself — "Exemplar
+    // anlegen…" reappears and lets the admin continue after correcting fields.
     expect(
-      await within(dialog).findByRole("button", { name: "Weiter" }),
+      await within(dialog).findByRole("button", { name: "Exemplar anlegen…" }),
     ).toBeEnabled();
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
 
-    await user.click(within(dialog).getByRole("button", { name: "Weiter" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Exemplar anlegen…" }),
+    );
+    // Korrektur am Titel — die EAN des Bestands steht im Exemplar-Schritt.
+    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
     await user.click(
       within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),
     );
@@ -290,6 +307,8 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     );
     expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
       condition: undefined,
+      ruleBookLanguages: [],
+      edition: null,
     });
     expect(createBoardGameMock).not.toHaveBeenCalled();
     await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));

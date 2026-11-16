@@ -33,6 +33,8 @@ const BGG_DATA: BggGameData = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
 };
 
 const FORM: BoardGameFormValues = {
@@ -56,7 +58,12 @@ const FORM: BoardGameFormValues = {
   ruleBookLanguages: [],
   publisher: "",
   author: "",
+  illustrator: "",
   yearPublished: "",
+  editionLanguages: "",
+  editionMode: "none",
+  editionVersionId: "",
+  bggVersion: null,
   traits: [],
   notes: "",
 };

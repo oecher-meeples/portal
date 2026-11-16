@@ -2,9 +2,11 @@ import {
   fetchBggXml,
   parser,
   parseNumber,
+  parseVersions,
   SEARCH_REVALIDATE_SECONDS,
   toArray,
 } from "@/lib/bgg/client";
+import type { BggItem, BggVersion } from "@/lib/bgg/client";
 
 export class BggCollectionUnavailableError extends Error {
   constructor(username: string) {
@@ -25,6 +27,9 @@ export interface BggCollectionEntry {
   wantToPlay: boolean;
   /** BGG liefert hier bereits die kleinere Vorschau-Variante des Covers. */
   imageUrl: string | null;
+  /** Die auf BGG hinterlegte Version dieses Exemplars (`version=1`), `null`
+   * wenn der Meeple keine gewählt hat. */
+  version: BggVersion | null;
 }
 
 interface BggCollectionItem {
@@ -34,6 +39,8 @@ interface BggCollectionItem {
   stats?: { rating?: { value?: string } };
   image?: string;
   thumbnail?: string;
+  /** Gleiche Struktur wie `versions` bei `thing?versions=1`, höchstens ein Item. */
+  version?: BggItem["versions"];
 }
 
 interface BggCollectionResponse {
@@ -50,7 +57,7 @@ interface BggCollectionResponse {
  * Titel (`own=1`), keine Wunschlisten/geliehenen Einträge; zusätzlich
  * client-seitig auf `status.own === "1"` gefiltert, da `own=1` nur ein
  * Server-seitiger Filter-Hinweis ist. `stats=1` liefert die persönliche
- * Bewertung mit.
+ * Bewertung mit, `version=1` die vom Meeple gewählte Version.
  */
 export async function fetchBggCollection(
   username: string,
@@ -59,7 +66,7 @@ export async function fetchBggCollection(
   if (!trimmed) return [];
 
   const xml = await fetchBggXml(
-    `/collection?username=${encodeURIComponent(trimmed)}&own=1&stats=1&excludesubtype=boardgameexpansion`,
+    `/collection?username=${encodeURIComponent(trimmed)}&own=1&stats=1&version=1&excludesubtype=boardgameexpansion`,
     SEARCH_REVALIDATE_SECONDS,
   );
   const parsed = parser.parse(xml) as BggCollectionResponse;
@@ -81,6 +88,9 @@ export async function fetchBggCollection(
         forTrade: item.status?.fortrade === "1",
         wantToPlay: item.status?.wanttoplay === "1",
         imageUrl: item.image ?? item.thumbnail ?? null,
+        version:
+          parseVersions(item.version).find((v) => v.bggVersionId !== null) ??
+          null,
       };
     })
     .filter((entry): entry is BggCollectionEntry => entry !== null);

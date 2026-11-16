@@ -211,13 +211,12 @@ model AuthSession {
   @@map("auth_sessions")
 }
 
-/// `issuer` + `accountId` identifizieren ein Konto (better-auth ≥ 1.7). Für
-/// Passwort-Logins gilt `providerId = "credential"`, `issuer =
-/// "local:credential"`, `accountId = userId` — better-auths Sign-in findet das
-/// Passwort nur unter genau dieser Kombination.
+/// `providerId` + `accountId` identifizieren ein Konto (better-auth ≥ 1.7.3 —
+/// die `issuer`-Spalte aus 1.7.0–1.7.2 ist wieder entfallen). Für
+/// Passwort-Logins gilt `providerId = "credential"`, `accountId = userId` —
+/// better-auths Sign-in findet das Passwort nur unter genau dieser Kombination.
 model AuthAccount {
   id                    String    @id @default(uuid()) @db.Uuid
-  issuer                String
   accountId             String
   providerId            String
   userId                String    @db.Uuid
@@ -232,7 +231,7 @@ model AuthAccount {
   createdAt             DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt             DateTime  @updatedAt @db.Timestamptz(6)
 
-  @@unique([issuer, accountId])
+  @@unique([providerId, accountId])
   @@index([userId])
   @@map("auth_accounts")
 }
@@ -886,13 +885,6 @@ model BoardGame {
   /// erfasst (#188) — beim BGG-Import als meistgewählter Vorschlag übernommen,
   /// vom Admin frei änderbar.
   languageDependence LanguageDependence?
-  /// Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen, wenn über
-  /// alle (ggf. auf deutsche Editionen gefilterten) BGG-Versionen identisch,
-  /// sonst wählt der Admin (#205).
-  publisher          String[]
-  /// Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205) —
-  /// im Gegensatz zu `publisher` nicht versionsabhängig.
-  author             String[]
   /// Erstveröffentlichungsjahr — das älteste Jahr über alle BGG-Versionen,
   /// unabhängig von der für `publisher` gewählten Version (#205).
   yearPublished      Int?
@@ -916,6 +908,8 @@ model BoardGame {
   marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
   privateEventLoans        PrivateEventLoan[]
+  contributors             BoardGameContributor[]
+  versions                 BoardGameVersion[]
 
   @@index([ean])
   @@map("board_games")
@@ -954,12 +948,95 @@ model BoardGameAlternateName {
   @@map("board_game_alternate_names")
 }
 
+enum ContributorRole {
+  PUBLISHER
+  AUTHOR
+  ILLUSTRATOR
+}
+
+/// Verlag, Autor oder Illustrator — eine Person/Firma über alle Titel hinweg.
+/// `dedupKey` ist die Eindeutigkeit: `bgg:<bggId>` bzw. `name:<normalizedName>`
+/// ohne BGG-ID, berechnet in `lib/ludothek/taxonomy/normalize.ts`.
+model Contributor {
+  id             String   @id @default(cuid())
+  dedupKey       String   @unique
+  name           String
+  normalizedName String
+  bggId          Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  boardGames        BoardGameContributor[]
+  versionPublishers BoardGameVersionPublisher[]
+
+  @@index([bggId])
+  @@map("contributors")
+}
+
+/// Rolle eines Mitwirkenden an einem Titel — die Rolle liegt auf der
+/// Zwischentabelle, damit dieselbe Firma z. B. Verlag und Autor sein kann.
+model BoardGameContributor {
+  boardGameId   String
+  contributorId String
+  role          ContributorRole
+
+  boardGame   BoardGame   @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  contributor Contributor @relation(fields: [contributorId], references: [id], onDelete: Restrict)
+
+  @@id([boardGameId, contributorId, role])
+  @@index([contributorId])
+  @@map("board_game_contributors")
+}
+
+/// Eine Edition (BGG-Version) eines Titels, die der Verein besitzt — nur
+/// Versionen, die ein Exemplar oder ein Privatsammlungs-Eintrag tatsächlich
+/// hat, werden gespeichert. `bggVersionId` ist `null` bei manuell angelegten
+/// Editionen (Postgres behandelt NULL im Unique-Index als verschieden).
+model BoardGameVersion {
+  id            String   @id @default(cuid())
+  boardGameId   String
+  bggVersionId  Int?
+  name          String?
+  yearPublished Int?
+  /// BGG-Product-Code der Edition (häufig die EAN, aber selten gepflegt).
+  productCode   String?
+  /// BGG-Sprachnamen (z. B. `German`, `English`) — Grundlage der Flagge, die
+  /// nur bei nicht-deutschen Editionen erscheint.
+  languages     String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  boardGame                BoardGame                    @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  publishers               BoardGameVersionPublisher[]
+  copies                   GameCopy[]
+  privateCollectionEntries PrivateGameCollectionEntry[]
+
+  @@unique([boardGameId, bggVersionId])
+  @@index([boardGameId])
+  @@map("board_game_versions")
+}
+
+/// Verlag(e) einer Edition — mehrere bei Co-Publishern.
+model BoardGameVersionPublisher {
+  versionId     String
+  contributorId String
+
+  version     BoardGameVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  contributor Contributor      @relation(fields: [contributorId], references: [id], onDelete: Restrict)
+
+  @@id([versionId, contributorId])
+  @@index([contributorId])
+  @@map("board_game_version_publishers")
+}
+
 /// A single physical copy of a title — condition, inventory status and (via
 /// GameHolding) the location chain. See ADR 0008.
 model GameCopy {
   id                     String              @id @default(cuid())
   slug                   String              @unique
   boardGameId            String
+  /// Die Edition (BGG-Version) dieses Exemplars — `null` = unbekannt.
+  versionId              String?
   /// The single condition note — a defect is recorded here, not in a second field.
   condition              String?
   /// Regelheft-Sprache(n) dieses Exemplars (#188) — mehrere möglich, z. B. eine
@@ -976,10 +1053,12 @@ model GameCopy {
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
-  boardGame BoardGame     @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  version   BoardGameVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
   holdings  GameHolding[]
 
   @@index([boardGameId])
+  @@index([versionId])
   @@index([status])
   @@map("game_copies")
 }
@@ -1036,6 +1115,9 @@ model PrivateGameCollectionEntry {
   id          String   @id @default(cuid())
   meepleId    String
   boardGameId String
+  /// Optionale Edition dieses Privateintrags — ohne Version bleiben Verlag
+  /// und Sprache leer.
+  versionId   String?
   syncedAt    DateTime
   /// Persönliche BGG-Bewertung (`stats.rating`), `null` wenn unbewertet.
   rating      Float?
@@ -1044,8 +1126,9 @@ model PrivateGameCollectionEntry {
   forTrade    Boolean  @default(false)
   wantToPlay  Boolean  @default(false)
 
-  meeple    Meeple    @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
-  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  meeple    Meeple            @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
+  version   BoardGameVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
 
   @@unique([meepleId, boardGameId])
   @@index([meepleId])
@@ -1566,14 +1649,14 @@ enum SystemNotificationCloseable {
 /// Deaktivierungs-Flag in `AutomatedNotificationDisable` — der Code bleibt
 /// bei einer Deaktivierung unverändert.
 model SystemNotification {
-  id                    String                       @id @default(cuid())
+  id                    String                      @id @default(cuid())
   name                  String
   type                  SystemNotificationType
   audiencePermissionKey String?
   closeable             SystemNotificationCloseable
   message               String
-  isActive              Boolean                      @default(true)
-  createdAt             DateTime                     @default(now())
+  isActive              Boolean                     @default(true)
+  createdAt             DateTime                    @default(now())
 
   @@map("system_notifications")
 }

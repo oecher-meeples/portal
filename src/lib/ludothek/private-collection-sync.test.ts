@@ -45,6 +45,13 @@ vi.mock("@/lib/ludothek/board-game-versions", () => ({
     ...(data as object),
   }),
   toBoardGameTitleData: (input: unknown) => input,
+  versionInputFromBgg: (version: unknown) => ({ fromBgg: version }),
+}));
+
+const upsertBoardGameVersionMock = vi.fn();
+vi.mock("@/lib/ludothek/taxonomy/versions", () => ({
+  upsertBoardGameVersion: (...args: unknown[]) =>
+    upsertBoardGameVersionMock(...args),
 }));
 
 const translateBggGameDataMock = vi.fn();
@@ -65,6 +72,9 @@ const MEEPLE = {
 };
 
 beforeEach(() => {
+  prismaMock.$transaction.mockImplementation(((
+    fn: (tx: typeof prismaMock) => unknown,
+  ) => fn(prismaMock)) as never);
   vi.clearAllMocks();
   getCurrentMeepleMock.mockResolvedValue(MEEPLE);
   prismaMock.role.count.mockResolvedValue(0);
@@ -203,6 +213,7 @@ describe("syncPrivateBggCollection (#255)", () => {
       data: {
         meepleId: "meeple-1",
         boardGameId: "game-1",
+        versionId: null,
         syncedAt: expect.any(Date),
         rating: 8,
         forTrade: true,
@@ -244,6 +255,7 @@ describe("syncPrivateBggCollection (#255)", () => {
       data: {
         meepleId: "meeple-1",
         boardGameId: "game-2",
+        versionId: null,
         syncedAt: expect.any(Date),
         rating: null,
         forTrade: false,
@@ -345,6 +357,7 @@ describe("syncPrivateBggCollection (#255)", () => {
       data: {
         meepleId: "meeple-1",
         boardGameId: "game-3",
+        versionId: null,
         syncedAt: expect.any(Date),
         rating: null,
         forTrade: false,
@@ -352,6 +365,43 @@ describe("syncPrivateBggCollection (#255)", () => {
       },
     });
     expect(result).toEqual({ success: true, imported: 1 });
+  });
+
+  it("stores the version chosen on BGG with its publishers and links the entry to it", async () => {
+    const version = {
+      bggVersionId: 278264,
+      name: "English first edition",
+      yearPublished: 2017,
+      publisher: ["Serious Poulp"],
+      publisherLinks: [{ bggId: 17654, name: "Serious Poulp" }],
+      productCode: null,
+      languages: ["English"],
+    };
+    fetchBggCollectionMock.mockResolvedValue([
+      {
+        bggId: 180263,
+        title: "The 7th Continent",
+        rating: null,
+        forTrade: false,
+        wantToPlay: false,
+        version,
+      },
+    ]);
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-1",
+    } as never);
+    upsertBoardGameVersionMock.mockResolvedValue({ id: "version-1" });
+
+    await syncPrivateBggCollection();
+
+    expect(upsertBoardGameVersionMock).toHaveBeenCalledWith(
+      prismaMock,
+      "game-1",
+      { fromBgg: version },
+    );
+    expect(prismaMock.privateGameCollectionEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ versionId: "version-1" }),
+    });
   });
 
   it("does not create a GameCopy for imported titles", async () => {
