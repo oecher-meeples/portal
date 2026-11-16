@@ -5,6 +5,7 @@ import { SearchIcon } from "lucide-react";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { searchEanForBoardGame } from "@/lib/ludothek/ean-search";
 import type { EanSearchResult } from "@/lib/upc-lookup/client";
@@ -162,13 +163,12 @@ export function EanField({
       </div>
       {message && <p className="text-muted-foreground text-xs">{message}</p>}
       {candidates && candidates.length > 0 && (
-        <select
+        <NativeSelect
           aria-label="EAN-Vorschlag auswählen"
           value={candidates.some((c) => c.ean === value) ? value : ""}
           onChange={(event) => {
             if (event.target.value) onChange(event.target.value);
           }}
-          className="border-input bg-background h-8 rounded-lg border px-2.5 text-sm"
         >
           <option value="" disabled>
             {candidates.length} EAN-Vorschläge — bitte auswählen
@@ -179,7 +179,7 @@ export function EanField({
               {candidate.brand ? ` (${candidate.brand})` : ""} — {candidate.ean}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       )}
     </Field>
   );

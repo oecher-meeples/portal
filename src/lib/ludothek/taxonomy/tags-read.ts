@@ -35,3 +35,8 @@ export function tagLabelsByType(links: TagLinkRow[]) {
     categories: labelsFor("CATEGORY"),
   };
 }
+
+export const TAG_TYPE_LABELS: Record<TagType, string> = {
+  MECHANIC: "Mechanik",
+  CATEGORY: "Kategorie",
+};
