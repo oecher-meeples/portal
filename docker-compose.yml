@@ -13,7 +13,6 @@
 services:
   app:
     image: ghcr.io/oecher-meeples/portal-app:${IMAGE_TAG:-latest}
-    build: .
     restart: unless-stopped
     depends_on:
       # Entrypoint runs `prisma migrate deploy` + seed on every start — wait
@@ -113,7 +112,6 @@ services:
   # pinned to a tested version — check for updates before bumping.
   seaweedfs:
     image: ghcr.io/oecher-meeples/portal-seaweedfs:latest
-    build: ./docker/seaweedfs
     restart: unless-stopped
     environment:
       # Separate admin identity (bucket/policy setup only) from the app's own

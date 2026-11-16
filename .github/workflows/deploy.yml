@@ -1,12 +1,12 @@
 name: Deploy
 
 on:
-  push:
-    branches: [feature/autodeploy-workflows]
-  workflow_run:
-    workflows: ["Docker build"]
-    types: [completed]
-    branches: [feature/autodeploy-workflows, preview, release]
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment to deploy"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       environment:
@@ -19,7 +19,7 @@ on:
         default: Preview
 
 concurrency:
-  group: deploy-${{ inputs.environment || github.event.workflow_run.head_branch || github.ref_name }}
+  group: deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 permissions:
@@ -28,10 +28,9 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy (${{ inputs.environment || (github.event.workflow_run.head_branch == 'release' && 'production' || 'Preview') }})
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    name: Deploy (${{ inputs.environment }})
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || (github.event.workflow_run.head_branch == 'release' && 'production' || 'Preview') }}
+    environment: ${{ inputs.environment }}
 
     steps:
       - uses: actions/checkout@v7
@@ -181,7 +180,7 @@ jobs:
             docker-compose.yml "$TARGET:$DEPLOY_PATH/docker-compose.yml"
 
           printf '%s\n' "$GHCR_TOKEN" | ssh $SSH_OPTS "$TARGET" \
-            "docker login ghcr.io -u '$GHCR_USER' --password-stdin && cd '$DEPLOY_PATH' && chmod 600 .env && docker compose pull && docker compose up -d --no-build"
+            "docker login ghcr.io -u '$GHCR_USER' --password-stdin && cd '$DEPLOY_PATH' && chmod 600 .env && docker compose pull && docker compose up -d"
 
       - name: Clean up SSH key and .env
         if: always()
