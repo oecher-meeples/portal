@@ -141,6 +141,14 @@ jobs:
               return `${k}="${val}"`;
             });
             fs.writeFileSync(".env.deploy", lines.join("\n") + "\n", { mode: 0o600 });
+
+            const appPort = process.env.APP_PORT || "3000";
+            const cronSecret = process.env.CRON_SECRET || "";
+            const crontab = fs
+              .readFileSync("crontab", "utf8")
+              .replace(/^APP_URL=.*$/m, `APP_URL=http://127.0.0.1:${appPort}`)
+              .replace(/^CRON_SECRET=.*$/m, `CRON_SECRET=${cronSecret}`);
+            fs.writeFileSync(".crontab.deploy", crontab, { mode: 0o600 });
           '
 
       - name: Configure SSH
@@ -177,11 +185,13 @@ jobs:
           scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
             .env.deploy "$TARGET:$DEPLOY_PATH/.env"
           scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+            .crontab.deploy "$TARGET:$DEPLOY_PATH/crontab"
+          scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
             docker-compose.yml "$TARGET:$DEPLOY_PATH/docker-compose.yml"
 
           printf '%s\n' "$GHCR_TOKEN" | ssh $SSH_OPTS "$TARGET" \
-            "docker login ghcr.io -u '$GHCR_USER' --password-stdin && cd '$DEPLOY_PATH' && chmod 600 .env && docker compose pull && docker compose up -d"
+            "docker login ghcr.io -u '$GHCR_USER' --password-stdin && cd '$DEPLOY_PATH' && chmod 600 .env crontab && crontab crontab && docker compose pull && docker compose up -d"
 
       - name: Clean up SSH key and .env
         if: always()
-        run: rm -f ~/.ssh/id_deploy .env.deploy
+        run: rm -f ~/.ssh/id_deploy .env.deploy .crontab.deploy
