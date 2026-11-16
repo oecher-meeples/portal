@@ -25,8 +25,6 @@ function enumRef(
 
 export function serializeEntry(game: DemoGame): string {
   const num = (n: number | null) => (n === null ? "null" : String(n));
-  const strArray = (values: string[]) =>
-    `[${values.map((v) => JSON.stringify(v)).join(", ")}]`;
   const traitsArray = (values: BoardGameTrait[]) =>
     `[${values.map((v) => enumRef("BoardGameTrait", BoardGameTrait, v)).join(", ")}]`;
 
@@ -40,8 +38,6 @@ export function serializeEntry(game: DemoGame): string {
     `weight: ${num(game.weight)}`,
     `averageRating: ${num(game.averageRating)}`,
     `description: ${JSON.stringify(game.description)}`,
-    `mechanics: ${strArray(game.mechanics)}`,
-    `categories: ${strArray(game.categories)}`,
     `explainerVideoUrl: ${game.explainerVideoUrl === null ? "null" : JSON.stringify(game.explainerVideoUrl)}`,
     `languageDependence: ${
       game.languageDependence === null

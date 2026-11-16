@@ -163,8 +163,6 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         weight: game.weight,
         averageRating: game.averageRating,
         description: game.description,
-        mechanics: game.mechanics,
-        categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
         yearPublished: game.yearPublished,

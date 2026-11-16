@@ -51,6 +51,9 @@ src/lib/
 ├── links/      Kuratierte „Wichtige Links" fürs Dashboard (`ImportantLink`) — Reihenfolge nach `createdAt`, keine manuelle Sortierung
 ├── ludothek/   Titel (`BoardGame`) & Exemplare (`GameCopy`, ADR 0008) & Aufenthalte (Holdings):
 │               ├── taxonomy/          Mitwirkende (Verlag/Autor/Illustrator) & Normalisierung/`dedupKey` (Epic #490): Import, Lese-Helfer, Admin-Actions;
+│               │                      gemeinsame Upsert-Regel beider Register in `upsert.ts` (BGG-ID vor Name, nachträgliche BGG-ID);
+│               │                      Tags (Mechanik/Kategorie, Strang B): `tags.ts` (Schreibseite, BGG-Labels), `tags-read.ts` (Include, Anzeigename),
+│               │                      `tag-admin-actions.ts`/`tag-admin-queries.ts` für `/admin/tags`;
 │               │                      Versionen (`BoardGameVersion`): `versions.ts` (`upsertBoardGameVersion`, dedupliziert per BGG-Version-ID bzw. Name+Sprachen+Verlage),
 │               │                      `version-actions.ts` (gespeicherte Versionen eines Titels + noch nicht gespeicherte BGG-Versionen), `version-label.ts` (Anzeigetext)
 │               ├── board-game-versions.ts BGG-Versionen auswerten: deutsche bevorzugen, Verlag/Product-Code auflösen, BGG-Version → `VersionInput`
@@ -94,6 +97,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | --- | --- |
 | `button`, `input`, `label`, `textarea`, `card`, `dialog`, `table`, `tabs`, `badge`, `avatar`, `tooltip`, `separator`, `dropdown-menu` | Primitives |
 | `field.tsx` | `Field` / `TextField` / `TextAreaField` — Label-über-Control-Zeile (ersetzt ~60 handkopierte Wrapper) |
+| `native-select.tsx` | `NativeSelect` — natives `<select>` im `Input`-Stil für Filter, Sortierung, Vorschlagslisten |
 | `use-action.ts` | Hook: Server Action ausführen → pending/error/`router.refresh()` |
 | `action-button.tsx` | Button, der eine Server Action ausführt (ersetzt 8 `Delete…Button`-Wrapper) |
 | `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
@@ -152,7 +156,7 @@ widgets/
     ├── edit-board-game-exemplar.tsx     Exemplar-Formularfelder (Version, Regelheft-Sprachen, Mängelvermerk) — pro `GameCopy`, nicht pro Titel
     ├── edition-fields.tsx               Versions-Dropdown: ohne Version / vorhandene / noch nicht gespeicherte BGG-Versionen / manuell (Verlag + Sprache der Version)
     ├── contributor-names-field.tsx      Namensliste für Mitwirkende mit Register-Abgleich (unbekannte Namen markiert, `knownNames` ausgenommen)
-    ├── ean-field.tsx                    EAN-Input + Scan-Icon, geteilt von jedem Formular mit EAN-Feld
+    ├── ean-field.tsx                    EAN-Input + Scan-Icon + Dropdown bei mehreren Suchtreffern, geteilt von jedem Formular mit EAN-Feld
     ├── edit-board-game-title-dialog.tsx     Titel-Stammdaten bearbeiten (Detailseiten-Header, #121/#122)
     ├── edit-board-game-exemplar-dialog.tsx  Ein Exemplar bearbeiten (Listen-/Kompakt-Zeile, Exemplar-Tabelle)
     ├── edit-board-game-dialog.tsx       Titel **und** Exemplar in einem Formular (Admin-Bestand-Tabellenzeile, Grid-Kachel-Overlay)
