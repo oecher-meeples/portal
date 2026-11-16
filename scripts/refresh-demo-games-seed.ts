@@ -4,8 +4,8 @@
  * `refresh-board-games-from-bgg.ts` (schreibt in die DB) bleibt dieser Lauf
  * auf der Seed-Quelldatei, rührt also keine laufende Dev-/Prod-DB an. Nutzt
  * bewusst dieselben Bausteine wie der reguläre BGG-Import (`fetchBggGame`,
- * `searchBggGamesExact`, `translateToGerman`, `translateMechanics`,
- * `translateCategories`, `bggDataToTitleInput`) statt die BGG-Mapping-Logik
+ * `searchBggGamesExact`, `translateToGerman`, `bggTagInputs`,
+ * `bggDataToTitleInput`) statt die BGG-Mapping-Logik
  * zu duplizieren.
  *
  * `title` bleibt in jedem Fall der bisherige Marketingname (siehe Dateikopf
@@ -25,8 +25,6 @@ import {
   type BggGameData,
 } from "../src/lib/bgg/client";
 import { translateToGerman } from "../src/lib/bgg/translate";
-import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
-import { translateCategories } from "../src/lib/ludothek/category-translations";
 import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
 import { bggContributorInputs } from "../src/lib/ludothek/taxonomy/bgg-contributors";
 import { sleep } from "../src/lib/utils/sleep";
@@ -63,11 +61,10 @@ function withoutBggMatch(game: DemoGame): DemoGame {
     weight: game.weight ?? null,
     averageRating: game.averageRating ?? null,
     description: game.description ?? "",
-    mechanics: game.mechanics ?? [],
-    categories: game.categories ?? [],
     explainerVideoUrl: game.explainerVideoUrl ?? null,
     languageDependence: game.languageDependence ?? null,
     contributors: game.contributors ?? [],
+    tags: game.tags ?? [],
     yearPublished: game.yearPublished ?? null,
     traits: game.traits ?? [],
     version: game.version ?? null,
@@ -77,24 +74,19 @@ function withoutBggMatch(game: DemoGame): DemoGame {
 async function translateGameData(
   data: BggGameData,
 ): Promise<{ data: BggGameData; descriptionTranslationFailed: boolean }> {
-  const mechanics = translateMechanics(data.mechanics);
-  const categories = translateCategories(data.categories);
   if (!data.description) {
-    return {
-      data: { ...data, mechanics, categories },
-      descriptionTranslationFailed: false,
-    };
+    return { data, descriptionTranslationFailed: false };
   }
   try {
     const description = await translateToGerman(data.description);
     return {
-      data: { ...data, description, mechanics, categories },
+      data: { ...data, description },
       descriptionTranslationFailed: false,
     };
   } catch (error) {
     console.warn(`  Übersetzung fehlgeschlagen für "${data.title}":`, error);
     return {
-      data: { ...data, mechanics, categories },
+      data,
       descriptionTranslationFailed: true,
     };
   }
@@ -177,8 +169,6 @@ async function refreshOne(
       weight: mapped.weight ?? null,
       averageRating: mapped.averageRating ?? null,
       description,
-      mechanics: mapped.mechanics,
-      categories: mapped.categories,
       explainerVideoUrl: mapped.explainerVideoUrl ?? null,
       languageDependence: mapped.languageDependence ?? null,
       // Verlage hängen in der Seed-Datei weiter am Titel (der Seed legt daraus
@@ -187,6 +177,7 @@ async function refreshOne(
         demoVersion && publishers.length === 0
           ? withVersionPublishers(contributors, demoVersion)
           : contributors,
+      tags: mapped.tags,
       yearPublished: mapped.yearPublished ?? null,
       traits: mapped.traits,
       version: demoVersion ? toDemoVersion(demoVersion) : null,

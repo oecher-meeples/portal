@@ -43,6 +43,7 @@ function entry(
       bggId: 316554,
       alternateNames: [],
       contributors: [],
+      tags: [],
       secondaryTitle: null,
       description: null,
       explainerVideoUrl: null,

@@ -7,6 +7,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
 import { ContributorAdminRow } from "@/components/feature/admin-contributors/contributor-admin-row";
 import { CONTRIBUTOR_ROLE_LABELS } from "@/lib/ludothek/taxonomy/contributor-labels";
@@ -85,13 +86,12 @@ export function AdminContributorsView({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="contributor-role">Rolle</Label>
-          <select
+          <NativeSelect
             id="contributor-role"
             value={roleFilter}
             onChange={(event) =>
               setRoleFilter(event.target.value as "ALL" | ContributorRole)
             }
-            className="border-input bg-background h-8 rounded-lg border px-2.5 text-sm"
           >
             {(
               Object.keys(ROLE_FILTER_LABELS) as ("ALL" | ContributorRole)[]
@@ -100,22 +100,21 @@ export function AdminContributorsView({
                 {ROLE_FILTER_LABELS[role]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="contributor-sort">Sortierung</Label>
-          <select
+          <NativeSelect
             id="contributor-sort"
             value={sort}
             onChange={(event) => setSort(event.target.value as SortOption)}
-            className="border-input bg-background h-8 rounded-lg border px-2.5 text-sm"
           >
             {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
               <option key={option} value={option}>
                 {SORT_LABELS[option]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 

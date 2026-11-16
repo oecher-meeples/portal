@@ -13,6 +13,11 @@ import {
   linkContributors,
   replaceAuthorIllustratorLinksByName,
 } from "@/lib/ludothek/taxonomy/contributors";
+import {
+  linkTags,
+  replaceTitleTagsByLabel,
+  type TagInput,
+} from "@/lib/ludothek/taxonomy/tags";
 import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
@@ -40,8 +45,9 @@ export type BoardGameTitleInput = {
   averageRating?: number | null;
   imageUrl?: string | null;
   description?: string | null;
+  /** Anzeigenamen der Mechaniken/Kategorien — ohne `tags` (BGG-Links) über
+   * `replaceTitleTagsByLabel()` als `BoardGameTag` gespeichert, keine Spalte. */
   mechanics?: string[];
-  /** BGGs `boardgamecategory`-Links, analog `mechanics` importiert (#404). */
   categories?: string[];
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
@@ -69,12 +75,16 @@ export type BoardGameTitleInput = {
   /** Mitwirkende mit BGG-ID (Epic #490) — werden zusätzlich zu den
    * Namenslisten `publisher`/`author`/`illustrator` als Relation gespeichert. */
   contributors?: ContributorInput[];
+  /** Mechaniken/Kategorien mit BGG-ID (Epic #490 Strang B) — haben beim
+   * Anlegen Vorrang vor den Namenslisten `mechanics`/`categories`. */
+  tags?: TagInput[];
 };
 
-/** `author`/`illustrator`/`version` sind bewusst nicht Teil dieses
+/** `author`/`illustrator`/`mechanics`/`categories`/`version` sind bewusst nicht Teil dieses
  * Rückgabewerts — sie sind keine `BoardGame`-Spalten, sondern werden separat
- * über `replaceAuthorIllustratorLinksByName()`/`linkContributors()` bzw.
- * `upsertBoardGameVersion()` gespeichert. */
+ * über `replaceAuthorIllustratorLinksByName()`/`linkContributors()`,
+ * `linkTags()`/`replaceTitleTagsByLabel()` bzw. `upsertBoardGameVersion()`
+ * gespeichert. */
 export function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
     secondaryTitle: input.secondaryTitle || null,
@@ -87,8 +97,6 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
     averageRating: input.averageRating ?? null,
     imageUrl: input.imageUrl || null,
     description: input.description || null,
-    mechanics: input.mechanics ?? [],
-    categories: input.categories ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
     languageDependence: input.languageDependence ?? null,
     yearPublished: input.yearPublished ?? null,
@@ -138,6 +146,7 @@ export async function findOrCreateBoardGameTitle(
     });
     if (existing) {
       await linkContributors(tx, existing.id, input.contributors ?? []);
+      await linkTags(tx, existing.id, input.tags ?? []);
       return existing;
     }
   }
@@ -152,6 +161,14 @@ export async function findOrCreateBoardGameTitle(
     await replaceAuthorIllustratorLinksByName(tx, created.id, {
       author: input.author ?? [],
       illustrator: input.illustrator ?? [],
+    });
+  }
+  if (input.tags?.length) {
+    await linkTags(tx, created.id, input.tags);
+  } else {
+    await replaceTitleTagsByLabel(tx, created.id, {
+      mechanics: input.mechanics ?? [],
+      categories: input.categories ?? [],
     });
   }
   return created;

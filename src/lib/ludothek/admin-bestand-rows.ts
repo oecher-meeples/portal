@@ -4,6 +4,10 @@ import {
   VERSION_DISPLAY_SELECT,
   versionDisplay,
 } from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  TAG_LINKS_INCLUDE,
+  tagLabelsByType,
+} from "@/lib/ludothek/taxonomy/tags-read";
 import type {
   BoardGameKind,
   BoardGameTrait,
@@ -126,6 +130,7 @@ export async function buildAdminBoardGameRows({
           include: {
             alternateNames: { select: { name: true } },
             contributors: CONTRIBUTOR_LINKS_INCLUDE,
+            tags: TAG_LINKS_INCLUDE,
           },
         },
         holdings: {
@@ -270,8 +275,7 @@ export async function buildAdminBoardGameRows({
         averageRating: boardGame.averageRating,
         imageUrl: boardGame.imageUrl,
         description: boardGame.description,
-        mechanics: boardGame.mechanics,
-        categories: boardGame.categories,
+        ...tagLabelsByType(boardGame.tags),
         condition: copy.condition,
         inventoryNumber: copy.inventoryNumber,
         versionId: copy.versionId,

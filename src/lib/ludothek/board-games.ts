@@ -13,11 +13,16 @@ import {
 } from "@/lib/ludothek/game-copy-placement";
 import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { replaceAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
+import { replaceTitleTagsByLabel } from "@/lib/ludothek/taxonomy/tags";
 import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import {
   CONTRIBUTOR_LINKS_INCLUDE,
   contributorNamesByRole,
 } from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  TAG_LINKS_INCLUDE,
+  tagLabelsByType,
+} from "@/lib/ludothek/taxonomy/tags-read";
 import {
   type BoardGameTitleInput,
   findOrCreateBoardGameTitle,
@@ -206,6 +211,10 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
       author: input.author ?? [],
       illustrator: input.illustrator ?? [],
     });
+    await replaceTitleTagsByLabel(tx, id, {
+      mechanics: input.mechanics ?? [],
+      categories: input.categories ?? [],
+    });
     return updated;
   });
 
@@ -241,10 +250,9 @@ export async function getBoardGameTitleForEdit(id: string) {
       averageRating: true,
       imageUrl: true,
       description: true,
-      mechanics: true,
-      categories: true,
       explainerVideoUrl: true,
       contributors: CONTRIBUTOR_LINKS_INCLUDE,
+      tags: TAG_LINKS_INCLUDE,
       yearPublished: true,
       traits: true,
       notes: true,
@@ -252,8 +260,12 @@ export async function getBoardGameTitleForEdit(id: string) {
   });
   if (!record) return null;
 
-  const { contributors, ...rest } = record;
-  return { ...rest, ...contributorNamesByRole(contributors) };
+  const { contributors, tags, ...rest } = record;
+  return {
+    ...rest,
+    ...contributorNamesByRole(contributors),
+    ...tagLabelsByType(tags),
+  };
 }
 
 export type DuplicateBoardGameMatch = { id: string; title: string };

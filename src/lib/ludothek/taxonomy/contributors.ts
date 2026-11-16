@@ -1,8 +1,6 @@
 import type { ContributorRole, Prisma, PrismaClient } from "@prisma/client";
-import {
-  normalizeTaxonomyName,
-  taxonomyDedupKey,
-} from "@/lib/ludothek/taxonomy/normalize";
+import { normalizeTaxonomyName } from "@/lib/ludothek/taxonomy/normalize";
+import { upsertTaxonomyEntry } from "@/lib/ludothek/taxonomy/upsert";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -12,38 +10,17 @@ export type ContributorInput = {
   name: string;
 };
 
-/**
- * Findet oder legt einen Mitwirkenden an. Ein Eintrag mit BGG-ID wird über
- * `bggId` gefunden. Ein bisher namensbasierter Eintrag (ohne BGG-ID) mit
- * gleichem Namen bekommt die BGG-ID nachträglich und wird dabei umgeschrieben.
- */
+/** Findet oder legt einen Mitwirkenden an, Regel siehe `upsertTaxonomyEntry`. */
 export async function upsertContributor(tx: Tx, input: ContributorInput) {
-  const normalizedName = normalizeTaxonomyName(input.name);
-  const dedupKey = taxonomyDedupKey(input.bggId, normalizedName);
-
-  const byKey = await tx.contributor.findUnique({ where: { dedupKey } });
-  if (byKey) return byKey;
-
-  if (input.bggId !== null) {
-    const byName = await tx.contributor.findUnique({
-      where: { dedupKey: taxonomyDedupKey(null, normalizedName) },
-    });
-    if (byName) {
-      return tx.contributor.update({
-        where: { id: byName.id },
-        data: { bggId: input.bggId, dedupKey, name: input.name },
-      });
-    }
-  }
-
-  return tx.contributor.create({
-    data: {
-      dedupKey,
-      name: input.name,
-      normalizedName,
-      bggId: input.bggId,
+  return upsertTaxonomyEntry(
+    {
+      findByDedupKey: (dedupKey) =>
+        tx.contributor.findUnique({ where: { dedupKey } }),
+      attachBggId: (id, data) => tx.contributor.update({ where: { id }, data }),
+      create: (data) => tx.contributor.create({ data }),
     },
-  });
+    input,
+  );
 }
 
 export async function linkContributors(

@@ -232,6 +232,10 @@ Deinventarisierte Exemplare werden nie gelöscht (`GameCopy.status`, `archivedAt
 
 BGG kennt mehrere Editionen (`versions=1`) desselben Titels mit potenziell abweichendem Verlag und Product Code je Edition (z. B. deutsche vs. englische Auflage bei unterschiedlichem Verlag). `lib/ludothek/board-game-versions.ts` löst das auf: identisch über alle (bevorzugt auf deutsche Editionen eingeengten, siehe `selectRelevantVersions()`) Versionen → automatisch übernommen; sonst wählt der Admin im Anlegen-Wizard. `BoardGame.yearPublished` ist davon unabhängig immer das älteste Jahr über *alle* Versionen — keine gekoppelte Auswahl mit dem Verlag. Verlag, Autor und Illustrator liegen seit Epic #490 als `Contributor` mit BGG-ID über die Zwischentabelle `BoardGameContributor` (Rolle `PUBLISHER`/`AUTHOR`/`ILLUSTRATOR`) statt als String-Listen am Titel. Eindeutigkeit über `Contributor.dedupKey` (`bgg:<id>` bzw. `name:<normalisierter Name>`, siehe `lib/ludothek/taxonomy/normalize.ts`). Autoren kommen direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item, nicht aus den Versionen.
 
+### Mechaniken und Kategorien (Epic #490 Strang B)
+
+Mechaniken (`boardgamemechanic`) und Kategorien (`boardgamecategory`) liegen als `Tag` (Typ `MECHANIC`/`CATEGORY`) mit BGG-ID über die Zwischentabelle `BoardGameTag` statt als String-Listen am Titel. `Tag.name` ist der englische BGG-Originalname und nicht umbenennbar, `Tag.displayName` die unter `/admin/tags` pflegbare deutsche Anzeige (leer → `name`). Eindeutigkeit über `Tag.dedupKey` mit Typ-Präfix (`MECHANIC:bgg:<id>` bzw. `MECHANIC:name:<normalisierter Name>`), weil BGG-IDs nur je Typ eindeutig sind. Die deutschen Startwerte kommen aus `prisma/seed-data/tag-display-names.ts` (früher feste Übersetzungstabellen); der Seed überschreibt einen gepflegten `displayName` nicht.
+
 Die EAN-Suche bevorzugt einen eindeutig aufgelösten BGG-Product-Code vor der UPCitemdb-Fallback-Suche; ohne eindeutigen Code sortiert der bekannte Verlag die UPCitemdb-Kandidaten nach oben.
 
 ### Standort: eine Kette von Aufenthalten
@@ -259,7 +263,6 @@ erDiagram
         Float averageRating "nullable — BGGs Community-Durchschnittsbewertung 0-10 (#214)"
         String imageUrl
         String description
-        String_Array mechanics
         String explainerVideoUrl
         BoardGameKind kind "BOARDGAME, BOARDGAME_EXPANSION"
         LanguageDependence languageDependence "nullable — BGGs 5-stufiges Poll-Level (#188)"

@@ -4,7 +4,7 @@
  * ohne echten BGG-Abgleich angelegt und entsprechen nicht mehr dem
  * Qualitätsanspruch. Nutzt bewusst dieselben Bausteine wie der reguläre
  * BGG-Import (`fetchBggGame`, `searchBggGamesExact`, `translateToGerman`,
- * `translateMechanics`, `resolvePublisherFromVersions`) statt die
+ * `bggTagInputs`, `resolvePublisherFromVersions`) statt die
  * BGG-Mapping-Logik zu duplizieren.
  *
  * Läuft direkt gegen Prisma statt über `updateBoardGame()`/`createBoardGame()`
@@ -31,9 +31,9 @@ import {
   type BggGameData,
 } from "../src/lib/bgg/client";
 import { translateToGerman } from "../src/lib/bgg/translate";
-import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
 import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
 import { replaceBggContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import { replaceBggTags } from "../src/lib/ludothek/taxonomy/tags";
 import {
   BGG_SCRIPT_THROTTLE_MS as THROTTLE_MS,
   withRateLimitRetry,
@@ -47,19 +47,18 @@ type Outcome =
   | { status: "failed"; title: string; error: string };
 
 async function translateGameData(data: BggGameData): Promise<BggGameData> {
-  const mechanics = translateMechanics(data.mechanics);
   if (!data.description) {
-    return { ...data, mechanics };
+    return data;
   }
   try {
     const description = await translateToGerman(data.description);
-    return { ...data, description, mechanics };
+    return { ...data, description };
   } catch (error) {
     // Schlägt die Übersetzung fehl (z. B. MyMemorys Tageslimit), bleibt die
     // englische Beschreibung stehen statt sie zu leeren — analog zu
     // `translateBggGameData()` in `board-games-bgg-import.ts` (#184).
     console.warn(`  Übersetzung fehlgeschlagen für "${data.title}":`, error);
-    return { ...data, mechanics };
+    return data;
   }
 }
 
@@ -143,7 +142,6 @@ async function refreshOne(row: Row): Promise<Outcome> {
         averageRating: data.averageRating,
         imageUrl: data.imageUrl,
         description: data.description,
-        mechanics: data.mechanics,
         explainerVideoUrl: data.explainerVideoUrl,
         languageDependence: data.languageDependence,
         yearPublished: data.yearPublished,
@@ -152,6 +150,7 @@ async function refreshOne(row: Row): Promise<Outcome> {
     });
 
     await replaceBggContributors(tx, row.id, mapped.contributors);
+    await replaceBggTags(tx, row.id, mapped.tags);
 
     // Alternativnamen komplett aus BGG neu aufbauen — die Demodaten hatten
     // hier keine belastbare Auswahl.

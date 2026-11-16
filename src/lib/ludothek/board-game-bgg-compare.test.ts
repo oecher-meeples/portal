@@ -34,6 +34,8 @@ const BGG_DATA: BggGameData = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
   categories: [],
+  mechanicLinks: [],
+  categoryLinks: [],
   traits: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,

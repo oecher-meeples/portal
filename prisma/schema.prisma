@@ -868,11 +868,6 @@ model BoardGame {
   averageRating      Float?
   imageUrl           String?
   description        String?
-  mechanics          String[]
-  /// BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
-  /// analog `mechanics` importiert (#404) — Voraussetzung für die
-  /// Regal-Kategorisierung anhand BGG-Daten (#276).
-  categories         String[]
   /// Best-effort auto-populated from the BGG videos block (see docs/adr, step 11); manually correctable.
   explainerVideoUrl  String?
   /// Distinguishes an expansion from a standalone game (BGG `type` attribute), see #30.
@@ -909,6 +904,7 @@ model BoardGame {
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
   privateEventLoans        PrivateEventLoan[]
   contributors             BoardGameContributor[]
+  tags                     BoardGameTag[]
   versions                 BoardGameVersion[]
 
   @@index([ean])
@@ -986,6 +982,44 @@ model BoardGameContributor {
   @@id([boardGameId, contributorId, role])
   @@index([contributorId])
   @@map("board_game_contributors")
+}
+
+enum TagType {
+  MECHANIC
+  CATEGORY
+}
+
+/// Mechanik oder Kategorie (BGG `boardgamemechanic` / `boardgamecategory`).
+/// `dedupKey` ist `<TYPE>:bgg:<bggId>` bzw. `<TYPE>:name:<normalizedName>` —
+/// die BGG-ID ist nur je Typ eindeutig. `name` ist der BGG-Originalname,
+/// `displayName` die pflegbare deutsche Anzeige (leer → `name`).
+model Tag {
+  id             String   @id @default(cuid())
+  dedupKey       String   @unique
+  type           TagType
+  name           String
+  normalizedName String
+  bggId          Int?
+  displayName    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  boardGames BoardGameTag[]
+
+  @@index([type])
+  @@map("tags")
+}
+
+model BoardGameTag {
+  boardGameId String
+  tagId       String
+
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+  tag       Tag       @relation(fields: [tagId], references: [id], onDelete: Restrict)
+
+  @@id([boardGameId, tagId])
+  @@index([tagId])
+  @@map("board_game_tags")
 }
 
 /// Eine Edition (BGG-Version) eines Titels, die der Verein besitzt — nur
