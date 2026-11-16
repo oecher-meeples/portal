@@ -33,7 +33,7 @@ async function searchWithFallback(
  * EAN is edited (create/edit dialogs, manual and BGG mode, see #121/#122).
  * Lupen-Icon sucht zusätzlich per Titel nach einer EAN (#197) — kein
  * verlässlicher Volltreffer (siehe `searchEanByName`), deshalb bei >1
- * Treffer eine Auswahlliste statt Auto-Fill, bei 0 nur ein Hinweis. */
+ * Treffer ein Dropdown statt Auto-Fill, bei 0 nur ein Hinweis. */
 export function EanField({
   idPrefix,
   value,
@@ -162,32 +162,24 @@ export function EanField({
       </div>
       {message && <p className="text-muted-foreground text-xs">{message}</p>}
       {candidates && candidates.length > 0 && (
-        <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border p-1">
+        <select
+          aria-label="EAN-Vorschlag auswählen"
+          value={candidates.some((c) => c.ean === value) ? value : ""}
+          onChange={(event) => {
+            if (event.target.value) onChange(event.target.value);
+          }}
+          className="border-input bg-background h-8 rounded-lg border px-2.5 text-sm"
+        >
+          <option value="" disabled>
+            {candidates.length} EAN-Vorschläge — bitte auswählen
+          </option>
           {candidates.map((candidate) => (
-            <li key={candidate.ean}>
-              <button
-                type="button"
-                className="hover:bg-accent hover:text-accent-foreground group w-full rounded px-2 py-1.5 text-left text-sm"
-                onClick={() => {
-                  onChange(candidate.ean);
-                  setCandidates(null);
-                }}
-              >
-                {candidate.title}
-                {candidate.brand && (
-                  <span className="text-muted-foreground group-hover:text-accent-foreground/80">
-                    {" "}
-                    ({candidate.brand})
-                  </span>
-                )}
-                <span className="text-muted-foreground group-hover:text-accent-foreground/80">
-                  {" "}
-                  — {candidate.ean}
-                </span>
-              </button>
-            </li>
+            <option key={candidate.ean} value={candidate.ean}>
+              {candidate.title}
+              {candidate.brand ? ` (${candidate.brand})` : ""} — {candidate.ean}
+            </option>
           ))}
-        </ul>
+        </select>
       )}
     </Field>
   );
