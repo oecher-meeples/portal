@@ -2,12 +2,17 @@ name: Docker build
 
 on:
   push:
-    branches: [feature/autodeploy-workflows, develop, preview, release, main]
+    branches: [preview, release]
     tags: ["v*", "[0-9]+.[0-9]+*"]
   workflow_dispatch:
     inputs:
       force_seaweed_build:
         description: "Force building the SeaweedFS image"
+        required: false
+        default: false
+        type: boolean
+      deploy_preview:
+        description: "Deploy to Preview after build finishes (for testing current branch)"
         required: false
         default: false
         type: boolean
@@ -172,3 +177,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=seaweedfs
           cache-to: type=gha,mode=max,scope=seaweedfs
+
+  deploy:
+    needs: [build, build-seaweedfs]
+    if: github.ref_name == 'preview' || github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_preview)
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: ${{ github.ref_name == 'release' && 'production' || 'Preview' }}
+    secrets: inherit

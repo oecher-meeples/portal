@@ -1,0 +1,10 @@
+# Local build overrides for docker-compose.yml.
+# Automatically loaded by `docker compose` when present in the project root
+# (e.g. `docker compose up -d --build`), and omitted on remote deployments
+# that pull pre-built images from GHCR.
+services:
+  app:
+    build: .
+
+  seaweedfs:
+    build: ./docker/seaweedfs
