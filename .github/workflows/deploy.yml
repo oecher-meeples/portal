@@ -24,6 +24,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   deploy:
@@ -161,6 +162,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PORT="${SSH_PORT:-22}"
           if printf '%s' "$SSH_HOST" | grep -q '@'; then
@@ -177,7 +180,8 @@ jobs:
           scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
             docker-compose.yml "$TARGET:$DEPLOY_PATH/docker-compose.yml"
 
-          ssh $SSH_OPTS "$TARGET" "cd '$DEPLOY_PATH' && chmod 600 .env && docker compose pull && docker compose up -d --no-build"
+          printf '%s\n' "$GHCR_TOKEN" | ssh $SSH_OPTS "$TARGET" \
+            "docker login ghcr.io -u '$GHCR_USER' --password-stdin && cd '$DEPLOY_PATH' && chmod 600 .env && docker compose pull && docker compose up -d --no-build"
 
       - name: Clean up SSH key and .env
         if: always()
