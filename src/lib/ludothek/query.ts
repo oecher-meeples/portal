@@ -4,6 +4,10 @@ import {
   VERSION_DISPLAY_SELECT,
   versionDisplay,
 } from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  TAG_LINKS_INCLUDE,
+  tagLabelsByType,
+} from "@/lib/ludothek/taxonomy/tags-read";
 import { prisma } from "@/lib/utils/prisma";
 import {
   BoardGameKind,
@@ -59,6 +63,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
             },
             alternateNames: { select: { name: true } },
             contributors: CONTRIBUTOR_LINKS_INCLUDE,
+            tags: TAG_LINKS_INCLUDE,
           },
         },
         holdings: {
@@ -120,8 +125,7 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
       playTimeMinutes: boardGame.playTimeMinutes,
       weight: boardGame.weight,
       averageRating: boardGame.averageRating,
-      mechanics: boardGame.mechanics,
-      categories: boardGame.categories,
+      ...tagLabelsByType(boardGame.tags),
       ean: boardGame.ean,
       condition: copy.condition,
       ruleBookLanguages: copy.ruleBookLanguages,

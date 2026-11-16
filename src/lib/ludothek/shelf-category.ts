@@ -20,9 +20,9 @@ export const SHELF_CATEGORY_VALUES: ShelfCategory[] = [
   ShelfCategory.PARTY,
 ];
 
-/** BGGs Mechanik-Bezeichnung für "kooperativ", bereits übersetzt (#184) — siehe
- * `mechanics-translations.ts`. */
-const COOPERATIVE_MECHANIC = "Kooperativ";
+/** BGG-Originalnamen (`Tag.name`), nicht die deutschen Anzeigenamen — die
+ * sind im Admin pflegbar und taugen deshalb nicht als Regel-Schlüssel. */
+const COOPERATIVE_MECHANIC = "Cooperative Game";
 const CHILDREN_OR_FAMILY_CATEGORIES = ["Children's Game", "Family Game"];
 const PARTY_CATEGORY = "Party Game";
 const KENNERSPIEL_MIN_WEIGHT = 2.0;
@@ -36,6 +36,7 @@ const PARTY_MIN_PLAYERS = 6;
  * kann mehrere Kategorien gleichzeitig treffen (z. B. kooperativ **und**
  * Expertenspiel) — fehlende Daten (kein `weight`/`mechanics`/`categories`)
  * lassen die jeweilige Regel einfach nicht greifen, kein Sonderfall nötig.
+ * `mechanics`/`categories` sind die BGG-Originalnamen der Tags.
  */
 export function deriveShelfCategories(game: {
   maxPlayers: number | null;

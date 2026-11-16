@@ -105,7 +105,13 @@ describe("previewBggImport", () => {
   it("returns the mapped preview data without persisting anything", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
-    const bggData = { title: "Ark Nova", mechanics: [], categories: [] };
+    const bggData = {
+      title: "Ark Nova",
+      mechanics: [],
+      categories: [],
+      mechanicLinks: [],
+      categoryLinks: [],
+    };
     fetchBggGameMock.mockResolvedValue(bggData);
 
     const result = await previewBggImport(342942);
@@ -116,15 +122,38 @@ describe("previewBggImport", () => {
     expect(translateToGermanMock).not.toHaveBeenCalled();
   });
 
-  it("translates the description via the translation API and mechanics via the fixed table (#184)", async () => {
+  it("translates the description via the translation API and tag labels via the tag register (#184, #490)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     prismaMock.rolePermission.count.mockResolvedValue(1);
+    const mechanicLinks = [
+      { bggId: 2082, name: "Worker Placement" },
+      { bggId: 9999, name: "Some Unmapped Mechanic" },
+    ];
+    const categoryLinks = [{ bggId: 1015, name: "Animals" }];
     fetchBggGameMock.mockResolvedValue({
       title: "Ark Nova",
       description: "Build a modern zoo.",
       mechanics: ["Worker Placement", "Some Unmapped Mechanic"],
-      categories: [],
+      categories: ["Animals"],
+      mechanicLinks,
+      categoryLinks,
     });
+    prismaMock.tag.findMany.mockResolvedValue([
+      {
+        type: "MECHANIC",
+        bggId: null,
+        name: "Worker Placement",
+        normalizedName: "worker placement",
+        displayName: "Arbeitereinsatz",
+      },
+      {
+        type: "CATEGORY",
+        bggId: 1015,
+        name: "Animals",
+        normalizedName: "animals",
+        displayName: "Tiere",
+      },
+    ] as never);
     translateToGermanMock.mockResolvedValue("Baue einen modernen Zoo.");
 
     const result = await previewBggImport(342942);
@@ -136,7 +165,9 @@ describe("previewBggImport", () => {
         title: "Ark Nova",
         description: "Baue einen modernen Zoo.",
         mechanics: ["Arbeitereinsatz", "Some Unmapped Mechanic"],
-        categories: [],
+        categories: ["Tiere"],
+        mechanicLinks,
+        categoryLinks,
       },
     });
   });
@@ -149,6 +180,8 @@ describe("previewBggImport", () => {
       description: "Build a modern zoo.",
       mechanics: [],
       categories: [],
+      mechanicLinks: [],
+      categoryLinks: [],
     });
     translateToGermanMock.mockRejectedValue(new Error("translation API boom"));
 
@@ -161,6 +194,8 @@ describe("previewBggImport", () => {
         description: "Build a modern zoo.",
         mechanics: [],
         categories: [],
+        mechanicLinks: [],
+        categoryLinks: [],
       },
       hint: "Automatische Übersetzung der Beschreibung ist fehlgeschlagen — Beschreibung ist vorerst auf Englisch, bitte über den „Übersetzen“-Button oder manuell auf Deutsch ergänzen.",
     });

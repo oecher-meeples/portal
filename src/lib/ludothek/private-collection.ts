@@ -4,6 +4,10 @@ import {
   VERSION_DISPLAY_SELECT,
   versionDisplay,
 } from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  TAG_LINKS_INCLUDE,
+  tagLabelsByType,
+} from "@/lib/ludothek/taxonomy/tags-read";
 import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { prisma } from "@/lib/utils/prisma";
@@ -159,6 +163,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
         include: {
           alternateNames: { select: { name: true } },
           contributors: CONTRIBUTOR_LINKS_INCLUDE,
+          tags: TAG_LINKS_INCLUDE,
         },
       },
     },
@@ -178,8 +183,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
       playTimeMinutes: boardGame.playTimeMinutes,
       weight: boardGame.weight,
       averageRating: boardGame.averageRating,
-      mechanics: boardGame.mechanics,
-      categories: boardGame.categories,
+      ...tagLabelsByType(boardGame.tags),
       ean: null,
       condition: null,
       inventoryNumber: null,

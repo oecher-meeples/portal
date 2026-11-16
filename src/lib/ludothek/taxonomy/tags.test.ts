@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BggGameData } from "@/lib/bgg/client";
-import { bggTagInputs, replaceTagsByLabel, upsertTag } from "./tags";
+import {
+  bggTagInputs,
+  replaceTagsByLabel,
+  resolveBggTagLabels,
+  upsertTag,
+} from "./tags";
+import { tagLabelsByType } from "./tags-read";
 
 type Row = { id: string; bggId: number | null; name: string };
 
@@ -135,5 +141,90 @@ describe("bggTagInputs", () => {
       { type: "CATEGORY", bggId: 1015, name: "Animals" },
     ]);
     expect(bggTagInputs(null)).toEqual([]);
+  });
+});
+
+describe("tagLabelsByType", () => {
+  it("groups display names per type, falls back to the BGG name, sorted and deduped", () => {
+    expect(
+      tagLabelsByType([
+        {
+          tag: {
+            type: "MECHANIC",
+            name: "Worker Placement",
+            displayName: "Arbeitereinsatz",
+          },
+        },
+        { tag: { type: "MECHANIC", name: "Deck Building", displayName: null } },
+        { tag: { type: "CATEGORY", name: "Animals", displayName: "Tiere" } },
+        {
+          tag: {
+            type: "MECHANIC",
+            name: "Worker Placement",
+            displayName: "Arbeitereinsatz",
+          },
+        },
+      ]),
+    ).toEqual({
+      mechanics: ["Arbeitereinsatz", "Deck Building"],
+      categories: ["Tiere"],
+    });
+  });
+});
+
+describe("resolveBggTagLabels", () => {
+  it("labels by BGG id, then by name, else keeps the BGG name — per type", async () => {
+    const findMany = vi.fn(async () => [
+      {
+        type: "MECHANIC",
+        bggId: 2082,
+        name: "Card Play",
+        normalizedName: "card play",
+        displayName: "Kartenspiel",
+      },
+      {
+        type: "MECHANIC",
+        bggId: null,
+        name: "Income",
+        normalizedName: "income",
+        displayName: "Einkommen",
+      },
+      {
+        type: "MECHANIC",
+        bggId: null,
+        name: "Animals",
+        normalizedName: "animals",
+        displayName: "Falscher Typ",
+      },
+    ]);
+    const tx = { tag: { findMany } } as never;
+    const preview = {
+      mechanicLinks: [
+        { bggId: 2082, name: "Card Play" },
+        { bggId: 2015, name: "Income" },
+        { bggId: 7, name: "Unknown" },
+      ],
+      categoryLinks: [{ bggId: 1015, name: "Animals" }],
+    } as unknown as BggGameData;
+
+    expect(await resolveBggTagLabels(tx, preview)).toEqual({
+      mechanics: ["Kartenspiel", "Einkommen", "Unknown"],
+      categories: ["Animals"],
+    });
+  });
+
+  it("skips the query without links", async () => {
+    const findMany = vi.fn();
+    const preview = {
+      mechanicLinks: [],
+      categoryLinks: [],
+    } as unknown as BggGameData;
+    expect(
+      await resolveBggTagLabels({ tag: { findMany } } as never, preview),
+    ).toEqual({
+      mechanics: [],
+      categories: [],
+    });
+    expect(findMany).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,10 @@
 import type { Prisma, PrismaClient, TagType } from "@prisma/client";
 import type { BggGameData } from "@/lib/bgg/client";
+import {
+  normalizeTaxonomyName,
+  taxonomyDedupKey,
+} from "@/lib/ludothek/taxonomy/normalize";
+import { tagLabel } from "@/lib/ludothek/taxonomy/tags-read";
 import { upsertTaxonomyEntry } from "@/lib/ludothek/taxonomy/upsert";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
@@ -111,4 +116,59 @@ export async function replaceTitleTagsByLabel(
 ) {
   await replaceTagsByLabel(tx, boardGameId, "MECHANIC", labels.mechanics);
   await replaceTagsByLabel(tx, boardGameId, "CATEGORY", labels.categories);
+}
+
+/**
+ * Anzeigenamen der Mechaniken/Kategorien einer BGG-Vorschau aus dem Register:
+ * Treffer über Typ + BGG-ID, sonst über Typ + normalisierten Namen; ein
+ * unbekannter Tag zeigt den BGG-Namen. Reihenfolge wie bei BGG. Ersetzt die
+ * frühere feste Übersetzungstabelle in Import-Vorschau und BGG-Abgleich.
+ */
+export async function resolveBggTagLabels(tx: Tx, data: BggGameData) {
+  const inputs = bggTagInputs(data);
+  if (inputs.length === 0) return { mechanics: [], categories: [] };
+
+  const known = await tx.tag.findMany({
+    where: {
+      OR: [
+        {
+          dedupKey: {
+            in: inputs.flatMap((input) =>
+              input.bggId === null
+                ? []
+                : [taxonomyDedupKey(input.bggId, "", input.type)],
+            ),
+          },
+        },
+        {
+          normalizedName: {
+            in: inputs.map((input) => normalizeTaxonomyName(input.name)),
+          },
+        },
+      ],
+    },
+    select: {
+      type: true,
+      bggId: true,
+      name: true,
+      normalizedName: true,
+      displayName: true,
+    },
+  });
+
+  const labelFor = (input: TagInput) => {
+    const sameType = known.filter((tag) => tag.type === input.type);
+    const match =
+      (input.bggId !== null &&
+        sameType.find((tag) => tag.bggId === input.bggId)) ||
+      sameType.find(
+        (tag) => tag.normalizedName === normalizeTaxonomyName(input.name),
+      );
+    return match ? tagLabel(match) : input.name;
+  };
+
+  return {
+    mechanics: inputs.filter((i) => i.type === "MECHANIC").map(labelFor),
+    categories: inputs.filter((i) => i.type === "CATEGORY").map(labelFor),
+  };
 }

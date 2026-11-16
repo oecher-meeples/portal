@@ -21,7 +21,7 @@ describe("deriveShelfCategories (#276)", () => {
 
   it("matches both KOOPERATIV and EXPERTENSPIELE for a heavy cooperative game", () => {
     const result = deriveShelfCategories(
-      game({ mechanics: ["Kooperativ"], weight: 3.5 }),
+      game({ mechanics: ["Cooperative Game"], weight: 3.5 }),
     );
 
     expect(result).toContain(ShelfCategory.KOOPERATIV);

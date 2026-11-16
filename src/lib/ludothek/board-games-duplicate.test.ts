@@ -148,6 +148,7 @@ describe("getBoardGameTitleForEdit", () => {
       mechanics: [],
       explainerVideoUrl: null,
       contributors: [],
+      tags: [],
     } as never);
 
     const result = await getBoardGameTitleForEdit("game-1");

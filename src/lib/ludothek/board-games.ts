@@ -20,6 +20,10 @@ import {
   contributorNamesByRole,
 } from "@/lib/ludothek/taxonomy/contributors-read";
 import {
+  TAG_LINKS_INCLUDE,
+  tagLabelsByType,
+} from "@/lib/ludothek/taxonomy/tags-read";
+import {
   type BoardGameTitleInput,
   findOrCreateBoardGameTitle,
   toBoardGameTitleData,
@@ -246,10 +250,9 @@ export async function getBoardGameTitleForEdit(id: string) {
       averageRating: true,
       imageUrl: true,
       description: true,
-      mechanics: true,
-      categories: true,
       explainerVideoUrl: true,
       contributors: CONTRIBUTOR_LINKS_INCLUDE,
+      tags: TAG_LINKS_INCLUDE,
       yearPublished: true,
       traits: true,
       notes: true,
@@ -257,8 +260,12 @@ export async function getBoardGameTitleForEdit(id: string) {
   });
   if (!record) return null;
 
-  const { contributors, ...rest } = record;
-  return { ...rest, ...contributorNamesByRole(contributors) };
+  const { contributors, tags, ...rest } = record;
+  return {
+    ...rest,
+    ...contributorNamesByRole(contributors),
+    ...tagLabelsByType(tags),
+  };
 }
 
 export type DuplicateBoardGameMatch = { id: string; title: string };
