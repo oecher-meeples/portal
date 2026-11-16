@@ -2,7 +2,7 @@ name: Docker build
 
 on:
   push:
-    branches: [preview, release]
+    branches: [feature/autodeploy-workflows, preview, release]
     tags: ["v*", "[0-9]+.[0-9]+*"]
   workflow_dispatch:
     inputs:
@@ -11,11 +11,15 @@ on:
         required: false
         default: false
         type: boolean
-      deploy_preview:
-        description: "Deploy to Preview after build finishes (for testing current branch)"
+      deploy_environment:
+        description: "Target environment to deploy after build finishes"
         required: false
-        default: false
-        type: boolean
+        type: choice
+        options:
+          - none
+          - Preview
+          - production
+        default: none
 
 # Ein laufender Build pro Ref reicht — verhindert auch, dass ein älterer Lauf
 # einen neueren Branch-/latest-Tag überschreibt.
@@ -180,8 +184,8 @@ jobs:
 
   deploy:
     needs: [build, build-seaweedfs]
-    if: github.ref_name == 'preview' || github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_preview)
+    if: github.ref_name == 'feature/autodeploy-workflows' || github.ref_name == 'preview' || github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_environment != '' && inputs.deploy_environment != 'none')
     uses: ./.github/workflows/deploy.yml
     with:
-      environment: ${{ github.ref_name == 'release' && 'production' || 'Preview' }}
+      environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.deploy_environment) || (github.ref_name == 'release' && 'production') || 'Preview' }}
     secrets: inherit
