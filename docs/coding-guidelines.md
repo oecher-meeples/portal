@@ -75,8 +75,11 @@ Verbindlich daran:
 3. **Fehlermeldungen sind deutsch und nutzerlesbar** („Keine Berechtigung.", nicht „FORBIDDEN").
 4. **`revalidatePath`** nach Mutationen, die Server-Komponenten betreffen.
 5. Actions liegen bei ihrem Anwendungsfall (`feature/<domäne>/actions.ts`) oder — wenn mehrere Features sie brauchen — im Domain-Layer (`lib/<domäne>/*-actions.ts`).
+6. **Jeder Export einer `"use server"`-Datei ist ein öffentlicher POST-Endpunkt.** Reine Lesefunktionen ohne eigenen Guard gehören in eine Datei **ohne** `"use server"` (z. B. `lib/bringbuy/queries.ts`, mit `import "server-only"`).
+7. **Gebundene Argumente sind keine Autorisierung.** `action.bind(null, x)` schickt `x` an den Client, der es beim Aufruf manipuliert zurückschicken kann. Identität (Meeple-ID, Verkäufer-ID) löst die Action selbst auf — per Session oder durch erneute Prüfung eines Tokens.
+8. **catch-all-Blöcke** laufen über `actionErrorMessage(error)` bzw. `toResult(run)` aus [`src/lib/utils/action-result.ts`](../src/lib/utils/action-result.ts): zuerst `unstable_rethrow` (sonst verschluckt der `catch` `redirect()`/`notFound()` und die UI zeigt „NEXT_REDIRECT"), dann nur die Message eines `UserFacingError` — alles andere wird geloggt und als „Unbekannter Fehler." gemeldet. Nie `(error as Error).message` in die UI.
 
-**Unerwartete** Zustandsverletzungen sind Ausnahmen, keine Rückgabewerte: dafür gibt es benannte Fehlerklassen in [`src/lib/ludothek/errors.ts`](../src/lib/ludothek/errors.ts) (`HoldingConflictError`, `GameNotFoundError`, …), jeweils mit gesetztem `this.name` und deutscher Message.
+**Unerwartete** Zustandsverletzungen sind Ausnahmen, keine Rückgabewerte: dafür gibt es benannte Fehlerklassen in [`src/lib/ludothek/errors.ts`](../src/lib/ludothek/errors.ts) (`HoldingConflictError`, `GameNotFoundError`, …), jeweils mit gesetztem `this.name` und deutscher Message. Sie erben von `UserFacingError`, damit `toResult` ihre Message durchreicht.
 
 Es gibt **kein Schema-Validierungs-Framework** (kein zod). Validiert wird von Hand in kleinen, testbaren Funktionen im Domain-Layer.
 
