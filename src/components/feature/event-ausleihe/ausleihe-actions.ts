@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { BoardGameTraitTone } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { toResult } from "@/lib/utils/action-result";
 import { requireMeeple } from "@/lib/members/meeples";
 import { findActiveShiftEvent } from "@/lib/events/shift-rights";
 import { resolveBoardGameTraits } from "@/lib/ludothek/board-game-traits";
@@ -48,15 +49,8 @@ async function requireAusleiheShift() {
   return { meeple, eventId: activeShift.eventId };
 }
 
-async function toResult(run: () => Promise<unknown>) {
-  try {
-    await run();
-    return { success: true as const };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unbekannter Fehler.",
-    };
-  }
+function revalidateAusleihe() {
+  revalidatePath("/ausleihe");
 }
 
 export async function ausleiheResolveCode(raw: string): Promise<ResolvedScan> {
@@ -147,7 +141,7 @@ export async function ausleiheGetAvailability(
  * CONTEXT.md "Ausleiher".
  */
 export async function ausleiheIssueGame(gameCopyId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     const meeple = await requireAusleiheMeeple();
     const member = await prisma.member.findUnique({
       where: { meepleId: meeple.id },
@@ -158,28 +152,24 @@ export async function ausleiheIssueGame(gameCopyId: string) {
         "Dieses Konto ist mit keinem Vereinsmitglied verknüpft — Ausgabe an einen Gast ist nur für Vereinsmitglieder möglich.",
       );
     }
-    return borrowGame({
+    await borrowGame({
       gameCopyId,
       vereinsmitgliedId: member.id,
       recordedByMeepleId: meeple.id,
       isSelf: true,
     });
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
 
 export async function ausleiheReturnToUnit(gameCopyId: string, unitId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     const meeple = await requireAusleiheMeeple();
-    return returnGame({
+    await returnGame({
       gameCopyId,
       toUnitId: unitId,
       recordedByMeepleId: meeple.id,
     });
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
 
 /** Private Exemplare (#122), die für die laufende Ausleihe-Schicht zur
@@ -193,21 +183,17 @@ export async function ausleiheListOfferedPrivateLoans(): Promise<
 }
 
 export async function ausleiheIssuePrivateLoan(loanId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     const { meeple } = await requireAusleiheShift();
     const outcome = await issuePrivateLoan(loanId, meeple.id);
     if ("error" in outcome) throw new HoldingConflictError(outcome.error);
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
 
 export async function ausleiheReturnPrivateLoan(loanId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     await requireAusleiheShift();
     const outcome = await returnPrivateLoan(loanId);
     if ("error" in outcome) throw new HoldingConflictError(outcome.error);
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
