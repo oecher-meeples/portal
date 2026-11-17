@@ -5,6 +5,7 @@ import {
   requireMeeplePermission,
 } from "@/lib/members/meeples";
 import { HoldingConflictError } from "@/lib/ludothek/holdings";
+import { toResult } from "@/lib/utils/action-result";
 
 /**
  * Shared helpers between `holding-actions.ts` and `holding-actions-external.ts`
@@ -67,21 +68,6 @@ export async function requireMemberForMeeple(meepleId: string) {
     );
   }
   return member;
-}
-
-export async function toResult<T>(
-  run: () => Promise<T> | T,
-  onSuccess?: (value: T) => Promise<void> | void,
-) {
-  try {
-    const value = await run();
-    if (onSuccess) await onSuccess(value);
-    return { success: true as const, value };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unbekannter Fehler.",
-    };
-  }
 }
 
 /** Revalidates the list, admin overview and (if resolvable) the copy's detail page — only called on success. */

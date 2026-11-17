@@ -54,6 +54,7 @@ Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst �
 | `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                          | eigenem S3-`DeleteObjects`-Aufruf pro Feature                       |
 | `createBlobUploadToken({ pathname, contentType, … })` (`lib/utils/blob-upload-token.ts`)  | eigenem `createPresignedPost` im `get…UploadToken`-Server-Action    |
 | `putBlob(pathname, body, contentType)` (`lib/utils/s3.ts`)                                | eigenem `PutObjectCommand` für serverseitige Uploads                |
+| `toResult(run)` / `actionErrorMessage(error)` (`lib/utils/action-result.ts`)              | eigenem `catch (e) { return { error: (e as Error).message } }`      |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 

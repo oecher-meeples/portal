@@ -3,7 +3,6 @@
 import { prisma } from "@/lib/utils/prisma";
 import { generateToken } from "@/lib/utils/generate-token";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
-import { isFleaMarketExternalSellerTokenValid } from "@/lib/bringbuy/status";
 import { isBringAndBuyMarketOpen } from "@/lib/events/upcoming";
 
 function siteUrl(): string {
@@ -59,26 +58,4 @@ export async function registerExternalSeller(
   });
 
   return { success: true as const };
-}
-
-export type ExternalSellerContext = {
-  id: string;
-  eventId: string;
-  name: string;
-};
-
-/** Löst einen Verkäufer-Token auf — `null` bei unbekanntem oder nicht mehr
- * gültigem Token (alle Artikel bereits in einem Endzustand, siehe
- * `isFleaMarketExternalSellerTokenValid`). */
-export async function findExternalSellerByToken(
-  token: string,
-): Promise<ExternalSellerContext | null> {
-  const seller = await prisma.fleaMarketExternalSeller.findUnique({
-    where: { token },
-    include: { items: { select: { status: true } } },
-  });
-  if (!seller) return null;
-  if (!isFleaMarketExternalSellerTokenValid(seller.items)) return null;
-
-  return { id: seller.id, eventId: seller.eventId, name: seller.name };
 }

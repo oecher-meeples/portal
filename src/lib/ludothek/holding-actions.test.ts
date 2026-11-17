@@ -42,7 +42,8 @@ vi.mock("@/lib/utils/prisma", () => ({
     },
   },
 }));
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
   redirect: (target: string) => {
     throw new RedirectError(target);
   },

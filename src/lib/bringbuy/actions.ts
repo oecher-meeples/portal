@@ -7,6 +7,7 @@ import { requireMeeple } from "@/lib/members/meeples";
 import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
 import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 import { canTransitionFleaMarketItemStatus } from "@/lib/bringbuy/status";
+import { UserFacingError, actionErrorMessage } from "@/lib/utils/action-result";
 
 /**
  * Kassen-Berechtigungsprüfung + Kassenaktionen (Freigabe, Statuswechsel,
@@ -22,7 +23,7 @@ export async function requireCashierRights() {
     FLEA_MARKET_CASHIER_PERMISSION_KEY,
   );
   if (!allowed) {
-    throw new Error(
+    throw new UserFacingError(
       "Keine Kassenberechtigung — weder events:manage noch eine aktive Schicht, deren Rolle diese Rechte gewährt.",
     );
   }
@@ -30,18 +31,18 @@ export async function requireCashierRights() {
 }
 
 export async function approveFleaMarketItem(itemId: string) {
+  let meeple;
+  try {
+    meeple = await requireCashierRights();
+  } catch (error) {
+    return { error: actionErrorMessage(error) };
+  }
+
   const item = await prisma.fleaMarketItem.findUnique({
     where: { id: itemId },
   });
   if (!item) {
     return { error: "Artikel nicht gefunden." };
-  }
-
-  let meeple;
-  try {
-    meeple = await requireCashierRights();
-  } catch (error) {
-    return { error: (error as Error).message };
   }
 
   if (item.status !== "PENDING") {
@@ -65,17 +66,17 @@ export async function setFleaMarketItemStatus(
   itemId: string,
   status: FleaMarketItemStatus,
 ) {
+  try {
+    await requireCashierRights();
+  } catch (error) {
+    return { error: actionErrorMessage(error) };
+  }
+
   const item = await prisma.fleaMarketItem.findUnique({
     where: { id: itemId },
   });
   if (!item) {
     return { error: "Artikel nicht gefunden." };
-  }
-
-  try {
-    await requireCashierRights();
-  } catch (error) {
-    return { error: (error as Error).message };
   }
 
   if (!canTransitionFleaMarketItemStatus(item.status, status)) {
@@ -98,7 +99,7 @@ export async function findFleaMarketItemByCode(eventId: string, code: string) {
   try {
     await requireCashierRights();
   } catch (error) {
-    return { error: (error as Error).message };
+    return { error: actionErrorMessage(error) };
   }
 
   const item = await prisma.fleaMarketItem.findFirst({
@@ -131,7 +132,7 @@ export async function sellFleaMarketItems(itemIds: string[]) {
   try {
     await requireCashierRights();
   } catch (error) {
-    return { error: (error as Error).message };
+    return { error: actionErrorMessage(error) };
   }
   if (itemIds.length === 0) {
     return { error: "Kein Artikel ausgewählt." };
@@ -177,7 +178,7 @@ export async function reserveFleaMarketCart(
   try {
     await requireCashierRights();
   } catch (error) {
-    return { error: (error as Error).message };
+    return { error: actionErrorMessage(error) };
   }
   const trimmedName = name.trim();
   if (!trimmedName) {
@@ -209,21 +210,4 @@ export async function reserveFleaMarketCart(
 
   revalidatePath("/admin/bringbuy");
   return { success: true as const, cartId: cart.id };
-}
-
-/** Liste der zwischengespeicherten, reservierten Warenkörbe eines Events
- * (#266) — für den "Reservierte Warenkörbe"-Tab der Kassenansicht. */
-export async function listReservedFleaMarketCarts(eventId: string) {
-  const carts = await prisma.fleaMarketCart.findMany({
-    where: { eventId },
-    orderBy: { createdAt: "desc" },
-    include: { items: true },
-  });
-  return carts.map((cart) => ({
-    id: cart.id,
-    name: cart.name,
-    createdAt: cart.createdAt,
-    itemIds: cart.items.map((item) => item.id),
-    totalEuros: cart.items.reduce((sum, item) => sum + item.priceEuros, 0),
-  }));
 }

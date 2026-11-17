@@ -24,9 +24,9 @@ import {
   requireActingMeeple,
   requireMemberForMeeple,
   requireOwnMember,
-  toResult,
   toResultAndRevalidate,
 } from "@/lib/ludothek/holding-actions-shared";
+import { toResult } from "@/lib/utils/action-result";
 
 export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
   await requireMeeplePermission("ludothek:borrow");

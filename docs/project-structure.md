@@ -42,7 +42,8 @@ src/lib/
 │               Verkäufer:innen (`external-sellers.ts`), eigene Artikel für Meeple **und** externe Verkäufer:innen
 │               (`own-items.ts`) — bewusst hier statt in `components/feature/admin-bringbuy/`, weil sowohl die
 │               Kassenansicht als auch die neue Verkäufer-Registrierungsseite (`feature/bringbuy`) darauf zugreifen
-│               und die Layer-Regel keinen Cross-Feature-Import erlaubt (#266)
+│               und die Layer-Regel keinen Cross-Feature-Import erlaubt (#266). Lesefunktionen ohne Guard (Token-Lookup,
+│               eigene Artikel, reservierte Warenkörbe) liegen in `queries.ts` **ohne** `"use server"` (#519)
 ├── content/    News/Content (inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
@@ -82,7 +83,8 @@ src/lib/
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → SeaweedFS per Presigned POST), `search-params.ts`,
                 `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, Public-URL ↔ Key, `putBlob()`),
-                `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt)
+                `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt),
+                `action-result.ts` (`toResult`/`actionErrorMessage`/`UserFacingError` — catch-all für Server Actions mit `unstable_rethrow`)
 ```
 
 Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.
