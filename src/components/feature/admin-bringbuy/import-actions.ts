@@ -5,6 +5,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
 import { requireCashierRights } from "@/lib/bringbuy/actions";
+import { actionErrorMessage } from "@/lib/utils/action-result";
 
 /**
  * Cashier-side bulk import (#211) — replaces the former member self-service
@@ -17,7 +18,7 @@ export async function importFleaMarketItemsCsv(eventId: string, raw: string) {
   try {
     meeple = await requireCashierRights();
   } catch (error) {
-    return { created: 0, errors: [], error: (error as Error).message };
+    return { created: 0, errors: [], error: actionErrorMessage(error) };
   }
 
   const { items, errors } = parseFleaMarketCsv(raw);

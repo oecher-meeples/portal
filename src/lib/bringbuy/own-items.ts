@@ -2,20 +2,34 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/utils/prisma";
+import { requireMember } from "@/lib/auth/session";
+import { isBringAndBuyMarketOpen } from "@/lib/events/upcoming";
 import { nextFleaMarketItemCode } from "@/lib/bringbuy/codes";
+import {
+  findExternalSellerByToken,
+  type FleaMarketSellerRef,
+} from "@/lib/bringbuy/queries";
 
-/** Identifies the caller of the own-items actions below: either a logged-in
- * Meeple (own login, no token, #266) or a token-identified external seller
- * (`findExternalSellerByToken`). Exactly one of the two is set. */
-export type FleaMarketSellerRef =
-  | { sellerMeepleId: string; externalSellerId?: undefined }
-  | { sellerMeepleId?: undefined; externalSellerId: string };
+/**
+ * Verkäufer-Selbstbedienung (#266). Die Verkäufer-Identität wird in jeder
+ * Action **serverseitig** aufgelöst (#519) — Mitglied über die Session,
+ * externe Verkäufer:in über den erneut geprüften Token. Gebundene Argumente
+ * (`.bind(null, …)`) gehen an den Client und kommen manipulierbar zurück;
+ * eine gebundene `sellerMeepleId` wäre daher keine Autorisierung. Der Token
+ * dagegen *ist* der Berechtigungsnachweis und darf gebunden werden.
+ */
 
 export type OwnFleaMarketItemInput = {
   title: string;
   language: string;
   priceEuros: number;
 };
+
+type ActionResult = { success: true } | { error: string };
+
+const INVALID_TOKEN_ERROR = "Dieser Verkäufer-Link ist nicht (mehr) gültig.";
+const MARKET_CLOSED_ERROR =
+  "Der Bring&Buy-Markt ist für dieses Event nicht geöffnet.";
 
 function validateOwnItemInput(input: OwnFleaMarketItemInput) {
   if (!input.title.trim()) return "Bitte einen Titel angeben.";
@@ -26,17 +40,32 @@ function validateOwnItemInput(input: OwnFleaMarketItemInput) {
   return null;
 }
 
+/** Die Seite prüft die Marktöffnung nur für die Anzeige — jede Action prüft
+ * sie erneut (#519). */
+async function isMarketOpen(eventId: string) {
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  return !!event && isBringAndBuyMarketOpen(event);
+}
+
+async function meepleSeller(): Promise<FleaMarketSellerRef> {
+  const { meeple } = await requireMember();
+  return { sellerMeepleId: meeple.id };
+}
+
 /** Meeple und externe Verkäufer:in melden Artikel gleichermaßen als
  * `PENDING` an (#266) — die Freigabe zu `FOR_SALE` bleibt in jedem Fall
  * Aufgabe der Kassenperson bei physischer Übergabe (unverändert ggü. #211). */
-export async function createOwnFleaMarketItem(
-  eventId: string,
+async function createItemFor(
   seller: FleaMarketSellerRef,
+  eventId: string,
   input: OwnFleaMarketItemInput,
-) {
+): Promise<ActionResult> {
   const validationError = validateOwnItemInput(input);
   if (validationError) {
     return { error: validationError };
+  }
+  if (!(await isMarketOpen(eventId))) {
+    return { error: MARKET_CLOSED_ERROR };
   }
 
   const existing = await prisma.fleaMarketItem.findMany({
@@ -62,15 +91,12 @@ export async function createOwnFleaMarketItem(
 }
 
 /** Nur `PENDING`-Artikel sind für die Verkäufer:in selbst bearbeitbar
- * (#266) — danach hat die Kasse die Hoheit über den Artikel. `seller` steht
- * bewusst vor `itemId`: die Seite bindet ihn serverseitig fest
- * (`updateOwnFleaMarketItem.bind(null, seller)`), `itemId`/`input` bleiben
- * die vom Client gewählten Argumente. */
-export async function updateOwnFleaMarketItem(
+ * (#266) — danach hat die Kasse die Hoheit über den Artikel. */
+async function updateItemFor(
   seller: FleaMarketSellerRef,
   itemId: string,
   input: OwnFleaMarketItemInput,
-) {
+): Promise<ActionResult> {
   const item = await prisma.fleaMarketItem.findUnique({
     where: { id: itemId },
   });
@@ -93,6 +119,9 @@ export async function updateOwnFleaMarketItem(
   if (validationError) {
     return { error: validationError };
   }
+  if (!(await isMarketOpen(item.eventId))) {
+    return { error: MARKET_CLOSED_ERROR };
+  }
 
   await prisma.fleaMarketItem.update({
     where: { id: itemId },
@@ -107,34 +136,37 @@ export async function updateOwnFleaMarketItem(
   return { success: true as const };
 }
 
-export type OwnFleaMarketItemView = {
-  id: string;
-  code: string;
-  title: string;
-  language: string | null;
-  priceEuros: number;
-  status: string;
-};
-
-export async function listOwnFleaMarketItems(
+export async function createOwnFleaMarketItemAsMeeple(
   eventId: string,
-  seller: FleaMarketSellerRef,
-): Promise<OwnFleaMarketItemView[]> {
-  const items = await prisma.fleaMarketItem.findMany({
-    where: {
-      eventId,
-      ...(seller.sellerMeepleId
-        ? { sellerMeepleId: seller.sellerMeepleId }
-        : { externalSellerId: seller.externalSellerId }),
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return items.map((item) => ({
-    id: item.id,
-    code: item.code,
-    title: item.title,
-    language: item.language,
-    priceEuros: item.priceEuros,
-    status: item.status,
-  }));
+  input: OwnFleaMarketItemInput,
+) {
+  return createItemFor(await meepleSeller(), eventId, input);
+}
+
+export async function updateOwnFleaMarketItemAsMeeple(
+  itemId: string,
+  input: OwnFleaMarketItemInput,
+) {
+  return updateItemFor(await meepleSeller(), itemId, input);
+}
+
+/** Das Event kommt aus dem Token, nicht vom Client — ein externer Verkäufer
+ * ist immer genau an ein Event gebunden. */
+export async function createOwnFleaMarketItemWithToken(
+  token: string,
+  input: OwnFleaMarketItemInput,
+) {
+  const seller = await findExternalSellerByToken(token);
+  if (!seller) return { error: INVALID_TOKEN_ERROR };
+  return createItemFor({ externalSellerId: seller.id }, seller.eventId, input);
+}
+
+export async function updateOwnFleaMarketItemWithToken(
+  token: string,
+  itemId: string,
+  input: OwnFleaMarketItemInput,
+) {
+  const seller = await findExternalSellerByToken(token);
+  if (!seller) return { error: INVALID_TOKEN_ERROR };
+  return updateItemFor({ externalSellerId: seller.id }, itemId, input);
 }
