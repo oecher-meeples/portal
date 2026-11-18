@@ -7,16 +7,17 @@ als Container aus [`docker-compose.yml`](../docker-compose.yml); externe Dienste
 Zugangsdaten angebunden.
 
 Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
-`docker-compose.yml`, [`docker/.env.example`](../docker/.env.example),
-`Dockerfile`, `docker/app/entrypoint.sh`, `docker/cron/`, `docker/seaweedfs/`,
-`docker/caddy/Caddyfile`.
+`docker-compose.yml`, [`.env.dist`](../.env.dist), `crontab`,
+`docker-compose.override.yml`, `Dockerfile`, `docker/app/entrypoint.sh`,
+`docker/seaweedfs/`, `.github/workflows/docker-build.yml`,
+`.github/workflows/deploy.yml`.
 
 ## Inhalt
 
 1. [Überblick](#1-überblick)
 2. [Voraussetzungen](#2-voraussetzungen)
 3. [Kurzfassung](#3-kurzfassung)
-4. [Image bauen](#4-image-bauen)
+4. [Images & lokales Bauen](#4-images--lokales-bauen)
 5. [Konfiguration (`.env`)](#5-konfiguration-env)
 6. [Stack starten](#6-stack-starten)
 7. [Erster Start: Migration und Seed](#7-erster-start-migration-und-seed)
@@ -24,7 +25,7 @@ Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
 9. [Die Dienste im Detail](#9-die-dienste-im-detail)
 10. [Externe Zugangsdaten beschaffen](#10-externe-zugangsdaten-beschaffen)
 11. [Backup und Wiederherstellung](#11-backup-und-wiederherstellung)
-12. [Updates einspielen](#12-updates-einspielen)
+12. [Updates & CI/CD-Deployment](#12-updates--cicd-deployment)
 13. [Umzug von Vercel/Neon](#13-umzug-von-vercelneon)
 14. [Fehlerbehebung](#14-fehlerbehebung)
 
@@ -32,49 +33,43 @@ Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
 
 | Service        | Image / Build                | Aufgabe                                                                                             | Host-Port (nur `127.0.0.1`)        |
 | -------------- | ---------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `app`          | `Dockerfile` (Repo-Wurzel)   | Next.js-Server; führt bei jedem Start Migrationen und ggf. den Seed aus                             | `3000` (`APP_PORT`)                |
+| `app`          | `ghcr.io/oecher-meeples/portal-app:${IMAGE_TAG:-latest}` | Next.js-Server; führt bei jedem Start Migrationen und ggf. den Seed aus                             | `3000` (`APP_PORT`)                |
 | `postgres`     | `postgres:16`                | Datenbank, Volume `postgres-data`                                                                   | `5432` (`POSTGRES_PORT`)           |
-| `seaweedfs`    | `docker/seaweedfs/Dockerfile` (Basis `chrislusf/seaweedfs:4.48`) | S3-kompatibler Datei-Speicher (Uploads, erzeugte Bilder), Volume `seaweedfs-data` | `8333` S3-API (`S3_API_PORT`)      |
+| `seaweedfs`    | `ghcr.io/oecher-meeples/portal-seaweedfs:${SEAWEEDFS_IMAGE_TAG:-preview}` | S3-kompatibler Datei-Speicher (Uploads, erzeugte Bilder), Volume `seaweedfs-data` | `8333` S3-API (`S3_API_PORT`)      |
 | `seaweedfs-init` | `amazon/aws-cli:2.33.0`    | One-Shot: legt Bucket und öffentliche Lese-Policy an, beendet sich danach                           | —                                  |
-| `cron-sidecar` | `docker/cron/Dockerfile`     | Ruft die geplanten Hintergrund-Jobs der App auf                                                     | —                                  |
-| `caddy`        | `caddy:2`                    | **Optional** (Profil `with-proxy`): TLS-Reverse-Proxy mit Let's-Encrypt-Zertifikaten                | `80`, `443` (öffentlich)           |
 
-Alles außer `caddy` ist nur an `127.0.0.1` gebunden. Ins Internet zeigt
-ausschließlich ein Reverse Proxy — entweder der mitgelieferte Caddy oder ein
-bereits vorhandener (nginx, Traefik, …). Er braucht **zwei** Hostnamen: einen
-für das Portal und einen für den Datei-Speicher (siehe
-[Abschnitt 8](#8-reverse-proxy-und-tls)).
+Alle Dienste sind nur an `127.0.0.1` gebunden. Ins Internet zeigt ausschließlich ein Reverse Proxy auf dem Host (z. B. nginx, Traefik oder Caddy). Er braucht **zwei** Hostnamen: einen für das Portal und einen für den Datei-Speicher (siehe [Abschnitt 8](#8-reverse-proxy-und-tls)).
+
+Geplante Hintergrundjobs (`cron`) laufen direkt auf dem Host über die bereitgestellte [`crontab`](../crontab) (siehe [Abschnitt 9.4](#94-geplante-jobs-host-crontab)).
 
 ## 2. Voraussetzungen
 
 - **Docker Engine ≥ 23** (BuildKit ist dort Standard; das `Dockerfile` nutzt
   `RUN --mount=type=cache`).
 - **Docker Compose v2** — also `docker compose` (Plugin), nicht das alte
-  Python-`docker-compose` v1. Genutzt werden Profile und
-  `depends_on`-Bedingungen (`service_healthy`, `service_completed_successfully`).
-- Ein Checkout dieses Repos auf dem Server (gebaut wird lokal, es gibt kein
-  vorgefertigtes Image).
+  Python-`docker-compose` v1. Genutzt werden `depends_on`-Bedingungen
+  (`service_healthy`, `service_completed_successfully`).
+- Vorgefertigte Multi-Arch-Images (`linux/amd64` und `linux/arm64`) werden
+  automatisch über die GitHub Container Registry (GHCR) bereitgestellt.
 - Für den Produktivbetrieb: **zwei DNS-Namen** (z. B. `portal.example.org` und
-  `files.portal.example.org`), die auf den Server zeigen, und — mit dem
-  Caddy-Profil — offene Ports **80 und 443**.
+  `files.portal.example.org`), die auf den Server zeigen, sowie ein Reverse Proxy
+  auf dem Host mit offenen Ports **80 und 443**.
 - `openssl` (oder ein anderer Zufallsgenerator) zum Erzeugen der Secrets.
 - Optional: ein SMTP-Zugang für den Mailversand ([9.3](#93-e-mail-smtp)).
-
-Der `next build` im Image braucht spürbar Arbeitsspeicher. Scheitert der Build
-auf einem kleinen VPS, das Image auf einem stärkeren Rechner bauen (siehe
-[4](#4-image-bauen)).
 
 ## 3. Kurzfassung
 
 ```bash
 git clone <repo-url> oecher-meeples-portal && cd oecher-meeples-portal
-cp docker/.env.example .env
-# .env ausfüllen: alle mit REQUIRED markierten Werte + SEED_ADMIN_* (Abschnitt 5)
+cp .env.dist .env
+# .env ausfüllen: alle mit Pflichtwerten versehen + SEED_ADMIN_* (Abschnitt 5)
 
-# a) Es gibt schon einen Reverse Proxy auf dem Host:
-docker compose up -d --build
-# b) Kein Proxy vorhanden — Caddy holt TLS-Zertifikate selbst:
-docker compose --profile with-proxy up -d --build
+# Images aus GHCR laden und Stack im Hintergrund starten:
+docker compose pull
+docker compose up -d
+
+# Host-Crontab für Hintergrundjobs einrichten (Abschnitt 9.4):
+crontab crontab
 
 docker compose ps            # app sollte nach ≤ 60 s "healthy" sein
 docker compose logs -f app   # Migration, Seed, Serverstart verfolgen
@@ -83,23 +78,40 @@ docker compose logs -f app   # Migration, Seed, Serverstart verfolgen
 Danach mit `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` unter `BETTER_AUTH_URL`
 anmelden.
 
-## 4. Image bauen
+## 4. Images & lokales Bauen
+
+Standardmäßig zieht `docker-compose.yml` vorgefertigte Images aus der
+GitHub Container Registry (GHCR):
+- `ghcr.io/oecher-meeples/portal-app:${IMAGE_TAG:-latest}`
+- `ghcr.io/oecher-meeples/portal-seaweedfs:${SEAWEEDFS_IMAGE_TAG:-preview}`
+
+### Lokales Bauen (`docker-compose.override.yml`)
+
+Für die lokale Entwicklung oder eigene Anpassungen liegt im Repo-Root eine
+[`docker-compose.override.yml`](../docker-compose.override.yml). Liegt diese
+Datei im Verzeichnis, überschreibt Docker Compose die Image-Direktiven und
+baut die Container lokal aus den Quellen:
 
 ```bash
-docker compose build              # baut app (Dockerfile), seaweedfs (docker/seaweedfs/) und cron-sidecar (docker/cron/)
+docker compose up -d --build      # baut app (Dockerfile) und seaweedfs (docker/seaweedfs/) lokal
 ```
 
-`docker compose up -d --build` baut implizit mit; ein separater Build lohnt
-sich nur, um Build-Fehler getrennt vom Start zu sehen. Das Basis-Image
-`chrislusf/seaweedfs:4.48` wird beim Bauen von `seaweedfs` gezogen, die
-übrigen Images (`postgres`, `amazon/aws-cli`, `caddy`) beim ersten `up`.
+Auf Zielservern, die über GitHub Actions oder fertige Images deployt werden,
+wird `docker-compose.override.yml` weggelassen, sodass `docker compose pull`
+und `docker compose up -d` stets die fertigen Registry-Images nutzen.
 
-Das App-Image ist ein Multi-Stage-Build (`node:22-slim`):
+### Multi-Arch-Build & Dockerfile
+
+Das App-Image ist ein Multi-Stage-Build (`node:22-slim`). Durch
+`FROM --platform=$BUILDPLATFORM base AS deps` und `build` laufen
+`pnpm install` und `next build` beim Multi-Arch-Build (`amd64` + `arm64`)
+nativ auf der Host-Architektur des Builders statt unter langsamer
+QEMU-arm64-Emulation (Prisma 7 nutzt platformunabhängiges WASM).
 
 | Stage        | Inhalt                                                                                                               |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- |
 | `deps`       | `pnpm install --frozen-lockfile` (pnpm-Version per corepack aus `packageManager` in `package.json`)                  |
-| `build`      | `prisma generate`, `next build` (Standalone-Output), Seed als eine gebündelte Datei `seed.cjs`                       |
+| `build`      | `next build` (Standalone-Output), Seed als eine gebündelte Datei `seed.cjs`                                          |
 | `prisma-cli` | nur die Prisma-CLI in exakt der Version aus `package.json`, für `migrate deploy`                                     |
 | `runner`     | Laufzeit-Image: `server.js` + getracte `node_modules`, `.next/static`, `public/`, Migrationen, Seed, Entrypoint      |
 
@@ -110,24 +122,18 @@ unprivilegierter User `node` und bringt einen `HEALTHCHECK` gegen
 nötigen Auth-Werte sind Platzhalter, die zur Laufzeit durch die echten aus der
 Container-Umgebung ersetzt werden.
 
-**Build auf einem anderen Rechner:** `docker build -t meeples-app .` baut
-dasselbe App-Image ohne Compose. Um es auf dem Server zu nutzen, per Registry
-oder `docker save | ssh … docker load` übertragen und in einer
-`docker-compose.override.yml` beim Service `app` `image: meeples-app`
-eintragen (dann `docker compose up -d` ohne `--build`).
-
 ## 5. Konfiguration (`.env`)
 
 ```bash
-cp docker/.env.example .env      # in der Repo-Wurzel, neben docker-compose.yml
+cp .env.dist .env      # in der Repo-Wurzel, neben docker-compose.yml
 ```
 
 Docker Compose liest `.env` im Projektverzeichnis automatisch. `.env` nie
-committen (ist per `.gitignore` ausgeschlossen). Die Datei
-`docker/.env.example` ist kommentiert und listet jede Variable mit dem
-passenden `openssl`-Befehl; die Wurzel-`.env.example` ist dagegen für die
-lokale Entwicklung (`pnpm dev` auf dem Host) gedacht und **nicht** für den
-Container-Betrieb.
+committen (ist per `.gitignore` ausgeschlossen). Die Vorlage
+[`.env.dist`](../.env.dist) enthält alle benötigten Variablen mit passenden
+Kommentaren und `openssl`-Beispielen. Die Wurzel-`.env.example` ist dagegen
+für die lokale Node-Entwicklung (`pnpm dev` auf dem Host) gedacht und
+**nicht** für den Container-Betrieb.
 
 ### Pflicht-Variablen
 
@@ -144,7 +150,7 @@ gar kein Container, nicht nur die App nicht.
 | `S3_PUBLIC_ENDPOINT`         | Öffentlicher Origin des Datei-Speichers (Bilder, Browser-Uploads). **Später nicht mehr ändern**, siehe 9.2     | `https://files.portal.example.org`  |
 | `BETTER_AUTH_SECRET`         | Signiert Sessions, Reset-Tokens, Instagram-OAuth-State. Wechsel meldet alle ab                                 | `openssl rand -base64 32`           |
 | `MEMBER_DATA_ENCRYPTION_KEY` | AES-256-GCM-Schlüssel für gespeicherte IBANs ([ADR 0003](adr/0003-bankdaten-verschluesselt-mit-protokolliertem-leseweg.md)). **Außerhalb des Servers sichern**, siehe 11   | `openssl rand -base64 32`           |
-| `CRON_SECRET`                | Bearer-Token zwischen `cron-sidecar` und `/api/cron/*`                                                         | `openssl rand -hex 32`              |
+| `CRON_SECRET`                | Bearer-Token für die `/api/cron/*`-Routen der App (aufgerufen via Host-Crontab)                                | `openssl rand -hex 32`              |
 | `POSTGRES_PASSWORD`          | Passwort des DB-Users; landet in der `DATABASE_URL`, daher URL-sicher halten                                   | `openssl rand -hex 24`              |
 | `SEAWEEDFS_ADMIN_ACCESS_KEY` | Access-Key der SeaweedFS-Identität `admin` (Bucket + Policy anlegen, nur `seaweedfs-init`) — die App nutzt ihn nicht | `openssl rand -hex 20`        |
 | `SEAWEEDFS_ADMIN_SECRET_KEY` | Secret-Key dazu                                                                                                | `openssl rand -hex 20`              |
@@ -159,7 +165,6 @@ aber in der jeweiligen Situation nötig:
 | Variable                                  | Wann                                     | Was passiert ohne                                                                                                                      |
 | ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Erster Start auf **leerer** Datenbank    | Der App-Container bricht nach der Migration ab ([7](#7-erster-start-migration-und-seed)). Danach werden sie ignoriert                    |
-| `APP_DOMAIN`, `S3_DOMAIN`                 | Nur mit `--profile with-proxy`           | Caddy kann keine Site konfigurieren und startet nicht. Reine Hostnamen ohne `https://`, passend zu `BETTER_AUTH_URL`/`S3_PUBLIC_ENDPOINT` |
 | `SEED_DEMO_PASSWORD`                      | Nur mit `SEED_DEMO_DATA=true`            | Die Demo-Konten bekommen ein leeres Passwort und sind nicht nutzbar. Mindestens 8 Zeichen                                              |
 
 ### Optional (mit funktionierendem Default)
@@ -167,6 +172,8 @@ aber in der jeweiligen Situation nötig:
 | Variable                                          | Default                                            | Zweck                                                                                     |
 | ------------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `ENVIRONMENT`                                     | `production`                                       | Andere Werte werden im Header-Logo-Tooltip angezeigt                                       |
+| `IMAGE_TAG`                                       | `latest`                                           | Image-Tag des App-Containers aus GHCR                                                     |
+| `SEAWEEDFS_IMAGE_TAG`                             | `preview`                                          | Image-Tag des SeaweedFS-Containers aus GHCR                                               |
 | `POSTGRES_USER`, `POSTGRES_DB`                    | `meeples`                                          | DB-User und -Name                                                                         |
 | `DATABASE_URL`                                    | aus `POSTGRES_*` gebaut, Host `postgres:5432`      | Nur setzen, um statt des Containers eine **externe** Postgres-Instanz zu nutzen           |
 | `BETTER_AUTH_TRUSTED_ORIGINS`                     | leer                                               | Weitere Origins (kommagetrennt), die `/api/auth` aufrufen dürfen                          |
@@ -179,7 +186,6 @@ aber in der jeweiligen Situation nötig:
 | `PUBLIC_CALENDAR_ICS_URL`, `ICS_FEED_URL_INTERNAL` | leer                                              | Öffentlicher bzw. interner Kalender-Feed (ICS-URL, kein API-Key)                          |
 | `META_*`, `BGG_BEARER_TOKEN`, `YOUTUBE_API_KEY`, `GITHUB_TOKEN`, `TRANSLATION_CONTACT_EMAIL` | leer (`META_GRAPH_API_VERSION`: `v21.0`) | Externe Dienste, je Feature optional ([10](#10-externe-zugangsdaten-beschaffen)) |
 | `APP_PORT`, `POSTGRES_PORT`, `S3_API_PORT`        | `3000`, `5432`, `8333`                             | Host-Ports (immer nur auf `127.0.0.1`)                                                    |
-| `CRON_APP_URL`                                    | `http://app:3000`                                  | Ziel des Cron-Sidecars, nur bei umbenanntem App-Service                                   |
 
 Fehlt ein optionaler Schlüssel eines externen Dienstes, startet die App
 trotzdem; nur die betroffene Funktion meldet beim Benutzen einen Fehler.
@@ -189,7 +195,7 @@ trotzdem; nur die betroffene Funktion meldet beim Benutzen einen Fehler.
 Zum Ausprobieren auf dem eigenen Rechner geht es auch ohne Proxy und TLS:
 `BETTER_AUTH_URL` und `PUBLIC_SITE_URL` auf `http://localhost:3000`,
 `S3_PUBLIC_ENDPOINT` auf `http://localhost:8333`, dann
-`docker compose up -d --build`.
+`docker compose up -d` (bzw. `docker compose up -d --build` mit lokaler Override-Datei).
 Einschränkung: Die Textextraktion von hochgeladenen Rechtliches-PDFs lädt die
 Datei über `S3_PUBLIC_ENDPOINT` — aus dem App-Container heraus zeigt
 `localhost` aber auf den Container selbst, das schlägt in diesem Modus fehl.
@@ -198,27 +204,17 @@ Für eine echte Instanz nicht übernehmen (gespeicherte Datei-URLs enthalten
 
 ## 6. Stack starten
 
-**Variante A — es gibt schon einen Reverse Proxy** (nginx, Traefik, Apache, ein
-Proxy des Hosters …):
-
 ```bash
+# Images aus GHCR laden und Stack starten:
+docker compose up -d
+
+# Oder für lokalen Build aus Quellcode (nutzt automatisch docker-compose.override.yml):
 docker compose up -d --build
 ```
 
-Startet `postgres`, `seaweedfs`, `seaweedfs-init`, `app` und `cron-sidecar`. Der
-vorhandene Proxy wird auf `127.0.0.1:3000` (Portal) und `127.0.0.1:8333`
-(Datei-Speicher) gerichtet, siehe [8.2](#82-variante-a-vorhandener-reverse-proxy).
-
-**Variante B — kein Proxy vorhanden**, Caddy soll TLS übernehmen:
-
-```bash
-docker compose --profile with-proxy up -d --build
-```
-
-Startet zusätzlich `caddy` auf den Ports 80/443. `--profile` ist eine Option
-von `docker compose` selbst und steht daher **vor** `up`. Wer das Profil nicht
-bei jedem Befehl angeben will, setzt `COMPOSE_PROFILES=with-proxy` in `.env`.
-Voraussetzungen siehe [8.1](#81-variante-b-mitgelieferter-caddy-profil-with-proxy).
+Startet `postgres`, `seaweedfs`, `seaweedfs-init` und `app`. Der vorhandene
+Reverse Proxy auf dem Host wird auf `127.0.0.1:3000` (Portal) und
+`127.0.0.1:8333` (Datei-Speicher) gerichtet, siehe [Abschnitt 8](#8-reverse-proxy-und-tls).
 
 Startreihenfolge (automatisch über `depends_on`):
 
@@ -230,8 +226,6 @@ Startreihenfolge (automatisch über `depends_on`):
    (in `docker compose ps -a` als `exited (0)` — das ist korrekt).
 3. Erst dann startet `app`. Ein „DB noch nicht bereit"-Fehler beim ersten
    Start ist dadurch ausgeschlossen.
-4. `cron-sidecar` startet nach `app`; mit Profil wartet `caddy`, bis `app`
-   **healthy** ist (bis zu ca. 60 s nach dem Start).
 
 Alle Dienste haben `restart: unless-stopped` und laufen nach einem
 Server-Neustart von selbst wieder an.
@@ -242,8 +236,8 @@ docker compose logs -f app       # Logs eines Dienstes
 docker compose down              # stoppen; Daten in den Volumes bleiben
 ```
 
-> `docker compose down -v` löscht zusätzlich **alle Volumes** — Datenbank,
-> Dateien und Caddy-Zertifikate. Nur für einen bewussten Neuanfang.
+> `docker compose down -v` löscht zusätzlich **alle Volumes** — Datenbank und
+> Dateien. Nur für einen bewussten Neuanfang.
 
 ## 7. Erster Start: Migration und Seed
 
@@ -303,37 +297,7 @@ Das Portal braucht zwei öffentliche Hostnamen:
 Die App setzt einen HSTS-Header (`includeSubDomains`). Produktiv also von
 Anfang an unter HTTPS betreiben.
 
-### 8.1 Variante B: mitgelieferter Caddy (Profil `with-proxy`)
-
-`docker/caddy/Caddyfile` leitet `APP_DOMAIN` an `app:3000` und `S3_DOMAIN` an
-`seaweedfs:8333` weiter und holt/erneuert Let's-Encrypt-Zertifikate selbst.
-
-Vor dem Start:
-
-1. **DNS:** A-/AAAA-Records für `APP_DOMAIN` und `S3_DOMAIN` zeigen auf den
-   Server — **bevor** Caddy startet, sonst scheitert die ACME-Challenge (und
-   wiederholte Fehlversuche laufen in die Let's-Encrypt-Rate-Limits).
-2. **Ports 80 und 443** (TCP, 443 zusätzlich UDP für HTTP/3) sind von außen
-   erreichbar und nicht von einem anderen Webserver auf dem Host belegt.
-3. In `.env` passen die Werte zusammen:
-
-   ```bash
-   APP_DOMAIN="portal.example.org"
-   S3_DOMAIN="files.portal.example.org"
-   BETTER_AUTH_URL="https://portal.example.org"
-   PUBLIC_SITE_URL="https://portal.example.org"
-   S3_PUBLIC_ENDPOINT="https://files.portal.example.org"
-   ```
-
-4. `docker compose --profile with-proxy up -d --build`, dann
-   `docker compose logs -f caddy` — dort erscheint die Zertifikatsausstellung.
-
-Zertifikate und ACME-Konto liegen im Volume `caddy-data`. Geht es verloren,
-stellt Caddy neu aus (Rate-Limits beachten).
-
-### 8.2 Variante A: vorhandener Reverse Proxy
-
-Ohne Profil startet kein Caddy. Der eigene Proxy auf demselben Host zeigt auf:
+Der Reverse Proxy auf dem Host (z. B. nginx, Traefik, Apache oder Caddy als Host-Dienst) terminiert TLS und leitet an die beiden lokalen Ports weiter:
 
 | Hostname                                 | Ziel             |
 | ---------------------------------------- | ---------------- |
@@ -531,12 +495,12 @@ eignet sich ein Mail-Catcher wie Mailpit
 (`docker run -p 1025:1025 -p 8025:8025 axllent/mailpit`, `SMTP_HOST=localhost`,
 `SMTP_PORT=1025`, Weboberfläche auf `http://localhost:8025`).
 
-### 9.4 Geplante Jobs (`cron-sidecar`)
+### 9.4 Geplante Jobs (Host-Crontab)
 
-Ein kleiner `alpine`-Container (`docker/cron/`) mit busybox-`crond` und `curl`
-ruft die per Bearer-Token geschützten Cron-Routen der App auf
-(`GET` mit `Authorization: Bearer $CRON_SECRET`). Kein Docker-Socket-Zugriff
-nötig.
+Die geplanten Hintergrundjobs der App werden direkt über die Crontab des
+Host-Systems ausgeführt. Im Repository-Root liegt dafür eine vorgefertigte
+[`crontab`](../crontab)-Datei, die per `curl` die per Bearer-Token
+geschützten Cron-Routen der App aufruft.
 
 | Route                       | Zeitplan (UTC) | Aufgabe                                                                                                              |
 | --------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -549,20 +513,22 @@ und ist für den Newsletter nötig. Der Newsletter-Versand ist dabei auf
 **300 Mails pro Tag** begrenzt (fest im Code, ein Erbe des früheren
 Brevo-Gratis-Kontingents); größere Verteiler verteilen sich auf mehrere Tage.
 
-`CRON_SECRET` ist **dieselbe** Variable, die auch die App liest — ein Secret,
-nicht zwei. `CRON_APP_URL` (Default `http://app:3000`) muss nur bei
-umbenanntem App-Service angepasst werden.
+`CRON_SECRET` ist **dieselbe** Variable, die auch die App liest. In der Datei
+`crontab` werden vor der Aktivierung `APP_URL` (z. B. `http://127.0.0.1:3000`)
+und `CRON_SECRET` konfiguriert:
 
-Cron-Jobs erben die Container-Umgebung nicht. Der Entrypoint schreibt deshalb
-beim Start den fertigen Header nach `/run/cron/auth-header` (nur für `nobody`
-lesbar); `run-cron-job` übergibt ihn per `curl -H @datei` — das Secret steht
-so weder in der Crontab noch in der Prozessliste. `crond` läuft als root (muss
-es), `curl` selbst als `nobody`. Fehlt `CRON_SECRET`, startet der Container
-nicht.
+```bash
+# Crontab auf dem Host installieren:
+crontab crontab
 
-**Zeitpläne ändern:** in `docker/cron/crontab`, danach
-`docker compose up -d --build cron-sidecar`. Läuft parallel noch ein
-Vercel-Deployment, gleichzeitig `vercel.json` anpassen ([13.3](#133-vercel-cron-und-verceljson)).
+# Aktuelle Crontab prüfen:
+crontab -l
+```
+
+Beim automatisierten Deployment über GitHub Actions (siehe
+[Abschnitt 12](#12-updates--cicd-deployment)) wird die Crontab automatisch mit den
+Werten aus den GitHub Secrets/Variables generiert und auf dem Zielsystem
+installiert.
 
 Prüfen, ob die Jobs laufen: [14](#cron-jobs-laufen-nicht-oder-schlagen-fehl).
 
@@ -661,10 +627,10 @@ Wiederherstellen — in eine leere bzw. zu überschreibende Datenbank, App
 vorher stoppen:
 
 ```bash
-docker compose stop app cron-sidecar
+docker compose stop app
 docker compose exec -T postgres \
   pg_restore -U meeples -d meeples --clean --if-exists --no-owner < meeples-2026-10-01.dump
-docker compose start app cron-sidecar
+docker compose start app
 ```
 
 ### Dateien (SeaweedFS)
@@ -690,29 +656,55 @@ Alternativ das Volume `seaweedfs-data` bei gestopptem `seaweedfs`
 (`docker compose stop seaweedfs`) als Ganzes archivieren (Volume-Name mit
 Projekt-Präfix, siehe `docker volume ls`).
 
-Das Volume `caddy-data` (Zertifikate) muss nicht gesichert werden; Caddy
-stellt bei Verlust neu aus.
+## 12. Updates & CI/CD-Deployment
 
-## 12. Updates einspielen
+Das Projekt nutzt GitHub Actions für automatisierte Builds und Deployments.
+
+### 12.1 Automatische Pipelines (GitHub Actions)
+
+Die CI/CD-Pipeline besteht aus zwei Workflows:
+
+1. **Docker Build ([`.github/workflows/docker-build.yml`](../.github/workflows/docker-build.yml))**:
+   - Triggert bei `push` auf die Branches `preview` und `release` sowie bei Tags (`v*`, Versionsnummern) oder manuell via `workflow_dispatch`.
+   - Baut Multi-Platform-Images (`linux/amd64`, `linux/arm64`) für die App und pusht sie nach GHCR (`ghcr.io/oecher-meeples/portal-app`):
+     - Branch `preview` → Tag `preview`
+     - Branch `release` → Tag `latest`
+     - Tags → entsprechende SemVer-Tags
+   - SeaweedFS wird nur gebaut und gepusht, wenn sich Dateien in `docker/seaweedfs/` geändert haben oder `force_seaweed_build: true` gesetzt ist.
+   - Triggert nach erfolgreichem Build automatisch das Deployment für die jeweilige Umgebung (`preview` oder `production`).
+
+2. **Deployment ([`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml))**:
+   - Wird vom Build-Workflow aufgerufen oder kann manuell via `workflow_dispatch` für `preview` bzw. `production` gestartet werden.
+   - Stellt eine SSH-Verbindung zum Zielserver her (`SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_PRIVATE_KEY`).
+   - Generiert die `.env`-Datei direkt aus den GitHub Environment Variables und Secrets.
+   - Konfiguriert die Host-[`crontab`](../crontab) mit `APP_URL` und `CRON_SECRET` und installiert sie auf dem Server.
+   - Überträgt `.env`, `crontab` und `docker-compose.yml` in das Zielverzeichnis (`DEPLOY_PATH`).
+   - Führt auf dem Zielserver `docker login ghcr.io`, `docker compose pull` und `docker compose up -d` aus.
+
+### 12.2 Erforderliche GitHub Secrets & Variables
+
+Für das automatische Deployment müssen in den GitHub Environment Settings (`preview` und `production`) folgende Werte hinterlegt sein:
+
+- **SSH & Deployment**: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_PRIVATE_KEY`, `DEPLOY_PATH`.
+- **Umgebungsvariablen (`vars.*`)**: `ENVIRONMENT`, `IMAGE_TAG`, `BETTER_AUTH_URL`, `PUBLIC_SITE_URL`, `S3_PUBLIC_ENDPOINT`, `APP_PORT`, `POSTGRES_PORT`, `S3_API_PORT`, `SEAWEEDFS_IMAGE_TAG`, etc.
+- **Geheimnisse (`secrets.*`)**: `POSTGRES_PASSWORD`, `DATABASE_URL`, `BETTER_AUTH_SECRET`, `MEMBER_DATA_ENCRYPTION_KEY`, `CRON_SECRET`, `SEAWEEDFS_ADMIN_ACCESS_KEY`, `SEAWEEDFS_ADMIN_SECRET_KEY`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `GH_TOKEN`, sowie optionale API-Keys.
+
+### 12.3 Manuelle Updates auf dem Server
+
+Wird ohne automatische GitHub Actions Pipeline gearbeitet, erfolgt das Update manuell über die Container Registry:
 
 ```bash
-git pull
-docker compose up -d --build            # ggf. mit --profile with-proxy
-docker image prune -f                   # alte Image-Schichten aufräumen
+docker compose pull            # neue Image-Versionen aus GHCR herunterladen
+docker compose up -d           # Container mit neuen Images neu erstellen
+docker image prune -f          # alte, ungenutzte Image-Schichten aufräumen
 ```
 
 Der neue App-Container spielt fehlende Migrationen beim Start automatisch ein
 ([7](#7-erster-start-migration-und-seed)). Vor einem Update ein
-Datenbank-Backup ziehen ([11](#11-backup-und-wiederherstellung)) — Migrationen
-lassen sich nicht automatisch zurückdrehen. Fremd-Images (`postgres`,
-`amazon/aws-cli`, `caddy`) aktualisiert `docker compose pull` gefolgt von
-`docker compose up -d`; die Postgres-**Major**-Version (`postgres:16`) nur mit
-Dump/Restore wechseln, nie durch bloßes Ändern des Tags. SeaweedFS ist auf
-einen festen Tag gepinnt (`FROM chrislusf/seaweedfs:4.48` in
-`docker/seaweedfs/Dockerfile`) und ändert sich nur, wenn dieser Tag
-angehoben wird — dann mit `docker compose up -d --build` neu bauen
-([9.2](#92-datei-speicher-seaweedfs-seaweedfs-init)); vorher die Dateien
-sichern ([11](#11-backup-und-wiederherstellung)).
+Datenbank-Backup ziehen ([11](#11-backup-und-wiederherstellung)). Fremd-Images
+(`postgres`, `amazon/aws-cli`) aktualisiert `docker compose pull` ebenfalls;
+die Postgres-**Major**-Version (`postgres:16`) nur mit Dump/Restore wechseln,
+nie durch bloßes Ändern des Tags.
 
 ## 13. Umzug von Vercel/Neon
 
@@ -799,7 +791,7 @@ Erst danach den Vercel-Blob-Store löschen.
 
 ### 13.3 Vercel Cron und `vercel.json`
 
-Die Zeitpläne in `docker/cron/crontab` spiegeln `vercel.json`. Solange die App
+Die Zeitpläne in [`crontab`](../crontab) spiegeln `vercel.json`. Solange die App
 parallel noch auf Vercel läuft, beide synchron halten — und beachten, dass
 dann **beide** Deployments die Jobs ausführen (z. B. doppelte
 Instagram-Posts, wenn beide auf dieselbe Datenbank zeigen). `vercel.json`
@@ -811,7 +803,7 @@ bleibt bis zur Abschaltung des Vercel-Deployments im Repo.
 
 Eine [Pflicht-Variable](#pflicht-variablen) fehlt in `.env` oder ist leer. Das
 betrifft jeden Compose-Befehl, auch für einzelne Dienste. `.env` muss in
-der Repo-Wurzel neben `docker-compose.yml` liegen (nicht in `docker/`).
+der Repo-Wurzel neben `docker-compose.yml` liegen (Vorlage: `.env.dist`).
 `docker compose config` zeigt die aufgelöste Konfiguration.
 
 ### App-Container startet immer wieder neu
@@ -854,18 +846,11 @@ Dieselbe Logik gilt für die App: Schlägt jeder S3-Zugriff mit
 `S3_ACCESS_KEY`/`S3_SECRET_KEY` zwischen `app` und `seaweedfs` — beide mit
 `docker compose up -d` neu erstellen.
 
-### `app` ist `unhealthy`, Caddy startet nicht
+### Reverse Proxy liefert 502 Bad Gateway
 
-Caddy wartet auf `app: healthy`. In den ersten 60 s ist `health: starting`
-normal (Migration + Seed). Bleibt es `unhealthy`, `docker compose logs app`
-prüfen.
-
-### Caddy bekommt kein Zertifikat
-
-`docker compose logs caddy`. Ursachen: DNS für `APP_DOMAIN`/`S3_DOMAIN` zeigt
-(noch) nicht auf den Server, Port 80/443 von außen nicht erreichbar oder von
-einem anderen Dienst belegt, `APP_DOMAIN`/`S3_DOMAIN` leer oder mit `https://`
-eingetragen.
+`docker compose ps` prüfen: Läuft der App-Container und meldet `healthy`?
+In den ersten 60 s ist `health: starting` normal (Migration + Seed). Bleibt es
+`unhealthy` oder bricht der Container ab, `docker compose logs app` prüfen.
 
 ### Login schlägt fehl / „Invalid origin"
 
@@ -907,34 +892,23 @@ täglichen Cron-Lauf um 05:00 UTC raus, nicht sofort.
 
 ### Cron-Jobs laufen nicht oder schlagen fehl
 
-```bash
-docker compose logs -f cron-sidecar
-```
+Die Jobs werden per Host-Crontab ([`crontab`](../crontab)) per `curl` ausgeführt.
 
-Beim Start erscheint `[cron] starting crond (TZ=UTC, target http://app:3000)`,
-pro Lauf ein Block wie:
+1. **Prüfen, ob Crontab auf dem Host aktiv ist**:
+   ```bash
+   crontab -l
+   ```
+2. **Einen Job manuell auf dem Host testen**:
+   ```bash
+   curl -i -H "Authorization: Bearer <CRON_SECRET>" http://127.0.0.1:3000/api/cron/market-digest
+   ```
+   Erwartete Antwort ist HTTP 200 mit JSON-Body.
 
-```text
-[cron] 2026-10-03T17:00:00Z GET http://app:3000/api/cron/market-digest
-<Antwort der Route>
-[cron] HTTP 200
-[cron] market-digest exit=0
-```
-
-Einen Job sofort auslösen, ohne auf den Zeitplan zu warten:
-
-```bash
-docker compose exec cron-sidecar run-cron-job market-digest
-docker compose logs --tail 20 cron-sidecar
-```
-
-(Die Ausgabe von `exec` landet im Container-Log, nicht im Terminal.)
-
-| Log-Zeile                     | Bedeutung                                                              |
+| Rückmeldung / Log             | Bedeutung                                                              |
 | ----------------------------- | ---------------------------------------------------------------------- |
-| `exit=0`                      | HTTP 2xx, Job erfolgreich                                              |
-| `exit=22` + `HTTP 401`        | `CRON_SECRET` von App und Sidecar unterscheiden sich — nach Änderung beide neu erstellen: `docker compose up -d` |
-| `exit=22` + anderer 4xx/5xx   | Route meldet einen Fehler → `docker compose logs app` zur selben Zeit  |
-| `exit=6` / `exit=7`           | App nicht erreichbar (Name nicht auflösbar / Verbindung abgelehnt) — läuft `app`? stimmt `CRON_APP_URL`? |
+| HTTP 200                      | Job erfolgreich ausgeführt                                              |
+| HTTP 401 Unauthorized         | `CRON_SECRET` in der Crontab stimmt nicht mit `.env` überein           |
+| HTTP 4xx / 5xx                | Route meldet einen Fehler → `docker compose logs app` zur selben Zeit  |
+| Connection refused            | Next.js-Server auf Port 3000 nicht erreichbar — läuft der Container?  |
 
 Alle Zeitpläne sind **UTC** (`0 17 * * *` = 18:00 MEZ bzw. 19:00 MESZ).
