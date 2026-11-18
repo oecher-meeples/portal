@@ -526,9 +526,11 @@ crontab -l
 ```
 
 Beim automatisierten Deployment über GitHub Actions (siehe
-[Abschnitt 12](#12-updates--cicd-deployment)) wird die Crontab automatisch mit den
-Werten aus den GitHub Secrets/Variables generiert und auf dem Zielsystem
-installiert.
+[Abschnitt 12](#12-updates--cicd-deployment)) wird die Crontab standardmäßig nur für
+die `production`-Umgebung generiert und installiert. Für `preview` ist Cron
+deaktiviert, damit auf geteilten Servern die bestehende Produktiv-Crontab
+nicht überschrieben wird und keine Test-Mails oder Instagram-Posts ausgelöst werden
+(steuerbar über die GitHub-Variable `ENABLE_CRON=true/false`).
 
 Prüfen, ob die Jobs laufen: [14](#cron-jobs-laufen-nicht-oder-schlagen-fehl).
 
@@ -677,8 +679,8 @@ Die CI/CD-Pipeline besteht aus zwei Workflows:
    - Wird vom Build-Workflow aufgerufen oder kann manuell via `workflow_dispatch` für `preview` bzw. `production` gestartet werden.
    - Stellt eine SSH-Verbindung zum Zielserver her (`SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_PRIVATE_KEY`).
    - Generiert die `.env`-Datei direkt aus den GitHub Environment Variables und Secrets.
-   - Konfiguriert die Host-[`crontab`](../crontab) mit `APP_URL` und `CRON_SECRET` und installiert sie auf dem Server.
-   - Überträgt `.env`, `crontab` und `docker-compose.yml` in das Zielverzeichnis (`DEPLOY_PATH`).
+   - Konfiguriert die Host-[`crontab`](../crontab) mit `APP_URL` und `CRON_SECRET` und installiert sie auf dem Server (standardmäßig nur für `production`; für `preview` ist Cron deaktiviert, um geteilte Server nicht zu beeinflussen).
+   - Überträgt `.env` und `docker-compose.yml` (sowie `crontab` nur bei aktivem Cron) in das Zielverzeichnis (`DEPLOY_PATH`).
    - Führt auf dem Zielserver `docker login ghcr.io`, `docker compose pull` und `docker compose up -d` aus.
 
 ### 12.2 Erforderliche GitHub Secrets & Variables
