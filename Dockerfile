@@ -18,7 +18,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 # ---------------------------------------------------------------------------
-FROM base AS deps
+# deps und build erzeugen ausschließlich plattformunabhängiges JS/WASM
+# (Prisma 7 nutzt wasm + @prisma/adapter-pg statt einer nativen Query-Engine).
+# Mit --platform=$BUILDPLATFORM laufen `pnpm install` und `next build` beim
+# Multi-Arch-Build (amd64 + arm64) nur einmal nativ statt ein zweites Mal
+# unter langsamer QEMU-arm64-Emulation.
+FROM --platform=$BUILDPLATFORM base AS deps
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
@@ -34,7 +39,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
  && pnpm install --frozen-lockfile
 
 # ---------------------------------------------------------------------------
-FROM deps AS build
+FROM --platform=$BUILDPLATFORM deps AS build
 COPY . .
 # #521: `next.config.ts` leitet daraus beim Build die Image-Optimizer-
 # Allowlist ab (standalone serialisiert die Config, zur Laufzeit wird sie
@@ -44,8 +49,7 @@ ARG S3_PUBLIC_ENDPOINT=""
 # und `next build` lädt die Module beim Page-Data-Sammeln. Platzhalter nur für
 # diesen RUN — sie landen weder im Runner-Image noch im Bundle (kein
 # NEXT_PUBLIC_*); zur Laufzeit gelten die echten Werte aus der Container-Env.
-RUN pnpm exec prisma generate \
- && BETTER_AUTH_URL=http://localhost:3000 \
+RUN BETTER_AUTH_URL=http://localhost:3000 \
     BETTER_AUTH_SECRET=build-time-placeholder-never-used-at-runtime \
     pnpm run build
 # Seed als eine in sich geschlossene CJS-Datei bündeln (inkl. @prisma/client,

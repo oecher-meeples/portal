@@ -14,9 +14,9 @@ on:
         required: true
         type: choice
         options:
-          - Preview
+          - preview
           - production
-        default: Preview
+        default: preview
 
 concurrency:
   group: deploy-${{ inputs.environment }}
