@@ -7,7 +7,15 @@ overrides:
   better-auth@>=0.3.4 <1.6.11: ^1.6.11
   brace-expansion@<1.1.20: ^1.1.20
   brace-expansion@>=4.0.0 <5.0.11: ^5.0.11
-  fast-uri: ^3.1.8
+  fast-uri: ^3.1.9
+  # GHSA-j6r3-76f7-8jcv / GHSA-h3mg-xc3c-68pw / GHSA-rxp7-6hxx-x8q5: ip-address DoS / subnet matching,
+  # transitiv über shadcn > socks.
+  ip-address: ">=10.7.4"
+  # GHSA-wx4j-mvgx-mqwp: Satori-generated SVG escaping, transitiv über @vercel/og
+  satori: ">=0.33.5"
+  # GHSA-g3hv-75wg-m249: minimatch DoS via globparts amplification,
+  # transitiv über @typescript-eslint und shadcn > ts-morph.
+  "minimatch@>=7.0.0 <11.0.1": ^11.0.9
   # GHSA-px8p-9vwx-vf98: fflate unzipSync-Endlosschleife bei malformten
   # ZIP64-Archiven, transitiv über @vercel/og>satori (0.7.3, bereits an
   # anderer Stelle im Baum auf 0.7.5 gefixt).
@@ -88,13 +96,19 @@ auditConfig:
     # geforderte 3.0.4 existiert noch nicht. Erneut prüfen, sobald ein
     # Patch-Release erscheint.
     - GHSA-vfj7-8cjw-p6xm
+    # picomatch ReDoS durch single-branch repeated extglobs (transitiv über
+    # eslint-config-next / shadcn / vitest, reines Dev-Tooling) — kein Fix
+    # verfügbar auf npm, npm führt aktuell nur bis 4.0.7 (Stand 2026-11-18),
+    # die von der Advisory geforderte Version 4.0.8 existiert noch nicht auf npm.
+    # Erneut prüfen, sobald ein Patch-Release erscheint.
+    - GHSA-fc5q-39xc-vjpf
 minimumReleaseAgeExclude:
   - better-auth@1.6.2 || 1.6.11
   - "@hono/node-server@2.0.5"
   - hono@4.12.34
   - js-yaml@3.15.2 || 4.3.2
   - brace-expansion@1.1.20 || 5.0.11
-  - fast-uri@3.1.8
+  - fast-uri@3.1.9
   - fflate@0.7.5
   - nanoid@3.3.18
   - next@16.3.8

@@ -1,0 +1,14 @@
+# Cron jobs for Oecher Meeples Portal (schedules in UTC).
+#
+# Install on the host:
+#   crontab crontab
+#
+# Set APP_URL and CRON_SECRET (must match CRON_SECRET in .env).
+CRON_TZ=UTC
+APP_URL=http://127.0.0.1:3000
+CRON_SECRET=replace-with-cron-secret-from-env
+
+# min hour dom mon dow  command
+0 5 * * *   curl -fsS --max-time 900 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/instagram-queue" >/dev/null
+0 17 * * *  curl -fsS --max-time 900 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/market-digest" >/dev/null
+0 2 2 1 *   curl -fsS --max-time 900 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/year-turn" >/dev/null

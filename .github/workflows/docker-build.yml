@@ -1,0 +1,191 @@
+name: Docker build
+
+on:
+  push:
+    branches: [preview, release]
+    tags: ["v*", "[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+    inputs:
+      force_seaweed_build:
+        description: "Force building the SeaweedFS image"
+        required: false
+        default: false
+        type: boolean
+      deploy_environment:
+        description: "Target environment to deploy after build finishes"
+        required: false
+        type: choice
+        options:
+          - none
+          - preview
+          - production
+        default: none
+
+# Ein laufender Build pro Ref reicht — verhindert auch, dass ein älterer Lauf
+# einen neueren Branch-/latest-Tag überschreibt.
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build and push app image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for version git tag
+        id: version
+        run: |
+          TAG=$(git tag --points-at HEAD | grep -E '^v?[0-9]+\.[0-9]+' | sort -V | tail -n 1 || true)
+          if [ -z "$TAG" ] && git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+            TAG=$(git tag --points-at HEAD^2 | grep -E '^v?[0-9]+\.[0-9]+' | sort -V | tail -n 1 || true)
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "clean=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-app
+          tags: |
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref_name == 'release' }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
+            type=raw,value=${{ steps.version.outputs.clean }},enable=${{ steps.version.outputs.clean != '' }}
+            type=sha,prefix=sha-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
+
+  build-seaweedfs:
+    name: Build and push SeaweedFS image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check if SeaweedFS build is needed
+        id: check
+        env:
+          FORCE_BUILD: ${{ inputs.force_seaweed_build }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ "$FORCE_BUILD" = "true" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ] && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            CHANGED=$(git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" -- docker/seaweedfs/)
+          else
+            CHANGED=$(git diff-tree --no-commit-id --name-only -r HEAD -- docker/seaweedfs/)
+          fi
+
+          if [ -n "$CHANGED" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up QEMU
+        if: steps.check.outputs.should_build == 'true'
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.should_build == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        if: steps.check.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for version git tag
+        if: steps.check.outputs.should_build == 'true'
+        id: version
+        run: |
+          TAG=$(git tag --points-at HEAD | grep -E '^v?[0-9]+\.[0-9]+' | sort -V | tail -n 1 || true)
+          if [ -z "$TAG" ] && git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+            TAG=$(git tag --points-at HEAD^2 | grep -E '^v?[0-9]+\.[0-9]+' | sort -V | tail -n 1 || true)
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "clean=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata
+        if: steps.check.outputs.should_build == 'true'
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-seaweedfs
+          tags: |
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref_name == 'release' || inputs.force_seaweed_build }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || inputs.force_seaweed_build }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
+            type=raw,value=${{ steps.version.outputs.clean }},enable=${{ steps.version.outputs.clean != '' }}
+            type=sha,prefix=sha-
+
+      - name: Build and push SeaweedFS Docker image
+        if: steps.check.outputs.should_build == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: ./docker/seaweedfs
+          file: ./docker/seaweedfs/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=seaweedfs
+          cache-to: type=gha,mode=max,scope=seaweedfs
+
+  deploy:
+    needs: [build, build-seaweedfs]
+    if: github.ref_name == 'preview' || github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_environment != '' && inputs.deploy_environment != 'none')
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.deploy_environment) || (github.ref_name == 'release' && 'production') || 'preview' }}
+    secrets: inherit

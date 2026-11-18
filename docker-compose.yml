@@ -1,20 +1,18 @@
 # Self-hosting stack (see docs/deployment-docker.md and
 # .claude/plans/docker-self-hosted-migration.md).
 #
-#   cp docker/.env.example .env      # fill in, then:
-#   docker compose up -d --build                      # own reverse proxy
-#   docker compose --profile with-proxy up -d --build # bundled Caddy + TLS
+#   cp .env.dist .env                # fill in, then:
+#   docker compose up -d --build
 #
-# Services: app, postgres, seaweedfs, seaweedfs-init (one-shot), cron-sidecar
-# and the optional caddy (profile `with-proxy`). Everything except caddy
-# binds to 127.0.0.1 only — an existing reverse proxy on the host points at
+# Services: app, postgres, seaweedfs and seaweedfs-init (one-shot).
+# All services bind to 127.0.0.1 only — a reverse proxy on the host points at
 # 127.0.0.1:3000 (app) and 127.0.0.1:8333 (blob storage, S3_PUBLIC_ENDPOINT).
 #
 # `${VAR:?…}` = must be set, compose refuses to start otherwise;
 # `${VAR:-x}` = optional, x is the default.
 services:
   app:
-    build: .
+    image: ghcr.io/oecher-meeples/portal-app:${IMAGE_TAG:-latest}
     restart: unless-stopped
     depends_on:
       # Entrypoint runs `prisma migrate deploy` + seed on every start — wait
@@ -34,7 +32,7 @@ services:
       BETTER_AUTH_TRUSTED_ORIGINS: ${BETTER_AUTH_TRUSTED_ORIGINS:-}
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?PUBLIC_SITE_URL must be set}
       MEMBER_DATA_ENCRYPTION_KEY: ${MEMBER_DATA_ENCRYPTION_KEY:?MEMBER_DATA_ENCRYPTION_KEY must be set}
-      # Same secret the cron-sidecar sends as bearer token.
+      # Bearer token for the /api/cron/* routes.
       CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
       # --- Seed (entrypoint, only on an empty database) ---
       # Not `:?` on purpose: only needed for the very first start; the seed
@@ -73,11 +71,10 @@ services:
       TRANSLATION_CONTACT_EMAIL: ${TRANSLATION_CONTACT_EMAIL:-}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
     ports:
-      # Localhost only: a reverse proxy (own or the caddy profile) is what
-      # faces the internet.
+      # Localhost only: a reverse proxy on the host is what faces the internet.
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     # Same check as the Dockerfile's HEALTHCHECK, restated so `docker compose
-    # ps` shows it and the caddy service can wait for it.
+    # ps` shows it.
     healthcheck:
       test:
         - CMD
@@ -114,7 +111,7 @@ services:
   # its Docker Hub images in Sept. 2026 and archived the OSS project. Image
   # pinned to a tested version — check for updates before bumping.
   seaweedfs:
-    build: ./docker/seaweedfs
+    image: ghcr.io/oecher-meeples/portal-seaweedfs:${SEAWEEDFS_IMAGE_TAG:-preview}
     restart: unless-stopped
     environment:
       # Separate admin identity (bucket/policy setup only) from the app's own
@@ -127,7 +124,7 @@ services:
       - seaweedfs-data:/data
     ports:
       # Localhost only, like postgres; the public endpoint (images, uploads)
-      # is exposed through the reverse proxy (own one or the caddy profile).
+      # is exposed through the reverse proxy on the host.
       - "127.0.0.1:${S3_API_PORT:-8333}:8333"
     healthcheck:
       test: ["CMD", "/usr/local/bin/healthcheck"]
@@ -177,55 +174,6 @@ services:
         aws --endpoint-url "$$ENDPOINT" s3api put-bucket-policy --bucket "$$S3_BUCKET" --policy file:///tmp/policy.json
     restart: "no"
 
-  # Replaces Vercel Cron: busybox crond calls the existing bearer-protected
-  # /api/cron/* routes on the schedules from docker/cron/crontab (mirrors
-  # vercel.json) against the app service on app:3000.
-  cron-sidecar:
-    build: ./docker/cron
-    restart: unless-stopped
-    depends_on:
-      - app
-    environment:
-      # Same variable the app service reads — one secret, not a second one.
-      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
-      APP_URL: ${CRON_APP_URL:-http://app:3000}
-
-  # OPTIONAL TLS-terminating reverse proxy with automatic Let's Encrypt
-  # certificates (docker/caddy/Caddyfile). Only started with
-  #   docker compose --profile with-proxy up -d
-  # Operators who already run a reverse proxy (nginx, Traefik, …) skip the
-  # profile and point their proxy at 127.0.0.1:3000 (app) and
-  # 127.0.0.1:8333 (SeaweedFS, the S3_PUBLIC_ENDPOINT host) instead.
-  # Both domains need DNS records pointing at this host, and ports 80/443
-  # must be reachable from the internet for the ACME challenge.
-  caddy:
-    image: caddy:2
-    profiles: ["with-proxy"]
-    restart: unless-stopped
-    depends_on:
-      app:
-        condition: service_healthy
-      seaweedfs:
-        condition: service_healthy
-    environment:
-      # Not `:?` — compose interpolates the whole file even when the profile
-      # is inactive, which would break `docker compose up` without a proxy.
-      # Required whenever the profile is used (Caddy fails to start without).
-      APP_DOMAIN: ${APP_DOMAIN:-}
-      S3_DOMAIN: ${S3_DOMAIN:-}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      # Certificates + ACME account — losing this means re-issuing (and
-      # possibly hitting Let's Encrypt rate limits).
-      - caddy-data:/data
-      - caddy-config:/config
-
 volumes:
   postgres-data:
   seaweedfs-data:
-  caddy-data:
-  caddy-config:
