@@ -2,7 +2,7 @@ name: Docker build
 
 on:
   push:
-    branches: [feature/autodeploy-workflows, preview, release]
+    branches: [preview, release]
     tags: ["v*", "[0-9]+.[0-9]+*"]
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ on:
         type: choice
         options:
           - none
-          - Preview
+          - preview
           - production
         default: none
 
@@ -76,7 +76,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref_name == 'release' }}
-            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || github.ref_name == 'feature/autodeploy-workflows' }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
@@ -161,8 +161,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-seaweedfs
           tags: |
             type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref_name == 'release' }}
-            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || github.ref_name == 'feature/autodeploy-workflows' }}
+            type=raw,value=latest,enable=${{ github.ref_name == 'release' || inputs.force_seaweed_build }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || inputs.force_seaweed_build }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
@@ -184,8 +184,8 @@ jobs:
 
   deploy:
     needs: [build, build-seaweedfs]
-    if: github.ref_name == 'feature/autodeploy-workflows' || github.ref_name == 'preview' || github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_environment != '' && inputs.deploy_environment != 'none')
+    if: github.ref_name == 'preview' || github.ref_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.deploy_environment != '' && inputs.deploy_environment != 'none')
     uses: ./.github/workflows/deploy.yml
     with:
-      environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.deploy_environment) || (github.ref_name == 'release' && 'production') || 'Preview' }}
+      environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.deploy_environment) || (github.ref_name == 'release' && 'production') || 'preview' }}
     secrets: inherit
