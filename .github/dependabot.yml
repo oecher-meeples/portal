@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    # TypeScript 7 (Go-Port) bricht typescript-eslint ab ("does not support
+    # TS 7.0", siehe #515). Erst freigeben, wenn typescript-eslint TS >=7.1
+    # unterstützt: https://github.com/typescript-eslint/typescript-eslint/issues/10940
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
     # Ohne Gruppierung macht Dependabot einen PR pro Package. Minor/Patch sind
     # in aller Regel gefahrlos und laufen gebündelt in einem PR; Major-Bumps
     # brechen öfter (siehe #192: typescript 5→7 hat typescript-eslint zerlegt)
