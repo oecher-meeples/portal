@@ -8,9 +8,12 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { IdCombobox } from "@/components/ui/id-combobox";
 import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
 import { ContributorAdminRow } from "@/components/feature/admin-contributors/contributor-admin-row";
 import { CONTRIBUTOR_ROLE_LABELS } from "@/lib/ludothek/taxonomy/contributor-labels";
+import { mergeContributors } from "@/lib/ludothek/taxonomy/contributor-admin-actions";
 
 const ROLE_FILTER_LABELS: Record<"ALL" | ContributorRole, string> = {
   ALL: "Alle Rollen",
@@ -32,6 +35,9 @@ export function AdminContributorsView({
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | ContributorRole>("ALL");
   const [sort, setSort] = useState<SortOption>("name");
+  const [mergeSource, setMergeSource] = useState<AdminContributorRow | null>(
+    null,
+  );
 
   const roleCounts = useMemo(() => {
     const counts: Record<ContributorRole, number> = {
@@ -124,9 +130,75 @@ export function AdminContributorsView({
 
       <ul className="flex flex-col gap-3">
         {visible.map((row) => (
-          <ContributorAdminRow key={row.id} row={row} allRows={rows} />
+          <ContributorAdminRow
+            key={row.id}
+            row={row}
+            onMerge={() => setMergeSource(row)}
+          />
         ))}
       </ul>
+
+      {mergeSource && (
+        <MergeContributorDialog
+          source={mergeSource}
+          rows={rows}
+          onClose={() => setMergeSource(null)}
+        />
+      )}
     </PageContainer>
   );
+}
+
+/** Der eine geteilte Zusammenführen-Dialog (#520) — Kandidaten erst, wenn
+ * er offen ist, und per Suche statt als Liste aller Einträge. */
+function MergeContributorDialog({
+  source,
+  rows,
+  onClose,
+}: {
+  source: AdminContributorRow;
+  rows: AdminContributorRow[];
+  onClose: () => void;
+}) {
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const options = useMemo(
+    () =>
+      rows
+        .filter((row) => row.id !== source.id)
+        .map((row) => ({ id: row.id, label: contributorOptionLabel(row) })),
+    [rows, source.id],
+  );
+
+  return (
+    <ActionDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={`„${source.name}" zusammenführen`}
+      description="Beide Einträge werden zu einem, alle Titel-Verknüpfungen bleiben erhalten. Hat einer der beiden eine BGG-ID, bleibt dieser bestehen, sonst der gewählte Ziel-Eintrag."
+      submitLabel="Zusammenführen"
+      pendingLabel="Führe zusammen…"
+      canSubmit={targetId !== null}
+      action={() => mergeContributors(source.id, targetId!)}
+      onReset={onClose}
+    >
+      <IdCombobox
+        options={options}
+        value={targetId}
+        onValueChange={setTargetId}
+        placeholder="Ziel-Eintrag suchen …"
+      />
+    </ActionDialog>
+  );
+}
+
+/** Name plus Unterscheidungsmerkmal — gleichnamige Einträge (z. B. ohne und
+ * mit BGG-ID) müssen im Suchfeld auseinanderzuhalten sein. */
+function contributorOptionLabel(row: AdminContributorRow) {
+  const details = [
+    `${row.titleCount} Titel`,
+    row.bggId !== null ? `BGG-ID ${row.bggId}` : null,
+  ].filter(Boolean);
+  return `${row.name} (${details.join(", ")})`;
 }

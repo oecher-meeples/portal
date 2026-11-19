@@ -16,7 +16,7 @@ import { useAction, type ActionResult } from "@/components/ui/use-action";
 /**
  * The dialog skeleton every mutating dialog in this app shares: open state,
  * reset-on-close, an error slot, and a footer submit button that closes the
- * dialog and refreshes the route on success.
+ * dialog on success (route refresh only with `refresh`, see `useAction`).
  *
  * Callers supply only the trigger, the copy and the body fields.
  */

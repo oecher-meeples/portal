@@ -107,6 +107,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `field.tsx` | `Field` / `TextField` / `TextAreaField` — Label-über-Control-Zeile (ersetzt ~60 handkopierte Wrapper) |
 | `native-select.tsx` | `NativeSelect` — natives `<select>` im `Input`-Stil für Filter, Sortierung, Vorschlagslisten |
 | `use-action.ts` | Hook: Server Action ausführen → pending/error; `router.refresh()` nur mit `refresh: true` (#525: Default aus, `revalidatePath` der Action rendert bereits neu) |
+| `id-combobox.tsx` | Durchsuchbare Auswahl über `{ id, label }` — Basis von `MeepleCombobox`/`MemberCombobox` und dem Mitwirkenden-Zusammenführen (#520) |
 | `action-button.tsx` | Button, der eine Server Action ausführt (ersetzt 8 `Delete…Button`-Wrapper) |
 | `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
