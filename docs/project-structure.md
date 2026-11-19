@@ -71,6 +71,7 @@ src/lib/
 │               ├── board-game-kind.ts  `BOARD_GAME_KIND_LABELS` (Basisspiel/Erweiterung)
 │               ├── holding-actions-shared.ts   Von beiden `holding-actions*.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
+│               ├── game-issue.ts / game-defects.ts  Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format (rein), Statusübergang `ACTIVE↔MAINTENANCE` (`reportGameCopyDefect`/`clearGameCopyDefect`, ohne `"use server"` — Guard liegt in `feature/scan/inventory-actions.ts`)
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
@@ -131,7 +132,7 @@ entities/
 ├── game-compact-row.tsx         Dichte Spiele-Zeile (Kompakt, nur `games:manage`)
 ├── related-game-card.tsx        Basisspiel-/Erweiterungs-Referenz: Cover + Titel-Link + Standort (#121/#122)
 ├── edition-flag.tsx             Sprachflagge einer nicht-deutschen Version (Ländercode aus `lib/ludothek/edition-language.ts`)
-├── contact-dialog.tsx            Name → Dialog mit allen Kontaktoptionen (Mail/Telegram) — ersetzt Icon-Zeilen pro Stelle
+├── contact-dialog.tsx            Name → Dialog mit allen Kontaktoptionen (Mail/Telegram) — ersetzt Icon-Zeilen pro Stelle; lädt nie selbst Daten (`meeple`-Prop oder `loadMeeple`-Funktion). Für „nur `meepleId` bekannt": `widgets/contact/meeple-contact-dialog.tsx`; Erklärbär-Liste: `widgets/explainer/`
 ├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung (nicht erfasst rendert bewusst nichts, #121)
 ├── lfg-status-pill.tsx         offen / voll / abgelaufen / geschlossen
 ├── membership-state-pill.tsx   aktiv / gekündigt / ausgetreten / anonymisiert

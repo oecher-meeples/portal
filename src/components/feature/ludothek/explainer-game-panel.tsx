@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ExplainerExperienceLevel } from "@prisma/client";
-import { ExplainerListDialogTrigger } from "@/components/entities/explainer-list-dialog-trigger";
+import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
 import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
 import {
   addExplainerGame,

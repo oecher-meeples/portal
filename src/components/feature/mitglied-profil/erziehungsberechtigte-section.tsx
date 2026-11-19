@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { GuardianLinkOption } from "@/lib/members/guardians";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 
 /** Erziehungsberechtigten-Sektion auf dem Kind-Profil (#385, Gegenstück zu
  * `MeineKinderSection`) — sichtbar für Vorstand (`isAdmin`/`canManageMembers`)
@@ -29,7 +29,7 @@ export function ErziehungsberechtigteSection({
               size="md"
             />
             {guardian.meepleId ? (
-              <ContactDialog
+              <MeepleContactDialog
                 name={guardian.displayName}
                 meepleId={guardian.meepleId}
               />

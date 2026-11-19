@@ -1,13 +1,13 @@
 "use server";
 
-import { GameInventoryStatus } from "@prisma/client";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
+import type { GameIssueKind } from "@/lib/ludothek/game-issue";
 import {
-  GAME_ISSUE_LABELS,
-  type GameIssueKind,
-} from "@/components/feature/scan/game-issue-labels";
+  clearGameCopyDefect,
+  reportGameCopyDefect,
+} from "@/lib/ludothek/game-defects";
 
 export async function confirmGameCondition(
   gameCopyId: string,
@@ -34,29 +34,11 @@ export async function reportGameDefect(
 ) {
   await requireMeeple();
 
-  if (!note.trim()) {
-    return { error: "Bitte eine Notiz zum Mangel angeben." };
-  }
-
-  await prisma.gameCopy.update({
-    where: { id: gameCopyId },
-    data: {
-      condition: `${GAME_ISSUE_LABELS[kind]}: ${note.trim()}`,
-      lastCheckedAt: new Date(),
-      status: GameInventoryStatus.MAINTENANCE,
-    },
-  });
-
-  return { success: true as const };
+  return reportGameCopyDefect(gameCopyId, kind, note);
 }
 
 export async function clearGameDefect(gameCopyId: string) {
   await requireActionPermission("games:manage");
 
-  await prisma.gameCopy.update({
-    where: { id: gameCopyId },
-    data: { status: GameInventoryStatus.ACTIVE },
-  });
-
-  return { success: true as const };
+  return clearGameCopyDefect(gameCopyId);
 }
