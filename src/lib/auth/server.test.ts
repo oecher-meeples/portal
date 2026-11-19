@@ -22,10 +22,14 @@ vi.mock("next/headers", () => ({
 }));
 
 const { getCurrentUser, getCurrentSession } = await import("./server");
+// betterAuth() runs once at import time; Vitest's clearMocks (default since
+// v5) wipes the mock's calls before each test, so snapshot them here.
+const betterAuthCalls = [...betterAuthMock.mock.calls];
 
 describe("auth instance", () => {
   it("is configured from BETTER_AUTH_URL/BETTER_AUTH_SECRET against our own Prisma adapter", () => {
-    expect(betterAuthMock).toHaveBeenCalledWith(
+    expect(betterAuthCalls).toHaveLength(1);
+    expect(betterAuthCalls[0][0]).toEqual(
       expect.objectContaining({
         baseURL: "http://localhost:3002",
         secret: "test-secret-at-least-32-characters-long",
