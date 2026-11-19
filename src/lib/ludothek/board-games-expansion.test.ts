@@ -6,6 +6,9 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const {
   assignExpansion,

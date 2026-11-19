@@ -5,17 +5,12 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
-const ensureMeepleMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, ensureMeeple: ensureMeepleMock };
-});
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { encryptSecret } = await import("@/lib/utils/crypto");
 const { BANK_CSV_COLUMNS } = await import("./csv-columns");
@@ -30,8 +25,7 @@ beforeEach(() => {
   process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString(
     "base64",
   );
-  requirePermissionMock.mockResolvedValue({ id: "user-kassenwart" });
-  ensureMeepleMock.mockResolvedValue({ id: "meeple-kassenwart" });
+  requirePermissionMock.mockResolvedValue({ id: "meeple-kassenwart" });
 });
 
 describe("without the bank:read permission", () => {

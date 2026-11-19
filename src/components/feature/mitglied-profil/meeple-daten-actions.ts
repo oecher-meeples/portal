@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ProfilePictureVisibility } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { optionalHandle, optionalText } from "@/lib/utils/optional-text";
@@ -23,7 +23,7 @@ export type MeepleDatenInput = {
 async function assertMayEdit(meepleId: string) {
   const session = await requireMember();
   if (session.meeple.id === meepleId) return;
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 }
 
 async function revalidateOwnerProfile(meepleId: string) {

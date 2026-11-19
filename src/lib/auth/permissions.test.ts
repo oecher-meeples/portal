@@ -12,12 +12,12 @@ describe("hasPermission", () => {
     vi.setSystemTime(new Date("2026-08-30T10:00:00Z"));
     prismaMock.rolePermission.count.mockResolvedValue(1);
 
-    const result = await hasPermission("user-1", "posts:write");
+    const result = await hasPermission("user-1", "posts:public");
 
     expect(result).toBe(true);
     expect(prismaMock.rolePermission.count).toHaveBeenCalledWith({
       where: {
-        permission: { key: "posts:write" },
+        permission: { key: "posts:public" },
         role: {
           users: {
             some: {

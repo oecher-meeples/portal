@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
+import { getMembershipState } from "@/lib/members/membership-state";
 
 export type {
   MembershipState,
@@ -44,26 +44,34 @@ export async function getCurrentMeeple() {
   return ensureMeeple(user);
 }
 
+/**
+ * The Meeple's linked Vereinsmitglied (if any) plus its derived
+ * membership state — shared by every guard that enforces "ausgetreten /
+ * anonymisiert darf nur abwickeln" (`requireMember`, the action guards,
+ * the holding actions). resignedAt/membershipEndsAt live on the Member
+ * since #328, anonymizedAt stays on the Meeple.
+ */
+export async function getMeepleMembership(meeple: {
+  id: string;
+  anonymizedAt: Date | null;
+}) {
+  const member = await prisma.member.findUnique({
+    where: { meepleId: meeple.id },
+    select: { id: true, slug: true, resignedAt: true, membershipEndsAt: true },
+  });
+  const membershipState = getMembershipState({
+    meepleId: meeple.id,
+    resignedAt: member?.resignedAt ?? null,
+    membershipEndsAt: member?.membershipEndsAt ?? null,
+    anonymizedAt: meeple.anonymizedAt,
+  });
+  return { member, membershipState };
+}
+
 export async function requireMeeple() {
   const meeple = await getCurrentMeeple();
   if (!meeple) {
     redirect("/login");
-  }
-  return meeple;
-}
-
-/**
- * Like `requireMeeple`, but also requires a specific permission (e.g.
- * "lfg:participate") — used by feature actions that a "Ausgetreten"-Meeple
- * (#332) must no longer be able to call, even though it's still logged in.
- */
-export async function requireMeeplePermission(permissionKey: string) {
-  const meeple = await requireMeeple();
-  if (
-    !meeple.neonAuthUserId ||
-    !(await hasPermission(meeple.neonAuthUserId, permissionKey))
-  ) {
-    redirect("/403");
   }
   return meeple;
 }

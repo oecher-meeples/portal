@@ -57,7 +57,7 @@ Jede Server Action folgt demselben Aufbau:
 "use server";
 
 export async function createShift(eventId: string, input: ShiftInput) {
-  await requirePermission("events:manage");        // 1. Guard zuerst
+  await requireActionPermission("events:manage");  // 1. Guard zuerst
 
   const validationError = validateShift(input);     // 2. Validierung
   if (validationError) return { error: validationError };
@@ -70,7 +70,10 @@ export async function createShift(eventId: string, input: ShiftInput) {
 
 Verbindlich daran:
 
-1. **Guard ist die erste Zeile.** `requireMeeple()` / `requirePermission(...)` / `requireGamesManage()` — nie erst nach dem Lesen von Daten. Berechtigungen werden **serverseitig** geprüft, nie nur durch Ausblenden im UI.
+1. **Guard ist die erste Zeile.** `requireMeeple()` für Self-Service, sonst die Action-Guards aus [`src/lib/auth/action-guards.ts`](../src/lib/auth/action-guards.ts) — nie erst nach dem Lesen von Daten. Berechtigungen werden **serverseitig** geprüft, nie nur durch Ausblenden im UI.
+   - `requireActionPermission(key)` (redirect), `findActionActor(key)` (`null`), `actionPermissionDenied(key)` (`{ error }`) prüfen Permission **und** Mitgliedsstatus: Ausgetretene behalten Zusatzrollen, dürfen aber nur abwickeln (`docs/mitglieder-konzept.md` §3.4). Abwicklungs-Actions (eigene Bestände zurückgeben/weitergeben) setzen dafür explizit `{ settlement: true }`.
+   - `requirePermission()` (ohne Mitgliedsstatus) ist kein Action-Guard. Seiten nehmen `requireMember()` / `requireAdminPermission()`.
+   - Permission-Keys sind `PermissionKey` ([`permission-keys.ts`](../src/lib/auth/permission-keys.ts)) — ein neuer Key wird dort eingetragen, nicht als freier String.
 2. **Rückgabeformat** ist `{ error: string }` oder `{ success: true as const }` (optional mit Zusatzfeldern wie `{ success: true as const, id }`). Kein Werfen für erwartbare Fehler — das UI braucht die Nachricht. Der Typ dazu ist `ActionResult` in [`src/components/ui/use-action.ts`](../src/components/ui/use-action.ts).
 3. **Fehlermeldungen sind deutsch und nutzerlesbar** („Keine Berechtigung.", nicht „FORBIDDEN").
 4. **`revalidatePath`** nach Mutationen, die Server-Komponenten betreffen.

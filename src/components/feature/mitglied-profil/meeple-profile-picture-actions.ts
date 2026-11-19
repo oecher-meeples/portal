@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ProfilePictureVisibility } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
@@ -16,7 +16,7 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 async function assertMayEdit(meepleId: string) {
   const session = await requireMember();
   if (session.meeple.id === meepleId) return;
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 }
 
 export async function getMeepleProfilePictureUploadToken(

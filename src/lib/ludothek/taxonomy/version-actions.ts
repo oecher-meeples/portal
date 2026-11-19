@@ -1,7 +1,7 @@
 "use server";
 
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { describeVersion } from "@/lib/ludothek/taxonomy/version-label";
 import { fetchBggGame, type BggVersion } from "@/lib/bgg/client";
 
@@ -16,7 +16,7 @@ export type EditionOption = {
 export async function getBoardGameEditions(
   boardGameId: string,
 ): Promise<EditionOption[]> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return [];
 
   const versions = await prisma.boardGameVersion.findMany({
@@ -49,7 +49,7 @@ export async function getBoardGameEditions(
 export async function getUnsavedBggVersions(
   boardGameId: string,
 ): Promise<BggVersion[]> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return [];
 
   const game = await prisma.boardGame.findUnique({

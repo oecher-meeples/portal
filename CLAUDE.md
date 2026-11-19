@@ -55,6 +55,7 @@ Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst �
 | `createBlobUploadToken({ pathname, contentType, … })` (`lib/utils/blob-upload-token.ts`)  | eigenem `createPresignedPost` im `get…UploadToken`-Server-Action    |
 | `putBlob(pathname, body, contentType)` (`lib/utils/s3.ts`)                                | eigenem `PutObjectCommand` für serverseitige Uploads                |
 | `toResult(run)` / `actionErrorMessage(error)` (`lib/utils/action-result.ts`)              | eigenem `catch (e) { return { error: (e as Error).message } }`      |
+| `requireActionPermission(key)` u. a. (`lib/auth/action-guards.ts`, prüft Mitgliedsstatus) | `requirePermission`/`hasPermission` als Action-Guard                |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 

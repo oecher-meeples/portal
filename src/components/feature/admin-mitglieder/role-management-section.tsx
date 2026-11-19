@@ -24,6 +24,7 @@ import {
   setRolePermissions,
   reorderRoles,
 } from "@/components/feature/admin-mitglieder/actions";
+import type { PermissionKey } from "@/lib/auth/permission-keys";
 
 export type RoleManagementRow = {
   id: string;
@@ -40,8 +41,7 @@ export type RoleManagementRow = {
 /** Eigener MIME-Typ für den Drag-Payload — analog role-permissions-editor.tsx. */
 const REORDER_DRAG_MIME = "application/x-role-id";
 
-/** Muss zum in prisma/seed-roles.ts gepflegten Permission-Key passen. */
-const ADMIN_ACCESS_PERMISSION_KEY = "admin:access";
+const ADMIN_ACCESS_PERMISSION_KEY: PermissionKey = "admin:access";
 
 /**
  * Rollenverwaltung — nur sichtbar mit `members:manage` (Gate liegt beim

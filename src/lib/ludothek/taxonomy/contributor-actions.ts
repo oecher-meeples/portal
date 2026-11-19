@@ -1,8 +1,8 @@
 "use server";
 
 import type { ContributorRole } from "@prisma/client";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
   normalizeTaxonomyName,
   taxonomyDedupKey,
@@ -11,7 +11,7 @@ import {
 export async function listContributorNames(
   role: ContributorRole,
 ): Promise<string[]> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return [];
 
   const contributors = await prisma.contributor.findMany({
@@ -32,7 +32,7 @@ export async function listContributorNames(
  * `BoardGameContributor`-Verknüpfung, hier wird nur der Stammdatensatz
  * angelegt. */
 export async function createContributor(name: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
 
   const trimmed = name.trim();

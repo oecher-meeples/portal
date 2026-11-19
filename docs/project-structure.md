@@ -36,7 +36,9 @@ Aktueller Stand: **0 Verstöße** repo-weit.
 src/lib/
 ├── analytics/  Selbstgehostetes Seitenaufruf-Tracking (`PageView`, keine IP/PII): Beacon-Prüfung + User-Agent-Klassifizierung
 │               (`collect.ts`, Schreibseite der Route `/api/analytics/collect`), Aggregationen fürs Admin-Dashboard (`queries.ts`)
-├── auth/       better-auth-Instanz + Config (self-hosted, ADR 0015), Session, Tier-Ermittlung, Auth-Client
+├── auth/       better-auth-Instanz + Config (self-hosted, ADR 0015), Session, Tier-Ermittlung, Auth-Client;
+│               Permission-Katalog + `PermissionKey`-Typ (`permission-keys.ts`, auch Quelle für `prisma/seed-roles.ts`),
+│               Action-Guards mit Mitgliedsstatus-Prüfung (`action-guards.ts`, #522)
 ├── bgg/        BoardGameGeek-Integration
 ├── bringbuy/   Flohmarkt-Regeln + Server Actions: Statuswechsel/Warenkorb (`actions.ts`), Token-Anmeldung externer
 │               Verkäufer:innen (`external-sellers.ts`), eigene Artikel für Meeple **und** externe Verkäufer:innen
@@ -68,7 +70,6 @@ src/lib/
 │               ├── holding-actions-shared.ts   Von beiden `holding-actions*.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern
-│               ├── permissions.ts      `requireGamesManagePermission()` — geteilt von `board-games.ts` und `game-copies.ts`
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
 │               ├── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])

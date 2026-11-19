@@ -8,7 +8,6 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const requireBankReaderMock = vi.fn();
 const revealMeepleIbanMock = vi.fn();
 vi.mock("@/lib/members/bank-access-log", () => ({
-  requireBankReader: () => requireBankReaderMock(),
   revealMeepleIban: (...args: unknown[]) => revealMeepleIbanMock(...args),
 }));
 
@@ -22,6 +21,11 @@ const requestIbanChangeMock = vi.fn();
 vi.mock("@/lib/members/pending-changes", () => ({
   requestIbanChange: (...args: unknown[]) => requestIbanChangeMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireBankReaderMock(...args),
+  ),
+);
 
 const { revealMemberIban, updateMemberIban, requestMemberIbanChange } =
   await import("./bankverbindung-actions");

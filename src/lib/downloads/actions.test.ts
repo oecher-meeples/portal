@@ -22,6 +22,9 @@ vi.mock("@/lib/utils/blob-upload-token", () => ({
   createBlobUploadToken: (...args: unknown[]) =>
     createBlobUploadTokenMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const {
   createDownload,

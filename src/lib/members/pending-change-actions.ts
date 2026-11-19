@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { PendingChangeKind } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import {
   approvePendingChange as approvePendingChangeRecord,
@@ -13,9 +13,10 @@ import {
 /** IBAN: Kassenwart (`bank:read`). MEMBER_EMAIL: Vorstand (`members:manage`) —
  * dieselbe Berechtigung, die auch Kündigungen vermerkt. */
 async function requireApproverFor(kind: PendingChangeKind) {
-  return kind === PendingChangeKind.IBAN
-    ? requirePermission("bank:read")
-    : requirePermission("members:manage");
+  const { user } = await requireActionPermission(
+    kind === PendingChangeKind.IBAN ? "bank:read" : "members:manage",
+  );
+  return user;
 }
 
 async function revalidateProfilePage(memberId: string) {

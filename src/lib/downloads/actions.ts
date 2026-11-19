@@ -2,22 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import type { DownloadStatus } from "@prisma/client";
+import { actionPermissionDenied } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
-
-async function requireManagePermission() {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "downloads:manage"))) {
-    return { error: "Keine Berechtigung." } as const;
-  }
-  return null;
-}
 
 function revalidateDownloadPaths() {
   revalidatePath("/downloads");
@@ -32,7 +23,7 @@ export type CreateDownloadInput = {
 };
 
 export async function createDownload(input: CreateDownloadInput) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
   await prisma.download.create({ data: input });
@@ -42,7 +33,7 @@ export async function createDownload(input: CreateDownloadInput) {
 }
 
 export async function renameDownload(id: string, title: string) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
   const trimmed = title.trim();
@@ -57,7 +48,7 @@ export async function renameDownload(id: string, title: string) {
 }
 
 export async function setDownloadStatus(id: string, status: DownloadStatus) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
   await prisma.download.update({ where: { id }, data: { status } });
@@ -67,7 +58,7 @@ export async function setDownloadStatus(id: string, status: DownloadStatus) {
 }
 
 export async function deleteDownload(id: string) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
   const download = await prisma.download.findUnique({
@@ -103,7 +94,7 @@ export async function replaceDownloadFile(
   id: string,
   input: ReplaceDownloadFileInput,
 ) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
   const existing = await prisma.download.findUnique({
@@ -128,7 +119,7 @@ export async function replaceDownloadFile(
  * manual order (they sort by `fileUpdatedAt`, see #201), so any OFFLINE id
  * is dropped rather than reordered. */
 export async function reorderDownloads(orderedIds: string[]) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
   const downloads = await prisma.download.findMany({
@@ -154,7 +145,7 @@ export async function getDownloadUploadToken(
   pathname: string,
   contentType: string,
 ) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) throw new Error(forbidden.error);
 
   return createBlobUploadToken({

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { EventVisibility } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import { uniqueSlug } from "@/lib/utils/slug";
 import { enumerateEventDates, endOfUtcDay } from "@/lib/events/event-days";
 
@@ -55,7 +55,7 @@ function validateEventInput(input: EventInput) {
 }
 
 export async function createEvent(input: EventInput) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const validationError = validateEventInput(input);
   if (validationError) {
@@ -83,7 +83,7 @@ export async function createEvent(input: EventInput) {
 }
 
 export async function updateEvent(id: string, input: EventInput) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const validationError = validateEventInput(input);
   if (validationError) {
@@ -112,7 +112,7 @@ export async function updateEvent(id: string, input: EventInput) {
 }
 
 export async function deleteEvent(id: string) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const [shiftCount, shelfAssignmentCount, itemCount] = await Promise.all([
     prisma.shift.count({ where: { eventId: id } }),

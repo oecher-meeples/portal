@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { assertMaySubmitChangeFor } from "@/lib/members/guardians";
 import {
@@ -59,7 +59,7 @@ export async function updateMemberStammdaten(
   memberId: string,
   input: StammdatenInput,
 ) {
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 
   await prisma.member.update({
     where: { id: memberId },

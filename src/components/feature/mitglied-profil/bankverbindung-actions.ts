@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import {
-  requireBankReader,
   revealMeepleIban,
   revealPendingIbanChange,
 } from "@/lib/members/bank-access-log";
@@ -30,7 +30,7 @@ async function revalidateProfile(memberId: string) {
  * importieren laut CLAUDE.md nie voneinander, die eigentliche Logik (samt
  * Access-Log) lebt bereits gemeinsam in `lib/members/bank-access-log.ts`. */
 export async function revealMemberIban(meepleId: string) {
-  const actor = await requireBankReader();
+  const { meeple: actor } = await requireActionPermission("bank:read");
   return revealMeepleIban(meepleId, actor.id);
 }
 
@@ -38,7 +38,7 @@ export async function revealMemberIban(meepleId: string) {
  * {@link revealMemberIban} — für die offenen IBAN-Änderungsanträge unter
  * dem Bankverbindungs-Bereich. */
 export async function revealPendingMemberIban(changeId: string) {
-  const actor = await requireBankReader();
+  const { meeple: actor } = await requireActionPermission("bank:read");
   return revealPendingIbanChange(changeId, actor.id);
 }
 
@@ -50,7 +50,7 @@ export async function updateMemberIban(
   memberId: string,
   input: { accountHolder: string; iban: string },
 ) {
-  await requireBankReader();
+  await requireActionPermission("bank:read");
 
   const trimmedHolder = input.accountHolder.trim();
   if (!trimmedHolder) {

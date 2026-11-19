@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import {
   generateMemberCalendarToken,
   revokeMemberCalendarToken,
@@ -26,7 +26,7 @@ function subscribeUrl(token: string): string {
  * (#438) — nur `admin:access`. Die Abo-URL geht als Rückgabewert einmalig an
  * den Client, nirgends persistiert (nur der Hash liegt in der DB). */
 export async function generateMemberCalendarSubscription(memberId: string) {
-  await requirePermission("admin:access");
+  await requireActionPermission("admin:access");
 
   const token = await generateMemberCalendarToken(memberId);
   await revalidateProfile(memberId);
@@ -34,7 +34,7 @@ export async function generateMemberCalendarSubscription(memberId: string) {
 }
 
 export async function revokeMemberCalendarSubscription(memberId: string) {
-  await requirePermission("admin:access");
+  await requireActionPermission("admin:access");
 
   await revokeMemberCalendarToken(memberId);
   await revalidateProfile(memberId);
@@ -45,7 +45,7 @@ export async function revokeMemberCalendarSubscription(memberId: string) {
  * — ein Roh-Token ist nach dem Erzeugen nicht mehr abrufbar, "erneut
  * versenden" muss also immer neu erzeugen. */
 export async function sendMemberCalendarSubscriptionMail(memberId: string) {
-  await requirePermission("admin:access");
+  await requireActionPermission("admin:access");
 
   const member = await prisma.member.findUnique({
     where: { id: memberId },

@@ -14,9 +14,13 @@ vi.mock("@/lib/members/meeples", async () => {
   return {
     ...actual,
     requireMeeple: requireMeepleMock,
-    requireMeeplePermission: requireMeeplePermissionMock,
   };
 });
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireMeeplePermissionMock(...args),
+  ),
+);
 
 const {
   addLfgGuest,

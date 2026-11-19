@@ -7,17 +7,14 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
 
-const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/auth/permissions")>()),
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
-
 const setDefaultInviteDaysMock = vi.fn();
 vi.mock("@/lib/members/invite-settings", () => ({
   setDefaultInviteDays: (...args: unknown[]) =>
     setDefaultInviteDaysMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const { disconnectInstagram, updateDefaultInviteDays } =
   await import("./actions");
@@ -46,7 +43,8 @@ describe("disconnectInstagram", () => {
 
 describe("updateDefaultInviteDays", () => {
   it("rejects a value outside the valid range", async () => {
-    requirePermissionMock.mockResolvedValue({ id: "admin-1" });
+    getCurrentUserMock.mockResolvedValue({ id: "admin-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
 
     const result = await updateDefaultInviteDays(200);
 
@@ -55,7 +53,8 @@ describe("updateDefaultInviteDays", () => {
   });
 
   it("stores a valid value", async () => {
-    requirePermissionMock.mockResolvedValue({ id: "admin-1" });
+    getCurrentUserMock.mockResolvedValue({ id: "admin-1" });
+    prismaMock.rolePermission.count.mockResolvedValue(1);
 
     const result = await updateDefaultInviteDays(10);
 

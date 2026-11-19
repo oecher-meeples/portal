@@ -1,7 +1,7 @@
 "use server";
 
+import { findActionActor } from "@/lib/auth/action-guards";
 import { isValidEan } from "@/lib/inventory/ean";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
   searchEanByName,
   UpcLookupError,
@@ -47,7 +47,7 @@ export async function searchEanForBoardGame(
   title: string,
   options?: { bggProductCode?: string | null; publisher?: string[] },
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }

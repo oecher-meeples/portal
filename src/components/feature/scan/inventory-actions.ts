@@ -1,9 +1,9 @@
 "use server";
 
 import { GameInventoryStatus } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { requireMeeple } from "@/lib/members/meeples";
-import { requirePermission } from "@/lib/auth/permissions";
 import {
   GAME_ISSUE_LABELS,
   type GameIssueKind,
@@ -51,7 +51,7 @@ export async function reportGameDefect(
 }
 
 export async function clearGameDefect(gameCopyId: string) {
-  await requirePermission("games:manage");
+  await requireActionPermission("games:manage");
 
   await prisma.gameCopy.update({
     where: { id: gameCopyId },

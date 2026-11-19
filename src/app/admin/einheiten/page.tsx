@@ -1,8 +1,7 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
-import { getCurrentUser } from "@/lib/auth/server";
-import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
+import { requireMember } from "@/lib/auth/session";
+import { getMembershipState } from "@/lib/members/meeples";
 import {
   AdminEinheitenView,
   type ResignedHolderRow,
@@ -27,14 +26,11 @@ function locationChain(
 }
 
 export default async function AdminEinheitenPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  const [currentMeeple, isAdmin] = await Promise.all([
-    ensureMeeple(user),
-    hasPermission(user.id, "games:manage"),
-  ]);
+  // #522: offen für jedes aktive Mitglied (Self-Claim einer Einheit),
+  // Verwaltung nur mit games:manage — requireMember setzt den
+  // Mitgliedsstatus durch, den der frühere Eigen-Guard ausließ.
+  const { user, meeple: currentMeeple } = await requireMember();
+  const isAdmin = await hasPermission(user.id, "games:manage");
 
   const [units, gameCounts, meeples] = await Promise.all([
     // EVENT-Units sind system-verwaltet (lazy per `ensureEventUnit()`, #273)

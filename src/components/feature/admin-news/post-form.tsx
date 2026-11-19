@@ -116,7 +116,7 @@ export function PostForm({
     const result = await retryInstagramPost(postId);
     setIsRetrying(false);
 
-    if (result.error) {
+    if ("error" in result) {
       setError(result.error);
       return;
     }

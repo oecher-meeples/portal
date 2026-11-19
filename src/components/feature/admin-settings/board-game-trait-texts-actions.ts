@@ -2,12 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { BoardGameTrait, BoardGameTraitTone } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { updateBoardGameTraitText as updateBoardGameTraitTextRecord } from "@/lib/ludothek/board-game-trait-texts";
-
-async function requireGamesManage() {
-  return requirePermission("games:manage");
-}
 
 export async function updateBoardGameTraitText(
   trait: BoardGameTrait,
@@ -19,7 +15,7 @@ export async function updateBoardGameTraitText(
     detailsMessage: string;
   },
 ) {
-  await requireGamesManage();
+  await requireActionPermission("games:manage");
 
   await updateBoardGameTraitTextRecord(trait, {
     label: input.label.trim() || null,

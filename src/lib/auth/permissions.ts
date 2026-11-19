@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
+import type { PermissionKey } from "@/lib/auth/permission-keys";
+
+export type { PermissionKey } from "@/lib/auth/permission-keys";
 
 /**
  * A UserRole assignment is active at `now` when its time window
@@ -17,7 +20,7 @@ function activeAssignmentWhere(now: Date) {
 
 export async function hasPermission(
   neonAuthUserId: string,
-  permissionKey: string,
+  permissionKey: PermissionKey,
 ) {
   const count = await prisma.rolePermission.count({
     where: {
@@ -49,7 +52,12 @@ export async function getUserPermissionKeys(
   return rows.map((row) => row.permission.key);
 }
 
-export async function requirePermission(permissionKey: string) {
+/**
+ * Page/route guard: login + permission, redirects otherwise. Prüft bewusst
+ * keinen Mitgliedsstatus — Server Actions nehmen `requireActionPermission`
+ * (`lib/auth/action-guards.ts`), Admin-Seiten `requireAdminPermission`.
+ */
+export async function requirePermission(permissionKey: PermissionKey) {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");

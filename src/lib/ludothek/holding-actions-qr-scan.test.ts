@@ -9,14 +9,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/action-guards", async () => {
+  const guards = await import("@/lib/__mocks__/action-guards");
+  return guards.actionGuardsFrom(
+    guards.holdingActorResolver({
+      actingMeeple: (...args) => requireMeeplePermissionMock(...args),
+      gamesManager: async () => null,
+      findMember: (args) => memberFindUniqueMock(args),
+      membershipState: () => "registriert",
+    }),
+  );
+});
 
 const requireMeeplePermissionMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, requireMeeplePermission: requireMeeplePermissionMock };
-});
 
 const memberFindUniqueMock = vi.fn();
 vi.mock("@/lib/utils/prisma", () => ({

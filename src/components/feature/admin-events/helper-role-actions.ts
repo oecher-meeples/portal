@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import {
   createHelperRole,
   updateHelperRole,
@@ -12,7 +12,7 @@ export async function createHelperRoleAction(
   name: string,
   grantsPermissionKey: string | null,
 ) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const result = await createHelperRole(name, grantsPermissionKey);
   if ("error" in result) return result;
@@ -26,7 +26,7 @@ export async function updateHelperRoleAction(
   name: string,
   grantsPermissionKey: string | null,
 ) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const result = await updateHelperRole(roleId, name, grantsPermissionKey);
   if ("error" in result) return result;
@@ -36,7 +36,7 @@ export async function updateHelperRoleAction(
 }
 
 export async function deleteHelperRoleAction(roleId: string) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const result = await deleteHelperRole(roleId);
   if ("error" in result) return result;

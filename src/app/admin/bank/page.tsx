@@ -6,14 +6,14 @@ import {
   ibanLast4,
   maskIban,
 } from "@/lib/utils/crypto";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireAdminPermission } from "@/lib/auth/session";
 import { AdminBankView } from "@/components/feature/admin-bank/admin-bank-view";
 import { formatDateTime } from "@/lib/utils/format";
 import { listOpenPendingChanges } from "@/lib/members/pending-changes";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 
 export default async function AdminBankPage() {
-  await requirePermission("bank:read");
+  await requireAdminPermission("bank:read");
 
   const [members, logs, pendingChanges] = await Promise.all([
     // `revealIban` looks a Member up by its linked Meeple (#328), so this
