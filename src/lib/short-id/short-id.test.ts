@@ -45,6 +45,11 @@ describe("parseShortId", () => {
     });
   });
 
+  it("accepts free alphanumeric unit codes, normalised to upper case", () => {
+    expect(parseShortId("shelf-c4")).toEqual({ kind: "shelf", id: "C4" });
+    expect(parseShortId("BOX-a1")).toEqual({ kind: "box", id: "A1" });
+  });
+
   it("parses meeple slugs", () => {
     expect(parseShortId("meeple-cm1abc_2-x")).toEqual({
       kind: "meeple",
@@ -59,7 +64,7 @@ describe("parseShortId", () => {
     "inv-1.5",
     "inv-",
     "xyz-1",
-    "box-A1",
+    "box-A-1",
     "meeple-a b",
     "OM-BOX-0001",
     "https://short.oecher-meeples.org/inv-123",
@@ -88,6 +93,13 @@ describe("unit code mapping", () => {
     expect(shortIdFromUnitCode("om-shelf-0012")).toEqual({
       kind: "shelf",
       id: "0012",
+    });
+  });
+
+  it("maps free alphanumeric codes", () => {
+    expect(shortIdFromUnitCode("OM-SHELF-C4")).toEqual({
+      kind: "shelf",
+      id: "C4",
     });
   });
 

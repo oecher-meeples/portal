@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import {
   paginateLabels,
   selectLabels,
+  unitLabelQrContent,
   type LabelSelection,
   type LabelUnit,
 } from "@/lib/inventory/labels";
@@ -43,12 +44,12 @@ export function UnitLabelSheet({ units }: { units: LabelUnit[] }) {
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      selected.map(async (unit) => {
-        const dataUrl = await QRCode.toDataURL(unit.code, {
-          margin: 0,
-          width: 200,
-        });
-        return [unit.id, dataUrl] as const;
+      selected.flatMap((unit) => {
+        const content = unitLabelQrContent(unit);
+        if (!content) return [];
+        return QRCode.toDataURL(content, { margin: 0, width: 200 }).then(
+          (dataUrl) => [unit.id, dataUrl] as const,
+        );
       }),
     ).then((entries) => {
       if (!cancelled) setQrCodes(Object.fromEntries(entries));
