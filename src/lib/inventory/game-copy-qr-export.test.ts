@@ -6,31 +6,24 @@ import {
 } from "./game-copy-qr-export";
 
 describe("selectQrExportableCopies (#271)", () => {
-  it("keeps only copies with a non-empty inventory number", () => {
+  it("keeps only copies with an inventory number", () => {
     const copies = [
-      { id: "1", title: "Ark Nova", inventoryNumber: "INV-001" },
+      { id: "1", title: "Ark Nova", inventoryNumber: 1 },
       { id: "2", title: "Wingspan", inventoryNumber: null },
-      { id: "3", title: "Azul", inventoryNumber: "  " },
     ];
 
     const result = selectQrExportableCopies(copies);
 
     expect(result).toEqual([
-      { id: "1", title: "Ark Nova", inventoryNumber: "INV-001" },
+      { id: "1", title: "Ark Nova", inventoryNumber: 1 },
     ]);
   });
 });
 
 describe("buildExemplarUrl (#271)", () => {
   it("builds the exemplar-level target route", () => {
-    expect(buildExemplarUrl("https://portal.example", "INV-001")).toBe(
-      "https://portal.example/ludothek/exemplar/INV-001",
-    );
-  });
-
-  it("URL-encodes the inventory number", () => {
-    expect(buildExemplarUrl("https://portal.example", "INV 001/A")).toBe(
-      "https://portal.example/ludothek/exemplar/INV%20001%2FA",
+    expect(buildExemplarUrl("https://portal.example", 1)).toBe(
+      "https://portal.example/ludothek/exemplar/1",
     );
   });
 });
@@ -41,9 +34,9 @@ describe("qrExportFilename (#271)", () => {
       qrExportFilename({
         id: "1",
         title: "Ark Nova",
-        inventoryNumber: "INV-001",
+        inventoryNumber: 1,
       }),
-    ).toBe("INV-001_Ark Nova.png");
+    ).toBe("1_Ark Nova.png");
   });
 
   it("strips filesystem-unsafe characters from the title", () => {
@@ -51,8 +44,8 @@ describe("qrExportFilename (#271)", () => {
       qrExportFilename({
         id: "1",
         title: 'Catan: Seefahrer/"Städte & Ritter"',
-        inventoryNumber: "INV-002",
+        inventoryNumber: 2,
       }),
-    ).toBe("INV-002_Catan SeefahrerStädte & Ritter.png");
+    ).toBe("2_Catan SeefahrerStädte & Ritter.png");
   });
 });

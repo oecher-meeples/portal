@@ -22,8 +22,8 @@ export function PruefbogenPanel({
 }: {
   gameCopyId: string;
   title: string;
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber?: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber?: number | null;
   onDone: () => void;
 }) {
   const [mode, setMode] = useState<"idle" | GameIssueKind>("idle");

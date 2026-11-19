@@ -33,8 +33,8 @@ export type GameActionsCopy = {
   locationChain: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber: number | null;
   /** Edition (BGG-Version) des Exemplars - Vorbelegung im Exemplar-Editor. */
   versionId?: string | null;
   /** Whether the current session holds this copy right now — gates

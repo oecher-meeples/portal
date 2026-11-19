@@ -5,7 +5,7 @@ import { Pencil } from "lucide-react";
 import type { RuleBookLanguage } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { InventoryNumberField } from "@/components/widgets/board-game/inventory-number-field";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import {
@@ -35,8 +35,8 @@ export function EditBoardGameExemplarDialog({
   copyId: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber?: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber?: number | null;
   /** Titel des Exemplars — liefert die zur Auswahl stehenden Editionen. */
   boardGameId?: string;
   /** Aktuelle Edition des Exemplars. */
@@ -53,13 +53,15 @@ export function EditBoardGameExemplarDialog({
     editionVersionId: versionId ?? "",
   });
   const [form, setForm] = useState(initialForm);
+  const initialInventoryNumber =
+    inventoryNumber != null ? String(inventoryNumber) : "";
   const [inventoryNumberValue, setInventoryNumberValue] = useState(
-    inventoryNumber ?? "",
+    initialInventoryNumber,
   );
 
   function reset() {
     setForm(initialForm());
-    setInventoryNumberValue(inventoryNumber ?? "");
+    setInventoryNumberValue(initialInventoryNumber);
   }
 
   return (
@@ -86,11 +88,10 @@ export function EditBoardGameExemplarDialog({
       }
       onReset={reset}
     >
-      <TextField
+      <InventoryNumberField
         id={`copy-${copyId}-inventory-number`}
-        label="Inventarnummer"
         value={inventoryNumberValue}
-        onChange={(event) => setInventoryNumberValue(event.target.value)}
+        onChange={setInventoryNumberValue}
       />
       <EditBoardGameExemplar
         idPrefix={`copy-${copyId}`}

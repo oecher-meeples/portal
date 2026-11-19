@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CopyPlus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { InventoryNumberField } from "@/components/widgets/board-game/inventory-number-field";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import {
   EMPTY_BOARD_GAME_FORM,
@@ -57,7 +57,7 @@ export function AddGameCopyDialog({
       submitLabel="Anlegen"
       contentClassName="sm:max-w-2xl"
       onOpen={async () => {
-        setInventoryNumber(await getSuggestedInventoryNumber());
+        setInventoryNumber(String(await getSuggestedInventoryNumber()));
       }}
       action={() =>
         createGameCopy(
@@ -70,11 +70,10 @@ export function AddGameCopyDialog({
         setInventoryNumber("");
       }}
     >
-      <TextField
+      <InventoryNumberField
         id={`add-copy-${boardGameId}-inventory-number`}
-        label="Inventarnummer"
         value={inventoryNumber}
-        onChange={(event) => setInventoryNumber(event.target.value)}
+        onChange={setInventoryNumber}
       />
       <EditBoardGameExemplar
         idPrefix={`add-copy-${boardGameId}`}

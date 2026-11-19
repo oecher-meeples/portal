@@ -1,5 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
+import {
+  isValidInventoryNumber,
+  parseInventoryNumber,
+} from "@/lib/ludothek/game-copy-inventory-number";
 
 /**
  * QR-Code-Ziel für ein einzelnes Exemplar (#271) — löst über die eindeutige
@@ -17,7 +21,10 @@ export default async function ExemplarRedirectPage({
 }: {
   params: Promise<{ inventoryNumber: string }>;
 }) {
-  const { inventoryNumber } = await params;
+  const inventoryNumber = parseInventoryNumber((await params).inventoryNumber);
+  if (inventoryNumber === null || !isValidInventoryNumber(inventoryNumber)) {
+    notFound();
+  }
 
   const copy = await prisma.gameCopy.findUnique({
     where: { inventoryNumber },

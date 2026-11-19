@@ -26,7 +26,7 @@ type ViewState =
   | { kind: "unknown"; raw: string }
   | {
       kind: "select-game";
-      games: { id: string; title: string; inventoryNumber: string | null }[];
+      games: { id: string; title: string; inventoryNumber: number | null }[];
       /** Selecting here places directly into the active Serienmodus-Kiste
        * instead of opening the GameHoldingPanel (#5). */
       forEinlagern: boolean;
@@ -36,7 +36,7 @@ type ViewState =
       kind: "pruefen";
       gameCopyId: string;
       title: string;
-      inventoryNumber: string | null;
+      inventoryNumber: number | null;
     }
   | {
       kind: "unit";
