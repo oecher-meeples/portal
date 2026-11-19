@@ -226,6 +226,10 @@ export type LudothekFilters = {
    * das nach Event-Ende noch auf der Event-Unit liegt, gilt bewusst
    * weiterhin als anwesend. */
   onlyPresentAtEvent?: boolean;
+  /** Short-ID einer Kiste/eines Regals (`box-0001`, #550) — Ziel des
+   * QR-Routers für ein Einheiten-Etikett, auch für Gäste. Nur Exemplare in
+   * dieser Einheit oder einer darin stehenden, siehe `unitGameCopyIds`. */
+  unit?: string;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -333,6 +337,7 @@ export function parseLudothekSearchParams(
     languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
     hasExplainer: firstString(searchParams.erklaerbaer) === "1",
     onlyPresentAtEvent: firstString(searchParams.anwesend) === "1",
+    unit: firstString(searchParams.einheit) || undefined,
   };
 
   if (internal) {
@@ -390,6 +395,7 @@ export function filterLudothekGames(
   {
     attendingExplainerBoardGameIds,
     presentGameCopyIds,
+    unitGameCopyIds,
   }: {
     /** Gast-während-Event-Kontext (#256): wenn gesetzt, ersetzt diese Menge
      * die einfache `explainerCount > 0`-Prüfung durch "hat ein gerade
@@ -399,6 +405,9 @@ export function filterLudothekGames(
      * nötig für `filters.onlyPresentAtEvent`. Weglassen/leer lassen, solange
      * kein Event läuft. */
     presentGameCopyIds?: Set<string>;
+    /** GameCopy-Ids im Teilbaum der Einheit aus `filters.unit` (#550) —
+     * fehlt sie (unbekannte Einheit), bleibt die Liste leer. */
+    unitGameCopyIds?: Set<string>;
   } = {},
 ): LudothekGame[] {
   return games.filter((game) => {
@@ -497,6 +506,7 @@ export function filterLudothekGames(
     if (filters.onlyPresentAtEvent) {
       if (!presentGameCopyIds?.has(game.id)) return false;
     }
+    if (filters.unit && !unitGameCopyIds?.has(game.id)) return false;
     return true;
   });
 }
