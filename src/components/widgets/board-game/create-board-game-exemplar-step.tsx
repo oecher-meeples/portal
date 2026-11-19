@@ -1,5 +1,6 @@
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import { EanField } from "@/components/widgets/board-game/ean-field";
+import { InventoryNumberField } from "@/components/widgets/board-game/inventory-number-field";
 import {
   CreateBoardGameLocationField,
   type LocationPlacement,
@@ -16,6 +17,8 @@ import { parseCommaSeparatedList } from "@/lib/ludothek/bgg-id";
 export function CreateBoardGameExemplarStep({
   values,
   onChange,
+  inventoryNumber,
+  onInventoryNumberChange,
   onPlacementResolved,
   placement,
   existingBoardGame,
@@ -25,6 +28,10 @@ export function CreateBoardGameExemplarStep({
 }: {
   values: BoardGameFormValues;
   onChange: (patch: Partial<BoardGameFormValues>) => void;
+  /** Inventarnummer des neuen Exemplars (#549) — Rohtext, z. B. per
+   * `?neu=inv-<n>` aus einem gescannten Etikett vorbelegt. */
+  inventoryNumber: string;
+  onInventoryNumberChange: (value: string) => void;
   onPlacementResolved: (placement: LocationPlacement | null) => void;
   placement: LocationPlacement | null;
   existingBoardGame: DuplicateBoardGameMatch | null;
@@ -45,6 +52,11 @@ export function CreateBoardGameExemplarStep({
             : `Weiteres Exemplar von „${existingBoardGame.title}“ — es wird kein neuer Titel angelegt.`}
         </p>
       )}
+      <InventoryNumberField
+        id="game-inventory-number"
+        value={inventoryNumber}
+        onChange={onInventoryNumberChange}
+      />
       <EditBoardGameExemplar
         idPrefix="game"
         values={values}

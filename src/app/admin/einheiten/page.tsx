@@ -4,12 +4,37 @@ import { unitChainLabel } from "@/lib/ludothek/unit-chain";
 import { requireMember } from "@/lib/auth/session";
 import { getMembershipState } from "@/lib/members/meeples";
 import {
+  parseShortId,
+  unitCodeFromShortId,
+  unitKindFromShortId,
+} from "@/lib/short-id/short-id";
+import { firstString } from "@/lib/utils/search-params";
+import type { ScannedUnitPrefill } from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
+import {
   AdminEinheitenView,
   type ResignedHolderRow,
   type StorageUnitRow,
 } from "@/components/feature/admin-einheiten/admin-einheiten-view";
 
-export default async function AdminEinheitenPage() {
+/** `?neu=box-0001` (#549): Ziel des Short-ID-Routers für ein gescanntes,
+ * noch unbekanntes Einheiten-Etikett — nur für Admins wirksam, und nur,
+ * solange der Code tatsächlich noch frei ist. */
+function scannedUnitPrefill(
+  neu: string | undefined,
+  existingCodes: Set<string>,
+): ScannedUnitPrefill | undefined {
+  const shortId = parseShortId(neu ?? "");
+  if (shortId?.kind !== "box" && shortId?.kind !== "shelf") return undefined;
+  const code = unitCodeFromShortId(shortId);
+  if (existingCodes.has(code)) return undefined;
+  return { kind: unitKindFromShortId(shortId) as "BOX" | "SHELF", code };
+}
+
+export default async function AdminEinheitenPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // #522: offen für jedes aktive Mitglied (Self-Claim einer Einheit),
   // Verwaltung nur mit games:manage — requireMember setzt den
   // Mitgliedsstatus durch, den der frühere Eigen-Guard ausließ.
@@ -108,6 +133,14 @@ export default async function AdminEinheitenPage() {
       isAdmin={isAdmin}
       selfMeepleId={currentMeeple.id}
       keeperOptions={keeperOptions}
+      scannedUnit={
+        isAdmin
+          ? scannedUnitPrefill(
+              firstString((await searchParams).neu),
+              new Set(units.map((unit) => unit.code)),
+            )
+          : undefined
+      }
     />
   );
 }

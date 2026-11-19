@@ -22,6 +22,8 @@ import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
 import { getPresentGameCopyIds } from "@/lib/events/guest-area";
 import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
+import { parseShortId } from "@/lib/short-id/short-id";
+import { firstString } from "@/lib/utils/search-params";
 
 export default async function LudothekPage({
   searchParams,
@@ -54,6 +56,14 @@ export default async function LudothekPage({
   const internal = tier !== "gast" && canViewInternal;
 
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
+  // `?neu=inv-<n>` (#549): Ziel des Short-ID-Routers für ein gescanntes,
+  // noch unbekanntes Exemplar-Etikett — ohne Recht wirkungslos.
+  const createShortId =
+    internal && canManageGames
+      ? parseShortId(firstString(rawSearchParams.neu) ?? "")
+      : null;
+  const createInventoryNumber =
+    createShortId?.kind === "inv" ? createShortId.id : undefined;
   const showExplainerFilter = internal || currentEvent !== null;
   const showPresentFilter = currentEvent !== null;
 
@@ -145,6 +155,7 @@ export default async function LudothekPage({
         showExplainerFilter={showExplainerFilter}
         showPresentFilter={showPresentFilter}
         traitTexts={traitTexts}
+        createInventoryNumber={createInventoryNumber}
       />
     </PageContainer>
   );

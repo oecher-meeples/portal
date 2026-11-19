@@ -50,6 +50,7 @@ const STEP_LABELS: Record<Step, string> = {
 export function CreateBoardGameDialog({
   defaultEan,
   defaultBggQuery,
+  defaultInventoryNumber,
   onCreated,
 }: {
   defaultEan?: string;
@@ -62,8 +63,16 @@ export function CreateBoardGameDialog({
    * `AssignExpansionDialog`s Combobox-Leerzustand, die das Ergebnis direkt
    * als Auswahl übernehmen wollen (#204). */
   onCreated?: (game: { id: string; title: string }) => void;
+  /** Inventarnummer eines gescannten, noch unbekannten Exemplar-Etiketts
+   * (`/ludothek?neu=inv-<n>`, #549) — öffnet den Dialog sofort und belegt
+   * das Feld im Exemplar-Schritt vor, auch für „Weiteres Exemplar anlegen". */
+  defaultInventoryNumber?: number;
 } = {}) {
-  const [open, setOpen] = useState(Boolean(defaultEan));
+  const initialInventoryNumber =
+    defaultInventoryNumber !== undefined ? String(defaultInventoryNumber) : "";
+  const [open, setOpen] = useState(
+    Boolean(defaultEan) || defaultInventoryNumber !== undefined,
+  );
   // Ein Scan identifiziert die physische Kopie bereits eindeutig — der
   // BGG-Import-Schritt bringt dann nichts, direkt zur manuellen Prüfung.
   const [step, setStep] = useState<Step>(defaultEan ? 2 : 1);
@@ -78,6 +87,9 @@ export function CreateBoardGameDialog({
     ean: defaultEan ?? "",
   });
   const [placement, setPlacement] = useState<LocationPlacement | null>(null);
+  const [inventoryNumber, setInventoryNumber] = useState(
+    initialInventoryNumber,
+  );
   const [contributorsValid, setContributorsValid] = useState(true);
 
   const {
@@ -105,6 +117,7 @@ export function CreateBoardGameDialog({
     resetSubmitState,
   } = useCreateBoardGameSubmit({
     form,
+    inventoryNumber,
     existingBoardGame,
     correctingExistingTitle,
     placement,
@@ -129,6 +142,7 @@ export function CreateBoardGameDialog({
     setPreview(null);
     resetDuplicateGuard();
     setForm({ ...EMPTY_BOARD_GAME_FORM, ean: defaultEan ?? "" });
+    setInventoryNumber(initialInventoryNumber);
     resetSubmitState();
     setPlacement(null);
   }
@@ -376,6 +390,8 @@ export function CreateBoardGameDialog({
             <CreateBoardGameExemplarStep
               values={form}
               onChange={patchForm}
+              inventoryNumber={inventoryNumber}
+              onInventoryNumberChange={setInventoryNumber}
               onPlacementResolved={setPlacement}
               placement={placement}
               existingBoardGame={existingBoardGame}

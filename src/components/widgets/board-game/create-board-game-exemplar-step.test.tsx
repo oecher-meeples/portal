@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CreateBoardGameExemplarStep } from "@/components/widgets/board-game/create-board-game-exemplar-step";
 import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
@@ -61,6 +61,8 @@ function renderStep(
   const props = {
     values: { ...EMPTY_BOARD_GAME_FORM, title: "Ark Nova" },
     onChange: vi.fn(),
+    inventoryNumber: "",
+    onInventoryNumberChange: vi.fn(),
     onPlacementResolved: vi.fn(),
     placement: null,
     existingBoardGame: null,
@@ -72,6 +74,18 @@ function renderStep(
   render(<CreateBoardGameExemplarStep {...props} />);
   return props;
 }
+
+describe("CreateBoardGameExemplarStep — Inventarnummer (#549)", () => {
+  it("shows a prefilled inventory number and reports edits", () => {
+    const props = renderStep({ inventoryNumber: "42" });
+
+    const field = screen.getByLabelText("Inventarnummer");
+    expect(field).toHaveValue(42);
+
+    fireEvent.change(field, { target: { value: "43" } });
+    expect(props.onInventoryNumberChange).toHaveBeenCalledWith("43");
+  });
+});
 
 describe("CreateBoardGameExemplarStep — Version & Exemplar", () => {
   it("offers the BGG versions in the version dropdown, German first", () => {

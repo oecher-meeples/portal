@@ -89,6 +89,7 @@ export function LudothekBrowser({
   showExplainerFilter = true,
   showPresentFilter = false,
   traitTexts,
+  createInventoryNumber,
 }: {
   games: (PublicLudothekGame | LudothekGame)[];
   internal: boolean;
@@ -114,6 +115,10 @@ export function LudothekBrowser({
   showPresentFilter?: boolean;
   /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept). */
   traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
+  /** Inventarnummer eines gescannten, unbekannten Exemplar-Etiketts
+   * (`?neu=inv-<n>`, #549) — öffnet sofort den Anlegen-Dialog. Nur mit
+   * `canManageGames` gesetzt. */
+  createInventoryNumber?: number;
 }) {
   const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
@@ -198,7 +203,10 @@ export function LudothekBrowser({
 
       <div className="flex items-center justify-between gap-2">
         {canManageGames ? (
-          <CreateBoardGameDialog defaultBggQuery={search} />
+          <CreateBoardGameDialog
+            defaultBggQuery={search}
+            defaultInventoryNumber={createInventoryNumber}
+          />
         ) : (
           <div />
         )}
