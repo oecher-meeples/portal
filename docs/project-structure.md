@@ -80,6 +80,9 @@ src/lib/
 │               ├── storage-units.ts    Aufbewahrungseinheiten-CRUD (Code explizit oder `nextUnitCode`, Code-Lookup) — von `admin-einheiten` **und** dem Standort-Feld im Create-Dialog gebraucht, deshalb hier statt in `components/feature/`
 │               └── private-collection.ts  Crowdsourced-Suche über `PrivateGameCollectionEntry` — nie im öffentlichen Pfad (`toPublicGame`)
 ├── markt/      Kleinanzeigen-Marktplatz: Anzeigen-Form, Preis-/Zustand-Filter über `searchParams`
+├── short-id/   QR-Short-IDs (Epic #542, `https://short.oecher-meeples.org/id/<präfix>-<id>`): Präfix-Registry, `buildShortIdUrl`/
+│               `parseShortId` (ignoriert alles vor `/id/`), Einheiten-Code-Mapping `box-0001` ↔ `OM-BOX-0001` (`short-id.ts`, rein,
+│               client-sicher); Router-Ziel je Präfix und Recht (`resolve.ts`, `resolveShortId`)
 ├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
 │               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
