@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { paginateLabels, selectLabels, type LabelUnit } from "./labels";
+import {
+  paginateLabels,
+  selectLabels,
+  unitLabelQrContent,
+  type LabelUnit,
+} from "./labels";
 
 const UNITS: LabelUnit[] = [
   { id: "1", code: "OM-BOX-0002", label: "Karton 2", kind: "BOX" },
@@ -57,5 +62,20 @@ describe("paginateLabels", () => {
 
   it("returns an empty array for no units", () => {
     expect(paginateLabels([])).toEqual([]);
+  });
+});
+
+describe("unitLabelQrContent (#546)", () => {
+  it("encodes the unit as a short-id URL", () => {
+    expect(unitLabelQrContent({ code: "OM-BOX-0001" })).toBe(
+      "https://short.oecher-meeples.org/id/box-0001",
+    );
+    expect(unitLabelQrContent({ code: "OM-SHELF-C4" })).toBe(
+      "https://short.oecher-meeples.org/id/shelf-C4",
+    );
+  });
+
+  it("returns null for a code without a short id", () => {
+    expect(unitLabelQrContent({ code: "Regal links" })).toBeNull();
   });
 });

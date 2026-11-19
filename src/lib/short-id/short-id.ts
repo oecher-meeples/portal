@@ -24,8 +24,10 @@ export type ShortIdKind = (typeof SHORT_ID_KINDS)[number];
 export type ShortId =
   /** Exemplar per Inventarnummer (`inv-123`). */
   | { kind: "inv"; id: number }
-  /** Aufbewahrungseinheit; `id` ist der Ziffernteil des Codes (`box-0001`
-   * ↔ `OM-BOX-0001`), führende Nullen bleiben erhalten. */
+  /** Aufbewahrungseinheit; `id` ist der Teil hinter `OM-BOX-`/`OM-SHELF-`
+   * in Großbuchstaben (`box-0001` ↔ `OM-BOX-0001`, `shelf-C4` ↔
+   * `OM-SHELF-C4`) — führende Nullen bleiben erhalten, frei vergebene Codes
+   * (vorgedruckte Etiketten) sind alphanumerisch. */
   | { kind: "box" | "shelf"; id: string }
   | { kind: "meeple"; id: string };
 
@@ -37,7 +39,8 @@ const UNIT_KIND_BY_PREFIX = {
 } as const satisfies Record<UnitShortId["kind"], StorageUnitKind>;
 
 const SLUG_PATTERN = /^([a-z]+)-(.+)$/i;
-const UNIT_CODE_PATTERN = /^OM-(BOX|SHELF)-(\d+)$/i;
+const UNIT_ID_PATTERN = /^[A-Z0-9]+$/i;
+const UNIT_CODE_PATTERN = /^OM-(BOX|SHELF)-([A-Z0-9]+)$/i;
 
 /** `inv-123`, `box-0001` — der Teil hinter `/id/`. */
 export function formatShortIdSlug(shortId: ShortId): string {
@@ -88,7 +91,7 @@ export function parseShortId(raw: string): ShortId | null {
     }
     case "box":
     case "shelf":
-      return /^\d+$/.test(id) ? { kind, id } : null;
+      return UNIT_ID_PATTERN.test(id) ? { kind, id: id.toUpperCase() } : null;
     case "meeple":
       return /^[A-Za-z0-9_-]+$/.test(id) ? { kind, id } : null;
   }
@@ -105,7 +108,7 @@ export function shortIdFromUnitCode(code: string): UnitShortId | null {
   const match = UNIT_CODE_PATTERN.exec(code.trim());
   if (!match) return null;
   const kind = match[1].toUpperCase() === "BOX" ? "box" : "shelf";
-  return { kind, id: match[2] };
+  return { kind, id: match[2].toUpperCase() };
 }
 
 export function unitKindFromShortId(shortId: UnitShortId): StorageUnitKind {
