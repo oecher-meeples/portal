@@ -1,13 +1,11 @@
 import {
-  CONTRIBUTOR_LINKS_INCLUDE,
-  contributorNamesByRole,
   VERSION_DISPLAY_SELECT,
   versionDisplay,
 } from "@/lib/ludothek/taxonomy/contributors-read";
 import {
-  TAG_LINKS_INCLUDE,
-  tagLabelsByType,
-} from "@/lib/ludothek/taxonomy/tags-read";
+  BOARD_GAME_DISPLAY_SELECT,
+  boardGameDisplayFields,
+} from "@/lib/ludothek/board-game-display";
 import type {
   BoardGameKind,
   BoardGameTrait,
@@ -126,13 +124,7 @@ export async function buildAdminBoardGameRows({
       orderBy: { boardGame: { title: "asc" } },
       include: {
         version: VERSION_DISPLAY_SELECT,
-        boardGame: {
-          include: {
-            alternateNames: { select: { name: true } },
-            contributors: CONTRIBUTOR_LINKS_INCLUDE,
-            tags: TAG_LINKS_INCLUDE,
-          },
-        },
+        boardGame: BOARD_GAME_DISPLAY_SELECT,
         holdings: {
           where: { endedAt: null },
           include: {
@@ -253,11 +245,7 @@ export async function buildAdminBoardGameRows({
 
       return {
         id: copy.id,
-        boardGameId: boardGame.id,
-        boardGameSlug: boardGame.slug,
-        title: boardGame.title,
-        secondaryTitle: boardGame.secondaryTitle,
-        ean: boardGame.ean,
+        ...boardGameDisplayFields(boardGame),
         status: copy.status,
         needsCompletenessCheck: copy.needsCompletenessCheck,
         lastCheckedAt: copy.lastCheckedAt
@@ -267,28 +255,11 @@ export async function buildAdminBoardGameRows({
         zustand,
         isUnconfirmed:
           Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
-        bggId: boardGame.bggId,
-        minPlayers: boardGame.minPlayers,
-        maxPlayers: boardGame.maxPlayers,
-        playTimeMinutes: boardGame.playTimeMinutes,
-        weight: boardGame.weight,
-        averageRating: boardGame.averageRating,
-        imageUrl: boardGame.imageUrl,
-        description: boardGame.description,
-        ...tagLabelsByType(boardGame.tags),
         condition: copy.condition,
         inventoryNumber: copy.inventoryNumber,
         versionId: copy.versionId,
-        kind: boardGame.kind,
-        explainerVideoUrl: boardGame.explainerVideoUrl,
-        languageDependence: boardGame.languageDependence,
-        ...contributorNamesByRole(boardGame.contributors),
         ...versionDisplay(copy.version),
-        yearPublished: boardGame.yearPublished,
         ruleBookLanguages: copy.ruleBookLanguages,
-        alternateNames: boardGame.alternateNames.map((a) => a.name),
-        traits: boardGame.traits,
-        notes: boardGame.notes,
         responsibleName,
         unitChain,
         responsibleContactMeeple: contactMeepleId

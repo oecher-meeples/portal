@@ -1,4 +1,5 @@
 import type { TagType } from "@prisma/client";
+import { sortedUniqueLabels } from "@/lib/utils/sorted-unique";
 
 /** Prisma-`include` für die Tags eines Titels — überall gleich, damit
  * Lese-Pfade dieselben Anzeigenamen liefern. */
@@ -22,13 +23,11 @@ export function tagLabel(tag: TagLinkRow["tag"]): string {
  * ohne Dubletten. Muster wie `contributorNamesByRole`. */
 export function tagLabelsByType(links: TagLinkRow[]) {
   const labelsFor = (type: TagType) =>
-    [
-      ...new Set(
-        links
-          .filter((link) => link.tag.type === type)
-          .map((link) => tagLabel(link.tag)),
-      ),
-    ].sort((a, b) => a.localeCompare(b, "de"));
+    sortedUniqueLabels(
+      links,
+      (link) => link.tag.type === type,
+      (link) => tagLabel(link.tag),
+    );
 
   return {
     mechanics: labelsFor("MECHANIC"),

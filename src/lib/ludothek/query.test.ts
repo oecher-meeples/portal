@@ -75,6 +75,35 @@ describe("buildLudothekGames", () => {
     );
   });
 
+  it("narrows the copies by the given where, still excluding deinventarised ones (#526)", async () => {
+    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.storageUnit.findMany.mockResolvedValue([]);
+
+    await buildLudothekGames({ where: { boardGame: { slug: "arche-nova" } } });
+
+    expect(prismaMock.gameCopy.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          boardGame: { slug: "arche-nova" },
+          status: { not: "DEINVENTARISED" },
+        },
+      }),
+    );
+  });
+
+  it("cannot be talked into deinventarised copies via where.status", async () => {
+    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.storageUnit.findMany.mockResolvedValue([]);
+
+    await buildLudothekGames({ where: { status: "DEINVENTARISED" } });
+
+    expect(prismaMock.gameCopy.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: { not: "DEINVENTARISED" } },
+      }),
+    );
+  });
+
   // #456: unbestätigte Weitergabe (Holding.confirmedAt === null) muss bis
   // in die Detailseite/Listenzeile durchgereicht werden.
   it("marks a member holding as isUnconfirmed when confirmedAt is null", async () => {

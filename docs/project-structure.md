@@ -67,6 +67,7 @@ src/lib/
 │               ├── anonymer-meeple.ts  Sammelkonto "Anonymer Meeple" (#333) — Displayname-Konstante + `Member`-Lookup, geteilt mit `prisma/seed.ts`
 │               ├── holding-actions.ts  Server Actions über den internen Übergängen
 │               ├── holding-actions-external.ts Server Actions über den externen Übergängen (#333a/b, Umbuchen, Member-Picker)
+│               ├── board-game-display.ts  `BOARD_GAME_DISPLAY_SELECT` + `boardGameDisplayFields()` — Titel-Anzeigefelder, geteilt von `query.ts`, `private-collection.ts`, `admin-bestand-rows.ts` (#526)
 │               ├── unit-chain.ts       Einzige Stelle des Kettenaufstiegs: `MAX_UNIT_CHAIN_DEPTH`, `walkUnitChain`, `unitChainLabel`, `findUnitAncestor`
 │               ├── board-game-kind.ts  `BOARD_GAME_KIND_LABELS` (Basisspiel/Erweiterung)
 │               ├── holding-actions-shared.ts   Von beiden `holding-actions*.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
@@ -90,7 +91,7 @@ src/lib/
                 `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, Public-URL ↔ Key, `putBlob()`),
                 `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt),
                 `action-result.ts` (`toResult`/`actionErrorMessage`/`UserFacingError` — catch-all für Server Actions mit `unstable_rethrow`),
-                `escape-html.ts` (`escapeHtml`, auch Anführungszeichen), `site-url.ts` (`siteUrl()`), `cron-auth.ts` (`requireCronAuth(request)` für `app/api/cron/*`)
+                `sorted-unique.ts` (`sortedUniqueLabels` — Kern von `tagLabelsByType`/`contributorNamesByRole`), `escape-html.ts` (`escapeHtml`, auch Anführungszeichen), `site-url.ts` (`siteUrl()`), `cron-auth.ts` (`requireCronAuth(request)` für `app/api/cron/*`)
 ```
 
 Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.

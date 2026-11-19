@@ -228,24 +228,27 @@ export async function getFreeGamesInRoom(
   eventId: string,
   filters: LudothekFilters,
 ): Promise<LudothekGame[]> {
-  const [games, eventUnitId, parentById, holdingUnitByGame] = await Promise.all(
-    [
-      buildLudothekGames(),
-      resolveEventUnitId(eventId),
-      loadUnitParents(),
-      loadOpenHoldingUnitByGame(),
-    ],
-  );
+  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
+    resolveEventUnitId(eventId),
+    loadUnitParents(),
+    loadOpenHoldingUnitByGame(),
+  ]);
   if (!eventUnitId) return [];
   const assignedUnitIds = new Set([eventUnitId]);
 
-  const freeGames = filterLudothekGames(games, { ...filters, zustand: "frei" });
+  // #526: erst die Exemplare im Raum bestimmen, dann nur diese laden — nicht
+  // den ganzen Bestand für einen anschließenden Filter.
+  const inRoomCopyIds = [...holdingUnitByGame]
+    .filter(([, unitId]) =>
+      unitOrAncestorAssigned(unitId, assignedUnitIds, parentById),
+    )
+    .map(([gameCopyId]) => gameCopyId);
+  if (inRoomCopyIds.length === 0) return [];
 
-  return freeGames.filter((game) => {
-    const unitId = holdingUnitByGame.get(game.id);
-    if (!unitId) return false;
-    return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
+  const games = await buildLudothekGames({
+    where: { id: { in: inRoomCopyIds } },
   });
+  return filterLudothekGames(games, { ...filters, zustand: "frei" });
 }
 
 export type GuestCopyAvailability =

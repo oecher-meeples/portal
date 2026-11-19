@@ -1,13 +1,11 @@
 import {
-  CONTRIBUTOR_LINKS_INCLUDE,
-  contributorNamesByRole,
   VERSION_DISPLAY_SELECT,
   versionDisplay,
 } from "@/lib/ludothek/taxonomy/contributors-read";
 import {
-  TAG_LINKS_INCLUDE,
-  tagLabelsByType,
-} from "@/lib/ludothek/taxonomy/tags-read";
+  BOARD_GAME_DISPLAY_SELECT,
+  boardGameDisplayFields,
+} from "@/lib/ludothek/board-game-display";
 import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { prisma } from "@/lib/utils/prisma";
@@ -139,11 +137,17 @@ export async function getImportCooldownEndsAt(meeple: {
  * Mechaniken/Gewicht/Dauer funktionieren also auch für privat importierte
  * Titel.
  */
-export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
+export async function buildPrivateLudothekGames({
+  boardGameSlug,
+}: {
+  /** Nur diesen Titel (#526: Detailseiten-Fallback), sonst alle. */
+  boardGameSlug?: string;
+} = {}): Promise<LudothekGame[]> {
   const entries = await prisma.privateGameCollectionEntry.findMany({
     where: {
       meeple: { privateCollectionVisible: true },
       boardGame: {
+        ...(boardGameSlug ? { slug: boardGameSlug } : {}),
         copies: {
           none: { status: { not: GameInventoryStatus.DEINVENTARISED } },
         },
@@ -159,13 +163,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
           profilePictureVisibility: true,
         },
       },
-      boardGame: {
-        include: {
-          alternateNames: { select: { name: true } },
-          contributors: CONTRIBUTOR_LINKS_INCLUDE,
-          tags: TAG_LINKS_INCLUDE,
-        },
-      },
+      boardGame: BOARD_GAME_DISPLAY_SELECT,
     },
   });
 
@@ -173,33 +171,14 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
     const boardGame = entry.boardGame;
     return {
       id: entry.id,
-      boardGameId: boardGame.id,
+      ...boardGameDisplayFields(boardGame),
       slug: entry.id,
-      boardGameSlug: boardGame.slug,
-      title: boardGame.title,
-      imageUrl: boardGame.imageUrl,
-      minPlayers: boardGame.minPlayers,
-      maxPlayers: boardGame.maxPlayers,
-      playTimeMinutes: boardGame.playTimeMinutes,
-      weight: boardGame.weight,
-      averageRating: boardGame.averageRating,
-      ...tagLabelsByType(boardGame.tags),
+      // Privatbesitz hat kein Vereins-Exemplar — exemplarbezogene Felder leer.
       ean: null,
       condition: null,
       inventoryNumber: null,
-      bggId: boardGame.bggId,
-      alternateNames: boardGame.alternateNames.map((a) => a.name),
-      secondaryTitle: boardGame.secondaryTitle,
-      description: boardGame.description,
-      explainerVideoUrl: boardGame.explainerVideoUrl,
-      kind: boardGame.kind,
-      languageDependence: boardGame.languageDependence,
       ruleBookLanguages: [],
-      ...contributorNamesByRole(boardGame.contributors),
       ...versionDisplay(entry.version),
-      yearPublished: boardGame.yearPublished,
-      traits: boardGame.traits,
-      notes: boardGame.notes,
       baseGames: [],
       expansions: [],
       zustand: "privat" as const,
