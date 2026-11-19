@@ -70,6 +70,7 @@ export function LinkFields({
         )}
         {iconUrl && !isUploading && (
           <CoverMedia
+            sizes="64px"
             imageUrl={iconUrl}
             alt="Icon-Vorschau"
             aspect="aspect-square"

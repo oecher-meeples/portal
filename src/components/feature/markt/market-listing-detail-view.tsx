@@ -89,6 +89,7 @@ export function MarketListingDetailView({
                   onClick={() => setLightboxIndex(offset + 1)}
                 >
                   <CoverMedia
+                    sizes="(min-width: 1024px) 15vw, 33vw"
                     imageUrl={url}
                     alt={listing.title}
                     aspect="aspect-square"
@@ -178,6 +179,7 @@ export function MarketListingDetailView({
                       )}
                     >
                       <CoverMedia
+                        sizes="96px"
                         imageUrl={url}
                         alt=""
                         aspect="aspect-square"

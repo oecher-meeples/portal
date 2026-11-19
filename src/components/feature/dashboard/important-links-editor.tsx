@@ -24,6 +24,7 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
           className="bg-card flex flex-col items-center gap-2 rounded-lg border p-6 text-center"
         >
           <CoverMedia
+            sizes="32px"
             imageUrl={link.iconUrl}
             alt=""
             aspect="aspect-square"

@@ -29,6 +29,7 @@ export function ContentListRow({
       </Link>
       <div className="relative w-28 shrink-0 sm:w-36">
         <CoverMedia
+          sizes="144px"
           imageUrl={item.coverImageUrl}
           alt={item.title}
           label="BILD"

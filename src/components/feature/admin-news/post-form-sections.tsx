@@ -114,6 +114,7 @@ export function PostCoverField({
       {error && <p className="text-destructive text-sm">{error}</p>}
       {value && !isUploading && (
         <CoverMedia
+          sizes="128px"
           imageUrl={value}
           alt="Cover-Bild-Vorschau"
           aspect="aspect-square"
