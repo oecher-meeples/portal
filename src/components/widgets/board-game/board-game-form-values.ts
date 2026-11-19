@@ -16,6 +16,7 @@ import type {
   CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
 import type { GameCopyInput } from "@/lib/ludothek/game-copies";
+import { parseInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
 import type { BggLink } from "@/lib/bgg/client";
 import type {
   EditionSelection,
@@ -257,7 +258,9 @@ export function exemplarFormToCopyInput(
   return {
     condition: form.condition || undefined,
     ruleBookLanguages: form.ruleBookLanguages,
-    inventoryNumber,
+    // Ungültiger Text wird zu `NaN` und serverseitig mit sprechender
+    // Meldung abgelehnt (`validateInventoryNumber`, #543).
+    inventoryNumber: parseInventoryNumber(inventoryNumber),
     edition: editionSelectionFromForm(form),
   };
 }

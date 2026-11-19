@@ -38,8 +38,8 @@ export type GameCopyRow = {
   condition: string | null;
   /** Sprache(n) des mitgelieferten Regelhefts, z. B. `["DE", "EN"]` (#188). */
   ruleBookLanguages: RuleBookLanguage[];
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber: number | null;
   /** Edition (BGG-Version) dieses Exemplars - Vorbelegung im Exemplar-Editor. */
   versionId: string | null;
   /** Verlag(e) der Edition dieses Exemplars; leer ohne Edition. */

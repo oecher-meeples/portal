@@ -23,6 +23,11 @@ import {
 } from "@/lib/ludothek/board-games";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
 import { getSuggestedInventoryNumber } from "@/lib/ludothek/game-copies";
+import {
+  INVALID_INVENTORY_NUMBER_ERROR,
+  isValidInventoryNumber,
+  parseInventoryNumber,
+} from "@/lib/ludothek/game-copy-inventory-number";
 
 /** The bulk-import dialog's "Trennzeichen"-Dropdown (#289) — `undefined`
  * ("Kein Trennzeichen") keeps today's behaviour, every line is a plain
@@ -49,7 +54,7 @@ export type BulkImportRow =
       /** Set when the line carried an explicit Inventarnummer (#289) — kept
        * around so `resolveBulkImportCandidate()` can still apply it once the
        * admin picks the right candidate by hand. */
-      inventoryNumber?: string;
+      inventoryNumber?: number;
     }
   | {
       name: string;
@@ -60,13 +65,13 @@ export type BulkImportRow =
        * afterwards (preview or create error) — the same single match as a
        * correction suggestion, so the admin doesn't have to search again. */
       candidates?: BggSearchResult[];
-      inventoryNumber?: string;
+      inventoryNumber?: number;
     };
 
 function toCreateInput(
   bggId: number,
   data: BggGameData,
-  inventoryNumber?: string,
+  inventoryNumber?: number,
 ): CreateBoardGameInput {
   return {
     ...bggDataToTitleInput(bggId, data),
@@ -80,20 +85,21 @@ function toCreateInput(
  * gewählt ist (#289) — die erste Spalte ist die Inventarnummer, der Rest der
  * Zeile das Spiel. Enthält die Zeile das Trennzeichen nicht (oder wäre eine
  * Seite danach leer), gilt sie unverändert als reines Name/EAN ohne
- * Inventarnummer.
+ * Inventarnummer. Eine nicht-numerische erste Spalte wird zu `NaN` (#543)
+ * und als Zeilenfehler gemeldet.
  */
 function splitInventoryNumber(
   line: string,
   delimiter?: BulkImportDelimiter,
-): { entry: string; inventoryNumber?: string } {
+): { entry: string; inventoryNumber?: number } {
   if (!delimiter) return { entry: line };
 
   const index = line.indexOf(delimiter);
   if (index === -1) return { entry: line };
 
-  const inventoryNumber = line.slice(0, index).trim();
+  const inventoryNumber = parseInventoryNumber(line.slice(0, index));
   const entry = line.slice(index + delimiter.length).trim();
-  if (!inventoryNumber || !entry) return { entry: line };
+  if (inventoryNumber === null || !entry) return { entry: line };
 
   return { entry, inventoryNumber };
 }
@@ -135,7 +141,7 @@ async function finishImport(
   entry: string,
   bggId: number,
   searchedTitle?: string,
-  inventoryNumber?: string,
+  inventoryNumber?: number,
 ): Promise<BulkImportRow> {
   const existing = await prisma.boardGame.findUnique({
     where: { bggId },
@@ -196,7 +202,7 @@ async function finishImport(
 
 async function importOne(
   entry: string,
-  inventoryNumber?: string,
+  inventoryNumber?: number,
 ): Promise<BulkImportRow> {
   const resolved = await resolveEntryTitle(entry);
   if ("error" in resolved) {
@@ -237,7 +243,7 @@ async function importOne(
 export async function resolveBulkImportCandidate(
   entry: string,
   bggId: number,
-  inventoryNumber?: string,
+  inventoryNumber?: number,
 ): Promise<BulkImportRow> {
   const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
@@ -273,6 +279,17 @@ export async function bulkImportBoardGames(
   const results: BulkImportRow[] = [];
   for (const line of trimmedNames) {
     const { entry, inventoryNumber } = splitInventoryNumber(line, delimiter);
+    if (
+      inventoryNumber !== undefined &&
+      !isValidInventoryNumber(inventoryNumber)
+    ) {
+      results.push({
+        name: line,
+        status: "failed",
+        error: INVALID_INVENTORY_NUMBER_ERROR,
+      });
+      continue;
+    }
     results.push(await importOne(entry, inventoryNumber));
   }
 

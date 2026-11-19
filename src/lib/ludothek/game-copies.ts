@@ -22,10 +22,7 @@ import {
   resolveOwnVereinsmitgliedIdForPlacement,
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
-import {
-  suggestNextInventoryNumber,
-  validateInventoryNumberUniqueness,
-} from "@/lib/ludothek/game-copy-inventory-number";
+import { validateInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
 
@@ -39,16 +36,19 @@ export type GameCopyInput = {
   placement?: CopyPlacementInput;
   /** Regelheft-Sprache(n) dieses Exemplars — Mehrfachauswahl (#188). */
   ruleBookLanguages?: RuleBookLanguage[];
-  /** Freie Inventarnummer (#270) — vorbelegt per `getSuggestedInventoryNumber()`. */
-  inventoryNumber?: string | null;
+  /** Inventarnummer (#270, ganzzahlig seit #543) — vorbelegt per
+   * `getSuggestedInventoryNumber()`. `null` entfernt sie beim Bearbeiten. */
+  inventoryNumber?: number | null;
 };
 
-/** Vorschlag fürs Inventarnummer-Feld beim Anlegen (#270). */
+/** Vorschlag fürs Inventarnummer-Feld beim Anlegen (#270): höchste vergebene
+ * Nummer + 1. Bewusst kein Lücken-Auffüllen wie `nextUnitCode()` — die
+ * Nummer setzt eine physische Nummerierung fort. */
 export async function getSuggestedInventoryNumber() {
-  const copies = await prisma.gameCopy.findMany({
-    select: { inventoryNumber: true },
+  const { _max } = await prisma.gameCopy.aggregate({
+    _max: { inventoryNumber: true },
   });
-  return suggestNextInventoryNumber(copies.map((c) => c.inventoryNumber));
+  return (_max.inventoryNumber ?? 0) + 1;
 }
 
 async function uniqueGameCopySlug(tx: Tx, title: string, excludeId?: string) {
@@ -83,13 +83,13 @@ export async function createGameCopyTx(
     versionId?: string | null;
     condition?: string | null;
     ruleBookLanguages?: RuleBookLanguage[];
-    inventoryNumber?: string | null;
+    inventoryNumber?: number | null;
     actorId: string;
     placement?: { unitId?: string; vereinsmitgliedId?: string };
   },
 ) {
-  if (inventoryNumber) {
-    const error = await validateInventoryNumberUniqueness(tx, inventoryNumber);
+  if (inventoryNumber != null) {
+    const error = await validateInventoryNumber(tx, inventoryNumber);
     if (error) throw new Error(error);
   }
   const slug = await uniqueGameCopySlug(tx, boardGameTitle);
@@ -100,7 +100,7 @@ export async function createGameCopyTx(
       versionId: versionId ?? null,
       condition: condition || null,
       ruleBookLanguages: ruleBookLanguages ?? [],
-      inventoryNumber: inventoryNumber?.trim() || null,
+      inventoryNumber: inventoryNumber ?? null,
     },
   });
 
@@ -183,8 +183,8 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
     return { error: "Keine Berechtigung." };
   }
 
-  if (input.inventoryNumber) {
-    const error = await validateInventoryNumberUniqueness(
+  if (input.inventoryNumber != null) {
+    const error = await validateInventoryNumber(
       prisma,
       input.inventoryNumber,
       id,
@@ -215,7 +215,7 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
             ? { ruleBookLanguages: input.ruleBookLanguages }
             : {}),
           ...(input.inventoryNumber !== undefined
-            ? { inventoryNumber: input.inventoryNumber?.trim() || null }
+            ? { inventoryNumber: input.inventoryNumber }
             : {}),
         },
         include: { boardGame: { select: { slug: true } } },

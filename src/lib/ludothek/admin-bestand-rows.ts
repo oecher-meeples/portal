@@ -84,8 +84,8 @@ export type AdminBoardGameRow = {
   mechanics: string[];
   categories: string[];
   condition: string | null;
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber: number | null;
   versionId: string | null;
   kind: BoardGameKind;
   explainerVideoUrl: string | null;

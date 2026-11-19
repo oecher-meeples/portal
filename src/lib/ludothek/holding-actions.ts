@@ -206,8 +206,8 @@ export type ScannedGameContext = {
     id: string;
     title: string;
     status: string;
-    /** Freie Inventarnummer des Exemplars (#270). */
-    inventoryNumber: string | null;
+    /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+    inventoryNumber: number | null;
   };
   holding: {
     id: string;

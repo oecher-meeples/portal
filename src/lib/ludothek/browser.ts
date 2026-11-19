@@ -49,8 +49,8 @@ export type LudothekGame = {
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
-  /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543) — internes Identifikationsfeld. */
+  inventoryNumber: number | null;
   /** Edition (BGG-Version) dieses Exemplars - nur zum Vorbelegen des
    * Exemplar-Editors fuer `games:manage`, nicht zur Anzeige. */
   versionId?: string | null;

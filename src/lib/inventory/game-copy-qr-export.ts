@@ -7,17 +7,17 @@
 export type QrExportableCopy = {
   id: string;
   title: string;
-  inventoryNumber: string | null;
+  inventoryNumber: number | null;
 };
 
 /** Nur Exemplare mit gesetzter Inventarnummer können einen QR-Code
  * bekommen — ohne sie gibt es kein eindeutiges Exemplar-Ziel. */
 export function selectQrExportableCopies<T extends QrExportableCopy>(
   copies: T[],
-): (T & { inventoryNumber: string })[] {
+): (T & { inventoryNumber: number })[] {
   return copies.filter(
-    (copy): copy is T & { inventoryNumber: string } =>
-      copy.inventoryNumber !== null && copy.inventoryNumber.trim() !== "",
+    (copy): copy is T & { inventoryNumber: number } =>
+      copy.inventoryNumber !== null,
   );
 }
 
@@ -26,9 +26,9 @@ export function selectQrExportableCopies<T extends QrExportableCopy>(
  * eigenen Code bekommt. */
 export function buildExemplarUrl(
   origin: string,
-  inventoryNumber: string,
+  inventoryNumber: number,
 ): string {
-  return `${origin}/ludothek/exemplar/${encodeURIComponent(inventoryNumber)}`;
+  return `${origin}/ludothek/exemplar/${inventoryNumber}`;
 }
 
 /** Dateiname innerhalb der ZIP — Inventarnummer zuerst, damit Dateien in der
