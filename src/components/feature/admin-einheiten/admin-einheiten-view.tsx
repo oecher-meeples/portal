@@ -9,7 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreateStorageUnitDialog } from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
+import {
+  CreateStorageUnitDialog,
+  type ScannedUnitPrefill,
+} from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
 import {
   AssignKeeperDialog,
   type KeeperOption,
@@ -40,12 +43,16 @@ export function AdminEinheitenView({
   isAdmin,
   selfMeepleId,
   keeperOptions,
+  scannedUnit,
 }: {
   units: StorageUnitRow[];
   resignedHolders: ResignedHolderRow[];
   isAdmin: boolean;
   selfMeepleId: string;
   keeperOptions: KeeperOption[];
+  /** Gescanntes, unbekanntes Etikett (`?neu=box-0001`, #549) — öffnet den
+   * Anlegen-Dialog mit festem Code. Nur für Admins gesetzt. */
+  scannedUnit?: ScannedUnitPrefill;
 }) {
   return (
     <PageContainer className="gap-6">
@@ -53,7 +60,11 @@ export function AdminEinheitenView({
         eyebrow="Ludothek"
         title="Aufbewahrungseinheiten"
         description="Aufbewahrungseinheiten sind die Kartons/Regal mit QR-Codes, welche für die Einlagerung oder Events verwendet werden."
-        action={isAdmin ? <CreateStorageUnitDialog /> : undefined}
+        action={
+          isAdmin ? (
+            <CreateStorageUnitDialog prefill={scannedUnit} />
+          ) : undefined
+        }
       />
 
       {isAdmin && resignedHolders.length > 0 && (
