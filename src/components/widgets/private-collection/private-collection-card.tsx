@@ -100,6 +100,7 @@ export function PrivateCollectionCard({
         <div className="mt-4 flex flex-col gap-1.5 border-t pt-4">
           <StopRowNavigation className="flex items-center gap-1.5">
             <ActionButton
+              refresh
               action={() => runImport(false)}
               variant="outline"
               size="sm"
@@ -111,6 +112,7 @@ export function PrivateCollectionCard({
             </ActionButton>
             {canForceImport && (
               <ActionButton
+                refresh
                 action={() => runImport(true)}
                 variant="outline"
                 size="icon-sm"

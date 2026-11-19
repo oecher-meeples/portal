@@ -5,7 +5,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const buildLudothekGamesMock = vi.fn();
 vi.mock("@/lib/ludothek/query", () => ({
-  buildLudothekGames: () => buildLudothekGamesMock(),
+  buildLudothekGames: (...args: unknown[]) => buildLudothekGamesMock(...args),
 }));
 
 const {
@@ -13,7 +13,6 @@ const {
   isGameInEventRoom,
   getAttendingExplainers,
   getFreeGamesInRoom,
-  getGuestFleaMarketItems,
   getGuestCopyAvailability,
   getPresentGameCopyIds,
 } = await import("./guest-area");
@@ -55,6 +54,7 @@ function mockEventUnit(eventUnitId: string | null) {
 }
 
 beforeEach(() => {
+  buildLudothekGamesMock.mockClear();
   prismaMock.storageUnit.findMany.mockResolvedValue([]);
   prismaMock.gameHolding.findMany.mockResolvedValue([]);
   mockEventUnit(null);
@@ -282,6 +282,24 @@ describe("getFreeGamesInRoom", () => {
     const result = await getFreeGamesInRoom("event-1", { players: 3 });
 
     expect(result.map((g) => g.id)).toEqual(["game-1"]);
+    // #526: nur die Exemplare im Raum geladen, nicht der ganze Bestand.
+    expect(buildLudothekGamesMock).toHaveBeenCalledWith({
+      where: { id: { in: ["game-1", "game-3"] } },
+    });
+  });
+
+  it("does not load any copies when nothing is in the room", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-elsewhere", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "game-1", unitId: "shelf-elsewhere" },
+    ] as never);
+
+    expect(await getFreeGamesInRoom("event-1", {})).toEqual([]);
+    expect(buildLudothekGamesMock).not.toHaveBeenCalled();
   });
 
   it("returns an empty list when the event has no unit yet", async () => {
@@ -291,49 +309,6 @@ describe("getFreeGamesInRoom", () => {
     const result = await getFreeGamesInRoom("event-1", {});
 
     expect(result).toEqual([]);
-  });
-});
-
-describe("getGuestFleaMarketItems", () => {
-  it("never includes PENDING items", async () => {
-    prismaMock.fleaMarketItem.findMany.mockResolvedValue([
-      {
-        id: "item-1",
-        title: "Azul",
-        description: null,
-        priceEuros: 20,
-        status: "FOR_SALE",
-      },
-    ] as never);
-
-    const result = await getGuestFleaMarketItems("event-1");
-
-    expect(result).toEqual([
-      {
-        id: "item-1",
-        title: "Azul",
-        description: null,
-        priceEuros: 20,
-        status: "FOR_SALE",
-      },
-    ]);
-    expect(prismaMock.fleaMarketItem.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { eventId: "event-1", status: { in: ["FOR_SALE", "RESERVED"] } },
-      }),
-    );
-  });
-
-  it("queries only FOR_SALE and RESERVED, excluding SOLD", async () => {
-    prismaMock.fleaMarketItem.findMany.mockResolvedValue([]);
-
-    await getGuestFleaMarketItems("event-1");
-
-    const call = prismaMock.fleaMarketItem.findMany.mock.calls[0][0] as {
-      where: { status: { in: string[] } };
-    };
-    expect(call.where.status.in).not.toContain("SOLD");
-    expect(call.where.status.in).not.toContain("PENDING");
   });
 });
 

@@ -1,3 +1,12 @@
+/** „Vorname Nachname" aus den (nullbaren) Namensfeldern eines Mitglieds —
+ * leerer String, wenn beide fehlen. Einzige Stelle der Verkettung. */
+export function memberFullName(member: {
+  firstName?: string | null;
+  lastName?: string | null;
+}): string {
+  return [member.firstName, member.lastName].filter(Boolean).join(" ").trim();
+}
+
 /** Falls back through whatever identifies a Member when its own name fields
  * are still empty (#328: `lastName`/`firstName` are new territory, nullable,
  * not backfilled) — the linked Meeple's display name, then the email, then
@@ -13,12 +22,8 @@ export function memberDisplayName(member: {
   meeple: { displayName: string } | null;
   memberNumber?: number;
 }): string {
-  const fullName = [member.firstName, member.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
   return (
-    fullName ||
+    memberFullName(member) ||
     member.meeple?.displayName ||
     member.email ||
     (member.memberNumber !== undefined

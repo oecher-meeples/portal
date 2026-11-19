@@ -33,8 +33,8 @@ export type GameActionsCopy = {
   locationChain: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber: number | null;
   /** Edition (BGG-Version) des Exemplars - Vorbelegung im Exemplar-Editor. */
   versionId?: string | null;
   /** Whether the current session holds this copy right now — gates
@@ -132,7 +132,7 @@ export function GameActionsMenu({
   boardGameTitle: string;
   canManageGames: boolean;
 }) {
-  const { run, pending } = useAction();
+  const { run, pending } = useAction({ refresh: true });
   const [pendingPick, setPendingPick] = useState<ActionKey | null>(null);
   const [chosen, setChosen] = useState<{
     action: ActionKey;

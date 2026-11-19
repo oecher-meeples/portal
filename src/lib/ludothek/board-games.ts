@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { BoardGameKind, type RuleBookLanguage } from "@prisma/client";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { normaliseEan } from "@/lib/inventory/ean";
 import { ensureMeeple } from "@/lib/members/meeples";
@@ -11,7 +12,6 @@ import {
   resolveOwnVereinsmitgliedIdForPlacement,
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { replaceAuthorIllustratorLinksByName } from "@/lib/ludothek/taxonomy/contributors";
 import { replaceTitleTagsByLabel } from "@/lib/ludothek/taxonomy/tags";
 import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
@@ -50,9 +50,9 @@ export type CreateBoardGameInput = BoardGameTitleInput & {
    * Anlegen eines weiteren Exemplars eines bereits bekannten `bggId`-Titels
    * würden diese sonst bei jedem Mal dupliziert. */
   alternateNames?: string[];
-  /** Freie Inventarnummer (#270) — beim Massenimport direkt mitgegeben statt
-   * nur vorbelegt, siehe `bulkImportBoardGames()` (#289). */
-  inventoryNumber?: string | null;
+  /** Inventarnummer (#270, ganzzahlig seit #543) — beim Massenimport direkt
+   * mitgegeben statt nur vorbelegt, siehe `bulkImportBoardGames()` (#289). */
+  inventoryNumber?: number | null;
 };
 
 /** Duplicate EANs are allowed by design (ADR 0001) — surfaced only as a hint. */
@@ -92,7 +92,7 @@ async function revalidateAssignmentPaths(
 
 /** New title + its first physical copy, in one transaction. */
 export async function createBoardGame(input: CreateBoardGameInput) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -187,7 +187,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
 }
 
 export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -231,7 +231,7 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
  * kann sie korrigieren (#183).
  */
 export async function getBoardGameTitleForEdit(id: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return null;
 
   const record = await prisma.boardGame.findUnique({
@@ -294,7 +294,7 @@ export async function findDuplicateBoardGame(
   title: string,
   bggId?: number | null,
 ): Promise<DuplicateBoardGameMatch | null> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return null;
 
   if (bggId) {
@@ -309,7 +309,7 @@ export async function findDuplicateBoardGame(
 }
 /** Manual base game ↔ expansion assignment, see #30 — BGG import is blocked by #12. */
 export async function assignExpansion(baseGameId: string, expansionId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -364,7 +364,7 @@ export async function removeExpansionAssignment(
   baseGameId: string,
   expansionId: string,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }

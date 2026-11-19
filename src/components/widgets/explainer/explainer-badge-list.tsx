@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 import { EXPLAINER_EXPERIENCE_LEVEL_LABELS } from "@/lib/utils/format";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 
@@ -30,7 +30,7 @@ export function ExplainerBadgeList({
             viewer={{ kind: "meeple" }}
             size="md"
           />
-          <ContactDialog
+          <MeepleContactDialog
             name={explainer.displayName}
             meepleId={explainer.meepleId}
           />

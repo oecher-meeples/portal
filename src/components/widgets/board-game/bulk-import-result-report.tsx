@@ -55,7 +55,7 @@ export function BulkImportResultReport({
   onResolveCandidate: (
     name: string,
     bggId: number,
-    inventoryNumber?: string,
+    inventoryNumber?: number,
   ) => void;
 }) {
   const { imported, duplicates, notImported } = groupResults(results);
@@ -208,7 +208,7 @@ function ResultRowList({
   onResolveCandidate: (
     name: string,
     bggId: number,
-    inventoryNumber?: string,
+    inventoryNumber?: number,
   ) => void;
 }) {
   return (

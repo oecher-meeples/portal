@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import {
   createRole as createRoleRecord,
   updateRole as updateRoleRecord,
@@ -23,38 +23,10 @@ import {
 import { removeAusgetretenRole } from "@/lib/auth/ausgetreten-role";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
-import {
-  requireBankReader,
-  revealMeepleIban,
-} from "@/lib/members/bank-access-log";
-
-async function requireMembersManage() {
-  return requirePermission("members:manage");
-}
-
-/** #264: eine Rollenzuweisung mit explizitem Zeitfenster (Amtszeit) erfordert
- * admin:access, keine eigene feingranulare Permission. */
-async function requireAdminAccess() {
-  return requirePermission("admin:access");
-}
-
-/** #365: Rollen-CRUD/-Rechte-Bearbeitung erfordert die eigene `roles:manage`,
- * nicht `members:manage` — nicht jeder Mitglieder-Admin darf sonst auch die
- * Rollenverwaltung selbst ändern. */
-async function requireRolesManage() {
-  return requirePermission("roles:manage");
-}
-
-/** #297: eigene Permission statt `members:manage`, damit nicht jeder
- * Mitglieder-Admin auch Mitgliederzählungen manipulieren kann — analog
- * `roles:manage`. */
-async function requireManageSystemAccounts() {
-  return requirePermission("members:manage-system-accounts");
-}
 
 /** How many games and units currently sit with this Meeple, for the confirmation dialog. */
 export async function getOpenHoldingsSummary(meepleId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   return countOpenHoldings(meepleId);
 }
@@ -62,7 +34,7 @@ export async function getOpenHoldingsSummary(meepleId: string) {
 /** `meepleId` weiterhin, weil die Admin-UI Meeples auflistet — die Kündigung
  * selbst wird seit #328 auf der verknüpften `Member`-Zeile vermerkt. */
 export async function recordResignation(meepleId: string, endsAt: Date) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   await prisma.$transaction([
     prisma.member.update({
@@ -83,7 +55,7 @@ export async function recordResignation(meepleId: string, endsAt: Date) {
 }
 
 export async function revokeResignation(meepleId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   await prisma.member.update({
     where: { meepleId },
@@ -100,7 +72,7 @@ export async function revokeResignation(meepleId: string) {
 /** Stufe 1 + Stufe 2 zusammen — der bisherige Ein-Klick-Admin-Flow (#331).
  * Stufe 3 (Member-Zeile hart löschen) ist eine eigene Aktion, siehe unten. */
 export async function anonymiseMeeple(meepleId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const stufe1 = await anonymiseMeepleStufe1(meepleId);
   if ("error" in stufe1) return stufe1;
@@ -116,7 +88,7 @@ export async function anonymiseMeeple(meepleId: string) {
 /** Löscht die Vereinsmitglied-Zeile endgültig (Stufe 3, #331) — frühestens
  * 12 Monate nach Austritt, ohne offene Ausleihen. */
 export async function deleteMemberPermanently(memberId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const result = await anonymiseMemberStufe3(memberId);
   if ("error" in result) return result;
@@ -126,7 +98,7 @@ export async function deleteMemberPermanently(memberId: string) {
 }
 
 export async function setMemberNumber(meepleId: string, newNumber: number) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const result = await setMemberNumberRecord(meepleId, newNumber);
   if ("error" in result) return result;
@@ -136,7 +108,7 @@ export async function setMemberNumber(meepleId: string, newNumber: number) {
 }
 
 export async function renameMeeple(meepleId: string, displayName: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const trimmed = displayName.trim();
   if (!trimmed) {
@@ -160,7 +132,7 @@ export async function setMeepleSystemAccount(
   meepleId: string,
   isSystemAccount: boolean,
 ) {
-  await requireManageSystemAccounts();
+  await requireActionPermission("members:manage-system-accounts");
 
   await prisma.meeple.update({
     where: { id: meepleId },
@@ -169,16 +141,6 @@ export async function setMeepleSystemAccount(
 
   revalidatePath("/admin/mitglieder");
   return { success: true as const };
-}
-
-/**
- * Reveals a Meeple's IBAN inside the Mitglieder-edit dialog. Gated on
- * `bank:read` specifically, not `members:manage` — an admin without the
- * Kassenwart-Recht only ever sees the masked value passed down from the page.
- */
-export async function revealMemberIban(meepleId: string) {
-  const actor = await requireBankReader();
-  return revealMeepleIban(meepleId, actor.id);
 }
 
 /**
@@ -197,14 +159,14 @@ export async function assignMeepleRole(
   // Base gate first, before the DB read decides whether to escalate — a
   // caller without any role-management permission at all must never reach
   // the escalation check (and its own DB read) in the first place.
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const role = await prisma.role.findUniqueOrThrow({
     where: { id: roleId },
     select: { isSystemRole: true },
   });
   if (window || role.isSystemRole) {
-    await requireAdminAccess();
+    await requireActionPermission("admin:access");
   }
 
   const result = await assignMeepleRoleRecord(meepleId, roleId, window);
@@ -217,14 +179,14 @@ export async function assignMeepleRole(
 /** Beendet eine Rollenzuweisung ab jetzt (Historie bleibt erhalten, siehe #264).
  * Systemrollen (#353) erfordern admin:access statt nur members:manage. */
 export async function removeMeepleRole(userRoleId: string) {
-  const actor = await requireMembersManage();
+  const { user: actor } = await requireActionPermission("members:manage");
 
   const assignment = await prisma.userRole.findUniqueOrThrow({
     where: { id: userRoleId },
     select: { role: { select: { isSystemRole: true } } },
   });
   if (assignment.role.isSystemRole) {
-    await requireAdminAccess();
+    await requireActionPermission("admin:access");
   }
 
   const result = await removeMeepleRoleRecord(userRoleId, actor.id);
@@ -236,13 +198,13 @@ export async function removeMeepleRole(userRoleId: string) {
 
 /** Für die Audit-/Historien-Ansicht (#264) — auch abgelaufene Zuweisungen. */
 export async function getMeepleRoleAssignments(neonAuthUserId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   return listMeepleRoleAssignments(neonAuthUserId);
 }
 
 export async function createRole(name: string, description: string | null) {
-  await requireRolesManage();
+  await requireActionPermission("roles:manage");
 
   const result = await createRoleRecord(name, description);
   if ("error" in result) return result;
@@ -256,7 +218,7 @@ export async function updateRole(
   name: string,
   description: string | null,
 ) {
-  await requireRolesManage();
+  await requireActionPermission("roles:manage");
 
   const result = await updateRoleRecord(roleId, name, description);
   if ("error" in result) return result;
@@ -266,7 +228,7 @@ export async function updateRole(
 }
 
 export async function deleteRole(roleId: string) {
-  await requireRolesManage();
+  await requireActionPermission("roles:manage");
 
   const result = await deleteRoleRecord(roleId);
   if ("error" in result) return result;
@@ -279,7 +241,7 @@ export async function setRolePermissions(
   roleId: string,
   permissionIds: string[],
 ) {
-  await requireRolesManage();
+  await requireActionPermission("roles:manage");
 
   const result = await setRolePermissionsRecord(roleId, permissionIds);
   if ("error" in result) return result;
@@ -289,7 +251,7 @@ export async function setRolePermissions(
 }
 
 export async function reorderRoles(roleIds: string[]) {
-  await requireRolesManage();
+  await requireActionPermission("roles:manage");
 
   const result = await reorderRolesRecord(roleIds);
   if ("error" in result) return result;

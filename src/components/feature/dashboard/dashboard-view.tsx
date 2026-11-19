@@ -198,6 +198,7 @@ export function DashboardView({
               >
                 <span>{holding.gameTitle} — Weitergabe bestätigen</span>
                 <ActionButton
+                  refresh
                   size="sm"
                   action={scanConfirmHolding.bind(null, holding.id)}
                 >

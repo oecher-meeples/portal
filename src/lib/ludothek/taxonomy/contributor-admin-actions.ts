@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import {
   normalizeTaxonomyName,
   taxonomyDedupKey,
@@ -15,7 +15,7 @@ function revalidateLudothek() {
 }
 
 export async function renameContributor(id: string, name: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
 
   const trimmed = name.trim();
@@ -45,7 +45,7 @@ export async function renameContributor(id: string, name: string) {
  * BGG-ID hat — sonst wären zwei BGG-Identitäten verschmolzen. Der Eintrag mit
  * BGG-ID bleibt bestehen, sonst der Ziel-Eintrag. */
 export async function mergeContributors(sourceId: string, targetId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
   if (sourceId === targetId)
     return { error: "Bitte zwei verschiedene Einträge wählen." };
@@ -110,7 +110,7 @@ export async function mergeContributors(sourceId: string, targetId: string) {
 }
 
 export async function deleteContributor(id: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
 
   const [titleLinks, publisherLinks] = await Promise.all([

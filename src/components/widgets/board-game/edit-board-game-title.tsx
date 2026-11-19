@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
 import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
+import { NativeSelect } from "@/components/ui/native-select";
 import { BoardGameTraitsField } from "@/components/widgets/board-game/board-game-traits-field";
 import { EanField } from "@/components/widgets/board-game/ean-field";
 import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
@@ -22,6 +22,7 @@ import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
+import { BOARD_GAME_KIND_LABELS } from "@/lib/ludothek/board-game-kind";
 
 /** Randfarbe je Abgleichsstatus im "Daten mit BGG abgleichen"-Modus (#189) —
  * `undefined` (Feld nicht im `compareStatus` enthalten) lässt das Feld
@@ -168,23 +169,23 @@ export function EditBoardGameTitle({
           </Button>
         )}
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`${idPrefix}-kind`}>Art</Label>
-        <select
+      <Field label="Art" htmlFor={`${idPrefix}-kind`}>
+        <NativeSelect
           id={`${idPrefix}-kind`}
           value={values.kind}
           onChange={(event) =>
             onChange({ kind: event.target.value as BoardGameKind })
           }
-          className={cn(
-            "border-input bg-background h-9 rounded-md border px-3 text-sm",
-            diffClassName(compareStatus?.kind),
-          )}
+          size="md"
+          className={diffClassName(compareStatus?.kind)}
         >
-          <option value={BoardGameKind.BOARDGAME}>Basisspiel</option>
-          <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
-        </select>
-      </div>
+          {Object.values(BoardGameKind).map((kind) => (
+            <option key={kind} value={kind}>
+              {BOARD_GAME_KIND_LABELS[kind]}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
 
       <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:col-span-2 sm:grid-cols-2">
         <ContributorNamesField
@@ -209,11 +210,11 @@ export function EditBoardGameTitle({
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`${idPrefix}-language-dependence`}>
-          Sprachabhängigkeit (BGG-Skala, optional)
-        </Label>
-        <select
+      <Field
+        label="Sprachabhängigkeit (BGG-Skala, optional)"
+        htmlFor={`${idPrefix}-language-dependence`}
+      >
+        <NativeSelect
           id={`${idPrefix}-language-dependence`}
           value={values.languageDependence ?? ""}
           onChange={(event) =>
@@ -222,10 +223,8 @@ export function EditBoardGameTitle({
                 (event.target.value as LanguageDependence) || null,
             })
           }
-          className={cn(
-            "border-input bg-background h-9 rounded-md border px-3 text-sm",
-            diffClassName(compareStatus?.languageDependence),
-          )}
+          size="md"
+          className={diffClassName(compareStatus?.languageDependence)}
         >
           <option value="">Nicht erfasst</option>
           {Object.values(LanguageDependence).map((level) => (
@@ -233,8 +232,8 @@ export function EditBoardGameTitle({
               {LANGUAGE_DEPENDENCE_LABELS[level]}
             </option>
           ))}
-        </select>
-      </div>
+        </NativeSelect>
+      </Field>
 
       <TextField
         id={`${idPrefix}-year-published`}

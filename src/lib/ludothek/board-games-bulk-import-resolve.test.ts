@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -12,6 +12,9 @@ vi.mock("@/lib/utils/sleep", () => ({
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const searchBggGamesExactMock = vi.fn();
 const fetchBggGameMock = vi.fn();
@@ -70,14 +73,14 @@ const VALID_BGG_DATA = {
 
 function beforeEachSetup() {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
 }
 
 describe("resolveBulkImportCandidate (#186-Folge)", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await resolveBulkImportCandidate("Catan", 13);
 
@@ -152,7 +155,7 @@ describe("resolveBulkImportCandidate (#186-Folge)", () => {
 describe("fetchBulkImportCandidateDetails (#186-Folge)", () => {
   it("returns an empty map without the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await fetchBulkImportCandidateDetails([13]);
 

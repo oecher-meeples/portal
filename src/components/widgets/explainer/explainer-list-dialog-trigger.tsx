@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ExplainerBadgeList } from "@/components/entities/explainer-badge-list";
+import { ExplainerBadgeList } from "@/components/widgets/explainer/explainer-badge-list";
 import { cn } from "@/lib/utils/cn";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 

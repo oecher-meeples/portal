@@ -5,22 +5,16 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
-const ensureMeepleMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, ensureMeeple: ensureMeepleMock };
-});
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { encryptSecret } = await import("@/lib/utils/crypto");
 const { BANK_CSV_COLUMNS } = await import("./csv-columns");
-const { exportBankDataCsv, revealIban, revealPendingIban } =
-  await import("./actions");
+const { exportBankDataCsv } = await import("./actions");
 
 class ForbiddenError extends Error {}
 
@@ -30,65 +24,18 @@ beforeEach(() => {
   process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString(
     "base64",
   );
-  requirePermissionMock.mockResolvedValue({ id: "user-kassenwart" });
-  ensureMeepleMock.mockResolvedValue({ id: "meeple-kassenwart" });
+  requirePermissionMock.mockResolvedValue({ id: "meeple-kassenwart" });
 });
 
 describe("without the bank:read permission", () => {
   it("neither decrypts nor logs anything", async () => {
     requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
-    await expect(revealIban("meeple-1")).rejects.toThrow(ForbiddenError);
-    await expect(revealPendingIban("change-1")).rejects.toThrow(ForbiddenError);
     await expect(exportBankDataCsv()).rejects.toThrow(ForbiddenError);
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
     expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.member.findMany).not.toHaveBeenCalled();
     expect(prismaMock.pendingChange.findUnique).not.toHaveBeenCalled();
-  });
-});
-
-describe("revealIban", () => {
-  // The decrypt/log rules themselves live in the lib layer and are tested in
-  // src/lib/members/bank-access-log.test.ts — here only the permission gate matters.
-  it("checks the bank:read permission and delegates to the shared reveal logic", async () => {
-    prismaMock.member.findUnique.mockResolvedValue({
-      ibanEncrypted: encryptSecret(IBAN),
-    } as never);
-
-    const result = await revealIban("meeple-1");
-
-    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
-    expect(result).toEqual({ success: true, iban: IBAN });
-    expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
-      data: {
-        accessedByMeepleId: "meeple-kassenwart",
-        subjectMeepleId: "meeple-1",
-        kind: "SINGLE_REVEAL",
-      },
-    });
-  });
-});
-
-describe("revealPendingIban", () => {
-  it("checks the bank:read permission and delegates to the shared reveal logic", async () => {
-    prismaMock.pendingChange.findUnique.mockResolvedValue({
-      kind: "IBAN",
-      newValue: encryptSecret(IBAN),
-      member: { meepleId: "meeple-1" },
-    } as never);
-
-    const result = await revealPendingIban("change-1");
-
-    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
-    expect(result).toEqual({ success: true, iban: IBAN });
-    expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
-      data: {
-        accessedByMeepleId: "meeple-kassenwart",
-        subjectMeepleId: "meeple-1",
-        kind: "SINGLE_REVEAL",
-      },
-    });
   });
 });
 

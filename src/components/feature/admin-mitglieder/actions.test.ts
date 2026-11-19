@@ -6,9 +6,16 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
+const requireBankReaderMock = vi.fn();
+// bank:read wird separat gesteuert, damit die Tests das Entschlüsselungs-Recht
+// unabhängig von members:manage verweigern können.
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    args[0] === "bank:read"
+      ? requireBankReaderMock(...args)
+      : requirePermissionMock(...args),
+  ),
+);
 
 // The anonymisation rules themselves live in the lib layer and are tested in
 // src/lib/members/anonymisation.test.ts — here only the action wrapper matters.
@@ -32,10 +39,8 @@ vi.mock("@/lib/auth/ausgetreten-role", () => ({
 
 // Ditto for the bank-reveal and Selbstauskunft-mail rules — those are tested in
 // src/lib/members/bank-access-log.test.ts and selbstauskunft-mail.test.ts.
-const requireBankReaderMock = vi.fn();
 const revealMeepleIbanMock = vi.fn();
 vi.mock("@/lib/members/bank-access-log", () => ({
-  requireBankReader: (...args: unknown[]) => requireBankReaderMock(...args),
   revealMeepleIban: (...args: unknown[]) => revealMeepleIbanMock(...args),
 }));
 
@@ -60,7 +65,6 @@ const {
   getOpenHoldingsSummary,
   recordResignation,
   renameMeeple,
-  revealMemberIban,
   revokeResignation,
   setMemberNumber,
   setMeepleSystemAccount,
@@ -269,28 +273,5 @@ describe("renameMeeple", () => {
       error: "Bitte einen Anzeigenamen angeben.",
     });
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
-  });
-});
-
-describe("revealMemberIban", () => {
-  it("checks bank:read separately from members:manage and delegates the reveal", async () => {
-    revealMeepleIbanMock.mockResolvedValue({ success: true, iban: "DE00" });
-
-    expect(await revealMemberIban("meeple-1")).toEqual({
-      success: true,
-      iban: "DE00",
-    });
-    expect(requireBankReaderMock).toHaveBeenCalled();
-    expect(revealMeepleIbanMock).toHaveBeenCalledWith(
-      "meeple-1",
-      "meeple-admin",
-    );
-  });
-
-  it("rejects without the bank:read permission, independent of members:manage", async () => {
-    requireBankReaderMock.mockRejectedValue(new ForbiddenError("/403"));
-
-    await expect(revealMemberIban("meeple-1")).rejects.toThrow(ForbiddenError);
-    expect(revealMeepleIbanMock).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,10 @@ Der oben offen gelassene Fall ist eingetreten: Der Spielewart kann jetzt für ei
 
 Bewusst kein PDF-Aufkleber-Bogen (Labelsheet-Layout) — dafür wäre eine neue PDF-Bibliothek (kein jsPDF/pdf-lib/@react-pdf im Repo) nötig gewesen; ein ZIP mit einzelnen PNGs deckt den eigentlichen Bedarf (Etiketten drucken/zuordnen) ohne diese zusätzliche Abhängigkeit ab. Ein PDF-Labelsheet bleibt als mögliches Folge-Issue offen, falls der Bedarf entsteht.
 
+## Nachtrag 2026-11-19: Short-ID-Router ersetzt die Exemplar-Route (Epic #542)
+
+`/ludothek/exemplar/[inventoryNumber]` ist entfallen (#545). Exemplar-QR-Codes zeigen jetzt auf den Router `/id/inv-<n>`, den die externe Short-Domain `short.oecher-meeples.org` ansteuert; `resolveShortId()` (`lib/short-id/resolve.ts`) leitet von dort weiter. Abweichend vom vorigen Nachtrag identifiziert das Etikett jetzt doch das Exemplar: Ziel ist `/ludothek/[slug]/inv-<n>` mit vorausgewähltem Exemplar (#548). Alt-Codes werden nicht unterstützt, es war noch nichts beklebt. Am Gäste-EAN-Scan ändert sich nichts.
+
 ## Nachtrag 2026-08-03: Namensumfang für Erklärbären im Gäste-Bereich (Security-Finding F10)
 
 `getGuestGameDetail` ist bewusst unauthentifiziert und gibt `attendingExplainers` mit vollem `displayName` zurück. Ein Sicherheits-Audit hat zu Recht angemerkt, dass `eventId` dabei ursprünglich nicht geprüft wurde — ein Aufrufer konnte über beliebige Event-IDs Klarnamen und Anwesenheit von Mitgliedern auslesen, auch für Events, die längst vorbei oder noch nicht begonnen hatten.

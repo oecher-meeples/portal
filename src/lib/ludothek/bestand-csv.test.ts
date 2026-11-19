@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireGamesManagePermissionMock = vi.fn();
-vi.mock("@/lib/ludothek/permissions", () => ({
-  requireGamesManagePermission: () => requireGamesManagePermissionMock(),
-}));
 
 const buildAdminBoardGameRowsMock = vi.fn();
 vi.mock("@/lib/ludothek/admin-bestand-rows", () => ({
   buildAdminBoardGameRows: (...args: unknown[]) =>
     buildAdminBoardGameRowsMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireGamesManagePermissionMock(...args),
+  ),
+);
 
 const { exportBestandCsv } = await import("./bestand-csv");
 

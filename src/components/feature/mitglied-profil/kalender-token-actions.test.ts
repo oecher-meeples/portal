@@ -5,9 +5,6 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const generateMemberCalendarTokenMock = vi.fn();
 const revokeMemberCalendarTokenMock = vi.fn();
@@ -23,6 +20,11 @@ vi.mock("@/lib/newsletter/mailer", () => ({
   sendTransactionalEmail: (...args: unknown[]) =>
     sendTransactionalEmailMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   generateMemberCalendarSubscription,

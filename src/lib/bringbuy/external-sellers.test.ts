@@ -9,8 +9,7 @@ vi.mock("@/lib/newsletter/mailer", () => ({
     sendTransactionalEmailMock(...args),
 }));
 
-const { registerExternalSeller, findExternalSellerByToken } =
-  await import("./external-sellers");
+const { registerExternalSeller } = await import("./external-sellers");
 
 function event(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -82,39 +81,5 @@ describe("registerExternalSeller", () => {
     expect(sendTransactionalEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({ to: "anna@example.com" }),
     );
-  });
-});
-
-describe("findExternalSellerByToken", () => {
-  it("returns null for an unknown token", async () => {
-    prismaMock.fleaMarketExternalSeller.findUnique.mockResolvedValue(null);
-
-    expect(await findExternalSellerByToken("nope")).toBeNull();
-  });
-
-  it("returns the seller context for a still-valid token", async () => {
-    prismaMock.fleaMarketExternalSeller.findUnique.mockResolvedValue({
-      id: "seller-1",
-      eventId: "event-1",
-      name: "Anna",
-      items: [{ status: "SOLD" }],
-    } as never);
-
-    expect(await findExternalSellerByToken("tok")).toEqual({
-      id: "seller-1",
-      eventId: "event-1",
-      name: "Anna",
-    });
-  });
-
-  it("returns null once every item reached a terminal state", async () => {
-    prismaMock.fleaMarketExternalSeller.findUnique.mockResolvedValue({
-      id: "seller-1",
-      eventId: "event-1",
-      name: "Anna",
-      items: [{ status: "PAID_OUT" }],
-    } as never);
-
-    expect(await findExternalSellerByToken("tok")).toBeNull();
   });
 });

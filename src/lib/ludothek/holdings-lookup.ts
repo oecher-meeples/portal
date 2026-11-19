@@ -11,10 +11,11 @@ import {
 import { prisma } from "@/lib/utils/prisma";
 import { UNSORTIERT_CODE, parseScannedCode } from "@/lib/inventory/codes";
 import { HoldingConflictError } from "@/lib/ludothek/errors";
+import { MAX_UNIT_CHAIN_DEPTH } from "@/lib/ludothek/unit-chain";
+
+export { walkUnitChain, type UnitChainNode } from "@/lib/ludothek/unit-chain";
 
 type Tx = PrismaClient | Prisma.TransactionClient;
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
 
 /**
  * "ausgeliehen" hat seit dem Vereinsmitglied/Meeple-Split (#333) zwei
@@ -38,39 +39,6 @@ export type GameZustand =
    * `zustandFromHoldingAndUnit()` zurückgegeben, nur von
    * `buildPrivateLudothekGames()` gesetzt. */
   | "privat";
-
-export type UnitChainNode = {
-  label: string;
-  parentUnitId: string | null;
-  keeperMeepleId: string | null;
-};
-
-/** Walks a unit chain from a leaf up towards the root, stopping at the first
- * keeper found — that person is the pickup orientation point, further
- * ancestor units aren't shown (see #121 Standort-Kette). */
-export function walkUnitChain(
-  unitId: string,
-  unitById: Map<string, UnitChainNode>,
-) {
-  const labels: string[] = [];
-  let keeperMeepleId: string | null = null;
-  let currentId: string | null = unitId;
-  let depth = 0;
-
-  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    const unit = unitById.get(currentId);
-    if (!unit) break;
-    labels.push(unit.label);
-    if (unit.keeperMeepleId) {
-      keeperMeepleId = unit.keeperMeepleId;
-      break;
-    }
-    currentId = unit.parentUnitId;
-    depth += 1;
-  }
-
-  return { unitChain: labels.reverse().join(" → "), keeperMeepleId };
-}
 
 export type StorageUnitLite = {
   id: string;

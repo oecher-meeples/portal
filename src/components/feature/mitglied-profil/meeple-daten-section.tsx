@@ -8,6 +8,7 @@ import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/components/ui/use-action";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   PROFILE_PICTURE_VISIBILITY_LABELS,
   PROFILE_PICTURE_VISIBILITY_SHORT_LABELS,
@@ -116,7 +117,7 @@ export function MeepleDatenSection({
             // Zugehörigkeit) — bleibt an derselben Stelle in der Kopfzeile,
             // egal ob `editing` gerade an oder aus ist, und wird nur
             // *bearbeitbar* im Editmode (sonst reines Anzeigefeld).
-            <select
+            <NativeSelect
               aria-label="Sichtbarkeit der freiwilligen Angaben"
               title={PROFILE_PICTURE_VISIBILITY_LABELS[visibility]}
               value={visibility}
@@ -126,7 +127,8 @@ export function MeepleDatenSection({
                   event.target.value as ProfilePictureVisibility,
                 )
               }
-              className="border-input bg-background h-9 w-32 shrink-0 rounded-md border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              size="md"
+              className="w-32 shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {Object.entries(PROFILE_PICTURE_VISIBILITY_SHORT_LABELS).map(
                 ([value, label]) => (
@@ -135,7 +137,7 @@ export function MeepleDatenSection({
                   </option>
                 ),
               )}
-            </select>
+            </NativeSelect>
           )}
           {canEdit && !editing && (
             <Button variant="outline" size="sm" onClick={startEdit}>

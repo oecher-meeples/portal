@@ -29,6 +29,7 @@ import { EventVisibilityPill } from "@/components/entities/event-visibility-pill
 import { EVENT_VISIBILITY_LABELS } from "@/lib/events/visibility";
 import { formatDateRange } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
+import { NativeSelect } from "@/components/ui/native-select";
 
 type VisibilityFilter = EventVisibility | "alle";
 
@@ -104,9 +105,9 @@ export function AdminEventsView({
           fieldClassName="w-64"
         />
         <Field label="Jahr" htmlFor="event-year-filter">
-          <select
+          <NativeSelect
             id="event-year-filter"
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            size="md"
             value={yearFilter}
             onChange={(event) => setYearFilter(event.target.value)}
           >
@@ -116,7 +117,7 @@ export function AdminEventsView({
                 {year}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </Field>
         <PillToggle
           options={VISIBILITY_FILTER_OPTIONS}

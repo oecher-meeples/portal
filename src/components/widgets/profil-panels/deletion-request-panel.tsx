@@ -44,7 +44,11 @@ export function DeletionRequestPanel({
           (ein Monat, Art. 12 Abs. 3 DSGVO).
         </p>
         <OpenHoldingsHint {...openHoldings} />
-        <ActionButton action={withdrawOwnDeletionRequest} variant="outline">
+        <ActionButton
+          refresh
+          action={withdrawOwnDeletionRequest}
+          variant="outline"
+        >
           Antrag zurückziehen
         </ActionButton>
       </div>
@@ -61,6 +65,7 @@ export function DeletionRequestPanel({
       </p>
       <OpenHoldingsHint {...openHoldings} />
       <ActionButton
+        refresh
         action={requestOwnDeletion}
         confirm="Löschung deiner personenbezogenen Daten beantragen?"
         variant="outline"

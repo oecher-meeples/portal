@@ -1,8 +1,8 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { auth, createLoginAccount } from "@/lib/auth/server";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import { isValidEmail } from "@/lib/utils/validate-email";
 import { getRequestOrigin } from "@/lib/utils/request-origin";
 
@@ -21,7 +21,7 @@ export async function createSystemkonto({
   email: string;
   displayName: string;
 }) {
-  await requirePermission("admin:access");
+  await requireActionPermission("admin:access");
 
   const trimmedEmail = email.trim().toLowerCase();
   const trimmedName = displayName.trim();

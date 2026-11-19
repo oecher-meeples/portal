@@ -8,15 +8,18 @@ import { StatTile } from "@/components/ui/stat-tile";
 import { Field, TextField } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { AdminTagRow } from "@/lib/ludothek/taxonomy/tag-admin-queries";
-import { TAG_TYPE_LABELS, tagLabel } from "@/lib/ludothek/taxonomy/tags-read";
+import {
+  TAG_TYPE_LABELS,
+  TAG_TYPE_PLURAL_LABELS,
+  tagLabel,
+} from "@/lib/ludothek/taxonomy/tags-read";
 import { TagAdminRow } from "@/components/feature/admin-tags/tag-admin-row";
 
 type TypeFilter = "ALL" | TagType;
 
 const TYPE_FILTER_LABELS: Record<TypeFilter, string> = {
   ALL: "Alle Typen",
-  MECHANIC: "Mechaniken",
-  CATEGORY: "Kategorien",
+  ...TAG_TYPE_PLURAL_LABELS,
 };
 
 type StateFilter = "ALL" | "NO_DISPLAY_NAME" | "NO_BGG_ID";

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -38,7 +38,7 @@ beforeEach(() => {
 describe("createGameCopy", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await createGameCopy("game-1");
 
@@ -48,7 +48,7 @@ describe("createGameCopy", () => {
 
   it("rejects when the title does not exist", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue(null);
 
     const result = await createGameCopy("game-x");
@@ -58,7 +58,7 @@ describe("createGameCopy", () => {
 
   it("adds a second copy to an existing title with its own slug and holding", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Catan",
@@ -87,57 +87,77 @@ describe("createGameCopy", () => {
 
   it("rejects an inventoryNumber that is already taken (#270)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Catan",
     } as never);
     prismaMock.gameCopy.findFirst.mockResolvedValue({ id: "other" } as never);
 
-    const result = await createGameCopy("game-1", { inventoryNumber: "12" });
+    const result = await createGameCopy("game-1", { inventoryNumber: 12 });
 
     expect(result).toEqual({
-      error: 'Inventarnummer "12" ist bereits vergeben.',
+      error: "Inventarnummer 12 ist bereits vergeben.",
     });
     expect(prismaMock.gameCopy.create).not.toHaveBeenCalled();
   });
 
   it("stores a free inventoryNumber", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Catan",
     } as never);
     prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-2" } as never);
 
-    const result = await createGameCopy("game-1", { inventoryNumber: "12" });
+    const result = await createGameCopy("game-1", { inventoryNumber: 12 });
 
     expect(result).toEqual({ success: true, id: "copy-2" });
     expect(prismaMock.gameCopy.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ inventoryNumber: "12" }),
+      data: expect.objectContaining({ inventoryNumber: 12 }),
     });
   });
 });
 
 describe("getSuggestedInventoryNumber", () => {
-  it("suggests the next number based on existing copies", async () => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([
-      { inventoryNumber: "3" },
-      { inventoryNumber: "7" },
-      { inventoryNumber: null },
-    ] as never);
+  it("suggests the highest existing number plus one", async () => {
+    prismaMock.gameCopy.aggregate.mockResolvedValue({
+      _max: { inventoryNumber: 7 },
+    } as never);
 
     const result = await getSuggestedInventoryNumber();
 
-    expect(result).toBe("8");
+    expect(result).toBe(8);
+  });
+
+  it("suggests 1 when no copy has a number yet", async () => {
+    prismaMock.gameCopy.aggregate.mockResolvedValue({
+      _max: { inventoryNumber: null },
+    } as never);
+
+    expect(await getSuggestedInventoryNumber()).toBe(1);
+  });
+
+  it("rejects a non-integer inventoryNumber before touching the db (#543)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+
+    const result = await updateGameCopy("copy-1", {
+      inventoryNumber: Number.NaN,
+    });
+
+    expect(result).toEqual({
+      error: "Inventarnummer muss eine positive ganze Zahl sein.",
+    });
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 });
 
 describe("updateGameCopy", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await updateGameCopy("copy-1", { condition: "Gebraucht" });
 
@@ -147,7 +167,7 @@ describe("updateGameCopy", () => {
 
   it("updates the condition when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.findUnique.mockResolvedValue({
       boardGameId: "game-1",
     } as never);
@@ -167,7 +187,7 @@ describe("updateGameCopy", () => {
 
   it("assigns an existing edition of the same title to the copy", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.findUnique.mockResolvedValue({
       boardGameId: "game-1",
     } as never);
@@ -196,7 +216,7 @@ describe("updateGameCopy", () => {
 
   it("refuses an edition that belongs to another title", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.findUnique.mockResolvedValue({
       boardGameId: "game-1",
     } as never);
@@ -214,7 +234,7 @@ describe("updateGameCopy", () => {
 
   it("removes the edition when null is passed", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.findUnique.mockResolvedValue({
       boardGameId: "game-1",
     } as never);
@@ -233,20 +253,20 @@ describe("updateGameCopy", () => {
 
   it("rejects an inventoryNumber already used by another copy (#270)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.findFirst.mockResolvedValue({ id: "other" } as never);
 
-    const result = await updateGameCopy("copy-1", { inventoryNumber: "12" });
+    const result = await updateGameCopy("copy-1", { inventoryNumber: 12 });
 
     expect(result).toEqual({
-      error: 'Inventarnummer "12" ist bereits vergeben.',
+      error: "Inventarnummer 12 ist bereits vergeben.",
     });
     expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 
   it("updates the inventoryNumber when it is free", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.findUnique.mockResolvedValue({
       boardGameId: "game-1",
     } as never);
@@ -254,12 +274,12 @@ describe("updateGameCopy", () => {
       boardGame: { slug: "catan" },
     } as never);
 
-    const result = await updateGameCopy("copy-1", { inventoryNumber: "12" });
+    const result = await updateGameCopy("copy-1", { inventoryNumber: 12 });
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "copy-1" },
-      data: { condition: null, inventoryNumber: "12" },
+      data: { condition: null, inventoryNumber: 12 },
       include: { boardGame: { select: { slug: true } } },
     });
   });
@@ -268,7 +288,7 @@ describe("updateGameCopy", () => {
 describe("deinventoriseGameCopy", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await deinventoriseGameCopy("copy-1", "Verkauft");
 
@@ -278,7 +298,7 @@ describe("deinventoriseGameCopy", () => {
 
   it("rejects when the reason is empty", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await deinventoriseGameCopy("copy-1", "   ");
 
@@ -290,7 +310,7 @@ describe("deinventoriseGameCopy", () => {
 
   it("sets status, archivedAt and archivedReason when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
       condition: null,
@@ -315,7 +335,7 @@ describe("deinventoriseGameCopy", () => {
 
   it("leaves the copy's open holding untouched — only the inventory status changes", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
       condition: null,
@@ -330,7 +350,7 @@ describe("deinventoriseGameCopy", () => {
 
   it("creates exactly one spare part listing when the checkbox is set", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     ensureMeepleMock.mockResolvedValue({ id: "admin-meeple" });
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
@@ -355,7 +375,7 @@ describe("deinventoriseGameCopy", () => {
 
   it("creates no spare part listing when the checkbox is unset", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.gameCopy.update.mockResolvedValue({
       id: "copy-1",
       condition: "Gebraucht",
@@ -371,7 +391,7 @@ describe("deinventoriseGameCopy", () => {
 describe("requestCompletenessCheck", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await requestCompletenessCheck("copy-1");
 
@@ -381,7 +401,7 @@ describe("requestCompletenessCheck", () => {
 
   it("sets the completeness-check flag", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await requestCompletenessCheck("copy-1");
 

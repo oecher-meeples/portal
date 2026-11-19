@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { GuardianLinkOption } from "@/lib/members/guardians";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 
 /** "Meine Kinder"-Sektion (#376) — nur auf der eigenen Profilseite
  * eingebunden (`mitglied-profil-view.tsx` rendert sie nur, wenn
@@ -28,7 +28,7 @@ export function MeineKinderSection({
               size="md"
             />
             {child.meepleId ? (
-              <ContactDialog
+              <MeepleContactDialog
                 name={child.displayName}
                 meepleId={child.meepleId}
               />

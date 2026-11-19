@@ -132,7 +132,7 @@ export function BulkImportBoardGamesDialog() {
   async function handleResolveCandidate(
     name: string,
     bggId: number,
-    inventoryNumber?: string,
+    inventoryNumber?: number,
   ) {
     setResolvingName(name);
     try {

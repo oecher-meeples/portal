@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/utils/prisma";
 import { uniqueSlug } from "@/lib/utils/slug";
 import { requiresEmail } from "@/lib/members/contribution";
+import { memberFullName } from "@/lib/members/member-display-name";
 
 export type CreateMemberInput = {
   email: string;
@@ -64,9 +65,7 @@ export async function createMember(
   });
   const memberNumber = (highestNumber._max.memberNumber ?? 0) + 1;
 
-  const nameForSlug =
-    [input.firstName, input.lastName].filter(Boolean).join(" ").trim() ||
-    `mitglied-${memberNumber}`;
+  const nameForSlug = memberFullName(input) || `mitglied-${memberNumber}`;
   const slug = await uniqueSlug(
     nameForSlug,
     async (candidate) =>

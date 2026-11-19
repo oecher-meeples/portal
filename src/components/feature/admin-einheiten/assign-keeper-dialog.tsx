@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import { assignStorageUnitKeeper } from "@/components/feature/admin-einheiten/actions";
 
 export type KeeperOption = { id: string; displayName: string };
@@ -66,10 +67,10 @@ export function AssignKeeperDialog({
       action={() => assignStorageUnitKeeper(unitId, selected || null)}
       onReset={() => setSelected(currentKeeperId ?? "")}
     >
-      <select
+      <NativeSelect
         value={selected}
         onChange={(event) => setSelected(event.target.value)}
-        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+        size="md"
       >
         <option value="">— kein Verwahrer —</option>
         {keeperOptions.map((meeple) => (
@@ -77,7 +78,7 @@ export function AssignKeeperDialog({
             {meeple.displayName}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </ActionDialog>
   );
 }

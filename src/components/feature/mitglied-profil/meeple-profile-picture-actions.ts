@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import type { ProfilePictureVisibility } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
@@ -16,7 +16,7 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 async function assertMayEdit(meepleId: string) {
   const session = await requireMember();
   if (session.meeple.id === meepleId) return;
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 }
 
 export async function getMeepleProfilePictureUploadToken(
@@ -33,14 +33,6 @@ export async function getMeepleProfilePictureUploadToken(
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,
   });
-}
-
-async function revalidateProfile(meepleId: string) {
-  const member = await prisma.member.findUnique({
-    where: { meepleId },
-    select: { slug: true },
-  });
-  if (member) revalidatePath(`/profil/${member.slug}`);
 }
 
 export async function saveMeepleProfilePicture(
@@ -62,7 +54,7 @@ export async function saveMeepleProfilePicture(
     await deleteBlobs([previous.profilePictureUrl]);
   }
 
-  await revalidateProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }
 
@@ -77,7 +69,7 @@ export async function updateMeepleProfilePictureVisibility(
     data: { profilePictureVisibility: visibility },
   });
 
-  await revalidateProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }
 
@@ -98,6 +90,6 @@ export async function deleteMeepleProfilePicture(meepleId: string) {
     data: { profilePictureUrl: null },
   });
 
-  await revalidateProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }

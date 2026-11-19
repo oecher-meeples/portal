@@ -113,8 +113,19 @@ export async function createDemoGameCopy(
   }
   usedSlugs.add(slug);
 
+  // Fortlaufende Inventarnummer (#543), damit `/id/inv-<n>` lokal testbar
+  // ist — max + 1 statt eines Zählers, damit wiederholte Seed-Läufe nie
+  // kollidieren.
+  const { _max } = await prisma.gameCopy.aggregate({
+    _max: { inventoryNumber: true },
+  });
   const copy = await prisma.gameCopy.create({
-    data: { slug, boardGameId, versionId },
+    data: {
+      slug,
+      boardGameId,
+      versionId,
+      inventoryNumber: (_max.inventoryNumber ?? 0) + 1,
+    },
   });
 
   await prisma.gameHolding.create({

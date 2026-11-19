@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Field, TextField } from "@/components/ui/field";
+import { NativeSelect } from "@/components/ui/native-select";
 import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
 import {
   getBoardGameEditions,
@@ -154,11 +155,12 @@ export function EditionFields({
         htmlFor={`${idPrefix}-edition`}
         hint={loadingBgg && "Versionen von BGG werden geladen …"}
       >
-        <select
+        <NativeSelect
           id={`${idPrefix}-edition`}
           value={selectValue}
           onChange={(event) => handleSelect(event.target.value)}
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          size="md"
+          className="w-full"
         >
           <option value="">Ohne Version</option>
           {options.length > 0 && (
@@ -191,7 +193,7 @@ export function EditionFields({
             </optgroup>
           )}
           <option value={NEW_EDITION}>Neue Version manuell eingeben …</option>
-        </select>
+        </NativeSelect>
       </Field>
       {values.editionMode === "new" && (
         <div className="flex flex-col gap-3 border-l-2 pl-3">

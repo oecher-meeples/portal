@@ -1,18 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { updateBoardGame } from "@/lib/ludothek/board-games";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import { EditBoardGameTitle } from "@/components/widgets/board-game/edit-board-game-title";
@@ -31,27 +22,15 @@ export type EditableBoardGame = {
 } & BoardGameRecord;
 
 export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [form, setForm] = useState<BoardGameFormValues>(
     boardGameToFormValues(game),
   );
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function patchForm(patch: Partial<BoardGameFormValues>) {
     setForm((prev) => ({ ...prev, ...patch }));
   }
 
-  function reset() {
-    setForm(boardGameToFormValues(game));
-    setError(null);
-  }
-
-  async function handleSubmit() {
-    setError(null);
-    setIsSubmitting(true);
-
+  async function save() {
     const [titleResult, copyResult] = await Promise.all([
       updateBoardGame(game.boardGameId, boardGameFormToTitleInput(form)),
       updateGameCopy(game.id, {
@@ -59,67 +38,37 @@ export function EditBoardGameDialog({ game }: { game: EditableBoardGame }) {
         ruleBookLanguages: form.ruleBookLanguages,
       }),
     ]);
-    setIsSubmitting(false);
-
-    const result = titleResult.error ? titleResult : copyResult;
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-
-    setOpen(false);
-    router.refresh();
+    return "error" in titleResult ? titleResult : copyResult;
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-        if (!nextOpen) reset();
-      }}
+    <ActionDialog
+      trigger={
+        <Button size="sm" variant="ghost">
+          <Pencil className="size-4" />
+          Bearbeiten
+        </Button>
+      }
+      title="Spiel bearbeiten"
+      description="Alle Stammdaten korrigieren, u. a. das automatisch übernommene Erklärvideo."
+      contentClassName="sm:max-w-lg"
+      submitLabel="Speichern"
+      canSubmit={Boolean(form.title.trim())}
+      action={save}
+      onReset={() => setForm(boardGameToFormValues(game))}
     >
-      <DialogTrigger
-        render={
-          <Button size="sm" variant="ghost">
-            <Pencil className="size-4" />
-            Bearbeiten
-          </Button>
-        }
-      />
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Spiel bearbeiten</DialogTitle>
-          <DialogDescription>
-            Alle Stammdaten korrigieren, u. a. das automatisch übernommene
-            Erklärvideo.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
-          <EditBoardGameTitle
-            idPrefix={`edit-${game.id}`}
-            values={form}
-            onChange={patchForm}
-          />
-          <EditBoardGameExemplar
-            idPrefix={`edit-${game.id}`}
-            values={form}
-            onChange={patchForm}
-          />
-        </div>
-
-        {error && <p className="text-destructive text-sm">{error}</p>}
-
-        <DialogFooter>
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !form.title.trim()}
-          >
-            {isSubmitting ? "Speichere…" : "Speichern"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+        <EditBoardGameTitle
+          idPrefix={`edit-${game.id}`}
+          values={form}
+          onChange={patchForm}
+        />
+        <EditBoardGameExemplar
+          idPrefix={`edit-${game.id}`}
+          values={form}
+          onChange={patchForm}
+        />
+      </div>
+    </ActionDialog>
   );
 }

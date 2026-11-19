@@ -1,4 +1,5 @@
 import type { ContributorRole } from "@prisma/client";
+import { sortedUniqueLabels } from "@/lib/utils/sorted-unique";
 
 /** Prisma-`include` für die Mitwirkenden eines Titels — überall gleich, damit
  * Lese-Pfade dieselben Namen liefern. */
@@ -18,13 +19,11 @@ export type ContributorLinkRow = {
  * Verlage hängen an der Edition (`versionDisplay()`), nicht am Titel. */
 export function contributorNamesByRole(links: ContributorLinkRow[]) {
   const namesFor = (role: ContributorRole) =>
-    [
-      ...new Set(
-        links
-          .filter((link) => link.role === role)
-          .map((link) => link.contributor.name),
-      ),
-    ].sort((a, b) => a.localeCompare(b, "de"));
+    sortedUniqueLabels(
+      links,
+      (link) => link.role === role,
+      (link) => link.contributor.name,
+    );
 
   return {
     author: namesFor("AUTHOR"),

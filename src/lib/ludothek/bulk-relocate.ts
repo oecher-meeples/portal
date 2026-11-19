@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { relocateGame, returnGame } from "@/lib/ludothek/holdings";
 import { HoldingConflictError } from "@/lib/ludothek/errors";
 import { ensureMeeple } from "@/lib/members/meeples";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 
 /**
  * Sammel-Umlagern (#273, CONTEXT.md-Konzept, hier erstmals implementiert):
@@ -25,7 +25,7 @@ export async function bulkRelocateGameCopy(
   gameCopyId: string,
   targetUnitId: string,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }

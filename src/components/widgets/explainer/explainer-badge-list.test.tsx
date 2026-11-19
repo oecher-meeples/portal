@@ -1,8 +1,12 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { ExplainerBadgeList } from "@/components/entities/explainer-badge-list";
+import { ExplainerBadgeList } from "@/components/widgets/explainer/explainer-badge-list";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
+
+vi.mock("@/lib/members/contact-dialog", () => ({
+  fetchContactDialogMeeple: vi.fn(),
+}));
 
 afterEach(cleanup);
 

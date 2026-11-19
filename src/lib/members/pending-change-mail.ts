@@ -1,12 +1,6 @@
 import { PendingChangeKind } from "@prisma/client";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>]/g,
-    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char]!,
-  );
-}
+import { escapeHtml } from "@/lib/utils/escape-html";
 
 /** Shared with the invite-link builder's plain-string convention (no
  * `new URL()`) so an empty `origin` (SSR) still yields a valid relative link. */

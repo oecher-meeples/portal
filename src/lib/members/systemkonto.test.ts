@@ -3,10 +3,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
+const requirePermissionMock = vi.fn().mockResolvedValue({ id: "admin-user" });
 
 const createUserMock = vi.fn();
 const requestPasswordResetMock = vi.fn();
@@ -23,6 +20,11 @@ vi.mock("@/lib/auth/server", () => ({
 vi.mock("@/lib/utils/request-origin", () => ({
   getRequestOrigin: () => Promise.resolve("https://example.com"),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { createSystemkonto } = await import("@/lib/members/systemkonto");
 

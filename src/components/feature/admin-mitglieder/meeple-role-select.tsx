@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAction } from "@/components/ui/use-action";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   assignMeepleRole,
   removeMeepleRole,
@@ -129,7 +130,7 @@ export function MeepleRoleSelect({
               />
             </div>
           )}
-          <select
+          <NativeSelect
             value={pendingRoleId}
             disabled={pending}
             onChange={(event) => {
@@ -154,7 +155,7 @@ export function MeepleRoleSelect({
                 },
               );
             }}
-            className="border-input bg-background h-8 rounded-md border px-2 text-sm disabled:opacity-60"
+            size="compact"
           >
             <option value="">+ Rolle hinzufügen …</option>
             {assignableRoles.map((role) => (
@@ -162,7 +163,7 @@ export function MeepleRoleSelect({
                 {role.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </>
       )}
       {expired.length > 0 && (

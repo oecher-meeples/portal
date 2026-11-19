@@ -1,40 +1,20 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
-import { getCurrentUser } from "@/lib/auth/server";
-import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
+import { unitChainLabel } from "@/lib/ludothek/unit-chain";
+import { requireMember } from "@/lib/auth/session";
+import { getMembershipState } from "@/lib/members/meeples";
 import {
   AdminEinheitenView,
   type ResignedHolderRow,
   type StorageUnitRow,
 } from "@/components/feature/admin-einheiten/admin-einheiten-view";
 
-function locationChain(
-  unit: { label: string; parentUnitId: string | null },
-  byId: Map<string, { label: string; parentUnitId: string | null }>,
-) {
-  const chain = [unit.label];
-  let parentId = unit.parentUnitId;
-  let depth = 0;
-  while (parentId && depth < 20) {
-    const parent = byId.get(parentId);
-    if (!parent) break;
-    chain.push(parent.label);
-    parentId = parent.parentUnitId;
-    depth += 1;
-  }
-  return chain.reverse().join(" → ");
-}
-
 export default async function AdminEinheitenPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  const [currentMeeple, isAdmin] = await Promise.all([
-    ensureMeeple(user),
-    hasPermission(user.id, "games:manage"),
-  ]);
+  // #522: offen für jedes aktive Mitglied (Self-Claim einer Einheit),
+  // Verwaltung nur mit games:manage — requireMember setzt den
+  // Mitgliedsstatus durch, den der frühere Eigen-Guard ausließ.
+  const { user, meeple: currentMeeple } = await requireMember();
+  const isAdmin = await hasPermission(user.id, "games:manage");
 
   const [units, gameCounts, meeples] = await Promise.all([
     // EVENT-Units sind system-verwaltet (lazy per `ensureEventUnit()`, #273)
@@ -110,7 +90,7 @@ export default async function AdminEinheitenPage() {
     // Rückgabetyp dadurch nicht automatisch ein (#273).
     kind: unit.kind as "BOX" | "SHELF",
     label: unit.label,
-    locationChain: locationChain(unit, unitById),
+    locationChain: unitChainLabel(unit.id, unitById),
     keeperMeepleId: unit.keeperMeepleId,
     keeperName: unit.keeper?.displayName ?? null,
     gameCount: gameCountByUnitId.get(unit.id) ?? 0,
