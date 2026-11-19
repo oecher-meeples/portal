@@ -13,4 +13,4 @@ Das Instagram-Cross-Posting (siehe `docs/roadmap.md`, Phase 3) ist vollständig 
   - `PUBLIC_SITE_URL` (öffentliche Domain, wird im Instagram-Caption-Text als Link-Hinweis verwendet)
 - [ ] **5. OAuth-Connect-Flow einmalig durchlaufen**: Im Admin-Bereich unter „Einstellungen → Instagram" (`/admin/einstellungen/instagram`) mit einem Account der Rolle `admin` einloggen und auf „Mit Instagram verbinden" klicken.
 
-Danach übernimmt der tägliche Vercel-Cron-Job (`vercel.json`, `/api/cron/instagram-queue`) automatisch das Cross-Posting freigegebener Beiträge sowie den Token-Refresh.
+Danach übernimmt der tägliche Cron-Job (`docker/cron/crontab`, `/api/cron/instagram-queue`) automatisch das Cross-Posting freigegebener Beiträge sowie den Token-Refresh.
