@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireAdminPermission } from "@/lib/auth/session";
 import { UnitLabelSheet } from "@/components/feature/admin-einheiten/unit-label-sheet";
 
 export default async function AdminEinheitenEtikettenPage() {
-  await requirePermission("games:manage");
+  await requireAdminPermission("games:manage");
 
   // EVENT-Units sind system-verwaltet (#273) und brauchen keine Etiketten.
   const units = await prisma.storageUnit.findMany({

@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 
 export async function assignShelfToEvent(eventId: string, unitId: string) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const unit = await prisma.storageUnit.findUnique({ where: { id: unitId } });
   if (!unit) {
@@ -28,7 +28,7 @@ export async function assignShelfToEvent(eventId: string, unitId: string) {
 }
 
 export async function unassignShelfFromEvent(eventId: string, unitId: string) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   await prisma.eventShelfAssignment.deleteMany({
     where: { eventId, unitId },

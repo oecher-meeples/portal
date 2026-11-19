@@ -41,6 +41,7 @@ export function AddGameCopyDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button variant="ghost" size="sm">

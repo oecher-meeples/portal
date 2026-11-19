@@ -3,9 +3,11 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/ludothek/permissions", () => ({
-  requireGamesManagePermission: vi.fn(async () => ({ id: "user-1" })),
-}));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom(
+    async () => ({ id: "user-1" }),
+  ),
+);
 
 const { deleteContributor, mergeContributors, renameContributor } =
   await import("./contributor-admin-actions");

@@ -24,14 +24,14 @@ export default defineConfig({
       // actions carry the business rules worth guarding with a threshold.
       // Everything else (UI components, routes) is deliberately excluded —
       // that is a scope decision, not a gap.
-      include: ["src/lib/**", "src/components/**/actions.ts"],
+      include: ["src/lib/**", "src/components/**/*actions.ts"],
       exclude: [
         "src/lib/__mocks__/**",
         "**/*.d.ts",
         "src/lib/utils/nav-config.ts",
         "src/lib/utils/cn.ts",
       ],
-      // Derived from the measured baseline (see #38): Statements 86.71,
+      // Derived from the measured baseline (see #38; re-measured with the *actions.ts glob in #523: 90.03 / 86.56 / 91.26 / 90.95). Original #38 values: Statements 86.71,
       // Branches 83.39, Functions 88.33, Lines 87.02 — rounded down to the
       // nearest ten, so today's suite passes and a real regression trips it.
       thresholds: {

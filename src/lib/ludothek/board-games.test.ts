@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -53,7 +53,7 @@ describe("createBoardGame", () => {
 
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await createBoardGame(VALID_INPUT);
 
@@ -63,7 +63,7 @@ describe("createBoardGame", () => {
 
   it("rejects when the title is missing", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await createBoardGame({ title: "" });
 
@@ -73,7 +73,7 @@ describe("createBoardGame", () => {
 
   it("rejects an invalid ean", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await createBoardGame({ ...VALID_INPUT, ean: "12345" });
 
@@ -86,7 +86,7 @@ describe("createBoardGame", () => {
 
   it("creates a new title, its first copy's slug and an initial holding into Unsortiert", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -122,7 +122,7 @@ describe("createBoardGame", () => {
 
   it("creates BoardGameAlternateName rows from the BGG-Import-Vorschau (#187)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-1",
       title: "Ark Nova",
@@ -141,7 +141,7 @@ describe("createBoardGame", () => {
 
   it("does not duplicate alternate names when reusing an existing title by bggId", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "existing-title",
       title: "Ark Nova",
@@ -159,7 +159,7 @@ describe("createBoardGame", () => {
 
   it("places the first copy in the given unit instead of Unsortiert when a placement is set (#121/#122)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -182,7 +182,7 @@ describe("createBoardGame", () => {
 
   it("places the first copy with the creator when placement is self", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -203,7 +203,7 @@ describe("createBoardGame", () => {
 
   it("rejects placement:self when the creator has no linked Vereinsmitglied (#333)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.member.findUnique.mockResolvedValue(null);
 
     const result = await createBoardGame({
@@ -219,7 +219,7 @@ describe("createBoardGame", () => {
 
   it("resolves a copy-slug collision with a numeric suffix", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-2",
       title: "Arche Nova",
@@ -238,7 +238,7 @@ describe("createBoardGame", () => {
 
   it("reuses an existing title for a duplicate bggId instead of creating a second title (second copy, ADR 0008)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -261,7 +261,7 @@ describe("createBoardGame", () => {
 
   it("rejects creating a second title with the same name, even without a bggId (#183)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findFirst.mockResolvedValue({
       id: "game-existing",
       title: "Arche Nova",
@@ -279,7 +279,7 @@ describe("createBoardGame", () => {
 
   it("rejects a same-named title even when a (different) bggId is given", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     // No title shares this bggId, but a different title row has the same name.
     prismaMock.boardGame.findUnique.mockResolvedValue(null);
     prismaMock.boardGame.findFirst.mockResolvedValue({
@@ -298,7 +298,7 @@ describe("createBoardGame", () => {
 
   it("skips the title-collision check when the bggId already reuses an existing title", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -313,7 +313,7 @@ describe("createBoardGame", () => {
 
   it("accepts a duplicate ean and reports it as a hint, not an error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.count.mockResolvedValue(1);
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-2",
@@ -339,7 +339,7 @@ describe("updateBoardGame", () => {
 
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await updateBoardGame("game-1", VALID_INPUT);
 
@@ -349,7 +349,7 @@ describe("updateBoardGame", () => {
 
   it("updates the title when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await updateBoardGame("game-1", VALID_INPUT);
 
@@ -362,7 +362,7 @@ describe("updateBoardGame", () => {
 
   it("rejects an invalid ean", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await updateBoardGame("game-1", {
       ...VALID_INPUT,
@@ -378,7 +378,7 @@ describe("updateBoardGame", () => {
 
   it("excludes the title itself from the duplicate-ean check", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     await updateBoardGame("game-1", { ...VALID_INPUT, ean: VALID_EAN });
 

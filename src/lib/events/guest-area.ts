@@ -3,6 +3,7 @@ import type {
   FleaMarketItemStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { findUnitAncestor } from "@/lib/ludothek/unit-chain";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
   filterLudothekGames,
@@ -19,8 +20,6 @@ import {
   meepleEmail,
   type ContactLinks,
 } from "@/lib/members/contact";
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
 
 /**
  * True if `unitId` or one of its ancestors (box in shelf) is in `assignedUnitIds` —
@@ -42,16 +41,7 @@ export function findAssignedAncestor(
   assignedUnitIds: Set<string>,
   parentById: Map<string, string | null>,
 ): string | null {
-  let currentId: string | null = unitId;
-  let depth = 0;
-
-  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    if (assignedUnitIds.has(currentId)) return currentId;
-    currentId = parentById.get(currentId) ?? null;
-    depth += 1;
-  }
-
-  return null;
+  return findUnitAncestor(unitId, parentById, (id) => assignedUnitIds.has(id));
 }
 
 /**
@@ -238,24 +228,27 @@ export async function getFreeGamesInRoom(
   eventId: string,
   filters: LudothekFilters,
 ): Promise<LudothekGame[]> {
-  const [games, eventUnitId, parentById, holdingUnitByGame] = await Promise.all(
-    [
-      buildLudothekGames(),
-      resolveEventUnitId(eventId),
-      loadUnitParents(),
-      loadOpenHoldingUnitByGame(),
-    ],
-  );
+  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
+    resolveEventUnitId(eventId),
+    loadUnitParents(),
+    loadOpenHoldingUnitByGame(),
+  ]);
   if (!eventUnitId) return [];
   const assignedUnitIds = new Set([eventUnitId]);
 
-  const freeGames = filterLudothekGames(games, { ...filters, zustand: "frei" });
+  // #526: erst die Exemplare im Raum bestimmen, dann nur diese laden — nicht
+  // den ganzen Bestand für einen anschließenden Filter.
+  const inRoomCopyIds = [...holdingUnitByGame]
+    .filter(([, unitId]) =>
+      unitOrAncestorAssigned(unitId, assignedUnitIds, parentById),
+    )
+    .map(([gameCopyId]) => gameCopyId);
+  if (inRoomCopyIds.length === 0) return [];
 
-  return freeGames.filter((game) => {
-    const unitId = holdingUnitByGame.get(game.id);
-    if (!unitId) return false;
-    return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
+  const games = await buildLudothekGames({
+    where: { id: { in: inRoomCopyIds } },
   });
+  return filterLudothekGames(games, { ...filters, zustand: "frei" });
 }
 
 export type GuestCopyAvailability =

@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Input } from "@/components/ui/input";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
 import type {
@@ -120,7 +120,7 @@ export function BorrowedGamesByMeepleView({
                    * Öffnen selbst das große Bild (mit `hideWithoutPicture`,
                    * kein leerer Initialen-Kreis ohne Bild). */}
                   {meeple.meepleId ? (
-                    <ContactDialog
+                    <MeepleContactDialog
                       name={meeple.memberName}
                       meepleId={meeple.meepleId}
                       className="font-medium"

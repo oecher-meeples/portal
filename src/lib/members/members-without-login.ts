@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { memberFullName } from "@/lib/members/member-display-name";
 
 export type MemberWithoutLoginRow = {
   id: string;
@@ -49,9 +50,7 @@ export async function listMembersWithoutLogin(): Promise<
     .map((member) => ({
       id: member.id,
       memberNumber: member.memberNumber,
-      displayName:
-        [member.firstName, member.lastName].filter(Boolean).join(" ") ||
-        member.email!,
+      displayName: memberFullName(member) || member.email!,
       email: member.email!,
     }));
 }

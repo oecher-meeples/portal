@@ -2,7 +2,7 @@
 
 import { ActionButton } from "@/components/ui/action-button";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 import {
   ausleiheIssuePrivateLoan,
   ausleiheReturnPrivateLoan,
@@ -42,7 +42,7 @@ export function PrivateLoansPanel({ loans }: { loans: OfferedPrivateLoan[] }) {
                   viewer={{ kind: "meeple" }}
                   size="md"
                 />
-                <ContactDialog
+                <MeepleContactDialog
                   name={loan.owner.displayName}
                   meepleId={loan.owner.id}
                 />

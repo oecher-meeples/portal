@@ -110,6 +110,18 @@ unprivilegierter User `node` und bringt einen `HEALTHCHECK` gegen
 nötigen Auth-Werte sind Platzhalter, die zur Laufzeit durch die echten aus der
 Container-Umgebung ersetzt werden.
 
+**Bild-Optimierung (#521):** Cover laufen über den Image-Optimizer von
+Next.js (`/_next/image`), der BGG-Cover und Uploads in Kartengröße statt in
+voller Auflösung ausliefert. Welche Hosts er verarbeiten darf, wird **beim
+Build** festgelegt (`src/lib/utils/image-hosts.ts`): BoardGameGeek immer,
+der Datei-Speicher nur, wenn `S3_PUBLIC_ENDPOINT` beim Bauen gesetzt ist —
+Compose reicht den Wert aus `.env` als Build-Argument durch. Ändert sich
+`S3_PUBLIC_ENDPOINT`, muss das Image neu gebaut werden; ohne Wert (oder bei
+einer lokalen/privaten Adresse) werden Uploads unoptimiert ausgeliefert,
+funktionieren aber weiter. Die optimierten Varianten liegen im Volume
+`app-image-cache` (`/app/.next/cache/images`), damit sie einen Neustart
+überleben; Löschen des Volumes ist gefahrlos (sie entstehen neu).
+
 **Build auf einem anderen Rechner:** `docker build -t meeples-app .` baut
 dasselbe App-Image ohne Compose. Um es auf dem Server zu nutzen, per Registry
 oder `docker save | ssh … docker load` übertragen und in einer
@@ -894,6 +906,11 @@ Browser aufgerufen wird (Schema, Host, ohne `/` am Ende). Weitere Origins in
   (fehlendes Hairpin-NAT). Abhilfe z. B. über einen DNS-Eintrag im lokalen
   Resolver bzw. `extra_hosts` in einer `docker-compose.override.yml`, der den
   Datei-Host auf die interne Proxy-Adresse auflöst.
+- Hochgeladene Cover fehlen, BGG-Cover gehen → der Image-Optimizer erreicht
+  `S3_PUBLIC_ENDPOINT` nicht (gleiches Hairpin-Problem). Achtung: löst der
+  Datei-Host per `extra_hosts` auf eine **private** IP auf, weist der
+  Optimizer ihn ab (Schutz vor SSRF). Dann `S3_PUBLIC_ENDPOINT` beim Build
+  leer lassen — Uploads gehen dann unoptimiert, direkt vom Datei-Speicher.
 
 ### Mails kommen nicht an
 

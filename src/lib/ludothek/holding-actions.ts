@@ -1,8 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  findActionActor,
+  requireActionPermission,
+} from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireMeeplePermission } from "@/lib/members/meeples";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { getMembershipState } from "@/lib/members/membership-state";
 import {
@@ -17,7 +20,6 @@ import {
   returnGame,
   type ResolvedScan,
 } from "@/lib/ludothek/holdings";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 import {
   assertCanReceive,
@@ -29,7 +31,7 @@ import {
 import { toResult } from "@/lib/utils/action-result";
 
 export async function scanResolveCode(raw: string): Promise<ResolvedScan> {
-  await requireMeeplePermission("ludothek:borrow");
+  await requireActionPermission("ludothek:borrow", { settlement: true });
   try {
     return await resolveScannedCode(raw);
   } catch {
@@ -193,7 +195,7 @@ export async function scanConfirmHolding(holdingId: string) {
  * bestehenden Bestätigen-Button für die empfangende Person selbst) nutzen
  * dieselbe Action. */
 export async function confirmHoldingForGamesManager(holdingId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
 
   return toResultAndRevalidate(() => confirmHoldingAsGamesManager(holdingId));

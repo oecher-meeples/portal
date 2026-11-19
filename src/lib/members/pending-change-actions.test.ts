@@ -6,9 +6,6 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const approvePendingChangeRecordMock = vi.fn();
 const rejectPendingChangeRecordMock = vi.fn();
@@ -21,6 +18,11 @@ vi.mock("@/lib/members/pending-changes", () => ({
   hasOpenInviteForMemberEmail: (...args: unknown[]) =>
     hasOpenInviteForMemberEmailMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   approvePendingChange,

@@ -1,9 +1,9 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DonationAmountPicker } from "@/components/feature/spenden/donation-amount-picker";
 import { PageContainer } from "@/components/ui/page-container";
+import { Field } from "@/components/ui/field";
 import { CONTRIBUTION_CATEGORY_LABELS } from "@/lib/members/contribution";
 
 const PAYPAL_DONATION_URL = "https://paypal.me/oechermeeples";
@@ -21,10 +21,9 @@ export function SpendenMockView() {
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
           <h2 className="font-serif text-lg font-bold">Einmalig spenden</h2>
           <DonationAmountPicker />
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="donor-name">Name (optional)</Label>
+          <Field label="Name (optional)" htmlFor="donor-name">
             <Input id="donor-name" placeholder="Für die Spendenquittung" />
-          </div>
+          </Field>
           <Button
             size="lg"
             render={

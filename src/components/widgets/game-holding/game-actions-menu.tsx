@@ -132,7 +132,7 @@ export function GameActionsMenu({
   boardGameTitle: string;
   canManageGames: boolean;
 }) {
-  const { run, pending } = useAction();
+  const { run, pending } = useAction({ refresh: true });
   const [pendingPick, setPendingPick] = useState<ActionKey | null>(null);
   const [chosen, setChosen] = useState<{
     action: ActionKey;

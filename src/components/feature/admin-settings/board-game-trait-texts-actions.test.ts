@@ -4,15 +4,17 @@ import { BoardGameTrait, BoardGameTraitTone } from "@prisma/client";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const updateBoardGameTraitTextRecordMock = vi.fn();
 vi.mock("@/lib/ludothek/board-game-trait-texts", () => ({
   updateBoardGameTraitText: (...args: unknown[]) =>
     updateBoardGameTraitTextRecordMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { updateBoardGameTraitText } =
   await import("./board-game-trait-texts-actions");

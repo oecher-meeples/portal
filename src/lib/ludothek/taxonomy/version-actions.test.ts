@@ -4,13 +4,15 @@ import type { BggVersion } from "@/lib/bgg/client";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 const requireGamesManagePermissionMock = vi.fn();
-vi.mock("@/lib/ludothek/permissions", () => ({
-  requireGamesManagePermission: () => requireGamesManagePermissionMock(),
-}));
 const fetchBggGameMock = vi.fn();
 vi.mock("@/lib/bgg/client", () => ({
   fetchBggGame: (...args: unknown[]) => fetchBggGameMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireGamesManagePermissionMock(...args),
+  ),
+);
 
 const { getUnsavedBggVersions } = await import("./version-actions");
 

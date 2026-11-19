@@ -14,7 +14,11 @@
 # `${VAR:-x}` = optional, x is the default.
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Image-Optimizer-Allowlist wird beim Build festgelegt (#521).
+        S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-}
     restart: unless-stopped
     depends_on:
       # Entrypoint runs `prisma migrate deploy` + seed on every start — wait
@@ -72,6 +76,9 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       TRANSLATION_CONTACT_EMAIL: ${TRANSLATION_CONTACT_EMAIL:-}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+    volumes:
+      # Optimierte Cover (next/image, #521) — überlebt Container-Neustarts.
+      - app-image-cache:/app/.next/cache/images
     ports:
       # Localhost only: a reverse proxy (own or the caddy profile) is what
       # faces the internet.
@@ -225,6 +232,7 @@ services:
       - caddy-config:/config
 
 volumes:
+  app-image-cache:
   postgres-data:
   seaweedfs-data:
   caddy-data:

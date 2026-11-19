@@ -15,9 +15,13 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return {
     ...actual,
-    requireMeeplePermission: requireMeeplePermissionMock,
   };
 });
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireMeeplePermissionMock(...args),
+  ),
+);
 
 const { updateLfgLocation, useOwnAddressAsLfgLocation } =
   await import("./actions");

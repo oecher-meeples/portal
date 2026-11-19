@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 // Split out of board-games-bulk-import.test.ts (#289) — the
 // Inventarnummer-Trennzeichen coverage pushed the original file past the
@@ -16,6 +16,9 @@ vi.mock("@/lib/utils/sleep", () => ({
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const searchBggGamesExactMock = vi.fn();
 vi.mock("@/lib/bgg/client", async () => {
@@ -71,7 +74,7 @@ const VALID_BGG_DATA = {
 
 function beforeEachSetup() {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
   getSuggestedInventoryNumberMock.mockResolvedValue("1");
 }

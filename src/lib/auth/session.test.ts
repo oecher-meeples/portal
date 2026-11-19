@@ -343,9 +343,9 @@ describe("getSessionTier", () => {
 describe("hasPermissionInCurrentView", () => {
   it("defers to the real permission for a non-admin (e.g. a moderator), preview cookie or not", async () => {
     previewCookie = undefined;
-    mockPermissions({ "admin:access": false, "posts:write": true });
+    mockPermissions({ "admin:access": false, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       true,
     );
   });
@@ -353,39 +353,45 @@ describe("hasPermissionInCurrentView", () => {
   it("hides an admin's permission while previewing a non-admin tier, even with the real permission", async () => {
     previewCookie = "gast";
     hasPermissionMock.mockClear();
-    mockPermissions({ "admin:access": true, "posts:write": true });
+    mockPermissions({ "admin:access": true, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       false,
     );
-    expect(hasPermissionMock).not.toHaveBeenCalledWith("user-1", "posts:write");
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(
+      "user-1",
+      "posts:public",
+    );
   });
 
   it("hides an admin's permission by default (no preview cookie) — mitglied is the default view (#126)", async () => {
     previewCookie = undefined;
     hasPermissionMock.mockClear();
-    mockPermissions({ "admin:access": true, "posts:write": true });
+    mockPermissions({ "admin:access": true, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       false,
     );
-    expect(hasPermissionMock).not.toHaveBeenCalledWith("user-1", "posts:write");
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(
+      "user-1",
+      "posts:public",
+    );
   });
 
   it("shows an admin's permission once they explicitly preview back to admin", async () => {
     previewCookie = "admin";
-    mockPermissions({ "admin:access": true, "posts:write": true });
+    mockPermissions({ "admin:access": true, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       true,
     );
   });
 
   it("stays false without the real permission, preview or not", async () => {
     previewCookie = undefined;
-    mockPermissions({ "admin:access": false, "posts:write": false });
+    mockPermissions({ "admin:access": false, "posts:public": false });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       false,
     );
   });

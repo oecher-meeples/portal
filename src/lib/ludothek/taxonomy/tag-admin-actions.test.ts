@@ -5,9 +5,11 @@ const requireGamesManagePermissionMock = vi.fn(async () => ({ id: "user-1" }));
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/ludothek/permissions", () => ({
-  requireGamesManagePermission: () => requireGamesManagePermissionMock(),
-}));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom(() =>
+    requireGamesManagePermissionMock(),
+  ),
+);
 
 const { updateTagDisplayName } = await import("./tag-admin-actions");
 

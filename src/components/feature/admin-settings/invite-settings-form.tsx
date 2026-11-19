@@ -10,7 +10,7 @@ import { updateDefaultInviteDays } from "@/components/feature/admin-settings/act
 
 export function InviteSettingsForm({ defaultDays }: { defaultDays: number }) {
   const [days, setDays] = useState(defaultDays);
-  const { run, pending, error } = useAction();
+  const { run, pending, error } = useAction({ refresh: true });
 
   return (
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">

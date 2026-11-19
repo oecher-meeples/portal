@@ -3,9 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const listTshirtSizesMock = vi.fn();
 const createTshirtSizeRecordMock = vi.fn();
@@ -20,6 +17,11 @@ vi.mock("@/lib/members/tshirt-sizes", () => ({
     reorderTshirtSizesRecordMock(...args),
   deleteTshirtSize: (...args: unknown[]) => deleteTshirtSizeRecordMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   loadTshirtSizes,

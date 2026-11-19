@@ -16,7 +16,7 @@ import { useAction, type ActionResult } from "@/components/ui/use-action";
 /**
  * The dialog skeleton every mutating dialog in this app shares: open state,
  * reset-on-close, an error slot, and a footer submit button that closes the
- * dialog and refreshes the route on success.
+ * dialog on success (route refresh only with `refresh`, see `useAction`).
  *
  * Callers supply only the trigger, the copy and the body fields.
  */
@@ -36,6 +36,7 @@ export function ActionDialog({
   action,
   onReset,
   onOpen,
+  refresh,
 }: {
   /** Complete trigger element, including its label. Omit for a fully
    * controlled dialog (see `open`/`onOpenChange`) — e.g. one opened
@@ -62,11 +63,14 @@ export function ActionDialog({
   onReset?: () => void;
   /** Load data the dialog needs when it opens. */
   onOpen?: () => void | Promise<void>;
+  /** See `useAction` — only for actions that don't revalidate this path. */
+  refresh?: boolean;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const { run, pending, error, setError } = useAction({
+    refresh,
     onSuccess: () => {
       setOpen(false);
       onReset?.();

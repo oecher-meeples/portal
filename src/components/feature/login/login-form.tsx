@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/ui/field";
 import { authClient } from "@/lib/auth/client";
 import { translateAuthError } from "@/lib/auth/password";
 import {
@@ -84,8 +84,7 @@ export function LoginForm() {
         onSubmit={handleSubmit}
         className="bg-card flex flex-col gap-4 rounded-lg border p-6"
       >
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">E-Mail</Label>
+        <Field label="E-Mail" htmlFor="email">
           <Input
             id="email"
             type="email"
@@ -94,9 +93,8 @@ export function LoginForm() {
             onChange={(event) => setEmail(event.target.value)}
             required
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Passwort</Label>
+        </Field>
+        <Field label="Passwort" htmlFor="password">
           <Input
             id="password"
             type="password"
@@ -105,7 +103,7 @@ export function LoginForm() {
             onChange={(event) => setPassword(event.target.value)}
             required
           />
-        </div>
+        </Field>
         {error && <p className="text-destructive text-sm">{error}</p>}
         {cooldownSeconds > 0 && (
           <p className="text-muted-foreground text-sm">

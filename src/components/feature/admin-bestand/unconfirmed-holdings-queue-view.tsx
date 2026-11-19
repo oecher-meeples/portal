@@ -49,6 +49,7 @@ export function UnconfirmedHoldingsQueueView({
                 </span>
               </span>
               <ActionButton
+                refresh
                 size="sm"
                 action={confirmHoldingForGamesManager.bind(null, row.id)}
               >

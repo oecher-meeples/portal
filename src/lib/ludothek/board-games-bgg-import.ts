@@ -1,5 +1,6 @@
 "use server";
 
+import { findActionActor } from "@/lib/auth/action-guards";
 import {
   BggApiError,
   BggNotFoundError,
@@ -11,11 +12,10 @@ import {
 import { translateToGerman } from "@/lib/bgg/translate";
 import { resolveBggTagLabels } from "@/lib/ludothek/taxonomy/tags";
 import { prisma } from "@/lib/utils/prisma";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { searchYoutubeVideos } from "@/lib/youtube/client";
 
 export async function searchBggGamesAction(query: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
@@ -84,7 +84,7 @@ export async function translateBggGameData(
  * manuell mit englischem Text angelegt wurde.
  */
 export async function translateDescription(text: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
@@ -129,7 +129,7 @@ export type ExplainerVideoSource = "bgg-german" | "youtube" | "bgg-fallback";
  * nichts wird automatisch übernommen.
  */
 export async function fetchExplainerVideoOptions(bggId: number) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
@@ -181,7 +181,7 @@ export async function fetchExplainerVideoOptions(bggId: number) {
 }
 
 export async function previewBggImport(bggId: number) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }

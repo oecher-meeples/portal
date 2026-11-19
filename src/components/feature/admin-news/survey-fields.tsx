@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Field } from "@/components/ui/field";
 
 /** Umfrage-spezifische Felder von `post-form.tsx`, nur bei `type: "umfrage"`
  * gerendert (#2) — ausgelagert, damit `post-form.tsx` unter dem
@@ -22,17 +26,15 @@ export function SurveyFields({
 }) {
   return (
     <div className="grid gap-4 rounded-md border p-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="surveyDeadline">Deadline</Label>
+      <Field label="Deadline" htmlFor="surveyDeadline">
         <Input
           id="surveyDeadline"
           type="date"
           value={deadline}
           onChange={(event) => onDeadlineChange(event.target.value)}
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="surveyEditLink">Bearbeiten-/Auswertungslink</Label>
+      </Field>
+      <Field label="Bearbeiten-/Auswertungslink" htmlFor="surveyEditLink">
         <span className="text-muted-foreground text-xs">
           Pflichtfeld bei Veröffentlichung, im Entwurf optional
         </span>
@@ -42,7 +44,7 @@ export function SurveyFields({
           value={editLink}
           onChange={(event) => onEditLinkChange(event.target.value)}
         />
-      </div>
+      </Field>
       <div className="flex flex-col gap-1.5 sm:col-span-2">
         <Label htmlFor="surveyAnalysisLink">
           Auswertungslink (falls abweichend)
@@ -60,4 +62,34 @@ export function SurveyFields({
       </p>
     </div>
   );
+}
+
+/** Umfrage-Zustand des Formulars (#524) — liefert die Props für
+ * `SurveyFields` und den Teil des `PostInput`, der nur bei `umfrage` zählt. */
+export function usePostSurvey(initial: {
+  surveyDeadline?: string;
+  surveyEditLink?: string;
+  surveyAnalysisLink?: string;
+}) {
+  const [deadline, setDeadline] = useState(initial.surveyDeadline ?? "");
+  const [editLink, setEditLink] = useState(initial.surveyEditLink ?? "");
+  const [analysisLink, setAnalysisLink] = useState(
+    initial.surveyAnalysisLink ?? "",
+  );
+
+  return {
+    fieldProps: {
+      deadline,
+      onDeadlineChange: setDeadline,
+      editLink,
+      onEditLinkChange: setEditLink,
+      analysisLink,
+      onAnalysisLinkChange: setAnalysisLink,
+    },
+    input: {
+      surveyDeadline: deadline || undefined,
+      surveyEditLink: editLink || undefined,
+      surveyAnalysisLink: analysisLink || undefined,
+    },
+  };
 }

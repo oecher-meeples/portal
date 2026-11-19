@@ -1,50 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useAction } from "@/components/ui/use-action";
 import { ContributorRolePill } from "@/components/entities/contributor-role-pill";
 import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
 import {
   deleteContributor,
-  mergeContributors,
   renameContributor,
 } from "@/lib/ludothek/taxonomy/contributor-admin-actions";
 
-type ActionResult = { success?: true; error?: string };
-
+/**
+ * Eine Mitwirkenden-Zeile. Das Zusammenführen-Ziel wählt die Zeile nicht
+ * selbst (#520: sonst N×N `<option>`-Knoten) — `onMerge` öffnet den einen
+ * geteilten Dialog der Übersicht.
+ */
 export function ContributorAdminRow({
   row,
-  allRows,
+  onMerge,
 }: {
   row: AdminContributorRow;
-  allRows: AdminContributorRow[];
+  onMerge: () => void;
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(row.name);
-  const [mergeTargetId, setMergeTargetId] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const mergeCandidates = allRows.filter((other) => other.id !== row.id);
-
-  async function run(action: () => Promise<ActionResult>) {
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await action();
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    } finally {
-      setBusy(false);
-    }
-  }
+  const { run, pending, error } = useAction();
 
   return (
     <li>
@@ -77,21 +59,23 @@ export function ContributorAdminRow({
               <>
                 <Button
                   size="sm"
-                  disabled={busy}
-                  onClick={() =>
-                    run(async () => {
-                      const result = await renameContributor(row.id, nameDraft);
-                      if (result.success) setEditing(false);
-                      return result;
-                    })
-                  }
+                  disabled={pending}
+                  onClick={async () => {
+                    const saved = await run(() =>
+                      renameContributor(row.id, nameDraft),
+                    );
+                    if (saved) setEditing(false);
+                  }}
                 >
                   Speichern
                 </Button>
                 <Button
                   size="sm"
-                  variant="ghost"
-                  onClick={() => setEditing(false)}
+                  variant="outline"
+                  onClick={() => {
+                    setNameDraft(row.name);
+                    setEditing(false);
+                  }}
                 >
                   Abbrechen
                 </Button>
@@ -106,34 +90,19 @@ export function ContributorAdminRow({
               </Button>
             )}
 
-            <select
-              aria-label="Zusammenführen mit"
-              value={mergeTargetId}
-              onChange={(event) => setMergeTargetId(event.target.value)}
-              className="border-input bg-background h-7 max-w-[220px] rounded-lg border px-2 text-xs"
-            >
-              <option value="">Zusammenführen mit …</option>
-              {mergeCandidates.map((other) => (
-                <option key={other.id} value={other.id}>
-                  {other.name}
-                </option>
-              ))}
-            </select>
             <Button
               size="sm"
               variant="outline"
-              disabled={busy || !mergeTargetId}
-              onClick={() =>
-                run(() => mergeContributors(row.id, mergeTargetId))
-              }
+              disabled={pending}
+              onClick={onMerge}
             >
-              Zusammenführen
+              Zusammenführen …
             </Button>
 
             <Button
               size="sm"
               variant="destructive"
-              disabled={busy || row.titleCount > 0}
+              disabled={pending || row.titleCount > 0}
               title={
                 row.titleCount > 0 ? "Noch mit Titeln verknüpft" : undefined
               }

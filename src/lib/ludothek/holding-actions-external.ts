@@ -1,5 +1,6 @@
 "use server";
 
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { memberDisplayName } from "@/lib/members/member-display-name";
@@ -13,7 +14,6 @@ import {
   ANONYMER_MEEPLE_NAME,
   findAnonymerMeepleMember,
 } from "@/lib/ludothek/anonymer-meeple";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { getMembershipState } from "@/lib/members/membership-state";
 import {
   requireActingMeeple,
@@ -59,7 +59,7 @@ export async function scanLendToExternalMember(
   gameCopyId: string,
   toMemberId: string,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
   const actor = await ensureMeeple(user);
 
@@ -81,7 +81,7 @@ export async function scanRebookToMember(
   gameCopyId: string,
   toMemberId: string,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return { error: "Keine Berechtigung." };
   const actor = await ensureMeeple(user);
 
@@ -122,7 +122,7 @@ export type MemberOption = { id: string; displayName: string };
  * davon unberührt, es tritt nie aus.
  */
 export async function scanListMembers(): Promise<MemberOption[]> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return [];
 
   const members = await prisma.member.findMany({

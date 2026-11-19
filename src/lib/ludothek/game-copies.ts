@@ -7,10 +7,10 @@ import {
   type Prisma,
   type PrismaClient,
 } from "@prisma/client";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { ensureUnsortiertUnit } from "@/lib/ludothek/holdings";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { toSparePartListingData } from "@/lib/inventory/spare-part-listings";
 import { uniqueSlug } from "@/lib/utils/slug";
 import {
@@ -128,7 +128,7 @@ export async function createGameCopy(
   boardGameId: string,
   input: GameCopyInput = {},
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -178,7 +178,7 @@ export async function createGameCopy(
 }
 
 export async function updateGameCopy(id: string, input: GameCopyInput) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -238,7 +238,7 @@ export async function deinventoriseGameCopy(
   reason: string,
   addToSpareParts = false,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -283,7 +283,7 @@ export async function deinventoriseGameCopy(
 }
 
 export async function requestCompletenessCheck(id: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }

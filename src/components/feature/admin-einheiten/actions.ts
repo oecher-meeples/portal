@@ -2,13 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import type { ShelfCategory } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
 import { hasPermission } from "@/lib/auth/permissions";
-import { getCurrentUser } from "@/lib/auth/server";
 import {
-  requireGamesManage,
   createStorageUnit as libCreateStorageUnit,
   findStorageUnitByCode as libFindStorageUnitByCode,
   setUnitParent as libSetUnitParent,
@@ -40,7 +38,7 @@ export async function updateStorageUnit(
   id: string,
   input: UpdateStorageUnitInput,
 ) {
-  await requireGamesManage();
+  await requireActionPermission("games:manage");
 
   const label = input.label.trim();
   if (!label) {
@@ -61,7 +59,7 @@ export async function updateStorageUnit(
 }
 
 export async function retireStorageUnit(id: string) {
-  await requireGamesManage();
+  await requireActionPermission("games:manage");
 
   const [openHoldings, childUnits] = await Promise.all([
     prisma.gameHolding.count({ where: { unitId: id, endedAt: null } }),
@@ -92,11 +90,10 @@ export async function assignStorageUnitKeeper(
   unitId: string,
   keeperMeepleId: string | null,
 ) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { error: "Bitte anmelden." };
-  }
-  const actingMeeple = await ensureMeeple(user);
+  // Verwahren heißt Annehmen — dasselbe Recht wie Ausleihen, und wie dort
+  // ohne `settlement`: Ausgetretene übernehmen nichts mehr (#522).
+  const { user, meeple: actingMeeple } =
+    await requireActionPermission("ludothek:borrow");
   const isAdmin = await hasPermission(user.id, "games:manage");
 
   if (!isAdmin && keeperMeepleId !== actingMeeple.id) {

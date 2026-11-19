@@ -12,17 +12,23 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return {
     ...actual,
-    requireMeeplePermission: requireMeeplePermissionMock,
     getMembershipState: getMembershipStateMock,
   };
 });
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/action-guards", async () => {
+  const guards = await import("@/lib/__mocks__/action-guards");
+  return guards.actionGuardsFrom(
+    guards.holdingActorResolver({
+      actingMeeple: (...args) => requireMeeplePermissionMock(...args),
+      gamesManager: () => requireGamesManagePermissionMock(),
+      findMember: (args) => memberFindUniqueMock(args),
+      membershipState: () => getMembershipStateMock(),
+    }),
+  );
+});
 
 const requireGamesManagePermissionMock = vi.fn();
-vi.mock("@/lib/ludothek/permissions", () => ({
-  requireGamesManagePermission: (...args: unknown[]) =>
-    requireGamesManagePermissionMock(...args),
-}));
 
 const gameCopyFindUniqueMock = vi.fn();
 const gameHoldingFindFirstMock = vi.fn();

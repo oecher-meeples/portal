@@ -27,6 +27,9 @@ const extractPdfTextMock = vi.fn();
 vi.mock("@/lib/legal/pdf-extract", () => ({
   extractPdfText: (...args: unknown[]) => extractPdfTextMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const { getLegalUploadToken, extractLegalPdfText, saveLegalDocument } =
   await import("./actions");

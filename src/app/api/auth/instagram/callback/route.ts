@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { encryptSecret } from "@/lib/utils/crypto";
 import {
@@ -13,8 +12,8 @@ import { clearStateCookie, verifyState } from "@/lib/instagram/oauth-state";
 const DEFAULT_EXPIRES_IN_SECONDS = 60 * 24 * 60 * 60;
 
 export async function GET(request: Request) {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "instagram:connect"))) {
+  const user = (await findActionActor("instagram:connect"))?.user;
+  if (!user) {
     return NextResponse.json({ error: "Keine Berechtigung." }, { status: 403 });
   }
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { sleep } from "@/lib/utils/sleep";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
@@ -20,7 +21,6 @@ import {
   createBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
 import { getSuggestedInventoryNumber } from "@/lib/ludothek/game-copies";
 
@@ -239,7 +239,7 @@ export async function resolveBulkImportCandidate(
   bggId: number,
   inventoryNumber?: string,
 ): Promise<BulkImportRow> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { name: entry, status: "failed", error: "Keine Berechtigung." };
   }
@@ -259,7 +259,7 @@ export async function bulkImportBoardGames(
   names: string[],
   delimiter?: BulkImportDelimiter,
 ): Promise<{ success: true; results: BulkImportRow[] } | { error: string }> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -297,7 +297,7 @@ export type BulkImportCandidateDetails = {
 export async function fetchBulkImportCandidateDetails(
   bggIds: number[],
 ): Promise<Record<number, BulkImportCandidateDetails>> {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) return {};
 
   const details: Record<number, BulkImportCandidateDetails> = {};
