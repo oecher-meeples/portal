@@ -4,6 +4,8 @@
  * Exemplare, Dateiname. Die eigentliche PNG-/ZIP-Erzeugung braucht
  * Canvas/Blob (Browser-APIs) und lebt in `qr-export-actions.ts` (Client). */
 
+import { formatShortIdSlug } from "@/lib/short-id/short-id";
+
 export type QrExportableCopy = {
   id: string;
   title: string;
@@ -21,14 +23,15 @@ export function selectQrExportableCopies<T extends QrExportableCopy>(
   );
 }
 
-/** Ziel-URL des QR-Codes — die neue Exemplar-Route (#271), nicht die
- * Titel-Route, damit bei mehreren Exemplaren desselben Spiels jedes seinen
- * eigenen Code bekommt. */
+/** Ziel-URL des QR-Codes — exemplar-, nicht titelbezogen (#271), damit bei
+ * mehreren Exemplaren desselben Spiels jedes seinen eigenen Code bekommt.
+ * Zeigt auf den Short-ID-Router `/id/inv-<n>` (#545); die Umstellung auf die
+ * feste Short-Domain folgt in #546. */
 export function buildExemplarUrl(
   origin: string,
   inventoryNumber: number,
 ): string {
-  return `${origin}/ludothek/exemplar/${inventoryNumber}`;
+  return `${origin}/id/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
 }
 
 /** Dateiname innerhalb der ZIP — Inventarnummer zuerst, damit Dateien in der

@@ -21,9 +21,9 @@ describe("selectQrExportableCopies (#271)", () => {
 });
 
 describe("buildExemplarUrl (#271)", () => {
-  it("builds the exemplar-level target route", () => {
+  it("targets the short-id router (#545)", () => {
     expect(buildExemplarUrl("https://portal.example", 1)).toBe(
-      "https://portal.example/ludothek/exemplar/1",
+      "https://portal.example/id/inv-1",
     );
   });
 });
