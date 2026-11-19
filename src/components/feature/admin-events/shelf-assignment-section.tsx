@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   assignShelfToEvent,
   unassignShelfFromEvent,
@@ -83,17 +84,18 @@ export function ShelfAssignmentSection({
 
       {availableShelves.length > 0 && (
         <div className="flex items-center gap-2">
-          <select
+          <NativeSelect
             value={selectedUnitId}
             onChange={(event) => setSelectedUnitId(event.target.value)}
-            className="border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm"
+            size="md"
+            className="flex-1"
           >
             {availableShelves.map((shelf) => (
               <option key={shelf.id} value={shelf.id}>
                 {shelf.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <Button size="sm" disabled={isPending} onClick={handleAssign}>
             Zuordnen
           </Button>

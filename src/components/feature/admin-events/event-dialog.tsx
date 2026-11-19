@@ -10,6 +10,7 @@ import { Field, TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Switch } from "@/components/ui/switch";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   createEvent,
   updateEvent,
@@ -120,9 +121,10 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
         required
       />
       <Field label="Sichtbarkeit" htmlFor="event-visibility">
-        <select
+        <NativeSelect
           id="event-visibility"
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          size="md"
+          className="w-full"
           value={visibility}
           onChange={(fieldEvent) =>
             setVisibility(fieldEvent.target.value as EventVisibility)
@@ -133,7 +135,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
               {label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
       {isEdit && (
         <>

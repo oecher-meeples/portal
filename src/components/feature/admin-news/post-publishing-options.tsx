@@ -1,6 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import type { NewsletterCategory } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAction } from "@/components/ui/use-action";
+import { retryInstagramPost } from "@/components/feature/admin-news/actions";
 import {
   NEWSLETTER_CATEGORIES,
   NEWSLETTER_CATEGORY_LABELS,
@@ -142,4 +147,26 @@ export function PostPublishingOptions({
       )}
     </div>
   );
+}
+
+/** Instagram-Status + „Erneut versuchen" (#524) — eigener `useAction`, der
+ * neue Status kommt aus dem Action-Ergebnis. */
+export function usePostInstagram(
+  postId: string | undefined,
+  initialStatus: string | null | undefined,
+) {
+  const [status, setStatus] = useState(initialStatus);
+  const { run, pending, error } = useAction();
+
+  async function retry() {
+    if (!postId) return;
+    await run(async () => {
+      const result = await retryInstagramPost(postId);
+      if ("error" in result) return result;
+      setStatus(result.posted ? "POSTED" : "PENDING");
+      return result;
+    });
+  }
+
+  return { status, isRetrying: pending, error, retry };
 }

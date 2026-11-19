@@ -4,8 +4,7 @@ import { useState, type ReactElement } from "react";
 import { Plus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextAreaField, TextField } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
+import { TextAreaField, TextField, Field } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   combineValidators,
@@ -126,10 +125,10 @@ export function CreateLfgDialog({
           placeholder="z. B. Arche Nova"
         />
         {boardGameOptions.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="lfg-board-game">
-              Aus dem Bestand wählen (optional)
-            </Label>
+          <Field
+            label="Aus dem Bestand wählen (optional)"
+            htmlFor="lfg-board-game"
+          >
             <Combobox
               items={boardGameOptions.map((option) => option.title)}
               value={
@@ -156,7 +155,7 @@ export function CreateLfgDialog({
                 </ComboboxList>
               </ComboboxPopup>
             </Combobox>
-          </div>
+          </Field>
         )}
         <TextField
           id="lfg-title"

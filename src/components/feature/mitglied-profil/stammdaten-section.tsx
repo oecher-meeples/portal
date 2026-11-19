@@ -7,6 +7,7 @@ import { TextField } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { birthDateValidator } from "@/components/ui/constraints";
 import { useAction } from "@/components/ui/use-action";
+import { NativeSelect } from "@/components/ui/native-select";
 import { formatDatePlain } from "@/lib/utils/format";
 import { ageInYears } from "@/lib/members/contribution";
 import { STAMMDATEN_FIELD_LABELS } from "@/lib/members/stammdaten-labels";
@@ -149,7 +150,7 @@ export function StammdatenSection({
                   >
                     {STAMMDATEN_FIELD_LABELS.tshirtSizeId}
                   </label>
-                  <select
+                  <NativeSelect
                     id="stammdaten-tshirtSizeId"
                     value={form.tshirtSizeId ?? ""}
                     onChange={(event) =>
@@ -158,7 +159,7 @@ export function StammdatenSection({
                         tshirtSizeId: event.target.value || null,
                       }))
                     }
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                    size="md"
                   >
                     <option value="">— keine Angabe —</option>
                     {tshirtSizeOptions.map((option) => (
@@ -166,7 +167,7 @@ export function StammdatenSection({
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </div>
               ) : key === "birthDate" || key === "joinedAt" ? (
                 <DatePicker

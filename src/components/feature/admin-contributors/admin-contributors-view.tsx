@@ -6,10 +6,10 @@ import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { IdCombobox } from "@/components/ui/id-combobox";
+import { Field } from "@/components/ui/field";
 import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
 import { ContributorAdminRow } from "@/components/feature/admin-contributors/contributor-admin-row";
 import { CONTRIBUTOR_ROLE_LABELS } from "@/lib/ludothek/taxonomy/contributor-labels";
@@ -81,17 +81,15 @@ export function AdminContributorsView({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_200px_200px]">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="contributor-search">Suche</Label>
+        <Field label="Suche" htmlFor="contributor-search">
           <Input
             id="contributor-search"
             value={search}
             placeholder="Name eingeben"
             onChange={(event) => setSearch(event.target.value)}
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="contributor-role">Rolle</Label>
+        </Field>
+        <Field label="Rolle" htmlFor="contributor-role">
           <NativeSelect
             id="contributor-role"
             value={roleFilter}
@@ -107,9 +105,8 @@ export function AdminContributorsView({
               </option>
             ))}
           </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="contributor-sort">Sortierung</Label>
+        </Field>
+        <Field label="Sortierung" htmlFor="contributor-sort">
           <NativeSelect
             id="contributor-sort"
             value={sort}
@@ -121,7 +118,7 @@ export function AdminContributorsView({
               </option>
             ))}
           </NativeSelect>
-        </div>
+        </Field>
       </div>
 
       <p className="text-muted-foreground text-sm">

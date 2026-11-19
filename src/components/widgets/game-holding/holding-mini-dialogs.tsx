@@ -5,6 +5,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button, type buttonVariants } from "@/components/ui/button";
 import type { VariantProps } from "class-variance-authority";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import { NativeSelect } from "@/components/ui/native-select";
 import { parseScannedCode } from "@/lib/inventory/codes";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -88,10 +89,11 @@ function TargetPicker({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <select
+      <NativeSelect
         value={selected}
         onChange={(event) => onSelect(event.target.value, false)}
-        className="border-input bg-background h-9 flex-1 rounded-md border px-3 text-sm"
+        size="md"
+        className="flex-1"
       >
         <option value="">— Ziel wählen —</option>
         {targets.map((target) => (
@@ -99,7 +101,7 @@ function TargetPicker({
             {target.label}
           </option>
         ))}
-      </select>
+      </NativeSelect>
       <ScanSearchDialog
         onScanned={(text) => {
           const parsed = parseScannedCode(text);

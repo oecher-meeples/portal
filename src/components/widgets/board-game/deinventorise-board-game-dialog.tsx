@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Field } from "@/components/ui/field";
 import { deinventoriseGameCopy } from "@/lib/ludothek/game-copies";
 
 export function DeinventoriseBoardGameDialog({
@@ -43,8 +43,7 @@ export function DeinventoriseBoardGameDialog({
         setAddToSpareParts(false);
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="deinventorise-reason">Grund</Label>
+      <Field label="Grund" htmlFor="deinventorise-reason">
         <Textarea
           id="deinventorise-reason"
           rows={3}
@@ -52,7 +51,7 @@ export function DeinventoriseBoardGameDialog({
           onChange={(event) => setReason(event.target.value)}
           required
         />
-      </div>
+      </Field>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

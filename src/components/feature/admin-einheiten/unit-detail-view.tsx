@@ -10,7 +10,6 @@ import {
 import { useAction } from "@/components/ui/use-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -28,6 +27,8 @@ import {
   type KeeperOption,
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
 import { PageContainer } from "@/components/ui/page-container";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Field } from "@/components/ui/field";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 import type { ProfilePictureVisibility } from "@prisma/client";
@@ -114,17 +115,15 @@ export function UnitDetailView({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-label">Label</Label>
+          <Field label="Label" htmlFor="unit-label">
             <Input
               id="unit-label"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
               disabled={unit.retired || !isAdmin}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-location">Ortsangabe</Label>
+          </Field>
+          <Field label="Ortsangabe" htmlFor="unit-location">
             <Input
               id="unit-location"
               value={locationNote}
@@ -132,17 +131,16 @@ export function UnitDetailView({
               placeholder="z. B. Keller links"
               disabled={unit.retired || !isAdmin}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-category">Regal-Kategorie</Label>
-            <select
+          </Field>
+          <Field label="Regal-Kategorie" htmlFor="unit-category">
+            <NativeSelect
               id="unit-category"
               value={category}
               onChange={(event) =>
                 setCategory(event.target.value as ShelfCategory | "")
               }
               disabled={unit.retired || !isAdmin}
-              className="border-input bg-background h-8 rounded-md border px-2 text-sm disabled:opacity-60"
+              size="compact"
             >
               <option value="">Keine</option>
               {SHELF_CATEGORY_VALUES.map((value) => (
@@ -150,8 +148,8 @@ export function UnitDetailView({
                   {SHELF_CATEGORY_LABELS[value]}
                 </option>
               ))}
-            </select>
-          </div>
+            </NativeSelect>
+          </Field>
           <div className="flex items-center justify-between gap-2">
             <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
               Verwahrer:{" "}
