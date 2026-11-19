@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -34,7 +34,7 @@ const VALID_INPUT = {
 
 beforeEach(() => {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   queueNewsletterForPostMock.mockClear();
 });
 

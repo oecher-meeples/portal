@@ -53,7 +53,7 @@ export function actionGuardsFrom(resolve: Resolver) {
 /**
  * Guards built on whatever the test did to `getCurrentUser`
  * (`@/lib/auth/server`) and `hasPermission` (`@/lib/auth/permissions`,
- * mocked or real over `prismaMock.rolePermission.count`) — for tests written
+ * mocked or real over `mockPermissionKeys()`) — for tests written
  * against those primitives before #522:
  *
  *   vi.mock("@/lib/auth/action-guards", async () =>

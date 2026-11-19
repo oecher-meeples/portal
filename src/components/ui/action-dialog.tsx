@@ -36,6 +36,7 @@ export function ActionDialog({
   action,
   onReset,
   onOpen,
+  refresh,
 }: {
   /** Complete trigger element, including its label. Omit for a fully
    * controlled dialog (see `open`/`onOpenChange`) — e.g. one opened
@@ -62,11 +63,14 @@ export function ActionDialog({
   onReset?: () => void;
   /** Load data the dialog needs when it opens. */
   onOpen?: () => void | Promise<void>;
+  /** See `useAction` — only for actions that don't revalidate this path. */
+  refresh?: boolean;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const { run, pending, error, setError } = useAction({
+    refresh,
     onSuccess: () => {
       setOpen(false);
       onReset?.();

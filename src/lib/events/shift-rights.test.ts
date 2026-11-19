@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
@@ -26,7 +26,7 @@ describe("hasRoleGrantedPermission", () => {
     prismaMock.meeple.findUnique.mockResolvedValue({
       neonAuthUserId: "user-1",
     } as never);
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await hasRoleGrantedPermission(
       MEEPLE_ID,

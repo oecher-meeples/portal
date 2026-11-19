@@ -232,6 +232,7 @@ export function AdminNewsView({
                         />
                       )}
                       <ActionButton
+                        refresh
                         variant="destructive"
                         size="sm"
                         confirm="Beitrag wirklich löschen?"

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -27,12 +27,12 @@ const {
 
 beforeEach(() => {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
 });
 
 describe("addAlternateName", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await addAlternateName("game-1", "Die Siedler von Catan");
 
@@ -75,7 +75,7 @@ describe("addAlternateName", () => {
 
 describe("deleteAlternateName", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await deleteAlternateName("alt-1");
 
@@ -103,7 +103,7 @@ describe("deleteAlternateName", () => {
 
 describe("promoteAlternateNameToTitle", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await promoteAlternateNameToTitle("alt-1");
 
@@ -178,7 +178,7 @@ describe("promoteAlternateNameToTitle", () => {
 
 describe("promoteAlternateNameToSecondaryTitle (#203-Folge)", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await promoteAlternateNameToSecondaryTitle("alt-1");
 
@@ -249,7 +249,7 @@ describe("promoteAlternateNameToSecondaryTitle (#203-Folge)", () => {
 
 describe("swapTitleAndSecondaryTitle (#203-Folge)", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await swapTitleAndSecondaryTitle("game-1");
 
@@ -295,7 +295,7 @@ describe("swapTitleAndSecondaryTitle (#203-Folge)", () => {
 
 describe("clearSecondaryTitle (#203-Folge-Korrektur)", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await clearSecondaryTitle("game-1");
 
@@ -340,7 +340,7 @@ describe("clearSecondaryTitle (#203-Folge-Korrektur)", () => {
 
 describe("deleteSecondaryTitle (#203-Folge-Korrektur)", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await deleteSecondaryTitle("game-1");
 
@@ -362,7 +362,7 @@ describe("deleteSecondaryTitle (#203-Folge-Korrektur)", () => {
 
 describe("listAlternateNames", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await listAlternateNames("game-1");
 

@@ -20,6 +20,8 @@ describe("revalidateMemberProfile", () => {
       select: { slug: true },
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/profil/ada");
+    // own profile is also served under /profil (#525)
+    expect(revalidatePathMock).toHaveBeenCalledWith("/profil");
   });
 
   it("looks the member up by meeple id", async () => {

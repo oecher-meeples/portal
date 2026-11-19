@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -48,7 +48,7 @@ const { previewBggImport, translateDescription, fetchExplainerVideoOptions } =
 describe("translateDescription", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await translateDescription("Build a modern zoo.");
 
@@ -58,7 +58,7 @@ describe("translateDescription", () => {
 
   it("rejects a blank description without calling the translation API", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await translateDescription("   ");
 
@@ -71,7 +71,7 @@ describe("translateDescription", () => {
 
   it("translates on demand for the 'Übersetzen'-Button in the title editor (#184)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     translateToGermanMock.mockResolvedValue("Baue einen modernen Zoo.");
 
     const result = await translateDescription("Build a modern zoo.");
@@ -85,7 +85,7 @@ describe("translateDescription", () => {
 
   it("surfaces the translation error instead of throwing", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     translateToGermanMock.mockRejectedValue(new Error("translation boom"));
 
     const result = await translateDescription("Build a modern zoo.");
@@ -97,7 +97,7 @@ describe("translateDescription", () => {
 describe("previewBggImport", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await previewBggImport(342942);
 
@@ -107,7 +107,7 @@ describe("previewBggImport", () => {
 
   it("returns the mapped preview data without persisting anything", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     const bggData = {
       title: "Ark Nova",
       mechanics: [],
@@ -127,7 +127,7 @@ describe("previewBggImport", () => {
 
   it("translates the description via the translation API and tag labels via the tag register (#184, #490)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     const mechanicLinks = [
       { bggId: 2082, name: "Worker Placement" },
       { bggId: 9999, name: "Some Unmapped Mechanic" },
@@ -177,7 +177,7 @@ describe("previewBggImport", () => {
 
   it("keeps the English description instead of clearing it when translation fails (#184)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockResolvedValue({
       title: "Ark Nova",
       description: "Build a modern zoo.",
@@ -206,7 +206,7 @@ describe("previewBggImport", () => {
 
   it("translates a BggNotFoundError into a speaking error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockRejectedValue(new BggNotFoundError(999999999));
 
     const result = await previewBggImport(999999999);
@@ -219,7 +219,7 @@ describe("previewBggImport", () => {
 
   it("translates a BggApiError into a speaking error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockRejectedValue(new BggApiError("boom", 503));
 
     const result = await previewBggImport(342942);
@@ -235,7 +235,7 @@ describe("previewBggImport", () => {
 describe("fetchExplainerVideoOptions", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await fetchExplainerVideoOptions(342942);
 
@@ -245,7 +245,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("returns the German BGG video candidates when any exist, without searching YouTube (#185)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockResolvedValue({
       title: "Ark Nova",
       germanExplainerVideos: [
@@ -282,7 +282,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("searches YouTube for '<Titel> Regeln' when BGG has no German match, since BGG's videos window can miss older ones (#185-Folgeanfrage)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockResolvedValue({
       title: "Revive",
       germanExplainerVideos: [],
@@ -320,7 +320,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("falls back to the single BGG fallback video when YouTube also finds nothing", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockResolvedValue({
       title: "Ark Nova",
       germanExplainerVideos: [],
@@ -351,7 +351,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("falls back to BGG instead of failing when the YouTube search itself errors", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockResolvedValue({
       title: "Ark Nova",
       germanExplainerVideos: [],
@@ -382,7 +382,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("returns an empty list when nothing is found anywhere", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockResolvedValue({
       title: "Ark Nova",
       germanExplainerVideos: [],
@@ -403,7 +403,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("translates a BggNotFoundError into a speaking error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockRejectedValue(new BggNotFoundError(999999999));
 
     const result = await fetchExplainerVideoOptions(999999999);
@@ -416,7 +416,7 @@ describe("fetchExplainerVideoOptions", () => {
 
   it("translates a BggApiError into a speaking error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     fetchBggGameMock.mockRejectedValue(new BggApiError("boom", 503));
 
     const result = await fetchExplainerVideoOptions(342942);

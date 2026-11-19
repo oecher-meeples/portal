@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -23,7 +23,7 @@ beforeEach(() => {
 describe("assignExpansion", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await assignExpansion("base-1", "expansion-1");
 
@@ -33,7 +33,7 @@ describe("assignExpansion", () => {
 
   it("rejects assigning a game as its own expansion", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await assignExpansion("game-1", "game-1");
 
@@ -45,7 +45,7 @@ describe("assignExpansion", () => {
 
   it("upserts the GameCollection row when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await assignExpansion("base-1", "expansion-1");
 
@@ -64,7 +64,7 @@ describe("assignExpansion", () => {
 
   it("sets the expansion's kind to BOARDGAME_EXPANSION if not already set", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     await assignExpansion("base-1", "expansion-1");
 
@@ -78,7 +78,7 @@ describe("assignExpansion", () => {
 describe("removeExpansionAssignment", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await removeExpansionAssignment("base-1", "expansion-1");
 
@@ -88,7 +88,7 @@ describe("removeExpansionAssignment", () => {
 
   it("deletes the GameCollection row when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await removeExpansionAssignment("base-1", "expansion-1");
 
@@ -100,7 +100,7 @@ describe("removeExpansionAssignment", () => {
 
   it("leaves the expansion's kind untouched — no fallback on removal", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     await removeExpansionAssignment("base-1", "expansion-1");
 

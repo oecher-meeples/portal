@@ -76,7 +76,7 @@ Verbindlich daran:
    - Permission-Keys sind `PermissionKey` ([`permission-keys.ts`](../src/lib/auth/permission-keys.ts)) — ein neuer Key wird dort eingetragen, nicht als freier String.
 2. **Rückgabeformat** ist `{ error: string }` oder `{ success: true as const }` (optional mit Zusatzfeldern wie `{ success: true as const, id }`). Kein Werfen für erwartbare Fehler — das UI braucht die Nachricht. Der Typ dazu ist `ActionResult` in [`src/components/ui/use-action.ts`](../src/components/ui/use-action.ts).
 3. **Fehlermeldungen sind deutsch und nutzerlesbar** („Keine Berechtigung.", nicht „FORBIDDEN").
-4. **`revalidatePath`** nach Mutationen, die Server-Komponenten betreffen.
+4. **`revalidatePath`** nach Mutationen, die Server-Komponenten betreffen — für **jeden Pfad, auf dem die auslösende Komponente angezeigt wird**. Das ist der Refresh: `useAction`/`ActionButton`/`ActionDialog` rufen `router.refresh()` seit #525 nur noch mit `refresh` auf. Fehlt das Revalidate (oder trifft es nicht den angezeigten Pfad), `refresh` explizit setzen.
 5. Actions liegen bei ihrem Anwendungsfall (`feature/<domäne>/actions.ts`) oder — wenn mehrere Features sie brauchen — im Domain-Layer (`lib/<domäne>/*-actions.ts`).
 6. **Jeder Export einer `"use server"`-Datei ist ein öffentlicher POST-Endpunkt.** Reine Lesefunktionen ohne eigenen Guard gehören in eine Datei **ohne** `"use server"` (z. B. `lib/bringbuy/queries.ts`, mit `import "server-only"`).
 7. **Gebundene Argumente sind keine Autorisierung.** `action.bind(null, x)` schickt `x` an den Client, der es beim Aufruf manipuliert zurückschicken kann. Identität (Meeple-ID, Verkäufer-ID) löst die Action selbst auf — per Session oder durch erneute Prüfung eines Tokens.

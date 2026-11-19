@@ -61,6 +61,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
 
   return (
     <ActionDialog
+      refresh
       trigger={
         isEdit ? (
           <Button variant="outline" size="sm" className="gap-1.5">

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -22,7 +22,7 @@ const { disconnectInstagram, updateDefaultInviteDays } =
 describe("disconnectInstagram", () => {
   it("rejects when the user lacks the instagram:connect permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await disconnectInstagram();
 
@@ -32,7 +32,7 @@ describe("disconnectInstagram", () => {
 
   it("deletes the active instagram connection when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await disconnectInstagram();
 
@@ -44,7 +44,7 @@ describe("disconnectInstagram", () => {
 describe("updateDefaultInviteDays", () => {
   it("rejects a value outside the valid range", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "admin-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await updateDefaultInviteDays(200);
 
@@ -54,7 +54,7 @@ describe("updateDefaultInviteDays", () => {
 
   it("stores a valid value", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "admin-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await updateDefaultInviteDays(10);
 

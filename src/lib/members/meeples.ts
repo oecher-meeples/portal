@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -29,14 +30,29 @@ function displayNameFor(user: AuthUser) {
  * (see docs/adr/0002) — so reading the current Meeple creates it if needed.
  */
 export async function ensureMeeple(user: AuthUser) {
-  const displayName = displayNameFor(user);
-
-  return prisma.meeple.upsert({
-    where: { neonAuthUserId: user.id },
-    update: { displayName },
-    create: { neonAuthUserId: user.id, displayName },
-  });
+  return ensureMeepleFor(user.id, displayNameFor(user));
 }
+
+/**
+ * Liest zuerst und schreibt nur, wenn der Meeple fehlt oder der aus dem
+ * Login abgeleitete `displayName` sich geändert hat (#525) — sonst wäre jeder
+ * Seitenaufruf ein Write (`updatedAt`). Per `cache()` je Request einmal, auf
+ * primitive Argumente gekeyt (das `user`-Objekt ist nicht identitätsstabil).
+ */
+const ensureMeepleFor = cache(
+  async (neonAuthUserId: string, displayName: string) => {
+    const existing = await prisma.meeple.findUnique({
+      where: { neonAuthUserId },
+    });
+    if (existing?.displayName === displayName) return existing;
+
+    return prisma.meeple.upsert({
+      where: { neonAuthUserId },
+      update: { displayName },
+      create: { neonAuthUserId, displayName },
+    });
+  },
+);
 
 export async function getCurrentMeeple() {
   const user = await getCurrentUser();

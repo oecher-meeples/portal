@@ -50,6 +50,7 @@ export function BorrowGameDialog({
 }: { gameCopyId: string } & ControlledDialogProps) {
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>
@@ -156,6 +157,7 @@ export function AcceptReturnDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button
@@ -248,6 +250,7 @@ export function GiveToMeepleDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button
@@ -308,6 +311,7 @@ export function RelocateGameDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button variant="ghost" size="sm" className={TRIGGER_CLASS}>

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -18,25 +19,13 @@ function activeAssignmentWhere(now: Date) {
   };
 }
 
-export async function hasPermission(
-  neonAuthUserId: string,
-  permissionKey: PermissionKey,
-) {
-  const count = await prisma.rolePermission.count({
-    where: {
-      permission: { key: permissionKey },
-      role: {
-        users: {
-          some: { neonAuthUserId, ...activeAssignmentWhere(new Date()) },
-        },
-      },
-    },
-  });
-  return count > 0;
-}
-
-/** All permission keys granted to a user's active roles — used to drive nav visibility. */
-export async function getUserPermissionKeys(
+/**
+ * All permission keys granted to a user's active roles — drives nav
+ * visibility and every `hasPermission` check. `cache()` memoises it per
+ * request (#525): a page with several guards/permission checks costs one
+ * query instead of one `count` per key.
+ */
+export const getUserPermissionKeys = cache(async function getUserPermissionKeys(
   neonAuthUserId: string,
 ): Promise<string[]> {
   const rows = await prisma.rolePermission.findMany({
@@ -50,6 +39,13 @@ export async function getUserPermissionKeys(
     select: { permission: { select: { key: true } } },
   });
   return rows.map((row) => row.permission.key);
+});
+
+export async function hasPermission(
+  neonAuthUserId: string,
+  permissionKey: PermissionKey,
+) {
+  return (await getUserPermissionKeys(neonAuthUserId)).includes(permissionKey);
 }
 
 /**

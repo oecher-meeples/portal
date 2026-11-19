@@ -85,7 +85,8 @@ export function UnitDetailView({
     unit.category ?? "",
   );
   const save = useAction({ refresh: false });
-  const retire = useAction();
+  // retireStorageUnit revalidiert nur die Übersicht, nicht diese Detailseite.
+  const retire = useAction({ refresh: true });
 
   function handleSave() {
     save.run(() =>

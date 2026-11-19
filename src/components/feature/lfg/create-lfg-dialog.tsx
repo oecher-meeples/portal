@@ -89,6 +89,7 @@ export function CreateLfgDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         trigger ?? (
           <Button className="gap-1.5">

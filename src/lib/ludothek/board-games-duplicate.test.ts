@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -68,7 +68,7 @@ describe("findOrCreateBoardGameTitle", () => {
 describe("findDuplicateBoardGame", () => {
   it("returns null when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await findDuplicateBoardGame("Arche Nova");
 
@@ -78,7 +78,7 @@ describe("findDuplicateBoardGame", () => {
 
   it("matches by bggId before falling back to the title", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Ark Nova",
@@ -96,7 +96,7 @@ describe("findDuplicateBoardGame", () => {
 
   it("falls back to a case-insensitive exact title match when no bggId matches", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue(null);
     prismaMock.boardGame.findFirst.mockResolvedValue({
       id: "game-1",
@@ -114,7 +114,7 @@ describe("findDuplicateBoardGame", () => {
 
   it("returns null for a blank title and no bggId", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await findDuplicateBoardGame("   ");
 
@@ -126,7 +126,7 @@ describe("findDuplicateBoardGame", () => {
 describe("getBoardGameTitleForEdit", () => {
   it("returns null when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await getBoardGameTitleForEdit("game-1");
 
@@ -136,7 +136,7 @@ describe("getBoardGameTitleForEdit", () => {
 
   it("returns the title's full field set for the 'Titel laden' flow (#183)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       title: "Arche Nova",
       ean: "5901234123457",

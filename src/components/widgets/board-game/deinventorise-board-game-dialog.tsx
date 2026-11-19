@@ -23,6 +23,7 @@ export function DeinventoriseBoardGameDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button variant="ghost" size="sm" className="text-muted-foreground">

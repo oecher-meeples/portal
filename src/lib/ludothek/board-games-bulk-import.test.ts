@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -87,7 +87,7 @@ const VALID_BGG_DATA = {
 
 function beforeEachSetup() {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
   getSuggestedInventoryNumberMock.mockResolvedValue("1");
 }
@@ -95,7 +95,7 @@ function beforeEachSetup() {
 describe("bulkImportBoardGames", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await bulkImportBoardGames(["Ark Nova"]);
 

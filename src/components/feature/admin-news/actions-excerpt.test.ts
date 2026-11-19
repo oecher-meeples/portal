@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -35,7 +35,7 @@ const VALID_INPUT = {
 describe("createPost — Excerpt-Ableitung", () => {
   it("derives the excerpt from the first 130 characters of the body when left empty", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
     const body = "x".repeat(180);
 
@@ -48,7 +48,7 @@ describe("createPost — Excerpt-Ableitung", () => {
 
   it("uses the full body as the excerpt when it is 130 characters or shorter", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
     const body = "x".repeat(80);
 
@@ -63,7 +63,7 @@ describe("createPost — Excerpt-Ableitung", () => {
   // Listen-Vorschau, wenn kein manueller Excerpt gesetzt war.
   it("strips markdown syntax when deriving the excerpt from the body", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost({
@@ -81,7 +81,7 @@ describe("createPost — Excerpt-Ableitung", () => {
 
   it("keeps an explicitly given excerpt instead of deriving one from the body", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost({

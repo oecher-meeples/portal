@@ -14,5 +14,10 @@ export async function revalidateMemberProfile(
     where: "memberId" in by ? { id: by.memberId } : { meepleId: by.meepleId },
     select: { slug: true },
   });
-  if (member) revalidatePath(`/profil/${member.slug}`);
+  if (!member) return;
+  revalidatePath(`/profil/${member.slug}`);
+  // Das eigene Profil ist zusätzlich unter `/profil` erreichbar (gleiche
+  // View) — ohne diesen Pfad bliebe die Ansicht dort nach einer Mutation
+  // stehen, seit `useAction` nicht mehr pauschal refresht (#525).
+  revalidatePath("/profil");
 }

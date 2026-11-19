@@ -64,6 +64,7 @@ export function EditBoardGameExemplarDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button size="sm" variant="outline">

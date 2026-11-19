@@ -12,11 +12,17 @@ export type ActionResult = { error?: string; success?: true } | void;
  * Fachfrei — knows nothing about what the action does.
  */
 export function useAction(options?: {
-  /** Call router.refresh() after a successful run. Default: true. */
+  /**
+   * Call `router.refresh()` after a successful run. Default: false (#525) —
+   * a Server Action that calls `revalidatePath` for the path being viewed
+   * already re-renders it; refreshing on top would render twice. Set it only
+   * where the action revalidates nothing, or not the path this component is
+   * shown on.
+   */
   refresh?: boolean;
   onSuccess?: () => void;
 }) {
-  const { refresh = true, onSuccess } = options ?? {};
+  const { refresh = false, onSuccess } = options ?? {};
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);

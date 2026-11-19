@@ -38,6 +38,20 @@ describe("ensureMeeple", () => {
     });
   });
 
+  it("does not write when the meeple exists with an unchanged display name (#525)", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(MEEPLE as never);
+
+    const meeple = await ensureMeeple({
+      id: "user-1",
+      name: "Lea",
+      email: "lea@example.org",
+    });
+
+    expect(meeple).toBe(MEEPLE);
+    expect(prismaMock.meeple.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
+  });
+
   it("upserts instead of creating, so a second call cannot duplicate", async () => {
     prismaMock.meeple.upsert.mockResolvedValue(MEEPLE as never);
 
@@ -49,6 +63,7 @@ describe("ensureMeeple", () => {
   });
 
   it("updates the display name when it changed at the auth provider", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(MEEPLE as never);
     prismaMock.meeple.upsert.mockResolvedValue(MEEPLE as never);
 
     await ensureMeeple({
