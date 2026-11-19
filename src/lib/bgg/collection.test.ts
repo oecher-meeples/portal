@@ -59,6 +59,7 @@ describe("fetchBggCollection (#255)", () => {
         forTrade: true,
         wantToPlay: false,
         imageUrl: "https://cf.geekdo-images.com/ark-nova.jpg",
+        version: null,
       },
       {
         bggId: 13,
@@ -67,8 +68,45 @@ describe("fetchBggCollection (#255)", () => {
         forTrade: false,
         wantToPlay: true,
         imageUrl: null,
+        version: null,
       },
     ]);
+  });
+
+  it("parses the version the meeple chose on BGG", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      `<?xml version="1.0" encoding="utf-8"?>
+      <items totalitems="1">
+        <item objecttype="thing" objectid="180263" subtype="boardgame" collid="1">
+          <name sortindex="5">The 7th Continent</name>
+          <status own="1" fortrade="0" wanttoplay="0" />
+          <version>
+            <item type="boardgameversion" id="278264">
+              <link type="boardgameversion" id="180263" value="The 7th Continent" inbound="true"/>
+              <name type="primary" sortindex="1" value="English first edition" />
+              <link type="boardgamepublisher" id="17654" value="Serious Poulp" />
+              <yearpublished value="2017" />
+              <productcode value="" />
+              <link type="language" id="2184" value="English" />
+            </item>
+          </version>
+        </item>
+      </items>`,
+    );
+
+    const [entry] = await fetchBggCollection("some-user");
+
+    expect(entry.version).toEqual({
+      bggVersionId: 278264,
+      name: "English first edition",
+      yearPublished: 2017,
+      publisher: ["Serious Poulp"],
+      publisherLinks: [{ bggId: 17654, name: "Serious Poulp" }],
+      productCode: null,
+      languages: ["English"],
+    });
   });
 
   it("falls back to the thumbnail when no full image is present", async () => {
@@ -104,6 +142,7 @@ describe("fetchBggCollection (#255)", () => {
     const [url] = fetchMock.mock.calls[0];
     expect(url).toContain("own=1");
     expect(url).toContain("stats=1");
+    expect(url).toContain("version=1");
     expect(url).toContain("excludesubtype=boardgameexpansion");
   });
 

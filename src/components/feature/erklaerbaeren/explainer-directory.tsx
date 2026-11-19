@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ExplainerListDialogTrigger } from "@/components/entities/explainer-list-dialog-trigger";
+import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 
 export type ExplainerDirectoryEntry = {

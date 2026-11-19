@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireMeeplePermission } from "@/lib/members/meeples";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
@@ -49,7 +49,7 @@ export async function getLfgAttachmentUploadToken(
   pathname: string,
   contentType: string,
 ) {
-  const meeple = await requireMeeplePermission("lfg:participate");
+  const { meeple } = await requireActionPermission("lfg:participate");
 
   const eligible = await requireEligiblePost(postId);
   if ("error" in eligible) throw new Error(eligible.error);
@@ -70,7 +70,7 @@ export async function createLfgAttachment(
   url: string,
   filename: string,
 ) {
-  const meeple = await requireMeeplePermission("lfg:participate");
+  const { meeple } = await requireActionPermission("lfg:participate");
 
   const eligible = await requireEligiblePost(postId);
   if ("error" in eligible) return eligible;
@@ -89,7 +89,7 @@ export async function createLfgAttachment(
 /** Löschen darf, wer die Datei hochgeladen hat, plus immer der Ersteller des
  * Gesuchs (analog `removeLfgGuest()`). */
 export async function deleteLfgAttachment(attachmentId: string) {
-  const meeple = await requireMeeplePermission("lfg:participate");
+  const { meeple } = await requireActionPermission("lfg:participate");
 
   const attachment = await prisma.lfgAttachment.findUnique({
     where: { id: attachmentId },

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { revealMemberIban } from "@/components/feature/admin-mitglieder/actions";
+import { revealMemberIban } from "@/lib/members/iban-reveal-actions";
 
 /**
  * Bankdaten im Mitglieder-Editdialog: ohne `bank:read` immer maskiert und

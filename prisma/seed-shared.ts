@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { createLocalAccountIssuer } from "better-auth/db";
 import { prisma } from "../src/lib/utils/prisma";
 import { uniqueSlug } from "../src/lib/utils/slug";
 import { encryptSecret, ibanFirst2, ibanLast4 } from "../src/lib/utils/crypto";
 
-const CREDENTIAL_ISSUER = createLocalAccountIssuer("credential");
-
 /**
  * Legt einen Login im self-hosted better-auth an (`AuthUser` + Credential-
  * `AuthAccount`, docs/adr/0015) — dieselbe Form, die better-auths eigenes
- * Sign-up schreibt: `issuer = "local:credential"`, `accountId = userId`,
+ * Sign-up schreibt: `providerId = "credential"`, `accountId = userId`,
  * sonst findet der Sign-in das Passwort nicht.
  *
  * #370: ein bereits existierender User bricht hier NICHT früh ab, sondern
@@ -38,14 +35,13 @@ export async function upsertAuthUser({
   if (existing) {
     await prisma.authAccount.upsert({
       where: {
-        issuer_accountId: {
-          issuer: CREDENTIAL_ISSUER,
+        providerId_accountId: {
+          providerId: "credential",
           accountId: existing.id,
         },
       },
       update: { password: hashedPassword },
       create: {
-        issuer: CREDENTIAL_ISSUER,
         accountId: existing.id,
         providerId: "credential",
         userId: existing.id,
@@ -67,7 +63,6 @@ export async function upsertAuthUser({
       emailVerified: true,
       accounts: {
         create: {
-          issuer: CREDENTIAL_ISSUER,
           accountId: userId,
           providerId: "credential",
           password: hashedPassword,

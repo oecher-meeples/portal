@@ -19,18 +19,15 @@ import {
   type FreeGameEntry,
 } from "@/components/feature/guest-area/free-games-list";
 import type { GuestFleaMarketItem } from "@/lib/events/guest-area";
-import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
+import {
+  EXPLAINER_EXPERIENCE_LEVEL_LABELS,
+  FLEA_MARKET_ITEM_STATUS_LABELS,
+} from "@/lib/utils/format";
 import { RegisterExternalSellerDialog } from "@/components/widgets/bringbuy/register-external-seller-dialog";
 import { PageContainer } from "@/components/ui/page-container";
 
 export type SellerAccess =
   { kind: "meeple"; href: string } | { kind: "guest"; eventId: string };
-
-const EXPLAINER_LEVEL_LABELS: Record<string, string> = {
-  WITH_MANUAL: "Mit Anleitung",
-  WITHOUT_MANUAL: "Ohne Anleitung",
-  BY_HEART: "Im Schlaf",
-};
 
 type ViewState =
   | { kind: "idle" }
@@ -174,9 +171,7 @@ export function GuestAreaView({
                           profileHref: explainer.profileHref,
                         }}
                       />{" "}
-                      ·{" "}
-                      {EXPLAINER_LEVEL_LABELS[explainer.level] ??
-                        explainer.level}
+                      · {EXPLAINER_EXPERIENCE_LEVEL_LABELS[explainer.level]}
                     </span>
                   </li>
                 ))}

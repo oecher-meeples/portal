@@ -15,8 +15,8 @@ export type CopyOption = {
   id: string;
   zustand: GameZustand;
   locationChain: string;
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber?: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber?: number | null;
 };
 
 /**

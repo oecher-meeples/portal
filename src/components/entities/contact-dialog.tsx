@@ -33,9 +33,10 @@ import type { ContactDialogMeeple } from "@/lib/members/contact";
  *   Server-Komponente mit eigenem Betrachter-Kontext wie dem
  *   Gast-Bereich) — `toContactDialogMeeple()` aus `lib/members/contact.ts`
  *   baut die passende Form.
- * - `meepleId`: die Aufrufstelle kennt nur die Id — der Dialog lädt die
- *   Daten selbst nach, erst beim Öffnen (`fetchContactDialogMeeple()`,
- *   nur für eingeloggte Meeple, siehe dort).
+ * - `meepleId` + `loadMeeple`: die Aufrufstelle kennt nur die Id; der Dialog
+ *   ruft die übergebene Ladefunktion erst beim Öffnen auf. Die Entity selbst
+ *   beschafft keine Daten — die Fachanbindung (`fetchContactDialogMeeple()`)
+ *   steckt in `widgets/contact/meeple-contact-dialog.tsx`.
  *
  * `name` bleibt in beiden Fällen ein eigenes Pflicht-Prop: der Trigger
  * braucht ihn schon vor dem (im `meepleId`-Fall erst beim Öffnen
@@ -45,13 +46,18 @@ export function ContactDialog({
   name,
   meeple,
   meepleId,
+  loadMeeple,
   className,
 }: {
   name: string;
   className?: string;
 } & (
-  | { meeple: ContactDialogMeeple; meepleId?: never }
-  | { meeple?: never; meepleId: string }
+  | { meeple: ContactDialogMeeple; meepleId?: never; loadMeeple?: never }
+  | {
+      meeple?: never;
+      meepleId: string;
+      loadMeeple: (meepleId: string) => Promise<ContactDialogMeeple | null>;
+    }
 )) {
   const [loaded, setLoaded] = useState<ContactDialogMeeple | null>(
     meeple ?? null,
@@ -60,19 +66,11 @@ export function ContactDialog({
   const [error, setError] = useState<string | null>(null);
 
   async function handleOpenChange(open: boolean) {
-    if (!open || loaded || !meepleId || loading) return;
+    if (!open || loaded || !meepleId || !loadMeeple || loading) return;
     setLoading(true);
     setError(null);
     try {
-      // Dynamischer statt statischer Import: die "use server"-Action zieht
-      // den kompletten Server-Layer (Prisma, Neon-Auth-Session) mit — mit
-      // einem statischen Import würde jede Test-Datei, die irgendeine
-      // ContactDialog-Aufrufstelle rendert, diesen Layer transitiv laden,
-      // egal ob der meepleId-Pfad überhaupt genutzt wird. So passiert das
-      // erst beim tatsächlichen Öffnen eines meepleId-Dialogs.
-      const { fetchContactDialogMeeple } =
-        await import("@/lib/members/contact-dialog");
-      const result = await fetchContactDialogMeeple(meepleId);
+      const result = await loadMeeple(meepleId);
       if (result) {
         setLoaded(result);
       } else {

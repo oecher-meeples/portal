@@ -36,6 +36,7 @@ export function CreateMarketListingDialog({
 
   return (
     <ActionDialog
+      refresh
       trigger={trigger ?? <Button size="sm">Anzeige inserieren</Button>}
       title="Anzeige inserieren"
       description="Kleinanzeige für alle Mitglieder – Kontakt läuft über dein Profil, nicht über das Portal."

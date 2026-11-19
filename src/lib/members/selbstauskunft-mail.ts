@@ -1,15 +1,9 @@
 import { prisma } from "@/lib/utils/prisma";
 import { collectMeeplePersonalData } from "@/lib/members/data-export";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
+import { escapeHtml } from "@/lib/utils/escape-html";
 
 export type SendSelbstauskunftResult = { error: string } | { success: true };
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>]/g,
-    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char]!,
-  );
-}
 
 function selbstauskunftHtml(displayName: string, data: unknown): string {
   return [

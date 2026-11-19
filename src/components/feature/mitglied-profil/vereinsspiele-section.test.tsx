@@ -124,12 +124,12 @@ describe("VereinsspieleSection (#383)", () => {
   it("shows a labelled inventory number when present", () => {
     render(
       <VereinsspieleSection
-        holdings={[{ ...HOLDING, inventoryNumber: "OM-042" }]}
+        holdings={[{ ...HOLDING, inventoryNumber: 42 }]}
         viewerIsSubject={false}
       />,
     );
 
-    expect(screen.getByText(/Inv\.-Nr\.: OM-042/)).toBeInTheDocument();
+    expect(screen.getByText(/Inv\.-Nr\.: 42/)).toBeInTheDocument();
   });
 
   it("shows a placeholder instead of omitting the inventory number", () => {

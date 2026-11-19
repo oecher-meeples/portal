@@ -1,10 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/utils/prisma";
 import { getCurrentSession, getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
+import { hasPermission, type PermissionKey } from "@/lib/auth/permissions";
 import { logAdminLoginOnce } from "@/lib/auth/login-log";
-import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
+import { ensureMeeple, getMeepleMembership } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
 /**
@@ -22,7 +21,7 @@ export const PREVIEW_TIER_COOKIE = "preview-tier";
  * entziehen (siehe #219-Review — genau das ist vorher mit der alten
  * hasRole(userId, "admin")-Prüfung passiert).
  */
-const ADMIN_ACCESS_PERMISSION = "admin:access";
+const ADMIN_ACCESS_PERMISSION: PermissionKey = "admin:access";
 
 function isTier(value: string | undefined): value is Tier {
   return !!value && (TIER_ORDER as string[]).includes(value);
@@ -101,7 +100,7 @@ export async function getSessionTier(): Promise<Tier> {
  */
 export async function hasPermissionInCurrentView(
   userId: string,
-  permissionKey: string,
+  permissionKey: PermissionKey,
 ) {
   if (await hasPermission(userId, ADMIN_ACCESS_PERMISSION)) {
     const previewTier = (await getPreviewTier()) ?? "mitglied";
@@ -121,18 +120,7 @@ export async function requireMember() {
   }
 
   const meeple = await ensureMeeple(user);
-  // resignedAt/membershipEndsAt moved to the linked Member (#328) —
-  // anonymizedAt stays on Meeple.
-  const member = await prisma.member.findUnique({
-    where: { meepleId: meeple.id },
-    select: { slug: true, resignedAt: true, membershipEndsAt: true },
-  });
-  const membershipState = getMembershipState({
-    meepleId: meeple.id,
-    resignedAt: member?.resignedAt ?? null,
-    membershipEndsAt: member?.membershipEndsAt ?? null,
-    anonymizedAt: meeple.anonymizedAt,
-  });
+  const { member, membershipState } = await getMeepleMembership(meeple);
 
   if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
@@ -199,11 +187,14 @@ async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
  * one feature permission (e.g. `games:manage`), so a Spielewart/Kassenwart/
  * Redakteur etc. can reach it without also holding `admin:access`.
  */
-export async function requireAdminPermission(permissionKey: string | string[]) {
+export async function requireAdminPermission(
+  permissionKey: PermissionKey | readonly PermissionKey[],
+) {
   const session = await requireMember();
   await enforceAdminAccessSessionFreshness(session.user.id);
 
-  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  const keys: readonly PermissionKey[] =
+    typeof permissionKey === "string" ? [permissionKey] : permissionKey;
   const results = await Promise.all(
     keys.map((key) => hasPermission(session.user.id, key)),
   );

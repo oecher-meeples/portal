@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { ExplainerExperienceLevel } from "@prisma/client";
-import { ExplainerListDialogTrigger } from "@/components/entities/explainer-list-dialog-trigger";
+import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
+import { useAction } from "@/components/ui/use-action";
 import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
 import {
   addExplainerGame,
@@ -24,41 +24,22 @@ export function ExplainerGamePanel({
   /** null: eingeloggt, aber noch nicht als Erklärbär für dieses Spiel gemeldet. */
   myLevel: ExplainerExperienceLevel | null;
 }) {
-  const router = useRouter();
   const [level, setLevel] = useState<ExplainerExperienceLevel | null>(myLevel);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Die Actions revalidieren `/erklaerbaeren`, nicht diese Spielseite.
+  const { run, pending: isSubmitting, error } = useAction({ refresh: true });
 
   async function handleRegister(nextLevel: ExplainerExperienceLevel) {
     setLevel(nextLevel);
-    setIsSubmitting(true);
-    setError(null);
-    const result = await addExplainerGame(boardGameId, nextLevel);
-    setIsSubmitting(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    router.refresh();
+    await run(() => addExplainerGame(boardGameId, nextLevel));
   }
 
   async function handleLevelChange(nextLevel: ExplainerExperienceLevel) {
     setLevel(nextLevel);
-    setError(null);
-    const result = await updateExplainerGameLevel(boardGameId, nextLevel);
-    if (result.error) {
-      setError(result.error);
-    }
-    router.refresh();
+    await run(() => updateExplainerGameLevel(boardGameId, nextLevel));
   }
 
   async function handleRemove() {
-    setIsSubmitting(true);
-    setError(null);
-    await removeExplainerGame(boardGameId);
-    setIsSubmitting(false);
-    setLevel(null);
-    router.refresh();
+    if (await run(() => removeExplainerGame(boardGameId))) setLevel(null);
   }
 
   return (

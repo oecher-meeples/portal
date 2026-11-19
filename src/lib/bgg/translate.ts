@@ -23,8 +23,9 @@ const TRANSLATE_TIMEOUT_MS = 8000;
  * entstehen. `TRANSLATION_CONTACT_EMAIL` ist optional (keine Registrierung,
  * nur ein Query-Param) und hebt das Tageslimit von 5.000 auf 50.000 Zeichen.
  *
- * Mechaniken sind kurze Fachbegriffe und laufen über die feste Tabelle in
- * `lib/ludothek/mechanics-translations.ts`, nicht über eine Live-Übersetzung.
+ * Mechaniken/Kategorien sind kurze Fachbegriffe und bekommen ihre deutschen
+ * Anzeigenamen aus dem Tag-Register (`Tag.displayName`), nicht über eine
+ * Live-Übersetzung.
  */
 export async function translateToGerman(text: string): Promise<string> {
   const trimmed = text.trim();

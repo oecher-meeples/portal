@@ -36,6 +36,8 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     condition: null,
     ruleBookLanguages: [],
     inventoryNumber: null,
+    versionId: null,
+    publisher: [],
     isMine: false,
     history: [],
     isPrivate: false,
@@ -59,6 +61,39 @@ describe("GameCopiesSection", () => {
     expect(screen.getByText("Regal A")).toBeInTheDocument();
   });
 
+  it("shows the edition's publisher in the single copy's detail row", () => {
+    render(
+      <GameCopiesSection
+        copies={[copy({ publisher: ["Feuerland Spiele"] })]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getByText("Verlag")).toBeInTheDocument();
+    expect(screen.getByText("Feuerland Spiele")).toBeInTheDocument();
+  });
+
+  it("lists every co-publisher on its own line", () => {
+    render(
+      <GameCopiesSection
+        copies={[
+          copy({
+            publisher: ["Fantasy Flight Games", "Heidelberger Spieleverlag"],
+          }),
+        ]}
+        boardGameId="game-1"
+        boardGameTitle="Rebellion"
+        canManageGames={false}
+      />,
+    );
+
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual(
+      ["Fantasy Flight Games", "Heidelberger Spieleverlag"],
+    );
+  });
+
   it("shows a placeholder instead of nothing when the single copy has no Regelheft-Sprache set (#188-Folge)", () => {
     render(
       <GameCopiesSection
@@ -69,7 +104,9 @@ describe("GameCopiesSection", () => {
       />,
     );
 
-    expect(screen.getByText("Regelheft: —")).toBeInTheDocument();
+    expect(screen.getByText("Regelheft").parentElement).toHaveTextContent(
+      "Regelheft—",
+    );
   });
 
   it("shows the set Regelheft-Sprache(n) for the single copy", () => {
@@ -82,7 +119,8 @@ describe("GameCopiesSection", () => {
       />,
     );
 
-    expect(screen.getByText("Regelheft: DE, EN")).toBeInTheDocument();
+    expect(screen.getByText("Regelheft")).toBeInTheDocument();
+    expect(screen.getByText("DE, EN")).toBeInTheDocument();
   });
 
   it("wires the actions menu for the single-copy card (#128)", () => {

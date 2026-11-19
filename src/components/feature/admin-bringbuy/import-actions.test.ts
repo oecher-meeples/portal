@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -22,7 +22,7 @@ beforeEach(() => {
   prismaMock.meeple.findUnique.mockResolvedValue({
     neonAuthUserId: "auth-1",
   } as never);
-  prismaMock.rolePermission.count.mockResolvedValue(1); // events:manage by default
+  mockPermissionKeys("all"); // events:manage by default
   prismaMock.shiftBooking.findFirst.mockResolvedValue(null);
   prismaMock.fleaMarketItem.findMany.mockResolvedValue([]);
   prismaMock.fleaMarketItem.create.mockResolvedValue({ id: "item-x" } as never);
@@ -30,7 +30,7 @@ beforeEach(() => {
 
 describe("importFleaMarketItemsCsv permission gate", () => {
   it("rejects a meeple with neither events:manage nor an active KASSE shift", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await importFleaMarketItemsCsv(
       "event-1",
@@ -44,7 +44,7 @@ describe("importFleaMarketItemsCsv permission gate", () => {
   });
 
   it("allows a meeple with the events:manage permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await importFleaMarketItemsCsv(
       "event-1",
@@ -56,7 +56,7 @@ describe("importFleaMarketItemsCsv permission gate", () => {
   });
 
   it("allows a meeple with an active KASSE shift but no permission", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
     prismaMock.shiftBooking.findFirst.mockResolvedValue({
       shiftId: "shift-1",
     } as never);

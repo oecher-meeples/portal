@@ -57,6 +57,11 @@ describe("fetchBggGame", () => {
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
       categories: ["Animals"],
+      mechanicLinks: [
+        { bggId: 2082, name: "Card Play" },
+        { bggId: 2015, name: "Income" },
+      ],
+      categoryLinks: [{ bggId: 1015, name: "Animals" }],
       traits: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
@@ -67,6 +72,8 @@ describe("fetchBggGame", () => {
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [{ bggId: 1, name: "Mathias Wigge" }],
+      illustrators: [],
     });
   });
 
@@ -86,6 +93,8 @@ describe("fetchBggGame", () => {
       description: null,
       mechanics: [],
       categories: [],
+      mechanicLinks: [],
+      categoryLinks: [],
       traits: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
@@ -96,6 +105,8 @@ describe("fetchBggGame", () => {
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [],
+      illustrators: [],
     });
   });
 
@@ -150,14 +161,20 @@ describe("fetchBggGame", () => {
 
     expect(result.versions).toEqual([
       {
+        bggVersionId: 500001,
+        name: "Ark Nova (English first edition)",
         yearPublished: 2021,
         publisher: ["Capstone Games"],
+        publisherLinks: [{ bggId: 1, name: "Capstone Games" }],
         productCode: "CAPS001",
         languages: ["English"],
       },
       {
+        bggVersionId: 500002,
+        name: "Ark Nova (Deutsche Ausgabe)",
         yearPublished: 2022,
         publisher: ["Feuerland Spiele"],
+        publisherLinks: [{ bggId: 2, name: "Feuerland Spiele" }],
         productCode: "FEU001",
         languages: ["German"],
       },

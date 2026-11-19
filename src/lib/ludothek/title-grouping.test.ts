@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { groupGamesByTitle } from "@/lib/ludothek/title-grouping";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
-type Copy = { id: string; boardGameId: string; zustand?: GameZustand };
+type Copy = {
+  id: string;
+  boardGameId: string;
+  zustand?: GameZustand;
+  publisher?: string[];
+  editionLanguages?: string[];
+};
 
 function copy(overrides: Partial<Copy> = {}): Copy {
   return {
@@ -94,5 +100,30 @@ describe("groupGamesByTitle", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].copyCount).toBe(2);
     expect(rows[0].id).toBe("copy-1");
+  });
+
+  it("unites the publishers and edition languages of all folded copies", () => {
+    const [row] = groupGamesByTitle([
+      copy({
+        id: "a",
+        publisher: ["Kosmos"],
+        editionLanguages: ["German"],
+      }),
+      copy({
+        id: "b",
+        publisher: ["Kosmos", "Capstone Games"],
+        editionLanguages: ["English"],
+      }),
+    ]);
+
+    expect(row.publisher).toEqual(["Kosmos", "Capstone Games"]);
+    expect(row.editionLanguages).toEqual(["German", "English"]);
+  });
+
+  it("leaves rows without edition data untouched", () => {
+    const [row] = groupGamesByTitle([copy()]);
+
+    expect(row).not.toHaveProperty("publisher");
+    expect(row).not.toHaveProperty("editionLanguages");
   });
 });

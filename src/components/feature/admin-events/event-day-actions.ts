@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 
 export type EventDayTimeInput = {
   startsAt: Date | null;
@@ -22,7 +22,7 @@ export async function updateEventDayTimes(
   dayId: string,
   input: EventDayTimeInput,
 ) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const validationError = validateEventDayTimeInput(input);
   if (validationError) {

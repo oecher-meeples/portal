@@ -1,0 +1,201 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { ContributorRole } from "@prisma/client";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeading } from "@/components/ui/page-heading";
+import { StatTile } from "@/components/ui/stat-tile";
+import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { IdCombobox } from "@/components/ui/id-combobox";
+import { Field } from "@/components/ui/field";
+import type { AdminContributorRow } from "@/lib/ludothek/taxonomy/contributor-admin-queries";
+import { ContributorAdminRow } from "@/components/feature/admin-contributors/contributor-admin-row";
+import { CONTRIBUTOR_ROLE_LABELS } from "@/lib/ludothek/taxonomy/contributor-labels";
+import { mergeContributors } from "@/lib/ludothek/taxonomy/contributor-admin-actions";
+
+const ROLE_FILTER_LABELS: Record<"ALL" | ContributorRole, string> = {
+  ALL: "Alle Rollen",
+  ...CONTRIBUTOR_ROLE_LABELS,
+};
+
+type SortOption = "name" | "titleCount";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  name: "Alphabetisch",
+  titleCount: "Nach Anzahl Titel",
+};
+
+export function AdminContributorsView({
+  rows,
+}: {
+  rows: AdminContributorRow[];
+}) {
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"ALL" | ContributorRole>("ALL");
+  const [sort, setSort] = useState<SortOption>("name");
+  const [mergeSource, setMergeSource] = useState<AdminContributorRow | null>(
+    null,
+  );
+
+  const roleCounts = useMemo(() => {
+    const counts: Record<ContributorRole, number> = {
+      AUTHOR: 0,
+      ILLUSTRATOR: 0,
+      PUBLISHER: 0,
+    };
+    for (const row of rows) {
+      for (const role of row.roles) counts[role] += 1;
+    }
+    return counts;
+  }, [rows]);
+
+  const visible = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return rows
+      .filter(
+        (row) =>
+          (!term || row.name.toLowerCase().includes(term)) &&
+          (roleFilter === "ALL" || row.roles.includes(roleFilter)),
+      )
+      .sort((a, b) =>
+        sort === "titleCount"
+          ? b.titleCount - a.titleCount
+          : a.name.localeCompare(b.name, "de"),
+      );
+  }, [rows, search, roleFilter, sort]);
+
+  return (
+    <PageContainer>
+      <PageHeading
+        eyebrow="Administration"
+        title="Mitwirkende"
+        description="Verlage, Autoren und Illustratoren über alle Titel. Zusammenführen nur, wenn höchstens ein Eintrag eine BGG-ID hat."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatTile label="Autoren" value={roleCounts.AUTHOR} />
+        <StatTile label="Illustratoren" value={roleCounts.ILLUSTRATOR} />
+        <StatTile label="Verlage" value={roleCounts.PUBLISHER} />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[1fr_200px_200px]">
+        <Field label="Suche" htmlFor="contributor-search">
+          <Input
+            id="contributor-search"
+            value={search}
+            placeholder="Name eingeben"
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </Field>
+        <Field label="Rolle" htmlFor="contributor-role">
+          <NativeSelect
+            id="contributor-role"
+            value={roleFilter}
+            onChange={(event) =>
+              setRoleFilter(event.target.value as "ALL" | ContributorRole)
+            }
+          >
+            {(
+              Object.keys(ROLE_FILTER_LABELS) as ("ALL" | ContributorRole)[]
+            ).map((role) => (
+              <option key={role} value={role}>
+                {ROLE_FILTER_LABELS[role]}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label="Sortierung" htmlFor="contributor-sort">
+          <NativeSelect
+            id="contributor-sort"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as SortOption)}
+          >
+            {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+              <option key={option} value={option}>
+                {SORT_LABELS[option]}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+      </div>
+
+      <p className="text-muted-foreground text-sm">
+        {visible.length} von {rows.length} Einträgen
+      </p>
+
+      <ul className="flex flex-col gap-3">
+        {visible.map((row) => (
+          <ContributorAdminRow
+            key={row.id}
+            row={row}
+            onMerge={() => setMergeSource(row)}
+          />
+        ))}
+      </ul>
+
+      {mergeSource && (
+        <MergeContributorDialog
+          source={mergeSource}
+          rows={rows}
+          onClose={() => setMergeSource(null)}
+        />
+      )}
+    </PageContainer>
+  );
+}
+
+/** Der eine geteilte Zusammenführen-Dialog (#520) — Kandidaten erst, wenn
+ * er offen ist, und per Suche statt als Liste aller Einträge. */
+function MergeContributorDialog({
+  source,
+  rows,
+  onClose,
+}: {
+  source: AdminContributorRow;
+  rows: AdminContributorRow[];
+  onClose: () => void;
+}) {
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const options = useMemo(
+    () =>
+      rows
+        .filter((row) => row.id !== source.id)
+        .map((row) => ({ id: row.id, label: contributorOptionLabel(row) })),
+    [rows, source.id],
+  );
+
+  return (
+    <ActionDialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={`„${source.name}" zusammenführen`}
+      description="Beide Einträge werden zu einem, alle Titel-Verknüpfungen bleiben erhalten. Hat einer der beiden eine BGG-ID, bleibt dieser bestehen, sonst der gewählte Ziel-Eintrag."
+      submitLabel="Zusammenführen"
+      pendingLabel="Führe zusammen…"
+      canSubmit={targetId !== null}
+      action={() => mergeContributors(source.id, targetId!)}
+      onReset={onClose}
+    >
+      <IdCombobox
+        options={options}
+        value={targetId}
+        onValueChange={setTargetId}
+        placeholder="Ziel-Eintrag suchen …"
+      />
+    </ActionDialog>
+  );
+}
+
+/** Name plus Unterscheidungsmerkmal — gleichnamige Einträge (z. B. ohne und
+ * mit BGG-ID) müssen im Suchfeld auseinanderzuhalten sein. */
+function contributorOptionLabel(row: AdminContributorRow) {
+  const details = [
+    `${row.titleCount} Titel`,
+    row.bggId !== null ? `BGG-ID ${row.bggId}` : null,
+  ].filter(Boolean);
+  return `${row.name} (${details.join(", ")})`;
+}

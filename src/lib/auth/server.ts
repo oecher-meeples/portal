@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { cache } from "react";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/utils/prisma";
 import { requireEnv } from "@/lib/utils/require-env";
@@ -57,7 +58,9 @@ export function createLoginAccount(input: {
  * guard, a page render degrades to "logged out" instead of crashing — the
  * same contract as before. Unrelated errors (e.g. DB down) still throw.
  */
-async function getSessionData() {
+// `cache()`: AppShell, Page-Guards und Permission-Checks fragen die Session
+// mehrfach pro Request ab — ein Lookup reicht (#525).
+const getSessionData = cache(async () => {
   try {
     return await auth.api.getSession({
       headers: await headers(),
@@ -72,7 +75,7 @@ async function getSessionData() {
     }
     throw error;
   }
-}
+});
 
 export async function getCurrentUser() {
   const data = await getSessionData();

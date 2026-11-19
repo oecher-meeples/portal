@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FileField } from "@/components/ui/file-field";
 import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { useAction } from "@/components/ui/use-action";
+import { NativeSelect } from "@/components/ui/native-select";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
 import { PROFILE_PICTURE_VISIBILITY_LABELS } from "@/lib/members/profile-picture-visibility";
@@ -95,14 +96,15 @@ export function ProfilePictureUpload({
 
       {canEdit && (
         <>
-          <select
+          <NativeSelect
             value={selectedVisibility}
             onChange={(event) =>
               handleVisibilityChange(
                 event.target.value as ProfilePictureVisibility,
               )
             }
-            className="border-input bg-background h-9 w-fit rounded-md border px-3 text-sm"
+            size="md"
+            className="w-fit"
           >
             {Object.entries(PROFILE_PICTURE_VISIBILITY_LABELS).map(
               ([value, label]) => (
@@ -111,7 +113,7 @@ export function ProfilePictureUpload({
                 </option>
               ),
             )}
-          </select>
+          </NativeSelect>
 
           {profilePictureUrl && (
             <Button

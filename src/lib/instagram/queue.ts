@@ -1,3 +1,4 @@
+import { siteUrl } from "@/lib/utils/site-url";
 import {
   InstagramStatus,
   type Post,
@@ -19,8 +20,7 @@ const DEFAULT_EXPIRES_IN_SECONDS = 60 * 24 * 60 * 60;
 export type DuePost = Post & { instagramDetails: PostInstagramDetails };
 
 function buildCaption(post: Pick<Post, "title" | "excerpt" | "slug">): string {
-  const siteUrl = process.env.PUBLIC_SITE_URL ?? "";
-  return `${post.title}\n\n${post.excerpt}\n\nMehr dazu: ${siteUrl}/news/${post.slug}`;
+  return `${post.title}\n\n${post.excerpt}\n\nMehr dazu: ${siteUrl()}/news/${post.slug}`;
 }
 
 export function findDuePosts() {

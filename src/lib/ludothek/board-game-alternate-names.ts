@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 
 /**
  * Gemeinsames Verschiebe-oder-Löschen-Muster hinter den "Als … verwenden"-
@@ -44,7 +44,7 @@ export async function addAlternateName(
   name: string,
   note?: string | null,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -64,7 +64,7 @@ export async function addAlternateName(
 
 /** Löscht einen Alternativnamen (#187). */
 export async function deleteAlternateName(id: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -89,7 +89,7 @@ export async function deleteAlternateName(id: string) {
  * landet wie bisher als Alternativtitel-Eintrag.
  */
 export async function promoteAlternateNameToTitle(alternateNameId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -139,7 +139,7 @@ export async function promoteAlternateNameToTitle(alternateNameId: string) {
 export async function promoteAlternateNameToSecondaryTitle(
   alternateNameId: string,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -181,7 +181,7 @@ export async function promoteAlternateNameToSecondaryTitle(
  * Fall wird abgelehnt statt eine Pflichtangabe zu leeren.
  */
 export async function swapTitleAndSecondaryTitle(boardGameId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -213,7 +213,7 @@ export async function swapTitleAndSecondaryTitle(boardGameId: string) {
  * hier. Zum endgültigen Verwerfen des Texts siehe `deleteSecondaryTitle`.
  */
 export async function clearSecondaryTitle(boardGameId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -249,7 +249,7 @@ export async function clearSecondaryTitle(boardGameId: string) {
  * weiterführt. Für den Fall, dass der Text wirklich verworfen werden soll.
  */
 export async function deleteSecondaryTitle(boardGameId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }
@@ -267,7 +267,7 @@ export async function deleteSecondaryTitle(boardGameId: string) {
  * Sekundärtitel selbst ist ein eigenständiges `BoardGame`-Feld (#203), nicht
  * mehr Teil dieser Liste. */
 export async function listAlternateNames(boardGameId: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }

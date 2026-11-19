@@ -6,9 +6,6 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const ensureMeepleMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
@@ -17,6 +14,11 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   createStorageUnit,

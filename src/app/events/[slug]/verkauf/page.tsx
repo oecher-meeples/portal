@@ -3,10 +3,10 @@ import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
 import { isBringAndBuyMarketOpen } from "@/lib/events/upcoming";
 import {
-  createOwnFleaMarketItem,
-  listOwnFleaMarketItems,
-  updateOwnFleaMarketItem,
+  createOwnFleaMarketItemAsMeeple,
+  updateOwnFleaMarketItemAsMeeple,
 } from "@/lib/bringbuy/own-items";
+import { listOwnFleaMarketItems } from "@/lib/bringbuy/queries";
 import { SellerDashboardView } from "@/components/feature/bringbuy/seller-dashboard-view";
 
 /** Meeple-Verkäuferseite (#266) — kein Token nötig, die bestehende
@@ -27,15 +27,14 @@ export default async function MeepleSellerPage({
   const items = await listOwnFleaMarketItems(event.id, {
     sellerMeepleId: meeple.id,
   });
-  const sellerRef = { sellerMeepleId: meeple.id } as const;
 
   return (
     <SellerDashboardView
       eventTitle={event.title}
       sellerLabel={meeple.displayName}
       items={items}
-      createItem={createOwnFleaMarketItem.bind(null, event.id, sellerRef)}
-      updateItem={updateOwnFleaMarketItem.bind(null, sellerRef)}
+      createItem={createOwnFleaMarketItemAsMeeple.bind(null, event.id)}
+      updateItem={updateOwnFleaMarketItemAsMeeple}
     />
   );
 }

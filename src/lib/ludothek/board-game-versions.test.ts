@@ -2,22 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
   selectRelevantVersions,
   resolvePublisherFromVersions,
+  resolveVersionInput,
   resolveProductCodeFromVersions,
 } from "./board-game-versions";
 import type { BggVersion } from "@/lib/bgg/client";
 
 const ENGLISH_VERSION: BggVersion = {
+  bggVersionId: null,
+  name: null,
   yearPublished: 2021,
   publisher: ["Capstone Games"],
   productCode: "CAPS001",
   languages: ["English"],
+  publisherLinks: [],
 };
 
 const GERMAN_VERSION: BggVersion = {
+  bggVersionId: null,
+  name: null,
   yearPublished: 2022,
   publisher: ["Feuerland Spiele"],
   productCode: "FEU001",
   languages: ["German"],
+  publisherLinks: [],
 };
 
 describe("selectRelevantVersions", () => {
@@ -133,5 +140,36 @@ describe("resolveProductCodeFromVersions", () => {
     ]);
 
     expect(result).toEqual({ value: null, needsSelection: false });
+  });
+});
+
+describe("resolveVersionInput", () => {
+  it("takes the single relevant edition as is", () => {
+    expect(
+      resolveVersionInput([ENGLISH_VERSION, GERMAN_VERSION]),
+    ).toMatchObject({
+      name: null,
+      languages: ["German"],
+      productCode: "FEU001",
+    });
+  });
+
+  it("returns an edition without a concrete BGG version id when several editions agree on the publisher", () => {
+    const second = { ...GERMAN_VERSION, productCode: null };
+
+    expect(resolveVersionInput([GERMAN_VERSION, second])).toMatchObject({
+      bggVersionId: null,
+      languages: ["German"],
+    });
+  });
+
+  it("returns null when the editions disagree on the publisher", () => {
+    const other = { ...GERMAN_VERSION, publisher: ["Other Verlag"] };
+
+    expect(resolveVersionInput([GERMAN_VERSION, other])).toBeNull();
+  });
+
+  it("returns null without versions", () => {
+    expect(resolveVersionInput([])).toBeNull();
   });
 });

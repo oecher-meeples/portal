@@ -1,5 +1,4 @@
 import type { BetterAuthOptions } from "better-auth";
-import { createLocalAccountIssuer } from "better-auth/db";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
@@ -167,7 +166,6 @@ type AuthContextLike = {
     linkAccount: (account: {
       userId: string;
       providerId: string;
-      issuer: string;
       accountId: string;
       password: string;
     }) => Promise<unknown>;
@@ -223,7 +221,6 @@ export async function createCredentialUser(
   await ctx.internalAdapter.linkAccount({
     userId: user.id,
     providerId: "credential",
-    issuer: createLocalAccountIssuer("credential"),
     accountId: user.id,
     password: hash,
   });

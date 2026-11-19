@@ -72,6 +72,7 @@ function NewItemForm({
   const [language, setLanguage] = useState("");
   const [priceEuros, setPriceEuros] = useState("");
   const { run, pending, error } = useAction({
+    refresh: true,
     onSuccess: () => {
       setTitle("");
       setLanguage("");
@@ -136,6 +137,7 @@ function ItemRow({
   const [language, setLanguage] = useState(item.language ?? "");
   const [priceEuros, setPriceEuros] = useState(String(item.priceEuros));
   const { run, pending, error } = useAction({
+    refresh: true,
     onSuccess: () => setEditing(false),
   });
   const canEdit = item.status === "PENDING";

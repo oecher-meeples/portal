@@ -5,9 +5,6 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const assignShiftBookingMock = vi.fn();
 const unassignShiftBookingMock = vi.fn();
@@ -16,6 +13,11 @@ vi.mock("@/lib/events/shift-booking-assignment", () => ({
   unassignShiftBooking: (...args: unknown[]) =>
     unassignShiftBookingMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { assignHelperToShift, unassignHelperFromShift } =
   await import("./shift-plan-actions");

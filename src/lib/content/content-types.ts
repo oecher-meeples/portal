@@ -9,6 +9,15 @@
 
 export type ContentType = "termin" | "blog" | "turnier" | "umfrage";
 
+/** Singular-Labels je Beitragstyp — die einzige Definition (Admin-Liste,
+ * Formular-Auswahl, Badge). Reihenfolge = Reihenfolge in Auswahllisten. */
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  blog: "Blog",
+  termin: "Termin",
+  turnier: "Turnier",
+  umfrage: "Umfrage",
+};
+
 /** Seitengröße für das Nachladen im News-Feed (#470). */
 export const NEWS_PAGE_SIZE = 10;
 

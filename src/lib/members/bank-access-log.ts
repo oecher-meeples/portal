@@ -1,7 +1,5 @@
 import { BankDataAccessKind, PendingChangeKind } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
-import { ensureMeeple } from "@/lib/members/meeples";
 import { decryptSecret } from "@/lib/utils/crypto";
 import { checkAndRecordCountLimit } from "@/lib/utils/rate-limit";
 import {
@@ -41,17 +39,6 @@ export async function deleteExpiredBankDataAccessLogs(now: Date = new Date()) {
     where: { at: { lt: bankLogCutoff(now) } },
   });
   return { deleted: count };
-}
-
-/**
- * Gate for every place that decrypts a Meeple's bank data — `bank:read` is
- * deliberately separate from `members:manage` (see PERMISSIONS in
- * seed-roles.ts), so an admin dialog that edits other Meeple fields must not
- * fall back on its own permission to also unlock this.
- */
-export async function requireBankReader() {
-  const user = await requirePermission("bank:read");
-  return ensureMeeple(user);
 }
 
 /**

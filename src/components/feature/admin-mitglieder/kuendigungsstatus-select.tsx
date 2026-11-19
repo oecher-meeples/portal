@@ -4,6 +4,7 @@ import { useState } from "react";
 import { computeMembershipEndsAt } from "@/lib/members/membership-state";
 import type { MembershipState } from "@/lib/members/membership-state";
 import { useAction } from "@/components/ui/use-action";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   recordResignation,
   revokeResignation,
@@ -46,7 +47,7 @@ export function KuendigungsstatusSelect({
 
   return (
     <div className="flex flex-col gap-1">
-      <select
+      <NativeSelect
         value={value}
         disabled={pending}
         onChange={(event) => {
@@ -58,11 +59,11 @@ export function KuendigungsstatusSelect({
               : revokeResignation(meepleId),
           );
         }}
-        className="border-input bg-background h-8 rounded-md border px-2 text-sm disabled:opacity-60"
+        size="compact"
       >
         <option value="aktiv">{STATE_LABELS.registriert}</option>
         <option value="gekuendigt">{STATE_LABELS.gekuendigt}</option>
-      </select>
+      </NativeSelect>
       {error && <span className="text-destructive text-xs">{error}</span>}
     </div>
   );

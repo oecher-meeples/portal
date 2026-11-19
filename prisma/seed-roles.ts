@@ -1,107 +1,13 @@
 import { prisma } from "../src/lib/utils/prisma";
-
-const PERMISSIONS = [
-  {
-    key: "admin:access",
-    description:
-      'Zugriff auf den Admin-Bereich und dessen Tier-Vorschau (ersetzt die frühere Prüfung auf den Rollennamen "admin", siehe src/lib/auth/session.ts)',
-  },
-  {
-    key: "posts:public",
-    description:
-      "Öffentliche Beiträge anzeigen, bearbeiten und senden (inkl. Instagram-Crosspost, sofern verbunden) — Nachfolger von posts:write (#321)",
-  },
-  {
-    key: "posts:internal",
-    description:
-      "Interne (vereinsinterne) Beiträge anzeigen, bearbeiten und senden (#321)",
-  },
-  { key: "posts:delete", description: "Beiträge löschen" },
-  {
-    key: "invites:manage",
-    description: "Einladungen erzeugen, einsehen und widerrufen",
-  },
-  { key: "members:manage", description: "Mitgliederverwaltung" },
-  {
-    key: "members:manage-system-accounts",
-    description:
-      "Meeple-Profile als System-Konto markieren/entmarkieren (#297) — schließt sie aus Mitgliederzählungen aus",
-  },
-  {
-    key: "roles:manage",
-    description:
-      "Rollen und deren Rechte bearbeiten (#365) — bewusst getrennt von members:manage, damit nicht jeder Mitglieder-Admin auch die Rollenverwaltung selbst ändern kann",
-  },
-  {
-    key: "instagram:connect",
-    description: "Instagram-Verbindung verwalten (OAuth verbinden/trennen)",
-  },
-  {
-    key: "games:manage",
-    description:
-      "Ludothek verwalten: Spiele und Aufbewahrungseinheiten anlegen, bearbeiten und stilllegen, EAN pflegen, Etiketten drucken, fremde Aufenthalte korrigieren, Mängel schließen, deinventarisieren",
-  },
-  {
-    key: "bank:read",
-    description: "Bankdaten entschlüsselt einsehen und exportieren",
-  },
-  {
-    key: "events:manage",
-    description:
-      "Events, Schichten und Regal-Zuordnungen verwalten, Flohmarkt-Artikel freigeben/Kasse bedienen außerhalb einer Kasse-Schicht",
-  },
-  {
-    key: "events:bestand",
-    description:
-      "Event-Ausgabe und Event-Rückgabe scannen (Regal-Zuordnung beim Verladen) — bewusst eigenständig statt games:manage (#436), engerer Scope als events:manage",
-  },
-  {
-    key: "downloads:manage",
-    description:
-      "Downloads verwalten (hochladen, Sichtbarkeit ändern, löschen)",
-  },
-  {
-    key: "legal:manage",
-    description:
-      "Rechtliches-Dokumente verwalten (PDF hochladen, Sections bearbeiten)",
-  },
-  {
-    key: "links:manage",
-    description: "Wichtige Links verwalten (anlegen, bearbeiten, löschen)",
-  },
-  {
-    key: "ludothek:view",
-    description:
-      "Ludothek-Bestand als eingeloggtes Mitglied sehen (Zustand, Standort, Ausleihhistorie) statt nur der öffentlichen Gast-Ansicht",
-  },
-  {
-    key: "ludothek:borrow",
-    description:
-      "Spiele selbst ausleihen, zurückgeben und weitergeben (Scan-Flow)",
-  },
-  {
-    key: "news:internal:view",
-    description: "Interne (vereinsinterne) News-Beiträge lesen",
-  },
-  {
-    key: "lfg:participate",
-    description: "Spielergesuche anlegen, beitreten und verwalten",
-  },
-  {
-    key: "market:participate",
-    description: "Marktplatz-Angebote anlegen und darauf reagieren",
-  },
-  {
-    key: "notifications:manage",
-    description:
-      "Globale System-Notifications verwalten: manuelle anlegen/deaktivieren/löschen, automatisierte deaktivieren (#339)",
-  },
-];
+import {
+  PERMISSIONS,
+  type PermissionKey,
+} from "../src/lib/auth/permission-keys";
 
 /** Regulärer Funktionsumfang eines eingeloggten Meeples ohne Sonderrolle
  * (siehe #335) — die Standardrolle "Meeple" bekommt genau diesen Satz,
  * die künftige "Ausgetreten"-Rolle (#332) einen Teil davon. */
-export const REGULAR_MEEPLE_PERMISSION_KEYS = [
+export const REGULAR_MEEPLE_PERMISSION_KEYS: PermissionKey[] = [
   "ludothek:view",
   "ludothek:borrow",
   "news:internal:view",
@@ -124,7 +30,14 @@ export const AUSGETRETEN_PERMISSION_KEYS =
       ].includes(key),
   );
 
-const ROLES = [
+type SeedRole = {
+  name: string;
+  description: string;
+  permissionKeys: readonly PermissionKey[];
+  isSystemRole?: boolean;
+};
+
+const ROLES: SeedRole[] = [
   {
     name: "sysadmin",
     description: "Vollzugriff",
@@ -188,14 +101,14 @@ export async function seedPermissions() {
     await prisma.permission.upsert({
       where: { key: permission.key },
       update: { description: permission.description },
-      create: permission,
+      create: { key: permission.key, description: permission.description },
     });
   }
 }
 
 export async function seedRoles() {
   for (const [sortOrder, role] of ROLES.entries()) {
-    const isSystemRole = "isSystemRole" in role ? role.isSystemRole : false;
+    const isSystemRole = role.isSystemRole ?? false;
     await prisma.role.upsert({
       where: { name: role.name },
       update: { description: role.description, isSystemRole, sortOrder },

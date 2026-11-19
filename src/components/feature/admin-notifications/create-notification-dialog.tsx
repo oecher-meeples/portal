@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField, TextAreaField } from "@/components/ui/field";
+import { NativeSelect } from "@/components/ui/native-select";
 import { createManualNotification } from "@/lib/notifications/actions";
 import {
   NOTIFICATION_CLOSEABLE_LABELS,
@@ -73,9 +74,10 @@ export function CreateNotificationDialog({
           required
         />
         <Field label="Dringlichkeit" htmlFor="notification-type">
-          <select
+          <NativeSelect
             id="notification-type"
-            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+            size="md"
+            className="w-full"
             value={type}
             onChange={(event) =>
               setType(event.target.value as NotificationType)
@@ -86,12 +88,13 @@ export function CreateNotificationDialog({
                 {label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </Field>
         <Field label="Zielgruppe" htmlFor="notification-audience">
-          <select
+          <NativeSelect
             id="notification-audience"
-            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+            size="md"
+            className="w-full"
             value={audiencePermissionKey}
             onChange={(event) => setAudiencePermissionKey(event.target.value)}
           >
@@ -101,15 +104,16 @@ export function CreateNotificationDialog({
                 {permission.key} — {permission.description}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </Field>
         <Field
           label="Schließbarkeit im Banner"
           htmlFor="notification-closeable"
         >
-          <select
+          <NativeSelect
             id="notification-closeable"
-            className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+            size="md"
+            className="w-full"
             value={closeable}
             onChange={(event) =>
               setCloseable(event.target.value as NotificationCloseable)
@@ -122,7 +126,7 @@ export function CreateNotificationDialog({
                 </option>
               ),
             )}
-          </select>
+          </NativeSelect>
         </Field>
       </div>
     </ActionDialog>

@@ -1,13 +1,9 @@
 "use server";
 
 import { BankDataAccessKind } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import {
-  logBankDataAccess,
-  requireBankReader,
-  revealMeepleIban,
-  revealPendingIbanChange,
-} from "@/lib/members/bank-access-log";
+import { logBankDataAccess } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { memberDisplayName } from "@/lib/members/member-display-name";
@@ -17,18 +13,8 @@ function csvCell(value: string | number) {
   return escapeCsvField(value, ";");
 }
 
-export async function revealIban(meepleId: string) {
-  const actor = await requireBankReader();
-  return revealMeepleIban(meepleId, actor.id);
-}
-
-export async function revealPendingIban(changeId: string) {
-  const actor = await requireBankReader();
-  return revealPendingIbanChange(changeId, actor.id);
-}
-
 export async function exportBankDataCsv() {
-  const actor = await requireBankReader();
+  const { meeple: actor } = await requireActionPermission("bank:read");
 
   // #395: Datenminimierung auf tatsächlich einzuziehende Zustände.
   // "Gekündigt" (resignedAt gesetzt, membershipEndsAt in der Zukunft) bleibt

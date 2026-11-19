@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { PendingChangeKind } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import {
   approvePendingChange as approvePendingChangeRecord,
   hasOpenInviteForMemberEmail,
@@ -13,17 +14,10 @@ import {
 /** IBAN: Kassenwart (`bank:read`). MEMBER_EMAIL: Vorstand (`members:manage`) —
  * dieselbe Berechtigung, die auch Kündigungen vermerkt. */
 async function requireApproverFor(kind: PendingChangeKind) {
-  return kind === PendingChangeKind.IBAN
-    ? requirePermission("bank:read")
-    : requirePermission("members:manage");
-}
-
-async function revalidateProfilePage(memberId: string) {
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
-    select: { slug: true },
-  });
-  if (member) revalidatePath(`/profil/${member.slug}`);
+  const { user } = await requireActionPermission(
+    kind === PendingChangeKind.IBAN ? "bank:read" : "members:manage",
+  );
+  return user;
 }
 
 export async function approvePendingChange(
@@ -39,7 +33,7 @@ export async function approvePendingChange(
 
   revalidatePath("/admin/bank");
   revalidatePath("/admin/mitglieder");
-  await revalidateProfilePage(change.memberId);
+  await revalidateMemberProfile({ memberId: change.memberId });
   return { success: true as const };
 }
 
@@ -63,6 +57,6 @@ export async function rejectPendingChange(id: string, reason: string) {
 
   revalidatePath("/admin/bank");
   revalidatePath("/admin/mitglieder");
-  await revalidateProfilePage(change.memberId);
+  await revalidateMemberProfile({ memberId: change.memberId });
   return { success: true as const };
 }

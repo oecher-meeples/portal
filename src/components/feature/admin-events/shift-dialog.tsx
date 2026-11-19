@@ -6,6 +6,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField } from "@/components/ui/field";
 import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   createShift,
   updateShift,
@@ -137,9 +138,9 @@ export function ShiftDialog({
       onReset={reset}
     >
       <Field label="Tag" htmlFor="shift-day">
-        <select
+        <NativeSelect
           id="shift-day"
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          size="md"
           value={dayId}
           onChange={(event) => setDayId(event.target.value)}
         >
@@ -148,7 +149,7 @@ export function ShiftDialog({
               {formatWeekdayDate(day.date)}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
       <p className="text-muted-foreground -mt-2 text-xs">
         {selectedDay?.startsAt && selectedDay.endsAt
@@ -156,9 +157,9 @@ export function ShiftDialog({
           : "Für diesen Tag sind noch keine Öffnungszeiten hinterlegt."}
       </p>
       <Field label="Rolle" htmlFor="shift-role">
-        <select
+        <NativeSelect
           id="shift-role"
-          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+          size="md"
           value={roleId}
           onChange={(event) => setRoleId(event.target.value)}
         >
@@ -167,7 +168,7 @@ export function ShiftDialog({
               {role.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
       <TimePicker
         id="shift-target-starts"

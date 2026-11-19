@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import type { ProfilePictureVisibility } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import { optionalHandle, optionalText } from "@/lib/utils/optional-text";
 
 export type MeepleDatenInput = {
@@ -23,15 +23,7 @@ export type MeepleDatenInput = {
 async function assertMayEdit(meepleId: string) {
   const session = await requireMember();
   if (session.meeple.id === meepleId) return;
-  await requirePermission("members:manage");
-}
-
-async function revalidateOwnerProfile(meepleId: string) {
-  const member = await prisma.member.findUnique({
-    where: { meepleId },
-    select: { slug: true },
-  });
-  if (member) revalidatePath(`/profil/${member.slug}`);
+  await requireActionPermission("members:manage");
 }
 
 /** Direktes Speichern, kein Änderungsantrag (#382 — anders als der
@@ -57,7 +49,7 @@ export async function updateMeepleDaten(
     },
   });
 
-  await revalidateOwnerProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }
 
@@ -76,6 +68,6 @@ export async function updateMeepleDatenVisibility(
     data: { meepleDatenVisibility: visibility },
   });
 
-  await revalidateOwnerProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }

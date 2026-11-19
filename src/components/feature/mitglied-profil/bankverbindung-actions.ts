@@ -1,12 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import {
-  requireBankReader,
-  revealMeepleIban,
-  revealPendingIbanChange,
-} from "@/lib/members/bank-access-log";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import { assertMaySubmitChangeFor } from "@/lib/members/guardians";
 import { requestIbanChange } from "@/lib/members/pending-changes";
 import {
@@ -17,31 +13,6 @@ import {
   normaliseIban,
 } from "@/lib/utils/crypto";
 
-async function revalidateProfile(memberId: string) {
-  const member = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-    select: { slug: true },
-  });
-  revalidatePath(`/profil/${member.slug}`);
-}
-
-/** Dünner Wrapper um `revealMeepleIban` (#381) — auf der Profilseite eigens
- * gehalten statt aus `admin-bank/actions.ts` importiert: Feature-Ordner
- * importieren laut CLAUDE.md nie voneinander, die eigentliche Logik (samt
- * Access-Log) lebt bereits gemeinsam in `lib/members/bank-access-log.ts`. */
-export async function revealMemberIban(meepleId: string) {
-  const actor = await requireBankReader();
-  return revealMeepleIban(meepleId, actor.id);
-}
-
-/** Dünner Wrapper um `revealPendingIbanChange` (#381), analog
- * {@link revealMemberIban} — für die offenen IBAN-Änderungsanträge unter
- * dem Bankverbindungs-Bereich. */
-export async function revealPendingMemberIban(changeId: string) {
-  const actor = await requireBankReader();
-  return revealPendingIbanChange(changeId, actor.id);
-}
-
 /** Kassenwart-Direktbearbeitung (#381) — anders als der Selbst-/Guardian-Weg
  * (`requestIbanChange`, weiter über `PendingChange`/Vorstandsfreigabe) trägt
  * der Kassenwart selbst die Freigabe-Berechtigung, ein zusätzlicher Antrag
@@ -50,7 +21,7 @@ export async function updateMemberIban(
   memberId: string,
   input: { accountHolder: string; iban: string },
 ) {
-  await requireBankReader();
+  await requireActionPermission("bank:read");
 
   const trimmedHolder = input.accountHolder.trim();
   if (!trimmedHolder) {
@@ -72,7 +43,7 @@ export async function updateMemberIban(
     },
   });
 
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const };
 }
 
@@ -88,6 +59,6 @@ export async function requestMemberIbanChange(
   const result = await requestIbanChange(memberId, input);
   if ("error" in result) return result;
 
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const };
 }

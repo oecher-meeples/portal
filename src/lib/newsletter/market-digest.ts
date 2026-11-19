@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/utils/prisma";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
+import { siteUrl } from "@/lib/utils/site-url";
 
 const DIGEST_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
 
 function digestEmailHtml(
   listings: { id: string; title: string; priceEuros: number }[],

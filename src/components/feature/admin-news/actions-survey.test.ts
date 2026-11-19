@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 vi.mock("@/lib/instagram/queue", () => ({ processPost: vi.fn() }));
 
@@ -32,7 +35,7 @@ describe("Umfrage-Beiträge (#2)", () => {
 
   it("rejects publishing without a surveyEditLink", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await createPost(SURVEY_INPUT);
 
@@ -45,7 +48,7 @@ describe("Umfrage-Beiträge (#2)", () => {
 
   it("allows saving a survey draft without a surveyEditLink", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     const result = await createPost({ ...SURVEY_INPUT, status: "DRAFT" });
@@ -55,7 +58,7 @@ describe("Umfrage-Beiträge (#2)", () => {
 
   it("creates a surveyDetails row with the given fields when publishing", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost({
@@ -80,7 +83,7 @@ describe("Umfrage-Beiträge (#2)", () => {
 
   it("creates no surveyDetails row for a non-survey post", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost(VALID_INPUT);
@@ -91,7 +94,7 @@ describe("Umfrage-Beiträge (#2)", () => {
 
   it("deletes an existing surveyDetails row when the type changes away from umfrage", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.findUnique.mockResolvedValue({
       internal: null,
       newsletterStatus: null,
@@ -109,7 +112,7 @@ describe("Umfrage-Beiträge (#2)", () => {
 
   it("updates an existing surveyDetails row in place", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.findUnique.mockResolvedValue({
       internal: null,
       newsletterStatus: null,

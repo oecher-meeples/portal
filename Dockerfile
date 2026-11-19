@@ -36,6 +36,10 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 # ---------------------------------------------------------------------------
 FROM deps AS build
 COPY . .
+# #521: `next.config.ts` leitet daraus beim Build die Image-Optimizer-
+# Allowlist ab (standalone serialisiert die Config, zur Laufzeit wird sie
+# nicht neu gelesen). Leer → S3-Uploads werden unoptimiert ausgeliefert.
+ARG S3_PUBLIC_ENDPOINT=""
 # src/lib/auth/server.ts instanziiert better-auth auf Modulebene (requireEnv),
 # und `next build` lädt die Module beim Page-Data-Sammeln. Platzhalter nur für
 # diesen RUN — sie landen weder im Runner-Image noch im Bundle (kein
@@ -88,6 +92,10 @@ COPY --from=build /app/prisma/migrations ./db/prisma/migrations
 COPY --from=build /app/db-tools/seed.cjs ./db/seed.cjs
 COPY docker/app/entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod 0755 /usr/local/bin/entrypoint
+
+# #521: Cache des Image-Optimizers — muss für `node` beschreibbar sein;
+# docker-compose.yml hängt ein Volume ein, damit er Neustarts überlebt.
+RUN mkdir -p .next/cache/images && chown -R node:node .next/cache
 
 # `node` (uid/gid 1000) bringt das offizielle Node-Image schon mit.
 USER node
