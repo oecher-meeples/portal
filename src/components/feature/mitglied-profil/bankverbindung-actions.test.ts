@@ -27,7 +27,7 @@ vi.mock("@/lib/auth/action-guards", async () =>
   ),
 );
 
-const { revealMemberIban, updateMemberIban, requestMemberIbanChange } =
+const { updateMemberIban, requestMemberIbanChange } =
   await import("./bankverbindung-actions");
 
 const IBAN = "DE89 3704 0044 0532 0130 00";
@@ -129,20 +129,5 @@ describe("requestMemberIbanChange (#381)", () => {
       "Du bist nicht berechtigt, einen Änderungsantrag für dieses Mitglied zu stellen.",
     );
     expect(requestIbanChangeMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("revealMemberIban (#381)", () => {
-  it("requires bank:read and logs via the shared bank-access-log rule", async () => {
-    revealMeepleIbanMock.mockResolvedValue({ success: true, iban: IBAN });
-
-    const result = await revealMemberIban("meeple-1");
-
-    expect(result).toEqual({ success: true, iban: IBAN });
-    expect(requireBankReaderMock).toHaveBeenCalled();
-    expect(revealMeepleIbanMock).toHaveBeenCalledWith(
-      "meeple-1",
-      "kassenwart-1",
-    );
   });
 });

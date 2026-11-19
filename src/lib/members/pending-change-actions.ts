@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { PendingChangeKind } from "@prisma/client";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import {
   approvePendingChange as approvePendingChangeRecord,
   hasOpenInviteForMemberEmail,
@@ -19,14 +20,6 @@ async function requireApproverFor(kind: PendingChangeKind) {
   return user;
 }
 
-async function revalidateProfilePage(memberId: string) {
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
-    select: { slug: true },
-  });
-  if (member) revalidatePath(`/profil/${member.slug}`);
-}
-
 export async function approvePendingChange(
   id: string,
   options?: { revokeAndReissueInvite?: boolean },
@@ -40,7 +33,7 @@ export async function approvePendingChange(
 
   revalidatePath("/admin/bank");
   revalidatePath("/admin/mitglieder");
-  await revalidateProfilePage(change.memberId);
+  await revalidateMemberProfile({ memberId: change.memberId });
   return { success: true as const };
 }
 
@@ -64,6 +57,6 @@ export async function rejectPendingChange(id: string, reason: string) {
 
   revalidatePath("/admin/bank");
   revalidatePath("/admin/mitglieder");
-  await revalidateProfilePage(change.memberId);
+  await revalidateMemberProfile({ memberId: change.memberId });
   return { success: true as const };
 }

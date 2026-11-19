@@ -46,7 +46,7 @@ src/lib/
 │               Kassenansicht als auch die neue Verkäufer-Registrierungsseite (`feature/bringbuy`) darauf zugreifen
 │               und die Layer-Regel keinen Cross-Feature-Import erlaubt (#266). Lesefunktionen ohne Guard (Token-Lookup,
 │               eigene Artikel, reservierte Warenkörbe) liegen in `queries.ts` **ohne** `"use server"` (#519)
-├── content/    News/Content (inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
+├── content/    News/Content (`CONTENT_TYPE_LABELS` in `content-types.ts`; inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
 ├── legal/      Rechtliches-Dokumente (Satzung/Datenschutz/Impressum/Beitragsordnung, feste Slugs): PDF-Text-Extraktion
@@ -67,6 +67,8 @@ src/lib/
 │               ├── anonymer-meeple.ts  Sammelkonto "Anonymer Meeple" (#333) — Displayname-Konstante + `Member`-Lookup, geteilt mit `prisma/seed.ts`
 │               ├── holding-actions.ts  Server Actions über den internen Übergängen
 │               ├── holding-actions-external.ts Server Actions über den externen Übergängen (#333a/b, Umbuchen, Member-Picker)
+│               ├── unit-chain.ts       Einzige Stelle des Kettenaufstiegs: `MAX_UNIT_CHAIN_DEPTH`, `walkUnitChain`, `unitChainLabel`, `findUnitAncestor`
+│               ├── board-game-kind.ts  `BOARD_GAME_KIND_LABELS` (Basisspiel/Erweiterung)
 │               ├── holding-actions-shared.ts   Von beiden `holding-actions*.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern
@@ -77,7 +79,8 @@ src/lib/
 │               └── private-collection.ts  Crowdsourced-Suche über `PrivateGameCollectionEntry` — nie im öffentlichen Pfad (`toPublicGame`)
 ├── markt/      Kleinanzeigen-Marktplatz: Anzeigen-Form, Preis-/Zustand-Filter über `searchParams`
 ├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
-├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`)
+├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
+│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
 ├── instagram/  Cross-Posting
 ├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, No-op ohne `SMTP_HOST`), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
@@ -85,7 +88,8 @@ src/lib/
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → SeaweedFS per Presigned POST), `search-params.ts`,
                 `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, Public-URL ↔ Key, `putBlob()`),
                 `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt),
-                `action-result.ts` (`toResult`/`actionErrorMessage`/`UserFacingError` — catch-all für Server Actions mit `unstable_rethrow`)
+                `action-result.ts` (`toResult`/`actionErrorMessage`/`UserFacingError` — catch-all für Server Actions mit `unstable_rethrow`),
+                `escape-html.ts` (`escapeHtml`, auch Anführungszeichen), `site-url.ts` (`siteUrl()`), `cron-auth.ts` (`requireCronAuth(request)` für `app/api/cron/*`)
 ```
 
 Deutschsprachige **Labels** für Domänen-Enums (`MEMBERSHIP_STATE_LABELS`, `SHIFT_TYPE_LABELS`, …) liegen hier — sie sind Fachvokabular. Wie ein Zustand **aussieht** (Farbe/Tone) liegt dagegen in `components/entities/`.

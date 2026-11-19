@@ -3,6 +3,7 @@ import type {
   FleaMarketItemStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { findUnitAncestor } from "@/lib/ludothek/unit-chain";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
   filterLudothekGames,
@@ -19,8 +20,6 @@ import {
   meepleEmail,
   type ContactLinks,
 } from "@/lib/members/contact";
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
 
 /**
  * True if `unitId` or one of its ancestors (box in shelf) is in `assignedUnitIds` —
@@ -42,16 +41,7 @@ export function findAssignedAncestor(
   assignedUnitIds: Set<string>,
   parentById: Map<string, string | null>,
 ): string | null {
-  let currentId: string | null = unitId;
-  let depth = 0;
-
-  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    if (assignedUnitIds.has(currentId)) return currentId;
-    currentId = parentById.get(currentId) ?? null;
-    depth += 1;
-  }
-
-  return null;
+  return findUnitAncestor(unitId, parentById, (id) => assignedUnitIds.has(id));
 }
 
 /**

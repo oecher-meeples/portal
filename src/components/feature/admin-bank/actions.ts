@@ -3,11 +3,7 @@
 import { BankDataAccessKind } from "@prisma/client";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import {
-  logBankDataAccess,
-  revealMeepleIban,
-  revealPendingIbanChange,
-} from "@/lib/members/bank-access-log";
+import { logBankDataAccess } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { memberDisplayName } from "@/lib/members/member-display-name";
@@ -15,16 +11,6 @@ import { BANK_CSV_COLUMNS } from "@/components/feature/admin-bank/csv-columns";
 
 function csvCell(value: string | number) {
   return escapeCsvField(value, ";");
-}
-
-export async function revealIban(meepleId: string) {
-  const { meeple: actor } = await requireActionPermission("bank:read");
-  return revealMeepleIban(meepleId, actor.id);
-}
-
-export async function revealPendingIban(changeId: string) {
-  const { meeple: actor } = await requireActionPermission("bank:read");
-  return revealPendingIbanChange(changeId, actor.id);
 }
 
 export async function exportBankDataCsv() {

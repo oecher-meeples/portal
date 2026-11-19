@@ -40,3 +40,8 @@ export const TAG_TYPE_LABELS: Record<TagType, string> = {
   MECHANIC: "Mechanik",
   CATEGORY: "Kategorie",
 };
+
+export const TAG_TYPE_PLURAL_LABELS: Record<TagType, string> = {
+  MECHANIC: "Mechaniken",
+  CATEGORY: "Kategorien",
+};

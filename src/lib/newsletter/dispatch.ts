@@ -7,12 +7,9 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
+import { siteUrl } from "@/lib/utils/site-url";
 
 const MAX_ATTEMPTS = 3;
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
 
 function newsletterEmailHtml(
   post: Pick<Post, "title" | "excerpt" | "slug">,

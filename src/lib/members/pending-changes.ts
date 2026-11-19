@@ -22,10 +22,7 @@ import {
   findOpenInviteByEmail,
 } from "@/lib/members/invites";
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
+import { siteUrl } from "@/lib/utils/site-url";
 
 /**
  * Änderungsanträge an sensiblen `Member`-Feldern (#330) — IBAN braucht nur

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
+import { unitChainLabel } from "@/lib/ludothek/unit-chain";
 import { requireMember } from "@/lib/auth/session";
 import { getMembershipState } from "@/lib/members/meeples";
 import {
@@ -7,23 +8,6 @@ import {
   type ResignedHolderRow,
   type StorageUnitRow,
 } from "@/components/feature/admin-einheiten/admin-einheiten-view";
-
-function locationChain(
-  unit: { label: string; parentUnitId: string | null },
-  byId: Map<string, { label: string; parentUnitId: string | null }>,
-) {
-  const chain = [unit.label];
-  let parentId = unit.parentUnitId;
-  let depth = 0;
-  while (parentId && depth < 20) {
-    const parent = byId.get(parentId);
-    if (!parent) break;
-    chain.push(parent.label);
-    parentId = parent.parentUnitId;
-    depth += 1;
-  }
-  return chain.reverse().join(" → ");
-}
 
 export default async function AdminEinheitenPage() {
   // #522: offen für jedes aktive Mitglied (Self-Claim einer Einheit),
@@ -106,7 +90,7 @@ export default async function AdminEinheitenPage() {
     // Rückgabetyp dadurch nicht automatisch ein (#273).
     kind: unit.kind as "BOX" | "SHELF",
     label: unit.label,
-    locationChain: locationChain(unit, unitById),
+    locationChain: unitChainLabel(unit.id, unitById),
     keeperMeepleId: unit.keeperMeepleId,
     keeperName: unit.keeper?.displayName ?? null,
     gameCount: gameCountByUnitId.get(unit.id) ?? 0,

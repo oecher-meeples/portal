@@ -1,25 +1,17 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { siteUrl } from "@/lib/utils/site-url";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import {
   generateMemberCalendarToken,
   revokeMemberCalendarToken,
 } from "@/lib/members/calendar-token";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
 
-async function revalidateProfile(memberId: string) {
-  const member = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-    select: { slug: true },
-  });
-  revalidatePath(`/profil/${member.slug}`);
-}
-
 function subscribeUrl(token: string): string {
-  const base = process.env.PUBLIC_SITE_URL ?? "";
-  return `${base}/api/calendar/internal/${token}.ics`;
+  return `${siteUrl()}/api/calendar/internal/${token}.ics`;
 }
 
 /** Erzeugt einen neuen Abo-Token und ersetzt einen eventuell bestehenden
@@ -29,7 +21,7 @@ export async function generateMemberCalendarSubscription(memberId: string) {
   await requireActionPermission("admin:access");
 
   const token = await generateMemberCalendarToken(memberId);
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const, subscribeUrl: subscribeUrl(token) };
 }
 
@@ -37,7 +29,7 @@ export async function revokeMemberCalendarSubscription(memberId: string) {
   await requireActionPermission("admin:access");
 
   await revokeMemberCalendarToken(memberId);
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const };
 }
 
@@ -81,6 +73,6 @@ export async function sendMemberCalendarSubscriptionMail(memberId: string) {
     };
   }
 
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const };
 }

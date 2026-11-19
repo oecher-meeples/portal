@@ -23,7 +23,6 @@ import {
 import { removeAusgetretenRole } from "@/lib/auth/ausgetreten-role";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { setMemberNumber as setMemberNumberRecord } from "@/lib/members/member-number";
-import { revealMeepleIban } from "@/lib/members/bank-access-log";
 
 /** How many games and units currently sit with this Meeple, for the confirmation dialog. */
 export async function getOpenHoldingsSummary(meepleId: string) {
@@ -142,16 +141,6 @@ export async function setMeepleSystemAccount(
 
   revalidatePath("/admin/mitglieder");
   return { success: true as const };
-}
-
-/**
- * Reveals a Meeple's IBAN inside the Mitglieder-edit dialog. Gated on
- * `bank:read` specifically, not `members:manage` — an admin without the
- * Kassenwart-Recht only ever sees the masked value passed down from the page.
- */
-export async function revealMemberIban(meepleId: string) {
-  const { meeple: actor } = await requireActionPermission("bank:read");
-  return revealMeepleIban(meepleId, actor.id);
 }
 
 /**

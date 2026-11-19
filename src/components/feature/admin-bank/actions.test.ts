@@ -14,8 +14,7 @@ vi.mock("@/lib/auth/action-guards", async () =>
 
 const { encryptSecret } = await import("@/lib/utils/crypto");
 const { BANK_CSV_COLUMNS } = await import("./csv-columns");
-const { exportBankDataCsv, revealIban, revealPendingIban } =
-  await import("./actions");
+const { exportBankDataCsv } = await import("./actions");
 
 class ForbiddenError extends Error {}
 
@@ -32,57 +31,11 @@ describe("without the bank:read permission", () => {
   it("neither decrypts nor logs anything", async () => {
     requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
-    await expect(revealIban("meeple-1")).rejects.toThrow(ForbiddenError);
-    await expect(revealPendingIban("change-1")).rejects.toThrow(ForbiddenError);
     await expect(exportBankDataCsv()).rejects.toThrow(ForbiddenError);
     expect(prismaMock.bankDataAccessLog.create).not.toHaveBeenCalled();
     expect(prismaMock.member.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.member.findMany).not.toHaveBeenCalled();
     expect(prismaMock.pendingChange.findUnique).not.toHaveBeenCalled();
-  });
-});
-
-describe("revealIban", () => {
-  // The decrypt/log rules themselves live in the lib layer and are tested in
-  // src/lib/members/bank-access-log.test.ts — here only the permission gate matters.
-  it("checks the bank:read permission and delegates to the shared reveal logic", async () => {
-    prismaMock.member.findUnique.mockResolvedValue({
-      ibanEncrypted: encryptSecret(IBAN),
-    } as never);
-
-    const result = await revealIban("meeple-1");
-
-    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
-    expect(result).toEqual({ success: true, iban: IBAN });
-    expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
-      data: {
-        accessedByMeepleId: "meeple-kassenwart",
-        subjectMeepleId: "meeple-1",
-        kind: "SINGLE_REVEAL",
-      },
-    });
-  });
-});
-
-describe("revealPendingIban", () => {
-  it("checks the bank:read permission and delegates to the shared reveal logic", async () => {
-    prismaMock.pendingChange.findUnique.mockResolvedValue({
-      kind: "IBAN",
-      newValue: encryptSecret(IBAN),
-      member: { meepleId: "meeple-1" },
-    } as never);
-
-    const result = await revealPendingIban("change-1");
-
-    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
-    expect(result).toEqual({ success: true, iban: IBAN });
-    expect(prismaMock.bankDataAccessLog.create).toHaveBeenCalledWith({
-      data: {
-        accessedByMeepleId: "meeple-kassenwart",
-        subjectMeepleId: "meeple-1",
-        kind: "SINGLE_REVEAL",
-      },
-    });
   });
 });
 

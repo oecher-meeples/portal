@@ -4,10 +4,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { generateToken } from "@/lib/utils/generate-token";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
 import { isBringAndBuyMarketOpen } from "@/lib/events/upcoming";
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
+import { siteUrl } from "@/lib/utils/site-url";
 
 export type ExternalSellerRegistrationInput = {
   eventId: string;

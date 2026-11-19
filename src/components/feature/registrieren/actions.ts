@@ -6,6 +6,7 @@ import { validateInviteToken } from "@/lib/members/invites";
 import { translateAuthError, validatePassword } from "@/lib/auth/password";
 import { checkFixedCooldown } from "@/lib/utils/rate-limit";
 import { getRequestIp } from "@/lib/utils/request-ip";
+import { memberFullName } from "@/lib/members/member-display-name";
 
 const DEFAULT_ROLE = "Meeple";
 
@@ -79,7 +80,7 @@ export async function redeemInvite({
       where: { email: invite.email },
     });
     const displayName =
-      [member?.firstName, member?.lastName].filter(Boolean).join(" ") ||
+      (member ? memberFullName(member) : "") ||
       name.trim() ||
       email.split("@")[0];
 

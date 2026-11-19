@@ -65,7 +65,6 @@ const {
   getOpenHoldingsSummary,
   recordResignation,
   renameMeeple,
-  revealMemberIban,
   revokeResignation,
   setMemberNumber,
   setMeepleSystemAccount,
@@ -274,28 +273,5 @@ describe("renameMeeple", () => {
       error: "Bitte einen Anzeigenamen angeben.",
     });
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
-  });
-});
-
-describe("revealMemberIban", () => {
-  it("checks bank:read separately from members:manage and delegates the reveal", async () => {
-    revealMeepleIbanMock.mockResolvedValue({ success: true, iban: "DE00" });
-
-    expect(await revealMemberIban("meeple-1")).toEqual({
-      success: true,
-      iban: "DE00",
-    });
-    expect(requireBankReaderMock).toHaveBeenCalled();
-    expect(revealMeepleIbanMock).toHaveBeenCalledWith(
-      "meeple-1",
-      "meeple-admin",
-    );
-  });
-
-  it("rejects without the bank:read permission, independent of members:manage", async () => {
-    requireBankReaderMock.mockRejectedValue(new ForbiddenError("/403"));
-
-    await expect(revealMemberIban("meeple-1")).rejects.toThrow(ForbiddenError);
-    expect(revealMeepleIbanMock).not.toHaveBeenCalled();
   });
 });

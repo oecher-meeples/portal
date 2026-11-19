@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import { assertMaySubmitChangeFor } from "@/lib/members/guardians";
 import {
   requestStammdatenChange,
@@ -46,14 +46,6 @@ function toUpdateData(input: StammdatenInput) {
   };
 }
 
-async function revalidateProfile(memberId: string) {
-  const member = await prisma.member.findUniqueOrThrow({
-    where: { id: memberId },
-    select: { slug: true },
-  });
-  revalidatePath(`/profil/${member.slug}`);
-}
-
 /** Direktbearbeitung für `members:manage` (#380) — kein Änderungsantrag. */
 export async function updateMemberStammdaten(
   memberId: string,
@@ -65,7 +57,7 @@ export async function updateMemberStammdaten(
     where: { id: memberId },
     data: toUpdateData(input),
   });
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const };
 }
 
@@ -80,6 +72,6 @@ export async function requestMemberStammdatenChange(
   const result = await requestStammdatenChange(memberId, diff);
   if ("error" in result) return result;
 
-  await revalidateProfile(memberId);
+  await revalidateMemberProfile({ memberId: memberId });
   return { success: true as const };
 }

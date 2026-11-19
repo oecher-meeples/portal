@@ -22,6 +22,7 @@ import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
 import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
+import { BOARD_GAME_KIND_LABELS } from "@/lib/ludothek/board-game-kind";
 
 /** Randfarbe je Abgleichsstatus im "Daten mit BGG abgleichen"-Modus (#189) —
  * `undefined` (Feld nicht im `compareStatus` enthalten) lässt das Feld
@@ -181,8 +182,11 @@ export function EditBoardGameTitle({
             diffClassName(compareStatus?.kind),
           )}
         >
-          <option value={BoardGameKind.BOARDGAME}>Basisspiel</option>
-          <option value={BoardGameKind.BOARDGAME_EXPANSION}>Erweiterung</option>
+          {Object.values(BoardGameKind).map((kind) => (
+            <option key={kind} value={kind}>
+              {BOARD_GAME_KIND_LABELS[kind]}
+            </option>
+          ))}
         </select>
       </div>
 

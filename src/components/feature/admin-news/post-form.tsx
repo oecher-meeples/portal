@@ -14,7 +14,10 @@ import { SurveyFields } from "@/components/feature/admin-news/survey-fields";
 import { PostPublishingOptions } from "@/components/feature/admin-news/post-publishing-options";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
-import type { ContentType } from "@/lib/content/content-types";
+import {
+  CONTENT_TYPE_LABELS,
+  type ContentType,
+} from "@/lib/content/content-types";
 import {
   createPost,
   getUploadToken,
@@ -34,12 +37,9 @@ const DEFAULT_NEWSLETTER_CATEGORY_BY_TYPE: Record<
   umfrage: "NEWS",
 };
 
-const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
-  { value: "blog", label: "Blog" },
-  { value: "termin", label: "Termin" },
-  { value: "turnier", label: "Turnier" },
-  { value: "umfrage", label: "Umfrage" },
-];
+const TYPE_OPTIONS = (
+  Object.entries(CONTENT_TYPE_LABELS) as [ContentType, string][]
+).map(([value, label]) => ({ value, label }));
 
 export function PostForm({
   postId,
