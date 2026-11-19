@@ -176,6 +176,20 @@ export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
     return { kind: "unit", unit, contents };
   }
 
+  if (parsed.kind === "copy") {
+    // Exemplar-Etikett (#547): genau ein Exemplar — als Ein-Element-Liste,
+    // damit jeder Scan-Flow es wie einen eindeutigen EAN-Treffer behandelt
+    // (direkt zum Exemplar, keine Auswahl).
+    const copy = await prisma.gameCopy.findFirst({
+      where: {
+        inventoryNumber: parsed.inventoryNumber,
+        status: { not: GameInventoryStatus.DEINVENTARISED },
+      },
+      include: { boardGame: true },
+    });
+    return copy ? { kind: "games", games: [copy] } : { kind: "unknown", raw };
+  }
+
   if (parsed.kind === "ean") {
     // The EAN identifies the title, not the individual copy (ADR 0001/0008) —
     // a scan can resolve to several copies of the same title.

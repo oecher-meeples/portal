@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildExemplarUrl,
+  exemplarLabelText,
   qrExportFilename,
   selectQrExportableCopies,
 } from "./game-copy-qr-export";
@@ -21,10 +22,16 @@ describe("selectQrExportableCopies (#271)", () => {
 });
 
 describe("buildExemplarUrl (#271)", () => {
-  it("targets the short-id router (#545)", () => {
-    expect(buildExemplarUrl("https://portal.example", 1)).toBe(
-      "https://portal.example/id/inv-1",
+  it("always targets the fixed short domain (#546)", () => {
+    expect(buildExemplarUrl(1)).toBe(
+      "https://short.oecher-meeples.org/id/inv-1",
     );
+  });
+});
+
+describe("exemplarLabelText (#546)", () => {
+  it("prints the same slug the QR code encodes", () => {
+    expect(exemplarLabelText(42)).toBe("inv-42");
   });
 });
 

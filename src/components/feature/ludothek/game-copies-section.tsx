@@ -107,11 +107,15 @@ export function GameCopiesSection({
   boardGameId,
   boardGameTitle,
   canManageGames,
+  selectedCopyId,
 }: {
   copies: GameCopyRow[];
   boardGameId: string;
   boardGameTitle: string;
   canManageGames: boolean;
+  /** Per QR-Code vorausgewähltes Exemplar (#548) — hervorgehoben und
+   * aufgeklappt. */
+  selectedCopyId?: string;
 }) {
   return (
     <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
@@ -157,6 +161,7 @@ export function GameCopiesSection({
                 gameCopyId={copy.id}
                 history={copy.history}
                 colSpan={7}
+                selected={copy.id === selectedCopyId}
               >
                 <TableCell className="text-muted-foreground text-sm">
                   {copy.inventoryNumber || "—"}
@@ -198,6 +203,7 @@ export function GameCopiesSection({
             key={copy.id}
             gameCopyId={copy.id}
             history={copy.history}
+            selected={copy.id === selectedCopyId}
             actions={
               !copy.isPrivate && (
                 <GameActionsMenu

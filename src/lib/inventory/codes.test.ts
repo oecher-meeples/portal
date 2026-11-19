@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildMeepleCode, nextUnitCode, parseScannedCode } from "./codes";
+import {
+  buildMeepleCode,
+  nextUnitCode,
+  normalizeUnitCode,
+  parseScannedCode,
+} from "./codes";
 
 describe("nextUnitCode", () => {
   it("starts at 0001 for boxes", () => {
@@ -30,6 +35,30 @@ describe("nextUnitCode", () => {
 });
 
 describe("parseScannedCode", () => {
+  it.each([
+    "https://short.oecher-meeples.org/id/inv-123",
+    "http://localhost:3002/id/inv-123",
+    "inv-123",
+  ])("recognises an exemplar short id in %s (#547)", (raw) => {
+    expect(parseScannedCode(raw)).toEqual({
+      kind: "copy",
+      inventoryNumber: 123,
+    });
+  });
+
+  it("maps a unit short id to its stored code (#547)", () => {
+    expect(
+      parseScannedCode("https://short.oecher-meeples.org/id/shelf-0002"),
+    ).toEqual({ kind: "unit", value: "OM-SHELF-0002" });
+  });
+
+  it("maps a meeple short id to the meeple id", () => {
+    expect(parseScannedCode("https://x.example/id/meeple-cm1abc")).toEqual({
+      kind: "meeple",
+      value: "cm1abc",
+    });
+  });
+
   it("recognises a box code", () => {
     expect(parseScannedCode("OM-BOX-0001")).toEqual({
       kind: "unit",
@@ -94,5 +123,21 @@ describe("buildMeepleCode (#465)", () => {
       kind: "meeple",
       value: meepleId,
     });
+  });
+});
+
+describe("normalizeUnitCode (#547)", () => {
+  it("resolves a scanned unit label to its code", () => {
+    expect(
+      normalizeUnitCode("https://short.oecher-meeples.org/id/box-0007"),
+    ).toBe("OM-BOX-0007");
+  });
+
+  it("upper-cases a typed code", () => {
+    expect(normalizeUnitCode(" om-shelf-c4 ")).toBe("OM-SHELF-C4");
+  });
+
+  it("keeps a freely chosen new code", () => {
+    expect(normalizeUnitCode("regal-links")).toBe("REGAL-LINKS");
   });
 });

@@ -15,6 +15,7 @@ afterEach(() => {
 describe("resolveShortId — inv", () => {
   it("redirects a known copy to its game page with the copy preselected", async () => {
     prismaMock.gameCopy.findUnique.mockResolvedValue({
+      id: "copy-1",
       boardGame: { slug: "ark-nova" },
     } as never);
 
@@ -26,7 +27,7 @@ describe("resolveShortId — inv", () => {
     });
     expect(prismaMock.gameCopy.findUnique).toHaveBeenCalledWith({
       where: { inventoryNumber: 123 },
-      select: { boardGame: { select: { slug: true } } },
+      select: { id: true, boardGame: { select: { slug: true } } },
     });
   });
 
