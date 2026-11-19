@@ -213,11 +213,23 @@ describe("with an active Ausleihe shift", () => {
   });
 
   it("ausleiheIssueGame surfaces a HoldingConflictError as { error }", async () => {
-    borrowGameMock.mockRejectedValue(new Error("Bereits ausgeliehen."));
+    const { HoldingConflictError } = await import("@/lib/ludothek/holdings");
+    borrowGameMock.mockRejectedValue(
+      new HoldingConflictError("Bereits ausgeliehen."),
+    );
 
     const result = await ausleiheIssueGame("copy-1");
 
     expect(result).toEqual({ error: "Bereits ausgeliehen." });
+  });
+
+  it("ausleiheIssueGame hides an unexpected error behind a generic message", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    borrowGameMock.mockRejectedValue(new Error("P1001: db unreachable"));
+
+    const result = await ausleiheIssueGame("copy-1");
+
+    expect(result).toEqual({ error: "Unbekannter Fehler." });
   });
 
   it("ausleiheReturnToUnit returns the copy to the given unit", async () => {

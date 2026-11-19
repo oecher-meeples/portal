@@ -10,10 +10,12 @@ vi.mock("next/navigation", () => ({
 const revealMemberIbanMock = vi.fn();
 const revealPendingMemberIbanMock = vi.fn();
 const updateMemberIbanMock = vi.fn();
-vi.mock("@/components/feature/mitglied-profil/bankverbindung-actions", () => ({
+vi.mock("@/lib/members/iban-reveal-actions", () => ({
   revealMemberIban: (...args: unknown[]) => revealMemberIbanMock(...args),
   revealPendingMemberIban: (...args: unknown[]) =>
     revealPendingMemberIbanMock(...args),
+}));
+vi.mock("@/components/feature/mitglied-profil/bankverbindung-actions", () => ({
   updateMemberIban: (...args: unknown[]) => updateMemberIbanMock(...args),
 }));
 

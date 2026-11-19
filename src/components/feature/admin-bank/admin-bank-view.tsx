@@ -18,9 +18,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  revealIban,
-  revealPendingIban,
-} from "@/components/feature/admin-bank/actions";
+  revealMemberIban,
+  revealPendingMemberIban,
+} from "@/lib/members/iban-reveal-actions";
 import { BankCsvExportDialog } from "@/components/feature/admin-bank/bank-csv-export-dialog";
 import {
   PendingChangesPanel,
@@ -67,7 +67,7 @@ export function AdminBankView({
   >({});
 
   async function revealRowIban(id: string): Promise<RevealResult> {
-    const result = await revealIban(id);
+    const result = await revealMemberIban(id);
     return "error" in result
       ? result
       : { success: true as const, value: result.iban };
@@ -98,7 +98,7 @@ export function AdminBankView({
         titlePlural="Offene IBAN-Änderungsanträge"
         changes={pendingIbanChanges}
         revealIban={async (changeId) => {
-          const result = await revealPendingIban(changeId);
+          const result = await revealPendingMemberIban(changeId);
           return "error" in result
             ? result
             : { success: true as const, value: result.iban };

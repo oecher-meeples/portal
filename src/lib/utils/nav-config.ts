@@ -25,6 +25,7 @@ import {
   Activity,
   type LucideIcon,
 } from "lucide-react";
+import type { PermissionKey } from "@/lib/auth/permission-keys";
 
 export type NavItem = {
   label: string;
@@ -41,7 +42,7 @@ export type NavItem = {
    * tier gating the whole group. Overrides minTier when set — an admin
    * previewing a lower tier still hides these (see sidebar.tsx).
    */
-  permission?: string | string[];
+  permission?: PermissionKey | readonly PermissionKey[];
   /**
    * Extra data-dependent visibility gate on top of tier/permission —
    * "openHelperRequest" (#155, event-wide): hides "Helferplan" unless a
@@ -140,8 +141,11 @@ export const ADMIN_PERMISSIONS = [
   "notifications:manage",
 ] as const;
 
-export const MITGLIEDER_PERMISSIONS = ["members:manage", "invites:manage"];
-export const EINSTELLUNGEN_PERMISSIONS = [
+export const MITGLIEDER_PERMISSIONS: PermissionKey[] = [
+  "members:manage",
+  "invites:manage",
+];
+export const EINSTELLUNGEN_PERMISSIONS: PermissionKey[] = [
   "games:manage",
   "instagram:connect",
   "invites:manage",

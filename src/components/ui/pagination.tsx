@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -30,18 +31,18 @@ export function Pagination({
     <div className="flex flex-wrap items-center justify-end gap-3">
       <label className="text-muted-foreground flex items-center gap-2 text-sm">
         Einträge pro Seite
-        <select
+        <NativeSelect
           value={pageSize}
           onChange={(event) => onPageSizeChange(Number(event.target.value))}
           aria-label="Einträge pro Seite"
-          className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+          size="compact"
         >
           {pageSizeOptions.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       {pageCount > 1 && (
         <>

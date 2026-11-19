@@ -28,7 +28,12 @@ vi.mock(
   }),
 );
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
-  AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
+  AddGameCopyDialog: ({ open }: { open?: boolean }) =>
+    open === undefined ? (
+      <button type="button">Weiteres Exemplar</button>
+    ) : open ? (
+      <p>Weiteres-Exemplar-Dialog offen</p>
+    ) : null,
 }));
 vi.mock(
   "@/components/widgets/board-game/edit-board-game-exemplar-dialog",
@@ -234,6 +239,47 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
     expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
+  });
+
+  it("opens Exemplar bearbeiten outside the menu, so its text fields accept typing", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy()]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Exemplar bearbeiten" }),
+    );
+
+    expect(
+      await screen.findByText("Mängelvermerk-Dialog offen für copy-1"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Exemplar wählen")).not.toBeInTheDocument();
+  });
+
+  it("opens Weiteres Exemplar outside the menu", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy()]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Weiteres Exemplar" }),
+    );
+
+    expect(
+      await screen.findByText("Weiteres-Exemplar-Dialog offen"),
+    ).toBeInTheDocument();
   });
 });
 

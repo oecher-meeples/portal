@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireMeeple } from "@/lib/members/meeples";
+import { prisma } from "@/lib/utils/prisma";
 import {
   offerPrivateGameForEvent,
   withdrawPrivateGameOffer,
@@ -23,6 +24,20 @@ export async function offerPrivateGameForEventAction(
   );
   if ("success" in result) revalidatePath("/profil");
   return result;
+}
+
+/** Opt-in (#255): die eigene private Collection anderen Meeple zeigen —
+ * in der Ludothek („Auch Privatbesitz anzeigen") und auf dem eigenen Profil.
+ * Immer nur für die eigene Session, nie per übergebener Meeple-ID. */
+export async function setPrivateCollectionVisibleAction(visible: boolean) {
+  const meeple = await requireMeeple();
+  await prisma.meeple.update({
+    where: { id: meeple.id },
+    data: { privateCollectionVisible: visible },
+  });
+  revalidatePath("/profil");
+  revalidatePath("/ludothek");
+  return { success: true as const };
 }
 
 export async function withdrawPrivateGameOfferAction(

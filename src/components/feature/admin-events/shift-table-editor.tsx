@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
+import { useAction, type ActionResult } from "@/components/ui/use-action";
 import {
   createShift,
   updateShift,
@@ -41,9 +42,6 @@ type EditRow = {
   endMinutes: number;
   capacity: string;
 };
-
-const SELECT_CLASSNAME =
-  "border-input bg-background h-9 rounded-md border px-3 text-sm";
 
 /** Fallback für einen Tag ohne hinterlegte Öffnungszeiten — dieselben
  * Default-Zeiten wie beim Helferplan-Verfügbarkeitsformular. */
@@ -93,10 +91,8 @@ export function ShiftTableEditor({
   onCancel: () => void;
   onSaved: () => void;
 }) {
-  const router = useRouter();
   const [rows, setRows] = useState<EditRow[]>(() => shifts.map(rowFromShift));
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { run, pending, error } = useAction({ onSuccess: onSaved });
   const nextKey = useRef(0);
 
   function updateRow(key: string, patch: Partial<EditRow>) {
@@ -134,15 +130,19 @@ export function ShiftTableEditor({
   }
 
   async function handleSave() {
-    setPending(true);
-    setError(null);
+    await run(saveRows);
+  }
 
+  /** Löschen, dann anlegen/ändern — bricht beim ersten Fehler ab und gibt ihn
+   * zurück, statt ihn (wie früher beim Löschen) zu verschlucken. */
+  async function saveRows() {
     const keptIds = new Set(
       rows.map((row) => row.id).filter((id): id is string => id !== null),
     );
     for (const shift of shifts) {
       if (keptIds.has(shift.id)) continue;
-      await deleteShift(shift.id);
+      const deleted: ActionResult = await deleteShift(shift.id);
+      if (deleted?.error) return deleted;
     }
 
     for (const row of rows) {
@@ -158,16 +158,10 @@ export function ShiftTableEditor({
       const result = row.id
         ? await updateShift(row.id, input)
         : await createShift(eventId, input);
-      if ("error" in result) {
-        setError(result.error ?? "Unbekannter Fehler.");
-        setPending(false);
-        return;
-      }
+      if ("error" in result) return result;
     }
 
-    setPending(false);
-    router.refresh();
-    onSaved();
+    return { success: true as const };
   }
 
   return (
@@ -187,9 +181,9 @@ export function ShiftTableEditor({
             {rows.map((row) => (
               <TableRow key={row.key}>
                 <TableCell>
-                  <select
+                  <NativeSelect
                     aria-label="Tag"
-                    className={SELECT_CLASSNAME}
+                    size="md"
                     value={row.dayId}
                     onChange={(event) =>
                       handleDayChange(row.key, event.target.value)
@@ -200,12 +194,12 @@ export function ShiftTableEditor({
                         {formatWeekdayDate(day.date)}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </TableCell>
                 <TableCell>
-                  <select
+                  <NativeSelect
                     aria-label="Rolle"
-                    className={SELECT_CLASSNAME}
+                    size="md"
                     value={row.roleId}
                     onChange={(event) =>
                       updateRow(row.key, { roleId: event.target.value })
@@ -216,7 +210,7 @@ export function ShiftTableEditor({
                         {role.name}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </TableCell>
                 <TableCell className="min-w-48">
                   <RangeSlider

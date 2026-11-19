@@ -4,29 +4,13 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
-
-const ensureMeepleMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, ensureMeeple: ensureMeepleMock };
-});
-
 const { encryptSecret } = await import("@/lib/utils/crypto");
 const {
   bankLogCutoff,
   deleteExpiredBankDataAccessLogs,
-  requireBankReader,
   revealMeepleIban,
   revealPendingIbanChange,
 } = await import("./bank-access-log");
-
-class ForbiddenError extends Error {}
 
 const IBAN = "DE89370400440532013000";
 
@@ -34,21 +18,6 @@ beforeEach(() => {
   process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString(
     "base64",
   );
-  requirePermissionMock.mockResolvedValue({ id: "user-kassenwart" });
-  ensureMeepleMock.mockResolvedValue({ id: "meeple-kassenwart" });
-});
-
-describe("requireBankReader", () => {
-  it("checks the bank:read permission and resolves the actor's Meeple", async () => {
-    expect(await requireBankReader()).toEqual({ id: "meeple-kassenwart" });
-    expect(requirePermissionMock).toHaveBeenCalledWith("bank:read");
-  });
-
-  it("propagates the redirect when the permission is missing", async () => {
-    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
-
-    await expect(requireBankReader()).rejects.toThrow(ForbiddenError);
-  });
 });
 
 describe("revealMeepleIban", () => {

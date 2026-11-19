@@ -28,56 +28,63 @@ export default async function LudothekPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const tier = await getSessionTier();
-  const user = await getCurrentUser();
+  // #525: alles, was nicht voneinander abhängt, in Wellen parallel statt
+  // nacheinander — Auth-Lookups sind per `cache()` ohnehin je Request einmal.
+  const [tier, user, rawSearchParams, clubGames, traitTexts, currentEvent] =
+    await Promise.all([
+      getSessionTier(),
+      getCurrentUser(),
+      searchParams,
+      buildLudothekGames(),
+      loadBoardGameTraitTextsByTrait(),
+      // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-
+      // Filters (#256) als auch für "nur anwesende Spiele" (#273) — beide
+      // Filter sind nur sinnvoll, solange ein Event läuft.
+      findCurrentEvent(),
+    ]);
+
   // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
   // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
-  const internal =
-    tier !== "gast" &&
-    (user ? await hasPermission(user.id, "ludothek:view") : false);
-  const canManageGames = user
-    ? await hasPermissionInCurrentView(user.id, "games:manage")
-    : false;
+  const [canViewInternal, canManageGames] = user
+    ? await Promise.all([
+        hasPermission(user.id, "ludothek:view"),
+        hasPermissionInCurrentView(user.id, "games:manage"),
+      ])
+    : [false, false];
+  const internal = tier !== "gast" && canViewInternal;
 
-  const rawSearchParams = await searchParams;
   const filters = parseLudothekSearchParams(rawSearchParams, { internal });
+  const showExplainerFilter = internal || currentEvent !== null;
+  const showPresentFilter = currentEvent !== null;
+
+  const [
+    currentMeeple,
+    privateGames,
+    attendingExplainerBoardGameIds,
+    presentGameCopyIds,
+  ] = await Promise.all([
+    internal ? getCurrentMeeple() : null,
+    // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
+    // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
+    // eines separaten, statischen Blocks).
+    internal && filters.showPrivateCollection
+      ? buildPrivateLudothekGames()
+      : [],
+    !internal && filters.hasExplainer
+      ? currentEvent
+        ? getAttendingExplainerBoardGameIds(currentEvent.id)
+        : new Set<string>()
+      : undefined,
+    filters.onlyPresentAtEvent && currentEvent
+      ? getPresentGameCopyIds(currentEvent.id)
+      : undefined,
+  ]);
+  const allGames = [...clubGames, ...privateGames];
 
   // "Meine Ausleihen"-Filter (#290): kein eigener Bestätigen-Weg hier, nur
   // ein Hinweis zurück zum Dashboard, wo die eigentliche Aktion sitzt.
-  const currentMeeple = internal ? await getCurrentMeeple() : null;
   const showsOwnLoans =
     currentMeeple !== null && filters.atMeepleId === currentMeeple.id;
-  const hasUnconfirmedOwnHoldings = showsOwnLoans
-    ? await hasUnconfirmedHoldingsForMeeple(currentMeeple.id)
-    : false;
-
-  const clubGames = await buildLudothekGames();
-  // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
-  // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
-  // eines separaten, statischen Blocks).
-  const privateGames =
-    internal && filters.showPrivateCollection
-      ? await buildPrivateLudothekGames()
-      : [];
-  const allGames = [...clubGames, ...privateGames];
-  const traitTexts = await loadBoardGameTraitTextsByTrait();
-
-  // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
-  // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
-  // nur sinnvoll, solange ein Event läuft, für Meeples wie Gäste gleichermaßen.
-  const currentEvent = await findCurrentEvent();
-  const showExplainerFilter = internal || currentEvent !== null;
-  const attendingExplainerBoardGameIds =
-    !internal && filters.hasExplainer
-      ? currentEvent
-        ? await getAttendingExplainerBoardGameIds(currentEvent.id)
-        : new Set<string>()
-      : undefined;
-  const showPresentFilter = currentEvent !== null;
-  const presentGameCopyIds =
-    filters.onlyPresentAtEvent && currentEvent
-      ? await getPresentGameCopyIds(currentEvent.id)
-      : undefined;
 
   const filtered = filterLudothekGames(allGames, filters, {
     attendingExplainerBoardGameIds,
@@ -88,23 +95,26 @@ export default async function LudothekPage({
   const categoriesOptions = listDistinctCategories(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
 
-  const meepleOptions = internal
-    ? await (async () => {
-        const ids = [
-          ...new Set(
-            allGames
-              .map((g) => g.responsibleMeepleId)
-              .filter((id): id is string => id !== null),
-          ),
-        ];
-        if (ids.length === 0) return [];
-        return prisma.meeple.findMany({
-          where: { id: { in: ids } },
-          select: { id: true, displayName: true },
-          orderBy: { displayName: "asc" },
-        });
-      })()
-    : undefined;
+  const [hasUnconfirmedOwnHoldings, meepleOptions] = await Promise.all([
+    showsOwnLoans ? hasUnconfirmedHoldingsForMeeple(currentMeeple.id) : false,
+    internal
+      ? (async () => {
+          const ids = [
+            ...new Set(
+              allGames
+                .map((g) => g.responsibleMeepleId)
+                .filter((id): id is string => id !== null),
+            ),
+          ];
+          if (ids.length === 0) return [];
+          return prisma.meeple.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, displayName: true },
+            orderBy: { displayName: "asc" },
+          });
+        })()
+      : undefined,
+  ]);
 
   return (
     <PageContainer variant="wide">

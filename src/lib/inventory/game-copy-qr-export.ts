@@ -4,31 +4,34 @@
  * Exemplare, Dateiname. Die eigentliche PNG-/ZIP-Erzeugung braucht
  * Canvas/Blob (Browser-APIs) und lebt in `qr-export-actions.ts` (Client). */
 
+import { formatShortIdSlug } from "@/lib/short-id/short-id";
+
 export type QrExportableCopy = {
   id: string;
   title: string;
-  inventoryNumber: string | null;
+  inventoryNumber: number | null;
 };
 
 /** Nur Exemplare mit gesetzter Inventarnummer können einen QR-Code
  * bekommen — ohne sie gibt es kein eindeutiges Exemplar-Ziel. */
 export function selectQrExportableCopies<T extends QrExportableCopy>(
   copies: T[],
-): (T & { inventoryNumber: string })[] {
+): (T & { inventoryNumber: number })[] {
   return copies.filter(
-    (copy): copy is T & { inventoryNumber: string } =>
-      copy.inventoryNumber !== null && copy.inventoryNumber.trim() !== "",
+    (copy): copy is T & { inventoryNumber: number } =>
+      copy.inventoryNumber !== null,
   );
 }
 
-/** Ziel-URL des QR-Codes — die neue Exemplar-Route (#271), nicht die
- * Titel-Route, damit bei mehreren Exemplaren desselben Spiels jedes seinen
- * eigenen Code bekommt. */
+/** Ziel-URL des QR-Codes — exemplar-, nicht titelbezogen (#271), damit bei
+ * mehreren Exemplaren desselben Spiels jedes seinen eigenen Code bekommt.
+ * Zeigt auf den Short-ID-Router `/id/inv-<n>` (#545); die Umstellung auf die
+ * feste Short-Domain folgt in #546. */
 export function buildExemplarUrl(
   origin: string,
-  inventoryNumber: string,
+  inventoryNumber: number,
 ): string {
-  return `${origin}/ludothek/exemplar/${encodeURIComponent(inventoryNumber)}`;
+  return `${origin}/id/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
 }
 
 /** Dateiname innerhalb der ZIP — Inventarnummer zuerst, damit Dateien in der

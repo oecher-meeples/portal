@@ -82,7 +82,10 @@ describe("EanField", () => {
     expect(screen.getByText(/Ark Nova \(DE\)/)).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
 
-    await user.click(screen.getByText(/Ark Nova \(DE\)/));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "EAN-Vorschlag auswählen" }),
+      "4056282500000",
+    );
 
     expect(onChange).toHaveBeenCalledWith("4056282500000");
   });

@@ -54,12 +54,11 @@ export default async function GameDetailPage({
   const canManageGames =
     !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
 
-  const clubGames = await buildLudothekGames();
-  // One title can have several physical copies (same boardGameSlug) — the
-  // header/description render from the first copy, `copies` below carries
-  // every one of them for the exemplar table/card (#121/#122).
-  let games = clubGames;
-  let game = clubGames.find((g) => g.boardGameSlug === slug);
+  // #526: nur die Exemplare dieses Titels, nicht der Gesamtbestand. One
+  // title can have several physical copies (same boardGameSlug) — the
+  // header/description render from the first copy, `copies` carries every
+  // one of them for the exemplar table/card (#121/#122).
+  let copies = await buildLudothekGames({ where: { boardGame: { slug } } });
 
   // Privatbesitz-Titel bekommen dieselbe Detailseite wie Vereinsspiele
   // (#255-Folge) — nur intern erreichbar, unabhängig vom "Auch Privatbesitz
@@ -67,14 +66,12 @@ export default async function GameDetailPage({
   // ein direkter Link muss trotzdem funktionieren). Für Gäste nie geladen,
   // und nur bei einem Vereins-Fehltreffer nachgeladen — kein Extra-Query auf
   // jeder normalen Detailseite.
-  if (!game && internal) {
-    const privateGames = await buildPrivateLudothekGames();
-    games = [...clubGames, ...privateGames];
-    game = games.find((g) => g.boardGameSlug === slug);
+  if (copies.length === 0 && internal) {
+    copies = await buildPrivateLudothekGames({ boardGameSlug: slug });
   }
 
+  const game = copies[0];
   if (!game) notFound();
-  const copies = games.filter((g) => g.boardGameId === game.boardGameId);
 
   const traitTexts = await loadBoardGameTraitTextsByTrait();
 
@@ -186,6 +183,8 @@ export default async function GameDetailPage({
     condition: copy.condition,
     ruleBookLanguages: copy.ruleBookLanguages,
     inventoryNumber: copy.inventoryNumber,
+    versionId: copy.versionId ?? null,
+    publisher: copy.publisher,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? [],
@@ -198,10 +197,16 @@ export default async function GameDetailPage({
     ...game.baseGames.map((g) => g.id),
     ...game.expansions.map((g) => g.id),
   ];
+  const relatedGames =
+    linkedRefIds.length > 0
+      ? await buildLudothekGames({
+          where: { boardGameId: { in: linkedRefIds } },
+        })
+      : [];
   const relatedLocationChains = Object.fromEntries(
     linkedRefIds.map((id) => [
       id,
-      games.find((g) => g.boardGameId === id)?.locationChain ?? "",
+      relatedGames.find((g) => g.boardGameId === id)?.locationChain ?? "",
     ]),
   );
 
@@ -225,8 +230,10 @@ export default async function GameDetailPage({
         ]),
       }
     : undefined;
+  // Vorschläge über den ganzen Bestand — nur für Spielewarte geladen, die
+  // die Mechaniken bearbeiten können (#526).
   const mechanicsOptions = canManageGames
-    ? listDistinctMechanics(games)
+    ? listDistinctMechanics(await buildLudothekGames())
     : undefined;
   const titleEdit = canManageGames
     ? {
@@ -249,7 +256,9 @@ export default async function GameDetailPage({
         languageDependence: game.languageDependence,
         publisher: game.publisher,
         author: game.author,
+        illustrator: game.illustrator,
         yearPublished: game.yearPublished,
+        editionLanguages: game.editionLanguages,
         traits: game.traits,
         notes: game.notes,
       }

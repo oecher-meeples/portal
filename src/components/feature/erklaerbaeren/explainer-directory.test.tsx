@@ -1,7 +1,11 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+vi.mock("@/lib/members/contact-dialog", () => ({
+  fetchContactDialogMeeple: vi.fn(),
+}));
 
 const { ExplainerDirectory } = await import("./explainer-directory");
 

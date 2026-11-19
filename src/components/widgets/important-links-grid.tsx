@@ -28,6 +28,7 @@ export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
               <item.icon className="text-primary size-6" />
             ) : (
               <CoverMedia
+                sizes="32px"
                 imageUrl={item.iconUrl}
                 alt=""
                 aspect="aspect-square"

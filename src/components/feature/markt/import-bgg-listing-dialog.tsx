@@ -124,6 +124,7 @@ export function ImportBggListingDialog({
                   className="flex items-center gap-3 rounded-md border p-2"
                 >
                   <CoverMedia
+                    sizes="56px"
                     imageUrl={entry.imageUrl}
                     alt={entry.title}
                     aspect="aspect-square"
@@ -150,6 +151,7 @@ export function ImportBggListingDialog({
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <CoverMedia
+                  sizes="64px"
                   imageUrl={selected.imageUrl}
                   alt={selected.title}
                   aspect="aspect-square"

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Combobox,
   ComboboxEmpty,
@@ -13,6 +12,7 @@ import {
   ComboboxPopup,
 } from "@/components/ui/combobox";
 import { useControlledComboboxInput } from "@/components/ui/use-controlled-combobox-input";
+import { Field } from "@/components/ui/field";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   buildRegistrationLink,
@@ -97,8 +97,7 @@ export function InviteForm({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-[2fr_auto]">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-member">Mitglied</Label>
+        <Field label="Mitglied" htmlFor="invite-member">
           <Combobox
             items={membersWithoutLogin.map(memberSearchKey)}
             value={selectedMember ? memberSearchKey(selectedMember) : null}
@@ -149,7 +148,7 @@ export function InviteForm({
               </ComboboxList>
             </ComboboxPopup>
           </Combobox>
-        </div>
+        </Field>
         <Button
           onClick={handleCreateInvite}
           disabled={isPending || !memberId}

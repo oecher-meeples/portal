@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import {
   assignShiftBooking,
   unassignShiftBooking,
@@ -26,7 +26,7 @@ export async function assignHelperToShift(
   /** Rein optische Spaltenposition (Drag innerhalb der Rollen-Spaltengruppe). */
   slotIndex?: number,
 ) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const result = await assignShiftBooking({
     shiftId,
@@ -44,7 +44,7 @@ export async function unassignHelperFromShift(
   bookingId: string,
   shiftId: string,
 ) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const result = await unassignShiftBooking(bookingId);
   if ("success" in result) await revalidateEventPath(shiftId);

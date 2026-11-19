@@ -93,6 +93,10 @@ _Avoid_: Als alleiniges Kriterium für „ist Erweiterung" heranziehen; 1:1-Kard
 Eine Diff-Ansicht, die die aktuellen BGG-Daten eines Titels neben die eigenen stellt. BGG ist dabei **kein automatischer Sieger bei Abweichungen** — nur Vorschlag, feldweise und manuell durch den Admin zu übernehmen. Deckt sich mit dem Prinzip bei **Erweiterung** (siehe unten): eine manuelle Korrektur ist immer maßgeblich, eine BGG-Ableitung nie automatisch bindend.
 _Avoid_: BGG als vorrangige/automatisch gewinnende Quelle
 
+**Tag** (Mechanik / Kategorie):
+Eine BGG-Mechanik (z. B. „Worker Placement“) oder BGG-Kategorie (z. B. „Party Game“) als eigener Datensatz mit BGG-ID, über alle Titel hinweg geteilt. Der BGG-Name bleibt unverändert; angezeigt, gefiltert und im Editor ausgewählt wird der pflegbare deutsche **Anzeigename** („Arbeitereinsatz“), ohne ihn der BGG-Name. Regeln, die auf einen Tag reagieren (z. B. Regal-Kategorien), prüfen den BGG-Namen, nie den Anzeigenamen.
+_Avoid_: Mechaniken/Kategorien als freie Strings am Titel; den Anzeigenamen als Schlüssel verwenden
+
 **Aufbewahrungseinheit**:
 Ein mit QR-Code etikettiertes physisches Behältnis für Spiele — entweder ein **Karton** (`OM-BOX-0001`, wandert als Ganzes) oder ein **Regal** (`OM-SHELF-C4`, vereinseigen, wird bei Events aufgebaut). Eine Einheit kann in einer anderen stehen (Karton im Regal) und steht am Ende der Kette bei einem Meeple.
 _Avoid_: Lager, Ort, Location, Box vs. Shelf als getrennte Konzepte

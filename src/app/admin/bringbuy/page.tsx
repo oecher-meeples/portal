@@ -8,7 +8,7 @@ import {
 import { hasRoleGrantedPermission } from "@/lib/events/shift-rights";
 import { FLEA_MARKET_CASHIER_PERMISSION_KEY } from "@/lib/bringbuy/cashier-permission";
 import { computeFleaMarketStats } from "@/lib/bringbuy/stats";
-import { listReservedFleaMarketCarts } from "@/lib/bringbuy/actions";
+import { listReservedFleaMarketCarts } from "@/lib/bringbuy/queries";
 import {
   AdminBringBuyView,
   type CashierEventOption,

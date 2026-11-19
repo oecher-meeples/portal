@@ -1,24 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import {
+  actionPermissionDenied,
+  requireActionPermission,
+} from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission, requirePermission } from "@/lib/auth/permissions";
 import { MAX_INVITE_DAYS, MIN_INVITE_DAYS } from "@/lib/members/invites";
 import { setDefaultInviteDays } from "@/lib/members/invite-settings";
 
 export async function disconnectInstagram() {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "instagram:connect"))) {
-    return { error: "Keine Berechtigung." };
-  }
+  const denied = await actionPermissionDenied("instagram:connect");
+  if (denied) return denied;
 
   await prisma.instagramConnection.deleteMany();
   return { success: true as const };
 }
 
 export async function updateDefaultInviteDays(days: number) {
-  await requirePermission("invites:manage");
+  await requireActionPermission("invites:manage");
 
   if (!(days > MIN_INVITE_DAYS) || days > MAX_INVITE_DAYS) {
     return {

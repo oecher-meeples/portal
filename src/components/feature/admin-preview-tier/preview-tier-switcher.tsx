@@ -29,7 +29,7 @@ export function PreviewTierSwitcher({
   labelClassName?: string;
 }) {
   const [value, setValue] = useState(tier);
-  const { run, pending } = useAction();
+  const { run, pending } = useAction({ refresh: true });
 
   function handleChange(next: Tier) {
     setValue(next);

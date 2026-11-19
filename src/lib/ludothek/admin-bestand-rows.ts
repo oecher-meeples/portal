@@ -1,3 +1,11 @@
+import {
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
+} from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  BOARD_GAME_DISPLAY_SELECT,
+  boardGameDisplayFields,
+} from "@/lib/ludothek/board-game-display";
 import type {
   BoardGameKind,
   BoardGameTrait,
@@ -76,15 +84,18 @@ export type AdminBoardGameRow = {
   mechanics: string[];
   categories: string[];
   condition: string | null;
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber: number | null;
+  versionId: string | null;
   kind: BoardGameKind;
   explainerVideoUrl: string | null;
   languageDependence: LanguageDependence | null;
   ruleBookLanguages: RuleBookLanguage[];
   publisher: string[];
   author: string[];
+  illustrator: string[];
   yearPublished: number | null;
+  editionLanguages: string[];
   /** BGG-Alternativnamen, ungefiltert — matcht in der Suche wie der Titel
    * selbst (#187). */
   alternateNames: string[];
@@ -112,7 +123,8 @@ export async function buildAdminBoardGameRows({
       where: gameCopyAdminWhere({ showDeinventarised, filter }),
       orderBy: { boardGame: { title: "asc" } },
       include: {
-        boardGame: { include: { alternateNames: { select: { name: true } } } },
+        version: VERSION_DISPLAY_SELECT,
+        boardGame: BOARD_GAME_DISPLAY_SELECT,
         holdings: {
           where: { endedAt: null },
           include: {
@@ -233,11 +245,7 @@ export async function buildAdminBoardGameRows({
 
       return {
         id: copy.id,
-        boardGameId: boardGame.id,
-        boardGameSlug: boardGame.slug,
-        title: boardGame.title,
-        secondaryTitle: boardGame.secondaryTitle,
-        ean: boardGame.ean,
+        ...boardGameDisplayFields(boardGame),
         status: copy.status,
         needsCompletenessCheck: copy.needsCompletenessCheck,
         lastCheckedAt: copy.lastCheckedAt
@@ -247,28 +255,11 @@ export async function buildAdminBoardGameRows({
         zustand,
         isUnconfirmed:
           Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
-        bggId: boardGame.bggId,
-        minPlayers: boardGame.minPlayers,
-        maxPlayers: boardGame.maxPlayers,
-        playTimeMinutes: boardGame.playTimeMinutes,
-        weight: boardGame.weight,
-        averageRating: boardGame.averageRating,
-        imageUrl: boardGame.imageUrl,
-        description: boardGame.description,
-        mechanics: boardGame.mechanics,
-        categories: boardGame.categories,
         condition: copy.condition,
         inventoryNumber: copy.inventoryNumber,
-        kind: boardGame.kind,
-        explainerVideoUrl: boardGame.explainerVideoUrl,
-        languageDependence: boardGame.languageDependence,
-        publisher: boardGame.publisher,
-        author: boardGame.author,
-        yearPublished: boardGame.yearPublished,
+        versionId: copy.versionId,
+        ...versionDisplay(copy.version),
         ruleBookLanguages: copy.ruleBookLanguages,
-        alternateNames: boardGame.alternateNames.map((a) => a.name),
-        traits: boardGame.traits,
-        notes: boardGame.notes,
         responsibleName,
         unitChain,
         responsibleContactMeeple: contactMeepleId

@@ -17,6 +17,8 @@ import {
 import {
   revealMemberIban,
   revealPendingMemberIban,
+} from "@/lib/members/iban-reveal-actions";
+import {
   requestMemberIbanChange,
   updateMemberIban,
 } from "@/components/feature/mitglied-profil/bankverbindung-actions";

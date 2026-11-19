@@ -1,7 +1,7 @@
 "use server";
 
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import {
   adminResetLoginBackoff,
   getLoginBackoffStatus,
@@ -27,7 +27,7 @@ async function loginKeyForMeeple(meepleId: string): Promise<string | null> {
 export async function getMeepleLoginRateLimitStatus(
   meepleId: string,
 ): Promise<LoginBackoffStatus | { error: string }> {
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 
   const key = await loginKeyForMeeple(meepleId);
   if (!key)
@@ -36,7 +36,7 @@ export async function getMeepleLoginRateLimitStatus(
 }
 
 export async function resetMeepleLoginRateLimit(meepleId: string) {
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 
   const key = await loginKeyForMeeple(meepleId);
   if (!key)
@@ -46,7 +46,7 @@ export async function resetMeepleLoginRateLimit(meepleId: string) {
 }
 
 export async function lockMeepleLogin(meepleId: string) {
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 
   const key = await loginKeyForMeeple(meepleId);
   if (!key)

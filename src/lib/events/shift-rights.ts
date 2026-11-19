@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
-import { hasPermission } from "@/lib/auth/permissions";
+import { hasPermission, type PermissionKey } from "@/lib/auth/permissions";
 
 /**
  * Generalizes ADR-0006 (docs/adr/0006-schicht-buchung-statt-permission-fuer-event-rechte.md)
@@ -15,7 +15,7 @@ import { hasPermission } from "@/lib/auth/permissions";
  */
 export async function hasRoleGrantedPermission(
   meepleId: string,
-  permissionKey: string,
+  permissionKey: PermissionKey,
   at: Date = new Date(),
 ) {
   const meeple = await prisma.meeple.findUnique({

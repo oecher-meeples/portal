@@ -36,23 +36,34 @@ Eine Schicht importiert **nur aus Schichten links von sich**. Zusätzlich:
 
 Bevor du pending/error-State, einen Dialog oder eine Label-Zeile neu schreibst — das gibt es schon:
 
-| Baustein                                                                                  | Statt                                                            |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `useAction()` (`ui/use-action.ts`)                                                        | eigenem `isSubmitting`/`setError`/`router.refresh()`             |
-| `<ActionButton action={fn.bind(null, id)}>`                                               | eigenem `Delete…Button`-Wrapper                                  |
-| `<ActionDialog>`                                                                          | eigenem Dialog-Skelett mit open-State und Error-Slot             |
-| `<TextField>` / `<TextAreaField>` / `<Field>`                                             | `<div className="flex flex-col gap-1.5"><Label/><Input/></div>`  |
-| `<CodeScanner onDetected={…}>`                                                            | eigener Kamera-/Scanner-Logik                                    |
-| `<CopyButton value label icon>` (`ui/copy-button.tsx`)                                    | eigenem `navigator.clipboard.writeText`-Aufruf pro Feature       |
-| `formatDateTime/​Medium/​Plain/​TimeRange` (`lib/utils/format.ts`)                        | eigener `new Intl.DateTimeFormat(…)`                             |
-| `findUpcomingEvents()` / `resolveSelectedEventId()` (`lib/events/upcoming.ts`)            | eigener „kommende Events"-Query                                  |
-| `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>` | eigener Label-/Tone-Map                                          |
-| `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                    | eigenem S3-Presigned-POST-Upload-State pro Formular              |
-| `getContactLinks(meeple)` (`lib/members/contact.ts`)                                      | eigenem Mail-/Telegram-Link-Aufbau                               |
-| `requireEnv(name)` (`lib/utils/require-env.ts`)                                           | `process.env.X!` mit unklarer Fehlermeldung bei fehlendem Wert   |
-| `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                          | eigenem S3-`DeleteObjects`-Aufruf pro Feature                    |
-| `createBlobUploadToken({ pathname, contentType, … })` (`lib/utils/blob-upload-token.ts`)  | eigenem `createPresignedPost` im `get…UploadToken`-Server-Action |
-| `putBlob(pathname, body, contentType)` (`lib/utils/s3.ts`)                                | eigenem `PutObjectCommand` für serverseitige Uploads             |
+| Baustein                                                                                                                                                                 | Statt                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `useAction()` (`ui/use-action.ts`)                                                                                                                                       | eigenem `isSubmitting`/`setError`/`router.refresh()`                       |
+| `<ActionButton action={fn.bind(null, id)}>`                                                                                                                              | eigenem `Delete…Button`-Wrapper                                            |
+| `<ActionDialog>`                                                                                                                                                         | eigenem Dialog-Skelett mit open-State und Error-Slot                       |
+| `<TextField>` / `<TextAreaField>` / `<Field>`                                                                                                                            | `<div className="flex flex-col gap-1.5"><Label/><Input/></div>`            |
+| `<CodeScanner onDetected={…}>`                                                                                                                                           | eigener Kamera-/Scanner-Logik                                              |
+| `<CopyButton value label icon>` (`ui/copy-button.tsx`)                                                                                                                   | eigenem `navigator.clipboard.writeText`-Aufruf pro Feature                 |
+| `<NativeSelect>` (`ui/native-select.tsx`)                                                                                                                                | `<select className="border-input bg-background h-8 …">` pro Feature        |
+| `<IdCombobox options={[{ id, label }]}>` (`ui/id-combobox.tsx`)                                                                                                          | eigener Combobox-Verdrahtung oder `<select>` mit allen Einträgen           |
+| `formatDateTime/​Medium/​Plain/​TimeRange` (`lib/utils/format.ts`)                                                                                                       | eigener `new Intl.DateTimeFormat(…)`                                       |
+| `findUpcomingEvents()` / `resolveSelectedEventId()` (`lib/events/upcoming.ts`)                                                                                           | eigener „kommende Events"-Query                                            |
+| `<GameZustandPill>`, `<LfgStatusPill>`, `<MembershipStatePill>`, `<FleaMarketStatusPill>`                                                                                | eigener Label-/Tone-Map                                                    |
+| `useBlobUpload(pathPrefix, getToken)` (`lib/utils/use-blob-upload.ts`)                                                                                                   | eigenem S3-Presigned-POST-Upload-State pro Formular                        |
+| `getContactLinks(meeple)` (`lib/members/contact.ts`)                                                                                                                     | eigenem Mail-/Telegram-Link-Aufbau                                         |
+| `requireEnv(name)` (`lib/utils/require-env.ts`)                                                                                                                          | `process.env.X!` mit unklarer Fehlermeldung bei fehlendem Wert             |
+| `deleteBlobs(urls)` (`lib/utils/blob-delete.ts`)                                                                                                                         | eigenem S3-`DeleteObjects`-Aufruf pro Feature                              |
+| `createBlobUploadToken({ pathname, contentType, … })` (`lib/utils/blob-upload-token.ts`)                                                                                 | eigenem `createPresignedPost` im `get…UploadToken`-Server-Action           |
+| `putBlob(pathname, body, contentType)` (`lib/utils/s3.ts`)                                                                                                               | eigenem `PutObjectCommand` für serverseitige Uploads                       |
+| `toResult(run)` / `actionErrorMessage(error)` (`lib/utils/action-result.ts`)                                                                                             | eigenem `catch (e) { return { error: (e as Error).message } }`             |
+| `requireActionPermission(key)` u. a. (`lib/auth/action-guards.ts`, prüft Mitgliedsstatus)                                                                                | `requirePermission`/`hasPermission` als Action-Guard                       |
+| `revalidateMemberProfile({ memberId } \| { meepleId })` (`lib/members/revalidate-profile.ts`)                                                                            | Slug laden + `revalidatePath('/profil/…')` pro Action                      |
+| `walkUnitChain` / `unitChainLabel` / `findUnitAncestor` (`lib/ludothek/unit-chain.ts`)                                                                                   | eigener `parentUnitId`-Aufstieg mit Tiefenlimit                            |
+| `CONTENT_TYPE_LABELS` (`lib/content/content-types.ts`), `BOARD_GAME_KIND_LABELS` (`lib/ludothek/board-game-kind.ts`), `TAG_TYPE_PLURAL_LABELS` (`taxonomy/tags-read.ts`) | lokale Label-Maps in Komponenten                                           |
+| `escapeHtml` (`lib/utils/escape-html.ts`), `siteUrl()` (`lib/utils/site-url.ts`), `requireCronAuth(request)` (`lib/utils/cron-auth.ts`)                                  | eigenem Escape, `process.env.PUBLIC_SITE_URL ?? ""`, `CRON_SECRET`-Prüfung |
+| `buildShortIdUrl` / `parseShortId` / `resolveShortId` (`lib/short-id/`)                                                                                                  | eigenem QR-URL-Aufbau oder Code-/Slug-Parsing                              |
+| `memberFullName(member)` (`lib/members/member-display-name.ts`)                                                                                                          | `[firstName, lastName].filter(Boolean).join(" ")`                          |
+| `revealMemberIban` / `revealPendingMemberIban` (`lib/members/iban-reveal-actions.ts`)                                                                                    | eigener IBAN-Reveal-Wrapper pro Feature                                    |
 
 Server Actions an Client-Komponenten aus einer Server-Komponente heraus: `action={deletePost.bind(null, id)}` — eine normale Closure ist nicht serialisierbar.
 
@@ -71,7 +82,7 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 `pnpm run verify` (= format:check + typecheck + lint + test) — läuft auch als `pre-push`-Hook und in der CI. `next build` und Test-Coverage laufen bewusst nur in der CI, nicht im Hook.
 `pnpm run test` schließt `*.live.test.ts` aus (echte Fremd-APIs); die laufen nur via `pnpm run test:live`.
 
-**Coverage-Scope (`vitest.config.ts`):** nur `src/lib/**` und `src/components/**/actions.ts` — die Geschäftsregeln und Server Actions. UI-Komponenten und Routen sind bewusst ausgenommen, das ist eine Scope-Entscheidung, keine Lücke. Schwellenwert 80 % (Statements/Branches/Functions/Lines), abgeleitet aus der gemessenen Baseline (siehe Issue #38), nicht geraten.
+**Coverage-Scope (`vitest.config.ts`):** nur `src/lib/**` und `src/components/**/*actions.ts` — die Geschäftsregeln und Server Actions. UI-Komponenten und Routen sind bewusst ausgenommen, das ist eine Scope-Entscheidung, keine Lücke. Schwellenwert 80 % (Statements/Branches/Functions/Lines), abgeleitet aus der gemessenen Baseline (siehe Issue #38; mit dem erweiterten Glob aus #523: 90,0 / 86,6 / 91,3 / 91,0 %), nicht geraten.
 
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.
 

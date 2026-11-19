@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Combobox,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxPopup,
-} from "@/components/ui/combobox";
-import { useControlledComboboxInput } from "@/components/ui/use-controlled-combobox-input";
+import { IdCombobox } from "@/components/ui/id-combobox";
 
 export type MeepleOption = { id: string; displayName: string };
 
@@ -30,32 +22,15 @@ export function MeepleCombobox({
   onValueChange: (meepleId: string | null) => void;
   placeholder?: string;
 }) {
-  const selectedName =
-    options.find((option) => option.id === value)?.displayName ?? null;
-  const [inputValue, setInputValue] = useControlledComboboxInput(selectedName);
-
   return (
-    <Combobox
-      items={options.map((option) => option.displayName)}
-      value={selectedName}
-      inputValue={inputValue}
-      onInputValueChange={setInputValue}
-      onValueChange={(name) => {
-        const selected = options.find((option) => option.displayName === name);
-        onValueChange(selected?.id ?? null);
-      }}
-    >
-      <ComboboxInput placeholder={placeholder} />
-      <ComboboxPopup>
-        <ComboboxEmpty>Keine Treffer.</ComboboxEmpty>
-        <ComboboxList>
-          {(name: string) => (
-            <ComboboxItem key={name} value={name}>
-              {name}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxPopup>
-    </Combobox>
+    <IdCombobox
+      options={options.map((option) => ({
+        id: option.id,
+        label: option.displayName,
+      }))}
+      value={value}
+      onValueChange={onValueChange}
+      placeholder={placeholder}
+    />
   );
 }

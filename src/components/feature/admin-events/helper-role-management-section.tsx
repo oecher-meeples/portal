@@ -12,6 +12,7 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   createHelperRoleAction,
   updateHelperRoleAction,
@@ -147,9 +148,10 @@ function HelperRoleDialog({
           )?.description
         }
       >
-        <select
+        <NativeSelect
           id={`helper-role-permission-${role?.id ?? "new"}`}
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          size="md"
+          className="w-full"
           value={grantsPermissionKey}
           onChange={(event) => setGrantsPermissionKey(event.target.value)}
         >
@@ -159,7 +161,7 @@ function HelperRoleDialog({
               {permission.key}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
     </ActionDialog>
   );

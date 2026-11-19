@@ -1,22 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { actionPermissionDenied } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
-
-async function requireManagePermission() {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "links:manage"))) {
-    return { error: "Keine Berechtigung." } as const;
-  }
-  return null;
-}
 
 function revalidateLinkPaths() {
   revalidatePath("/dashboard");
@@ -29,7 +20,7 @@ export type ImportantLinkInput = {
 };
 
 export async function createImportantLink(input: ImportantLinkInput) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("links:manage");
   if (forbidden) return forbidden;
 
   await prisma.importantLink.create({ data: input });
@@ -42,7 +33,7 @@ export async function updateImportantLink(
   id: string,
   input: ImportantLinkInput,
 ) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("links:manage");
   if (forbidden) return forbidden;
 
   await prisma.importantLink.update({ where: { id }, data: input });
@@ -52,7 +43,7 @@ export async function updateImportantLink(
 }
 
 export async function deleteImportantLink(id: string) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("links:manage");
   if (forbidden) return forbidden;
 
   const link = await prisma.importantLink.findUnique({
@@ -76,7 +67,7 @@ export async function getImportantLinkUploadToken(
   pathname: string,
   contentType: string,
 ) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("links:manage");
   if (forbidden) throw new Error(forbidden.error);
 
   return createBlobUploadToken({

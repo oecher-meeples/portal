@@ -1,5 +1,6 @@
 "use server";
 
+import { findActionActor } from "@/lib/auth/action-guards";
 import {
   BggApiError,
   BggNotFoundError,
@@ -9,13 +10,12 @@ import {
   type BggSearchResult,
 } from "@/lib/bgg/client";
 import { translateToGerman } from "@/lib/bgg/translate";
-import { translateMechanics } from "@/lib/ludothek/mechanics-translations";
-import { translateCategories } from "@/lib/ludothek/category-translations";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
+import { resolveBggTagLabels } from "@/lib/ludothek/taxonomy/tags";
+import { prisma } from "@/lib/utils/prisma";
 import { searchYoutubeVideos } from "@/lib/youtube/client";
 
 export async function searchBggGamesAction(query: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
@@ -39,7 +39,8 @@ export async function searchBggGamesAction(query: string) {
  * Übersetzt die BGG-Rohdaten ins Deutsche (#184), bevor der Titel überhaupt
  * angelegt werden kann — ein eigener Schritt nach `fetchBggGame()`, nicht in
  * `mapItem()` verdrahtet, damit die englischen BGG-Fixtures/-Tests
- * unverändert bleiben. Mechaniken laufen über die feste Tabelle, die
+ * unverändert bleiben. Mechaniken/Kategorien bekommen ihre deutschen
+ * Anzeigenamen aus dem Tag-Register (`resolveBggTagLabels`), die
  * Beschreibung über die MyMemory-API. Schlägt die Übersetzung fehl (z. B.
  * MyMemorys knappes Tageslimit ohne `TRANSLATION_CONTACT_EMAIL`), bleibt der
  * englische Original-Text stehen statt die Beschreibung leer zu lassen —
@@ -49,8 +50,7 @@ export async function searchBggGamesAction(query: string) {
 export async function translateBggGameData(
   data: BggGameData,
 ): Promise<{ data: BggGameData; descriptionTranslationFailed: boolean }> {
-  const mechanics = translateMechanics(data.mechanics);
-  const categories = translateCategories(data.categories);
+  const { mechanics, categories } = await resolveBggTagLabels(prisma, data);
 
   if (!data.description) {
     return {
@@ -84,7 +84,7 @@ export async function translateBggGameData(
  * manuell mit englischem Text angelegt wurde.
  */
 export async function translateDescription(text: string) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
@@ -129,7 +129,7 @@ export type ExplainerVideoSource = "bgg-german" | "youtube" | "bgg-fallback";
  * nichts wird automatisch übernommen.
  */
 export async function fetchExplainerVideoOptions(bggId: number) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
@@ -181,7 +181,7 @@ export async function fetchExplainerVideoOptions(bggId: number) {
 }
 
 export async function previewBggImport(bggId: number) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }

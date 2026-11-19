@@ -24,6 +24,7 @@ import { ActionButton } from "@/components/ui/action-button";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/components/ui/use-pagination";
 import { useResponsivePageSize } from "@/components/ui/use-responsive-page-size";
+import { NativeSelect } from "@/components/ui/native-select";
 import { MembershipStatePill } from "@/components/entities/membership-state-pill";
 import { ResignMembershipDialog } from "@/components/feature/admin-mitglieder/resign-membership-dialog";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
@@ -200,33 +201,33 @@ export function VereinsmitgliederTable({
                 onChange={setSearch}
                 className="w-full max-w-sm"
               />
-              <select
+              <NativeSelect
                 value={zustandFilter}
                 onChange={(event) =>
                   setZustandFilter(event.target.value as ZustandFilter)
                 }
                 aria-label="Nach Zustand filtern"
-                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+                size="compact"
               >
                 {ZUSTAND_FILTERS.map(({ value, label }) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
-              </select>
-              <select
+              </NativeSelect>
+              <NativeSelect
                 value={portalLoginFilter}
                 onChange={(event) =>
                   setPortalLoginFilter(event.target.value as PortalLoginFilter)
                 }
                 aria-label="Nach Portal-Login filtern"
-                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+                size="compact"
               >
                 <option value="alle">Portal-Login: alle</option>
                 <option value="vorhanden">Portal-Login: vorhanden</option>
                 <option value="fehlt">Portal-Login: fehlt</option>
-              </select>
-              <select
+              </NativeSelect>
+              <NativeSelect
                 value={contributionFilterOption(contributionFilter ?? null)}
                 onChange={(event) => {
                   const option = event.target.value as ContributionFilterOption;
@@ -237,14 +238,14 @@ export function VereinsmitgliederTable({
                   );
                 }}
                 aria-label="Nach Beitragsart filtern"
-                className="border-input bg-background h-8 rounded-md border px-2 text-sm"
+                size="compact"
               >
                 {BEITRAGSART_FILTERS.map(({ value, label }) => (
                   <option key={value} value={value}>
                     {value === "alle" ? "Beitragsart: alle" : label}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
               {canManageMembers && (
                 <div className="ml-auto">
                   <CreateMemberDialog isAdmin={isAdmin} />

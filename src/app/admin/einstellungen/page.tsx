@@ -32,6 +32,18 @@ export default async function AdminSettingsPage() {
         "Anzeige-Texte & Dringlichkeit je BGG-Trait (Legacy, Kampagne, …) pflegen.",
       href: "/admin/spiel-traits",
     },
+    {
+      title: "Mitwirkende",
+      description:
+        "Verlage, Autoren und Illustratoren pflegen, umbenennen und zusammenführen.",
+      href: "/admin/mitwirkende",
+    },
+    {
+      title: "Mechaniken & Kategorien",
+      description:
+        "Deutsche Anzeigenamen der BGG-Mechaniken und -Kategorien pflegen.",
+      href: "/admin/tags",
+    },
   ];
 
   return (

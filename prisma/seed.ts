@@ -1,6 +1,5 @@
 import {
   BoardGameKind,
-  HoldingOrigin,
   InstagramStatus,
   StorageUnitKind,
 } from "@prisma/client";
@@ -10,6 +9,13 @@ import {
   findOrCreateBoardGameTitle,
   uniqueBoardGameSlug,
 } from "../src/lib/ludothek/board-game-title-lookup";
+import { linkContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import { linkTags } from "../src/lib/ludothek/taxonomy/tags";
+import {
+  backfillDemoEdition,
+  seedDemoEdition,
+  createDemoGameCopy,
+} from "./seed-data/demo-editions";
 import { DEMO_GAMES } from "./seed-data/demo-games";
 import { DEMO_EXPANSIONS } from "./seed-data/demo-expansions";
 import { DEMO_PRIVATE_COLLECTION_POOL } from "./seed-data/demo-private-collection";
@@ -24,6 +30,7 @@ import {
 } from "./seed-data/demo-accounts";
 import { randomDemoContactFields } from "./seed-data/demo-contacts";
 import { seedPermissions, seedRoles, assignRole } from "./seed-roles";
+import { seedHelperRoles } from "./seed-helper-roles";
 import { seedDemoFamily } from "./seed-family";
 import {
   seedDemoResignedMember,
@@ -31,6 +38,7 @@ import {
 } from "./seed-departed";
 import { seedDemoLoanHistory } from "./seed-loans";
 import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
+import { seedTagDisplayNames } from "./seed-tags";
 import { seedDemoLfgPosts } from "./seed-lfg";
 import { seedDemoMarketListings } from "./seed-marketplace";
 import {
@@ -100,37 +108,6 @@ async function ensureAnonymerMeeple() {
  * (401/403 auf jede Anfrage an boardgamegeek.com). Titel, Spielerzahlen und Coverbilder
  * sind reale, per Wikipedia verifizierte Daten — kein BGG-Import, aber echte Spiele.
  */
-async function createDemoGameCopy(
-  boardGameId: string,
-  title: string,
-  unitId: string,
-  adminMeepleId: string,
-  usedSlugs: Set<string>,
-) {
-  const base = slugify(title);
-  let slug = base;
-  let suffix = 2;
-  while (usedSlugs.has(slug)) {
-    slug = `${base}-${suffix}`;
-    suffix += 1;
-  }
-  usedSlugs.add(slug);
-
-  const copy = await prisma.gameCopy.create({ data: { slug, boardGameId } });
-
-  await prisma.gameHolding.create({
-    data: {
-      gameCopyId: copy.id,
-      unitId,
-      origin: HoldingOrigin.INITIAL,
-      confirmedAt: new Date(),
-      recordedByMeepleId: adminMeepleId,
-    },
-  });
-
-  return copy;
-}
-
 async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
   const unsortiert = await prisma.storageUnit.upsert({
     where: { code: UNSORTIERT_CODE },
@@ -158,8 +135,14 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
 
   let createdTitleCount = 0;
   let createdCopyCount = 0;
+  let backfilledCopyCount = 0;
 
   for (const game of DEMO_GAMES) {
+    const existingId = existingIdByTitle.get(game.title);
+    if (existingId) {
+      backfilledCopyCount += await backfillDemoEdition(existingId, game);
+      continue;
+    }
     // `gameIdByTitle` (unlike `existingIdByTitle`) also picks up titles
     // created earlier in *this* loop — guards against an accidental
     // duplicate title within `DEMO_GAMES` itself, not just against titles
@@ -180,12 +163,8 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         weight: game.weight,
         averageRating: game.averageRating,
         description: game.description,
-        mechanics: game.mechanics,
-        categories: game.categories,
         explainerVideoUrl: game.explainerVideoUrl,
         languageDependence: game.languageDependence,
-        publisher: game.publisher,
-        author: game.author,
         yearPublished: game.yearPublished,
         traits: game.traits,
         kind: expansionTitles.has(game.title)
@@ -193,6 +172,14 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
           : BoardGameKind.BOARDGAME,
       },
     });
+    await linkContributors(
+      prisma,
+      created.id,
+      game.contributors.filter((c) => c.role !== "PUBLISHER"),
+    );
+    await linkTags(prisma, created.id, game.tags);
+    // Verlage hängen an der Edition, nicht am Titel.
+    const demoEdition = await seedDemoEdition(created.id, game);
     gameIdByTitle.set(game.title, created.id);
     createdTitleCount += 1;
 
@@ -204,11 +191,17 @@ async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
         unsortiert.id,
         adminMeepleId,
         usedSlugs,
+        demoEdition.id,
       );
       createdCopyCount += 1;
     }
   }
 
+  if (backfilledCopyCount > 0) {
+    console.log(
+      `${backfilledCopyCount} vorhandene Demo-Exemplare der deutschen Version zugeordnet.`,
+    );
+  }
   console.log(
     `${createdTitleCount} Demo-Titel angelegt (${createdCopyCount} Exemplare), ${DEMO_GAMES.length - createdTitleCount} Titel bereits vorhanden übersprungen.`,
   );
@@ -288,10 +281,10 @@ async function ensureDemoAccountWithMember(
 }
 
 async function seedDemoMeeples() {
-  const [lea, tobias] = await Promise.all([
-    ensureDemoAccountWithMember(DEMO_MEEPLE_1, "Meeple"),
-    ensureDemoAccountWithMember(DEMO_MEEPLE_2, "Meeple"),
-  ]);
+  // Nacheinander, nicht per Promise.all: beide ziehen sonst dieselbe
+  // `nextMemberNumber()` und verletzen auf einer frischen DB den Unique-Key.
+  const lea = await ensureDemoAccountWithMember(DEMO_MEEPLE_1, "Meeple");
+  const tobias = await ensureDemoAccountWithMember(DEMO_MEEPLE_2, "Meeple");
 
   await seedPrivateGameCollection(
     lea.meepleId,
@@ -395,7 +388,7 @@ async function seedDemoLegalDocuments() {
 /**
  * Grundbestand, den jede Instanz braucht — auch eine frische Self-Hosting-
  * Installation ohne Demo-Daten: Admin-Login (sysadmin), Rechte/Rollen,
- * Spieleigenschafts-Texte sowie Rechtliches/Downloads (früher hart codiert,
+ * Spieleigenschafts-Texte, Tag-Anzeigenamen sowie Rechtliches/Downloads (früher hart codiert,
  * im Admin-UI nur bearbeitbar, nicht neu anlegbar bzw. auf Dateien unter
  * `public/downloads/` zeigend).
  */
@@ -403,7 +396,9 @@ async function seedBase() {
   const adminUserId = await upsertAuthUser(ADMIN_ACCOUNT);
   await seedPermissions();
   await seedRoles();
+  await seedHelperRoles();
   await seedBoardGameTraitTexts();
+  await seedTagDisplayNames();
   await assignRole(adminUserId, "sysadmin");
   await seedDemoDownloads();
   await seedDemoLegalDocuments();
