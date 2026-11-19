@@ -110,7 +110,11 @@ function TargetPicker({
             if (match) onSelect(match.id, true);
             return;
           }
-          const needle = text.trim().toLowerCase();
+          // Ein Einheiten-Etikett kodiert eine Short-ID-URL (#547) — gegen
+          // den Code matchen, nicht gegen die URL.
+          const needle = (parsed.kind === "unit" ? parsed.value : text)
+            .trim()
+            .toLowerCase();
           const match = targets.find((target) =>
             target.matchValue.toLowerCase().includes(needle),
           );

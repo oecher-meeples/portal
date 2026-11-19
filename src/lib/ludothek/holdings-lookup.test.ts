@@ -184,6 +184,46 @@ describe("resolveScannedCode", () => {
     expect(result.kind).toBe("unit");
   });
 
+  it("resolves a unit short-id label via its stored code (#547)", async () => {
+    prismaMock.storageUnit.findUnique.mockResolvedValue({
+      id: UNIT_ID,
+      code: "OM-BOX-0001",
+    } as never);
+    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+
+    const result = await resolveScannedCode(
+      "https://short.oecher-meeples.org/id/box-0001",
+    );
+
+    expect(result.kind).toBe("unit");
+    expect(prismaMock.storageUnit.findUnique).toHaveBeenCalledWith({
+      where: { code: "OM-BOX-0001" },
+    });
+  });
+
+  it("resolves an exemplar label to exactly that copy (#547)", async () => {
+    prismaMock.gameCopy.findFirst.mockResolvedValue({ id: GAME_ID } as never);
+
+    const result = await resolveScannedCode(
+      "https://short.oecher-meeples.org/id/inv-42",
+    );
+
+    expect(result).toEqual({ kind: "games", games: [{ id: GAME_ID }] });
+    expect(prismaMock.gameCopy.findFirst).toHaveBeenCalledWith({
+      where: { inventoryNumber: 42, status: { not: "DEINVENTARISED" } },
+      include: { boardGame: true },
+    });
+  });
+
+  it("resolves an exemplar label without an active copy to unknown (#547)", async () => {
+    prismaMock.gameCopy.findFirst.mockResolvedValue(null);
+
+    expect(await resolveScannedCode("inv-42")).toEqual({
+      kind: "unknown",
+      raw: "inv-42",
+    });
+  });
+
   it("resolves an ean with zero matches to unknown", async () => {
     prismaMock.gameCopy.findMany.mockResolvedValue([]);
 
