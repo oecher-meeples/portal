@@ -21,6 +21,21 @@ function redirectTo(href: string): ShortIdResolution {
   return { kind: "redirect", href };
 }
 
+/** Exemplar per Inventarnummer samt Titel-Slug — für den Router und die
+ * Detailseite mit Vorauswahl (`/ludothek/[slug]/[copySlug]`, #548). */
+export async function findCopyByInventoryNumber(inventoryNumber: number) {
+  const copy = await prisma.gameCopy.findUnique({
+    where: { inventoryNumber },
+    select: { id: true, boardGame: { select: { slug: true } } },
+  });
+  return copy ? { id: copy.id, boardGameSlug: copy.boardGame.slug } : null;
+}
+
+/** Pfad der Detailseite mit vorausgewähltem Exemplar. */
+export function copyDetailPath(boardGameSlug: string, inventoryNumber: number) {
+  return `/ludothek/${boardGameSlug}/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
+}
+
 /** Exemplar: bekannt → Detailseite mit Vorauswahl; unbekannt → Anlegen
  * (mit Recht) oder Ludothek-Suche nach der Nummer (ohne). Ein
  * deinventarisiertes Exemplar gilt als bekannt — seine Nummer ist vergeben,
@@ -29,15 +44,8 @@ async function resolveInventoryNumber(
   shortId: Extract<ShortId, { kind: "inv" }>,
   viewer: ShortIdViewer,
 ): Promise<ShortIdResolution> {
-  const copy = await prisma.gameCopy.findUnique({
-    where: { inventoryNumber: shortId.id },
-    select: { boardGame: { select: { slug: true } } },
-  });
-  if (copy) {
-    return redirectTo(
-      `/ludothek/${copy.boardGame.slug}/${formatShortIdSlug(shortId)}`,
-    );
-  }
+  const copy = await findCopyByInventoryNumber(shortId.id);
+  if (copy) return redirectTo(copyDetailPath(copy.boardGameSlug, shortId.id));
   return redirectTo(
     viewer.canManageGames
       ? `/ludothek?neu=${formatShortIdSlug(shortId)}`

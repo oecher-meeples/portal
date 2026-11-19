@@ -69,6 +69,8 @@ export function GameDetailView({
   createLfgTrigger,
   marketListingSection,
   traitTexts,
+  selectedCopy,
+  selectedCopyId,
 }: {
   game: PublicLudothekGame;
   /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
@@ -111,6 +113,12 @@ export function GameDetailView({
   /** Admin-editierbare Anzeige-Texte je gesetztem Trait (#487-Konzept) — für
    * alle (auch Gäste) geladen, analog `game.traits` selbst. */
   traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
+  /** Fertig gerenderte Leiste des per QR-Code vorausgewählten Exemplars
+   * (`/ludothek/<spiel>/inv-<n>`, #548) — weit oben, von der Seite
+   * komponiert. */
+  selectedCopy?: ReactNode;
+  /** Id dieses Exemplars — hebt es im Exemplare-Bereich hervor. */
+  selectedCopyId?: string;
 }) {
   const { inline: inlineContributors, illustrators } =
     splitContributorsForDetail(groupGameContributorsByName(game));
@@ -174,6 +182,7 @@ export function GameDetailView({
           {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
         </p>
         <GameContributorList contributors={inlineContributors} />
+        {selectedCopy && <div className="mt-4">{selectedCopy}</div>}
       </div>
 
       {/* #467: max-lg:w-fit + mx-auto lassen den Container unterhalb `lg`
@@ -402,6 +411,7 @@ export function GameDetailView({
             boardGameId={game.boardGameId}
             boardGameTitle={game.title}
             canManageGames={Boolean(canManageGames)}
+            selectedCopyId={selectedCopyId}
           />
         )}
 
