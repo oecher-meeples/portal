@@ -2,7 +2,6 @@
 
 import { QrCode } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
-import { exportGameCopyQrCodesZip } from "@/lib/inventory/game-copy-qr-export-client";
 import type { QrExportableCopy } from "@/lib/inventory/game-copy-qr-export";
 
 /**
@@ -27,7 +26,12 @@ export function GameCopyQrExportButton({
       size="sm"
       refresh={false}
       className="gap-1.5"
-      action={() => exportGameCopyQrCodesZip(copies, zipFilename)}
+      action={async () => {
+        // `qrcode` + `jszip` erst beim Klick laden (#529), nicht mit der Seite.
+        const { exportGameCopyQrCodesZip } =
+          await import("@/lib/inventory/game-copy-qr-export-client");
+        return exportGameCopyQrCodesZip(copies, zipFilename);
+      }}
     >
       <QrCode className="size-4" />
       {label}
