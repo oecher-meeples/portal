@@ -10,8 +10,8 @@ import { notifyCodeDetected } from "@/components/ui/scan-feedback";
 async function createReader() {
   const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] =
     await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
-  // Nur die hier tatsächlich gebrauchten Formate erkennen: QR (OM-BOX-XXXX-
-  // Lagereinheiten) und EAN-13/EAN-8 (Spiele). Ohne diese Einschränkung
+  // Nur die hier tatsächlich gebrauchten Formate erkennen: QR (Short-ID-
+  // Etiketten für Exemplare/Einheiten) und EAN-13/EAN-8 (Spiele). Ohne diese Einschränkung
   // versucht der Reader bei jedem Frame alle Barcode-Formate (Micro QR,
   // Aztec, Codabar, PDF417, …), was die Erkennung unzuverlässig macht.
   const hints = new Map([

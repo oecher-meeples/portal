@@ -222,7 +222,7 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                 id="manual-code"
                 value={manualInput}
                 onChange={(event) => setManualInput(event.target.value)}
-                placeholder="OM-BOX-0001 oder EAN"
+                placeholder="inv-123, OM-BOX-0001 oder EAN"
               />
               <Button
                 onClick={() => {

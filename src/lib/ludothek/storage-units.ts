@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { StorageUnitKind } from "@prisma/client";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { nextUnitCode } from "@/lib/inventory/codes";
+import { nextUnitCode, normalizeUnitCode } from "@/lib/inventory/codes";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
 
 export type CreateStorageUnitInput = {
@@ -74,7 +74,7 @@ export async function findStorageUnitByCode(code: string) {
   await requireActionPermission("games:manage");
 
   const unit = await prisma.storageUnit.findFirst({
-    where: { code: code.trim().toUpperCase(), retiredAt: null },
+    where: { code: normalizeUnitCode(code), retiredAt: null },
     select: { id: true, label: true, code: true },
   });
   return unit;

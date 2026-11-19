@@ -1,4 +1,9 @@
 import { StorageUnitKind } from "@prisma/client";
+import {
+  parseShortId,
+  unitCodeFromShortId,
+  type ShortId,
+} from "@/lib/short-id/short-id";
 
 /** The fixed unit for games whose physical location has never been recorded. */
 export const UNSORTIERT_CODE = "OM-BOX-0000";
@@ -50,15 +55,35 @@ export function buildMeepleCode(meepleId: string): string {
 }
 
 export type ScannedCode =
+  /** Exemplar-Etikett (`…/id/inv-<n>`, #547) — identifiziert genau ein
+   * Exemplar, anders als die titelbezogene EAN. */
+  | { kind: "copy"; inventoryNumber: number }
   | { kind: "unit"; value: string }
   | { kind: "ean"; value: string }
   | { kind: "meeple"; value: string }
   | { kind: "unknown"; value: string };
 
-/** Distinguishes a unit label (`OM-BOX-0001`), a Meeple's personal QR-Code
- * (`OM-MEEPLE-<id>`, #465) and an EAN-8/13 barcode. */
+function fromShortId(shortId: ShortId): ScannedCode {
+  switch (shortId.kind) {
+    case "inv":
+      return { kind: "copy", inventoryNumber: shortId.id };
+    case "box":
+    case "shelf":
+      return { kind: "unit", value: unitCodeFromShortId(shortId) };
+    case "meeple":
+      return { kind: "meeple", value: shortId.id };
+  }
+}
+
+/** Distinguishes a QR short ID (`…/id/inv-123`, `…/id/box-0001`, Epic #542 —
+ * any host, so a local build resolves real labels), a typed unit code as
+ * printed under its QR (`OM-BOX-0001`), a Meeple's personal QR-Code
+ * (`OM-MEEPLE-<id>`, #465, until #541) and an EAN-8/13 barcode. */
 export function parseScannedCode(raw: string): ScannedCode {
   const value = raw.trim();
+
+  const shortId = parseShortId(value);
+  if (shortId) return fromShortId(shortId);
 
   if (/^(OM-BOX-|OM-SHELF-)[A-Z0-9]+$/i.test(value)) {
     return { kind: "unit", value: value.toUpperCase() };
@@ -74,4 +99,12 @@ export function parseScannedCode(raw: string): ScannedCode {
   }
 
   return { kind: "unknown", value };
+}
+
+/** Typed or scanned unit input → stored unit code: a short-ID label resolves
+ * to its code (`…/id/box-0001` → `OM-BOX-0001`), anything else is taken as
+ * a (possibly new, freely chosen) code in upper case. */
+export function normalizeUnitCode(raw: string): string {
+  const parsed = parseScannedCode(raw);
+  return parsed.kind === "unit" ? parsed.value : raw.trim().toUpperCase();
 }
