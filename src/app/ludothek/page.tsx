@@ -24,6 +24,8 @@ import { getPresentGameCopyIds } from "@/lib/events/guest-area";
 import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
 import { parseShortId } from "@/lib/short-id/short-id";
 import { firstString } from "@/lib/utils/search-params";
+import { buildHref } from "@/lib/utils/query-string";
+import { resolveUnitFilter } from "@/lib/ludothek/unit-contents";
 
 export default async function LudothekPage({
   searchParams,
@@ -72,6 +74,7 @@ export default async function LudothekPage({
     privateGames,
     attendingExplainerBoardGameIds,
     presentGameCopyIds,
+    unitFilter,
   ] = await Promise.all([
     internal ? getCurrentMeeple() : null,
     // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
@@ -88,6 +91,8 @@ export default async function LudothekPage({
     filters.onlyPresentAtEvent && currentEvent
       ? getPresentGameCopyIds(currentEvent.id)
       : undefined,
+    // Gescanntes Einheiten-Etikett (#550) — auch für Gäste.
+    filters.unit ? resolveUnitFilter(filters.unit) : null,
   ]);
   const allGames = [...clubGames, ...privateGames];
 
@@ -99,6 +104,7 @@ export default async function LudothekPage({
   const filtered = filterLudothekGames(allGames, filters, {
     attendingExplainerBoardGameIds,
     presentGameCopyIds,
+    unitGameCopyIds: unitFilter?.gameCopyIds,
   });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
@@ -139,6 +145,31 @@ export default async function LudothekPage({
           <Link href="/dashboard" className="text-primary hover:underline">
             Zum Dashboard
           </Link>
+        </p>
+      )}
+      {filters.unit && (
+        <p className="bg-card flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-4 text-sm">
+          <span>
+            {unitFilter
+              ? `Gefiltert nach ${unitFilter.unit.label} (${unitFilter.unit.code}) – inklusive allem, was darin steht.`
+              : "Diese Einheit gibt es nicht."}
+          </span>
+          <Link
+            href={buildHref("/ludothek", rawSearchParams, {
+              einheit: undefined,
+            })}
+            className="text-primary hover:underline"
+          >
+            Filter entfernen
+          </Link>
+          {unitFilter && internal && canManageGames && (
+            <Link
+              href={`/admin/einheiten/${unitFilter.unit.id}`}
+              className="text-primary hover:underline"
+            >
+              Zur Einheit
+            </Link>
+          )}
         </p>
       )}
       <LudothekBrowser
