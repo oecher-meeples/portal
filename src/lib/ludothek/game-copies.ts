@@ -282,10 +282,21 @@ export async function deinventoriseGameCopy(
   return { success: true as const };
 }
 
+/** Markiert ein Exemplar zur Kontrolle. `alreadyMarked` meldet ein schon
+ * markiertes Exemplar (Scanner-Modus „Zur Kontrolle markieren", #563:
+ * Hinweis statt Fehler). */
 export async function requestCompletenessCheck(id: string) {
   const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
+  }
+
+  const copy = await prisma.gameCopy.findUnique({
+    where: { id },
+    select: { needsCompletenessCheck: true },
+  });
+  if (copy?.needsCompletenessCheck) {
+    return { success: true as const, alreadyMarked: true };
   }
 
   await prisma.gameCopy.update({
@@ -295,5 +306,30 @@ export async function requestCompletenessCheck(id: string) {
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
-  return { success: true as const };
+  return { success: true as const, alreadyMarked: false };
+}
+
+/**
+ * Markiert alle Spiele, die **direkt** in einer Einheit liegen, zur Kontrolle
+ * (#563, z. B. eine Kiste nach einem Event) — Spiele in Unterkisten nicht.
+ * Gibt die Anzahl der Spiele zurück, die dabei markiert wurden.
+ */
+export async function markUnitForCompletenessCheck(unitId: string) {
+  const user = (await findActionActor("games:manage"))?.user;
+  if (!user) {
+    return { error: "Keine Berechtigung." };
+  }
+
+  const { count } = await prisma.gameCopy.updateMany({
+    where: {
+      status: { not: GameInventoryStatus.DEINVENTARISED },
+      needsCompletenessCheck: false,
+      holdings: { some: { unitId, endedAt: null } },
+    },
+    data: { needsCompletenessCheck: true },
+  });
+
+  revalidatePath("/ludothek");
+  revalidatePath("/admin/bestand");
+  return { success: true as const, count };
 }

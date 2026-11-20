@@ -4,13 +4,6 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const requireMeepleMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, requireMeeple: requireMeepleMock };
-});
 vi.mock("@/lib/auth/action-guards", async () =>
   (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
     requirePermissionMock(...args),
@@ -25,7 +18,6 @@ const { clearGameDefect, confirmGameCondition, reportGameDefect } =
 class ForbiddenError extends Error {}
 
 beforeEach(() => {
-  requireMeepleMock.mockResolvedValue({ id: "meeple-1" });
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
 });
 
@@ -44,11 +36,13 @@ describe("confirmGameCondition", () => {
     });
   });
 
-  it("is available to any logged-in member", async () => {
-    await confirmGameCondition("game-1", "ok");
+  it("rejects without games:manage (#563)", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
-    expect(requireMeepleMock).toHaveBeenCalled();
-    expect(requirePermissionMock).not.toHaveBeenCalled();
+    await expect(confirmGameCondition("game-1", "ok")).rejects.toThrow(
+      ForbiddenError,
+    );
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 });
 
@@ -91,11 +85,13 @@ describe("reportGameDefect", () => {
     );
   });
 
-  it("is available to any logged-in member", async () => {
-    await reportGameDefect("game-1", "beschaedigt", "Mangel");
+  it("rejects without games:manage (#563)", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
-    expect(requireMeepleMock).toHaveBeenCalled();
-    expect(requirePermissionMock).not.toHaveBeenCalled();
+    await expect(
+      reportGameDefect("game-1", "beschaedigt", "Mangel"),
+    ).rejects.toThrow(ForbiddenError);
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 });
 

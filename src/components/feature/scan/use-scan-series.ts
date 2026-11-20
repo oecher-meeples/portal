@@ -7,7 +7,6 @@ import { scanPickCopy } from "@/lib/ludothek/scanner-actions";
 import type { ResolvedScan } from "@/lib/ludothek/holdings";
 import type {
   ScannerMode,
-  ScannerOutcome,
   ScannerTarget,
 } from "@/lib/ludothek/scanner-dispatch";
 import { toCopyChoices, type CopyChoice } from "@/lib/ludothek/scanner-modes";
@@ -23,8 +22,8 @@ export type SeriesBooking = {
   text: string;
   /** Link aufs Exemplar — korrigiert wird dort per Gegenbuchung (kein Undo). */
   href?: string;
-  /** Zählt zum Serien-Zähler („N Spiele erhalten"). */
-  counts?: boolean;
+  /** Beitrag zum Serien-Zähler („N Spiele erhalten"), Standard 0. */
+  counts?: number;
 };
 
 export type SeriesEntry = SeriesBooking & { key: number };
@@ -38,27 +37,35 @@ export function gameLabel(game: CopyChoice) {
     : game.title;
 }
 
-/** Baut den Log-Eintrag aus dem Ergebnis von `scanReceiveGame`/`scanTransferGame`. */
-export function outcomeBooking<O extends ScannerOutcome>(
+/** Log-Eintrag zu einem Exemplar: „Titel (Inv.-Nr. n): label" mit Link aufs Exemplar. */
+export function gameBooking(
   game: CopyChoice,
-  result: { error?: string; value?: O },
-  describe: (outcome: O) => Omit<SeriesBooking, "text" | "href"> & {
-    label: string;
-  },
+  label: string,
+  rest: Omit<SeriesBooking, "text" | "href">,
 ): SeriesBooking {
-  if (result.error || !result.value) {
-    return { tone: "error", text: `${gameLabel(game)}: ${result.error}` };
-  }
-  const outcome = result.value;
-  const { label, ...rest } = describe(outcome);
   return {
     ...rest,
     text: `${gameLabel(game)}: ${label}`,
     href:
-      outcome.inventoryNumber !== null
-        ? copyDetailPath(outcome.boardGameSlug, outcome.inventoryNumber)
+      game.inventoryNumber !== null
+        ? copyDetailPath(game.boardGameSlug, game.inventoryNumber)
         : undefined,
   };
+}
+
+/** Baut den Log-Eintrag aus einem Action-Ergebnis (`{ error }` oder Erfolg). */
+export function resultBooking<V>(
+  game: CopyChoice,
+  result: { error?: string; value?: V },
+  describe: (value: V) => Omit<SeriesBooking, "text" | "href"> & {
+    label: string;
+  },
+): SeriesBooking {
+  if (result.error || result.value === undefined) {
+    return { tone: "error", text: `${gameLabel(game)}: ${result.error}` };
+  }
+  const { label, ...rest } = describe(result.value);
+  return gameBooking(game, label, rest);
 }
 
 /**
@@ -75,7 +82,8 @@ export function useScanSeries({
 }: {
   mode: ScannerMode;
   target?: ScannerTarget | null;
-  book: (game: CopyChoice) => Promise<SeriesBooking>;
+  /** Bucht (bzw. öffnet) ein Exemplar; `null` = nichts ins Log. */
+  book: (game: CopyChoice) => Promise<SeriesBooking | null>;
   /** Einheit, Meeple-QR oder unbekannter Code — Hinweis fürs Log oder `null`. */
   onOtherScan: (
     resolved: Exclude<ResolvedScan, { kind: "games" }>,
@@ -106,7 +114,8 @@ export function useScanSeries({
   }
 
   async function bookAndLog(game: CopyChoice) {
-    log(await book(game));
+    const booking = await book(game);
+    if (booking) log(booking);
   }
 
   async function handleCode(raw: string) {
@@ -150,7 +159,8 @@ export function useScanSeries({
   return {
     handleCode,
     entries,
-    count: entries.filter((entry) => entry.counts).length,
+    count: entries.reduce((sum, entry) => sum + (entry.counts ?? 0), 0),
+    log,
     choice,
     pick,
     cancelChoice: () => setChoice(null),

@@ -12,6 +12,7 @@ describe("scannerModesFor", () => {
     expect(scannerModesFor(true)).toEqual([
       "erhalten",
       "einzel",
+      "markieren",
       "kontrollieren",
     ]);
   });
@@ -27,6 +28,8 @@ describe("parseScannerMode", () => {
     // nicht erlaubt → still Einzel-Scan
     ["kontrollieren", false, "einzel"],
     ["kontrollieren", true, "kontrollieren"],
+    ["markieren", false, "einzel"],
+    ["markieren", true, "markieren"],
   ] as const)("%j (games:manage %s) → %s", (raw, canManage, expected) => {
     expect(
       parseScannerMode(raw as string | string[] | undefined, canManage),
@@ -49,18 +52,32 @@ describe("toCopyChoices", () => {
           id: "a",
           condition: "leicht bespielt",
           inventoryNumber: 3,
-          boardGame: { title: "Catan" },
+          needsCompletenessCheck: true,
+          boardGame: { title: "Catan", slug: "catan" },
         },
         {
           id: "b",
           condition: null,
           inventoryNumber: null,
-          boardGame: { title: "Catan" },
+          needsCompletenessCheck: false,
+          boardGame: { title: "Catan", slug: "catan" },
         },
       ]),
     ).toEqual([
-      { id: "a", title: "Catan (leicht bespielt)", inventoryNumber: 3 },
-      { id: "b", title: "Catan", inventoryNumber: null },
+      {
+        id: "a",
+        title: "Catan (leicht bespielt)",
+        inventoryNumber: 3,
+        boardGameSlug: "catan",
+        needsCompletenessCheck: true,
+      },
+      {
+        id: "b",
+        title: "Catan",
+        inventoryNumber: null,
+        boardGameSlug: "catan",
+        needsCompletenessCheck: false,
+      },
     ]);
   });
 });

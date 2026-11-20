@@ -20,6 +20,7 @@ const {
   updateGameCopy,
   deinventoriseGameCopy,
   requestCompletenessCheck,
+  markUnitForCompletenessCheck,
   getSuggestedInventoryNumber,
 } = await import("./game-copies");
 
@@ -405,9 +406,56 @@ describe("requestCompletenessCheck", () => {
 
     const result = await requestCompletenessCheck("copy-1");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, alreadyMarked: false });
     expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
       where: { id: "copy-1" },
+      data: { needsCompletenessCheck: true },
+    });
+  });
+});
+
+describe("requestCompletenessCheck — schon markiert (#563)", () => {
+  it("reports an already marked copy instead of updating it", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.gameCopy.findUnique.mockResolvedValue({
+      needsCompletenessCheck: true,
+    } as never);
+
+    const result = await requestCompletenessCheck("copy-1");
+
+    expect(result).toEqual({ success: true, alreadyMarked: true });
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("markUnitForCompletenessCheck (#563)", () => {
+  it("rejects without games:manage", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys([]);
+
+    expect(await markUnitForCompletenessCheck("unit-1")).toEqual({
+      error: "Keine Berechtigung.",
+    });
+    expect(prismaMock.gameCopy.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("marks only the games directly in the unit and returns the count", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.gameCopy.updateMany.mockResolvedValue({ count: 5 });
+
+    const result = await markUnitForCompletenessCheck("unit-1");
+
+    expect(result).toEqual({ success: true, count: 5 });
+    // Direkte Inhalte = offener Aufenthalt genau in dieser Einheit; Spiele in
+    // Unterkisten haben ihren Aufenthalt in der Unterkiste.
+    expect(prismaMock.gameCopy.updateMany).toHaveBeenCalledWith({
+      where: {
+        status: { not: "DEINVENTARISED" },
+        needsCompletenessCheck: false,
+        holdings: { some: { unitId: "unit-1", endedAt: null } },
+      },
       data: { needsCompletenessCheck: true },
     });
   });

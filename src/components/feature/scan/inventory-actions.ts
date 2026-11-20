@@ -2,18 +2,18 @@
 
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requireMeeple } from "@/lib/members/meeples";
 import type { GameIssueKind } from "@/lib/ludothek/game-issue";
 import {
   clearGameCopyDefect,
   reportGameCopyDefect,
 } from "@/lib/ludothek/game-defects";
 
+/** Prüfbogen (Scanner-Modus „Kontrollieren", #563) — nur `games:manage`. */
 export async function confirmGameCondition(
   gameCopyId: string,
   condition: string,
 ) {
-  await requireMeeple();
+  await requireActionPermission("games:manage");
 
   await prisma.gameCopy.update({
     where: { id: gameCopyId },
@@ -32,7 +32,7 @@ export async function reportGameDefect(
   kind: GameIssueKind,
   note: string,
 ) {
-  await requireMeeple();
+  await requireActionPermission("games:manage");
 
   return reportGameCopyDefect(gameCopyId, kind, note);
 }

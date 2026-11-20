@@ -4,7 +4,6 @@ import { useImperativeHandle, useState, type Ref } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
-import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
 import { RelocateConfirmPanel } from "@/components/feature/scan/relocate-confirm-panel";
 import { CopyChoiceList } from "@/components/feature/scan/scan-series-log";
 import type { ScanModeHandle } from "@/components/feature/scan/use-scan-series";
@@ -28,7 +27,6 @@ type ViewState =
       forEinlagern: boolean;
     }
   | { kind: "game"; gameCopyId: string }
-  | { kind: "pruefen"; game: CopyChoice }
   | ({ kind: "unit" } & UnitView)
   | {
       kind: "confirm-relocate";
@@ -40,17 +38,14 @@ type ViewState =
 /**
  * Einzel-Scan (bisheriger `/scan`-Ablauf): Spiel → `GameHoldingPanel`,
  * Einheit → Inhalt + Einlagern-Serie, mehrdeutige EAN → Exemplar-Auswahl.
- * Mit `pruefen` öffnet jedes Spiel den Prüfbogen (wird in #563 zum Modus
- * „Kontrollieren"); die Einlagern-Serie geht in #539 in „Übergeben" auf.
+ * Die Einlagern-Serie geht in #539 in „Übergeben" auf.
  */
 export function SingleScan({
   ref,
   canManageGames,
-  pruefen = false,
 }: {
   ref: Ref<ScanModeHandle>;
   canManageGames: boolean;
-  pruefen?: boolean;
 }) {
   const [state, setState] = useState<ViewState>({ kind: "idle" });
   const [einlagern, setEinlagern] = useState<EinlagernSeries>(null);
@@ -81,11 +76,7 @@ export function SingleScan({
   }
 
   function openGame(game: CopyChoice) {
-    setState(
-      pruefen
-        ? { kind: "pruefen", game }
-        : { kind: "game", gameCopyId: game.id },
-    );
+    setState({ kind: "game", gameCopyId: game.id });
   }
 
   function handleUnit(unit: UnitView) {
@@ -248,15 +239,6 @@ export function SingleScan({
           />
         )}
 
-        {state.kind === "pruefen" && (
-          <PruefbogenPanel
-            gameCopyId={state.game.id}
-            title={state.game.title}
-            inventoryNumber={state.game.inventoryNumber}
-            onDone={reset}
-          />
-        )}
-
         {state.kind === "unit" && (
           <div className="flex flex-col gap-2">
             <p className="font-serif text-lg font-bold">{state.label}</p>
@@ -303,9 +285,7 @@ export function SingleScan({
           />
         )}
 
-        {(state.kind === "unknown" ||
-          state.kind === "game" ||
-          state.kind === "pruefen") && (
+        {(state.kind === "unknown" || state.kind === "game") && (
           <Button variant="outline" size="sm" className="mt-2" onClick={reset}>
             Zurücksetzen
           </Button>
