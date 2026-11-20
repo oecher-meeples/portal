@@ -10,6 +10,7 @@ import { CheckSeries } from "@/components/feature/scan/check-series";
 import { MarkSeries } from "@/components/feature/scan/mark-series";
 import { ReceiveSeries } from "@/components/feature/scan/receive-series";
 import { SingleScan } from "@/components/feature/scan/single-scan";
+import { TransferSeries } from "@/components/feature/scan/transfer-series";
 import type { ScanModeHandle } from "@/components/feature/scan/use-scan-series";
 import {
   SCANNER_PAGE_MODE_LABELS,
@@ -27,20 +28,25 @@ import {
 export function ScanView({
   canManageGames,
   initialMode,
+  initialTargetUnitId = null,
 }: {
   canManageGames: boolean;
   initialMode: ScannerPageMode;
+  /** `?ziel=<unitId>` im Modus „Übergeben" (#539). */
+  initialTargetUnitId?: string | null;
 }) {
   const [mode, setMode] = useState(initialMode);
+  const [targetUnitId, setTargetUnitId] = useState(initialTargetUnitId);
   const [manualInput, setManualInput] = useState("");
   const [lastRaw, setLastRaw] = useState("");
   const modeRef = useRef<ScanModeHandle>(null);
 
-  function changeMode(next: ScannerPageMode) {
+  function changeMode(next: ScannerPageMode, ziel: string | null = null) {
     setMode(next);
+    setTargetUnitId(ziel);
     // Ohne Server-Roundtrip — die Kamera läuft weiter (Next.js integriert
     // `replaceState` in den Router).
-    window.history.replaceState(null, "", scannerModeHref(next));
+    window.history.replaceState(null, "", scannerModeHref(next, ziel));
   }
 
   async function handleCode(raw: string) {
@@ -56,7 +62,7 @@ export function ScanView({
           label: SCANNER_PAGE_MODE_LABELS[value],
         }))}
         value={mode}
-        onChange={changeMode}
+        onChange={(next) => changeMode(next)}
       />
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -86,10 +92,21 @@ export function ScanView({
 
           <div className="border-t pt-4">
             {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
+            {mode === "uebergeben" && (
+              <TransferSeries
+                key={targetUnitId ?? ""}
+                ref={modeRef}
+                initialUnitId={targetUnitId}
+              />
+            )}
             {mode === "markieren" && <MarkSeries ref={modeRef} />}
             {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
             {mode === "einzel" && (
-              <SingleScan ref={modeRef} canManageGames={canManageGames} />
+              <SingleScan
+                ref={modeRef}
+                canManageGames={canManageGames}
+                onFillUnit={(unitId) => changeMode("uebergeben", unitId)}
+              />
             )}
           </div>
         </div>

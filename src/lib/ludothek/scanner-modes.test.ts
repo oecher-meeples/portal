@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseScannerMode,
+  parseScannerTargetUnit,
   scannerModeHref,
   scannerModesFor,
   toCopyChoices,
@@ -8,9 +9,14 @@ import {
 
 describe("scannerModesFor", () => {
   it("hides the games:manage-only modes", () => {
-    expect(scannerModesFor(false)).toEqual(["erhalten", "einzel"]);
+    expect(scannerModesFor(false)).toEqual([
+      "erhalten",
+      "uebergeben",
+      "einzel",
+    ]);
     expect(scannerModesFor(true)).toEqual([
       "erhalten",
+      "uebergeben",
       "einzel",
       "markieren",
       "kontrollieren",
@@ -30,6 +36,7 @@ describe("parseScannerMode", () => {
     ["kontrollieren", true, "kontrollieren"],
     ["markieren", false, "einzel"],
     ["markieren", true, "markieren"],
+    ["uebergeben", false, "uebergeben"],
   ] as const)("%j (games:manage %s) → %s", (raw, canManage, expected) => {
     expect(
       parseScannerMode(raw as string | string[] | undefined, canManage),
@@ -41,6 +48,16 @@ describe("scannerModeHref", () => {
   it("keeps the Einzel-Scan parameter-free", () => {
     expect(scannerModeHref("einzel")).toBe("/scan");
     expect(scannerModeHref("erhalten")).toBe("/scan?modus=erhalten");
+  });
+
+  it("carries the pre-selected target unit only for Übergeben (#539)", () => {
+    expect(scannerModeHref("uebergeben", "unit 1")).toBe(
+      "/scan?modus=uebergeben&ziel=unit%201",
+    );
+    expect(scannerModeHref("erhalten", "unit-1")).toBe("/scan?modus=erhalten");
+    expect(parseScannerTargetUnit("uebergeben", ["unit-1"])).toBe("unit-1");
+    expect(parseScannerTargetUnit("erhalten", "unit-1")).toBeNull();
+    expect(parseScannerTargetUnit("uebergeben", undefined)).toBeNull();
   });
 });
 
