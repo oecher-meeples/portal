@@ -23,7 +23,13 @@ function copy(
   inventoryNumber: number,
   condition: string | null = null,
 ) {
-  return { id, inventoryNumber, condition, boardGame: { title: "Catan" } };
+  return {
+    id,
+    inventoryNumber,
+    condition,
+    needsCompletenessCheck: false,
+    boardGame: { title: "Catan", slug: "catan" },
+  };
 }
 
 function outcome(id: string, inventoryNumber: number, kind = "borrow") {

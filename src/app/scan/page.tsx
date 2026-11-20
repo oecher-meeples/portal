@@ -3,6 +3,9 @@ import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { ScanView } from "@/components/feature/scan/scan-view";
 import { parseScannerMode } from "@/lib/ludothek/scanner-modes";
 
+const MODES_DESCRIPTION =
+  "Erhalten: Spiele nacheinander auf dich buchen. Einzel-Scan: ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen.";
+
 export default async function ScanPage({
   searchParams,
 }: {
@@ -24,7 +27,11 @@ export default async function ScanPage({
       <PageHeading
         eyebrow="Kamera-Scan"
         title="Scanner"
-        description="Erhalten: Spiele nacheinander auf dich buchen. Einzel-Scan: ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen."
+        description={
+          canManageGames
+            ? `${MODES_DESCRIPTION} Zur Kontrolle markieren / Kontrollieren: Vollständigkeit prüfen.`
+            : MODES_DESCRIPTION
+        }
       />
       <ScanView canManageGames={canManageGames} initialMode={initialMode} />
     </div>

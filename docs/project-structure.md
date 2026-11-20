@@ -76,7 +76,7 @@ src/lib/
 │               ├── scanner-actions.ts  Server Actions der Scanner-Serien: `scanReceiveGame`, `scanTransferGame`, `scanValidateTarget`, `scanPickCopy`
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── game-issue.ts / game-defects.ts  Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format (rein), Statusübergang `ACTIVE↔MAINTENANCE` (`reportGameCopyDefect`/`clearGameCopyDefect`, ohne `"use server"` — Guard liegt in `feature/scan/inventory-actions.ts`)
-│               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern
+│               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern (einzeln oder `markUnitForCompletenessCheck` für die direkten Inhalte einer Einheit, #563)
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
 │               ├── bgg-id.ts           Parsing: BGG-ID, Mechaniken-Liste (Formularfeld ↔ String[])
@@ -198,7 +198,7 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 - `actions.ts` — Server Actions dieses Anwendungsfalls
 - `*-dialog.tsx`, `use-*.ts` — Teilaspekte desselben Anwendungsfalls
 
-Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan inkl. Einlagern-Serie und Prüfbogen) bzw. `receive-series.tsx` (Erhalten). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
+Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan inkl. Einlagern-Serie), `receive-series.tsx` (Erhalten), `mark-series.tsx` (Zur Kontrolle markieren) bzw. `check-series.tsx` (Kontrollieren, öffnet `pruefbogen-panel.tsx`). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
 
 Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `entities/`, `ui/` oder `lib/`.
 

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { CodeScanner } from "@/components/ui/code-scanner";
 import { PageContainer } from "@/components/ui/page-container";
+import { CheckSeries } from "@/components/feature/scan/check-series";
+import { MarkSeries } from "@/components/feature/scan/mark-series";
 import { ReceiveSeries } from "@/components/feature/scan/receive-series";
 import { SingleScan } from "@/components/feature/scan/single-scan";
 import type { ScanModeHandle } from "@/components/feature/scan/use-scan-series";
@@ -83,15 +85,11 @@ export function ScanView({
           </form>
 
           <div className="border-t pt-4">
-            {mode === "erhalten" ? (
-              <ReceiveSeries ref={modeRef} />
-            ) : (
-              <SingleScan
-                key={mode}
-                ref={modeRef}
-                canManageGames={canManageGames}
-                pruefen={mode === "kontrollieren"}
-              />
+            {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
+            {mode === "markieren" && <MarkSeries ref={modeRef} />}
+            {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
+            {mode === "einzel" && (
+              <SingleScan ref={modeRef} canManageGames={canManageGames} />
             )}
           </div>
         </div>

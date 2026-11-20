@@ -21,6 +21,11 @@ vi.mock("@/components/feature/scan/pruefbogen-panel", () => ({
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
+vi.mock("@/lib/ludothek/game-copies", () => ({
+  requestCompletenessCheck: vi.fn(),
+  markUnitForCompletenessCheck: vi.fn(),
+}));
+
 const scanResolveCodeMock = vi.fn();
 const scanTransferGameMock = vi.fn();
 vi.mock("@/lib/ludothek/holding-actions", () => ({
@@ -63,12 +68,14 @@ const UNIT_B = { id: "unit-b", code: "OM-BOX-0002", label: "Kiste B" };
 const GAME_1 = {
   id: "copy-1",
   condition: null,
-  boardGame: { title: "Catan" },
+  boardGame: { title: "Catan", slug: "catan" },
+  needsCompletenessCheck: false,
 };
 const GAME_2 = {
   id: "copy-2",
   condition: "leicht bespielt",
-  boardGame: { title: "Catan" },
+  boardGame: { title: "Catan", slug: "catan" },
+  needsCompletenessCheck: false,
 };
 
 describe("ScanView — Serienmodus Einlagern, Mehrfachtreffer (#5)", () => {
@@ -241,16 +248,26 @@ describe("ScanView — Moduswahl (#538)", () => {
       .getAllByRole("button")
       .map((button) => button.textContent)
       .filter((label) =>
-        ["Erhalten", "Einzel-Scan", "Prüfbogen"].includes(label ?? ""),
+        [
+          "Erhalten",
+          "Einzel-Scan",
+          "Zur Kontrolle markieren",
+          "Kontrollieren",
+        ].includes(label ?? ""),
       );
 
-  it("offers Erhalten and Einzel-Scan, the Prüfbogen only with games:manage", () => {
+  it("offers the Kontroll-Modi only with games:manage", () => {
     render(<ScanView canManageGames={false} initialMode="einzel" />);
     expect(modeLabels()).toEqual(["Erhalten", "Einzel-Scan"]);
     cleanup();
 
     render(<ScanView canManageGames initialMode="einzel" />);
-    expect(modeLabels()).toEqual(["Erhalten", "Einzel-Scan", "Prüfbogen"]);
+    expect(modeLabels()).toEqual([
+      "Erhalten",
+      "Einzel-Scan",
+      "Zur Kontrolle markieren",
+      "Kontrollieren",
+    ]);
   });
 
   it("starts in the mode from the URL and writes a mode change back", () => {

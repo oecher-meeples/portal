@@ -2,10 +2,13 @@
 
 import { useImperativeHandle, type Ref } from "react";
 import { scanReceiveGame } from "@/lib/ludothek/scanner-actions";
-import { RECEIVE_OUTCOME_LABELS } from "@/lib/ludothek/scanner-modes";
+import {
+  RECEIVE_OUTCOME_LABELS,
+  spieleCount,
+} from "@/lib/ludothek/scanner-modes";
 import { ScanSeriesLog } from "@/components/feature/scan/scan-series-log";
 import {
-  outcomeBooking,
+  resultBooking,
   useScanSeries,
   type ScanModeHandle,
 } from "@/components/feature/scan/use-scan-series";
@@ -19,10 +22,10 @@ export function ReceiveSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
   const series = useScanSeries({
     mode: "receive",
     book: async (game) =>
-      outcomeBooking(game, await scanReceiveGame(game.id), ({ outcome }) => ({
+      resultBooking(game, await scanReceiveGame(game.id), ({ outcome }) => ({
         label: RECEIVE_OUTCOME_LABELS[outcome],
         tone: outcome === "already-mine" ? "info" : "success",
-        counts: outcome !== "already-mine",
+        counts: outcome === "already-mine" ? 0 : 1,
       })),
     onOtherScan: (resolved) => ({
       tone: "info",
@@ -43,9 +46,7 @@ export function ReceiveSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
       </p>
       <ScanSeriesLog
         series={series}
-        countLabel={(count) =>
-          `${count} ${count === 1 ? "Spiel" : "Spiele"} erhalten`
-        }
+        countLabel={(count) => `${spieleCount(count)} erhalten`}
         emptyHint="Noch nichts gescannt."
       />
     </div>

@@ -10,6 +10,7 @@ import type { ReceiveDecision } from "@/lib/ludothek/scanner-dispatch";
 export const SCANNER_PAGE_MODES = [
   "erhalten",
   "einzel",
+  "markieren",
   "kontrollieren",
 ] as const;
 export type ScannerPageMode = (typeof SCANNER_PAGE_MODES)[number];
@@ -17,11 +18,13 @@ export type ScannerPageMode = (typeof SCANNER_PAGE_MODES)[number];
 export const SCANNER_PAGE_MODE_LABELS: Record<ScannerPageMode, string> = {
   erhalten: "Erhalten",
   einzel: "Einzel-Scan",
-  // Wird in #563 zu „Kontrollieren" umgebaut.
-  kontrollieren: "Prüfbogen",
+  markieren: "Zur Kontrolle markieren",
+  // Früher „Prüfbogen" (#563).
+  kontrollieren: "Kontrollieren",
 };
 
 const GAMES_MANAGE_ONLY: ReadonlySet<ScannerPageMode> = new Set([
+  "markieren",
   "kontrollieren",
 ]);
 
@@ -51,6 +54,11 @@ export function scannerModeHref(mode: ScannerPageMode): string {
   return mode === DEFAULT_MODE ? "/scan" : `/scan?modus=${mode}`;
 }
 
+/** „1 Spiel" / „N Spiele" — für die Serien-Zähler. */
+export function spieleCount(count: number) {
+  return `${count} ${count === 1 ? "Spiel" : "Spiele"}`;
+}
+
 /** Log-Text je Ergebnis im Modus „Erhalten". */
 export const RECEIVE_OUTCOME_LABELS: Record<ReceiveDecision, string> = {
   borrow: "ausgeliehen",
@@ -64,12 +72,14 @@ export type CopyChoice = {
   id: string;
   title: string;
   inventoryNumber: number | null;
+  boardGameSlug: string;
+  needsCompletenessCheck: boolean;
 };
 
 type ChoosableCopy = Pick<
   ScannedGameCopy,
-  "id" | "condition" | "inventoryNumber"
-> & { boardGame: { title: string } };
+  "id" | "condition" | "inventoryNumber" | "needsCompletenessCheck"
+> & { boardGame: { title: string; slug: string } };
 
 /** Exemplar-Auswahl bei mehrdeutiger EAN: Titel samt Zustand. */
 export function toCopyChoices(games: ChoosableCopy[]): CopyChoice[] {
@@ -79,5 +89,7 @@ export function toCopyChoices(games: ChoosableCopy[]): CopyChoice[] {
       ? `${game.boardGame.title} (${game.condition})`
       : game.boardGame.title,
     inventoryNumber: game.inventoryNumber,
+    boardGameSlug: game.boardGame.slug,
+    needsCompletenessCheck: game.needsCompletenessCheck,
   }));
 }

@@ -199,7 +199,7 @@ export async function borrowGame({
       );
     }
 
-    return closeAndOpen(tx, {
+    const holding = await closeAndOpen(tx, {
       gameCopyId,
       previous,
       target: { vereinsmitgliedId },
@@ -208,6 +208,14 @@ export async function borrowGame({
       confirmedAt: await confirmationFor(tx, recordedByMeepleId, isSelf),
       note,
     });
+    // #563: jede Ausleihe (Verein, Event-Ausgabe, extern) markiert das
+    // Exemplar zur Kontrolle — bis der Prüfbogen ausgefüllt ist. Eine
+    // Weitergabe (HANDOVER) lässt das Flag unverändert.
+    await tx.gameCopy.update({
+      where: { id: gameCopyId },
+      data: { needsCompletenessCheck: true },
+    });
+    return holding;
   });
 }
 
