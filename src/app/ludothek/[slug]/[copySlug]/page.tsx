@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { formatShortIdSlug, parseShortId } from "@/lib/short-id/short-id";
 import {
   copyDetailPath,
-  findCopyByInventoryNumber,
-} from "@/lib/short-id/resolve";
+  formatShortIdSlug,
+  parseShortId,
+} from "@/lib/short-id/short-id";
+import { findCopyByInventoryNumber } from "@/lib/short-id/resolve";
 import { renderGameDetail } from "../render-game-detail";
 
 /**

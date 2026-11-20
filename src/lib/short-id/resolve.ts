@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/utils/prisma";
 import {
+  copyDetailPath,
   formatShortIdSlug,
   parseShortId,
   unitCodeFromShortId,
@@ -29,11 +30,6 @@ export async function findCopyByInventoryNumber(inventoryNumber: number) {
     select: { id: true, boardGame: { select: { slug: true } } },
   });
   return copy ? { id: copy.id, boardGameSlug: copy.boardGame.slug } : null;
-}
-
-/** Pfad der Detailseite mit vorausgewähltem Exemplar. */
-export function copyDetailPath(boardGameSlug: string, inventoryNumber: number) {
-  return `/ludothek/${boardGameSlug}/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
 }
 
 /** Exemplar: bekannt → Detailseite mit Vorauswahl; unbekannt → Anlegen

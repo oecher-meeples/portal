@@ -47,6 +47,12 @@ export function formatShortIdSlug(shortId: ShortId): string {
   return `${shortId.kind}-${shortId.id}`;
 }
 
+/** Pfad der Detailseite mit vorausgewähltem Exemplar (#548) — auch das
+ * Scanner-Serien-Log verlinkt darauf (Korrektur per Gegenbuchung, #538). */
+export function copyDetailPath(boardGameSlug: string, inventoryNumber: number) {
+  return `/ludothek/${boardGameSlug}/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
+}
+
 export function buildShortIdUrl(shortId: ShortId): string {
   return `${SHORT_ID_BASE_URL}/id/${formatShortIdSlug(shortId)}`;
 }

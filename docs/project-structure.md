@@ -72,6 +72,7 @@ src/lib/
 │               ├── board-game-kind.ts  `BOARD_GAME_KIND_LABELS` (Basisspiel/Erweiterung)
 │               ├── holding-actions-shared.ts   Von `holding-actions*.ts` und `scanner-actions.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
 │               ├── scanner-dispatch.ts Scanner-Serien (#537): reine Buchungs-Weiche `decideReceive`/`decideTransfer` + Vorauswahl `pickCopyForMode` bei mehrdeutiger EAN
+│               ├── scanner-modes.ts    Modi der Scanner-Seite: `parseScannerMode` (URL → erlaubter Modus), Labels, `toCopyChoices`
 │               ├── scanner-actions.ts  Server Actions der Scanner-Serien: `scanReceiveGame`, `scanTransferGame`, `scanValidateTarget`, `scanPickCopy`
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── game-issue.ts / game-defects.ts  Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format (rein), Statusübergang `ACTIVE↔MAINTENANCE` (`reportGameCopyDefect`/`clearGameCopyDefect`, ohne `"use server"` — Guard liegt in `feature/scan/inventory-actions.ts`)
@@ -196,6 +197,8 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 - `<domäne>-view.tsx` — Smart Component, verdrahtet ui/entities/widgets mit State & Actions
 - `actions.ts` — Server Actions dieses Anwendungsfalls
 - `*-dialog.tsx`, `use-*.ts` — Teilaspekte desselben Anwendungsfalls
+
+Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan inkl. Einlagern-Serie und Prüfbogen) bzw. `receive-series.tsx` (Erhalten). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
 
 Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `entities/`, `ui/` oder `lib/`.
 
