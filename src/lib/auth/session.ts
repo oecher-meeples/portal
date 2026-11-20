@@ -82,14 +82,27 @@ export async function getPreviewTier(): Promise<Tier | null> {
 
 /**
  * Effective tier for display purposes — real role, overridden by an admin's
- * preview choice. Admins default to "mitglied" until they explicitly pick a
- * tier via the switcher (including picking "admin" itself, which stores that
- * choice rather than falling back to it).
+ * preview choice. Admins see their full "admin" view until they pick another
+ * tier via the switcher (#516; #126 had defaulted to "mitglied", which hid
+ * every admin affordance right after login without any visible reason).
  */
 export async function getSessionTier(): Promise<Tier> {
-  const realTier = await getRealSessionTier();
+  return resolveViewTier(await getRealSessionTier());
+}
+
+/**
+ * `getSessionTier` for callers that already know the real tier (AppShell).
+ * Shell and pages must share one admin default — they once disagreed, so the
+ * switcher showed "Admin" while every page rendered the member view (#504).
+ */
+export async function resolveViewTier(realTier: Tier): Promise<Tier> {
   if (realTier !== "admin") return realTier;
-  return (await getPreviewTier()) ?? "mitglied";
+  return adminViewTier();
+}
+
+/** A real admin's view: the preview choice, else the full admin view. */
+async function adminViewTier(): Promise<Tier> {
+  return (await getPreviewTier()) ?? "admin";
 }
 
 /**
@@ -106,8 +119,7 @@ export async function hasPermissionInCurrentView(
   permissionKey: PermissionKey,
 ) {
   if (await hasPermission(userId, ADMIN_ACCESS_PERMISSION)) {
-    const previewTier = (await getPreviewTier()) ?? "mitglied";
-    if (previewTier !== "admin") return false;
+    if ((await adminViewTier()) !== "admin") return false;
   }
   return hasPermission(userId, permissionKey);
 }

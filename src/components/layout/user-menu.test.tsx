@@ -15,11 +15,6 @@ vi.mock("@/lib/auth/client", () => ({
   authClient: { signOut: (...args: unknown[]) => signOutMock(...args) },
 }));
 
-const clearPreviewTierMock = vi.fn();
-vi.mock("@/components/feature/admin-preview-tier/actions", () => ({
-  clearPreviewTier: () => clearPreviewTierMock(),
-}));
-
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -31,7 +26,6 @@ describe("UserMenu — Logout räumt Client-Präferenzen (#472, #339)", () => {
     localStorage.setItem(PINNED_STORAGE_KEY, "true");
     localStorage.setItem("notification-closed:manual:abc", "1");
     signOutMock.mockResolvedValue(undefined);
-    clearPreviewTierMock.mockResolvedValue(undefined);
 
     render(
       <UserMenu user={{ name: "Erika Musterfrau", meepleId: "meeple-1" }} />,
@@ -45,7 +39,6 @@ describe("UserMenu — Logout räumt Client-Präferenzen (#472, #339)", () => {
 
   it("still signs out and navigates home when no pin preference was set", async () => {
     signOutMock.mockResolvedValue(undefined);
-    clearPreviewTierMock.mockResolvedValue(undefined);
 
     render(
       <UserMenu user={{ name: "Erika Musterfrau", meepleId: "meeple-1" }} />,

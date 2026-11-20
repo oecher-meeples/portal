@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { LogIn, LogOut, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
-import { clearPreviewTier } from "@/components/feature/admin-preview-tier/actions";
 import { MeepleQrDialog } from "@/components/layout/meeple-qr-dialog";
 import { useLongPress } from "@/components/ui/use-long-press";
 
@@ -36,7 +35,7 @@ export function UserMenu({
   }
 
   async function handleSignOut() {
-    await Promise.all([authClient.signOut(), clearPreviewTier()]);
+    await authClient.signOut();
     // #472/#339: Client-Präferenzen (Sidebar-Pin, geschlossene
     // Notification-Hinweise) sind geräte-, nicht kontogebunden — ohne das
     // hier zu räumen, würde die nächste Person am selben Gerät (auch ein
