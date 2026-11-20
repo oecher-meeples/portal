@@ -1,7 +1,13 @@
 import "@testing-library/jest-dom/vitest";
 import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import type { ScanModeHandle } from "./use-scan-series";
 
 const resolveMock = vi.fn();
@@ -189,5 +195,88 @@ describe("TransferSeries — Zielphase (#539)", () => {
 
     await press("Abbrechen");
     expect(screen.getByText("Bea")).toBeInTheDocument();
+  });
+});
+
+describe("TransferSeries — An Anonymen Meeple weitergeben (#540)", () => {
+  const toggle = () =>
+    screen.getByRole("switch", { name: "An Anonymer Meeple weitergeben" });
+  const typeName = (value: string) =>
+    fireEvent.change(screen.getByLabelText("Name der externen Person"), {
+      target: { value },
+    });
+
+  it("keeps the toggle disabled while the name is empty", () => {
+    setup();
+
+    expect(toggle()).toHaveAttribute("aria-disabled", "true");
+    typeName("   ");
+    expect(toggle()).toHaveAttribute("aria-disabled", "true");
+    typeName("Max (Gast)");
+    expect(toggle()).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("hands scanned games to the Sammelkonto with the name, replacing a person target", async () => {
+    const scan = setup();
+    resolveMock
+      .mockResolvedValueOnce(BEA_QR)
+      .mockResolvedValueOnce({ kind: "games", games: [GAME] });
+    validateMock.mockResolvedValue({ success: true });
+    transferMock.mockResolvedValue(transferred("external", true));
+
+    await scan("meeple-b");
+    typeName("Max (Gast)");
+    await act(async () => toggle().click());
+
+    expect(
+      screen.getByText("Anonymer Meeple (Max (Gast))"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Zurückgeben" }),
+    ).not.toBeInTheDocument();
+
+    await scan("inv-4");
+
+    expect(transferMock).toHaveBeenCalledWith("copy-1", {
+      kind: "external",
+      externalName: "Max (Gast)",
+    });
+    expect(
+      screen.getByText(
+        "Azul (Inv.-Nr. 4): weitergegeben → Anonymer Meeple (Max (Gast))",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("switches off and clears the target when the name is emptied", async () => {
+    setup();
+    typeName("Max");
+    await act(async () => toggle().click());
+    expect(screen.getByText("Anonymer Meeple (Max)")).toBeInTheDocument();
+
+    typeName("");
+
+    expect(toggle()).not.toBeChecked();
+    expect(screen.queryByText(/^Ziel:/)).not.toBeInTheDocument();
+    expect(screen.getByText("Noch kein Ziel.")).toBeInTheDocument();
+  });
+
+  it("shows a missing Sammelkonto as log error instead of crashing", async () => {
+    const scan = setup();
+    resolveMock.mockResolvedValue({ kind: "games", games: [GAME] });
+    transferMock.mockResolvedValue({
+      error:
+        'Sammelkonto "Anonymer Meeple" fehlt — bitte den Seed erneut ausführen.',
+    });
+
+    typeName("Max");
+    await act(async () => toggle().click());
+    await scan("inv-4");
+
+    expect(
+      screen.getByText(
+        'Azul (Inv.-Nr. 4): Sammelkonto "Anonymer Meeple" fehlt — bitte den Seed erneut ausführen.',
+      ),
+    ).toBeInTheDocument();
   });
 });

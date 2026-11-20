@@ -65,6 +65,7 @@ src/lib/
 │               ├── holdings-external.ts Übergänge mit externem Ziel (#333): an extern weitergeben/ausgeben, Umbuchen, Rückgabe-von-extern-Bestätigung
 │               ├── holdings-lookup.ts  Leseseite (Zustand inkl. verfügbar/nicht-verfügbar, Scan auflösen, Verantwortliche)
 │               ├── anonymer-meeple.ts  Sammelkonto "Anonymer Meeple" (#333) — Displayname-Konstante + `Member`-Lookup, geteilt mit `prisma/seed.ts`
+│               ├── anonymer-meeple-name.ts Nur die Displayname-Konstante, ohne Prisma — client-sicher (Scanner, #540)
 │               ├── holding-actions.ts  Server Actions über den internen Übergängen
 │               ├── holding-actions-external.ts Server Actions über den externen Übergängen (#333a/b, Umbuchen, Member-Picker)
 │               ├── board-game-display.ts  `BOARD_GAME_DISPLAY_SELECT` + `boardGameDisplayFields()` — Titel-Anzeigefelder, geteilt von `query.ts`, `private-collection.ts`, `admin-bestand-rows.ts` (#526)
@@ -198,7 +199,7 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 - `actions.ts` — Server Actions dieses Anwendungsfalls
 - `*-dialog.tsx`, `use-*.ts` — Teilaspekte desselben Anwendungsfalls
 
-Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan), `receive-series.tsx` (Erhalten), `transfer-series.tsx` (Übergeben: Zielphase, Zielwechsel-Rückfrage, Einheit in Einheit — löst die frühere Einlagern-Serie ab, #539), `mark-series.tsx` (Zur Kontrolle markieren) bzw. `check-series.tsx` (Kontrollieren, öffnet `pruefbogen-panel.tsx`). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
+Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan), `receive-series.tsx` (Erhalten), `transfer-series.tsx` (Übergeben: Zielphase, Zielwechsel-Rückfrage, Einheit in Einheit — löst die frühere Einlagern-Serie ab, #539; Umschalter „An Anonymen Meeple weitergeben", #540), `mark-series.tsx` (Zur Kontrolle markieren) bzw. `check-series.tsx` (Kontrollieren, öffnet `pruefbogen-panel.tsx`). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
 
 Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `entities/`, `ui/` oder `lib/`.
 

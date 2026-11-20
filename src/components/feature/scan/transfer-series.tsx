@@ -4,6 +4,9 @@ import { useEffect, useImperativeHandle, useState, type Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { IdCombobox } from "@/components/ui/id-combobox";
 import { PillToggle } from "@/components/ui/pill-toggle";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { TextField } from "@/components/ui/field";
 import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import {
   scanEinlagernUnit,
@@ -15,6 +18,7 @@ import {
   scanValidateTarget,
 } from "@/lib/ludothek/scanner-actions";
 import type { ScannerTarget } from "@/lib/ludothek/scanner-dispatch";
+import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple-name";
 import {
   spieleCount,
   TRANSFER_OUTCOME_LABELS,
@@ -34,7 +38,9 @@ type MeepleTarget = {
   displayName: string;
   viaTargetQrScan: boolean;
 };
-type Target = UnitTarget | MeepleTarget;
+/** #540: Weitergabe an das Sammelkonto „Anonymer Meeple" mit Namen. */
+type ExternalTarget = { kind: "external"; externalName: string };
+type Target = UnitTarget | MeepleTarget | ExternalTarget;
 type Intent = "handover" | "return";
 type UnitOption = { id: string; code: string; label: string };
 
@@ -48,26 +54,29 @@ function toUnitTarget(unit: UnitOption): UnitTarget {
 }
 
 function targetName(target: Target) {
-  return target.kind === "unit"
-    ? `${target.label} (${target.code})`
-    : target.displayName;
+  if (target.kind === "unit") return `${target.label} (${target.code})`;
+  if (target.kind === "external") {
+    return `${ANONYMER_MEEPLE_NAME} (${target.externalName})`;
+  }
+  return target.displayName;
 }
 
 function sameTarget(a: Target, b: Target) {
-  return a.kind === "unit" && b.kind === "unit"
-    ? a.unitId === b.unitId
-    : a.kind === "meeple" && b.kind === "meeple" && a.meepleId === b.meepleId;
+  if (a.kind === "unit" && b.kind === "unit") return a.unitId === b.unitId;
+  return (
+    a.kind === "meeple" && b.kind === "meeple" && a.meepleId === b.meepleId
+  );
 }
 
 function toScannerTarget(target: Target, intent: Intent): ScannerTarget {
-  return target.kind === "unit"
-    ? { kind: "unit", unitId: target.unitId }
-    : {
-        kind: "meeple",
-        meepleId: target.meepleId,
-        intent,
-        viaTargetQrScan: target.viaTargetQrScan,
-      };
+  if (target.kind === "unit") return { kind: "unit", unitId: target.unitId };
+  if (target.kind === "external") return target;
+  return {
+    kind: "meeple",
+    meepleId: target.meepleId,
+    intent,
+    viaTargetQrScan: target.viaTargetQrScan,
+  };
 }
 
 const info = (text: string): SeriesBooking => ({ tone: "info", text });
@@ -92,6 +101,7 @@ export function TransferSeries({
   const [intent, setIntent] = useState<Intent>("handover");
   const [pendingTarget, setPendingTarget] = useState<Target | null>(null);
   const [units, setUnits] = useState<UnitOption[] | null>(null);
+  const [externalName, setExternalName] = useState("");
   const [meeples, setMeeples] = useState<
     { id: string; displayName: string }[] | null
   >(null);
@@ -188,6 +198,22 @@ export function TransferSeries({
     );
   }
 
+  /** #540: Name geändert — leer schaltet den Umschalter samt Ziel ab. */
+  function changeExternalName(name: string) {
+    setExternalName(name);
+    if (target?.kind !== "external") return;
+    setTarget(
+      name.trim() ? { kind: "external", externalName: name.trim() } : null,
+    );
+  }
+
+  function toggleExternal(on: boolean) {
+    setPendingTarget(null);
+    setTarget(
+      on ? { kind: "external", externalName: externalName.trim() } : null,
+    );
+  }
+
   async function loadPickers() {
     const [unitList, meepleList] = await Promise.all([
       units ?? scanListUnits(),
@@ -257,6 +283,25 @@ export function TransferSeries({
           )}
         </div>
       )}
+
+      <div className="flex flex-col gap-2 rounded-md border p-3">
+        <TextField
+          id="external-name"
+          label="Name der externen Person"
+          hint="Wird für den Spielewart gespeichert, damit er das Spiel später umbuchen kann."
+          value={externalName}
+          onChange={(event) => changeExternalName(event.target.value)}
+        />
+        <Label htmlFor="external-toggle" className="font-normal">
+          <Switch
+            id="external-toggle"
+            checked={target?.kind === "external"}
+            disabled={!externalName.trim()}
+            onCheckedChange={toggleExternal}
+          />
+          An {ANONYMER_MEEPLE_NAME} weitergeben
+        </Label>
+      </div>
 
       {target?.kind === "meeple" && (
         <PillToggle
