@@ -5,7 +5,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
-import { ensureMeeple } from "@/lib/members/meeples";
+import { ensureMeeple, getMeepleMembership } from "@/lib/members/meeples";
 import { hasOpenHelperRequest } from "@/lib/events/upcoming";
 import { hasActiveAusleiheShift } from "@/lib/events/shift-rights";
 import { listActiveNotificationsForViewer } from "@/lib/notifications/queries";
@@ -30,7 +30,16 @@ export async function AppShell({ children }: { children: ReactNode }) {
   // #339: Banner + Glocke teilen sich dieselbe Liste — ein Server-Lookup
   // statt je einer eigenen Query. Braucht `permissions` (Zielgruppen-Filter),
   // kann daher erst nach dem zweiten Promise.all starten.
-  const notifications = await listActiveNotificationsForViewer(permissions);
+  // #537: Ausgetretene sehen den Scanner nicht (Vier-Augen-Prinzip).
+  const [notifications, membership] = await Promise.all([
+    listActiveNotificationsForViewer(permissions),
+    meeple ? getMeepleMembership(meeple) : Promise.resolve(null),
+  ]);
+  const flags = {
+    openHelperRequest,
+    activeAusleiheShift,
+    activeMembership: membership?.membershipState !== "ausgetreten",
+  };
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -43,7 +52,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest, activeAusleiheShift }}
+        flags={flags}
         notifications={notifications}
       >
         {children}
@@ -55,7 +64,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest, activeAusleiheShift }}
+        flags={flags}
         user={user ? { name: user.name } : null}
       />
     </div>

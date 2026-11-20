@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getVisibleNavGroups } from "./nav-config";
 
-const NO_FLAGS = { openHelperRequest: false, activeAusleiheShift: false };
+const NO_FLAGS = {
+  openHelperRequest: false,
+  activeAusleiheShift: false,
+  activeMembership: true,
+};
 
 describe("Nav-Sichtbarkeit 'Support & Spenden' (#420)", () => {
   it("shows 'Support & Spenden' to a guest — Sperre aus #96 aufgehoben (#267 löst sie)", () => {
@@ -28,5 +32,21 @@ describe("Nav-Sichtbarkeit 'Ausleihe & Rückgabe' (#433)", () => {
 
     const labels = groups.flatMap((group) => group.items.map((i) => i.label));
     expect(labels).toContain("Ausleihe & Rückgabe");
+  });
+});
+
+describe("Nav-Sichtbarkeit Scanner (#537)", () => {
+  const hrefsFor = (activeMembership: boolean) =>
+    getVisibleNavGroups("mitglied", new Set(), false, {
+      ...NO_FLAGS,
+      activeMembership,
+    }).flatMap((group) => group.items.map((i) => i.href));
+
+  it("shows the scanner to an active member", () => {
+    expect(hrefsFor(true)).toContain("/scan");
+  });
+
+  it("hides the scanner from an ausgetreten member (Vier-Augen-Prinzip)", () => {
+    expect(hrefsFor(false)).not.toContain("/scan");
   });
 });

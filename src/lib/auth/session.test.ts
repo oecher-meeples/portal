@@ -87,11 +87,12 @@ describe("isSettlementPath", () => {
   it("allows the settlement routes", () => {
     expect(isSettlementPath("/dashboard")).toBe(true);
     expect(isSettlementPath("/profil")).toBe(true);
-    expect(isSettlementPath("/scan")).toBe(true);
   });
 
   it("blocks everything else, including nested internal routes", () => {
     expect(isSettlementPath("/ludothek")).toBe(false);
+    // #537: Vier-Augen-Prinzip — Ausgetretene scannen nicht selbst.
+    expect(isSettlementPath("/scan")).toBe(false);
     expect(isSettlementPath("/lfg")).toBe(false);
     expect(isSettlementPath("/dashboard/news")).toBe(false);
     expect(isSettlementPath("/admin/bestand")).toBe(false);
@@ -153,8 +154,15 @@ describe("requireMember", () => {
     expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 
-  it("lets a resigned member through on a settlement route", async () => {
+  it("rejects a resigned member on /scan — Vier-Augen-Prinzip (#537)", async () => {
     withUser(RESIGNED_AND_GONE, "/scan", RESIGNED_AND_GONE_MEMBER);
+
+    await expect(requireMember()).rejects.toThrow(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith("/403");
+  });
+
+  it("lets a resigned member through on a settlement route", async () => {
+    withUser(RESIGNED_AND_GONE, "/dashboard", RESIGNED_AND_GONE_MEMBER);
 
     const session = await requireMember();
 

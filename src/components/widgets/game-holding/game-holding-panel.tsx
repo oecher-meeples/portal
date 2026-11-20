@@ -16,7 +16,6 @@ import {
   scanGetGameContext,
   scanGiveToMeeple,
   scanListMeeples,
-  scanPlaceGameInUnit,
   scanResolveCode,
   scanReturnToMeeple,
   type ScannedGameContext,
@@ -29,6 +28,7 @@ import {
   scanRebookToMember,
   type MemberOption,
 } from "@/lib/ludothek/holding-actions-external";
+import { scanTransferGame } from "@/lib/ludothek/scanner-actions";
 
 type MeeplePickerFor = "handover" | "return-to-person" | null;
 type MemberPickerFor = "lend-to-external" | "rebook" | null;
@@ -124,7 +124,18 @@ export function GameHoldingPanel({
       setError("Kein Einheiten-Code erkannt.");
       return;
     }
-    await perform(() => scanPlaceGameInUnit(gameCopyId, resolved.unit.id));
+    const unitId = resolved.unit.id;
+    let alreadyThere = false;
+    await perform(async () => {
+      const result = await scanTransferGame(gameCopyId, {
+        kind: "unit",
+        unitId,
+      });
+      alreadyThere = result.value?.outcome === "already-there";
+      return result;
+    });
+    // Keine überflüssige Umlagerung (#537) — nur ein Hinweis.
+    if (alreadyThere) setMessage(`Liegt schon in ${resolved.unit.code}.`);
     setTargetCodeInput("");
   }
 

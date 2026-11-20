@@ -32,8 +32,12 @@ export const PATHNAME_HEADER = "x-pathname";
 
 /**
  * The only routes an "ausgetreten" Meeple may still reach — settling up:
- * own profile, own holdings, giving games back or on.
- * Everything else (Ludothek, interne News, Spielergesuche) is closed.
+ * own profile, own holdings. Everything else (Ludothek, interne News,
+ * Spielergesuche) is closed.
+ *
+ * #537: `/scan` ist bewusst nicht dabei (Vier-Augen-Prinzip) — ein
+ * Ausgetretener bucht nichts selbst, seine Spiele bringt eine andere Person
+ * per Scan zurück.
  *
  * #209: `/dashboard/kalender` ist entfernt (News-Konsolidierung, #208) —
  * `/news` deckt die Funktion ab, ist aber ein öffentlicher Weg (kein
@@ -48,7 +52,6 @@ export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
   // gezielt über isOwnProfilPath durch, nicht über diese Liste.
   { path: "/profil", exact: true },
-  { path: "/scan" },
 ];
 
 export function isSettlementPath(pathname: string) {

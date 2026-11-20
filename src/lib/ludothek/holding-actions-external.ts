@@ -18,7 +18,6 @@ import { getMembershipState } from "@/lib/members/membership-state";
 import {
   requireActingMeeple,
   requireOwnMember,
-  assertCanReceive,
   toResultAndRevalidate,
 } from "@/lib/ludothek/holding-actions-shared";
 
@@ -96,10 +95,9 @@ export async function scanRebookToMember(
 
 /** "Ich habe das Spiel erhalten" für eine Rückgabe von extern (#333c/d). */
 export async function scanConfirmExternalReturn(holdingId: string) {
-  const { member, membershipState } = await requireActingMeeple();
+  const { member } = await requireActingMeeple();
 
   return toResultAndRevalidate(() => {
-    assertCanReceive(membershipState);
     const own = requireOwnMember(member);
     return confirmExternalReturn({
       holdingId,

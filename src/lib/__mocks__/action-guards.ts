@@ -81,7 +81,8 @@ export function currentUserGuards() {
  * games-manager stub, everything else (`ludothek:borrow`) to the acting
  * Meeple — enriched with its Member and membership state the way the real
  * guard derives them, so tests keep steering those via their prisma/state
- * mocks.
+ * mocks. Like the real guard, an "ausgetreten" Meeple is denied unless the
+ * caller passed `{ settlement: true }`.
  */
 export function holdingActorResolver(stubs: {
   actingMeeple: (...args: unknown[]) => Promise<Identity>;
@@ -92,10 +93,13 @@ export function holdingActorResolver(stubs: {
   return async (key, ...rest) => {
     if (key === "games:manage") return stubs.gamesManager();
     const meeple = await stubs.actingMeeple(key, ...rest);
+    const membershipState = stubs.membershipState();
+    const options = rest[0] as { settlement?: boolean } | undefined;
+    if (membershipState === "ausgetreten" && !options?.settlement) return null;
     return {
       ...meeple,
       member: await stubs.findMember({ where: { meepleId: meeple.id } }),
-      membershipState: stubs.membershipState(),
+      membershipState,
     };
   };
 }

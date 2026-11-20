@@ -70,7 +70,9 @@ src/lib/
 │               ├── board-game-display.ts  `BOARD_GAME_DISPLAY_SELECT` + `boardGameDisplayFields()` — Titel-Anzeigefelder, geteilt von `query.ts`, `private-collection.ts`, `admin-bestand-rows.ts` (#526)
 │               ├── unit-chain.ts       Einzige Stelle des Kettenaufstiegs: `MAX_UNIT_CHAIN_DEPTH`, `walkUnitChain`, `unitChainLabel`, `findUnitAncestor`
 │               ├── board-game-kind.ts  `BOARD_GAME_KIND_LABELS` (Basisspiel/Erweiterung)
-│               ├── holding-actions-shared.ts   Von beiden `holding-actions*.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
+│               ├── holding-actions-shared.ts   Von `holding-actions*.ts` und `scanner-actions.ts` geteilte interne Helfer (reine Datei-Größen-Trennung)
+│               ├── scanner-dispatch.ts Scanner-Serien (#537): reine Buchungs-Weiche `decideReceive`/`decideTransfer` + Vorauswahl `pickCopyForMode` bei mehrdeutiger EAN
+│               ├── scanner-actions.ts  Server Actions der Scanner-Serien: `scanReceiveGame`, `scanTransferGame`, `scanValidateTarget`, `scanPickCopy`
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
 │               ├── game-issue.ts / game-defects.ts  Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format (rein), Statusübergang `ACTIVE↔MAINTENANCE` (`reportGameCopyDefect`/`clearGameCopyDefect`, ohne `"use server"` — Guard liegt in `feature/scan/inventory-actions.ts`)
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern

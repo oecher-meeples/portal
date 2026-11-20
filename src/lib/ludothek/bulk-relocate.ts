@@ -16,7 +16,7 @@ import { ensureMeeple } from "@/lib/members/meeples";
  * fachlich dieselbe Operation, nur mit unterschiedlicher Ziel-Einheit.
  * `games:manage`-only wie die übrigen neuen `admin/bestand`-Unterseiten.
  *
- * Wie `scanPlaceGameInUnit()` (`holding-actions.ts`) akzeptiert dies auch
+ * Wie `scanTransferGame(…, { kind: "unit" })` (`scanner-actions.ts`) akzeptiert dies auch
  * Exemplare, die gerade bei einer Person liegen (RETURN statt RELOCATION) —
  * ein Spielewart soll ein Exemplar auch dann einsammeln können, wenn es
  * gerade ausgeliehen zurückkommt, nicht nur aus einer Einheit.

@@ -192,11 +192,7 @@ describe("scanConfirmExternalReturn (#333c/d)", () => {
   it("blocks a resigned meeple from confirming", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
 
-    const result = await scanConfirmExternalReturn("holding-1");
-
-    expect(result).toEqual({
-      error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    });
+    await expect(scanConfirmExternalReturn("holding-1")).rejects.toThrow();
     expect(confirmExternalReturnMock).not.toHaveBeenCalled();
   });
 });

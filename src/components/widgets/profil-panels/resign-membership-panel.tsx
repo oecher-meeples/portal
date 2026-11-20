@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAction } from "@/components/ui/use-action";
 import { resignOwnMembership } from "@/lib/members/own-profile-actions";
 import { formatDatePlain } from "@/lib/utils/format";
+import { SETTLEMENT_HANDOVER_HINT } from "@/lib/members/membership-state";
 
 export function ResignMembershipPanel({
   resignedAt,
@@ -39,8 +40,8 @@ export function ResignMembershipPanel({
         Deine Kündigung ist vermerkt. Die Mitgliedschaft läuft unverändert
         weiter bis zum Jahreswechsel
         {endsAt ? ` (${formatDatePlain(endsAt)})` : ""}. Bis dahin kannst du
-        weiter ausleihen. Danach bleibt dir nur noch die Abwicklung: Profil,
-        eigene Bestände, Rückgabe und Weitergabe.
+        weiter ausleihen. Danach siehst du nur noch dein Profil und deine
+        eigenen Bestände. {SETTLEMENT_HANDOVER_HINT}
       </p>
     );
   }
