@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { SidebarShell } from "@/components/layout/sidebar-shell";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
+import { getRealSessionTier, resolveViewTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
 import { ensureMeeple, getMeepleMembership } from "@/lib/members/meeples";
@@ -16,8 +16,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     getCurrentUser(),
     hasOpenHelperRequest(),
   ]);
-  const previewTier = realTier === "admin" ? await getPreviewTier() : null;
-  const tier = previewTier ?? realTier;
+  const tier = await resolveViewTier(realTier);
   // #433: activeAusleiheShift ist pro Nutzer, braucht deshalb user.id — kann
   // erst nach dem obigen Promise.all starten, läuft dafür parallel zu
   // permissions. #465: meepleId fürs Header-Longpress-QR-Popup, ebenfalls

@@ -60,6 +60,7 @@ const {
   getRealSessionTier,
   getPreviewTier,
   getSessionTier,
+  resolveViewTier,
   hasPermissionInCurrentView,
 } = await import("./session");
 
@@ -323,12 +324,12 @@ describe("getSessionTier", () => {
     expect(await getSessionTier()).toBe("mitglied");
   });
 
-  it("defaults to mitglied for a real admin without a preview cookie", async () => {
+  it("defaults to admin for a real admin without a preview cookie (#516)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
     mockPermissions({ "admin:access": true });
     previewCookie = undefined;
 
-    expect(await getSessionTier()).toBe("mitglied");
+    expect(await getSessionTier()).toBe("admin");
   });
 
   it("lets a real admin explicitly switch back up to admin", async () => {
@@ -345,6 +346,26 @@ describe("getSessionTier", () => {
     previewCookie = "gast";
 
     expect(await getSessionTier()).toBe("gast");
+  });
+});
+
+describe("resolveViewTier", () => {
+  it("defaults a real admin without a preview cookie to admin, like the pages do", async () => {
+    previewCookie = undefined;
+
+    expect(await resolveViewTier("admin")).toBe("admin");
+  });
+
+  it("uses the preview cookie for a real admin", async () => {
+    previewCookie = "mitglied";
+
+    expect(await resolveViewTier("admin")).toBe("mitglied");
+  });
+
+  it("keeps a non-admin's real tier regardless of the cookie", async () => {
+    previewCookie = "admin";
+
+    expect(await resolveViewTier("gast")).toBe("gast");
   });
 });
 
@@ -372,17 +393,12 @@ describe("hasPermissionInCurrentView", () => {
     );
   });
 
-  it("hides an admin's permission by default (no preview cookie) — mitglied is the default view (#126)", async () => {
+  it("shows an admin's permission by default (no preview cookie) — admin is the default view (#516)", async () => {
     previewCookie = undefined;
-    hasPermissionMock.mockClear();
     mockPermissions({ "admin:access": true, "posts:public": true });
 
     expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
-      false,
-    );
-    expect(hasPermissionMock).not.toHaveBeenCalledWith(
-      "user-1",
-      "posts:public",
+      true,
     );
   });
 
