@@ -20,12 +20,16 @@ vi.mock("@/components/feature/scan/pruefbogen-panel", () => ({
 }));
 
 const scanResolveCodeMock = vi.fn();
-const scanPlaceGameInUnitMock = vi.fn();
+const scanTransferGameMock = vi.fn();
 vi.mock("@/lib/ludothek/holding-actions", () => ({
   scanResolveCode: (raw: string) => scanResolveCodeMock(raw),
-  scanPlaceGameInUnit: (gameCopyId: string, unitId: string) =>
-    scanPlaceGameInUnitMock(gameCopyId, unitId),
 }));
+vi.mock("@/lib/ludothek/scanner-actions", () => ({
+  scanTransferGame: (gameCopyId: string, target: { unitId: string }) =>
+    scanTransferGameMock(gameCopyId, target),
+}));
+
+const PLACED = { success: true, value: { outcome: "return-to-unit" } };
 
 const { ScanView } = await import("./scan-view");
 
@@ -77,12 +81,15 @@ describe("ScanView — Serienmodus Einlagern, Mehrfachtreffer (#5)", () => {
     expect(
       await screen.findByText("Mehrere Spiele mit dieser EAN — welches?"),
     ).toBeInTheDocument();
-    expect(scanPlaceGameInUnitMock).not.toHaveBeenCalled();
+    expect(scanTransferGameMock).not.toHaveBeenCalled();
 
-    scanPlaceGameInUnitMock.mockResolvedValue({ success: true });
+    scanTransferGameMock.mockResolvedValue(PLACED);
     fireEvent.click(screen.getByText("Catan (leicht bespielt)"));
 
-    expect(scanPlaceGameInUnitMock).toHaveBeenCalledWith("copy-2", "unit-a");
+    expect(scanTransferGameMock).toHaveBeenCalledWith("copy-2", {
+      kind: "unit",
+      unitId: "unit-a",
+    });
     expect(
       await screen.findByText("Catan (leicht bespielt) → OM-BOX-0001"),
     ).toBeInTheDocument();
@@ -99,7 +106,7 @@ describe("ScanView — Serienmodus Einlagern, Kistenwechsel (#5)", () => {
       kind: "games",
       games: [GAME_1],
     });
-    scanPlaceGameInUnitMock.mockResolvedValue({ success: true });
+    scanTransferGameMock.mockResolvedValue(PLACED);
     scan("4001504311892");
     await screen.findByText("Catan → OM-BOX-0001");
   }
@@ -122,10 +129,13 @@ describe("ScanView — Serienmodus Einlagern, Kistenwechsel (#5)", () => {
       ),
     ).toBeInTheDocument();
 
-    scanPlaceGameInUnitMock.mockClear();
+    scanTransferGameMock.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Ja, umbuchen" }));
 
-    expect(scanPlaceGameInUnitMock).toHaveBeenCalledWith("copy-1", "unit-b");
+    expect(scanTransferGameMock).toHaveBeenCalledWith("copy-1", {
+      kind: "unit",
+      unitId: "unit-b",
+    });
     expect(
       await screen.findByText(
         (_, node) =>
@@ -150,10 +160,10 @@ describe("ScanView — Serienmodus Einlagern, Kistenwechsel (#5)", () => {
     scan(UNIT_B.code);
     await screen.findByRole("button", { name: "Nein" });
 
-    scanPlaceGameInUnitMock.mockClear();
+    scanTransferGameMock.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Nein" }));
 
-    expect(scanPlaceGameInUnitMock).not.toHaveBeenCalled();
+    expect(scanTransferGameMock).not.toHaveBeenCalled();
     expect(
       await screen.findByText(
         (_, node) =>
@@ -181,6 +191,27 @@ describe("ScanView — Serienmodus Einlagern, Kistenwechsel (#5)", () => {
       await screen.findByText(
         "Einheit OM-BOX-0001 kann nicht in sich selbst eingelagert werden.",
       ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("ScanView — Serienmodus Einlagern, liegt schon dort (#537)", () => {
+  it("logs a hint instead of a booking", async () => {
+    render(<ScanView canManageGames={false} />);
+    fireEvent.click(await enterEinlagernMode(UNIT_A));
+
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "games",
+      games: [GAME_1],
+    });
+    scanTransferGameMock.mockResolvedValue({
+      success: true,
+      value: { outcome: "already-there" },
+    });
+    scan("4001504311892");
+
+    expect(
+      await screen.findByText("Catan liegt schon in OM-BOX-0001"),
     ).toBeInTheDocument();
   });
 });

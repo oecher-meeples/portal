@@ -9,10 +9,8 @@ import { CodeScanner } from "@/components/ui/code-scanner";
 import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
 import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
 import { RelocateConfirmPanel } from "@/components/feature/scan/relocate-confirm-panel";
-import {
-  scanPlaceGameInUnit,
-  scanResolveCode,
-} from "@/lib/ludothek/holding-actions";
+import { scanResolveCode } from "@/lib/ludothek/holding-actions";
+import { scanTransferGame } from "@/lib/ludothek/scanner-actions";
 import type { ResolvedScan } from "@/lib/ludothek/holdings";
 import { PageContainer } from "@/components/ui/page-container";
 
@@ -67,14 +65,15 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
     game: { id: string; title: string },
     unit: { id: string; code: string },
   ) {
-    const result = await scanPlaceGameInUnit(game.id, unit.id);
-    setSeriesLog((log) => [
-      result.error
-        ? `${game.title}: ${result.error}`
-        : `${game.title} → ${unit.code}`,
-      ...log,
-    ]);
-    if (!result.error) setLastPlacedGame(game);
+    const target = { kind: "unit", unitId: unit.id } as const;
+    const { error, value } = await scanTransferGame(game.id, target);
+    const line = error
+      ? `${game.title}: ${error}`
+      : value?.outcome === "already-there"
+        ? `${game.title} liegt schon in ${unit.code}`
+        : `${game.title} → ${unit.code}`;
+    setSeriesLog((log) => [line, ...log]);
+    if (!error) setLastPlacedGame(game);
   }
 
   function enterUnit(unit: {

@@ -3,6 +3,7 @@ import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { formatDateShort } from "@/lib/utils/format";
+import { SETTLEMENT_HANDOVER_HINT } from "@/lib/members/membership-state";
 import type { requireMember } from "@/lib/auth/session";
 import type { getInternalContent } from "@/lib/content/content";
 import type { listImportantLinks } from "@/lib/links/links";
@@ -41,6 +42,8 @@ type DashboardViewProps = {
    * dann immer sichtbar und wird inline editierbar (Pivot #110). */
   canManageLinks: boolean;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
+  /** Ausgetreten (#537): kein Scanner, stattdessen der Abwicklungshinweis. */
+  isAusgetreten: boolean;
   /** Frühestes anstehendes Event mit `helpersWanted` (#155) — null blendet die Karte aus. */
   openHelperRequestEvent: { id: string; title: string } | null;
 };
@@ -60,6 +63,7 @@ export function DashboardView({
   importantLinks,
   canManageLinks,
   resignationNotice,
+  isAusgetreten,
   openHelperRequestEvent,
 }: DashboardViewProps) {
   return (
@@ -94,9 +98,16 @@ export function DashboardView({
               >
                 zur Ludothek-Rückgabe
               </Link>
-              , oder wende dich an den Spielewart.
+              , oder wende dich an den Spielewart. Nach dem Austritt kannst du
+              nichts mehr selbst buchen.
             </>
           )}
+        </div>
+      )}
+
+      {isAusgetreten && (
+        <div className="bg-primary/10 rounded-md p-4 text-sm">
+          Deine Mitgliedschaft ist beendet. {SETTLEMENT_HANDOVER_HINT}
         </div>
       )}
 
@@ -187,46 +198,53 @@ export function DashboardView({
         </div>
       </div>
 
-      {(unconfirmedHandovers.length > 0 || unconfirmedReturns.length > 0) && (
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Offene Vorgänge</h2>
-          <ul className="mt-3 flex flex-col divide-y">
-            {unconfirmedHandovers.map((holding) => (
-              <li
-                key={holding.id}
-                className="flex items-center justify-between gap-3 py-2.5"
-              >
-                <span>{holding.gameTitle} — Weitergabe bestätigen</span>
-                <ActionButton
-                  refresh
-                  size="sm"
-                  action={scanConfirmHolding.bind(null, holding.id)}
+      {!isAusgetreten &&
+        (unconfirmedHandovers.length > 0 || unconfirmedReturns.length > 0) && (
+          <div className="bg-card rounded-lg border p-5">
+            <h2 className="font-serif text-lg font-bold">Offene Vorgänge</h2>
+            <ul className="mt-3 flex flex-col divide-y">
+              {unconfirmedHandovers.map((holding) => (
+                <li
+                  key={holding.id}
+                  className="flex items-center justify-between gap-3 py-2.5"
                 >
-                  Bestätigen
-                </ActionButton>
-              </li>
-            ))}
-            {unconfirmedReturns.map((holding) => (
-              <li
-                key={holding.id}
-                className="flex items-center justify-between gap-3 py-2.5"
-              >
-                <span>{holding.gameTitle} — Rückgabe: jetzt einlagern</span>
-                <Link
-                  href="/scan"
-                  className="text-primary text-sm hover:underline"
+                  <span>{holding.gameTitle} — Weitergabe bestätigen</span>
+                  <ActionButton
+                    refresh
+                    size="sm"
+                    action={scanConfirmHolding.bind(null, holding.id)}
+                  >
+                    Bestätigen
+                  </ActionButton>
+                </li>
+              ))}
+              {unconfirmedReturns.map((holding) => (
+                <li
+                  key={holding.id}
+                  className="flex items-center justify-between gap-3 py-2.5"
                 >
-                  Zum Scan →
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                  <span>{holding.gameTitle} — Rückgabe: jetzt einlagern</span>
+                  <Link
+                    href="/scan"
+                    className="text-primary text-sm hover:underline"
+                  >
+                    Zum Scan →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-lg font-bold">Schnellzugriff</h2>
-        <ImportantLinksGrid items={QUICK_LINKS} />
+        <ImportantLinksGrid
+          items={
+            isAusgetreten
+              ? QUICK_LINKS.filter((link) => link.href !== "/scan")
+              : QUICK_LINKS
+          }
+        />
       </div>
 
       {(importantLinks.length > 0 || canManageLinks) && (

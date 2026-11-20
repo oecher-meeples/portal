@@ -92,7 +92,6 @@ const {
   scanGetGameContext,
   scanGiveToMeeple,
   scanListMeeples,
-  scanPlaceGameInUnit,
   scanRelocateGame,
   scanResolveCode,
   scanReturnToUnit,
@@ -150,11 +149,7 @@ describe("scanBorrowGame (Ausbuchen)", () => {
   it("blocks a resigned (ausgetreten) meeple from borrowing", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
 
-    const result = await scanBorrowGame("game-1");
-
-    expect(result).toEqual({
-      error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    });
+    await expect(scanBorrowGame("game-1")).rejects.toThrow(RedirectError);
     expect(borrowGameMock).not.toHaveBeenCalled();
   });
 
@@ -196,33 +191,23 @@ describe("scanAcceptHandover / scanConfirmHolding (annehmen)", () => {
   it("blocks a resigned meeple from accepting a handover", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
 
-    const result = await scanAcceptHandover("game-1");
-
-    expect(result).toEqual({
-      error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    });
+    await expect(scanAcceptHandover("game-1")).rejects.toThrow(RedirectError);
     expect(handOverGameMock).not.toHaveBeenCalled();
   });
 
   it("blocks a resigned meeple from confirming a holding", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
 
-    const result = await scanConfirmHolding("holding-1");
-
-    expect(result).toEqual({
-      error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    });
+    await expect(scanConfirmHolding("holding-1")).rejects.toThrow(
+      RedirectError,
+    );
     expect(confirmHoldingMock).not.toHaveBeenCalled();
   });
 
   it("blocks a resigned meeple from accepting a return", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
 
-    const result = await scanAcceptReturn("game-1");
-
-    expect(result).toEqual({
-      error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    });
+    await expect(scanAcceptReturn("game-1")).rejects.toThrow(RedirectError);
     expect(returnGameMock).not.toHaveBeenCalled();
   });
 
@@ -236,9 +221,52 @@ describe("scanAcceptHandover / scanConfirmHolding (annehmen)", () => {
   });
 });
 
-describe("giving actions stay allowed for a resigned meeple", () => {
-  it("allows handing a game over to someone else, resolving their Member id", async () => {
+describe("Vier-Augen-Prinzip: ein ausgetretenes Mitglied bucht nichts (#537)", () => {
+  it.each([
+    ["scanGiveToMeeple", () => scanGiveToMeeple("game-1", "meeple-other")],
+    ["scanReturnToUnit", () => scanReturnToUnit("game-1", "unit-1")],
+    ["scanRelocateGame", () => scanRelocateGame("game-1", "unit-2")],
+    ["scanEinlagernUnit", () => scanEinlagernUnit("unit-1", {})],
+    ["scanResolveCode", () => scanResolveCode("inv-1")],
+  ])("rejects %s", async (_name, call) => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
+
+    await expect(call()).rejects.toThrow(RedirectError);
+    expect(handOverGameMock).not.toHaveBeenCalled();
+    expect(returnGameMock).not.toHaveBeenCalled();
+    expect(relocateGameMock).not.toHaveBeenCalled();
+    expect(moveStorageUnitMock).not.toHaveBeenCalled();
+    expect(resolveScannedCodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an ausgetreten target person, without booking", async () => {
+    memberFindUniqueMock.mockImplementation(
+      ({ where }: { where: { meepleId: string } }) =>
+        Promise.resolve(
+          where.meepleId === "meeple-other"
+            ? {
+                id: "member-other",
+                meepleId: "meeple-other",
+                resignedAt: new Date("2024-07-01T00:00:00Z"),
+                membershipEndsAt: new Date("2025-01-01T00:00:00Z"),
+                meeple: { anonymizedAt: null },
+              }
+            : OWN_MEMBER,
+        ),
+    );
+
+    const result = await scanGiveToMeeple("game-1", "meeple-other");
+
+    expect(result).toEqual({
+      error:
+        "Diese Person ist ausgetreten und kann keine Spiele mehr annehmen.",
+    });
+    expect(handOverGameMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("giving actions of an active meeple", () => {
+  it("hands a game over to someone else, resolving their Member id", async () => {
     memberFindUniqueMock.mockImplementation(
       ({ where }: { where: { meepleId: string } }) =>
         Promise.resolve(
@@ -258,9 +286,7 @@ describe("giving actions stay allowed for a resigned meeple", () => {
     });
   });
 
-  it("allows returning someone else's loan into a unit — no ownership check", async () => {
-    getMembershipStateMock.mockReturnValue("ausgetreten");
-
+  it("returns someone else's loan into a unit — no ownership check", async () => {
     const result = await scanReturnToUnit("game-1", "unit-1");
 
     expect(result).toEqual({ success: true, value: { id: "holding-new" } });
@@ -271,9 +297,7 @@ describe("giving actions stay allowed for a resigned meeple", () => {
     });
   });
 
-  it("allows relocating a unit", async () => {
-    getMembershipStateMock.mockReturnValue("ausgetreten");
-
+  it("relocates a game", async () => {
     await scanRelocateGame("game-1", "unit-2");
 
     expect(relocateGameMock).toHaveBeenCalledWith({
@@ -283,56 +307,13 @@ describe("giving actions stay allowed for a resigned meeple", () => {
     });
   });
 
-  it("allows einlagern (moving a storage unit)", async () => {
-    getMembershipStateMock.mockReturnValue("ausgetreten");
-
+  it("einlagert a storage unit", async () => {
     await scanEinlagernUnit("unit-1", { locationNote: "Keller" });
 
     expect(moveStorageUnitMock).toHaveBeenCalledWith({
       unitId: "unit-1",
       recordedByMeepleId: "meeple-self",
       locationNote: "Keller",
-    });
-  });
-});
-
-describe("scanPlaceGameInUnit", () => {
-  it("relocates when the game is already in a unit", async () => {
-    gameHoldingFindFirstMock.mockResolvedValue({ unitId: "unit-old" });
-
-    await scanPlaceGameInUnit("game-1", "unit-new");
-
-    expect(relocateGameMock).toHaveBeenCalledWith({
-      gameCopyId: "game-1",
-      toUnitId: "unit-new",
-      recordedByMeepleId: "meeple-self",
-    });
-    expect(returnGameMock).not.toHaveBeenCalled();
-  });
-
-  it("returns when the game was with a person", async () => {
-    gameHoldingFindFirstMock.mockResolvedValue({
-      unitId: null,
-      vereinsmitgliedId: "member-other",
-    });
-
-    await scanPlaceGameInUnit("game-1", "unit-new");
-
-    expect(returnGameMock).toHaveBeenCalledWith({
-      gameCopyId: "game-1",
-      toUnitId: "unit-new",
-      recordedByMeepleId: "meeple-self",
-    });
-    expect(relocateGameMock).not.toHaveBeenCalled();
-  });
-
-  it("rejects a game without an open holding instead of guessing", async () => {
-    gameHoldingFindFirstMock.mockResolvedValue(null);
-
-    const result = await scanPlaceGameInUnit("game-1", "unit-new");
-
-    expect(result).toEqual({
-      error: "Exemplar game-1 hat keinen offenen Aufenthalt.",
     });
   });
 });

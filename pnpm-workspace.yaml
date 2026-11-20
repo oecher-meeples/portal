@@ -53,6 +53,10 @@ overrides:
   # keine der Breaking Changes in 8.0.0 (deepmergeInto-Mutationsverhalten,
   # umbenannte Typen) betrifft diesen Aufruf — Override ist sicher.
   deepmerge-ts: ">=8.0.0"
+  # GHSA-7589-6fvf-x4pw: effect ReDoS in Schema.TemplateLiteral, transitiv über
+  # prisma > @prisma/config (pinnt 3.20.0, kein Prisma-Release mit Fix). Minor-
+  # Update innerhalb von 3.x, @prisma/config nutzt keine TemplateLiteral-Schemas.
+  effect@3: ^3.22.4
 onlyBuiltDependencies:
   - sharp
   - unrs-resolver

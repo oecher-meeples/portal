@@ -48,7 +48,9 @@ export type NavItem = {
    * "openHelperRequest" (#155, event-wide): hides "Helferplan" unless a
    * future event has `Event.helpersWanted` set. "activeAusleiheShift"
    * (#433, per Nutzer): hides "Ausleihe & Rückgabe" unless the current
-   * Meeple is inside a currently active "Leihe"-Schichtbuchung. Resolved
+   * Meeple is inside a currently active "Leihe"-Schichtbuchung.
+   * "activeMembership" (#537): hides the Scanner for an "ausgetreten"
+   * Meeple — Vier-Augen-Prinzip, they never book anything themselves. Resolved
    * server-side in app-shell.tsx and passed to Sidebar; direct navigation to
    * the href itself stays reachable regardless (the page shows its own
    * empty state / 403).
@@ -56,7 +58,8 @@ export type NavItem = {
   requiresFlag?: NavFlag;
 };
 
-export type NavFlag = "openHelperRequest" | "activeAusleiheShift";
+export type NavFlag =
+  "openHelperRequest" | "activeAusleiheShift" | "activeMembership";
 
 export type Tier = "gast" | "mitglied" | "admin";
 
@@ -209,6 +212,7 @@ export const NAV_GROUPS: NavGroup[] = [
         href: "/scan",
         icon: ScanLine,
         section: "Mitgliederbereich",
+        requiresFlag: "activeMembership",
       },
       {
         label: "Spielergesuche",
