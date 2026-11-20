@@ -174,6 +174,10 @@ _Avoid_: Verschieben, Move, Standortkorrektur
 Ein Standort, den die abgebende Person eingetragen hat und die empfangende noch nicht. Blockiert nichts und wird mit Herkunftshinweis („eingetragen von \<Person\>") angezeigt. Eine Weitergabe bestätigt der Empfänger per Klick; eine Rückgabe bestätigt er, indem er das Spiel in eine Einheit einlagert.
 _Avoid_: Pending, vorläufig, unsicher
 
+**Scanner** (`/scan`):
+Die Scan-Seite mit Modi (`?modus=`). **Einzel-Scan** (Standard): ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen. **Erhalten** (`?modus=erhalten`): beliebig viele Spiele nacheinander scannen, jedes landet sofort bestätigt bei mir. Das System wählt die Buchung selbst: aus einer Einheit → Ausleihe, von einer anderen Person (auch vom Sammelkonto) → Weitergabe, mir zum Einlagern zurückgegeben → als Ausleihe übernommen, offene Übergabe an mich → bestätigt, liegt schon bestätigt bei mir → nur Hinweis. Ein Fehlscan wird nicht rückgängig gemacht, sondern auf der Exemplar-Seite per normaler Gegenbuchung korrigiert.
+_Avoid_: Sammel-Ausleihe, Batch-Scan, Rückgängig
+
 **Sammel-Umlagern**:
 Variante des Umlagerns für den Event-Abbau: die Ziel-Einheit wird einmal gescannt, danach werden mehrere Spiele nacheinander gescannt und alle auf dieses eine Ziel gebucht, bis eine neue Ziel-Einheit gescannt wird. Bleibt fachlich ein gewöhnliches Umlagern je Spiel, nur die Scan-Reihenfolge ist umgekehrt.
 _Avoid_: Batch-Umlagern, Serien-Scan als eigener Vorgang

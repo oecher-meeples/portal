@@ -56,9 +56,12 @@ export type TransferDecision =
   | "external";
 
 /** Ergebnis pro Exemplar fürs Serien-Log der UI. */
-export type ScannerOutcome = {
+export type ScannerOutcome<
+  O extends ReceiveDecision | TransferDecision =
+    ReceiveDecision | TransferDecision,
+> = {
   gameCopyId: string;
-  outcome: ReceiveDecision | TransferDecision;
+  outcome: O;
   /** Ob der entstandene (bzw. bestehende) Aufenthalt bestätigt ist. */
   confirmed: boolean;
   title: string;

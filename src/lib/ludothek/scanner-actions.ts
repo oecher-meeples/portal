@@ -69,11 +69,11 @@ async function loadCopy(gameCopyId: string) {
 
 type LoadedCopy = Awaited<ReturnType<typeof loadCopy>>;
 
-function outcomeFor(
+function outcomeFor<O extends ReceiveDecision | TransferDecision>(
   copy: LoadedCopy,
-  outcome: ReceiveDecision | TransferDecision,
+  outcome: O,
   holding: { confirmedAt: Date | null } | null,
-): ScannerOutcome {
+): ScannerOutcome<O> {
   return {
     gameCopyId: copy.id,
     outcome,
@@ -88,49 +88,51 @@ function outcomeFor(
 export async function scanReceiveGame(gameCopyId: string) {
   const { meeple, member } = await requireActingMeeple();
 
-  return toResultAndRevalidate(async () => {
-    const own = requireOwnMember(member);
-    const copy = await loadCopy(gameCopyId);
-    const decision = decideReceive(copy, { memberId: own.id });
-    const recordedByMeepleId = meeple.id;
+  return toResultAndRevalidate(
+    async (): Promise<ScannerOutcome<ReceiveDecision>> => {
+      const own = requireOwnMember(member);
+      const copy = await loadCopy(gameCopyId);
+      const decision = decideReceive(copy, { memberId: own.id });
+      const recordedByMeepleId = meeple.id;
 
-    switch (decision) {
-      case "already-mine":
-        return outcomeFor(copy, decision, copy.holding);
-      case "confirm":
-        return outcomeFor(
-          copy,
-          decision,
-          await confirmHolding({
-            holdingId: copy.holding!.id,
-            confirmingVereinsmitgliedId: own.id,
-          }),
-        );
-      case "borrow":
-        return outcomeFor(
-          copy,
-          decision,
-          await borrowGame({
-            gameCopyId,
-            vereinsmitgliedId: own.id,
-            recordedByMeepleId,
-            isSelf: true,
-          }),
-        );
-      case "handover":
-      case "take-over-return":
-        return outcomeFor(
-          copy,
-          decision,
-          await handOverGame({
-            gameCopyId,
-            toVereinsmitgliedId: own.id,
-            recordedByMeepleId,
-            isSelf: true,
-          }),
-        );
-    }
-  });
+      switch (decision) {
+        case "already-mine":
+          return outcomeFor(copy, decision, copy.holding);
+        case "confirm":
+          return outcomeFor(
+            copy,
+            decision,
+            await confirmHolding({
+              holdingId: copy.holding!.id,
+              confirmingVereinsmitgliedId: own.id,
+            }),
+          );
+        case "borrow":
+          return outcomeFor(
+            copy,
+            decision,
+            await borrowGame({
+              gameCopyId,
+              vereinsmitgliedId: own.id,
+              recordedByMeepleId,
+              isSelf: true,
+            }),
+          );
+        case "handover":
+        case "take-over-return":
+          return outcomeFor(
+            copy,
+            decision,
+            await handOverGame({
+              gameCopyId,
+              toVereinsmitgliedId: own.id,
+              recordedByMeepleId,
+              isSelf: true,
+            }),
+          );
+      }
+    },
+  );
 }
 
 async function requireAnonymerMeeple() {
@@ -159,62 +161,64 @@ export async function scanTransferGame(
 ) {
   const { meeple, member } = await requireActingMeeple();
 
-  return toResultAndRevalidate(async () => {
-    const resolved = await resolveTarget(target);
-    const copy = await loadCopy(gameCopyId);
-    const decision = decideTransfer(copy, resolved, {
-      memberId: member?.id ?? null,
-    });
-    const recordedByMeepleId = meeple.id;
-    const book = (holding: { confirmedAt: Date | null }) =>
-      outcomeFor(copy, decision, holding);
+  return toResultAndRevalidate(
+    async (): Promise<ScannerOutcome<TransferDecision>> => {
+      const resolved = await resolveTarget(target);
+      const copy = await loadCopy(gameCopyId);
+      const decision = decideTransfer(copy, resolved, {
+        memberId: member?.id ?? null,
+      });
+      const recordedByMeepleId = meeple.id;
+      const book = (holding: { confirmedAt: Date | null }) =>
+        outcomeFor(copy, decision, holding);
 
-    if (decision === "already-there") return book(copy.holding!);
+      if (decision === "already-there") return book(copy.holding!);
 
-    if (resolved.kind === "unit") {
-      const args = {
-        gameCopyId,
-        toUnitId: resolved.unitId,
-        recordedByMeepleId,
-      };
-      return book(
-        decision === "relocate"
-          ? await relocateGame(args)
-          : await returnGame(args),
-      );
-    }
-
-    if (resolved.kind === "external") {
-      return book(
-        await handOverToExternal({
+      if (resolved.kind === "unit") {
+        const args = {
           gameCopyId,
-          externalName: resolved.externalName,
-          anonymerMeepleVereinsmitgliedId: (await requireAnonymerMeeple()).id,
+          toUnitId: resolved.unitId,
           recordedByMeepleId,
-        }),
-      );
-    }
+        };
+        return book(
+          decision === "relocate"
+            ? await relocateGame(args)
+            : await returnGame(args),
+        );
+      }
 
-    const viaTargetQrScan =
-      target.kind === "meeple" ? target.viaTargetQrScan : false;
-    const toVereinsmitgliedId = resolved.memberId;
-    return book(
-      decision === "return-to-person"
-        ? await returnGame({
+      if (resolved.kind === "external") {
+        return book(
+          await handOverToExternal({
             gameCopyId,
-            toVereinsmitgliedId,
+            externalName: resolved.externalName,
+            anonymerMeepleVereinsmitgliedId: (await requireAnonymerMeeple()).id,
             recordedByMeepleId,
-            viaTargetQrScan,
-          })
-        : await handOverGame({
-            gameCopyId,
-            toVereinsmitgliedId,
-            recordedByMeepleId,
-            isSelf: false,
-            viaTargetQrScan,
           }),
-    );
-  });
+        );
+      }
+
+      const viaTargetQrScan =
+        target.kind === "meeple" ? target.viaTargetQrScan : false;
+      const toVereinsmitgliedId = resolved.memberId;
+      return book(
+        decision === "return-to-person"
+          ? await returnGame({
+              gameCopyId,
+              toVereinsmitgliedId,
+              recordedByMeepleId,
+              viaTargetQrScan,
+            })
+          : await handOverGame({
+              gameCopyId,
+              toVereinsmitgliedId,
+              recordedByMeepleId,
+              isSelf: false,
+              viaTargetQrScan,
+            }),
+      );
+    },
+  );
 }
 
 /**

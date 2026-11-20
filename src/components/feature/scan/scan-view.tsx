@@ -1,218 +1,73 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { CodeScanner } from "@/components/ui/code-scanner";
-import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
-import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
-import { RelocateConfirmPanel } from "@/components/feature/scan/relocate-confirm-panel";
-import { scanResolveCode } from "@/lib/ludothek/holding-actions";
-import { scanTransferGame } from "@/lib/ludothek/scanner-actions";
-import type { ResolvedScan } from "@/lib/ludothek/holdings";
 import { PageContainer } from "@/components/ui/page-container";
+import { ReceiveSeries } from "@/components/feature/scan/receive-series";
+import { SingleScan } from "@/components/feature/scan/single-scan";
+import type { ScanModeHandle } from "@/components/feature/scan/use-scan-series";
+import {
+  SCANNER_PAGE_MODE_LABELS,
+  scannerModeHref,
+  scannerModesFor,
+  type ScannerPageMode,
+} from "@/lib/ludothek/scanner-modes";
 
-export type SeriesMode =
-  | { type: "einlagern"; unitId: string; unitCode: string }
-  | { type: "pruefen" }
-  | null;
-
-type ViewState =
-  | { kind: "idle" }
-  | { kind: "unknown"; raw: string }
-  | {
-      kind: "select-game";
-      games: { id: string; title: string; inventoryNumber: number | null }[];
-      /** Selecting here places directly into the active Serienmodus-Kiste
-       * instead of opening the GameHoldingPanel (#5). */
-      forEinlagern: boolean;
-    }
-  | { kind: "game"; gameCopyId: string }
-  | {
-      kind: "pruefen";
-      gameCopyId: string;
-      title: string;
-      inventoryNumber: number | null;
-    }
-  | {
-      kind: "unit";
-      unitId: string;
-      code: string;
-      label: string;
-      contents: string[];
-    }
-  | {
-      kind: "confirm-relocate";
-      game: { id: string; title: string };
-      fromUnitCode: string;
-      toUnit: { id: string; code: string; label: string; contents: string[] };
-    };
-
-export function ScanView({ canManageGames }: { canManageGames: boolean }) {
-  const [state, setState] = useState<ViewState>({ kind: "idle" });
+/**
+ * Rahmen der Scanner-Seite (#538): Moduswahl (in der URL, `?modus=`),
+ * Kamera und manuelle Eingabe. Jeder erkannte Code geht über eine Ref an den
+ * aktiven Modus — die Kamera hält ihren `onDetected`-Callback ab dem Start
+ * fest, die Ref sorgt dafür, dass ein Moduswechsel trotzdem greift.
+ */
+export function ScanView({
+  canManageGames,
+  initialMode,
+}: {
+  canManageGames: boolean;
+  initialMode: ScannerPageMode;
+}) {
+  const [mode, setMode] = useState(initialMode);
   const [manualInput, setManualInput] = useState("");
-  const [seriesMode, setSeriesMode] = useState<SeriesMode>(null);
-  const [seriesLog, setSeriesLog] = useState<string[]>([]);
   const [lastRaw, setLastRaw] = useState("");
-  const [lastPlacedGame, setLastPlacedGame] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
+  const modeRef = useRef<ScanModeHandle>(null);
 
-  async function placeInActiveUnit(
-    game: { id: string; title: string },
-    unit: { id: string; code: string },
-  ) {
-    const target = { kind: "unit", unitId: unit.id } as const;
-    const { error, value } = await scanTransferGame(game.id, target);
-    const line = error
-      ? `${game.title}: ${error}`
-      : value?.outcome === "already-there"
-        ? `${game.title} liegt schon in ${unit.code}`
-        : `${game.title} → ${unit.code}`;
-    setSeriesLog((log) => [line, ...log]);
-    if (!error) setLastPlacedGame(game);
-  }
-
-  function enterUnit(unit: {
-    id: string;
-    code: string;
-    label: string;
-    contents: string[];
-  }) {
-    setSeriesMode({ type: "einlagern", unitId: unit.id, unitCode: unit.code });
-    setState({ kind: "idle" });
-  }
-
-  async function handleResolved(resolved: ResolvedScan) {
-    if (resolved.kind === "unknown") {
-      setState({ kind: "unknown", raw: resolved.raw });
-      return;
-    }
-    // #465: Meeple-QR-Code hat im allgemeinen Scan-Flow keine Bedeutung —
-    // nur die Weitergabe-/Rückgabe-Zielauswahl (TargetPicker) versteht ihn.
-    if (resolved.kind === "meeple") {
-      setState({ kind: "unknown", raw: resolved.meeple.displayName });
-      return;
-    }
-
-    if (resolved.kind === "unit") {
-      const unit = {
-        id: resolved.unit.id,
-        code: resolved.unit.code,
-        label: resolved.unit.label,
-        contents: resolved.contents.map((g) => g.boardGame.title),
-      };
-
-      if (seriesMode?.type === "einlagern") {
-        if (unit.id === seriesMode.unitId) {
-          setSeriesLog((log) => [
-            `Einheit ${unit.code} kann nicht in sich selbst eingelagert werden.`,
-            ...log,
-          ]);
-          return;
-        }
-        if (!lastPlacedGame) {
-          enterUnit(unit);
-          return;
-        }
-        setState({
-          kind: "confirm-relocate",
-          game: lastPlacedGame,
-          fromUnitCode: seriesMode.unitCode,
-          toUnit: unit,
-        });
-        return;
-      }
-
-      setState({ kind: "unit", unitId: unit.id, ...unit });
-      return;
-    }
-
-    // resolved.kind === "games"
-    if (seriesMode?.type === "einlagern") {
-      const unit = { id: seriesMode.unitId, code: seriesMode.unitCode };
-      if (resolved.games.length > 1) {
-        setState({
-          kind: "select-game",
-          games: resolved.games.map((g) => ({
-            id: g.id,
-            title: g.condition
-              ? `${g.boardGame.title} (${g.condition})`
-              : g.boardGame.title,
-            inventoryNumber: g.inventoryNumber,
-          })),
-          forEinlagern: true,
-        });
-        return;
-      }
-      const game = resolved.games[0];
-      await placeInActiveUnit(
-        { id: game.id, title: game.boardGame.title },
-        unit,
-      );
-      return;
-    }
-
-    if (resolved.games.length === 1) {
-      const game = resolved.games[0];
-      setState(
-        seriesMode?.type === "pruefen"
-          ? {
-              kind: "pruefen",
-              gameCopyId: game.id,
-              title: game.boardGame.title,
-              inventoryNumber: game.inventoryNumber,
-            }
-          : { kind: "game", gameCopyId: game.id },
-      );
-      return;
-    }
-    setState({
-      kind: "select-game",
-      games: resolved.games.map((g) => ({
-        id: g.id,
-        title: g.condition
-          ? `${g.boardGame.title} (${g.condition})`
-          : g.boardGame.title,
-        inventoryNumber: g.inventoryNumber,
-      })),
-      forEinlagern: false,
-    });
-  }
-
-  async function handleRelocateConfirm(
-    confirmState: Extract<ViewState, { kind: "confirm-relocate" }>,
-    relocate: boolean,
-  ) {
-    if (relocate) {
-      await placeInActiveUnit(confirmState.game, {
-        id: confirmState.toUnit.id,
-        code: confirmState.toUnit.code,
-      });
-    }
-    enterUnit(confirmState.toUnit);
+  function changeMode(next: ScannerPageMode) {
+    setMode(next);
+    // Ohne Server-Roundtrip — die Kamera läuft weiter (Next.js integriert
+    // `replaceState` in den Router).
+    window.history.replaceState(null, "", scannerModeHref(next));
   }
 
   async function handleCode(raw: string) {
     setLastRaw(raw);
-    const resolved = await scanResolveCode(raw);
-    await handleResolved(resolved);
-  }
-
-  function reset() {
-    setState({ kind: "idle" });
+    await modeRef.current?.handleCode(raw);
   }
 
   return (
     <PageContainer className="gap-6">
+      <PillToggle
+        options={scannerModesFor(canManageGames).map((value) => ({
+          value,
+          label: SCANNER_PAGE_MODE_LABELS[value],
+        }))}
+        value={mode}
+        onChange={changeMode}
+      />
+
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <CodeScanner onDetected={handleCode} />
 
         <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-          <div className="flex flex-col gap-1.5">
+          <form
+            className="flex flex-col gap-1.5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (manualInput.trim()) void handleCode(manualInput.trim());
+            }}
+          >
             <label htmlFor="manual-code" className="text-sm font-medium">
               Manuelle Eingabe
             </label>
@@ -223,199 +78,20 @@ export function ScanView({ canManageGames }: { canManageGames: boolean }) {
                 onChange={(event) => setManualInput(event.target.value)}
                 placeholder="inv-123, OM-BOX-0001 oder EAN"
               />
-              <Button
-                onClick={() => {
-                  if (manualInput.trim()) handleCode(manualInput.trim());
-                }}
-              >
-                Suchen
-              </Button>
+              <Button type="submit">Suchen</Button>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Serienmodus</span>
-            <PillToggle
-              options={[
-                { value: "aus", label: "Aus" },
-                { value: "pruefen", label: "Prüfen" },
-              ]}
-              value={seriesMode?.type === "pruefen" ? "pruefen" : "aus"}
-              onChange={(value) => {
-                setSeriesMode(value === "pruefen" ? { type: "pruefen" } : null);
-                setSeriesLog([]);
-              }}
-            />
-            {seriesMode?.type === "einlagern" && (
-              <p className="bg-primary/10 rounded-md p-2 text-sm">
-                Alles was jetzt gescannt wird, wird eingelagert in{" "}
-                <strong>{seriesMode.unitCode}</strong>.{" "}
-                <button
-                  type="button"
-                  className="underline"
-                  onClick={() => {
-                    setSeriesMode(null);
-                    setLastPlacedGame(null);
-                  }}
-                >
-                  beenden
-                </button>
-              </p>
-            )}
-            {seriesMode && seriesLog.length > 0 && (
-              <ul className="text-muted-foreground flex flex-col gap-0.5 text-xs">
-                {seriesLog.slice(0, 8).map((line, i) => (
-                  <li key={i}>{line}</li>
-                ))}
-              </ul>
-            )}
-          </div>
+          </form>
 
           <div className="border-t pt-4">
-            {state.kind === "idle" && (
-              <p className="text-muted-foreground text-sm">
-                Noch nichts gescannt.
-              </p>
-            )}
-
-            {state.kind === "unknown" && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Nicht im Bestand</p>
-                <p className="text-muted-foreground text-sm">
-                  Code: <span className="font-mono">{state.raw}</span>
-                </p>
-                {canManageGames && (
-                  <Link
-                    href={`/admin/bestand?ean=${encodeURIComponent(state.raw)}`}
-                    className="text-primary text-sm hover:underline"
-                  >
-                    Spiel jetzt anlegen →
-                  </Link>
-                )}
-              </div>
-            )}
-
-            {state.kind === "select-game" && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  Mehrere Spiele mit dieser EAN — welches?
-                </p>
-                <div className="flex flex-col gap-1">
-                  {state.games.map((game) => (
-                    <button
-                      key={game.id}
-                      type="button"
-                      className="hover:bg-muted cursor-pointer rounded-md border px-3 py-2 text-left text-sm"
-                      onClick={() => {
-                        if (
-                          state.forEinlagern &&
-                          seriesMode?.type === "einlagern"
-                        ) {
-                          void placeInActiveUnit(game, {
-                            id: seriesMode.unitId,
-                            code: seriesMode.unitCode,
-                          });
-                          setState({ kind: "idle" });
-                          return;
-                        }
-                        setState(
-                          seriesMode?.type === "pruefen"
-                            ? {
-                                kind: "pruefen",
-                                gameCopyId: game.id,
-                                title: game.title,
-                                inventoryNumber: game.inventoryNumber,
-                              }
-                            : { kind: "game", gameCopyId: game.id },
-                        );
-                      }}
-                    >
-                      {game.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {state.kind === "game" && (
-              <GameHoldingPanel
-                gameCopyId={state.gameCopyId}
-                advanceAfterAction={Boolean(seriesMode)}
-                onDone={reset}
+            {mode === "erhalten" ? (
+              <ReceiveSeries ref={modeRef} />
+            ) : (
+              <SingleScan
+                key={mode}
+                ref={modeRef}
+                canManageGames={canManageGames}
+                pruefen={mode === "kontrollieren"}
               />
-            )}
-
-            {state.kind === "pruefen" && (
-              <PruefbogenPanel
-                gameCopyId={state.gameCopyId}
-                title={state.title}
-                inventoryNumber={state.inventoryNumber}
-                onDone={reset}
-              />
-            )}
-
-            {state.kind === "unit" && (
-              <div className="flex flex-col gap-2">
-                <p className="font-serif text-lg font-bold">{state.label}</p>
-                <p className="text-muted-foreground font-mono text-sm">
-                  {state.code}
-                </p>
-                <div>
-                  <p className="text-sm font-medium">
-                    Inhalt ({state.contents.length})
-                  </p>
-                  {state.contents.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">Leer.</p>
-                  ) : (
-                    <ul className="text-muted-foreground text-sm">
-                      {state.contents.map((title) => (
-                        <li key={title}>{title}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-fit"
-                  onClick={() => {
-                    setSeriesMode({
-                      type: "einlagern",
-                      unitId: state.unitId,
-                      unitCode: state.code,
-                    });
-                    setSeriesLog([]);
-                    setLastPlacedGame(null);
-                    reset();
-                  }}
-                >
-                  Serienmodus: Einlagern in {state.code}
-                </Button>
-              </div>
-            )}
-
-            {state.kind === "confirm-relocate" && (
-              <RelocateConfirmPanel
-                game={state.game}
-                fromUnitCode={state.fromUnitCode}
-                toUnitCode={state.toUnit.code}
-                onConfirm={(relocate) =>
-                  void handleRelocateConfirm(state, relocate)
-                }
-              />
-            )}
-
-            {(state.kind === "unknown" ||
-              state.kind === "game" ||
-              state.kind === "pruefen") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-                onClick={reset}
-              >
-                Zurücksetzen
-              </Button>
             )}
           </div>
         </div>

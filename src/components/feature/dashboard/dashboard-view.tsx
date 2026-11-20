@@ -15,7 +15,7 @@ import { PageContainer } from "@/components/ui/page-container";
 
 const QUICK_LINKS = [
   { href: "/ludothek", label: "Ludothek", icon: Dice5 },
-  { href: "/scan", label: "Spiel scannen", icon: ScanLine },
+  { href: "/scan", label: "Scanner", icon: ScanLine },
   { href: "/lfg", label: "Spielergesuche", icon: Users },
   { href: "/markt", label: "Marktplatz", icon: Tag },
 ];

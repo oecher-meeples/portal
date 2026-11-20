@@ -208,7 +208,7 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Mitgliederbereich",
       },
       {
-        label: "QR-/EAN-Scan",
+        label: "Scanner",
         href: "/scan",
         icon: ScanLine,
         section: "Mitgliederbereich",
