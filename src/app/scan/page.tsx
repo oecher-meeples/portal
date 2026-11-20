@@ -1,10 +1,13 @@
 import { PageHeading } from "@/components/ui/page-heading";
 import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { ScanView } from "@/components/feature/scan/scan-view";
-import { parseScannerMode } from "@/lib/ludothek/scanner-modes";
+import {
+  parseScannerMode,
+  parseScannerTargetUnit,
+} from "@/lib/ludothek/scanner-modes";
 
 const MODES_DESCRIPTION =
-  "Erhalten: Spiele nacheinander auf dich buchen. Einzel-Scan: ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen.";
+  "Erhalten: Spiele nacheinander auf dich buchen. Übergeben: erst das Ziel scannen, dann die Spiele. Einzel-Scan: ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen.";
 
 export default async function ScanPage({
   searchParams,
@@ -17,10 +20,8 @@ export default async function ScanPage({
     "games:manage",
   );
   // Nicht erlaubte/ungültige Modi fallen still auf den Einzel-Scan (#538).
-  const initialMode = parseScannerMode(
-    (await searchParams).modus,
-    canManageGames,
-  );
+  const params = await searchParams;
+  const initialMode = parseScannerMode(params.modus, canManageGames);
 
   return (
     <div className="flex flex-col gap-6">
@@ -33,7 +34,11 @@ export default async function ScanPage({
             : MODES_DESCRIPTION
         }
       />
-      <ScanView canManageGames={canManageGames} initialMode={initialMode} />
+      <ScanView
+        canManageGames={canManageGames}
+        initialMode={initialMode}
+        initialTargetUnitId={parseScannerTargetUnit(initialMode, params.ziel)}
+      />
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import type { ScannedGameCopy } from "@/lib/ludothek/holdings-lookup";
-import type { ReceiveDecision } from "@/lib/ludothek/scanner-dispatch";
+import type {
+  ReceiveDecision,
+  TransferDecision,
+} from "@/lib/ludothek/scanner-dispatch";
 
 /**
  * Modi der Scanner-Seite `/scan` (Epic #536). Der Modus steht in der URL
@@ -9,6 +12,7 @@ import type { ReceiveDecision } from "@/lib/ludothek/scanner-dispatch";
  */
 export const SCANNER_PAGE_MODES = [
   "erhalten",
+  "uebergeben",
   "einzel",
   "markieren",
   "kontrollieren",
@@ -17,6 +21,7 @@ export type ScannerPageMode = (typeof SCANNER_PAGE_MODES)[number];
 
 export const SCANNER_PAGE_MODE_LABELS: Record<ScannerPageMode, string> = {
   erhalten: "Erhalten",
+  uebergeben: "Übergeben",
   einzel: "Einzel-Scan",
   markieren: "Zur Kontrolle markieren",
   // Früher „Prüfbogen" (#563).
@@ -49,9 +54,25 @@ export function parseScannerMode(
   );
 }
 
-/** URL eines Modus — der Einzel-Scan ist `/scan` ohne Parameter. */
-export function scannerModeHref(mode: ScannerPageMode): string {
-  return mode === DEFAULT_MODE ? "/scan" : `/scan?modus=${mode}`;
+/** URL eines Modus — der Einzel-Scan ist `/scan` ohne Parameter.
+ * `ziel` (Einheiten-Id) belegt das Ziel im Modus „Übergeben" vor (#539). */
+export function scannerModeHref(
+  mode: ScannerPageMode,
+  ziel?: string | null,
+): string {
+  if (mode === DEFAULT_MODE) return "/scan";
+  const zielParam =
+    mode === "uebergeben" && ziel ? `&ziel=${encodeURIComponent(ziel)}` : "";
+  return `/scan?modus=${mode}${zielParam}`;
+}
+
+/** `searchParams.ziel` → vorbelegte Einheiten-Id, nur im Modus „Übergeben". */
+export function parseScannerTargetUnit(
+  mode: ScannerPageMode,
+  raw: string | string[] | undefined,
+): string | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return mode === "uebergeben" && value ? value : null;
 }
 
 /** „1 Spiel" / „N Spiele" — für die Serien-Zähler. */
@@ -66,6 +87,16 @@ export const RECEIVE_OUTCOME_LABELS: Record<ReceiveDecision, string> = {
   "take-over-return": "als Ausleihe übernommen",
   confirm: "bestätigt",
   "already-mine": "hast du schon",
+};
+
+/** Log-Text je Ergebnis im Modus „Übergeben" (ohne Ziel/Bestätigung). */
+export const TRANSFER_OUTCOME_LABELS: Record<TransferDecision, string> = {
+  "return-to-unit": "zurückgelegt",
+  relocate: "umgelagert",
+  "already-there": "liegt schon dort",
+  handover: "weitergegeben",
+  "return-to-person": "zurückgegeben",
+  external: "weitergegeben",
 };
 
 export type CopyChoice = {

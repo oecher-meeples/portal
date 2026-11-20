@@ -87,7 +87,7 @@ export function useScanSeries({
   /** Einheit, Meeple-QR oder unbekannter Code — Hinweis fürs Log oder `null`. */
   onOtherScan: (
     resolved: Exclude<ResolvedScan, { kind: "games" }>,
-  ) => SeriesBooking | null;
+  ) => SeriesBooking | null | Promise<SeriesBooking | null>;
 }) {
   const [entries, setEntries] = useState<SeriesEntry[]>([]);
   const [choice, setChoice] = useState<CopyChoice[] | null>(null);
@@ -128,7 +128,7 @@ export function useScanSeries({
     await exclusive(async () => {
       const resolved = await scanResolveCode(raw);
       if (resolved.kind !== "games") {
-        const hint = onOtherScan(resolved);
+        const hint = await onOtherScan(resolved);
         if (hint) log(hint);
         return;
       }
