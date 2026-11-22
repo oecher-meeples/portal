@@ -36,6 +36,28 @@ vi.mock("@/lib/ludothek/holding-actions", () => ({
   scanListUnits: () => scanListUnitsMock(),
 }));
 
+// Combobox als natives Select: hält die Auswahl-Tests schlicht, das echte
+// Verhalten (Enter übernimmt den ersten Treffer) prüft id-combobox.test.tsx.
+vi.mock("@/components/ui/id-combobox", () => ({
+  IdCombobox: (props: {
+    options: { id: string; label: string }[];
+    value: string | null;
+    onValueChange: (id: string | null) => void;
+  }) => (
+    <select
+      value={props.value ?? ""}
+      onChange={(event) => props.onValueChange(event.target.value || null)}
+    >
+      <option value="">—</option>
+      {props.options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 let nextScannedText = "";
 vi.mock("@/components/ui/scan-search-dialog", () => ({
   ScanSearchDialog: ({ onScanned }: { onScanned: (text: string) => void }) => (

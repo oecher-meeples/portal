@@ -16,6 +16,7 @@ import { useIsMobile } from "@/components/ui/use-media-query";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
+import { classifyScannedSearch } from "@/lib/short-id/short-id";
 import type { BoardGameTrait } from "@prisma/client";
 import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import type {
@@ -144,6 +145,20 @@ export function LudothekBrowser({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
   }, [debouncedSearch]);
 
+  // #570: QR-Etiketten öffnen ihr Ziel über den Router statt als Roh-URL
+  // im Suchfeld zu landen; EAN/Freitext bleiben Suchtext.
+  const [scanHint, setScanHint] = useState<string | null>(null);
+  function handleScanned(text: string) {
+    const input = classifyScannedSearch(text);
+    setScanHint(
+      input.kind === "unsupported"
+        ? "Meeple-Codes kann die Ludothek-Suche noch nicht auflösen."
+        : null,
+    );
+    if (input.kind === "navigate") router.push(input.href);
+    if (input.kind === "search") setSearch(input.text);
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <Card size="sm">
@@ -190,8 +205,13 @@ export function LudothekBrowser({
             )}
           </div>
           <Button type="submit">Suchen</Button>
-          <ScanSearchDialog onScanned={setSearch} />
+          <ScanSearchDialog onScanned={handleScanned} />
         </form>
+        {scanHint && (
+          <p role="status" className="text-muted-foreground text-sm">
+            {scanHint}
+          </p>
+        )}
 
         <LudothekFilterPanel
           href={href}

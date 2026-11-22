@@ -59,6 +59,7 @@ const { TransferSeries } = await import("./transfer-series");
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -119,7 +120,7 @@ describe("TransferSeries — Zielphase (#539)", () => {
       viaTargetQrScan: true,
     });
     expect(
-      screen.getByText("Azul (Inv.-Nr. 4): weitergegeben → Bea — bestätigt"),
+      screen.getByText("Azul (inv-4) – weitergegeben → Bea — bestätigt"),
     ).toBeInTheDocument();
   });
 
@@ -156,7 +157,7 @@ describe("TransferSeries — Zielphase (#539)", () => {
     });
     expect(
       screen.getByText(
-        "Azul (Inv.-Nr. 4): zurückgegeben → Bea — unbestätigt, wartet auf Bea",
+        "Azul (inv-4) – zurückgegeben → Bea — unbestätigt, wartet auf Bea",
       ),
     ).toBeInTheDocument();
   });
@@ -243,7 +244,7 @@ describe("TransferSeries — An Anonymen Meeple weitergeben (#540)", () => {
     });
     expect(
       screen.getByText(
-        "Azul (Inv.-Nr. 4): weitergegeben → Anonymer Meeple (Max (Gast))",
+        "Azul (inv-4) – weitergegeben → Anonymer Meeple (Max (Gast))",
       ),
     ).toBeInTheDocument();
   });
@@ -275,8 +276,38 @@ describe("TransferSeries — An Anonymen Meeple weitergeben (#540)", () => {
 
     expect(
       screen.getByText(
-        'Azul (Inv.-Nr. 4): Sammelkonto "Anonymer Meeple" fehlt — bitte den Seed erneut ausführen.',
+        'Azul (inv-4) – Sammelkonto "Anonymer Meeple" fehlt — bitte den Seed erneut ausführen.',
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe("TransferSeries — alle Spiele einer Einheit übergeben", () => {
+  it("offers to hand over every game of a scanned unit to the current target", async () => {
+    const scan = setup();
+    const GAME_2 = { ...GAME, id: "copy-2", inventoryNumber: 5 };
+    resolveMock.mockResolvedValueOnce(BEA_QR).mockResolvedValueOnce({
+      kind: "unit",
+      unit: { id: "unit-k1", code: "OM-BOX-0001", label: "Kiste 1" },
+      contents: [GAME, GAME_2],
+    });
+    validateMock.mockResolvedValue({ success: true });
+    transferMock.mockResolvedValue(transferred("handover", true));
+
+    await scan("meeple-b");
+    await scan("OM-BOX-0001");
+    expect(transferMock).not.toHaveBeenCalled();
+
+    await press("Alle 2 Spiele übergeben");
+
+    expect(transferMock).toHaveBeenCalledTimes(2);
+    expect(transferMock).toHaveBeenLastCalledWith(
+      "copy-2",
+      expect.objectContaining({ kind: "meeple", meepleId: "meeple-b" }),
+    );
+    expect(screen.getByText("2 Spiele übergeben")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Ziel wechseln" }),
+    ).not.toBeInTheDocument();
   });
 });

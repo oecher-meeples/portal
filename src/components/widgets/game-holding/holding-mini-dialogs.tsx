@@ -4,9 +4,12 @@ import { useState } from "react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button, type buttonVariants } from "@/components/ui/button";
 import type { VariantProps } from "class-variance-authority";
-import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
-import { NativeSelect } from "@/components/ui/native-select";
-import { parseScannedCode } from "@/lib/inventory/codes";
+import {
+  HoldingTargetPicker,
+  meepleTargets,
+  unitTargets,
+  type HoldingTarget,
+} from "@/components/widgets/game-holding/holding-target-picker";
 import { cn } from "@/lib/utils/cn";
 import {
   scanAcceptReturn,
@@ -69,68 +72,12 @@ export function BorrowGameDialog({
   );
 }
 
-type Target = { id: string; label: string; matchValue: string };
-
-/** Select-or-scan target picker, shared by Rückgabe/Weitergeben/Umlagern —
- * the scan text is matched against `matchValue` (e.g. unit code), fachfrei
- * per `ScanSearchDialog`'s own contract. Erkennt zusätzlich den
- * persönlichen QR-Code eines Meeples (#465, `OM-MEEPLE-<id>`) und matcht
- * dann direkt per Id statt per Freitext — der zweite `onSelect`-Parameter
- * markiert diesen Fall, relevant nur für Rückgabe/Weitergeben (Umlagern hat
- * Einheiten als Ziel, ein Meeple-Code matcht dort ohnehin nie). */
-function TargetPicker({
-  targets,
-  selected,
-  onSelect,
-}: {
-  targets: Target[];
-  selected: string;
-  onSelect: (id: string, viaMeepleQrScan?: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <NativeSelect
-        value={selected}
-        onChange={(event) => onSelect(event.target.value, false)}
-        size="md"
-        className="flex-1"
-      >
-        <option value="">— Ziel wählen —</option>
-        {targets.map((target) => (
-          <option key={target.id} value={target.id}>
-            {target.label}
-          </option>
-        ))}
-      </NativeSelect>
-      <ScanSearchDialog
-        onScanned={(text) => {
-          const parsed = parseScannedCode(text);
-          if (parsed.kind === "meeple") {
-            const match = targets.find((target) => target.id === parsed.value);
-            if (match) onSelect(match.id, true);
-            return;
-          }
-          // Ein Einheiten-Etikett kodiert eine Short-ID-URL (#547) — gegen
-          // den Code matchen, nicht gegen die URL.
-          const needle = (parsed.kind === "unit" ? parsed.value : text)
-            .trim()
-            .toLowerCase();
-          const match = targets.find((target) =>
-            target.matchValue.toLowerCase().includes(needle),
-          );
-          if (match) onSelect(match.id, false);
-        }}
-      />
-    </div>
-  );
-}
-
 type ReturnMode = "self" | "person";
 
 /** Rückgabe — ein Dialog mit Umschalter statt zweier Menüpunkte (Plan-Schritt
  * 7): "an mich" bleibt der bisherige `scanAcceptReturn` (abgeschlossen erst
  * durchs Einlagern), "an Person" sucht die annehmende Person per
- * `TargetPicker` und ruft `scanReturnToMeeple`. */
+ * `HoldingTargetPicker` und ruft `scanReturnToMeeple`. */
 export function AcceptReturnDialog({
   gameCopyId,
   open,
@@ -143,7 +90,7 @@ export function AcceptReturnDialog({
   TriggerVariantProp) {
   const initialMode: ReturnMode = hideSelfMode ? "person" : "self";
   const [mode, setMode] = useState<ReturnMode>(initialMode);
-  const [targets, setTargets] = useState<Target[]>([]);
+  const [targets, setTargets] = useState<HoldingTarget[]>([]);
   const [selected, setSelected] = useState("");
   // #465: true, sobald das Ziel per persönlichem QR-Code der Person selbst
   // aufgelöst wurde — löst dann Sofort-Bestätigung statt "unbestätigt" aus.
@@ -151,14 +98,7 @@ export function AcceptReturnDialog({
 
   async function loadTargets() {
     if (targets.length > 0) return;
-    const meeples = await scanListMeeples();
-    setTargets(
-      meeples.map((m) => ({
-        id: m.id,
-        label: m.displayName,
-        matchValue: m.displayName,
-      })),
-    );
+    setTargets(meepleTargets(await scanListMeeples()));
   }
 
   return (
@@ -224,12 +164,13 @@ export function AcceptReturnDialog({
           </div>
         )}
         {mode === "person" && (
-          <TargetPicker
+          <HoldingTargetPicker
             targets={targets}
-            selected={selected}
-            onSelect={(id, viaQrScan) => {
-              setSelected(id);
-              setViaMeepleQrScan(viaQrScan ?? false);
+            value={selected || null}
+            placeholder="Person suchen …"
+            onPick={(id, source) => {
+              setSelected(id ?? "");
+              setViaMeepleQrScan(source === "meeple-qr");
             }}
           />
         )}
@@ -249,7 +190,7 @@ export function GiveToMeepleDialog({
 }: { gameCopyId: string } & ControlledDialogProps &
   TriggerClassNameProp &
   TriggerVariantProp) {
-  const [targets, setTargets] = useState<Target[]>([]);
+  const [targets, setTargets] = useState<HoldingTarget[]>([]);
   const [selected, setSelected] = useState("");
   // #465: siehe AcceptReturnDialog — QR-Scan des Ziel-Meeples bestätigt sofort.
   const [viaMeepleQrScan, setViaMeepleQrScan] = useState(false);
@@ -278,28 +219,20 @@ export function GiveToMeepleDialog({
       }
       submitLabel="Weitergeben"
       canSubmit={selected !== ""}
-      onOpen={async () => {
-        const meeples = await scanListMeeples();
-        setTargets(
-          meeples.map((m) => ({
-            id: m.id,
-            label: m.displayName,
-            matchValue: m.displayName,
-          })),
-        );
-      }}
+      onOpen={async () => setTargets(meepleTargets(await scanListMeeples()))}
       action={() => scanGiveToMeeple(gameCopyId, selected, viaMeepleQrScan)}
       onReset={() => {
         setSelected("");
         setViaMeepleQrScan(false);
       }}
     >
-      <TargetPicker
+      <HoldingTargetPicker
         targets={targets}
-        selected={selected}
-        onSelect={(id, viaQrScan) => {
-          setSelected(id);
-          setViaMeepleQrScan(viaQrScan ?? false);
+        value={selected || null}
+        placeholder="Person suchen …"
+        onPick={(id, source) => {
+          setSelected(id ?? "");
+          setViaMeepleQrScan(source === "meeple-qr");
         }}
       />
     </ActionDialog>
@@ -312,7 +245,7 @@ export function RelocateGameDialog({
   open,
   onOpenChange,
 }: { gameCopyId: string } & ControlledDialogProps) {
-  const [targets, setTargets] = useState<Target[]>([]);
+  const [targets, setTargets] = useState<HoldingTarget[]>([]);
   const [selected, setSelected] = useState("");
 
   return (
@@ -331,23 +264,15 @@ export function RelocateGameDialog({
       description="Wähle die Ziel-Einheit."
       submitLabel="Umlagern"
       canSubmit={selected !== ""}
-      onOpen={async () => {
-        const units = await scanListUnits();
-        setTargets(
-          units.map((u) => ({
-            id: u.id,
-            label: `${u.label} (${u.code})`,
-            matchValue: u.code,
-          })),
-        );
-      }}
+      onOpen={async () => setTargets(unitTargets(await scanListUnits()))}
       action={() => scanRelocateGame(gameCopyId, selected)}
       onReset={() => setSelected("")}
     >
-      <TargetPicker
+      <HoldingTargetPicker
         targets={targets}
-        selected={selected}
-        onSelect={setSelected}
+        value={selected || null}
+        placeholder="Einheit suchen …"
+        onPick={(id) => setSelected(id ?? "")}
       />
     </ActionDialog>
   );

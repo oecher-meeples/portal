@@ -146,7 +146,9 @@ export type ResolvedScan =
   | { kind: "games"; games: ScannedGameCopy[] }
   | { kind: "unit"; unit: StorageUnit; contents: ScannedGameCopy[] }
   | { kind: "meeple"; meeple: { id: string; displayName: string } }
-  | { kind: "unknown"; raw: string };
+  /** `unitCode`: ein Einheiten-Etikett, dessen Einheit nicht angelegt ist —
+   * damit die Anzeige nicht „Nicht im Bestand" sagt, als wäre es ein Spiel. */
+  | { kind: "unknown"; raw: string; unitCode?: string };
 
 export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
   const parsed = parseScannedCode(raw);
@@ -167,7 +169,7 @@ export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
       where: { code: parsed.value },
     });
     if (!unit) {
-      return { kind: "unknown", raw };
+      return { kind: "unknown", raw, unitCode: parsed.value };
     }
     const contents = await prisma.gameCopy.findMany({
       where: { holdings: { some: { unitId: unit.id, endedAt: null } } },

@@ -1,20 +1,24 @@
 "use client";
 
 import { useImperativeHandle, useState, type Ref } from "react";
-import { Button } from "@/components/ui/button";
 import {
   markUnitForCompletenessCheck,
   requestCompletenessCheck,
 } from "@/lib/ludothek/game-copies";
-import { ScanSeriesLog } from "@/components/feature/scan/scan-series-log";
+import {
+  ScanSeriesLog,
+  UnitBulkDialog,
+  type UnitBulkPrompt,
+} from "@/components/feature/scan/scan-series-log";
 import {
   resultBooking,
+  unknownScanText,
   useScanSeries,
   type ScanModeHandle,
 } from "@/components/feature/scan/use-scan-series";
 import { spieleCount } from "@/lib/ludothek/scanner-modes";
 
-type UnitPrompt = { id: string; label: string; count: number };
+type UnitPrompt = UnitBulkPrompt & { id: string };
 
 /**
  * Modus „Kontrolle anfordern" (#563, nur `games:manage`): jedes
@@ -36,6 +40,9 @@ export function MarkSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
     },
     onOtherScan: (resolved) => {
       if (resolved.kind === "unit") {
+        if (resolved.contents.length === 0) {
+          return { tone: "info", text: `${resolved.unit.label} ist leer.` };
+        }
         setUnitPrompt({
           id: resolved.unit.id,
           label: resolved.unit.label,
@@ -47,7 +54,7 @@ export function MarkSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
         tone: "info",
         text:
           resolved.kind === "unknown"
-            ? `Nicht im Bestand: ${resolved.raw}`
+            ? unknownScanText(resolved)
             : "Hier nur Spiele oder Einheiten scannen.",
       };
     },
@@ -56,51 +63,36 @@ export function MarkSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
   useImperativeHandle(ref, () => ({ handleCode: series.handleCode }));
 
   async function markUnit(unit: UnitPrompt) {
-    setUnitPrompt(null);
     const result = await markUnitForCompletenessCheck(unit.id);
     series.log(
       result.error
-        ? { tone: "error", text: `${unit.label}: ${result.error}` }
+        ? { tone: "error", text: `${unit.label} – ${result.error}` }
         : {
             tone: "success",
-            text: `${unit.label}: ${spieleCount(result.count ?? 0)} markiert`,
+            text: `${unit.label} – ${spieleCount(result.count ?? 0)} markiert`,
             counts: result.count,
           },
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <ScanSeriesLog
+      series={series}
+      countLabel={(count) => `${spieleCount(count)} markiert`}
+      emptyHint="Noch nichts gescannt."
+    >
       <p className="text-muted-foreground text-sm">
         Scanne Spiele, die auf Vollständigkeit geprüft werden sollen — oder eine
         Einheit, um alle Spiele darin zu markieren.
       </p>
-      {unitPrompt && (
-        <div className="bg-primary/10 flex flex-col gap-2 rounded-md p-3 text-sm">
-          <p>
-            Alle {spieleCount(unitPrompt.count)} in{" "}
-            <strong>{unitPrompt.label}</strong> markieren? Spiele in Unterkisten
-            bleiben unverändert.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => void markUnit(unitPrompt)}>
-              Alle markieren
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setUnitPrompt(null)}
-            >
-              Abbrechen
-            </Button>
-          </div>
-        </div>
-      )}
-      <ScanSeriesLog
-        series={series}
-        countLabel={(count) => `${spieleCount(count)} markiert`}
-        emptyHint="Noch nichts gescannt."
+      <UnitBulkDialog
+        unit={unitPrompt}
+        verb="zur Kontrolle anfordern"
+        onConfirm={() =>
+          unitPrompt ? markUnit(unitPrompt) : Promise.resolve()
+        }
+        onClose={() => setUnitPrompt(null)}
       />
-    </div>
+    </ScanSeriesLog>
   );
 }

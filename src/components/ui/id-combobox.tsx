@@ -17,7 +17,8 @@ export type IdOption = { id: string; label: string };
  * Fachfrei — die fachlichen Picker (`MeepleCombobox`, `MemberCombobox`, das
  * Zusammenführen-Ziel der Mitwirkenden) legen nur ihre Optionen und ihren
  * Platzhalter fest. Matched intern per Label: bei zwei gleichen Labels greift
- * die erste Übereinstimmung.
+ * die erste Übereinstimmung. Der erste Treffer ist beim Tippen hervorgehoben,
+ * Enter übernimmt ihn also direkt (#573).
  */
 export function IdCombobox({
   options,
@@ -36,6 +37,7 @@ export function IdCombobox({
 
   return (
     <Combobox
+      autoHighlight
       items={options.map((option) => option.label)}
       value={selectedLabel}
       inputValue={inputValue}

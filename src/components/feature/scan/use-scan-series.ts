@@ -2,6 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useAction } from "@/components/ui/use-action";
+import { useScanLog } from "@/components/feature/scan/use-scan-log";
+import {
+  SERIES_SCAN_LOG_POLICY,
+  type ScanLogEntry,
+} from "@/lib/ludothek/scan-log";
 import { scanResolveCode } from "@/lib/ludothek/holding-actions";
 import { scanPickCopy } from "@/lib/ludothek/scanner-actions";
 import type { ResolvedScan } from "@/lib/ludothek/holdings";
@@ -10,7 +15,7 @@ import type {
   ScannerTarget,
 } from "@/lib/ludothek/scanner-dispatch";
 import { toCopyChoices, type CopyChoice } from "@/lib/ludothek/scanner-modes";
-import { copyDetailPath } from "@/lib/short-id/short-id";
+import { copyDetailPath, formatShortIdSlug } from "@/lib/short-id/short-id";
 
 /** Was die Scanner-Seite an den aktiven Modus weiterreicht (Kamera + manuelle Eingabe). */
 export type ScanModeHandle = { handleCode: (raw: string) => Promise<void> };
@@ -26,18 +31,20 @@ export type SeriesBooking = {
   counts?: number;
 };
 
-export type SeriesEntry = SeriesBooking & { key: number };
+/** Persistiert pro Modus (#574) — `key`/`at` vergibt `useScanLog`. */
+export type SeriesEntry = SeriesBooking & ScanLogEntry;
 
 /** Gleicher Code innerhalb dieser Zeit → kein zweiter Buchungsversuch. */
 export const SCAN_DEBOUNCE_MS = 3000;
 
+/** `Ark Nova (inv-189)` — die Short-ID wie auf dem Etikett (#574). */
 export function gameLabel(game: CopyChoice) {
   return game.inventoryNumber
-    ? `${game.title} (Inv.-Nr. ${game.inventoryNumber})`
+    ? `${game.title} (${formatShortIdSlug({ kind: "inv", id: game.inventoryNumber })})`
     : game.title;
 }
 
-/** Log-Eintrag zu einem Exemplar: „Titel (Inv.-Nr. n): label" mit Link aufs Exemplar. */
+/** Log-Eintrag zu einem Exemplar: „Titel (inv-n) – label" mit Link aufs Exemplar. */
 export function gameBooking(
   game: CopyChoice,
   label: string,
@@ -45,12 +52,22 @@ export function gameBooking(
 ): SeriesBooking {
   return {
     ...rest,
-    text: `${gameLabel(game)}: ${label}`,
+    text: `${gameLabel(game)} – ${label}`,
     href:
       game.inventoryNumber !== null
         ? copyDetailPath(game.boardGameSlug, game.inventoryNumber)
         : undefined,
   };
+}
+
+/** Unbekannter Code: ein nicht angelegtes Einheiten-Etikett heißt so, statt
+ * wie ein fehlendes Spiel „Nicht im Bestand" zu melden. */
+export function unknownScanText(
+  resolved: Extract<ResolvedScan, { kind: "unknown" }>,
+): string {
+  return resolved.unitCode
+    ? `Einheit ${resolved.unitCode} ist nicht angelegt.`
+    : `Nicht im Bestand: ${resolved.raw}`;
 }
 
 /** Baut den Log-Eintrag aus einem Action-Ergebnis (`{ error }` oder Erfolg). */
@@ -62,7 +79,7 @@ export function resultBooking<V>(
   },
 ): SeriesBooking {
   if (result.error || result.value === undefined) {
-    return { tone: "error", text: `${gameLabel(game)}: ${result.error}` };
+    return { tone: "error", text: `${gameLabel(game)} – ${result.error}` };
   }
   const { label, ...rest } = describe(result.value);
   return gameBooking(game, label, rest);
@@ -89,16 +106,20 @@ export function useScanSeries({
     resolved: Exclude<ResolvedScan, { kind: "games" }>,
   ) => SeriesBooking | null | Promise<SeriesBooking | null>;
 }) {
-  const [entries, setEntries] = useState<SeriesEntry[]>([]);
+  const { entries, add } = useScanLog<SeriesEntry>(
+    mode,
+    SERIES_SCAN_LOG_POLICY,
+  );
+  // Der Zähler gilt für die laufende Serie, nicht für das gespeicherte Log.
+  const [count, setCount] = useState(0);
   const [choice, setChoice] = useState<CopyChoice[] | null>(null);
   const { run, pending, error } = useAction();
   const busyRef = useRef(false);
   const lastScanRef = useRef<{ raw: string; at: number } | null>(null);
-  const nextKeyRef = useRef(0);
 
   function log(booking: SeriesBooking) {
-    const key = nextKeyRef.current++;
-    setEntries((current) => [{ ...booking, key }, ...current]);
+    add(booking);
+    setCount((current) => current + (booking.counts ?? 0));
   }
 
   async function exclusive(task: () => Promise<void>) {
@@ -156,13 +177,23 @@ export function useScanSeries({
     await exclusive(() => bookAndLog(game));
   }
 
+  /** Alle Spiele einer gescannten Einheit nacheinander buchen — jedes
+   * bekommt seinen eigenen Log-Eintrag, ein Fehler stoppt die übrigen nicht. */
+  async function bookAll(games: CopyChoice[]) {
+    setChoice(null);
+    await exclusive(async () => {
+      for (const game of games) await bookAndLog(game);
+    });
+  }
+
   return {
     handleCode,
     entries,
-    count: entries.reduce((sum, entry) => sum + (entry.counts ?? 0), 0),
+    count,
     log,
     choice,
     pick,
+    bookAll,
     cancelChoice: () => setChoice(null),
     pending,
     error,

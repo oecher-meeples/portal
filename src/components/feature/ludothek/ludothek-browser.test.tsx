@@ -16,12 +16,14 @@ vi.mock("@/lib/auth/permissions", () => ({
   hasPermission: vi.fn(),
 }));
 const routerReplaceMock = vi.fn();
+const routerPushMock = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: routerReplaceMock, push: vi.fn() }),
+  useRouter: () => ({ replace: routerReplaceMock, push: routerPushMock }),
 }));
+let scannedText = "4001504311892";
 vi.mock("@/components/ui/scan-search-dialog", () => ({
   ScanSearchDialog: ({ onScanned }: { onScanned: (text: string) => void }) => (
-    <button type="button" onClick={() => onScanned("4001504311892")}>
+    <button type="button" onClick={() => onScanned(scannedText)}>
       simulate-scan
     </button>
   ),
@@ -43,6 +45,7 @@ const { LudothekBrowser } = await import("./ludothek-browser");
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  scannedText = "4001504311892";
 });
 
 function baseProps() {
@@ -149,6 +152,29 @@ describe("LudothekBrowser — live search", () => {
       );
     },
   );
+});
+
+describe("LudothekBrowser — gescannte Short-IDs (#570)", () => {
+  it("navigates to the router for a copy label and leaves the search field untouched", () => {
+    scannedText = "https://192.168.178.100:3002/id/inv-189";
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    fireEvent.click(screen.getByText("simulate-scan"));
+
+    expect(routerPushMock).toHaveBeenCalledWith("/id/inv-189");
+    expect(screen.getByPlaceholderText(/Spiel, EAN/)).toHaveValue("");
+  });
+
+  it("shows a hint instead of the raw URL for meeple codes", () => {
+    scannedText = "https://short.oecher-meeples.org/id/meeple-abc";
+    render(<LudothekBrowser {...baseProps()} internal={false} />);
+
+    fireEvent.click(screen.getByText("simulate-scan"));
+
+    expect(routerPushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent(/Meeple-Codes/);
+    expect(screen.getByPlaceholderText(/Spiel, EAN/)).toHaveValue("");
+  });
 });
 
 describe("LudothekBrowser — Enter im Suchfeld (#286)", () => {

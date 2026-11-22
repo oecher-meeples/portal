@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { useRef, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Camera, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
@@ -41,20 +41,28 @@ export function ScanView({
   const [mode, setMode] = useState(initialMode);
   const [targetUnitId, setTargetUnitId] = useState(initialTargetUnitId);
   const [manualInput, setManualInput] = useState("");
-  const [lastRaw, setLastRaw] = useState("");
+  // #573: Im Einzel-Scan ersetzt das Ergebnis die Kamera, bis
+  // „Nächster Scan“ sie wieder einblendet (Unmount stoppt den Stream).
+  const [cameraPaused, setCameraPaused] = useState(false);
+  const showCamera = mode !== "einzel" || !cameraPaused;
+  // Die Kamera hält `handleCode` ab dem Start fest — der Modus kommt daher
+  // aus einer Ref, nicht aus der Closure.
+  const currentModeRef = useRef(mode);
   const modeRef = useRef<ScanModeHandle>(null);
   const focusMode = useFocusMode();
 
   function changeMode(next: ScannerPageMode, ziel: string | null = null) {
     setMode(next);
+    currentModeRef.current = next;
     setTargetUnitId(ziel);
+    setCameraPaused(false);
     // Ohne Server-Roundtrip — die Kamera läuft weiter (Next.js integriert
     // `replaceState` in den Router).
     window.history.replaceState(null, "", scannerModeHref(next, ziel));
   }
 
   async function handleCode(raw: string) {
-    setLastRaw(raw);
+    if (currentModeRef.current === "einzel") setCameraPaused(true);
     await modeRef.current?.handleCode(raw);
   }
 
@@ -94,58 +102,68 @@ export function ScanView({
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <CodeScanner onDetected={handleCode} />
-
-        <Card className="gap-4">
-          <form
-            className="flex flex-col gap-1.5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (manualInput.trim()) void handleCode(manualInput.trim());
-            }}
+      <div
+        className={
+          showCamera ? "grid gap-6 lg:grid-cols-[2fr_1fr]" : "grid gap-4"
+        }
+      >
+        {showCamera ? (
+          <CodeScanner onDetected={handleCode} />
+        ) : (
+          <Button
+            size="lg"
+            className="w-full sm:w-fit"
+            onClick={() => setCameraPaused(false)}
           >
-            <label htmlFor="manual-code" className="text-sm font-medium">
-              Manuelle Eingabe
-            </label>
-            <div className="flex gap-2">
-              <Input
-                id="manual-code"
-                value={manualInput}
-                onChange={(event) => setManualInput(event.target.value)}
-                placeholder="inv-123, OM-BOX-0001 oder EAN"
-              />
-              <Button type="submit">Suchen</Button>
-            </div>
-          </form>
+            <Camera className="size-4" />
+            Nächster Scan
+          </Button>
+        )}
 
-          <div className="border-t pt-4">
-            {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
-            {mode === "uebergeben" && (
-              <TransferSeries
-                key={targetUnitId ?? ""}
-                ref={modeRef}
-                initialUnitId={targetUnitId}
-              />
-            )}
-            {mode === "markieren" && <MarkSeries ref={modeRef} />}
-            {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
-            {mode === "einzel" && (
-              <SingleScan
-                ref={modeRef}
-                canManageGames={canManageGames}
-                onFillUnit={(unitId) => changeMode("uebergeben", unitId)}
-              />
-            )}
-          </div>
-        </Card>
+        <div className="flex flex-col gap-6">
+          <Card>
+            <form
+              className="flex flex-col gap-1.5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (manualInput.trim()) void handleCode(manualInput.trim());
+              }}
+            >
+              <label htmlFor="manual-code" className="text-sm font-medium">
+                Manuelle Eingabe
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="manual-code"
+                  value={manualInput}
+                  onChange={(event) => setManualInput(event.target.value)}
+                  placeholder="inv-123, OM-BOX-0001 oder EAN"
+                />
+                <Button type="submit">Suchen</Button>
+              </div>
+            </form>
+          </Card>
+
+          {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
+          {mode === "uebergeben" && (
+            <TransferSeries
+              key={targetUnitId ?? ""}
+              ref={modeRef}
+              initialUnitId={targetUnitId}
+            />
+          )}
+          {mode === "markieren" && <MarkSeries ref={modeRef} />}
+          {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
+          {mode === "einzel" && (
+            <SingleScan
+              ref={modeRef}
+              canManageGames={canManageGames}
+              onFillUnit={(unitId) => changeMode("uebergeben", unitId)}
+              onRescan={(raw) => void handleCode(raw)}
+            />
+          )}
+        </div>
       </div>
-
-      {lastRaw && (
-        <p className="text-muted-foreground text-xs">
-          Zuletzt gescannt: <span className="font-mono">{lastRaw}</span>
-        </p>
-      )}
     </PageContainer>
   );
 }

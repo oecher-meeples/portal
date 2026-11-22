@@ -4,11 +4,12 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
 vi.mock("@/components/ui/code-scanner", () => ({
-  CodeScanner: () => null,
+  CodeScanner: () => <div>camera</div>,
 }));
 vi.mock("@/components/widgets/game-holding/game-holding-panel", () => ({
   GameHoldingPanel: ({ gameCopyId }: { gameCopyId: string }) => (
@@ -116,7 +117,7 @@ describe("ScanView — Einlagern-Serie geht in Übergeben auf (#539)", () => {
     scan("4001504311892");
 
     expect(
-      await screen.findByText("Catan: zurückgelegt → Kiste A (OM-BOX-0001)"),
+      await screen.findByText("Catan – zurückgelegt → Kiste A (OM-BOX-0001)"),
     ).toBeInTheDocument();
     expect(scanTransferGameMock).toHaveBeenCalledWith("copy-1", {
       kind: "unit",
@@ -138,7 +139,7 @@ describe("ScanView — Einlagern-Serie geht in Übergeben auf (#539)", () => {
 
     expect(
       await screen.findByText(
-        "Catan (leicht bespielt): umgelagert → Kiste A (OM-BOX-0001)",
+        "Catan (leicht bespielt) – umgelagert → Kiste A (OM-BOX-0001)",
       ),
     ).toBeInTheDocument();
     expect(scanTransferGameMock).toHaveBeenCalledTimes(1);
@@ -219,8 +220,112 @@ describe("ScanView — Einlagern-Serie geht in Übergeben auf (#539)", () => {
     scan("4001504311892");
 
     expect(
-      await screen.findByText("Catan: liegt schon dort"),
+      await screen.findByText("Catan – liegt schon dort"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ScanView — Ergebnis statt Kamera im Einzel-Scan (#573)", () => {
+  it("hides the camera after a scan and brings it back via 'Nächster Scan'", async () => {
+    render(<ScanView canManageGames={false} initialMode="einzel" />);
+    expect(screen.getByText("camera")).toBeInTheDocument();
+
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "games",
+      games: [GAME_1],
+    });
+    scan("4001504311892");
+
+    expect(await screen.findByText("game-panel-copy-1")).toBeInTheDocument();
+    expect(screen.queryByText("camera")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Nächster Scan" }));
+    expect(screen.getByText("camera")).toBeInTheDocument();
+    expect(screen.getByText("game-panel-copy-1")).toBeInTheDocument();
+  });
+
+  it("keeps the camera running in series modes", async () => {
+    render(<ScanView canManageGames={false} initialMode="erhalten" />);
+    scanResolveCodeMock.mockResolvedValueOnce({ kind: "unknown", raw: "x" });
+    scan("x");
+
+    await screen.findAllByText(/x/);
+    expect(screen.getByText("camera")).toBeInTheDocument();
+  });
+});
+
+describe("ScanView — Zuletzt gescannt im Einzel-Scan (#574)", () => {
+  const recentList = () =>
+    screen
+      .getByText("Zuletzt gescannt")
+      .closest("[data-slot=card]")!
+      .querySelectorAll("li button");
+
+  it("logs the resolved name with short ID and re-shows a result on click", async () => {
+    render(<ScanView canManageGames={false} initialMode="einzel" />);
+    scanResolveCodeMock.mockResolvedValue({
+      kind: "unit",
+      unit: UNIT_A,
+      contents: [],
+    });
+    scan("https://short.oecher-meeples.org/id/box-0001");
+
+    const entry = await screen.findByRole("button", {
+      name: "Kiste A · box-0001",
+    });
+    fireEvent.click(entry);
+
+    expect(scanResolveCodeMock).toHaveBeenLastCalledWith(
+      "https://short.oecher-meeples.org/id/box-0001",
+    );
+  });
+
+  it("moves a re-scanned code to the top instead of duplicating it", async () => {
+    render(<ScanView canManageGames={false} initialMode="einzel" />);
+    scanResolveCodeMock.mockImplementation(async (raw: string) => ({
+      kind: "unknown",
+      raw,
+    }));
+
+    scan("111");
+    await screen.findByRole("button", { name: "111" });
+    scan("222");
+    await screen.findByRole("button", { name: "222" });
+    scan("111");
+
+    await vi.waitFor(() =>
+      expect(
+        Array.from(recentList()).map((button) => button.textContent),
+      ).toEqual(["111", "222"]),
+    );
+  });
+
+  it("drops entries older than 24 h when the page loads", async () => {
+    localStorage.setItem(
+      "scan-log:single",
+      JSON.stringify([
+        { key: "a", at: Date.now() - 1000, raw: "1", label: "Frisch" },
+        {
+          key: "b",
+          at: Date.now() - 25 * 60 * 60 * 1000,
+          raw: "2",
+          label: "Gestern",
+        },
+      ]),
+    );
+    render(<ScanView canManageGames={false} initialMode="einzel" />);
+
+    expect(await screen.findByText("Frisch")).toBeInTheDocument();
+    expect(screen.queryByText("Gestern")).not.toBeInTheDocument();
+  });
+
+  it("no longer shows the page-wide raw 'Zuletzt gescannt:' line", async () => {
+    render(<ScanView canManageGames={false} initialMode="erhalten" />);
+    scanResolveCodeMock.mockResolvedValueOnce({ kind: "unknown", raw: "x" });
+    scan("x");
+
+    await screen.findByText("Nicht im Bestand: x");
+    expect(screen.queryByText(/Zuletzt gescannt:/)).not.toBeInTheDocument();
   });
 });
 
@@ -303,7 +408,7 @@ describe("ScanView — Moduswahl (#538)", () => {
     scan("inv-7");
 
     expect(
-      await screen.findByText("Catan (Inv.-Nr. 7): ausgeliehen"),
+      await screen.findByText("Catan (inv-7) – ausgeliehen"),
     ).toBeInTheDocument();
     expect(scanReceiveGameMock).toHaveBeenCalledWith("copy-1");
   });
