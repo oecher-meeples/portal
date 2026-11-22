@@ -41,7 +41,6 @@ export function ScanView({
   const [mode, setMode] = useState(initialMode);
   const [targetUnitId, setTargetUnitId] = useState(initialTargetUnitId);
   const [manualInput, setManualInput] = useState("");
-  const [lastRaw, setLastRaw] = useState("");
   // #573: Im Einzel-Scan ersetzt das Ergebnis die Kamera, bis
   // „Nächster Scan“ sie wieder einblendet (Unmount stoppt den Stream).
   const [cameraPaused, setCameraPaused] = useState(false);
@@ -63,7 +62,6 @@ export function ScanView({
   }
 
   async function handleCode(raw: string) {
-    setLastRaw(raw);
     if (currentModeRef.current === "einzel") setCameraPaused(true);
     await modeRef.current?.handleCode(raw);
   }
@@ -122,55 +120,50 @@ export function ScanView({
           </Button>
         )}
 
-        <Card className="gap-4">
-          <form
-            className="flex flex-col gap-1.5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (manualInput.trim()) void handleCode(manualInput.trim());
-            }}
-          >
-            <label htmlFor="manual-code" className="text-sm font-medium">
-              Manuelle Eingabe
-            </label>
-            <div className="flex gap-2">
-              <Input
-                id="manual-code"
-                value={manualInput}
-                onChange={(event) => setManualInput(event.target.value)}
-                placeholder="inv-123, OM-BOX-0001 oder EAN"
-              />
-              <Button type="submit">Suchen</Button>
-            </div>
-          </form>
+        <div className="flex flex-col gap-6">
+          <Card>
+            <form
+              className="flex flex-col gap-1.5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (manualInput.trim()) void handleCode(manualInput.trim());
+              }}
+            >
+              <label htmlFor="manual-code" className="text-sm font-medium">
+                Manuelle Eingabe
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="manual-code"
+                  value={manualInput}
+                  onChange={(event) => setManualInput(event.target.value)}
+                  placeholder="inv-123, OM-BOX-0001 oder EAN"
+                />
+                <Button type="submit">Suchen</Button>
+              </div>
+            </form>
+          </Card>
 
-          <div className="border-t pt-4">
-            {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
-            {mode === "uebergeben" && (
-              <TransferSeries
-                key={targetUnitId ?? ""}
-                ref={modeRef}
-                initialUnitId={targetUnitId}
-              />
-            )}
-            {mode === "markieren" && <MarkSeries ref={modeRef} />}
-            {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
-            {mode === "einzel" && (
-              <SingleScan
-                ref={modeRef}
-                canManageGames={canManageGames}
-                onFillUnit={(unitId) => changeMode("uebergeben", unitId)}
-              />
-            )}
-          </div>
-        </Card>
+          {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
+          {mode === "uebergeben" && (
+            <TransferSeries
+              key={targetUnitId ?? ""}
+              ref={modeRef}
+              initialUnitId={targetUnitId}
+            />
+          )}
+          {mode === "markieren" && <MarkSeries ref={modeRef} />}
+          {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
+          {mode === "einzel" && (
+            <SingleScan
+              ref={modeRef}
+              canManageGames={canManageGames}
+              onFillUnit={(unitId) => changeMode("uebergeben", unitId)}
+              onRescan={(raw) => void handleCode(raw)}
+            />
+          )}
+        </div>
       </div>
-
-      {lastRaw && (
-        <p className="text-muted-foreground text-xs">
-          Zuletzt gescannt: <span className="font-mono">{lastRaw}</span>
-        </p>
-      )}
     </PageContainer>
   );
 }

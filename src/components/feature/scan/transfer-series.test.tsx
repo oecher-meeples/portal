@@ -59,6 +59,7 @@ const { TransferSeries } = await import("./transfer-series");
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -119,7 +120,7 @@ describe("TransferSeries — Zielphase (#539)", () => {
       viaTargetQrScan: true,
     });
     expect(
-      screen.getByText("Azul (Inv.-Nr. 4): weitergegeben → Bea — bestätigt"),
+      screen.getByText("Azul (inv-4) – weitergegeben → Bea — bestätigt"),
     ).toBeInTheDocument();
   });
 
@@ -156,7 +157,7 @@ describe("TransferSeries — Zielphase (#539)", () => {
     });
     expect(
       screen.getByText(
-        "Azul (Inv.-Nr. 4): zurückgegeben → Bea — unbestätigt, wartet auf Bea",
+        "Azul (inv-4) – zurückgegeben → Bea — unbestätigt, wartet auf Bea",
       ),
     ).toBeInTheDocument();
   });
@@ -243,7 +244,7 @@ describe("TransferSeries — An Anonymen Meeple weitergeben (#540)", () => {
     });
     expect(
       screen.getByText(
-        "Azul (Inv.-Nr. 4): weitergegeben → Anonymer Meeple (Max (Gast))",
+        "Azul (inv-4) – weitergegeben → Anonymer Meeple (Max (Gast))",
       ),
     ).toBeInTheDocument();
   });
@@ -275,7 +276,7 @@ describe("TransferSeries — An Anonymen Meeple weitergeben (#540)", () => {
 
     expect(
       screen.getByText(
-        'Azul (Inv.-Nr. 4): Sammelkonto "Anonymer Meeple" fehlt — bitte den Seed erneut ausführen.',
+        'Azul (inv-4) – Sammelkonto "Anonymer Meeple" fehlt — bitte den Seed erneut ausführen.',
       ),
     ).toBeInTheDocument();
   });

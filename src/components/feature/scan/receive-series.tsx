@@ -39,16 +39,15 @@ export function ReceiveSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
   useImperativeHandle(ref, () => ({ handleCode: series.handleCode }));
 
   return (
-    <div className="flex flex-col gap-3">
+    <ScanSeriesLog
+      series={series}
+      countLabel={(count) => `${spieleCount(count)} erhalten`}
+      emptyHint="Noch nichts gescannt."
+    >
       <p className="text-muted-foreground text-sm">
         Scanne nacheinander alle Spiele, die du bekommst. Jedes wird sofort
         bestätigt auf dich gebucht.
       </p>
-      <ScanSeriesLog
-        series={series}
-        countLabel={(count) => `${spieleCount(count)} erhalten`}
-        emptyHint="Noch nichts gescannt."
-      />
-    </div>
+    </ScanSeriesLog>
   );
 }

@@ -60,17 +60,21 @@ export function MarkSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
     const result = await markUnitForCompletenessCheck(unit.id);
     series.log(
       result.error
-        ? { tone: "error", text: `${unit.label}: ${result.error}` }
+        ? { tone: "error", text: `${unit.label} – ${result.error}` }
         : {
             tone: "success",
-            text: `${unit.label}: ${spieleCount(result.count ?? 0)} markiert`,
+            text: `${unit.label} – ${spieleCount(result.count ?? 0)} markiert`,
             counts: result.count,
           },
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <ScanSeriesLog
+      series={series}
+      countLabel={(count) => `${spieleCount(count)} markiert`}
+      emptyHint="Noch nichts gescannt."
+    >
       <p className="text-muted-foreground text-sm">
         Scanne Spiele, die auf Vollständigkeit geprüft werden sollen — oder eine
         Einheit, um alle Spiele darin zu markieren.
@@ -96,11 +100,6 @@ export function MarkSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
           </div>
         </div>
       )}
-      <ScanSeriesLog
-        series={series}
-        countLabel={(count) => `${spieleCount(count)} markiert`}
-        emptyHint="Noch nichts gescannt."
-      />
-    </div>
+    </ScanSeriesLog>
   );
 }

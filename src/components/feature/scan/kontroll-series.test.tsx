@@ -38,6 +38,7 @@ const { CheckSeries } = await import("./check-series");
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -78,7 +79,7 @@ describe("MarkSeries — Kontrolle anfordern (#563)", () => {
 
     expect(requestCompletenessCheckMock).toHaveBeenCalledWith("c1");
     expect(
-      screen.getByText("Catan (Inv.-Nr. 1): zur Kontrolle markiert"),
+      screen.getByText("Catan (inv-1) – zur Kontrolle markiert"),
     ).toBeInTheDocument();
     expect(screen.getByText("1 Spiel markiert")).toBeInTheDocument();
   });
@@ -97,7 +98,7 @@ describe("MarkSeries — Kontrolle anfordern (#563)", () => {
     await scan("inv-1");
 
     expect(
-      screen.getByText("Catan (Inv.-Nr. 1): bereits markiert"),
+      screen.getByText("Catan (inv-1) – bereits markiert"),
     ).toBeInTheDocument();
     expect(screen.getByText("0 Spiele markiert")).toBeInTheDocument();
   });
@@ -124,7 +125,7 @@ describe("MarkSeries — Kontrolle anfordern (#563)", () => {
     await click("Alle markieren");
 
     expect(markUnitMock).toHaveBeenCalledWith("unit-1");
-    expect(screen.getByText("Kiste A: 5 Spiele markiert")).toBeInTheDocument();
+    expect(screen.getByText("Kiste A – 5 Spiele markiert")).toBeInTheDocument();
     expect(screen.getByText("5 Spiele markiert")).toBeInTheDocument();
   });
 
@@ -159,7 +160,7 @@ describe("CheckSeries — Kontrollieren (#563)", () => {
     await click("prüfbogen-Catan");
 
     expect(
-      screen.getByText("Catan (Inv.-Nr. 1): Prüfbogen gespeichert"),
+      screen.getByText("Catan (inv-1) – Prüfbogen gespeichert"),
     ).toBeInTheDocument();
     expect(screen.getByText("1 Spiel kontrolliert")).toBeInTheDocument();
   });

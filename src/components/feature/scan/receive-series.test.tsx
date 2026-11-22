@@ -58,6 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.clearAllMocks();
   vi.useRealTimers();
 });
@@ -75,12 +76,8 @@ describe("ReceiveSeries (Modus Erhalten, #538)", () => {
     await scan("inv-1");
     await scan("inv-2");
 
-    expect(
-      screen.getByText("Catan (Inv.-Nr. 1): ausgeliehen"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Catan (Inv.-Nr. 2): übernommen"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Catan (inv-1) – ausgeliehen")).toBeInTheDocument();
+    expect(screen.getByText("Catan (inv-2) – übernommen")).toBeInTheDocument();
     expect(screen.getByText("2 Spiele erhalten")).toBeInTheDocument();
     expect(
       screen.getAllByRole("link", { name: "Zum Exemplar →" })[0],
@@ -98,7 +95,7 @@ describe("ReceiveSeries (Modus Erhalten, #538)", () => {
     await scan("inv-1");
 
     expect(
-      screen.getByText("Catan (Inv.-Nr. 1): hast du schon"),
+      screen.getByText("Catan (inv-1) – hast du schon"),
     ).toBeInTheDocument();
     expect(screen.getByText("0 Spiele erhalten")).toBeInTheDocument();
   });
@@ -129,7 +126,7 @@ describe("ReceiveSeries (Modus Erhalten, #538)", () => {
     await scan("inv-1");
 
     expect(
-      screen.getByText("Catan (Inv.-Nr. 1): Deinventarisiert."),
+      screen.getByText("Catan (inv-1) – Deinventarisiert."),
     ).toBeInTheDocument();
   });
 
@@ -209,9 +206,64 @@ describe("ReceiveSeries (Modus Erhalten, #538)", () => {
 
     expect(scanReceiveGameMock).toHaveBeenCalledWith("b");
     expect(
-      await screen.findByText(
-        "Catan (leicht bespielt) (Inv.-Nr. 2): ausgeliehen",
-      ),
+      await screen.findByText("Catan (leicht bespielt) (inv-2) – ausgeliehen"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("ReceiveSeries — persistentes Log (#574)", () => {
+  it("keeps the log across a reload but restarts the counter", async () => {
+    const scan = renderSeries();
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "games",
+      games: [copy("a", 1)],
+    });
+    scanReceiveGameMock.mockResolvedValueOnce(outcome("a", 1));
+    await scan("inv-1");
+    cleanup();
+
+    renderSeries();
+
+    expect(
+      await screen.findByText("Catan (inv-1) – ausgeliehen"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("0 Spiele erhalten")).toBeInTheDocument();
+  });
+
+  it("drops entries older than three months when the page loads", async () => {
+    const now = Date.now();
+    localStorage.setItem(
+      "scan-log:receive",
+      JSON.stringify([
+        { key: "neu", at: now - 1000, tone: "success", text: "Frisch" },
+        {
+          key: "alt",
+          at: now - 100 * 24 * 60 * 60 * 1000,
+          tone: "success",
+          text: "Abgelaufen",
+        },
+      ]),
+    );
+
+    renderSeries();
+
+    expect(await screen.findByText("Frisch")).toBeInTheDocument();
+    expect(screen.queryByText("Abgelaufen")).not.toBeInTheDocument();
+  });
+
+  it("does not offer a re-trigger, only the link to the copy", async () => {
+    const scan = renderSeries();
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "games",
+      games: [copy("a", 1)],
+    });
+    scanReceiveGameMock.mockResolvedValueOnce(outcome("a", 1));
+    await scan("inv-1");
+
+    const entry = screen.getByText("Catan (inv-1) – ausgeliehen");
+    expect(entry.closest("button")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Zum Exemplar →" }),
     ).toBeInTheDocument();
   });
 });

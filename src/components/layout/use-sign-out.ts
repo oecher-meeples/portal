@@ -17,6 +17,8 @@ export function useSignOut() {
     // hier zu räumen, würde die nächste Person am selben Gerät (auch ein
     // anderes Meeple) im zuletzt angehefteten Sidebar-Zustand starten bzw.
     // eine für die vorige Person geschlossene Notification nie mehr sehen.
+    // Räumt auch die Scan-Logs (`scan-log:*`, #574) — wer das hier auf
+    // einzelne Schlüssel einschränkt, muss sie ausdrücklich mitlöschen.
     localStorage.clear();
     router.push("/");
     router.refresh();

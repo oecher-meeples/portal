@@ -1,6 +1,6 @@
 "use client";
 
-import { useImperativeHandle, useState, type Ref } from "react";
+import { useImperativeHandle, useState, type ReactNode, type Ref } from "react";
 import { Button } from "@/components/ui/button";
 import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
 import { ScanSeriesLog } from "@/components/feature/scan/scan-series-log";
@@ -77,9 +77,19 @@ export function CheckSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
     );
   }
 
+  const log = (children: ReactNode) => (
+    <ScanSeriesLog
+      series={series}
+      countLabel={(count) => `${spieleCount(count)} kontrolliert`}
+      emptyHint="Noch nichts kontrolliert."
+    >
+      {children}
+    </ScanSeriesLog>
+  );
+
   if (open) {
-    return (
-      <div className="flex flex-col gap-3">
+    return log(
+      <>
         {!open.needsCompletenessCheck && (
           <p className="bg-primary/10 rounded-md p-2 text-sm">
             War nicht zur Kontrolle markiert.
@@ -99,12 +109,12 @@ export function CheckSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
         >
           Abbrechen
         </Button>
-      </div>
+      </>,
     );
   }
 
-  return (
-    <div className="flex flex-col gap-3">
+  return log(
+    <>
       <p className="text-muted-foreground text-sm">
         Scanne ein Spiel, um es mit dem Prüfbogen zu kontrollieren — oder eine
         Einheit, um ihre markierten Spiele zu sehen.
@@ -131,11 +141,6 @@ export function CheckSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
           ))}
         </div>
       )}
-      <ScanSeriesLog
-        series={series}
-        countLabel={(count) => `${spieleCount(count)} kontrolliert`}
-        emptyHint="Noch nichts kontrolliert."
-      />
-    </div>
+    </>,
   );
 }

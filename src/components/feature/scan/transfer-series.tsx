@@ -190,7 +190,7 @@ export function TransferSeries({
     });
     series.log(
       result.error
-        ? { tone: "error", text: `${targetName(unit)}: ${result.error}` }
+        ? { tone: "error", text: `${targetName(unit)} – ${result.error}` }
         : {
             tone: "success",
             text: `Einheit ${targetName(unit)} → ${targetName(into)} eingelagert`,
@@ -224,7 +224,11 @@ export function TransferSeries({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <ScanSeriesLog
+      series={series}
+      countLabel={(count) => `${spieleCount(count)} übergeben`}
+      emptyHint={target ? "Jetzt Spiele scannen." : "Noch kein Ziel."}
+    >
       {target ? (
         <div className="bg-primary/10 flex flex-wrap items-center justify-between gap-2 rounded-md p-3 text-sm">
           <span>
@@ -340,12 +344,6 @@ export function TransferSeries({
           </div>
         </div>
       )}
-
-      <ScanSeriesLog
-        series={series}
-        countLabel={(count) => `${spieleCount(count)} übergeben`}
-        emptyHint={target ? "Jetzt Spiele scannen." : "Noch kein Ziel."}
-      />
-    </div>
+    </ScanSeriesLog>
   );
 }
