@@ -4,7 +4,61 @@
 # that pull pre-built images from GHCR.
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Image-Optimizer-Allowlist wird beim Build festgelegt (#521).
+        S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-}
 
   seaweedfs:
     build: ./docker/seaweedfs
+
+  # busybox crond calls the bearer-protected /api/cron/* routes on the
+  # schedules from docker/cron/crontab against the app service on app:3000.
+  cron-sidecar:
+    build: ./docker/cron
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      # Same variable the app service reads — one secret, not a second one.
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET must be set}
+      APP_URL: ${CRON_APP_URL:-http://app:3000}
+
+  # OPTIONAL TLS-terminating reverse proxy with automatic Let's Encrypt
+  # certificates (docker/caddy/Caddyfile). Only started with
+  #   docker compose --profile with-proxy up -d
+  # Operators who already run a reverse proxy (nginx, Traefik, …) skip the
+  # profile and point their proxy at 127.0.0.1:3000 (app) and
+  # 127.0.0.1:8333 (SeaweedFS, the S3_PUBLIC_ENDPOINT host) instead.
+  # Both domains need DNS records pointing at this host, and ports 80/443
+  # must be reachable from the internet for the ACME challenge.
+  caddy:
+    image: caddy:2
+    profiles: ["with-proxy"]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      # Not `:?` — compose interpolates the whole file even when the profile
+      # is inactive, which would break `docker compose up` without a proxy.
+      # Required whenever the profile is used (Caddy fails to start without).
+      APP_DOMAIN: ${APP_DOMAIN:-}
+      S3_DOMAIN: ${S3_DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates + ACME account — losing this means re-issuing (and
+      # possibly hitting Let's Encrypt rate limits).
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:
