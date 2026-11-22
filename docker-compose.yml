@@ -188,4 +188,3 @@ volumes:
   app-image-cache:
   postgres-data:
   seaweedfs-data:
-
