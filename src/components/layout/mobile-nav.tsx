@@ -60,7 +60,7 @@ export function MobileNav({
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="bg-sidebar text-sidebar-foreground fixed inset-x-0 bottom-0 z-[60] flex h-16 border-t md:hidden"
+      className="bg-sidebar text-sidebar-foreground focus-mode:hidden fixed inset-x-0 bottom-0 z-[60] flex h-16 border-t md:hidden"
     >
       {groups.map((group, index) => {
         const key = group.title ?? "root";

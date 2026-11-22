@@ -121,6 +121,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
 | `use-media-query.ts` | `useMediaQuery(query)` live per `matchMedia`; `useIsMobile()` = unterhalb `md`, SSR-sicher (startet mit Desktop-Variante, #585) |
+| `use-focus-mode.ts` | Fachfreier Fokusmodus-Kanal: setzt `data-focus-mode` am `<html>` (nur `< md`, Reset bei Unmount/Breakpoint-Wechsel); Header, MobileNav und App-Shell reagieren per `focus-mode:`-Variante (`globals.css`), #587 |
 | `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
