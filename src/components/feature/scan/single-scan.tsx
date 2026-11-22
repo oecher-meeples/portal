@@ -21,11 +21,12 @@ import { toCopyChoices, type CopyChoice } from "@/lib/ludothek/scanner-modes";
 import {
   formatShortIdSlug,
   shortIdFromUnitCode,
+  unitCreatePath,
 } from "@/lib/short-id/short-id";
 
 type ViewState =
   | { kind: "idle" }
-  | { kind: "unknown"; raw: string }
+  | { kind: "unknown"; raw: string; unitCode?: string }
   | { kind: "select-game"; games: CopyChoice[] }
   | { kind: "game"; gameCopyId: string }
   | {
@@ -35,6 +36,11 @@ type ViewState =
       label: string;
       contents: string[];
     };
+
+function unitCreateHref(unitCode: string) {
+  const shortId = shortIdFromUnitCode(unitCode);
+  return shortId ? unitCreatePath(shortId) : "/admin/einheiten";
+}
 
 /** „Zuletzt gescannt" (#574): Rohcode zum erneuten Auflösen + Anzeigename. */
 type RecentScan = ScanLogEntry & { raw: string; label: string };
@@ -89,7 +95,11 @@ export function SingleScan({
 
   function handleResolved(resolved: ResolvedScan) {
     if (resolved.kind === "unknown") {
-      setState({ kind: "unknown", raw: resolved.raw });
+      setState({
+        kind: "unknown",
+        raw: resolved.raw,
+        unitCode: resolved.unitCode,
+      });
       return;
     }
     // #465: Meeple-QR-Code hat im Einzel-Scan keine Bedeutung — nur die
@@ -137,11 +147,22 @@ export function SingleScan({
 
         {state.kind === "unknown" && (
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium">Nicht im Bestand</p>
-            <p className="text-muted-foreground text-sm">
-              Code: <span className="font-mono">{state.raw}</span>
+            <p className="text-sm font-medium">
+              {state.unitCode ? "Einheit nicht angelegt" : "Nicht im Bestand"}
             </p>
-            {canManageGames && (
+            <p className="text-muted-foreground text-sm">
+              Code:{" "}
+              <span className="font-mono">{state.unitCode ?? state.raw}</span>
+            </p>
+            {canManageGames && state.unitCode && (
+              <Link
+                href={unitCreateHref(state.unitCode)}
+                className="text-primary text-sm hover:underline"
+              >
+                Einheit jetzt anlegen →
+              </Link>
+            )}
+            {canManageGames && !state.unitCode && (
               <Link
                 href={`/admin/bestand?ean=${encodeURIComponent(state.raw)}`}
                 className="text-primary text-sm hover:underline"

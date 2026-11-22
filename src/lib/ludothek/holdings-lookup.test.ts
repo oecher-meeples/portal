@@ -163,12 +163,15 @@ describe("getGameZustand", () => {
 });
 
 describe("resolveScannedCode", () => {
-  it("resolves an unknown unit code to unknown", async () => {
+  it("resolves an unknown unit code to unknown, keeping the unit code", async () => {
     prismaMock.storageUnit.findUnique.mockResolvedValue(null);
 
-    expect(await resolveScannedCode("OM-BOX-9999")).toEqual({
+    expect(
+      await resolveScannedCode("https://short.oecher-meeples.org/id/box-9999"),
+    ).toEqual({
       kind: "unknown",
-      raw: "OM-BOX-9999",
+      raw: "https://short.oecher-meeples.org/id/box-9999",
+      unitCode: "OM-BOX-9999",
     });
   });
 

@@ -53,6 +53,12 @@ export function copyDetailPath(boardGameSlug: string, inventoryNumber: number) {
   return `/ludothek/${boardGameSlug}/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
 }
 
+/** Anlegen-Formular für ein gescanntes, noch unbekanntes Einheiten-Etikett
+ * (#549) — Ziel des Routers und des Einzel-Scans. */
+export function unitCreatePath(shortId: UnitShortId): string {
+  return `/admin/einheiten?neu=${formatShortIdSlug(shortId)}`;
+}
+
 /** In-App-Pfad des Routers (`/id/[slug]`) — wer einen gescannten Code
  * auflösen will, navigiert hierhin statt die Regeln aus `resolveShortId()`
  * nachzubauen. */

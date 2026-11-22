@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import type { ScanModeHandle } from "./use-scan-series";
 
 const scanResolveCodeMock = vi.fn();
@@ -100,19 +100,68 @@ describe("ReceiveSeries (Modus Erhalten, #538)", () => {
     expect(screen.getByText("0 Spiele erhalten")).toBeInTheDocument();
   });
 
-  it("only hints at a unit or Meeple scan, without booking", async () => {
+  it("only hints at an empty unit or a Meeple scan, without booking", async () => {
     const scan = renderSeries();
     scanResolveCodeMock
-      .mockResolvedValueOnce({ kind: "unit", unit: { id: "u" }, contents: [] })
+      .mockResolvedValueOnce({
+        kind: "unit",
+        unit: { id: "u", label: "Kiste A" },
+        contents: [],
+      })
       .mockResolvedValueOnce({ kind: "meeple", meeple: { id: "m" } });
 
     await scan("OM-BOX-0001");
     await scan("meeple-1");
 
+    expect(screen.getByText("Kiste A ist leer.")).toBeInTheDocument();
     expect(
-      screen.getAllByText("Im Modus Erhalten nur Spiele scannen."),
-    ).toHaveLength(2);
+      screen.getByText("Im Modus Erhalten nur Spiele oder Einheiten scannen."),
+    ).toBeInTheDocument();
     expect(scanReceiveGameMock).not.toHaveBeenCalled();
+  });
+
+  it("asks 'Alle Spiele erhalten?' for a scanned unit and books every game", async () => {
+    const scan = renderSeries();
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "unit",
+      unit: { id: "u", label: "Kiste A" },
+      contents: [copy("a", 1), copy("b", 2)],
+    });
+    scanReceiveGameMock
+      .mockResolvedValueOnce(outcome("a", 1))
+      .mockResolvedValueOnce({ error: "Deinventarisiert." });
+
+    await scan("OM-BOX-0001");
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Alle Spiele erhalten?");
+    expect(scanReceiveGameMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      within(dialog).getByRole("button", { name: "Alle erhalten" }).click();
+    });
+
+    expect(
+      await screen.findByText("Catan (inv-1) – ausgeliehen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Catan (inv-2) – Deinventarisiert."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("1 Spiel erhalten")).toBeInTheDocument();
+  });
+
+  it("names an unknown unit label instead of 'Nicht im Bestand'", async () => {
+    const scan = renderSeries();
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "unknown",
+      raw: "https://short.oecher-meeples.org/id/box-0002",
+      unitCode: "OM-BOX-0002",
+    });
+
+    await scan("https://short.oecher-meeples.org/id/box-0002");
+
+    expect(
+      screen.getByText("Einheit OM-BOX-0002 ist nicht angelegt."),
+    ).toBeInTheDocument();
   });
 
   it("logs a booking error with the game's title", async () => {

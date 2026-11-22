@@ -1,14 +1,21 @@
 "use client";
 
-import { useImperativeHandle, type Ref } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 import { scanReceiveGame } from "@/lib/ludothek/scanner-actions";
 import {
   RECEIVE_OUTCOME_LABELS,
   spieleCount,
+  toCopyChoices,
+  type CopyChoice,
 } from "@/lib/ludothek/scanner-modes";
-import { ScanSeriesLog } from "@/components/feature/scan/scan-series-log";
+import {
+  ScanSeriesLog,
+  UnitBulkDialog,
+  type UnitBulkPrompt,
+} from "@/components/feature/scan/scan-series-log";
 import {
   resultBooking,
+  unknownScanText,
   useScanSeries,
   type ScanModeHandle,
 } from "@/components/feature/scan/use-scan-series";
@@ -17,8 +24,13 @@ import {
  * Modus „Erhalten" (#538): jedes gescannte Spiel landet bestätigt bei mir —
  * aus einer Einheit ausgeliehen, von einer anderen Person übernommen oder
  * eine offene Übergabe bestätigt. Die Buchung wählt `scanReceiveGame`.
+ * Eine gescannte Einheit bietet nach Rückfrage an, alle Spiele darin zu
+ * erhalten.
  */
 export function ReceiveSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
+  const [unitPrompt, setUnitPrompt] = useState<
+    (UnitBulkPrompt & { games: CopyChoice[] }) | null
+  >(null);
   const series = useScanSeries({
     mode: "receive",
     book: async (game) =>
@@ -27,13 +39,26 @@ export function ReceiveSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
         tone: outcome === "already-mine" ? "info" : "success",
         counts: outcome === "already-mine" ? 0 : 1,
       })),
-    onOtherScan: (resolved) => ({
-      tone: "info",
-      text:
-        resolved.kind === "unknown"
-          ? `Nicht im Bestand: ${resolved.raw}`
-          : "Im Modus Erhalten nur Spiele scannen.",
-    }),
+    onOtherScan: (resolved) => {
+      if (resolved.kind === "unit") {
+        if (resolved.contents.length === 0) {
+          return { tone: "info", text: `${resolved.unit.label} ist leer.` };
+        }
+        setUnitPrompt({
+          label: resolved.unit.label,
+          count: resolved.contents.length,
+          games: toCopyChoices(resolved.contents),
+        });
+        return null;
+      }
+      return {
+        tone: "info",
+        text:
+          resolved.kind === "unknown"
+            ? unknownScanText(resolved)
+            : "Im Modus Erhalten nur Spiele oder Einheiten scannen.",
+      };
+    },
   });
 
   useImperativeHandle(ref, () => ({ handleCode: series.handleCode }));
@@ -48,6 +73,12 @@ export function ReceiveSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
         Scanne nacheinander alle Spiele, die du bekommst. Jedes wird sofort
         bestätigt auf dich gebucht.
       </p>
+      <UnitBulkDialog
+        unit={unitPrompt}
+        verb="erhalten"
+        onConfirm={() => series.bookAll(unitPrompt?.games ?? [])}
+        onClose={() => setUnitPrompt(null)}
+      />
     </ScanSeriesLog>
   );
 }

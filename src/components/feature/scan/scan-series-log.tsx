@@ -2,10 +2,11 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import type { CopyChoice } from "@/lib/ludothek/scanner-modes";
+import { spieleCount, type CopyChoice } from "@/lib/ludothek/scanner-modes";
 import type {
   ScanSeries,
   SeriesTone,
@@ -61,6 +62,47 @@ export function CopyChoiceList({
         </Button>
       )}
     </div>
+  );
+}
+
+/** Gescannte Einheit, deren Spiele gesammelt gebucht werden können. */
+export type UnitBulkPrompt = { label: string; count: number };
+
+/**
+ * Rückfrage „Alle Spiele <verb>?" nach dem Scan einer Einheit (Erhalten,
+ * Kontrolle anfordern). Betrifft nur die Spiele direkt in der Einheit, nicht
+ * die in Unterkisten. `onConfirm` bucht und loggt selbst; Fehler einzelner
+ * Spiele landen im Log, der Dialog schließt danach in jedem Fall.
+ */
+export function UnitBulkDialog({
+  unit,
+  verb,
+  onConfirm,
+  onClose,
+}: {
+  unit: UnitBulkPrompt | null;
+  verb: string;
+  onConfirm: () => Promise<void>;
+  onClose: () => void;
+}) {
+  return (
+    <ActionDialog
+      open={unit !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={`Alle Spiele ${verb}?`}
+      description={
+        unit &&
+        `${spieleCount(unit.count)} direkt in ${unit.label}. Spiele in Unterkisten bleiben unverändert.`
+      }
+      submitLabel={`Alle ${verb}`}
+      pendingLabel="Buche …"
+      action={async () => {
+        await onConfirm();
+        return {};
+      }}
+    />
   );
 }
 

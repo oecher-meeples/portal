@@ -4,6 +4,7 @@ import {
   formatShortIdSlug,
   parseShortId,
   unitCodeFromShortId,
+  unitCreatePath,
   type ShortId,
   type UnitShortId,
 } from "@/lib/short-id/short-id";
@@ -65,7 +66,7 @@ async function resolveUnit(
   });
   if (unit) return redirectTo(`/ludothek?einheit=${slug}`);
   return viewer.canManageGames
-    ? redirectTo(`/admin/einheiten?neu=${slug}`)
+    ? redirectTo(unitCreatePath(shortId))
     : NOT_FOUND;
 }
 

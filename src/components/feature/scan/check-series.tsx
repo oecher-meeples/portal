@@ -6,6 +6,7 @@ import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
 import { ScanSeriesLog } from "@/components/feature/scan/scan-series-log";
 import {
   gameBooking,
+  unknownScanText,
   useScanSeries,
   type ScanModeHandle,
 } from "@/components/feature/scan/use-scan-series";
@@ -48,7 +49,7 @@ export function CheckSeries({ ref }: { ref: Ref<ScanModeHandle> }) {
         tone: "info",
         text:
           resolved.kind === "unknown"
-            ? `Nicht im Bestand: ${resolved.raw}`
+            ? unknownScanText(resolved)
             : "Hier nur Spiele oder Einheiten scannen.",
       };
     },

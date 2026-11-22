@@ -60,6 +60,16 @@ export function gameBooking(
   };
 }
 
+/** Unbekannter Code: ein nicht angelegtes Einheiten-Etikett heißt so, statt
+ * wie ein fehlendes Spiel „Nicht im Bestand" zu melden. */
+export function unknownScanText(
+  resolved: Extract<ResolvedScan, { kind: "unknown" }>,
+): string {
+  return resolved.unitCode
+    ? `Einheit ${resolved.unitCode} ist nicht angelegt.`
+    : `Nicht im Bestand: ${resolved.raw}`;
+}
+
 /** Baut den Log-Eintrag aus einem Action-Ergebnis (`{ error }` oder Erfolg). */
 export function resultBooking<V>(
   game: CopyChoice,
@@ -167,6 +177,15 @@ export function useScanSeries({
     await exclusive(() => bookAndLog(game));
   }
 
+  /** Alle Spiele einer gescannten Einheit nacheinander buchen — jedes
+   * bekommt seinen eigenen Log-Eintrag, ein Fehler stoppt die übrigen nicht. */
+  async function bookAll(games: CopyChoice[]) {
+    setChoice(null);
+    await exclusive(async () => {
+      for (const game of games) await bookAndLog(game);
+    });
+  }
+
   return {
     handleCode,
     entries,
@@ -174,6 +193,7 @@ export function useScanSeries({
     log,
     choice,
     pick,
+    bookAll,
     cancelChoice: () => setChoice(null),
     pending,
     error,

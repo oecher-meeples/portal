@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { createRef, type ComponentType, type Ref } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ScanModeHandle } from "./use-scan-series";
 
 const scanResolveCodeMock = vi.fn();
@@ -113,23 +113,39 @@ describe("MarkSeries — Kontrolle anfordern (#563)", () => {
     markUnitMock.mockResolvedValueOnce({ success: true, count: 5 });
 
     await scan(UNIT.code);
-    expect(
-      screen.getByText(
-        (_, node) =>
-          node?.tagName === "P" &&
-          Boolean(node.textContent?.startsWith("Alle 5 Spiele in Kiste A")),
-      ),
-    ).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("Alle Spiele zur Kontrolle anfordern?");
+    expect(dialog).toHaveTextContent("5 Spiele direkt in Kiste A");
     expect(markUnitMock).not.toHaveBeenCalled();
 
-    await click("Alle markieren");
+    await click("Alle zur Kontrolle anfordern");
 
     expect(markUnitMock).toHaveBeenCalledWith("unit-1");
-    expect(screen.getByText("Kiste A – 5 Spiele markiert")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Kiste A – 5 Spiele markiert"),
+    ).toBeInTheDocument();
     expect(screen.getByText("5 Spiele markiert")).toBeInTheDocument();
   });
 
-  it("marks nothing when the unit prompt is cancelled", async () => {
+  it("marks nothing when the unit dialog is closed", async () => {
+    const scan = renderMode(MarkSeries);
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "unit",
+      unit: UNIT,
+      contents: [copy("c1", "Spiel", false)],
+    });
+
+    await scan(UNIT.code);
+    await screen.findByRole("dialog");
+    await click("Schließen");
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(markUnitMock).not.toHaveBeenCalled();
+  });
+
+  it("only hints at an empty unit instead of asking", async () => {
     const scan = renderMode(MarkSeries);
     scanResolveCodeMock.mockResolvedValueOnce({
       kind: "unit",
@@ -138,9 +154,9 @@ describe("MarkSeries — Kontrolle anfordern (#563)", () => {
     });
 
     await scan(UNIT.code);
-    await click("Abbrechen");
 
-    expect(markUnitMock).not.toHaveBeenCalled();
+    expect(screen.getByText("Kiste A ist leer.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 

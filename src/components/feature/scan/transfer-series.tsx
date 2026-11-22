@@ -21,11 +21,14 @@ import type { ScannerTarget } from "@/lib/ludothek/scanner-dispatch";
 import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple-name";
 import {
   spieleCount,
+  toCopyChoices,
   TRANSFER_OUTCOME_LABELS,
+  type CopyChoice,
 } from "@/lib/ludothek/scanner-modes";
 import { ScanSeriesLog } from "@/components/feature/scan/scan-series-log";
 import {
   resultBooking,
+  unknownScanText,
   useScanSeries,
   type ScanModeHandle,
   type SeriesBooking,
@@ -100,6 +103,9 @@ export function TransferSeries({
   const [target, setTarget] = useState<Target | null>(null);
   const [intent, setIntent] = useState<Intent>("handover");
   const [pendingTarget, setPendingTarget] = useState<Target | null>(null);
+  /** Inhalt einer gescannten Einheit, solange die Rückfrage offen ist —
+   * „Alle Spiele übergeben" bucht genau diese an das aktuelle Ziel. */
+  const [pendingContents, setPendingContents] = useState<CopyChoice[]>([]);
   const [units, setUnits] = useState<UnitOption[] | null>(null);
   const [externalName, setExternalName] = useState("");
   const [meeples, setMeeples] = useState<
@@ -133,7 +139,7 @@ export function TransferSeries({
     },
     onOtherScan: async (resolved) => {
       if (resolved.kind === "unknown") {
-        return info(`Nicht im Bestand: ${resolved.raw}`);
+        return info(unknownScanText(resolved));
       }
       const next: Target =
         resolved.kind === "unit"
@@ -147,6 +153,9 @@ export function TransferSeries({
       if (!target) return chooseTarget(next);
       if (sameTarget(target, next)) return info("Das ist bereits das Ziel.");
       setPendingTarget(next);
+      setPendingContents(
+        resolved.kind === "unit" ? toCopyChoices(resolved.contents) : [],
+      );
       return null;
     },
   });
@@ -181,6 +190,11 @@ export function TransferSeries({
   async function applyTarget(next: Target) {
     const problem = await chooseTarget(next);
     if (problem) series.log(problem);
+  }
+
+  async function transferAll(games: CopyChoice[]) {
+    setPendingTarget(null);
+    await series.bookAll(games);
   }
 
   async function einlagern(unit: UnitTarget, into: UnitTarget) {
@@ -322,7 +336,19 @@ export function TransferSeries({
             Ziel ist <strong>{targetName(target)}</strong>.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => void applyTarget(pendingTarget)}>
+            {pendingContents.length > 0 && (
+              <Button
+                size="sm"
+                onClick={() => void transferAll(pendingContents)}
+              >
+                Alle {spieleCount(pendingContents.length)} übergeben
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant={pendingContents.length > 0 ? "outline" : "default"}
+              onClick={() => void applyTarget(pendingTarget)}
+            >
               Ziel wechseln
             </Button>
             {pendingTarget.kind === "unit" && target.kind === "unit" && (
