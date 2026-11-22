@@ -248,23 +248,23 @@ describe("ScanView — Moduswahl (#538)", () => {
           "Erhalten",
           "Übergeben",
           "Einzel-Scan",
-          "Zur Kontrolle markieren",
+          "Kontrolle anfordern",
           "Kontrollieren",
         ].includes(label ?? ""),
       );
 
   it("offers the Kontroll-Modi only with games:manage", () => {
     render(<ScanView canManageGames={false} initialMode="einzel" />);
-    expect(modeLabels()).toEqual(["Erhalten", "Übergeben", "Einzel-Scan"]);
+    expect(modeLabels()).toEqual(["Einzel-Scan", "Erhalten", "Übergeben"]);
     cleanup();
 
     render(<ScanView canManageGames initialMode="einzel" />);
     expect(modeLabels()).toEqual([
+      "Einzel-Scan",
       "Erhalten",
       "Übergeben",
-      "Einzel-Scan",
-      "Zur Kontrolle markieren",
       "Kontrollieren",
+      "Kontrolle anfordern",
     ]);
   });
 

@@ -11,11 +11,11 @@ import type {
  * zurück — kein `localStorage`.
  */
 export const SCANNER_PAGE_MODES = [
+  "einzel",
   "erhalten",
   "uebergeben",
-  "einzel",
-  "markieren",
   "kontrollieren",
+  "markieren",
 ] as const;
 export type ScannerPageMode = (typeof SCANNER_PAGE_MODES)[number];
 
@@ -23,7 +23,7 @@ export const SCANNER_PAGE_MODE_LABELS: Record<ScannerPageMode, string> = {
   erhalten: "Erhalten",
   uebergeben: "Übergeben",
   einzel: "Einzel-Scan",
-  markieren: "Zur Kontrolle markieren",
+  markieren: "Kontrolle anfordern",
   // Früher „Prüfbogen" (#563).
   kontrollieren: "Kontrollieren",
 };

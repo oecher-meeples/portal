@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { StatTile } from "@/components/ui/stat-tile";
+import { StatTile, StatValue } from "@/components/ui/stat-tile";
 import {
   MitgliederTable,
   type MeepleRow,
@@ -212,7 +212,7 @@ export function AdminMitgliederView({
               href="#vereinsmitglieder"
               className="hover:text-foreground flex flex-col items-center justify-center text-center"
             >
-              <p className="font-serif text-3xl font-bold">{members.length}</p>
+              <StatValue className="mt-0">{members.length}</StatValue>
               <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
             </a>
           </div>

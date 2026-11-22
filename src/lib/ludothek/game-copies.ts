@@ -283,7 +283,7 @@ export async function deinventoriseGameCopy(
 }
 
 /** Markiert ein Exemplar zur Kontrolle. `alreadyMarked` meldet ein schon
- * markiertes Exemplar (Scanner-Modus „Zur Kontrolle markieren", #563:
+ * markiertes Exemplar (Scanner-Modus „Kontrolle anfordern", #563:
  * Hinweis statt Fehler). */
 export async function requestCompletenessCheck(id: string) {
   const user = (await findActionActor("games:manage"))?.user;

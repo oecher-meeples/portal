@@ -5,6 +5,7 @@ import { SurveyDeadlineBanner } from "@/components/entities/survey-deadline-bann
 import { CoverMedia } from "@/components/ui/cover-media";
 import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "@/components/ui/markdown-content";
+import { PageTitle } from "@/components/ui/page-title";
 import { ShareButton } from "@/components/ui/share-button";
 import { formatDate } from "@/lib/utils/format";
 import { getRequestOrigin } from "@/lib/utils/request-origin";
@@ -60,9 +61,7 @@ export async function PostDetailView({ item, canEdit }: PostDetailViewProps) {
           />
         )}
       </div>
-      <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-        {item.title}
-      </h1>
+      <PageTitle>{item.title}</PageTitle>
       <p className="text-muted-foreground text-sm">
         {formatDate(item.date)}
         {item.author && <> · {item.author}</>}

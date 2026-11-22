@@ -17,7 +17,7 @@ import { spieleCount } from "@/lib/ludothek/scanner-modes";
 type UnitPrompt = { id: string; label: string; count: number };
 
 /**
- * Modus „Zur Kontrolle markieren" (#563, nur `games:manage`): jedes
+ * Modus „Kontrolle anfordern" (#563, nur `games:manage`): jedes
  * gescannte Spiel wird zur Vollständigkeitskontrolle markiert. Eine
  * gescannte Einheit markiert nach Rückfrage alle Spiele, die direkt in ihr
  * liegen — Unterkisten nicht.

@@ -47,7 +47,7 @@ export function ExplainerListDialogTrigger({
             >
               <Search className="size-4" />
               {Boolean(badgeCount) && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center px-1 text-[10px]">
+                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center px-1 text-[11px]">
                   {badgeCount}
                 </Badge>
               )}

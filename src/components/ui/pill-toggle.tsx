@@ -26,7 +26,11 @@ export function PillToggle<T extends string>({
   return (
     <div
       className={cn(
-        "bg-muted/40 flex w-fit shrink-0 flex-wrap gap-1 rounded-full border p-1",
+        // Radius 1.25 rem statt `rounded-full`: einzeilig identisch (halbe
+        // Höhe), bricht die Pill-Reihe um (z. B. 5 Scanner-Modi auf < sm),
+        // wird daraus ein abgerundetes Rechteck statt eines Ovals, an dessen
+        // Rundung die Pills hinausragen.
+        "bg-muted/40 flex w-fit shrink-0 flex-wrap gap-1 rounded-[1.25rem] border p-1",
         compact ? "text-[clamp(0.6875rem,1.4vw,0.875rem)]" : "text-sm",
       )}
     >

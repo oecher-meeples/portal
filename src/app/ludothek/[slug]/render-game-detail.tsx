@@ -5,6 +5,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { Button } from "@/components/ui/button";
 import { CreateLfgDialog } from "@/components/feature/lfg/create-lfg-dialog";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
+import type { GameTitleAction } from "@/components/feature/ludothek/game-title-actions";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { hasPermission } from "@/lib/auth/permissions";
@@ -281,19 +282,24 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
       }
     : undefined;
 
-  const createLfgTrigger = (
-    <CreateLfgDialog
-      trigger={
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Plus className="size-4" />
-          Spielergesuch eröffnen
-        </Button>
-      }
-      defaultGameTitle={game.title}
-      defaultBoardGameId={game.boardGameId}
-      defaultMaxParticipants={game.maxPlayers ?? undefined}
-    />
-  );
+  const createLfgAction: GameTitleAction = {
+    key: "create-lfg",
+    label: "Spielergesuch eröffnen",
+    icon: <Plus />,
+    node: (
+      <CreateLfgDialog
+        trigger={
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Plus className="size-4" />
+            Spielergesuch eröffnen
+          </Button>
+        }
+        defaultGameTitle={game.title}
+        defaultBoardGameId={game.boardGameId}
+        defaultMaxParticipants={game.maxPlayers ?? undefined}
+      />
+    ),
+  };
 
   // Existiert bereits (mind.) eine Marktplatz-Anzeige für diesen Titel,
   // verlinkt der Button auf die vorgefilterte Übersicht statt auf eine
@@ -303,28 +309,42 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
     where: { boardGameId: game.boardGameId },
     select: { id: true },
   });
-  const marketListingSection = hasActiveMarketListing ? (
-    <Button
-      variant="outline"
-      size="sm"
-      className="gap-1.5"
-      render={<Link href={`/markt?suche=${encodeURIComponent(game.title)}`} />}
-    >
-      <Tag className="size-4" />
-      Wird gerade verkauft
-    </Button>
-  ) : (
-    <CreateMarketListingDialog
-      trigger={
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Tag className="size-4" />
-          Verkaufen
-        </Button>
+  const marketHref = `/markt?suche=${encodeURIComponent(game.title)}`;
+  const marketListingAction: GameTitleAction = hasActiveMarketListing
+    ? {
+        key: "market",
+        label: "Wird gerade verkauft",
+        icon: <Tag />,
+        href: marketHref,
+        node: (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            render={<Link href={marketHref} />}
+          >
+            <Tag className="size-4" />
+            Wird gerade verkauft
+          </Button>
+        ),
       }
-      initialTitle={game.title}
-      boardGameId={game.boardGameId}
-    />
-  );
+    : {
+        key: "market",
+        label: "Verkaufen",
+        icon: <Tag />,
+        node: (
+          <CreateMarketListingDialog
+            trigger={
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Tag className="size-4" />
+                Verkaufen
+              </Button>
+            }
+            initialTitle={game.title}
+            boardGameId={game.boardGameId}
+          />
+        ),
+      };
 
   return (
     <GameDetailView
@@ -338,8 +358,8 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
       copies={copyRows}
       canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
-      createLfgTrigger={createLfgTrigger}
-      marketListingSection={marketListingSection}
+      createLfgAction={createLfgAction}
+      marketListingAction={marketListingAction}
       traitTexts={traitTexts}
       selectedCopyId={selected?.id}
       selectedCopy={

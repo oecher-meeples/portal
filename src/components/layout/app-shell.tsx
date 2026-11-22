@@ -64,7 +64,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         realTier={realTier}
         permissions={permissions}
         flags={flags}
-        user={user ? { name: user.name } : null}
+        user={user && meeple ? { name: user.name, meepleId: meeple.id } : null}
       />
     </div>
   );

@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* #587: Fokusmodus (z. B. Scanner auf Mobile) — gesetzt von `useFocusMode`
+   (ui/use-focus-mode.ts) als `data-focus-mode` am <html>. */
+@custom-variant focus-mode (&:is([data-focus-mode] *));
 
 @theme inline {
   --color-event-public: var(--event-public);

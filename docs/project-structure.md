@@ -120,11 +120,13 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `action-button.tsx` | Button, der eine Server Action ausführt (ersetzt 8 `Delete…Button`-Wrapper) |
 | `action-dialog.tsx` | Dialog-Skelett: Open-State, Reset-on-Close, Error-Slot, Submit-Footer |
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
+| `use-media-query.ts` | `useMediaQuery(query)` live per `matchMedia`; `useIsMobile()` = unterhalb `md`, SSR-sicher (startet mit Desktop-Variante, #585) |
+| `use-focus-mode.ts` | Fachfreier Fokusmodus-Kanal: setzt `data-focus-mode` am `<html>` (nur `< md`, Reset bei Unmount/Breakpoint-Wechsel); Header, MobileNav und App-Shell reagieren per `focus-mode:`-Variante (`globals.css`), #587 |
 | `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `bar-row.tsx` | `BarRow` — beschriftete Balkenzeile (Label, Wert, relativer Balken) ohne Chart-Library; von Statistiken und Admin-Seitenaufrufen geteilt |
-| `page-heading`, `stat-tile`, `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
+| `page-heading`, `page-title`, `stat-tile` (inkl. `StatValue`), `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
 | `page-container.tsx` | `PageContainer` — Seiten-Breitendeckel (`variant: "default" \| "wide"`); jede `*-view.tsx` legt ihre eigene Breite fest, statt dass `AppShell` global `max-w-6xl` erzwingt (#398) |
 
 ## `src/components/entities/` — Fachobjekte anzeigen
@@ -200,7 +202,7 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 - `actions.ts` — Server Actions dieses Anwendungsfalls
 - `*-dialog.tsx`, `use-*.ts` — Teilaspekte desselben Anwendungsfalls
 
-Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan), `receive-series.tsx` (Erhalten), `transfer-series.tsx` (Übergeben: Zielphase, Zielwechsel-Rückfrage, Einheit in Einheit — löst die frühere Einlagern-Serie ab, #539; Umschalter „An Anonymen Meeple weitergeben", #540), `mark-series.tsx` (Zur Kontrolle markieren) bzw. `check-series.tsx` (Kontrollieren, öffnet `pruefbogen-panel.tsx`). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
+Beispiel `feature/scan/` (Scanner, #538): `scan-view.tsx` ist nur der Rahmen (Moduswahl ↔ `?modus=`, Kamera, manuelle Eingabe) und reicht jeden Code per Ref an den aktiven Modus weiter: `single-scan.tsx` (Einzel-Scan), `receive-series.tsx` (Erhalten), `transfer-series.tsx` (Übergeben: Zielphase, Zielwechsel-Rückfrage, Einheit in Einheit — löst die frühere Einlagern-Serie ab, #539; Umschalter „An Anonymen Meeple weitergeben", #540), `mark-series.tsx` (Kontrolle anfordern) bzw. `check-series.tsx` (Kontrollieren, öffnet `pruefbogen-panel.tsx`). Das Serien-Gerüst `use-scan-series.ts` (Entprellen, Sperre während einer Buchung, Vorauswahl per `scanPickCopy`) und `scan-series-log.tsx` (Log, Zähler, Exemplar-Auswahl `CopyChoiceList`) teilen sich alle Serien-Modi. Modus-Liste, URL-Parsing und Ergebnis-Labels liegen in `lib/ludothek/scanner-modes.ts`.
 
 Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `entities/`, `ui/` oder `lib/`.
 

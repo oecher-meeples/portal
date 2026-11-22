@@ -10,16 +10,16 @@ import {
 describe("scannerModesFor", () => {
   it("hides the games:manage-only modes", () => {
     expect(scannerModesFor(false)).toEqual([
+      "einzel",
       "erhalten",
       "uebergeben",
-      "einzel",
     ]);
     expect(scannerModesFor(true)).toEqual([
+      "einzel",
       "erhalten",
       "uebergeben",
-      "einzel",
-      "markieren",
       "kontrollieren",
+      "markieren",
     ]);
   });
 });

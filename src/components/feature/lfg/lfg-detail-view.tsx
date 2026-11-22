@@ -20,6 +20,7 @@ import {
 import type { LfgStatus } from "@/lib/content/lfg";
 import type { ContactDialogMeeple } from "@/lib/members/contact";
 import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
 
 export type LfgParticipantRow = {
   /** Teilnehmer-Zeilen-ID, immer gesetzt — auch für Gäste. */
@@ -89,8 +90,8 @@ export function LfgDetailView({
   return (
     <PageContainer className="max-w-2xl gap-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-2xl font-bold">{title}</h1>
+        <div className="min-w-0">
+          <PageTitle size="sm">{title}</PageTitle>
           <p className="text-muted-foreground text-sm">
             {dateLabel}
             {!canEditLocation && location && ` · ${location}`}

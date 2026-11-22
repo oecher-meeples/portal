@@ -12,6 +12,7 @@ import { LudothekFilterPanel } from "@/components/feature/ludothek/ludothek-filt
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { SingleSlider } from "@/components/ui/range-slider";
 import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
+import { useIsMobile } from "@/components/ui/use-media-query";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
@@ -51,7 +52,8 @@ function ViewModeSwitch({
   href: (patch: Record<string, string | string[] | undefined>) => string;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    // #585: auf `< md` ausgeblendet — dort gilt immer das Raster.
+    <div className="hidden items-center gap-1 md:flex">
       {VIEW_MODE_OPTIONS.filter(
         (option) => option.value !== "compact" || canManageGames,
       ).map((option) => (
@@ -124,6 +126,10 @@ export function LudothekBrowser({
   const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
     buildHref(basePath, rawSearchParams, patch);
+  // #585: Liste/Kompakt sind auf `< md` unbrauchbar — dort immer Raster.
+  // `?ansicht=` bleibt dabei unangetastet und greift wieder ab `md`.
+  const isMobile = useIsMobile();
+  const view: LudothekViewMode = isMobile ? "grid" : (filters.view ?? "grid");
 
   const [search, setSearch] = useState(filters.search ?? "");
   const debouncedSearch = useDebouncedValue(search);
@@ -214,7 +220,7 @@ export function LudothekBrowser({
         <div className="flex items-center gap-3">
           {/* #446: nur Grid-Ansicht, nur Desktop — auf Mobile/Tablet
               ausgeblendet, List/Compact bleiben unbeeinflusst. */}
-          {(filters.view ?? "grid") === "grid" && (
+          {view === "grid" && (
             <SingleSlider
               className="hidden w-24 md:flex"
               min={CARD_MIN_WIDTH_RANGE.min}
@@ -226,7 +232,7 @@ export function LudothekBrowser({
             />
           )}
           <ViewModeSwitch
-            view={filters.view ?? "grid"}
+            view={view}
             canManageGames={canManageGames}
             href={href}
           />
@@ -235,7 +241,7 @@ export function LudothekBrowser({
 
       <LudothekResults
         games={games}
-        view={filters.view ?? "grid"}
+        view={view}
         canManageGames={canManageGames}
         mechanicsOptions={mechanicsOptions}
         cardMinWidth={cardMinWidth}

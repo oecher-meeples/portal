@@ -62,7 +62,7 @@ function renderMode(Mode: ComponentType<{ ref: Ref<ScanModeHandle> }>) {
 const click = (name: string) =>
   act(async () => screen.getByRole("button", { name }).click());
 
-describe("MarkSeries — Zur Kontrolle markieren (#563)", () => {
+describe("MarkSeries — Kontrolle anfordern (#563)", () => {
   it("marks a single game", async () => {
     const scan = renderMode(MarkSeries);
     scanResolveCodeMock.mockResolvedValueOnce({

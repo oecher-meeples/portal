@@ -25,3 +25,16 @@ export function useMediaQuery(query: string): boolean {
 
   return matches;
 }
+
+/** Unterhalb von Tailwinds `md`-Breakpoint (768 px). */
+const BELOW_MD_QUERY = "(max-width: 767.98px)";
+
+/**
+ * Ob der Viewport unterhalb von `md` liegt (#585). Startet wie
+ * `useMediaQuery` mit `false` — Server und erster Client-Render zeigen also
+ * die Desktop-Variante (z. B. die per URL gewählte Ansicht), nach der
+ * Hydration korrigiert der Client live bei jedem Breakpoint-Wechsel.
+ */
+export function useIsMobile(): boolean {
+  return useMediaQuery(BELOW_MD_QUERY);
+}

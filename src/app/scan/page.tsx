@@ -7,7 +7,7 @@ import {
 } from "@/lib/ludothek/scanner-modes";
 
 const MODES_DESCRIPTION =
-  "Erhalten: Spiele nacheinander auf dich buchen. Übergeben: erst das Ziel scannen, dann die Spiele. Einzel-Scan: ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen.";
+  "Einzel-Scan: ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen. Erhalten: Spiele nacheinander auf dich buchen. Übergeben: erst das Ziel scannen, dann die Spiele.";
 
 export default async function ScanPage({
   searchParams,
@@ -25,15 +25,18 @@ export default async function ScanPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeading
-        eyebrow="Kamera-Scan"
-        title="Scanner"
-        description={
-          canManageGames
-            ? `${MODES_DESCRIPTION} Zur Kontrolle markieren / Kontrollieren: Vollständigkeit prüfen.`
-            : MODES_DESCRIPTION
-        }
-      />
+      {/* #587: im Fokusmodus ausgeblendet (mehr Platz für die Kamera). */}
+      <div className="focus-mode:hidden">
+        <PageHeading
+          eyebrow="Kamera-Scan"
+          title="Scanner"
+          description={
+            canManageGames
+              ? `${MODES_DESCRIPTION} Kontrollieren / Kontrolle anfordern: Vollständigkeit prüfen.`
+              : MODES_DESCRIPTION
+          }
+        />
+      </div>
       <ScanView
         canManageGames={canManageGames}
         initialMode={initialMode}

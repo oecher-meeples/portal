@@ -80,7 +80,7 @@ function MarketImageThumbnail({
           fit="contain"
         />
         {isCover && (
-          <span className="bg-primary text-primary-foreground absolute top-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          <span className="bg-primary text-primary-foreground absolute top-1 left-1 rounded px-1.5 py-0.5 text-[11px] font-medium">
             Titelbild
           </span>
         )}

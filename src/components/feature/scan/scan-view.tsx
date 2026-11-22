@@ -2,11 +2,13 @@
 
 import { Card } from "@/components/ui/card";
 import { useRef, useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { CodeScanner } from "@/components/ui/code-scanner";
 import { PageContainer } from "@/components/ui/page-container";
+import { useFocusMode } from "@/components/ui/use-focus-mode";
 import { CheckSeries } from "@/components/feature/scan/check-series";
 import { MarkSeries } from "@/components/feature/scan/mark-series";
 import { ReceiveSeries } from "@/components/feature/scan/receive-series";
@@ -41,6 +43,7 @@ export function ScanView({
   const [manualInput, setManualInput] = useState("");
   const [lastRaw, setLastRaw] = useState("");
   const modeRef = useRef<ScanModeHandle>(null);
+  const focusMode = useFocusMode();
 
   function changeMode(next: ScannerPageMode, ziel: string | null = null) {
     setMode(next);
@@ -57,14 +60,39 @@ export function ScanView({
 
   return (
     <PageContainer className="gap-6">
-      <PillToggle
-        options={scannerModesFor(canManageGames).map((value) => ({
-          value,
-          label: SCANNER_PAGE_MODE_LABELS[value],
-        }))}
-        value={mode}
-        onChange={(next) => changeMode(next)}
-      />
+      {/* #587: Zeile sticky — normal unter dem fixen Header, im Fokusmodus
+          (Header ausgeblendet) am oberen Rand. Bei 5 Modi (Admin) dürfen die
+          Pills umbrechen, das Icon bleibt rechts. */}
+      <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 focus-mode:top-0 sticky top-16 z-20 -my-2 flex items-start justify-between gap-2 py-2 backdrop-blur md:static md:my-0 md:bg-transparent md:py-0 md:backdrop-blur-none">
+        <div className="min-w-0 flex-1">
+          <PillToggle
+            options={scannerModesFor(canManageGames).map((value) => ({
+              value,
+              label: SCANNER_PAGE_MODE_LABELS[value],
+            }))}
+            value={mode}
+            onChange={(next) => changeMode(next)}
+          />
+        </div>
+        {focusMode.available && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            aria-label={
+              focusMode.active ? "Fokusmodus beenden" : "Fokusmodus starten"
+            }
+            aria-pressed={focusMode.active}
+            onClick={focusMode.toggle}
+          >
+            {focusMode.active ? (
+              <Minimize2 className="size-4" />
+            ) : (
+              <Maximize2 className="size-4" />
+            )}
+          </Button>
+        )}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <CodeScanner onDetected={handleCode} />

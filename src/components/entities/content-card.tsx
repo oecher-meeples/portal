@@ -1,4 +1,4 @@
-import { cardVariants } from "@/components/ui/card";
+import { CardTitle, cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import { Share2 } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content-types";
@@ -43,9 +43,9 @@ export function ContentCard({ item }: { item: ContentItem }) {
                 />
               )}
             </div>
-            <h3 className="line-clamp-2 font-serif text-lg leading-snug font-semibold">
+            <CardTitle as="h3" className="line-clamp-2 font-semibold">
               {item.title}
-            </h3>
+            </CardTitle>
           </div>
           <p className="text-muted-foreground pointer-events-none absolute inset-x-0 top-0 line-clamp-3 translate-y-full text-sm opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
             {item.excerpt}
