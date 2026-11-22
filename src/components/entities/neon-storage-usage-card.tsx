@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { StatValue } from "@/components/ui/stat-tile";
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { formatBytes } from "@/lib/utils/format";
 import { getStorageTone, type StorageTone } from "@/lib/utils/storage-tone";
@@ -33,9 +34,7 @@ export function NeonStorageUsageCard({ usage }: { usage: NeonStorageUsage }) {
           tone={TONE_TO_STATUS_TONE[tone]}
         />
       </div>
-      <p className="mt-2 font-serif text-3xl font-bold">
-        {usage.percent.toFixed(1)} %
-      </p>
+      <StatValue>{usage.percent.toFixed(1)} %</StatValue>
       <p className="text-muted-foreground mt-1 text-sm">
         {formatBytes(usage.used)} von {formatBytes(usage.limit)} belegt
       </p>

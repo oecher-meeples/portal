@@ -1,7 +1,22 @@
+import type * as React from "react";
 import { Card, cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+
+/** Große Kennzahl einer Kachel (#581): auf `< sm` max. 26 px statt
+ * `text-3xl`, ab `sm` unverändert. */
+export function StatValue({ className, ...props }: React.ComponentProps<"p">) {
+  return (
+    <p
+      className={cn(
+        "mt-2 font-serif text-[1.625rem] font-bold sm:text-3xl",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
 function StatTileContent({
   label,
@@ -17,7 +32,7 @@ function StatTileContent({
       <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {label}
       </p>
-      <p className="mt-2 font-serif text-3xl font-bold">{value}</p>
+      <StatValue>{value}</StatValue>
       {hint && <p className="text-muted-foreground mt-1 text-sm">{hint}</p>}
     </>
   );

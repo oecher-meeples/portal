@@ -93,7 +93,7 @@ function CardTitle({
     <Comp
       data-slot="card-title"
       className={cn(
-        "font-serif text-lg leading-snug font-bold wrap-break-word group-data-[size=sm]/card:text-base",
+        "min-w-0 font-serif text-lg leading-snug font-bold wrap-break-word group-data-[size=sm]/card:text-base",
         className,
       )}
       {...props}

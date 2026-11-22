@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/utils/format";
 import type { getLatestPosts } from "@/lib/content/content";
 import type { getUpcomingEventsWithCalendar } from "@/lib/content/calendar";
 import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
 
 type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
@@ -22,9 +23,7 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
         <p className="text-primary text-xs font-semibold tracking-wider uppercase">
           Willkommen bei den Oecher Meeples
         </p>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-          Der Brettspielverein für Aachen und Umgebung
-        </h1>
+        <PageTitle>Der Brettspielverein für Aachen und Umgebung</PageTitle>
         <p className="text-muted-foreground max-w-2xl">
           Spielen, leihen, treffen. Von Kennerspiel bis Familienabend – bei uns
           findest du Runde, Regelerklärung und über {gameCount} Spiele in der

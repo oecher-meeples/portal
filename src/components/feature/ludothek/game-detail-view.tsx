@@ -5,6 +5,7 @@ import { ExternalLink } from "lucide-react";
 import type { BoardGameTrait, ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
 import { RibbonCorner } from "@/components/ui/ribbon-corner";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
 import { YoutubeIcon } from "@/components/ui/youtube-icon";
@@ -134,15 +135,15 @@ export function GameDetailView({
     <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
       <div className="lg:col-start-2 lg:row-start-1">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3">
-            <div>
-              <h1 className="font-serif text-3xl font-bold tracking-tight">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="min-w-0">
+              <PageTitle size="md">
                 {game.title}
                 <EditionFlag
                   languages={game.editionLanguages}
                   className="ml-2 text-base"
                 />
-              </h1>
+              </PageTitle>
               {game.secondaryTitle && (
                 <p className="text-muted-foreground">{game.secondaryTitle}</p>
               )}

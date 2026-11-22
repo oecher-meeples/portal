@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardTitle } from "@/components/ui/card";
+import { StatValue } from "@/components/ui/stat-tile";
 import { useState } from "react";
 import { ActionButton } from "@/components/ui/action-button";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
@@ -89,7 +90,7 @@ export function PrivateCollectionCard({
         <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           Aus BGG importiert
         </p>
-        <p className="mt-2 font-serif text-3xl font-bold">{entries.length}</p>
+        <StatValue>{entries.length}</StatValue>
       </div>
 
       <PrivateCollectionVisibleSwitch initialVisible={visibleToOthers} />
