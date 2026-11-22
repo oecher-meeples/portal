@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 vi.mock("@/components/ui/code-scanner", () => ({
-  CodeScanner: () => null,
+  CodeScanner: () => <div>camera</div>,
 }));
 vi.mock("@/components/widgets/game-holding/game-holding-panel", () => ({
   GameHoldingPanel: ({ gameCopyId }: { gameCopyId: string }) => (
@@ -221,6 +221,35 @@ describe("ScanView — Einlagern-Serie geht in Übergeben auf (#539)", () => {
     expect(
       await screen.findByText("Catan: liegt schon dort"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ScanView — Ergebnis statt Kamera im Einzel-Scan (#573)", () => {
+  it("hides the camera after a scan and brings it back via 'Nächster Scan'", async () => {
+    render(<ScanView canManageGames={false} initialMode="einzel" />);
+    expect(screen.getByText("camera")).toBeInTheDocument();
+
+    scanResolveCodeMock.mockResolvedValueOnce({
+      kind: "games",
+      games: [GAME_1],
+    });
+    scan("4001504311892");
+
+    expect(await screen.findByText("game-panel-copy-1")).toBeInTheDocument();
+    expect(screen.queryByText("camera")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Nächster Scan" }));
+    expect(screen.getByText("camera")).toBeInTheDocument();
+    expect(screen.getByText("game-panel-copy-1")).toBeInTheDocument();
+  });
+
+  it("keeps the camera running in series modes", async () => {
+    render(<ScanView canManageGames={false} initialMode="erhalten" />);
+    scanResolveCodeMock.mockResolvedValueOnce({ kind: "unknown", raw: "x" });
+    scan("x");
+
+    await screen.findAllByText(/x/);
+    expect(screen.getByText("camera")).toBeInTheDocument();
   });
 });
 

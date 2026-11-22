@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { useRef, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Camera, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
@@ -42,12 +42,21 @@ export function ScanView({
   const [targetUnitId, setTargetUnitId] = useState(initialTargetUnitId);
   const [manualInput, setManualInput] = useState("");
   const [lastRaw, setLastRaw] = useState("");
+  // #573: Im Einzel-Scan ersetzt das Ergebnis die Kamera, bis
+  // „Nächster Scan“ sie wieder einblendet (Unmount stoppt den Stream).
+  const [cameraPaused, setCameraPaused] = useState(false);
+  const showCamera = mode !== "einzel" || !cameraPaused;
+  // Die Kamera hält `handleCode` ab dem Start fest — der Modus kommt daher
+  // aus einer Ref, nicht aus der Closure.
+  const currentModeRef = useRef(mode);
   const modeRef = useRef<ScanModeHandle>(null);
   const focusMode = useFocusMode();
 
   function changeMode(next: ScannerPageMode, ziel: string | null = null) {
     setMode(next);
+    currentModeRef.current = next;
     setTargetUnitId(ziel);
+    setCameraPaused(false);
     // Ohne Server-Roundtrip — die Kamera läuft weiter (Next.js integriert
     // `replaceState` in den Router).
     window.history.replaceState(null, "", scannerModeHref(next, ziel));
@@ -55,6 +64,7 @@ export function ScanView({
 
   async function handleCode(raw: string) {
     setLastRaw(raw);
+    if (currentModeRef.current === "einzel") setCameraPaused(true);
     await modeRef.current?.handleCode(raw);
   }
 
@@ -94,8 +104,23 @@ export function ScanView({
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <CodeScanner onDetected={handleCode} />
+      <div
+        className={
+          showCamera ? "grid gap-6 lg:grid-cols-[2fr_1fr]" : "grid gap-4"
+        }
+      >
+        {showCamera ? (
+          <CodeScanner onDetected={handleCode} />
+        ) : (
+          <Button
+            size="lg"
+            className="w-full sm:w-fit"
+            onClick={() => setCameraPaused(false)}
+          >
+            <Camera className="size-4" />
+            Nächster Scan
+          </Button>
+        )}
 
         <Card className="gap-4">
           <form

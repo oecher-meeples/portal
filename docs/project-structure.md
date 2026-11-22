@@ -162,7 +162,8 @@ widgets/
 │   ├── game-holding-panel.tsx     Detailseiten-Panel: ausleihen, bestätigen, weitergeben, zurückgeben, einlagern
 │   ├── game-actions-menu.tsx      Rechtebasiertes Aktionen-Dropdown für Listen-/Kompakt-Zeilen (#121/#122) — Dialoge werden außerhalb des Menüs
 │   │                              gerendert (die Typeahead-Suche des Menüs würde sonst Tastatureingaben in deren Textfeldern schlucken)
-│   └── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
+│   ├── holding-mini-dialogs.tsx   Ausleihen/Weitergeben/Rückgabe/Umlagern als Mini-Dialoge mit Such-Auswahl oder Scan
+│   └── holding-target-picker.tsx  Gemeinsamer Ziel-Picker (Person/Einheit: Suche + Scan) für Panel und Mini-Dialoge (#573); im Panel löst die Wahl sofort aus
 ├── bringbuy/
 │   └── register-external-seller-dialog.tsx  Self-Service-Anmeldung externer Bring & Buy-Verkäufer:innen (#266) — vom Gäste-Bereich (`feature/guest-area`) genutzt, darf aber nicht aus `feature/bringbuy` importieren (Layer-Regel), deshalb hier
 ├── private-collection/
