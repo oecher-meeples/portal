@@ -12,8 +12,18 @@ describe("ImportantLinksGrid — feste statt gestreckte Kartenbreite (#454)", ()
     );
 
     const grid = screen.getByText("Signal").closest("div.grid");
+    // Ab `sm` das feste 200-px-Raster aus #454, darunter 2 Spalten (#584).
     expect(grid).toHaveClass(
-      "grid-cols-[repeat(auto-fit,minmax(200px,200px))]",
+      "sm:grid-cols-[repeat(auto-fit,minmax(200px,200px))]",
     );
+  });
+
+  it("shows exactly two tiles per row below sm (#584)", () => {
+    render(
+      <ImportantLinksGrid items={[{ href: "/signal", label: "Signal" }]} />,
+    );
+
+    const grid = screen.getByText("Signal").closest("div.grid");
+    expect(grid).toHaveClass("grid-cols-2");
   });
 });

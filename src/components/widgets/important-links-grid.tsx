@@ -14,14 +14,30 @@ export type LinkGridItem = {
   external?: boolean;
 };
 
+/**
+ * Raster der Link-Kacheln, geteilt mit `ImportantLinksEditor`. #454: ab `sm`
+ * feste 200-px-Spalten (`minmax(200px,200px)` statt `1fr`), damit wenige
+ * Einträge nicht auf volle Container-Breite auseinandergezogen werden;
+ * `auto-fit` füllt so viele Spalten wie möglich. #584: auf `< sm` genau zwei
+ * Kacheln pro Zeile.
+ */
+export const LINK_GRID_CLASS =
+  "grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(200px,200px))] sm:gap-4";
+
+/** #584: weniger Innenabstand auf `< sm`, damit zwei Kacheln nebeneinander
+ * passen. */
+export const LINK_TILE_CLASS = "max-sm:p-3";
+
+/** #584: Label schrumpft auf `< sm` fließend (Untergrenze 11 px, #581) statt
+ * abgeschnitten zu werden; Umbruch zwischen Wörtern, `break-word` nur als
+ * letzte Notbremse. */
+export const LINK_TILE_LABEL_CLASS =
+  "min-w-0 max-w-full font-serif font-semibold wrap-break-word max-sm:text-[clamp(0.6875rem,3.3vw,1rem)]";
+
 /** Shared card grid for Schnellzugriff and the admin-curated Wichtige Links (#110) — same layout, either a Lucide icon or an uploaded image. */
 export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
   return (
-    // #454: minmax(200px,200px) statt minmax(200px,1fr) — feste statt
-    // gestreckte Kartenbreite, damit wenige Einträge nicht auf volle
-    // Container-Breite auseinandergezogen werden. auto-fit sorgt weiterhin
-    // dafür, dass so viele 200px-Spalten wie möglich in eine Reihe passen.
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,200px))] gap-4">
+    <div className={LINK_GRID_CLASS}>
       {items.map((item) => {
         const content = (
           <>
@@ -36,11 +52,12 @@ export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
                 className="w-8"
               />
             )}
-            <span className="font-serif font-semibold">{item.label}</span>
+            <span className={LINK_TILE_LABEL_CLASS}>{item.label}</span>
           </>
         );
         const className = cn(
           cardVariants({ layout: "tile" }),
+          LINK_TILE_CLASS,
           CARD_HOVER_CLASS,
         );
 

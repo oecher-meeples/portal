@@ -5,6 +5,12 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
 import { CoverMedia } from "@/components/ui/cover-media";
+import {
+  LINK_GRID_CLASS,
+  LINK_TILE_CLASS,
+  LINK_TILE_LABEL_CLASS,
+} from "@/components/widgets/important-links-grid";
+import { cn } from "@/lib/utils/cn";
 import { CreateLinkDialog } from "@/components/feature/dashboard/create-link-dialog";
 import { EditLinkDialog } from "@/components/feature/dashboard/edit-link-dialog";
 import { deleteImportantLink } from "@/lib/links/actions";
@@ -15,12 +21,9 @@ import type { ImportantLinkRow } from "@/lib/links/links";
  * bekommt Bearbeiten/Löschen, am Ende steht eine gestrichelte "Hinzufügen"-Card. */
 export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
   return (
-    // #454: minmax(200px,200px) statt minmax(200px,1fr) — feste statt
-    // gestreckte Kartenbreite, damit wenige Einträge nicht auf volle
-    // Container-Breite auseinandergezogen werden.
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,200px))] gap-4">
+    <div className={LINK_GRID_CLASS}>
       {links.map((link) => (
-        <Card key={link.id} layout="tile">
+        <Card key={link.id} layout="tile" className={LINK_TILE_CLASS}>
           <CoverMedia
             sizes="32px"
             imageUrl={link.iconUrl}
@@ -28,7 +31,7 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
             aspect="aspect-square"
             className="w-8"
           />
-          <span className="font-serif font-semibold">{link.title}</span>
+          <span className={LINK_TILE_LABEL_CLASS}>{link.title}</span>
           <div className="mt-1 flex gap-1">
             <EditLinkDialog
               link={link}
@@ -58,7 +61,10 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
         trigger={
           <button
             type="button"
-            className="text-muted-foreground hover:border-primary/60 hover:text-primary bg-card/60 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-5 text-center text-sm transition-colors"
+            className={cn(
+              "text-muted-foreground hover:border-primary/60 hover:text-primary bg-card/60 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-5 text-center text-sm transition-colors",
+              LINK_TILE_CLASS,
+            )}
           >
             <Plus className="size-6" />
             Hinzufügen
