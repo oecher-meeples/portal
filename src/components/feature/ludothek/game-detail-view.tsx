@@ -1,7 +1,7 @@
 import { Card, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
 import type { BoardGameTrait, ExplainerExperienceLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/page-container";
@@ -26,6 +26,10 @@ import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
 import { ExplainerGamePanel } from "@/components/feature/ludothek/explainer-game-panel";
+import {
+  GameTitleActions,
+  type GameTitleAction,
+} from "@/components/feature/ludothek/game-title-actions";
 import {
   AssignExpansionDialog,
   type GameOption,
@@ -68,8 +72,8 @@ export function GameDetailView({
   relatedLocationChains,
   availability,
   openLfgPosts,
-  createLfgTrigger,
-  marketListingSection,
+  createLfgAction,
+  marketListingAction,
   traitTexts,
   selectedCopy,
   selectedCopyId,
@@ -103,15 +107,16 @@ export function GameDetailView({
   availability?: GuestCopyAvailability;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
-  /** Fully rendered "Spielergesuch eröffnen" dialog+trigger, composed by the
-   * page — only passed for logged-in Meeples. Kept as a prop instead of an
-   * import so this feature stays isolated from `components/feature/lfg`
-   * (#142, see CLAUDE.md layer rules). */
-  createLfgTrigger?: ReactNode;
+  /** Fully rendered "Spielergesuch eröffnen" dialog+trigger plus its „⋯"-menu
+   * entry (#586), composed by the page — only passed for logged-in Meeples.
+   * Kept as a prop instead of an import so this feature stays isolated from
+   * `components/feature/lfg` (#142, see CLAUDE.md layer rules). */
+  createLfgAction?: GameTitleAction;
   /** Fertig gerenderter Marktplatz-Hinweis/-Trigger ("wird verkauft" oder
-   * "Verkaufen"), von der Seite komponiert — analog `createLfgTrigger`, hält
-   * diesen Titel von `components/feature/markt` isoliert (#278). */
-  marketListingSection?: ReactNode;
+   * "Verkaufen") samt Menüeintrag, von der Seite komponiert — analog
+   * `createLfgAction`, hält diesen Titel von `components/feature/markt`
+   * isoliert (#278). */
+  marketListingAction?: GameTitleAction;
   /** Admin-editierbare Anzeige-Texte je gesetztem Trait (#487-Konzept) — für
    * alle (auch Gäste) geladen, analog `game.traits` selbst. */
   traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
@@ -124,6 +129,44 @@ export function GameDetailView({
 }) {
   const { inline: inlineContributors, illustrators } =
     splitContributorsForDetail(groupGameContributorsByName(game));
+  const bggUrl = bggId ? `https://boardgamegeek.com/boardgame/${bggId}` : null;
+  const titleActions: GameTitleAction[] = [
+    // #503: „Titel bearbeiten" im Header neben dem Titel (Revert #399), bei
+    // schmalem Titelblock wie alle anderen im „⋯"-Menü (#586).
+    titleEdit && {
+      key: "title-edit",
+      label: "Titel bearbeiten",
+      icon: <Pencil />,
+      node: (
+        <EditBoardGameTitleDialog
+          game={titleEdit}
+          mechanicsOptions={mechanicsOptions}
+          showLabel
+        />
+      ),
+    },
+    createLfgAction,
+    marketListingAction,
+    bggUrl && {
+      key: "bgg",
+      label: "Auf BoardGameGeek ansehen",
+      icon: <ExternalLink />,
+      href: bggUrl,
+      external: true,
+      node: (
+        <Button
+          variant="outline"
+          className="gap-1.5 px-2.5"
+          aria-label="Auf BoardGameGeek ansehen"
+          render={<a href={bggUrl} target="_blank" rel="noopener noreferrer" />}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
+          <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
+          <ExternalLink className="size-4" />
+        </Button>
+      ),
+    },
+  ].filter((action): action is GameTitleAction => Boolean(action));
 
   return (
     // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
@@ -133,7 +176,7 @@ export function GameDetailView({
     // Grid-Position, die wieder das klassische Bild-neben-Text-Layout
     // ergibt (Bild spannt beide Zeilen der rechten Spalte).
     <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
-      <div className="lg:col-start-2 lg:row-start-1">
+      <div className="@container/title-block lg:col-start-2 lg:row-start-1">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-3">
             <div className="min-w-0">
@@ -153,37 +196,7 @@ export function GameDetailView({
               />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* #503: „Titel bearbeiten" wieder im Header neben dem Titel
-                (Revert #399), mit ausgeschriebenem Label. */}
-            {titleEdit && (
-              <EditBoardGameTitleDialog
-                game={titleEdit}
-                mechanicsOptions={mechanicsOptions}
-                showLabel
-              />
-            )}
-            {createLfgTrigger}
-            {marketListingSection}
-            {bggId && (
-              <Button
-                variant="outline"
-                className="gap-1.5 px-2.5"
-                aria-label="Auf BoardGameGeek ansehen"
-                render={
-                  <a
-                    href={`https://boardgamegeek.com/boardgame/${bggId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
-                <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
-                <ExternalLink className="size-4" />
-              </Button>
-            )}
-          </div>
+          <GameTitleActions actions={titleActions} />
         </div>
         <p className="text-muted-foreground mt-1">
           {game.minPlayers && game.maxPlayers
