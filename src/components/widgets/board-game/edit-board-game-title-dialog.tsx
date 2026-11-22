@@ -40,6 +40,7 @@ export function EditBoardGameTitleDialog({
   game,
   mechanicsOptions,
   triggerClassName,
+  showLabel = false,
 }: {
   game: EditableBoardGameTitle;
   /** Every distinct mechanic already in the Bestand — Autocomplete-Vorschläge
@@ -48,6 +49,9 @@ export function EditBoardGameTitleDialog({
   /** Overrides the trigger's placement/appearance — e.g. icon-only with
    * hover-revealed label in the cover image's corner (#399). */
   triggerClassName?: string;
+  /** Label dauerhaft statt erst beim Hover zeigen — z. B. im Header der
+   * Detailseite (#503); in Karten-Overlays bleibt es Icon-only. */
+  showLabel?: boolean;
 }) {
   const [form, setForm] = useState<BoardGameFormValues>(() =>
     toFormValues(game),
@@ -129,7 +133,9 @@ export function EditBoardGameTitleDialog({
           className={cn("group/edit-title gap-1.5", triggerClassName)}
         >
           <Pencil className="size-4" />
-          <span className="hidden group-hover/edit-title:inline">
+          <span
+            className={cn(!showLabel && "hidden group-hover/edit-title:inline")}
+          >
             Titel bearbeiten
           </span>
         </Button>

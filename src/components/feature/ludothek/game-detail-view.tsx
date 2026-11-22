@@ -154,6 +154,15 @@ export function GameDetailView({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* #503: „Titel bearbeiten" wieder im Header neben dem Titel
+                (Revert #399), mit ausgeschriebenem Label. */}
+            {titleEdit && (
+              <EditBoardGameTitleDialog
+                game={titleEdit}
+                mechanicsOptions={mechanicsOptions}
+                showLabel
+              />
+            )}
             {createLfgTrigger}
             {marketListingSection}
             {bggId && (
@@ -203,14 +212,6 @@ export function GameDetailView({
         <CardCornerOverlay corner="top-right">
           <BggRatingBadge averageRating={game.averageRating} />
         </CardCornerOverlay>
-        {titleEdit && (
-          <CardCornerOverlay corner="bottom-right">
-            <EditBoardGameTitleDialog
-              game={titleEdit}
-              mechanicsOptions={mechanicsOptions}
-            />
-          </CardCornerOverlay>
-        )}
       </div>
 
       <div className="flex flex-col gap-6 lg:col-start-2 lg:row-start-2">
