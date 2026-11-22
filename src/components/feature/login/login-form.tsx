@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -80,10 +82,7 @@ export function LoginForm() {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <PageHeading eyebrow="Mitgliederbereich" title="Anmelden" />
-      <form
-        onSubmit={handleSubmit}
-        className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-      >
+      <form onSubmit={handleSubmit} className={cn(cardVariants(), "gap-4")}>
         <Field label="E-Mail" htmlFor="email">
           <Input
             id="email"

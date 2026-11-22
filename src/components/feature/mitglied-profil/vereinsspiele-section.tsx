@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card, CardTitle } from "@/components/ui/card";
 import { formatDatePlain } from "@/lib/utils/format";
 import type { ActiveMeepleHolding } from "@/lib/ludothek/holdings-by-meeple";
 import {
@@ -29,8 +30,8 @@ export function VereinsspieleSection({
   if (holdings.length === 0) return null;
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Vereinsspiele</h2>
+    <Card>
+      <CardTitle>Vereinsspiele</CardTitle>
       <ul className="flex flex-col divide-y text-sm">
         {holdings.map((holding) => (
           <li
@@ -77,6 +78,6 @@ export function VereinsspieleSection({
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

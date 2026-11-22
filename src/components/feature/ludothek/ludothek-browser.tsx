@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -139,7 +140,7 @@ export function LudothekBrowser({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
+      <Card size="sm">
         <form
           action={basePath}
           onSubmit={(event) => {
@@ -199,7 +200,7 @@ export function LudothekBrowser({
           showExplainerFilter={showExplainerFilter}
           showPresentFilter={showPresentFilter}
         />
-      </div>
+      </Card>
 
       <div className="flex items-center justify-between gap-2">
         {canManageGames ? (

@@ -1,3 +1,4 @@
+import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +19,8 @@ export function SpendenMockView() {
         description="Als gemeinnütziger Verein finanzieren wir Ludothek, Räume und Events überwiegend aus Beiträgen und Spenden."
       />
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <h2 className="font-serif text-lg font-bold">Einmalig spenden</h2>
+        <Card className="gap-4">
+          <CardTitle>Einmalig spenden</CardTitle>
           <DonationAmountPicker />
           <Field label="Name (optional)" htmlFor="donor-name">
             <Input id="donor-name" placeholder="Für die Spendenquittung" />
@@ -40,10 +41,10 @@ export function SpendenMockView() {
             Sichere Weiterleitung zu PayPal. Es werden keine Zahlungsdaten in
             der App gespeichert.
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <h2 className="font-serif text-lg font-bold">Spiele spenden</h2>
+        <Card className="gap-4">
+          <CardTitle>Spiele spenden</CardTitle>
           <p className="text-muted-foreground text-sm">
             Du möchtest Spiele in unseren Vereinsbestand geben? Wir freuen uns
             über jede Spende — unabhängig vom Zustand. Der Spielwart
@@ -56,10 +57,10 @@ export function SpendenMockView() {
           >
             {GAME_DONATION_MAIL}
           </Button>
-        </div>
+        </Card>
 
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <h2 className="font-serif text-lg font-bold">Mitglied werden</h2>
+        <Card className="gap-4">
+          <CardTitle>Mitglied werden</CardTitle>
           <p className="text-muted-foreground text-sm">
             Vollen Zugang zur Ludothek, Spielergesuchen und dem internen Bereich
             bekommst du als Mitglied.
@@ -92,7 +93,7 @@ export function SpendenMockView() {
               </a>
             }
           />
-        </div>
+        </Card>
       </div>
     </PageContainer>
   );

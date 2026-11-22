@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ export function InviteSettingsForm({ defaultDays }: { defaultDays: number }) {
   const { run, pending, error } = useAction({ refresh: true });
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
+    <Card className="gap-4">
       <div className="flex flex-col gap-1.5 sm:max-w-xs">
         <Label htmlFor="default-invite-days">
           Standard-Gültigkeitsdauer (Tage)
@@ -36,6 +37,6 @@ export function InviteSettingsForm({ defaultDays }: { defaultDays: number }) {
       >
         {pending ? "Speichere…" : "Speichern"}
       </Button>
-    </div>
+    </Card>
   );
 }

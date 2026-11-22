@@ -1,3 +1,4 @@
+import { cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { CoverMedia } from "@/components/ui/cover-media";
@@ -39,7 +40,7 @@ export function ImportantLinksGrid({ items }: { items: LinkGridItem[] }) {
           </>
         );
         const className = cn(
-          "bg-card flex flex-col items-center gap-2 rounded-lg border p-6 text-center",
+          cardVariants({ layout: "tile" }),
           CARD_HOVER_CLASS,
         );
 

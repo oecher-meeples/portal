@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
   MitgliederTable,
@@ -159,7 +165,7 @@ export function AdminMitgliederView({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+        <Card>
           <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
             Vereinsmitglieder
           </p>
@@ -210,7 +216,7 @@ export function AdminMitgliederView({
               <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
             </a>
           </div>
-        </div>
+        </Card>
         <StatTile
           label="Kündigungen mit Bestand"
           value={withOpenHoldings.length}
@@ -224,21 +230,22 @@ export function AdminMitgliederView({
       </div>
 
       {deletionRequests.length > 0 && (
-        <div
-          className={cn(
-            "bg-card rounded-lg border p-5",
-            deletionRequests.some((request) => request.overdue) &&
-              "border-destructive/50",
-          )}
+        <Card
+          variant={
+            deletionRequests.some((request) => request.overdue)
+              ? "destructive"
+              : "default"
+          }
         >
-          <h2 className="font-serif text-lg font-bold">
-            Löschanträge (Art. 17 DSGVO)
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Jeder Antrag muss binnen eines Monats bearbeitet sein (Art. 12 Abs.
-            3 DSGVO). Erledigt wird er durch die Anonymisierung des Mitglieds.
-          </p>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+          <CardHeader>
+            <CardTitle>Löschanträge (Art. 17 DSGVO)</CardTitle>
+            <CardDescription>
+              Jeder Antrag muss binnen eines Monats bearbeitet sein (Art. 12
+              Abs. 3 DSGVO). Erledigt wird er durch die Anonymisierung des
+              Mitglieds.
+            </CardDescription>
+          </CardHeader>
+          <ul className="flex flex-col divide-y text-sm">
             {deletionRequests.map((request) => (
               <li
                 key={request.id}
@@ -260,20 +267,13 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {withOpenHoldings.length > 0 && (
-        <div
-          className={cn(
-            "bg-card rounded-lg border p-5",
-            isDecemberOrLater && "border-amber-500/50",
-          )}
-        >
-          <h2 className="font-serif text-lg font-bold">
-            Kündigungen mit offenen Beständen
-          </h2>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+        <Card className={cn(isDecemberOrLater && "border-amber-500/50")}>
+          <CardTitle>Kündigungen mit offenen Beständen</CardTitle>
+          <ul className="flex flex-col divide-y text-sm">
             {withOpenHoldings.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{m.displayName}</span>
@@ -284,20 +284,18 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {readyForAnonymisation.length > 0 && (
-        <div className="bg-card rounded-lg border p-5">
+        <Card>
           <div className="flex items-center gap-1">
-            <h2 className="font-serif text-lg font-bold">
-              Bereit zur Anonymisierung
-            </h2>
+            <CardTitle>Bereit zur Anonymisierung</CardTitle>
             <HelpDialog title="Anonymisierung">
               <AnonymisationExplanation />
             </HelpDialog>
           </div>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+          <ul className="flex flex-col divide-y text-sm">
             {readyForAnonymisation.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{m.displayName}</span>
@@ -308,7 +306,7 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <PendingChangesPanel
@@ -325,19 +323,19 @@ export function AdminMitgliederView({
       />
 
       {stufe3Candidates.length > 0 && (
-        <div className="bg-card rounded-lg border p-5">
-          <div className="flex items-center gap-1">
-            <h2 className="font-serif text-lg font-bold">
-              Bereit zur endgültigen Löschung (Stufe 3)
-            </h2>
-            <HelpDialog title="Anonymisierung">
-              <AnonymisationExplanation />
-            </HelpDialog>
-          </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
-          </p>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-1">
+              <CardTitle>Bereit zur endgültigen Löschung (Stufe 3)</CardTitle>
+              <HelpDialog title="Anonymisierung">
+                <AnonymisationExplanation />
+              </HelpDialog>
+            </div>
+            <CardDescription>
+              12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
+            </CardDescription>
+          </CardHeader>
+          <ul className="flex flex-col divide-y text-sm">
             {stufe3Candidates.map((member) => (
               <li
                 key={member.id}
@@ -353,7 +351,7 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <VereinsmitgliederTable

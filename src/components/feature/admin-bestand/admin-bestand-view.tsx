@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -197,7 +198,7 @@ export function AdminBestandView({
         </div>
       </div>
 
-      <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+      <Card className="gap-4">
         <div className="overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
@@ -317,7 +318,7 @@ export function AdminBestandView({
           onPageSizeChange={setPageSize}
           totalItems={filtered.length}
         />
-      </div>
+      </Card>
     </PageContainer>
   );
 }

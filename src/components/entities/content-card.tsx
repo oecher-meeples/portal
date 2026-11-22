@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+import { cardVariants } from "@/components/ui/card";
+import Link from "next/link";
 import { Share2 } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content-types";
 import { CoverMedia } from "@/components/ui/cover-media";
@@ -11,10 +12,7 @@ export function ContentCard({ item }: { item: ContentItem }) {
   return (
     <Link
       href={`/news/${item.slug}`}
-      className={cn(
-        "group bg-card flex flex-col overflow-hidden rounded-lg border",
-        CARD_HOVER_CLASS,
-      )}
+      className={cn(cardVariants({ size: "flush" }), "group", CARD_HOVER_CLASS)}
     >
       <CoverMedia
         imageUrl={item.coverImageUrl}

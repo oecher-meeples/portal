@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
   Table,
@@ -68,15 +74,15 @@ export function AdminEinheitenView({
       />
 
       {isAdmin && resignedHolders.length > 0 && (
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bestände bei ausgetretenen Mitgliedern
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Rückholliste — diese Personen haben den Verein verlassen und haben
-            noch Vereinsspiele oder -einheiten.
-          </p>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle>Bestände bei ausgetretenen Mitgliedern</CardTitle>
+            <CardDescription>
+              Rückholliste — diese Personen haben den Verein verlassen und haben
+              noch Vereinsspiele oder -einheiten.
+            </CardDescription>
+          </CardHeader>
+          <ul className="flex flex-col divide-y text-sm">
             {resignedHolders.map((holder) => (
               <li
                 key={holder.meepleName}
@@ -89,7 +95,7 @@ export function AdminEinheitenView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <div className="overflow-hidden rounded-lg border">

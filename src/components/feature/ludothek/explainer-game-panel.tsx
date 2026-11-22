@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
@@ -43,9 +44,9 @@ export function ExplainerGamePanel({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+    <Card>
       <div className="flex items-center gap-2">
-        <h2 className="font-serif text-lg font-bold">Erklärbären</h2>
+        <CardTitle>Erklärbären</CardTitle>
         <ExplainerListDialogTrigger
           boardGameTitle={boardGameTitle}
           explainers={explainers}
@@ -74,6 +75,6 @@ export function ExplainerGamePanel({
         </div>
       )}
       {error && <p className="text-destructive text-sm">{error}</p>}
-    </div>
+    </Card>
   );
 }

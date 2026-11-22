@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -181,7 +182,7 @@ export function VereinsmitgliederTable({
     <Accordion
       id="vereinsmitglieder"
       defaultValue={["vereinsmitglieder"]}
-      className="bg-card rounded-lg border"
+      className={cardVariants({ size: "flush" })}
     >
       <AccordionItem value="vereinsmitglieder" className="border-b-0">
         <AccordionTrigger className="px-5">

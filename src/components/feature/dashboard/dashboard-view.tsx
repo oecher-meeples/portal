@@ -2,6 +2,12 @@ import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { formatDateShort } from "@/lib/utils/format";
 import { SETTLEMENT_HANDOVER_HINT } from "@/lib/members/membership-state";
 import type { requireMember } from "@/lib/auth/session";
@@ -154,9 +160,9 @@ export function DashboardView({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Interner Newsroom</h2>
-          <ul className="mt-3 flex flex-col divide-y">
+        <Card>
+          <CardTitle>Interner Newsroom</CardTitle>
+          <ul className="flex flex-col divide-y">
             {internalNews.map((item) => (
               <li
                 key={item.slug}
@@ -179,30 +185,32 @@ export function DashboardView({
               </li>
             )}
           </ul>
-        </div>
+        </Card>
 
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Interner Kalender</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Öffentliche und interne Termine an einem Ort.
-          </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Interner Kalender</CardTitle>
+            <CardDescription>
+              Öffentliche und interne Termine an einem Ort.
+            </CardDescription>
+          </CardHeader>
           {/* #209: /dashboard/kalender entfernt (News-Konsolidierung) — /news
            * deckt Öffentlich+Intern bereits über die "Nur interne
            * anzeigen"-Checkbox ab. */}
           <Link
             href="/news"
-            className="text-primary mt-3 inline-block text-sm hover:underline"
+            className="text-primary w-fit text-sm hover:underline"
           >
             Zum Vereinskalender →
           </Link>
-        </div>
+        </Card>
       </div>
 
       {!isAusgetreten &&
         (unconfirmedHandovers.length > 0 || unconfirmedReturns.length > 0) && (
-          <div className="bg-card rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Offene Vorgänge</h2>
-            <ul className="mt-3 flex flex-col divide-y">
+          <Card>
+            <CardTitle>Offene Vorgänge</CardTitle>
+            <ul className="flex flex-col divide-y">
               {unconfirmedHandovers.map((holding) => (
                 <li
                   key={holding.id}
@@ -233,7 +241,7 @@ export function DashboardView({
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         )}
 
       <div className="flex flex-col gap-3">

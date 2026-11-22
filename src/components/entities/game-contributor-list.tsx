@@ -1,3 +1,4 @@
+import { cardVariants } from "@/components/ui/card";
 import { ContributorPill } from "@/components/entities/contributor-pill";
 import {
   Accordion,
@@ -55,7 +56,7 @@ export function GameIllustratorsCard({
   if (illustrators.length === 0) return null;
 
   return (
-    <Accordion className="bg-card rounded-lg border">
+    <Accordion className={cardVariants({ size: "flush" })}>
       <AccordionItem value="illustrators" className="border-b-0">
         <AccordionTrigger className="px-5 py-4 font-serif text-lg font-bold hover:no-underline">
           Illustratoren ({illustrators.length})

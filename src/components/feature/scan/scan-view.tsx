@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,7 @@ export function ScanView({
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <CodeScanner onDetected={handleCode} />
 
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+        <Card className="gap-4">
           <form
             className="flex flex-col gap-1.5"
             onSubmit={(event) => {
@@ -109,7 +110,7 @@ export function ScanView({
               />
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       {lastRaw && (

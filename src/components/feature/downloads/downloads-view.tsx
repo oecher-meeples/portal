@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import type { DownloadStatus } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,7 @@ export function DownloadsView({
       )}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <div className="bg-card flex flex-col divide-y rounded-lg border">
+          <Card size="flush" className="divide-y">
             {visibleItems.map((file) => (
               <DownloadRow
                 key={file.id}
@@ -121,11 +122,11 @@ export function DownloadsView({
                 onDrop={() => moveAndPersist(file.id)}
               />
             ))}
-          </div>
+          </Card>
           {error && <p className="text-destructive text-sm">{error}</p>}
         </div>
 
-        <div className="bg-card flex flex-col divide-y rounded-lg border">
+        <Card size="flush" className="divide-y">
           {legalDocs.map((doc) => (
             <div key={doc.slug} className="flex flex-col gap-2 p-4">
               <p className="font-medium">{doc.title}</p>
@@ -163,7 +164,7 @@ export function DownloadsView({
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       </div>
       {canManage && <PrivateDownloadsTable downloads={offlineDownloads} />}
     </PageContainer>

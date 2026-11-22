@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ export function HelperRoleManagementSection({
   const sortedRoles = [...roles].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <Accordion className="bg-card rounded-lg border">
+    <Accordion className={cardVariants({ size: "flush" })}>
       <AccordionItem value="helper-roles" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">

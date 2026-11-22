@@ -4,6 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   assignShelfToEvent,
@@ -53,12 +59,14 @@ export function ShelfAssignmentSection({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Regal-Zuordnung</h2>
-      <p className="text-muted-foreground text-sm">
-        Welche Regale sind bei diesem Event aufgebaut? Rein informativ für den
-        Gäste-Bereich.
-      </p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Regal-Zuordnung</CardTitle>
+        <CardDescription>
+          Welche Regale sind bei diesem Event aufgebaut? Rein informativ für den
+          Gäste-Bereich.
+        </CardDescription>
+      </CardHeader>
 
       {assignedShelves.length > 0 && (
         <ul className="flex flex-col divide-y text-sm">
@@ -103,6 +111,6 @@ export function ShelfAssignmentSection({
       )}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
-    </div>
+    </Card>
   );
 }

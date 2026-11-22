@@ -6,6 +6,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Card, CardTitle } from "@/components/ui/card";
 import { StatTile } from "@/components/ui/stat-tile";
 import { QuickActionCard } from "@/components/ui/quick-action-card";
 import { BlobStorageUsageCard } from "@/components/entities/blob-storage-usage-card";
@@ -81,17 +82,17 @@ export function AdminDashboardView({
       />
 
       {rateLimitAlerts.length > 0 && (
-        <div className="border-destructive/50 bg-card flex flex-col gap-2 rounded-lg border p-5">
-          <h2 className="text-destructive flex items-center gap-2 font-serif text-lg font-bold">
+        <Card variant="destructive" className="gap-2">
+          <CardTitle className="text-destructive flex items-center gap-2">
             <AlertTriangle className="size-5" aria-hidden />
             Rate-Limit-Warnungen
-          </h2>
+          </CardTitle>
           <ul className="text-muted-foreground list-inside list-disc text-sm">
             {rateLimitAlerts.map((alert) => (
               <li key={alert.label}>{alert.label}</li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -170,10 +171,8 @@ export function AdminDashboardView({
       </div>
 
       {recentAdminLogins && recentAdminLogins.length > 0 && (
-        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Login-Historie (admin:access)
-          </h2>
+        <Card>
+          <CardTitle>Login-Historie (admin:access)</CardTitle>
           <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
             {recentAdminLogins.map((entry) => (
               <li key={entry.id}>
@@ -183,7 +182,7 @@ export function AdminDashboardView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

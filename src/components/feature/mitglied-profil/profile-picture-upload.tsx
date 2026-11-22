@@ -104,7 +104,7 @@ export function ProfilePictureUpload({
               )
             }
             size="md"
-            className="w-fit"
+            className="w-full sm:w-fit"
           >
             {Object.entries(PROFILE_PICTURE_VISIBILITY_LABELS).map(
               ([value, label]) => (

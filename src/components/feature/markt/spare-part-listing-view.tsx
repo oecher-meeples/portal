@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { ActionButton } from "@/components/ui/action-button";
 import { ContactDialog } from "@/components/entities/contact-dialog";
 import { EditSparePartListingDialog } from "@/components/feature/markt/edit-spare-part-listing-dialog";
@@ -14,7 +15,7 @@ export function SparePartListingCard({
   canManage: boolean;
 }) {
   return (
-    <div className="bg-card flex flex-col gap-2 rounded-lg border p-4">
+    <Card size="sm" className="gap-2">
       <h3 className="font-serif font-semibold">{part.title}</h3>
       <p className="text-muted-foreground text-xs">Zustand: {part.condition}</p>
       {part.description && <p className="text-sm">{part.description}</p>}
@@ -38,6 +39,6 @@ export function SparePartListingCard({
           </ActionButton>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

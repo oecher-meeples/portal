@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,8 +62,8 @@ export function NewsCalendar({
   const todayKey = toDateKey(new Date());
 
   return (
-    <div className="bg-card mx-auto max-w-sm self-start rounded-lg border p-5 lg:sticky lg:top-24">
-      <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
+    <Card className="mx-auto max-w-sm gap-0 self-start lg:sticky lg:top-24">
+      <CardTitle>Google-Kalender</CardTitle>
 
       <div className="mt-3 flex items-center justify-between">
         <Button
@@ -170,6 +171,6 @@ export function NewsCalendar({
           }
         />
       )}
-    </div>
+    </Card>
   );
 }

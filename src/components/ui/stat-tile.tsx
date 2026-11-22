@@ -1,3 +1,4 @@
+import { Card, cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
@@ -39,10 +40,7 @@ export function StatTile({
     return (
       <Link
         href={href}
-        className={cn(
-          "bg-card block h-full rounded-lg border p-5",
-          CARD_HOVER_CLASS,
-        )}
+        className={cn(cardVariants(), "block h-full", CARD_HOVER_CLASS)}
       >
         <StatTileContent label={label} value={value} hint={hint} />
       </Link>
@@ -50,8 +48,8 @@ export function StatTile({
   }
 
   return (
-    <div className="bg-card rounded-lg border p-5">
+    <Card className="block">
       <StatTileContent label={label} value={value} hint={hint} />
-    </div>
+    </Card>
   );
 }

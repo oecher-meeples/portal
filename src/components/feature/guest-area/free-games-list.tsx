@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import type { PlayerCountFilter } from "@/lib/ludothek/browser";
 import { Button } from "@/components/ui/button";
@@ -35,8 +36,8 @@ export function FreeGamesList({ games }: { games: FreeGameEntry[] }) {
       : games.filter((game) => matchesPlayers(game, filter));
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Was ist gerade frei?</h2>
+    <Card>
+      <CardTitle>Was ist gerade frei?</CardTitle>
       <div className="flex gap-2">
         {PLAYER_FILTERS.map((option) => (
           <Button
@@ -68,6 +69,6 @@ export function FreeGamesList({ games }: { games: FreeGameEntry[] }) {
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

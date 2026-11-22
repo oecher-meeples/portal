@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useState } from "react";
 import { GripVertical, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -99,7 +100,7 @@ export function RoleManagementSection({
   }
 
   return (
-    <Accordion className="bg-card rounded-lg border">
+    <Accordion className={cardVariants({ size: "flush" })}>
       <AccordionItem value="roles" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">

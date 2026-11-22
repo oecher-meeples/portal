@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -80,10 +82,7 @@ export function PasswortVergessenForm({
 
   if (step === "request") {
     return (
-      <form
-        onSubmit={handleRequest}
-        className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-      >
+      <form onSubmit={handleRequest} className={cn(cardVariants(), "gap-4")}>
         <TextField
           id="forgot-email"
           label="E-Mail"
@@ -101,10 +100,7 @@ export function PasswortVergessenForm({
   }
 
   return (
-    <form
-      onSubmit={handleReset}
-      className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-    >
+    <form onSubmit={handleReset} className={cn(cardVariants(), "gap-4")}>
       <p className="text-muted-foreground text-sm">
         Falls für <strong>{email}</strong> ein Konto besteht, wurde ein Code per
         E-Mail versendet. Trage ihn hier zusammen mit deinem neuen Passwort ein.

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ShelfCategory } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Card, CardTitle } from "@/components/ui/card";
 import {
   SHELF_CATEGORY_LABELS,
   SHELF_CATEGORY_VALUES,
@@ -114,7 +115,7 @@ export function UnitDetailView({
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
+        <Card className="gap-4">
           <Field label="Label" htmlFor="unit-label">
             <Input
               id="unit-label"
@@ -202,16 +203,14 @@ export function UnitDetailView({
               )}
             </div>
           )}
-        </div>
+        </Card>
 
-        <div className="bg-card rounded-lg border p-6">
-          <h2 className="font-serif text-lg font-bold">
-            Inhalt ({contents.length})
-          </h2>
+        <Card>
+          <CardTitle>Inhalt ({contents.length})</CardTitle>
           {contents.length === 0 ? (
-            <p className="text-muted-foreground mt-2 text-sm">Leer.</p>
+            <p className="text-muted-foreground text-sm">Leer.</p>
           ) : (
-            <ul className="mt-3 flex flex-col divide-y text-sm">
+            <ul className="flex flex-col divide-y text-sm">
               {contents.map((game) => (
                 <li key={game.id} className="py-2">
                   {game.title}
@@ -219,7 +218,7 @@ export function UnitDetailView({
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       </div>
 
       <div className="overflow-hidden rounded-lg border">

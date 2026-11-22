@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+import { cardVariants } from "@/components/ui/card";
+import Link from "next/link";
 import { Pencil } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content-types";
 import { CoverMedia } from "@/components/ui/cover-media";
@@ -19,7 +20,8 @@ export function ContentListRow({
   return (
     <div
       className={cn(
-        "group bg-card flex gap-4 rounded-lg border p-4",
+        cardVariants({ size: "sm" }),
+        "group flex-row gap-4",
         CARD_HOVER_CLASS,
         item.internal && "border-l-primary border-l-4",
       )}

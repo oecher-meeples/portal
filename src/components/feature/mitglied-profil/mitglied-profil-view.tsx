@@ -1,5 +1,6 @@
 import { PendingChangeKind, type Member } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Card, CardTitle } from "@/components/ui/card";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import {
   canViewBankSection,
@@ -324,19 +325,15 @@ export async function MitgliedProfilView({
         {selfServiceData && (
           <>
             {member.email && (
-              <div className="bg-card rounded-lg border p-5">
-                <h2 className="font-serif text-lg font-bold">Newsletter</h2>
-                <div className="mt-4">
-                  <NewsletterPreferencePanel
-                    initialEnabled={
-                      selfServiceData.newsletterPreference.enabled
-                    }
-                    initialCategories={
-                      selfServiceData.newsletterPreference.categories
-                    }
-                  />
-                </div>
-              </div>
+              <Card className="gap-4">
+                <CardTitle>Newsletter</CardTitle>
+                <NewsletterPreferencePanel
+                  initialEnabled={selfServiceData.newsletterPreference.enabled}
+                  initialCategories={
+                    selfServiceData.newsletterPreference.categories
+                  }
+                />
+              </Card>
             )}
 
             {/* Bewusst kein starrer `col-span-*` (im Gegensatz zu den
@@ -349,14 +346,14 @@ export async function MitgliedProfilView({
              * Nachbarspalten, nur `grid-column` legt die Breite fest, also
              * blieb die letzte Spalte neben ihr sonst einfach frei statt
              * gefüllt. */}
-            <div className="bg-card flex flex-col gap-3 rounded-lg border p-5 md:last:col-span-full">
-              <h2 className="font-serif text-lg font-bold">Datenschutz</h2>
+            <Card className="md:last:col-span-full">
+              <CardTitle>Datenschutz</CardTitle>
               <DataExportPanel />
               <DeletionRequestPanel
                 requestedAt={selfServiceData.deletionRequestedAt}
                 openHoldings={selfServiceData.openHoldings}
               />
-            </div>
+            </Card>
           </>
         )}
       </div>
@@ -366,15 +363,13 @@ export async function MitgliedProfilView({
        * diese Danger-Zone (Kündigung) soll dagegen garantiert immer als
        * letzter Block stehen, unabhängig von der Kartenkombination. */}
       {selfServiceData && (
-        <div className="border-destructive/40 flex flex-col gap-3 rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Mitgliedschaft beenden
-          </h2>
+        <Card variant="destructive">
+          <CardTitle>Mitgliedschaft beenden</CardTitle>
           <ResignMembershipPanel
             resignedAt={member.resignedAt?.toISOString() ?? null}
             membershipEndsAt={member.membershipEndsAt?.toISOString() ?? null}
           />
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

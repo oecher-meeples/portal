@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Copy, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { TextField } from "@/components/ui/field";
 import { CopyButton } from "@/components/ui/copy-button";
 import {
@@ -87,24 +88,26 @@ export function BankverbindungSection({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-serif text-lg font-bold">Bankverbindung</h2>
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle>Bankverbindung</CardTitle>
         {canEditUi && !editing && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setHolder(accountHolder ?? "");
-              setIban("");
-              setEditing(true);
-            }}
-          >
-            <Pencil className="size-3.5" />
-            Bearbeiten
-          </Button>
+          <CardAction>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setHolder(accountHolder ?? "");
+                setIban("");
+                setEditing(true);
+              }}
+            >
+              <Pencil className="size-3.5" />
+              Bearbeiten
+            </Button>
+          </CardAction>
         )}
-      </div>
+      </CardHeader>
 
       {editing ? (
         <div className="flex flex-col gap-4">
@@ -192,6 +195,6 @@ export function BankverbindungSection({
           }}
         />
       )}
-    </div>
+    </Card>
   );
 }
