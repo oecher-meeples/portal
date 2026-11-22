@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { ActionButton } from "@/components/ui/action-button";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
@@ -67,11 +68,8 @@ export function PrivateCollectionCard({
   const clickable = entries.length > 0;
 
   return (
-    <div
-      className={cn(
-        "bg-card rounded-lg border p-6",
-        clickable && CARD_HOVER_CLASS,
-      )}
+    <Card
+      className={cn("block", clickable && CARD_HOVER_CLASS)}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
       onClick={clickable ? () => setOpen(true) : undefined}
@@ -86,7 +84,7 @@ export function PrivateCollectionCard({
           : undefined
       }
     >
-      <h2 className="font-serif text-lg font-bold">Meine privaten Spiele</h2>
+      <CardTitle>Meine privaten Spiele</CardTitle>
       <div className="mt-4">
         <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           Aus BGG importiert
@@ -152,7 +150,7 @@ export function PrivateCollectionCard({
           ownOffers={ownOffers}
         />
       </StopRowNavigation>
-    </div>
+    </Card>
   );
 }
 

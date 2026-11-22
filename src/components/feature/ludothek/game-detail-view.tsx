@@ -1,3 +1,4 @@
+import { Card, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
@@ -237,9 +238,9 @@ export function GameDetailView({
         />
 
         {game.notes && (
-          <div className="bg-card rounded-lg border p-4">
+          <Card size="sm">
             <p className="text-sm whitespace-pre-line">{game.notes}</p>
-          </div>
+          </Card>
         )}
 
         {availability && (
@@ -323,8 +324,8 @@ export function GameDetailView({
           </div>
         )}
 
-        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Erklärung</h2>
+        <Card>
+          <CardTitle>Erklärung</CardTitle>
           {game.description && (
             <p className="text-sm leading-relaxed whitespace-pre-line">
               {game.description}
@@ -365,11 +366,11 @@ export function GameDetailView({
               <ExternalLink className="size-4" />
             </Button>
           </div>
-        </div>
+        </Card>
 
         {openLfgPosts && openLfgPosts.length > 0 && (
-          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Offene Gesuche</h2>
+          <Card>
+            <CardTitle>Offene Gesuche</CardTitle>
             <ul className="flex flex-col divide-y">
               {openLfgPosts.map((post) => (
                 <li key={post.id} className="flex flex-col gap-0.5 py-2.5">
@@ -390,7 +391,7 @@ export function GameDetailView({
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
         )}
 
         {explainer && (

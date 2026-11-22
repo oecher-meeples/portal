@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/ui/action-button";
@@ -61,10 +62,8 @@ export function LfgAttachmentsSection({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">
-        Dateien ({attachments.length})
-      </h2>
+    <Card>
+      <CardTitle>Dateien ({attachments.length})</CardTitle>
       {attachments.length === 0 ? (
         <p className="text-muted-foreground text-sm">Noch keine Dateien.</p>
       ) : (
@@ -119,6 +118,6 @@ export function LfgAttachmentsSection({
       {(uploadError || error) && (
         <p className="text-destructive text-sm">{uploadError || error}</p>
       )}
-    </div>
+    </Card>
   );
 }

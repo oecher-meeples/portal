@@ -1,3 +1,4 @@
+import { cardVariants } from "@/components/ui/card";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
@@ -30,7 +31,8 @@ export function RelatedGameCard({
     <Link
       href={`/ludothek/${game.slug}`}
       className={cn(
-        "bg-card flex items-center gap-3 rounded-lg border p-2",
+        cardVariants({ size: "flush" }),
+        "flex-row items-center gap-3 p-2",
         CARD_HOVER_CLASS,
       )}
     >

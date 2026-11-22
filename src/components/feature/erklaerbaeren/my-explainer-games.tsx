@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
@@ -166,9 +167,10 @@ export function MyExplainerGames({
           </p>
         )}
         {filteredGames.map((game) => (
-          <div
+          <Card
             key={game.boardGameId}
-            className="bg-card flex items-center gap-4 rounded-lg border p-3"
+            size="sm"
+            className="flex-row items-center gap-4"
           >
             <span className="max-w-[30%] truncate font-medium">
               {game.boardGameTitle}
@@ -188,7 +190,7 @@ export function MyExplainerGames({
               <Trash2 className="size-4" />
               Entfernen
             </ActionButton>
-          </div>
+          </Card>
         ))}
       </div>
 

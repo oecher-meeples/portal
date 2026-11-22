@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { Copy, Mail, RefreshCw, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useAction } from "@/components/ui/use-action";
 import { formatDateTime } from "@/lib/utils/format";
@@ -48,15 +54,15 @@ export function KalenderTokenSection({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">
-        Interner Kalender-Abo-Link
-      </h2>
-      <p className="text-muted-foreground text-sm">
-        Persönlicher, widerrufbarer Link zum Abonnieren des internen
-        Vereinskalenders in einer Kalender-App. Die eigentliche
-        Google-Calendar-Adresse wird dabei nie herausgegeben.
-      </p>
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle>Interner Kalender-Abo-Link</CardTitle>
+        <CardDescription>
+          Persönlicher, widerrufbarer Link zum Abonnieren des internen
+          Vereinskalenders in einer Kalender-App. Die eigentliche
+          Google-Calendar-Adresse wird dabei nie herausgegeben.
+        </CardDescription>
+      </CardHeader>
 
       <p className="text-sm">
         Status:{" "}
@@ -107,6 +113,6 @@ export function KalenderTokenSection({
           </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

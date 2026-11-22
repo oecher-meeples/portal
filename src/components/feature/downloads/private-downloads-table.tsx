@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { DownloadRow } from "@/components/feature/downloads/download-row";
 import type { DownloadListItem } from "@/components/feature/downloads/downloads-view";
 
@@ -16,11 +17,11 @@ export function PrivateDownloadsTable({
       <p className="text-muted-foreground text-sm">
         Nur für Administratoren sichtbar — sortiert nach letzter Änderung.
       </p>
-      <div className="bg-card flex flex-col divide-y rounded-lg border">
+      <Card size="flush" className="divide-y">
         {downloads.map((file) => (
           <DownloadRow key={file.id} file={file} canManage draggable={false} />
         ))}
-      </div>
+      </Card>
     </div>
   );
 }

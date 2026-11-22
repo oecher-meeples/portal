@@ -1,3 +1,5 @@
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -140,7 +142,7 @@ export default async function LudothekPage({
         description="Durchstöbere den Vereinsbestand und filtere nach Spieleranzahl, Dauer oder Mechanik."
       />
       {hasUnconfirmedOwnHoldings && (
-        <p className="bg-card rounded-lg border p-4 text-sm">
+        <p className={cn(cardVariants({ size: "sm" }), "block text-sm")}>
           Du hast noch unbestätigte Spiele.{" "}
           <Link href="/dashboard" className="text-primary hover:underline">
             Zum Dashboard
@@ -148,7 +150,12 @@ export default async function LudothekPage({
         </p>
       )}
       {filters.unit && (
-        <p className="bg-card flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-4 text-sm">
+        <p
+          className={cn(
+            cardVariants({ size: "sm" }),
+            "flex-row flex-wrap items-center gap-x-3 gap-y-1 text-sm",
+          )}
+        >
           <span>
             {unitFilter
               ? `Gefiltert nach ${unitFilter.unit.label} (${unitFilter.unit.code}) – inklusive allem, was darin steht.`

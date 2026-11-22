@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { TextField } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { birthDateValidator } from "@/components/ui/constraints";
@@ -127,16 +128,18 @@ export function StammdatenSection({
   const canEdit = canManage || canRequestChange;
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-lg font-bold">Stammdaten</h2>
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle>Stammdaten</CardTitle>
         {canEdit && !editing && (
-          <Button variant="outline" size="sm" onClick={startEdit}>
-            <Pencil className="size-3.5" />
-            Bearbeiten
-          </Button>
+          <CardAction>
+            <Button variant="outline" size="sm" onClick={startEdit}>
+              <Pencil className="size-3.5" />
+              Bearbeiten
+            </Button>
+          </CardAction>
         )}
-      </div>
+      </CardHeader>
 
       {editing ? (
         <div className="flex flex-col gap-4">
@@ -254,6 +257,6 @@ export function StammdatenSection({
           changes={openChanges}
         />
       )}
-    </div>
+    </Card>
   );
 }

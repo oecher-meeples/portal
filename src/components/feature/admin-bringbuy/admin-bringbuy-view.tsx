@@ -8,6 +8,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardTitle } from "@/components/ui/card";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import {
   Table,
@@ -155,9 +156,10 @@ export function AdminBringBuyView({
             </p>
           )}
           {reservedCarts.map((cart) => (
-            <div
+            <Card
               key={cart.id}
-              className="bg-card flex items-center justify-between gap-3 rounded-lg border p-4"
+              size="sm"
+              className="flex-row items-center justify-between"
             >
               <div>
                 <p className="font-medium">{cart.name}</p>
@@ -172,7 +174,7 @@ export function AdminBringBuyView({
               >
                 Wiederherstellen
               </Button>
-            </div>
+            </Card>
           ))}
         </div>
       ) : (
@@ -204,9 +206,9 @@ export function AdminBringBuyView({
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="bg-card rounded-lg border p-5">
-              <h2 className="font-serif text-lg font-bold">Kasse</h2>
-              <div className="relative mt-3">
+            <Card>
+              <CardTitle>Kasse</CardTitle>
+              <div className="relative">
                 <ScanLine className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                 <Input
                   placeholder="Artikel-Code eingeben (z. B. FM-0001)"
@@ -215,13 +217,13 @@ export function AdminBringBuyView({
                   onChange={(event) => setCode(event.target.value)}
                 />
               </div>
-              <Button className="mt-3 w-full" onClick={handleCodeSearch}>
+              <Button className="w-full" onClick={handleCodeSearch}>
                 Suchen
               </Button>
               {message && (
-                <p className="text-muted-foreground mt-2 text-sm">{message}</p>
+                <p className="text-muted-foreground text-sm">{message}</p>
               )}
-            </div>
+            </Card>
 
             <FleaMarketCartPanel
               eventId={selectedEventId}

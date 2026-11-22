@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAction } from "@/components/ui/use-action";
 import {
@@ -40,14 +41,14 @@ export function FleaMarketCartPanel({
   const pending = sellAction.pending || reserveAction.pending;
 
   return (
-    <div className="bg-card rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Warenkorb</h2>
+    <Card>
+      <CardTitle>Warenkorb</CardTitle>
       {selectedItems.length === 0 ? (
-        <p className="text-muted-foreground mt-2 text-sm">
+        <p className="text-muted-foreground text-sm">
           Artikel im Status „Verfügbar“ oder „Reserviert“ per Häkchen auswählen.
         </p>
       ) : (
-        <ul className="mt-2 flex flex-col gap-1 text-sm">
+        <ul className="flex flex-col gap-1 text-sm">
           {selectedItems.map((item) => (
             <li key={item.id} className="flex justify-between gap-2">
               <span className="truncate">{item.title}</span>
@@ -58,13 +59,13 @@ export function FleaMarketCartPanel({
           ))}
         </ul>
       )}
-      <p className="mt-3 flex justify-between font-medium">
+      <p className="flex justify-between font-medium">
         <span>Summe</span>
         <span>{total} €</span>
       </p>
 
       {showReserveInput && (
-        <div className="mt-3 flex gap-2">
+        <div className="flex gap-2">
           <Input
             placeholder="Name für den Warenkorb"
             value={reserveName}
@@ -73,7 +74,7 @@ export function FleaMarketCartPanel({
         </div>
       )}
 
-      <div className="mt-3 flex gap-2">
+      <div className="flex gap-2">
         <Button
           className="flex-1"
           disabled={itemIds.length === 0 || pending}
@@ -99,10 +100,10 @@ export function FleaMarketCartPanel({
         </Button>
       </div>
       {(sellAction.error || reserveAction.error) && (
-        <p className="text-destructive mt-2 text-xs">
+        <p className="text-destructive text-xs">
           {sellAction.error ?? reserveAction.error}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

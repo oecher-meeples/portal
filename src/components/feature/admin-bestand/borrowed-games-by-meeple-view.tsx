@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, cardVariants } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
@@ -83,17 +84,17 @@ export function BorrowedGamesByMeepleView({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-card text-muted-foreground rounded-lg border p-5 text-sm">
+        <Card className="text-muted-foreground block text-sm">
           {meeples.length === 0
             ? "Aktuell hat niemand ein Spiel bei sich."
             : "Kein Treffer für diese Suche."}
-        </div>
+        </Card>
       ) : (
         <Accordion
           // Remount bei jeder Sucheingabe (statt controlled): Treffer sollen
           // sofort aufgeklappt sein, manuelles Zu-/Aufklappen bleibt möglich.
           key={search}
-          className="bg-card rounded-lg border"
+          className={cardVariants({ size: "flush" })}
           defaultValue={
             search.trim()
               ? filtered.map((meeple) => meeple.vereinsmitgliedId)

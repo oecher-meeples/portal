@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { formatBytes } from "@/lib/utils/format";
 import { getStorageTone, type StorageTone } from "@/lib/utils/storage-tone";
@@ -22,7 +23,7 @@ export function NeonStorageUsageCard({ usage }: { usage: NeonStorageUsage }) {
   const tone = getStorageTone(usage.percent);
 
   return (
-    <div className="bg-card rounded-lg border p-5">
+    <Card className="block">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           Datenbank-Speicher
@@ -44,6 +45,6 @@ export function NeonStorageUsageCard({ usage }: { usage: NeonStorageUsage }) {
         Zeigt nur diesen Branch — das Kontingent gilt projektweit über alle
         Branches.
       </p>
-    </div>
+    </Card>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -68,10 +70,7 @@ export function PasswortEinloesenForm({ token }: { token: string | null }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-    >
+    <form onSubmit={handleSubmit} className={cn(cardVariants(), "gap-4")}>
       <TextField
         id="einloesen-password"
         label="Neues Passwort"

@@ -1,3 +1,4 @@
+import { cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import type { ContentItem } from "@/lib/content/content-types";
@@ -22,7 +23,8 @@ export function ContentTimelineEntry({
   return (
     <article
       className={cn(
-        "bg-card flex flex-col gap-4 rounded-lg border p-5",
+        cardVariants(),
+        "gap-4",
         item.internal && "border-l-primary border-l-4",
       )}
     >

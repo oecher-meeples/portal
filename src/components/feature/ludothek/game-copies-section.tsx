@@ -1,3 +1,4 @@
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReactNode } from "react";
 import {
   Table,
@@ -118,13 +119,11 @@ export function GameCopiesSection({
   selectedCopyId?: string;
 }) {
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-lg font-bold">
-          {copies.length > 1 ? "Exemplare" : "Exemplar"}
-        </h2>
+    <Card>
+      <CardHeader>
+        <CardTitle>{copies.length > 1 ? "Exemplare" : "Exemplar"}</CardTitle>
         {canManageGames && (
-          <div className="flex flex-wrap gap-2">
+          <CardAction>
             <GameCopyQrExportButton
               copies={copies.map((copy) => ({
                 id: copy.id,
@@ -137,9 +136,9 @@ export function GameCopiesSection({
               boardGameId={boardGameId}
               boardGameTitle={boardGameTitle}
             />
-          </div>
+          </CardAction>
         )}
-      </div>
+      </CardHeader>
 
       {copies.length > 1 ? (
         <Table>
@@ -242,6 +241,6 @@ export function GameCopiesSection({
           </GameCopyCard>
         ))
       )}
-    </div>
+    </Card>
   );
 }

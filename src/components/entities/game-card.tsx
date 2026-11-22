@@ -1,3 +1,4 @@
+import { cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Layers } from "lucide-react";
@@ -43,10 +44,7 @@ export function GameCard({
   return (
     <Link
       href={`/ludothek/${game.boardGameSlug}`}
-      className={cn(
-        "group bg-card flex flex-col overflow-hidden rounded-lg border",
-        CARD_HOVER_CLASS,
-      )}
+      className={cn(cardVariants({ size: "flush" }), "group", CARD_HOVER_CLASS)}
     >
       <CardCornerOverlay corner="top-right">
         <div className="flex flex-col items-end gap-1.5">

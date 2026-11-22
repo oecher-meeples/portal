@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
@@ -19,10 +20,7 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
     // Container-Breite auseinandergezogen werden.
     <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,200px))] gap-4">
       {links.map((link) => (
-        <div
-          key={link.id}
-          className="bg-card flex flex-col items-center gap-2 rounded-lg border p-6 text-center"
-        >
+        <Card key={link.id} layout="tile">
           <CoverMedia
             sizes="32px"
             imageUrl={link.iconUrl}
@@ -54,13 +52,13 @@ export function ImportantLinksEditor({ links }: { links: ImportantLinkRow[] }) {
               <Trash2 className="size-3.5" />
             </ActionButton>
           </div>
-        </div>
+        </Card>
       ))}
       <CreateLinkDialog
         trigger={
           <button
             type="button"
-            className="text-muted-foreground hover:border-primary/60 hover:text-primary flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm transition-colors"
+            className="text-muted-foreground hover:border-primary/60 hover:text-primary bg-card/60 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-5 text-center text-sm transition-colors"
           >
             <Plus className="size-6" />
             Hinzufügen

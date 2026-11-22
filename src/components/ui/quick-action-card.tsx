@@ -1,3 +1,4 @@
+import { cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
@@ -17,10 +18,7 @@ export function QuickActionCard({
   return (
     <Link
       href={href}
-      className={cn(
-        "bg-card flex flex-col items-center gap-2 rounded-lg border p-6 text-center",
-        CARD_HOVER_CLASS,
-      )}
+      className={cn(cardVariants({ layout: "tile" }), CARD_HOVER_CLASS)}
     >
       <Icon className="text-primary size-6" />
       <span className="font-serif text-sm font-semibold">{label}</span>

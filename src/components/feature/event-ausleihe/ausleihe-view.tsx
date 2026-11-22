@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,7 +158,7 @@ export function AusleiheView() {
     <PageContainer className="grid gap-6 lg:grid-cols-[2fr_1fr]">
       <CodeScanner onDetected={handleCode} />
 
-      <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+      <Card className="gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="manual-code" className="text-sm font-medium">
             Manuelle Eingabe
@@ -299,7 +300,7 @@ export function AusleiheView() {
             <p className="text-muted-foreground mt-3 text-sm">{message}</p>
           )}
         </div>
-      </div>
+      </Card>
     </PageContainer>
   );
 }

@@ -4,6 +4,13 @@ import { useState } from "react";
 import { Pencil } from "lucide-react";
 import type { ProfilePictureVisibility } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -102,15 +109,13 @@ export function MeepleDatenSection({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-serif text-lg font-bold">Meeple-Daten</h2>
-          <p className="text-muted-foreground text-sm">
-            Freiwillige Angaben für andere Meeple.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle>Meeple-Daten</CardTitle>
+        <CardDescription>
+          Freiwillige Angaben für andere Meeple.
+        </CardDescription>
+        <CardAction>
           {canEdit && (
             // Bewusst unabhängig vom Editing-Formular unten (eigenes,
             // sofort speicherndes Feld, keine "Speichern"/"Abbrechen"-
@@ -145,8 +150,8 @@ export function MeepleDatenSection({
               Bearbeiten
             </Button>
           )}
-        </div>
-      </div>
+        </CardAction>
+      </CardHeader>
       {visibilityError && (
         <p className="text-destructive text-sm">{visibilityError}</p>
       )}
@@ -278,6 +283,6 @@ export function MeepleDatenSection({
           )}
         </dl>
       )}
-    </div>
+    </Card>
   );
 }

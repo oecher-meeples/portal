@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { BoardGameTraitTone, type BoardGameTrait } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -106,10 +107,8 @@ function TraitTextCard({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
-      <p className="font-serif text-base font-bold">
-        {BOARD_GAME_TRAIT_FALLBACK_LABELS[trait]}
-      </p>
+    <Card size="sm">
+      <CardTitle as="h3">{BOARD_GAME_TRAIT_FALLBACK_LABELS[trait]}</CardTitle>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField
           id={`${idPrefix}-label`}
@@ -160,7 +159,7 @@ function TraitTextCard({
         </Button>
         {error && <p className="text-destructive text-sm">{error}</p>}
       </div>
-    </div>
+    </Card>
   );
 }
 
