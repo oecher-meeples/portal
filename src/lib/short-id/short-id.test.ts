@@ -1,12 +1,37 @@
 import { describe, expect, it } from "vitest";
 import {
   buildShortIdUrl,
+  classifyScannedSearch,
   formatShortIdSlug,
   parseShortId,
   shortIdFromUnitCode,
   unitCodeFromShortId,
   unitKindFromShortId,
 } from "./short-id";
+
+describe("classifyScannedSearch (#570)", () => {
+  it.each([
+    ["https://192.168.178.100:3002/id/inv-189", "/id/inv-189"],
+    ["https://short.oecher-meeples.org/id/box-0001", "/id/box-0001"],
+    ["https://short.oecher-meeples.org/id/shelf-c4", "/id/shelf-C4"],
+    ["inv-42", "/id/inv-42"],
+  ])("routes the short ID %s via the router", (raw, href) => {
+    expect(classifyScannedSearch(raw)).toEqual({ kind: "navigate", href });
+  });
+
+  it("marks meeple codes as not yet supported (#541)", () => {
+    expect(
+      classifyScannedSearch("https://short.oecher-meeples.org/id/meeple-abc"),
+    ).toEqual({ kind: "unsupported", shortId: { kind: "meeple", id: "abc" } });
+  });
+
+  it.each(["4001504311892", "Ark Nova", "https://example.org/spiele/123"])(
+    "keeps %s as search text",
+    (raw) => {
+      expect(classifyScannedSearch(raw)).toEqual({ kind: "search", text: raw });
+    },
+  );
+});
 
 describe("buildShortIdUrl", () => {
   it("builds the fixed public short URL", () => {

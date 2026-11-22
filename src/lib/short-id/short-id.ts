@@ -53,6 +53,28 @@ export function copyDetailPath(boardGameSlug: string, inventoryNumber: number) {
   return `/ludothek/${boardGameSlug}/${formatShortIdSlug({ kind: "inv", id: inventoryNumber })}`;
 }
 
+/** In-App-Pfad des Routers (`/id/[slug]`) — wer einen gescannten Code
+ * auflösen will, navigiert hierhin statt die Regeln aus `resolveShortId()`
+ * nachzubauen. */
+export function shortIdRouterPath(shortId: ShortId): string {
+  return `/id/${formatShortIdSlug(shortId)}`;
+}
+
+/** Was ein Scan in einem Suchfeld auslöst (#570): Short-ID → Router,
+ * `meeple-` → noch nicht unterstützt (#541), alles andere (EAN, Freitext) →
+ * Suchtext. */
+export type ScannedSearchInput =
+  | { kind: "navigate"; href: string }
+  | { kind: "unsupported"; shortId: ShortId }
+  | { kind: "search"; text: string };
+
+export function classifyScannedSearch(raw: string): ScannedSearchInput {
+  const shortId = parseShortId(raw);
+  if (!shortId) return { kind: "search", text: raw };
+  if (shortId.kind === "meeple") return { kind: "unsupported", shortId };
+  return { kind: "navigate", href: shortIdRouterPath(shortId) };
+}
+
 export function buildShortIdUrl(shortId: ShortId): string {
   return `${SHORT_ID_BASE_URL}/id/${formatShortIdSlug(shortId)}`;
 }
