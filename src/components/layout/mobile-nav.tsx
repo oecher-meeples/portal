@@ -3,14 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserRound } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
   DialogOverlay,
   DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { ProfileLink } from "@/components/layout/profile-link";
+import { useSignOut } from "@/components/layout/use-sign-out";
 import { PreviewTierSwitcher } from "@/components/feature/admin-preview-tier/preview-tier-switcher";
 import {
   getVisibleNavGroups,
@@ -41,9 +44,10 @@ export function MobileNav({
   realTier: Tier;
   permissions: readonly string[];
   flags: Readonly<Record<NavFlag, boolean>>;
-  user: { name: string } | null;
+  user: { name: string; meepleId: string } | null;
 }) {
   const pathname = usePathname();
+  const signOut = useSignOut();
   const previewingLowerTier = realTier === "admin" && tier !== "admin";
   const groups = getVisibleNavGroups(
     tier,
@@ -100,9 +104,9 @@ export function MobileNav({
                 data-slot="dialog-content"
                 className="bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:slide-in-from-bottom data-closed:animate-out data-closed:slide-out-to-bottom fixed inset-x-0 bottom-16 z-50 flex max-h-[calc(70vh-4rem)] flex-col gap-1 overflow-x-hidden rounded-t-xl p-3 text-sm ring-1 duration-150 outline-none"
               >
-                {/* Preview-Tier-Switcher, Profil-Link und Theme-Umschalter
-                    sind sonst nur im Header — auf `< sm` (wo die Bottom-Bar
-                    ihn ersetzt) nicht erreichbar. Landen hier in der ersten
+                {/* Preview-Tier-Switcher, Anmelden/Profil/Abmelden und
+                    Theme-Umschalter sind im Header `< md` ausgeblendet
+                    (#582, dort sonst Überlauf). Landen hier in der ersten
                     Gruppe statt an anderer Stelle in der Bottom-Bar selbst
                     zu leben, da es kein eigenes viertes Icon dafür geben
                     soll. Beide Zeilen rechtsbündig. */}
@@ -117,15 +121,40 @@ export function MobileNav({
                 )}
                 {index === 0 && (
                   <div className="flex items-center justify-end gap-3 px-2 pb-1">
-                    {user && (
-                      <Link
-                        href="/profil"
-                        onClick={() => setOpenGroup(null)}
-                        className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-sm"
-                      >
-                        <UserRound className="text-primary size-4 shrink-0" />
-                        <span className="truncate">{user.name}</span>
-                      </Link>
+                    {user ? (
+                      <>
+                        <ProfileLink
+                          user={user}
+                          onNavigate={() => setOpenGroup(null)}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 gap-1.5"
+                          onClick={() => {
+                            setOpenGroup(null);
+                            void signOut();
+                          }}
+                        >
+                          <LogOut className="size-4" />
+                          Abmelden
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        render={
+                          <Link
+                            href="/login"
+                            onClick={() => setOpenGroup(null)}
+                          >
+                            <LogIn className="size-4" />
+                            Anmelden
+                          </Link>
+                        }
+                      />
                     )}
                     <ThemeToggle />
                   </div>
