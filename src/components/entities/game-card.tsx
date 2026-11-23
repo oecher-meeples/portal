@@ -1,30 +1,41 @@
+import { cardVariants } from "@/components/ui/card";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { PackagePlus, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
+import type { BoardGameTrait } from "@prisma/client";
 import type { PublicLudothekGame, LudothekGame } from "@/lib/ludothek/browser";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import { EditionFlag } from "@/components/entities/edition-flag";
+import { GameContributorSummary } from "@/components/entities/game-contributor-summary";
+import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
+import { CopyCountSuffix } from "@/components/entities/copy-count-suffix";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
+import { playersAndDuration } from "@/lib/ludothek/format";
 import type { GameZustand } from "@/lib/ludothek/holdings";
-
-function playersAndDuration(game: PublicLudothekGame) {
-  const players =
-    game.minPlayers && game.maxPlayers
-      ? `${game.minPlayers}–${game.maxPlayers}`
-      : (game.minPlayers ?? game.maxPlayers ?? "?");
-  const duration = game.playTimeMinutes ? `${game.playTimeMinutes}’` : "";
-  return [players ? `${players} Spieler` : null, duration]
-    .filter(Boolean)
-    .join(" · ");
-}
+import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { cn } from "@/lib/utils/cn";
 
 export function GameCard({
   game,
   actions,
+  traitTexts,
 }: {
-  game: PublicLudothekGame | (LudothekGame & { zustand: GameZustand });
+  game: (PublicLudothekGame | (LudothekGame & { zustand: GameZustand })) & {
+    /** Set once several copies of this title are folded into one card (#121/#122). */
+    copyCount?: number;
+    /** How many copies share the shown zustand (#125) — only meaningful with copyCount. */
+    zustandCount?: number;
+  };
   /** Caller-supplied overlay, e.g. an edit button — GameCard just places it. */
   actions?: ReactNode;
+  /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept) — ein einmal pro
+   * Seite geladenes Objekt, hier nur durchgereicht. */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
 }) {
   const zustand = "zustand" in game ? game.zustand : undefined;
   const isExpansion = game.kind === "BOARDGAME_EXPANSION";
@@ -32,34 +43,37 @@ export function GameCard({
 
   return (
     <Link
-      href={`/ludothek/${game.slug}`}
-      className="group bg-card hover:border-primary/60 relative flex flex-col overflow-hidden rounded-lg border transition-colors"
+      href={`/ludothek/${game.boardGameSlug}`}
+      className={cn(cardVariants({ size: "flush" }), "group", CARD_HOVER_CLASS)}
     >
-      {actions && (
-        <CardCornerOverlay corner="top-right">{actions}</CardCornerOverlay>
-      )}
-      {isExpansion && (
-        <CardCornerOverlay corner="top-left">
-          <span
-            title="Erweiterung"
-            className="bg-background inline-flex size-8 items-center justify-center rounded-md border"
-          >
-            <PackagePlus className="size-4" />
-          </span>
-        </CardCornerOverlay>
-      )}
+      <CardCornerOverlay corner="top-right">
+        <div className="flex flex-col items-end gap-1.5">
+          {actions}
+          <BggRatingBadge averageRating={game.averageRating} />
+        </div>
+      </CardCornerOverlay>
+      {isExpansion && <RibbonCorner>Erweiterung</RibbonCorner>}
+      {/* < sm: 1-spaltiges Grid macht das Cover sonst sehr groß (volle
+          Kartenbreite) — etwas kürzeres Seitenverhältnis verkleinert es
+          dort; ab sm (2+ Spalten, schmalere Karten) wieder aspect-video. */}
       <GameCoverMedia
         imageUrl={game.imageUrl}
         title={game.title}
-        aspect="aspect-video"
+        aspect="aspect-[2/1] sm:aspect-video"
       />
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <h3 className="group-hover:text-primary font-serif text-lg leading-snug font-semibold">
           {game.title}
+          <EditionFlag languages={game.editionLanguages} className="ml-1.5" />
+          <CopyCountSuffix copyCount={game.copyCount} />
         </h3>
         <p className="text-muted-foreground text-sm">
           {playersAndDuration(game)}
         </p>
+        <GameContributorSummary
+          publisher={game.publisher}
+          illustrator={game.illustrator}
+        />
         {expansionCount > 0 && (
           <p className="text-muted-foreground flex items-center gap-1 text-sm">
             <Layers className="size-4" />
@@ -67,9 +81,22 @@ export function GameCard({
             {expansionCount === 1 ? "Erweiterung" : "Erweiterungen"}
           </p>
         )}
-        {zustand && (
-          <GameZustandPill zustand={zustand} className="mt-auto w-fit" />
-        )}
+        <div className="mt-auto flex flex-wrap items-center gap-1.5">
+          {zustand && (
+            <GameZustandPill
+              zustand={zustand}
+              count={game.zustandCount}
+              total={game.copyCount}
+            />
+          )}
+          <LanguageIndependentPill
+            languageDependence={game.languageDependence}
+          />
+          <BoardGameTraitsDisplay
+            traits={game.traits}
+            textsByTrait={traitTexts ?? {}}
+          />
+        </div>
       </div>
     </Link>
   );

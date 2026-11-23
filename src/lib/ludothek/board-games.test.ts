@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -15,27 +19,7 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
 
-const fetchBggGameMock = vi.fn();
-vi.mock("@/lib/bgg/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/bgg/client")>(
-      "@/lib/bgg/client",
-    );
-  return {
-    ...actual,
-    fetchBggGame: (...args: unknown[]) => fetchBggGameMock(...args),
-  };
-});
-
-const { BggApiError, BggNotFoundError } = await import("@/lib/bgg/client");
-const {
-  createBoardGame,
-  updateBoardGame,
-  previewBggImport,
-  findOrCreateBoardGameTitle,
-  assignExpansion,
-  removeExpansionAssignment,
-} = await import("./board-games");
+const { createBoardGame, updateBoardGame } = await import("./board-games");
 
 const VALID_INPUT = { title: "Arche Nova" };
 const VALID_EAN = "5901234123457";
@@ -53,6 +37,8 @@ beforeEach(() => {
   prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
   prismaMock.boardGame.count.mockResolvedValue(0);
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
+  prismaMock.boardGame.findFirst.mockResolvedValue(null);
+  prismaMock.member.findUnique.mockResolvedValue({ id: "member-1" } as never);
 });
 
 describe("createBoardGame", () => {
@@ -67,7 +53,7 @@ describe("createBoardGame", () => {
 
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await createBoardGame(VALID_INPUT);
 
@@ -77,7 +63,7 @@ describe("createBoardGame", () => {
 
   it("rejects when the title is missing", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await createBoardGame({ title: "" });
 
@@ -87,19 +73,20 @@ describe("createBoardGame", () => {
 
   it("rejects an invalid ean", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await createBoardGame({ ...VALID_INPUT, ean: "12345" });
 
     expect(result).toEqual({
       error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
     });
     expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
   });
 
   it("creates a new title, its first copy's slug and an initial holding into Unsortiert", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -108,7 +95,12 @@ describe("createBoardGame", () => {
 
     const result = await createBoardGame(VALID_INPUT);
 
-    expect(result).toEqual({ success: true, id: "copy-1", hint: undefined });
+    expect(result).toEqual({
+      success: true,
+      id: "copy-1",
+      boardGameId: "game-1",
+      hint: undefined,
+    });
     expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ title: "Arche Nova" }),
     });
@@ -128,9 +120,106 @@ describe("createBoardGame", () => {
     });
   });
 
+  it("creates BoardGameAlternateName rows from the BGG-Import-Vorschau (#187)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.create.mockResolvedValue({
+      id: "game-1",
+      title: "Ark Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
+
+    await createBoardGame({
+      ...VALID_INPUT,
+      alternateNames: ["Ark Nova (Deutsch)"],
+    });
+
+    expect(prismaMock.boardGameAlternateName.createMany).toHaveBeenCalledWith({
+      data: [{ boardGameId: "game-1", name: "Ark Nova (Deutsch)" }],
+    });
+  });
+
+  it("does not duplicate alternate names when reusing an existing title by bggId", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "existing-title",
+      title: "Ark Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
+
+    await createBoardGame({
+      ...VALID_INPUT,
+      bggId: 342942,
+      alternateNames: ["Ark Nova (Deutsch)"],
+    });
+
+    expect(prismaMock.boardGameAlternateName.createMany).not.toHaveBeenCalled();
+  });
+
+  it("places the first copy in the given unit instead of Unsortiert when a placement is set (#121/#122)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.create.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
+
+    await createBoardGame({
+      ...VALID_INPUT,
+      placement: { unitId: "unit-shelf-a" },
+    });
+
+    expect(prismaMock.storageUnit.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        unitId: "unit-shelf-a",
+        origin: "INITIAL",
+      }),
+    });
+  });
+
+  it("places the first copy with the creator when placement is self", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.create.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-1" } as never);
+
+    await createBoardGame({ ...VALID_INPUT, placement: { self: true } });
+
+    expect(prismaMock.storageUnit.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        vereinsmitgliedId: "member-1",
+        unitId: null,
+        origin: "INITIAL",
+      }),
+    });
+  });
+
+  it("rejects placement:self when the creator has no linked Vereinsmitglied (#333)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.member.findUnique.mockResolvedValue(null);
+
+    const result = await createBoardGame({
+      ...VALID_INPUT,
+      placement: { self: true },
+    });
+
+    expect(result).toEqual({
+      error: expect.stringContaining("Vereinsmitglied verknüpft"),
+    });
+    expect(prismaMock.gameHolding.create).not.toHaveBeenCalled();
+  });
+
   it("resolves a copy-slug collision with a numeric suffix", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-2",
       title: "Arche Nova",
@@ -149,7 +238,7 @@ describe("createBoardGame", () => {
 
   it("reuses an existing title for a duplicate bggId instead of creating a second title (second copy, ADR 0008)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Arche Nova",
@@ -158,16 +247,73 @@ describe("createBoardGame", () => {
 
     const result = await createBoardGame({ ...VALID_INPUT, bggId: 342942 });
 
-    expect(result).toEqual({ success: true, id: "copy-2", hint: undefined });
+    expect(result).toEqual({
+      success: true,
+      id: "copy-2",
+      boardGameId: "game-1",
+      hint: undefined,
+    });
     expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
     expect(prismaMock.gameCopy.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ boardGameId: "game-1" }),
     });
   });
 
+  it("rejects creating a second title with the same name, even without a bggId (#183)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.findFirst.mockResolvedValue({
+      id: "game-existing",
+      title: "Arche Nova",
+    } as never);
+
+    const result = await createBoardGame(VALID_INPUT);
+
+    expect(result).toEqual({
+      error:
+        "„Arche Nova“ existiert bereits im Bestand. Bitte über „Weiteres Exemplar anlegen“ eine weitere Kopie dieses Titels anlegen, statt einen zweiten Titel mit demselben Namen zu erzeugen.",
+    });
+    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
+    expect(prismaMock.gameCopy.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a same-named title even when a (different) bggId is given", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    // No title shares this bggId, but a different title row has the same name.
+    prismaMock.boardGame.findUnique.mockResolvedValue(null);
+    prismaMock.boardGame.findFirst.mockResolvedValue({
+      id: "game-existing",
+      title: "Arche Nova",
+    } as never);
+
+    const result = await createBoardGame({ ...VALID_INPUT, bggId: 999999 });
+
+    expect(result).toEqual({
+      error:
+        "„Arche Nova“ existiert bereits im Bestand. Bitte über „Weiteres Exemplar anlegen“ eine weitere Kopie dieses Titels anlegen, statt einen zweiten Titel mit demselben Namen zu erzeugen.",
+    });
+    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
+  });
+
+  it("skips the title-collision check when the bggId already reuses an existing title", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "game-1",
+      title: "Arche Nova",
+    } as never);
+    prismaMock.gameCopy.create.mockResolvedValue({ id: "copy-2" } as never);
+
+    const result = await createBoardGame({ ...VALID_INPUT, bggId: 342942 });
+
+    expect(result.success).toBe(true);
+    expect(prismaMock.boardGame.findFirst).not.toHaveBeenCalled();
+  });
+
   it("accepts a duplicate ean and reports it as a hint, not an error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.boardGame.count.mockResolvedValue(1);
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-2",
@@ -184,39 +330,16 @@ describe("createBoardGame", () => {
   });
 });
 
-describe("findOrCreateBoardGameTitle", () => {
-  it("creates a new title when no bggId is given", async () => {
-    prismaMock.boardGame.create.mockResolvedValue({ id: "game-1" } as never);
-
-    await findOrCreateBoardGameTitle(VALID_INPUT);
-
-    expect(prismaMock.boardGame.findUnique).not.toHaveBeenCalled();
-    expect(prismaMock.boardGame.create).toHaveBeenCalled();
-  });
-
-  it("reuses the title found by bggId", async () => {
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "existing-title",
-    } as never);
-
-    const result = await findOrCreateBoardGameTitle({
-      ...VALID_INPUT,
-      bggId: 342942,
-    });
-
-    expect(result).toEqual({ id: "existing-title" });
-    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
-  });
-});
-
 describe("updateBoardGame", () => {
   beforeEach(() => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.update.mockResolvedValue({
+      slug: "arche-nova",
+    } as never);
   });
 
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await updateBoardGame("game-1", VALID_INPUT);
 
@@ -226,7 +349,7 @@ describe("updateBoardGame", () => {
 
   it("updates the title when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await updateBoardGame("game-1", VALID_INPUT);
 
@@ -239,7 +362,7 @@ describe("updateBoardGame", () => {
 
   it("rejects an invalid ean", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await updateBoardGame("game-1", {
       ...VALID_INPUT,
@@ -248,145 +371,19 @@ describe("updateBoardGame", () => {
 
     expect(result).toEqual({
       error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
+      invalidEan: true,
     });
     expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
   });
 
   it("excludes the title itself from the duplicate-ean check", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     await updateBoardGame("game-1", { ...VALID_INPUT, ean: VALID_EAN });
 
     expect(prismaMock.boardGame.count).toHaveBeenCalledWith({
       where: { ean: VALID_EAN, id: { not: "game-1" } },
-    });
-  });
-});
-
-describe("previewBggImport", () => {
-  it("rejects when the user lacks the games:manage permission", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
-
-    const result = await previewBggImport(342942);
-
-    expect(result).toEqual({ success: false, error: "Keine Berechtigung." });
-    expect(fetchBggGameMock).not.toHaveBeenCalled();
-  });
-
-  it("returns the mapped preview data without persisting anything", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    const bggData = { title: "Ark Nova", mechanics: [] };
-    fetchBggGameMock.mockResolvedValue(bggData);
-
-    const result = await previewBggImport(342942);
-
-    expect(result).toEqual({ success: true, data: bggData });
-    expect(prismaMock.boardGame.create).not.toHaveBeenCalled();
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
-  });
-
-  it("translates a BggNotFoundError into a speaking error", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    fetchBggGameMock.mockRejectedValue(new BggNotFoundError(999999999));
-
-    const result = await previewBggImport(999999999);
-
-    expect(result).toEqual({
-      success: false,
-      error: "BoardGameGeek-Eintrag mit ID 999999999 wurde nicht gefunden.",
-    });
-  });
-
-  it("translates a BggApiError into a speaking error", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    fetchBggGameMock.mockRejectedValue(new BggApiError("boom", 503));
-
-    const result = await previewBggImport(342942);
-
-    expect(result).toEqual({
-      success: false,
-      error:
-        "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
-    });
-  });
-});
-
-describe("assignExpansion", () => {
-  beforeEach(() => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([]);
-  });
-
-  it("rejects when the user lacks the games:manage permission", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
-
-    const result = await assignExpansion("base-1", "expansion-1");
-
-    expect(result).toEqual({ error: "Keine Berechtigung." });
-    expect(prismaMock.gameCollection.upsert).not.toHaveBeenCalled();
-  });
-
-  it("rejects assigning a game as its own expansion", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-
-    const result = await assignExpansion("game-1", "game-1");
-
-    expect(result).toEqual({
-      error: "Ein Spiel kann nicht seine eigene Erweiterung sein.",
-    });
-    expect(prismaMock.gameCollection.upsert).not.toHaveBeenCalled();
-  });
-
-  it("upserts the GameCollection row when authorized and valid", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-
-    const result = await assignExpansion("base-1", "expansion-1");
-
-    expect(result).toEqual({ success: true });
-    expect(prismaMock.gameCollection.upsert).toHaveBeenCalledWith({
-      where: {
-        baseGameId_expansionId: {
-          baseGameId: "base-1",
-          expansionId: "expansion-1",
-        },
-      },
-      update: {},
-      create: { baseGameId: "base-1", expansionId: "expansion-1" },
-    });
-  });
-});
-
-describe("removeExpansionAssignment", () => {
-  beforeEach(() => {
-    prismaMock.gameCopy.findMany.mockResolvedValue([]);
-  });
-
-  it("rejects when the user lacks the games:manage permission", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
-
-    const result = await removeExpansionAssignment("base-1", "expansion-1");
-
-    expect(result).toEqual({ error: "Keine Berechtigung." });
-    expect(prismaMock.gameCollection.deleteMany).not.toHaveBeenCalled();
-  });
-
-  it("deletes the GameCollection row when authorized", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-
-    const result = await removeExpansionAssignment("base-1", "expansion-1");
-
-    expect(result).toEqual({ success: true });
-    expect(prismaMock.gameCollection.deleteMany).toHaveBeenCalledWith({
-      where: { baseGameId: "base-1", expansionId: "expansion-1" },
     });
   });
 });

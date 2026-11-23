@@ -1,0 +1,206 @@
+import { describe, expect, it } from "vitest";
+import {
+  BoardGameKind,
+  BoardGameTrait,
+  LanguageDependence,
+} from "@prisma/client";
+import { compareBoardGameWithBgg } from "./board-game-bgg-compare";
+import type { BggGameData } from "@/lib/bgg/client";
+
+const EMPTY_FORM = {
+  title: "",
+  kind: BoardGameKind.BOARDGAME,
+  minPlayers: "",
+  maxPlayers: "",
+  playTimeMinutes: "",
+  weight: "",
+  averageRating: "",
+  imageUrl: "",
+  description: "",
+  mechanics: "",
+  categories: "",
+  languageDependence: null,
+  traits: [],
+};
+
+const BGG_DATA: BggGameData = {
+  title: "Ark Nova",
+  minPlayers: 1,
+  maxPlayers: 4,
+  playTimeMinutes: 150,
+  weight: 3.7,
+  averageRating: 8.5,
+  imageUrl: "https://cf.geekdo-images.com/full.jpg",
+  description: "Baue einen modernen Zoo.",
+  mechanics: ["Kartenspiel", "Engine-Building"],
+  categories: [],
+  mechanicLinks: [],
+  categoryLinks: [],
+  traits: [],
+  kind: BoardGameKind.BOARDGAME,
+  languageDependence: LanguageDependence.MODERATE_TEXT,
+  author: [],
+  yearPublished: null,
+  versions: [],
+  alternateNames: [],
+  explainerVideoUrl: null,
+  germanExplainerVideos: [],
+  englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
+};
+
+const MATCHING_FORM = {
+  ...EMPTY_FORM,
+  title: "Ark Nova",
+  minPlayers: "1",
+  maxPlayers: "4",
+  playTimeMinutes: "150",
+  weight: "3.7",
+  averageRating: "8.5",
+  imageUrl: "https://cf.geekdo-images.com/full.jpg",
+  description: "Baue einen modernen Zoo.",
+  mechanics: "Kartenspiel, Engine-Building",
+  categories: "",
+  languageDependence: LanguageDependence.MODERATE_TEXT,
+};
+
+describe("compareBoardGameWithBgg", () => {
+  it("marks every comparable field as matching when values are identical", () => {
+    expect(compareBoardGameWithBgg(MATCHING_FORM, BGG_DATA)).toEqual({
+      title: true,
+      kind: true,
+      minPlayers: true,
+      maxPlayers: true,
+      playTimeMinutes: true,
+      weight: true,
+      averageRating: true,
+      imageUrl: true,
+      description: true,
+      mechanics: true,
+      categories: true,
+      languageDependence: true,
+      traits: true,
+    });
+  });
+
+  it("treats traits as matching regardless of order (#487)", () => {
+    const result = compareBoardGameWithBgg(
+      {
+        ...MATCHING_FORM,
+        traits: [BoardGameTrait.CAMPAIGN, BoardGameTrait.LEGACY],
+      },
+      { ...BGG_DATA, traits: [BoardGameTrait.LEGACY, BoardGameTrait.CAMPAIGN] },
+    );
+
+    expect(result.traits).toBe(true);
+  });
+
+  it("marks traits as a mismatch when they differ", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, traits: [] },
+      { ...BGG_DATA, traits: [BoardGameTrait.LEGACY] },
+    );
+
+    expect(result.traits).toBe(false);
+  });
+
+  it("marks averageRating as a mismatch when BGG's rating changed (#214)", () => {
+    const result = compareBoardGameWithBgg(MATCHING_FORM, {
+      ...BGG_DATA,
+      averageRating: 9.1,
+    });
+
+    expect(result.averageRating).toBe(false);
+  });
+
+  it("marks a field as a mismatch when the value differs", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, title: "Ark Nova (alte Auflage)" },
+      BGG_DATA,
+    );
+
+    expect(result.title).toBe(false);
+  });
+
+  it("treats mechanics as matching regardless of order (#189)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, mechanics: "Engine-Building, Kartenspiel" },
+      BGG_DATA,
+    );
+
+    expect(result.mechanics).toBe(true);
+  });
+
+  it("treats categories as matching regardless of order (#404)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, categories: "Familienspiel, Partyspiel" },
+      { ...BGG_DATA, categories: ["Partyspiel", "Familienspiel"] },
+    );
+
+    expect(result.categories).toBe(true);
+  });
+
+  it("marks categories as a mismatch when they differ", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, categories: "" },
+      { ...BGG_DATA, categories: ["Partyspiel"] },
+    );
+
+    expect(result.categories).toBe(false);
+  });
+
+  it("marks numeric fields as mismatching when BGG has no value but the form does", () => {
+    const result = compareBoardGameWithBgg(MATCHING_FORM, {
+      ...BGG_DATA,
+      minPlayers: null,
+    });
+
+    expect(result.minPlayers).toBe(false);
+  });
+
+  it("marks numeric fields as matching when both are unset", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, minPlayers: "" },
+      { ...BGG_DATA, minPlayers: null },
+    );
+
+    expect(result.minPlayers).toBe(true);
+  });
+
+  it("treats a blank description the same as null", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, description: "" },
+      { ...BGG_DATA, description: null },
+    );
+
+    expect(result.description).toBe(true);
+  });
+
+  it("marks kind as a mismatch when the form disagrees with BGG's type attribute (#202)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, kind: BoardGameKind.BOARDGAME_EXPANSION },
+      BGG_DATA,
+    );
+
+    expect(result.kind).toBe(false);
+  });
+
+  it("marks languageDependence as a mismatch when the form disagrees with BGG's poll result (#188)", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, languageDependence: LanguageDependence.UNPLAYABLE },
+      BGG_DATA,
+    );
+
+    expect(result.languageDependence).toBe(false);
+  });
+
+  it("marks languageDependence as matching when both are unset", () => {
+    const result = compareBoardGameWithBgg(
+      { ...MATCHING_FORM, languageDependence: null },
+      { ...BGG_DATA, languageDependence: null },
+    );
+
+    expect(result.languageDependence).toBe(true);
+  });
+});

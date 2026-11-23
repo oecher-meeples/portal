@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+	<item type="boardgame" id="342942">
+		<name type="primary" sortindex="1" value="Ark Nova" />
+		<minplayers value="1" />
+		<maxplayers value="4" />
+		<playingtime value="150" />
+		<videos total="5">
+			<video id="1" title="Ark Nova Review (Deutsch)" category="review" language="German" link="https://www.youtube.com/watch?v=review-de" username="reviewerde" />
+			<video id="2" title="Ark Nova How to Play" category="instructional" language="English" link="https://www.youtube.com/watch?v=english1" username="englishchannel" />
+			<video id="3" title="Regeln auf Deutsch" category="instructional" language="German" link="https://www.youtube.com/watch?v=german1" username="ChannelA" />
+			<video id="4" title="Ausführliche Regelerklärung" category="instructional" language="German" link="https://www.youtube.com/watch?v=german2" username="ChannelB" />
+			<video id="5" title="Regeln (Vimeo)" category="instructional" language="German" link="https://vimeo.com/german3" username="ChannelC" />
+		</videos>
+		<statistics page="1">
+			<ratings>
+				<averageweight value="3.6912" />
+			</ratings>
+		</statistics>
+	</item>
+</items>

@@ -3,8 +3,13 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* #587: Fokusmodus (z. B. Scanner auf Mobile) — gesetzt von `useFocusMode`
+   (ui/use-focus-mode.ts) als `data-focus-mode` am <html>. */
+@custom-variant focus-mode (&:is([data-focus-mode] *));
 
 @theme inline {
+  --color-event-public: var(--event-public);
+  --color-event-internal: var(--event-internal);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -49,6 +54,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #000000;
   --card: #ffffff;
@@ -67,6 +73,11 @@
   --border: #e5e5e5;
   --input: #e5e5e5;
   --ring: #ffde00;
+  /* #10: Kalender-Termin-Punkte — bewusst weder Schwarz/Weiß (background/
+     foreground) noch Gelb (primary/accent/ring), damit sie sich auf beiden
+     Hintergründen und von den übrigen Markierungen abheben. */
+  --event-public: #0ea5e9; /* sky-500 */
+  --event-internal: #d946ef; /* fuchsia-500 */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -84,6 +95,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: #000000;
   --foreground: #ffffff;
   --card: #0a0a0a;
@@ -102,6 +114,11 @@
   --border: #262626;
   --input: #262626;
   --ring: #ffde00;
+  /* #10: dunklerer Grund braucht hellere Variante für dieselbe Lesbarkeit —
+     gleiche Farbfamilie, gleiches Prinzip wie StatusPill (text-sky-700 hell /
+     dark:text-sky-400 dunkel). */
+  --event-public: #38bdf8; /* sky-400 */
+  --event-internal: #e879f9; /* fuchsia-400 */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -121,10 +138,19 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* #464: `clip` statt `hidden` — `overflow-x: hidden` auf html UND body
+     macht body zum Scroll-Container (overflow-y wird dann `auto`), und
+     `position: sticky` (News-Kalender, Scanner-Zeile, Rechtstext-Navigation)
+     klebt dann nirgends mehr. `clip` schneidet genauso ab, ohne Scroll-
+     Container zu erzeugen. */
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-clip;
   }
   html {
-    @apply font-sans;
+    /* Verhindert horizontales Scrollen der ganzen Seite (z. B. durch eine
+       versehentlich zu breite Zeile) — sonst zieht das auf Mobile die
+       `fixed` MobileNav-Bottom-Bar beim horizontalen Scroll seitlich aus
+       dem sichtbaren Bereich mit heraus. */
+    @apply overflow-x-clip font-sans;
   }
 }

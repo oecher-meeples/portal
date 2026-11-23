@@ -1,0 +1,70 @@
+import { CardTitle, cardVariants } from "@/components/ui/card";
+import Link from "next/link";
+import { Pencil } from "lucide-react";
+import type { ContentItem } from "@/lib/content/content-types";
+import { CoverMedia } from "@/components/ui/cover-media";
+import { ContentTypeBadge } from "@/components/entities/content-type-badge";
+import { InternalOnlyBadge } from "@/components/entities/internal-only-badge";
+import { Button } from "@/components/ui/button";
+import { MarkdownContent } from "@/components/ui/markdown-content";
+import { formatDate } from "@/lib/utils/format";
+import { cn } from "@/lib/utils/cn";
+
+/** Full-view timeline entry — cover, metadata and the complete markdown body,
+ * for the `/news` Vollansicht toggle (#135). Counterpart to the excerpt-only
+ * `ContentListRow` used in Vorschau. */
+export function ContentTimelineEntry({
+  item,
+  canEdit,
+}: {
+  item: ContentItem;
+  canEdit?: boolean;
+}) {
+  return (
+    <article
+      className={cn(
+        cardVariants(),
+        "gap-4",
+        item.internal && "border-l-primary border-l-4",
+      )}
+    >
+      <CoverMedia
+        imageUrl={item.coverImageUrl}
+        alt={item.title}
+        label="BILD"
+        sizing="natural"
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ContentTypeBadge type={item.type} />
+          {item.internal && <InternalOnlyBadge />}
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="text-muted-foreground min-w-0 text-sm wrap-break-word">
+            {formatDate(item.date)}
+            {item.author && <> · {item.author}</>}
+            {item.location && <> · {item.location}</>}
+          </span>
+          {canEdit && item.id && (
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link href={`/admin/news/${item.id}/edit`}>
+                  <Pencil className="size-3.5" />
+                  Bearbeiten
+                </Link>
+              }
+            />
+          )}
+        </div>
+      </div>
+      <CardTitle as="h3" className="text-xl tracking-tight">
+        <Link href={`/news/${item.slug}`} className="hover:text-primary">
+          {item.title}
+        </Link>
+      </CardTitle>
+      <MarkdownContent body={item.body} />
+    </article>
+  );
+}

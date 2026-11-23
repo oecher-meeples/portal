@@ -1,18 +1,11 @@
-import { randomBytes } from "node:crypto";
 import { NewsletterCategory, NewsletterSubscriberStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEmail } from "@/lib/utils/validate-email";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
+import { generateToken as generateManageToken } from "@/lib/utils/generate-token";
+import { siteUrl } from "@/lib/utils/site-url";
 
 const CONFIRMATION_COOLDOWN_MS = 15 * 60 * 1000;
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
-
-function generateManageToken(): string {
-  return randomBytes(32).toString("hex");
-}
 
 function confirmationEmailHtml(manageToken: string): string {
   const confirmUrl = `${siteUrl()}/newsletter/confirm?token=${manageToken}`;
@@ -173,11 +166,12 @@ export async function setMeepleNewsletterPreference(
     return { success: true };
   }
 
-  const meeple = await prisma.meeple.findUniqueOrThrow({
-    where: { id: meepleId },
+  // Die E-Mail-Adresse lebt seit #328 auf dem verknüpften Vereinsmitglied.
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
     select: { email: true },
   });
-  const email = meeple.email?.trim().toLowerCase();
+  const email = member?.email?.trim().toLowerCase();
   if (!email) {
     return { success: true };
   }

@@ -8,4 +8,5 @@ export const LEGAL_DOCS: LegalDoc[] = [
   { slug: "datenschutz", title: "Datenschutzerklärung (DSGVO)" },
   { slug: "impressum", title: "Impressum" },
   { slug: "beitragsordnung", title: "Beitragsordnung" },
+  { slug: "urheberrechte", title: "Genutzte Urheberrechte" },
 ];

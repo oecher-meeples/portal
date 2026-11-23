@@ -2,65 +2,74 @@ import { prisma } from "@/lib/utils/prisma";
 import { getMembershipState } from "@/lib/members/meeples";
 import {
   countOpenHoldings,
+  countOpenHoldingsByMemberId,
   hasOpenHoldings,
 } from "@/lib/members/open-holdings";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 
 export type AnonymisationResult = { error: string } | { success: true };
 
 /**
- * Strips every identifying field from a Meeple while keeping the row, so the
- * club's lending and event history survives without a personal reference.
+ * Drei Stufen (#331), aufgeteilt aus der ursprünglich einstufigen
+ * `anonymiseMeepleRecord`:
  *
- * Lives in the lib layer because two callers need the exact same rules: the
- * admin action in the members area and the retention job on the daily cron.
- * A second implementation would be a compliance bug waiting to happen.
+ * - **Stufe 1** ({@link anonymiseMeepleStufe1}): optionale `Meeple`-Felder,
+ *   `Post.author`, Marktplatzbilder — jederzeit selbst auslösbar, keine
+ *   Kündigungs-Vorbedingung, `anonymizedAt` bleibt unberührt.
+ * - **Stufe 2** ({@link anonymiseMeepleStufe2}): baut auf Stufe 1 auf (ruft
+ *   sie idempotent mit auf) und löscht zusätzlich hart das Login (`AuthUser`),
+ *   trennt `Member.meepleId`, setzt `Meeple.anonymizedAt`. Braucht
+ *   "ausgetreten" + keine offenen Ausleihen.
+ * - **Stufe 3** ({@link anonymiseMemberStufe3}): löscht die `Member`-Zeile
+ *   komplett, frühestens 12 Monate nach `membershipEndsAt`, wieder ohne
+ *   offene Ausleihen. `GameHolding.vereinsmitgliedId` fällt dabei per
+ *   `onDelete: SetNull` weg — die Ausleihhistorie bleibt lesbar.
  *
- * Does *not* check permissions — that is the caller's job.
+ * Lebt im lib-Layer, weil mehrere Aufrufer (Admin-Aktion, Jahreswechsel-Cron)
+ * dieselben Regeln brauchen — eine zweite Implementierung wäre ein
+ * Compliance-Bug in Wartestellung. Keine der drei Funktionen prüft
+ * Berechtigungen, das ist Sache der Aufrufer.
  */
-export async function anonymiseMeepleRecord(
+export async function anonymiseMeepleStufe1(
   meepleId: string,
-  now: Date = new Date(),
 ): Promise<AnonymisationResult> {
   const meeple = await prisma.meeple.findUnique({ where: { id: meepleId } });
   if (!meeple) {
     return { error: "Mitglied nicht gefunden." };
   }
   if (meeple.anonymizedAt) {
-    return { error: "Dieses Mitglied ist bereits anonymisiert." };
-  }
-  if (getMembershipState(meeple, now) !== "ausgetreten") {
-    return { error: "Nur ausgetretene Mitglieder können anonymisiert werden." };
-  }
-  if (hasOpenHoldings(await countOpenHoldings(meepleId))) {
     return {
-      error:
-        "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten. Erst zurückholen, dann anonymisieren.",
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
     };
   }
 
-  const neonAuthUserId = meeple.neonAuthUserId;
   const previousDisplayName = meeple.displayName;
 
-  // Blob URLs stay publicly reachable after the database row is cleared, so the
-  // files go first: if this fails the member is left un-anonymised and the caller
+  // Blob files outlive the cleared database row (and signed links stay valid
+  // for their lifetime, #112), so the files go first: if this fails the member is left un-anonymised and the caller
   // can retry, which is the safer failure than "anonymised, photos still online".
   const listingsWithImages = await prisma.marketListing.findMany({
-    where: { sellerMeepleId: meepleId, imageUrls: { isEmpty: false } },
-    select: { id: true, imageUrls: true },
+    where: { sellerMeepleId: meepleId, imageKeys: { isEmpty: false } },
+    select: { id: true, imageKeys: true },
   });
-  await deleteBlobs(listingsWithImages.flatMap((listing) => listing.imageUrls));
+  await deleteBlobs(listingsWithImages.flatMap((listing) => listing.imageKeys));
 
   await prisma.$transaction(async (tx) => {
-    if (neonAuthUserId) {
-      await tx.$executeRaw`DELETE FROM neon_auth."session" WHERE "userId" = ${neonAuthUserId}::uuid`;
-      await tx.$executeRaw`DELETE FROM neon_auth."account" WHERE "userId" = ${neonAuthUserId}::uuid`;
-      await tx.$executeRaw`DELETE FROM neon_auth."user" WHERE id = ${neonAuthUserId}::uuid`;
-    }
-
+    // #394: `title`/`description` hier zusammen mit `imageKeys` in einem
+    // Update — weitere selbst verfasste Freitextfelder mit möglichem
+    // Personenbezug. Scope-Grenze (Entscheidung 2026-09-03): nur geleert,
+    // wenn die zu anonymisierende Person selbst über die jeweilige
+    // `*MeepleId`-Relation Autor:in/Erfasser:in ist — robuster als der
+    // Namensabgleich bei `Post` unten, weil es über die Relation statt
+    // einen Freitext-Namensvergleich läuft. Erwähnt jemand die Person nur
+    // in einem fremden Text (z. B. eine `GameHolding.note` eines
+    // Spielewarts), bleibt der Text bewusst unangetastet — das ist keine
+    // Lücke, sondern die dokumentierte Grenze: beliebigen Fließtext auf
+    // Fremd-Erwähnungen zu durchsuchen ist nicht praktikabel.
     await tx.marketListing.updateMany({
       where: { sellerMeepleId: meepleId },
-      data: { imageUrls: [] },
+      data: { imageKeys: [], title: "", description: null },
     });
 
     // `Post.author` is free text with no relation to Meeple, so the display name
@@ -71,6 +80,111 @@ export async function anonymiseMeepleRecord(
       data: { author: null },
     });
 
+    await tx.lfgPost.updateMany({
+      where: { createdByMeepleId: meepleId },
+      data: { title: "", description: "" },
+    });
+    await tx.sparePartListing.updateMany({
+      where: { keeperMeepleId: meepleId },
+      data: { description: null },
+    });
+    await tx.gameHolding.updateMany({
+      where: { recordedByMeepleId: meepleId },
+      data: { note: null },
+    });
+    await tx.storageUnitMove.updateMany({
+      where: { recordedByMeepleId: meepleId },
+      data: { locationNote: null },
+    });
+    // #599: Kontroll-Notizen leeren, die Datensätze selbst bleiben (Statistik).
+    await tx.gameCopyCheck.updateMany({
+      where: { checkedByMeepleId: meepleId },
+      data: { note: null },
+    });
+
+    await tx.meeple.update({
+      where: { id: meepleId },
+      data: {
+        // Gleicher Basisname wie das Sammelkonto "Anonymer Meeple" (#364) —
+        // für alle außer `games:manage` ununterscheidbar, siehe
+        // `anonymisedMeepleDisplayName()`.
+        displayName: ANONYMER_MEEPLE_NAME,
+        bggUsername: null,
+        bgaUsername: null,
+        telegramHandle: null,
+        signalHandle: null,
+        discordHandle: null,
+        address: null,
+        shareAddress: false,
+        doorbellNote: null,
+      },
+    });
+  });
+
+  return { success: true };
+}
+
+export async function anonymiseMeepleStufe2(
+  meepleId: string,
+  now: Date = new Date(),
+): Promise<AnonymisationResult> {
+  const meeple = await prisma.meeple.findUnique({ where: { id: meepleId } });
+  if (!meeple) {
+    return { error: "Mitglied nicht gefunden." };
+  }
+  if (meeple.anonymizedAt) {
+    return { error: "Dieses Mitglied ist bereits anonymisiert." };
+  }
+
+  const member = await prisma.member.findUnique({
+    where: { meepleId },
+    select: { id: true, resignedAt: true, membershipEndsAt: true },
+  });
+  const membershipState = getMembershipState(
+    {
+      meepleId: meeple.id,
+      resignedAt: member?.resignedAt ?? null,
+      membershipEndsAt: member?.membershipEndsAt ?? null,
+      anonymizedAt: meeple.anonymizedAt,
+    },
+    now,
+  );
+  if (membershipState !== "ausgetreten") {
+    return { error: "Nur ausgetretene Mitglieder können anonymisiert werden." };
+  }
+  if (hasOpenHoldings(await countOpenHoldings(meepleId))) {
+    return {
+      error:
+        "Bei diesem Mitglied liegen noch Vereinsspiele oder -einheiten. Erst zurückholen, dann anonymisieren.",
+    };
+  }
+
+  // Idempotent: fasst Stufe 1 mit an, falls sie das Mitglied nicht schon
+  // selbst ausgelöst hat — zwei separate Transaktionen statt einer
+  // gemeinsamen, siehe Klassenkommentar oben.
+  const stufe1 = await anonymiseMeepleStufe1(meepleId);
+  if ("error" in stufe1) {
+    return stufe1;
+  }
+
+  const neonAuthUserId = meeple.neonAuthUserId;
+
+  await prisma.$transaction(async (tx) => {
+    if (neonAuthUserId) {
+      // Sessions und Konten (inkl. Passwort-Hash) hängen per
+      // `onDelete: Cascade` am AuthUser und verschwinden mit ihm.
+      // `deleteMany` statt `delete`: ein bereits fehlendes Login ist kein
+      // Fehler (wie zuvor beim Raw-SQL-DELETE).
+      await tx.authUser.deleteMany({ where: { id: neonAuthUserId } });
+    }
+
+    if (member) {
+      await tx.member.update({
+        where: { id: member.id },
+        data: { meepleId: null },
+      });
+    }
+
     // Anonymising *is* how a deletion request gets fulfilled, so closing it here
     // keeps the Art.-12-Abs.-3 queue honest without a second admin click.
     await tx.deletionRequest.updateMany({
@@ -80,22 +194,75 @@ export async function anonymiseMeepleRecord(
 
     await tx.meeple.update({
       where: { id: meepleId },
-      data: {
-        displayName: "(anonymisiert)",
-        neonAuthUserId: null,
-        email: null,
-        accountHolder: null,
-        ibanEncrypted: null,
-        ibanLast4: null,
-        bggUsername: null,
-        bgaUsername: null,
-        telegramHandle: null,
-        signalHandle: null,
-        discordHandle: null,
-        anonymizedAt: now,
-      },
+      data: { neonAuthUserId: null, anonymizedAt: now },
     });
   });
+
+  return { success: true };
+}
+
+const STUFE3_MIN_MONTHS_SINCE_END = 12;
+
+/** Berechnet den frühesten Zeitpunkt, ab dem Stufe 3 für einen bestimmten
+ * `membershipEndsAt` erlaubt ist — exportiert für den Jahreswechsel-Cron. */
+export function stufe3EligibleFrom(membershipEndsAt: Date): Date {
+  const eligibleFrom = new Date(membershipEndsAt);
+  eligibleFrom.setUTCMonth(
+    eligibleFrom.getUTCMonth() + STUFE3_MIN_MONTHS_SINCE_END,
+  );
+  return eligibleFrom;
+}
+
+/** Vereinsmitglieder, für die Stufe 3 fällig ist — 12 Monate seit Austritt
+ * vorbei, keine offenen Ausleihen. Von der Admin-Übersicht **und** dem
+ * Jahreswechsel-Cron genutzt, damit beide dieselbe Definition von "fällig"
+ * teilen. Member-zentrisch (nicht Meeple-zentrisch), weil nach Stufe 2 kein
+ * `Meeple` mehr auf das Vereinsmitglied zeigt (`Member.meepleId` ist dann
+ * bereits `null`). */
+export async function listMembersEligibleForStufe3(now: Date = new Date()) {
+  const cutoff = new Date(now);
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - STUFE3_MIN_MONTHS_SINCE_END);
+
+  const candidates = await prisma.member.findMany({
+    where: { membershipEndsAt: { not: null, lte: cutoff } },
+    include: { meeple: { select: { displayName: true } } },
+  });
+
+  const withoutOpenHoldings = [];
+  for (const member of candidates) {
+    const openGames = await countOpenHoldingsByMemberId(member.id);
+    if (openGames === 0) withoutOpenHoldings.push(member);
+  }
+  return withoutOpenHoldings;
+}
+
+export async function anonymiseMemberStufe3(
+  memberId: string,
+  now: Date = new Date(),
+): Promise<AnonymisationResult> {
+  const member = await prisma.member.findUnique({ where: { id: memberId } });
+  if (!member) {
+    return { error: "Vereinsmitglied nicht gefunden." };
+  }
+  if (!member.membershipEndsAt) {
+    return {
+      error: "Für dieses Vereinsmitglied ist kein Austrittsdatum hinterlegt.",
+    };
+  }
+  if (stufe3EligibleFrom(member.membershipEndsAt) > now) {
+    return {
+      error:
+        "Seit dem Austritt sind noch keine 12 Monate vergangen — Stufe 3 ist erst danach möglich.",
+    };
+  }
+  if ((await countOpenHoldingsByMemberId(memberId)) > 0) {
+    return {
+      error:
+        "Bei diesem Vereinsmitglied liegen noch Vereinsspiele vor. Erst zurückholen, dann löschen.",
+    };
+  }
+
+  await prisma.member.delete({ where: { id: memberId } });
 
   return { success: true };
 }

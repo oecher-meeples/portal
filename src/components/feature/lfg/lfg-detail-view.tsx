@@ -1,13 +1,43 @@
+import { Card, CardTitle } from "@/components/ui/card";
+import { UserPlus, X } from "lucide-react";
+import type { ProfilePictureVisibility } from "@prisma/client";
 import { ActionButton } from "@/components/ui/action-button";
 import { LfgStatusPill } from "@/components/entities/lfg-status-pill";
+import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
 import {
+  addLfgGuest,
   closeLfgPost,
   joinLfgPost,
   leaveLfgPost,
+  removeLfgGuest,
 } from "@/components/feature/lfg/actions";
+import { LfgLocationEditor } from "@/components/feature/lfg/lfg-location-editor";
+import {
+  LfgAttachmentsSection,
+  type LfgAttachmentRow,
+} from "@/components/feature/lfg/lfg-attachments-section";
 import type { LfgStatus } from "@/lib/content/lfg";
+import type { ContactDialogMeeple } from "@/lib/members/contact";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
 
-export type LfgParticipantRow = { meepleId: string; displayName: string };
+export type LfgParticipantRow = {
+  /** Teilnehmer-Zeilen-ID, immer gesetzt — auch für Gäste. */
+  id: string;
+  /** null = anonymer Gast (#145). */
+  meepleId: string | null;
+  displayName: string;
+  /** null für Gäste und wenn der Betrachter nicht beigetreten ist (#167) —
+   * serverseitig entschieden, hier nur gerendert. */
+  contactMeeple: ContactDialogMeeple | null;
+  /** (#412) Profilbild statt Initialen-Kreis, sofern vorhanden und laut
+   * Freigabe (#389) sichtbar — `null` für Gäste (kein Meeple-Datensatz). */
+  profilePictureUrl: string | null;
+  profilePictureVisibility: ProfilePictureVisibility;
+  /** Wer entfernen darf (wer hinzugefügt hat, plus immer der Ersteller). */
+  canRemove: boolean;
+};
 
 export function LfgDetailView({
   id,
@@ -22,6 +52,10 @@ export function LfgDetailView({
   createdByMeepleId,
   viewerMeepleId,
   canClose,
+  guestsMayBringGuests,
+  canEditLocation,
+  viewerHasOwnAddress,
+  attachments,
 }: {
   id: string;
   title: string;
@@ -35,49 +69,110 @@ export function LfgDetailView({
   createdByMeepleId: string;
   viewerMeepleId: string | null;
   canClose: boolean;
+  guestsMayBringGuests: boolean;
+  /** Ersteller darf das Ortsfeld immer bearbeiten, beigetretene Teilnehmer
+   * nur bei aktivem `participantsMayEditLocation` (#166) — serverseitig
+   * entschieden, hier nur gerendert. */
+  canEditLocation: boolean;
+  /** Ob der Betrachter eine Adresse im Profil hinterlegt hat — steuert, ob
+   * "Meine Adresse übernehmen" am Ortsfeld erscheint (#166). */
+  viewerHasOwnAddress: boolean;
+  /** `undefined` = Datei-Bereich wird nicht angezeigt — weder Teilnehmer
+   * noch `isLfgAttachmentEligible()` (#283), serverseitig entschieden. */
+  attachments?: LfgAttachmentRow[];
 }) {
   const isParticipant = participants.some((p) => p.meepleId === viewerMeepleId);
   const isCreator = viewerMeepleId === createdByMeepleId;
+  const canAddGuest =
+    status === "offen" &&
+    (isCreator || (guestsMayBringGuests && isParticipant));
 
   return (
-    <div className="flex max-w-2xl flex-col gap-5">
+    <PageContainer className="max-w-2xl gap-5">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-2xl font-bold">{title}</h1>
+        <div className="min-w-0">
+          <PageTitle size="sm">{title}</PageTitle>
           <p className="text-muted-foreground text-sm">
             {dateLabel}
-            {location && ` · ${location}`}
+            {!canEditLocation && location && ` · ${location}`}
             {gameTitle && ` · ${gameTitle}`}
           </p>
         </div>
         <LfgStatusPill status={status} />
       </div>
 
+      {canEditLocation && (
+        <LfgLocationEditor
+          key={location ?? ""}
+          postId={id}
+          initialLocation={location}
+          hasOwnAddress={viewerHasOwnAddress}
+        />
+      )}
+
       <p className="leading-relaxed">{description}</p>
 
-      <div className="bg-card rounded-lg border p-5">
-        <h2 className="font-serif text-lg font-bold">
+      <Card>
+        <CardTitle>
           Teilnehmende ({participants.length}/{maxParticipants})
-        </h2>
-        <ul className="mt-3 flex flex-col gap-2.5">
+        </CardTitle>
+        <ul className="flex flex-col gap-2.5">
           {participants.map((participant) => (
             <li
-              key={participant.meepleId}
+              key={participant.id}
               className="flex items-center gap-2.5 text-sm"
             >
-              <span className="bg-muted flex size-8 items-center justify-center rounded-full font-semibold">
-                {participant.displayName[0]?.toUpperCase()}
-              </span>
-              {participant.displayName}
+              <MeepleAvatar
+                name={participant.displayName}
+                profilePictureUrl={participant.profilePictureUrl}
+                profilePictureVisibility={participant.profilePictureVisibility}
+                viewer={{ kind: "meeple" }}
+                size="md"
+              />
+              {participant.contactMeeple ? (
+                <ContactDialog
+                  name={participant.displayName}
+                  meeple={participant.contactMeeple}
+                />
+              ) : (
+                participant.displayName
+              )}
               {participant.meepleId === createdByMeepleId && (
                 <span className="text-muted-foreground text-xs">
                   (Ersteller)
                 </span>
               )}
+              {participant.canRemove && (
+                <ActionButton
+                  variant="destructive"
+                  size="icon-xs"
+                  className="ml-auto"
+                  action={removeLfgGuest.bind(null, participant.id)}
+                  aria-label={`"${participant.displayName}" entfernen`}
+                >
+                  <X className="size-3.5" />
+                </ActionButton>
+              )}
             </li>
           ))}
         </ul>
-      </div>
+        {canAddGuest && (
+          <ActionButton
+            variant="outline"
+            size="sm"
+            className="mt-3 gap-1.5"
+            action={addLfgGuest.bind(null, id)}
+            pendingLabel="Füge hinzu…"
+          >
+            <UserPlus className="size-4" />
+            Gast hinzufügen
+          </ActionButton>
+        )}
+      </Card>
+
+      {attachments && (
+        <LfgAttachmentsSection postId={id} attachments={attachments} />
+      )}
 
       <div className="flex flex-wrap gap-3">
         {!isParticipant && (
@@ -111,6 +206,6 @@ export function LfgDetailView({
           </ActionButton>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

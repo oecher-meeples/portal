@@ -1,22 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
-const requireMeepleMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, requireMeeple: requireMeepleMock };
-});
+const requireMeeplePermissionMock = vi.fn();
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const deleteBlobsMock = vi.fn();
@@ -24,17 +21,28 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
+const hasPermissionMock = vi.fn();
+vi.mock("@/lib/auth/permissions", () => ({
+  hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
+}));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireMeeplePermissionMock(...args),
+  ),
+);
+
 const {
   createMarketListing,
   updateOwnMarketListing,
   deleteOwnMarketListing,
+  deleteMarketListingImage,
   getMarketListingUploadToken,
 } = await import("./actions");
 
 class RedirectError extends Error {}
 
-const OWNER = { id: "meeple-owner" };
-const OTHER = { id: "meeple-other" };
+const OWNER = { id: "meeple-owner", neonAuthUserId: "user-owner" };
+const OTHER = { id: "meeple-other", neonAuthUserId: "user-other" };
 
 const VALID_INPUT = {
   title: "Catan – Seefahrer",
@@ -51,21 +59,23 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
     description: null,
     priceEuros: 12,
     condition: "Sehr gut",
-    imageUrls: [],
+    imageKeys: [],
     ...overrides,
   };
 }
 
 beforeEach(() => {
-  requireMeepleMock.mockResolvedValue(OWNER);
+  requireMeeplePermissionMock.mockResolvedValue(OWNER);
   deleteBlobsMock.mockReset();
   deleteBlobsMock.mockResolvedValue(undefined);
+  hasPermissionMock.mockReset();
+  hasPermissionMock.mockResolvedValue(false);
   prismaMock.marketListing.create.mockResolvedValue(marketListing() as never);
 });
 
 describe("without a session", () => {
   it("writes nothing", async () => {
-    requireMeepleMock.mockRejectedValue(new RedirectError("/login"));
+    requireMeeplePermissionMock.mockRejectedValue(new RedirectError("/login"));
 
     await expect(createMarketListing(VALID_INPUT)).rejects.toThrow(
       RedirectError,
@@ -77,7 +87,7 @@ describe("without a session", () => {
       RedirectError,
     );
     await expect(
-      getMarketListingUploadToken("market-listings/foo.png"),
+      getMarketListingUploadToken("market-listings/foo.png", "image/png"),
     ).rejects.toThrow(RedirectError);
 
     expect(prismaMock.marketListing.create).not.toHaveBeenCalled();
@@ -98,22 +108,35 @@ describe("createMarketListing", () => {
         description: "Vollständig, Karten in Sleeves.",
         priceEuros: 12,
         condition: "Sehr gut",
-        imageUrls: [],
+        imageKeys: [],
       },
     });
   });
 
-  it("stores 0..n image urls as an array", async () => {
+  it("stores 0..n uploaded images as keys, keeping foreign legacy URLs (#112)", async () => {
     await createMarketListing({
       ...VALID_INPUT,
-      imageUrls: ["https://blob.example/a.png", "https://blob.example/b.png"],
+      imageUrls: [
+        `${TEST_S3_PUBLIC_BASE}/market-listings/a.png?X-Amz-Signature=abc`,
+        "https://cf.geekdo-images.com/legacy.jpg",
+      ],
     });
 
     expect(prismaMock.marketListing.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        imageUrls: ["https://blob.example/a.png", "https://blob.example/b.png"],
+        imageKeys: [
+          "market-listings/a.png",
+          "https://cf.geekdo-images.com/legacy.jpg",
+        ],
       }),
     });
+  });
+
+  it("refuses an image key outside market-listings/ (#112)", async () => {
+    await expect(
+      createMarketListing({ ...VALID_INPUT, imageUrls: ["downloads/x.pdf"] }),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(prismaMock.marketListing.create).not.toHaveBeenCalled();
   });
 
   it("rejects a missing title", async () => {
@@ -154,7 +177,7 @@ describe("updateOwnMarketListing", () => {
   });
 
   it("rejects editing someone else's listing", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
     );
@@ -162,9 +185,27 @@ describe("updateOwnMarketListing", () => {
     const result = await updateOwnMarketListing("listing-1", VALID_INPUT);
 
     expect(result).toEqual({
-      error: "Nur die eigene Anzeige kann bearbeitet werden.",
+      error: "Nur die eigene Anzeige oder ein Admin kann sie bearbeiten.",
     });
     expect(prismaMock.marketListing.update).not.toHaveBeenCalled();
+  });
+
+  it("allows an admin to edit someone else's listing (#175)", async () => {
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
+    hasPermissionMock.mockResolvedValue(true);
+    prismaMock.marketListing.findUnique.mockResolvedValue(
+      marketListing() as never,
+    );
+    prismaMock.marketListing.update.mockResolvedValue({} as never);
+
+    const result = await updateOwnMarketListing("listing-1", VALID_INPUT);
+
+    expect(result).toEqual({ success: true });
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      OTHER.neonAuthUserId,
+      "admin:access",
+    );
+    expect(prismaMock.marketListing.update).toHaveBeenCalled();
   });
 
   it("rejects an unknown listing", async () => {
@@ -193,21 +234,21 @@ describe("deleteOwnMarketListing", () => {
   it("deletes the listing's uploaded images, not just the row referencing them", async () => {
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing({
-        imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"],
+        imageKeys: ["market-listings/a.jpg", "market-listings/b.jpg"],
       }) as never,
     );
 
     await deleteOwnMarketListing("listing-1");
 
     expect(deleteBlobsMock).toHaveBeenCalledWith([
-      "https://blob/a.jpg",
-      "https://blob/b.jpg",
+      "market-listings/a.jpg",
+      "market-listings/b.jpg",
     ]);
   });
 
   it("keeps the row when blob deletion fails, so the images do not silently leak", async () => {
     prismaMock.marketListing.findUnique.mockResolvedValue(
-      marketListing({ imageUrls: ["https://blob/a.jpg"] }) as never,
+      marketListing({ imageKeys: ["market-listings/a.jpg"] }) as never,
     );
     deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
 
@@ -218,7 +259,7 @@ describe("deleteOwnMarketListing", () => {
   });
 
   it("rejects deleting someone else's listing", async () => {
-    requireMeepleMock.mockResolvedValue(OTHER);
+    requireMeeplePermissionMock.mockResolvedValue(OTHER);
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing() as never,
     );
@@ -232,15 +273,37 @@ describe("deleteOwnMarketListing", () => {
   });
 });
 
+describe("deleteMarketListingImage", () => {
+  it("deletes a single image blob for the logged-in meeple (#175)", async () => {
+    const result = await deleteMarketListingImage(
+      `${TEST_S3_PUBLIC_BASE}/market-listings/a.jpg`,
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(deleteBlobsMock).toHaveBeenCalledWith(["market-listings/a.jpg"]);
+  });
+
+  it("refuses to delete a file outside market-listings/ (#112)", async () => {
+    await expect(
+      deleteMarketListingImage(`${TEST_S3_PUBLIC_BASE}/downloads/satzung.pdf`),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(deleteBlobsMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("getMarketListingUploadToken", () => {
   it("issues a token scoped to image content types", async () => {
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getMarketListingUploadToken("market-listings/a.png");
+    const token = await getMarketListingUploadToken(
+      "market-listings/a.png",
+      "image/png",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "market-listings/a.png",
+      contentType: "image/png",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,
@@ -248,11 +311,11 @@ describe("getMarketListingUploadToken", () => {
   });
 
   it("normalises a client-chosen prefix to the market-listings namespace", async () => {
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    await getMarketListingUploadToken("posts/../../evil.png");
+    await getMarketListingUploadToken("posts/../../evil.png", "image/png");
 
-    expect(generateClientTokenMock).toHaveBeenCalledWith(
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: "market-listings/evil.png" }),
     );
   });

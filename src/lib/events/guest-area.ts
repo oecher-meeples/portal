@@ -3,14 +3,28 @@ import type {
   FleaMarketItemStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { findUnitAncestor } from "@/lib/ludothek/unit-chain";
+import {
+  getGameCopyIdsInUnitTree,
+  loadOpenHoldingUnitByGame,
+  loadUnitParents,
+} from "@/lib/ludothek/unit-contents";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
   filterLudothekGames,
   type LudothekFilters,
   type LudothekGame,
 } from "@/lib/ludothek/browser";
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
+import {
+  isProfilePictureVisible,
+  resolveVisibleProfilePictureUrl,
+  type ProfilePictureViewer,
+} from "@/lib/members/profile-picture-visibility";
+import {
+  getContactLinks,
+  meepleEmail,
+  type ContactLinks,
+} from "@/lib/members/contact";
 
 /**
  * True if `unitId` or one of its ancestors (box in shelf) is in `assignedUnitIds` —
@@ -22,63 +36,101 @@ export function unitOrAncestorAssigned(
   assignedUnitIds: Set<string>,
   parentById: Map<string, string | null>,
 ): boolean {
-  let currentId: string | null = unitId;
-  let depth = 0;
-
-  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    if (assignedUnitIds.has(currentId)) return true;
-    currentId = parentById.get(currentId) ?? null;
-    depth += 1;
-  }
-
-  return false;
+  return findAssignedAncestor(unitId, assignedUnitIds, parentById) !== null;
 }
 
-async function loadAssignedUnitIds(eventId: string) {
-  const assignments = await prisma.eventShelfAssignment.findMany({
-    where: { eventId },
-    select: { unitId: true },
-  });
-  return new Set(assignments.map((a) => a.unitId));
-}
-
-async function loadUnitParents() {
-  const units = await prisma.storageUnit.findMany({
-    select: { id: true, parentUnitId: true },
-  });
-  return new Map(units.map((u) => [u.id, u.parentUnitId]));
-}
-
-async function loadOpenHoldingUnitByGame() {
-  const holdings = await prisma.gameHolding.findMany({
-    where: { endedAt: null, unitId: { not: null } },
-    select: { gameCopyId: true, unitId: true },
-  });
-  return new Map(holdings.map((h) => [h.gameCopyId, h.unitId as string]));
+/** Same walk as `unitOrAncestorAssigned`, but returns which assigned unit
+ * matched — the shelf to point a guest at, not just a yes/no (#121). */
+export function findAssignedAncestor(
+  unitId: string,
+  assignedUnitIds: Set<string>,
+  parentById: Map<string, string | null>,
+): string | null {
+  return findUnitAncestor(unitId, parentById, (id) => assignedUnitIds.has(id));
 }
 
 /**
- * "Im Raum" = the copy currently sits (directly or via an ancestor unit) in a
- * shelf assigned to this event (see CONTEXT.md "Regal-Zuordnung", ADR 0005).
- * A copy held directly by a person (loaned out) is never in the room.
+ * Die Event-`StorageUnit` für `eventId` (#273) — `null`, solange noch
+ * niemand ein Exemplar dorthin gebucht hat (die Unit wird lazy per
+ * `ensureEventUnit()` erzeugt, nicht hier). Ersetzt `EventShelfAssignment`
+ * als Grundlage der "im Raum"-Frage für dieses gesamte Modul.
+ */
+async function resolveEventUnitId(eventId: string): Promise<string | null> {
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { slug: true },
+  });
+  if (!event) return null;
+
+  const unit = await prisma.storageUnit.findUnique({
+    where: { code: `OM-EVENT-${event.slug}` },
+    select: { id: true },
+  });
+  return unit?.id ?? null;
+}
+
+async function loadUnitLabels() {
+  const units = await prisma.storageUnit.findMany({
+    select: { id: true, label: true },
+  });
+  return new Map(units.map((u) => [u.id, u.label]));
+}
+
+/**
+ * "Im Raum" = die Ahnenkette der Holding-Unit des Exemplars erreicht die
+ * Event-`StorageUnit` (#273) — deckt Stufe 1 (direkt auf der Event-Unit,
+ * "Sammel-Platz") und Stufe 2 (auf einem Regal, das unter die Event-Unit
+ * gehängt wurde) gleichermaßen ab, ohne separate Zuordnungstabelle. Kein
+ * Zeit-Gate an `event.endsAt` — ein Exemplar, das nach Event-Ende noch auf
+ * der Event-Unit liegt, gilt bewusst weiterhin als "im Raum" (liegengebliebene
+ * Rückgabe soll auffallen, nicht still verschwinden). A copy held directly by
+ * a person (loaned out) is never in the room.
  */
 export async function isGameInEventRoom(gameCopyId: string, eventId: string) {
-  const [assignedUnitIds, parentById, holdingUnitByGame] = await Promise.all([
-    loadAssignedUnitIds(eventId),
+  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
+    resolveEventUnitId(eventId),
     loadUnitParents(),
     loadOpenHoldingUnitByGame(),
   ]);
 
   const unitId = holdingUnitByGame.get(gameCopyId);
-  if (!unitId || assignedUnitIds.size === 0) return false;
+  if (!unitId || !eventUnitId) return false;
 
-  return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
+  return unitOrAncestorAssigned(unitId, new Set([eventUnitId]), parentById);
+}
+
+/**
+ * GameCopy-Ids, die gerade "im Raum" von `eventId` sind (#273) — Grundlage
+ * für den "nur anwesende Spiele"-Filter auf der Ludothek-Übersichtsseite
+ * (bisher gab's die Anwesenheits-Frage nur auf der Detailseite/-Lookup, via
+ * `isGameInEventRoom()`/`getGuestCopyAvailability()`). Leeres Set, solange
+ * das Event keine Unit hat (niemand hat eingecheckt).
+ */
+export async function getPresentGameCopyIds(
+  eventId: string,
+): Promise<Set<string>> {
+  const eventUnitId = await resolveEventUnitId(eventId);
+  return eventUnitId ? getGameCopyIdsInUnitTree(eventUnitId) : new Set();
 }
 
 export type AttendingExplainer = {
   meepleId: string;
   displayName: string;
   level: ExplainerExperienceLevel;
+  /** Nur gesetzt, wenn laut Freigabe (#389) für den Gast-Bereich sichtbar —
+   * `getAttendingExplainers()` wird ausschließlich für ein laufendes Event
+   * aufgerufen (`isEventCurrentlyRunning()` beim Aufrufer), jede Zeile hier
+   * ist also automatisch "gerade aktiv anwesend". */
+  profilePictureUrl: string | null;
+  /** Freiwillige Kontaktkanäle — genau wie `profileHref` erst ab
+   * `meepleDatenVisibility` EVENTS/IMMER befüllt (nicht an
+   * `profilePictureVisibility` gekoppelt: ein Meeple kann sein Bild zeigen,
+   * ohne Kontaktdaten für Gäste freizugeben, und umgekehrt). */
+  contact: ContactLinks;
+  /** Ziel des "Profil ansehen"-Links im `ContactDialog` — `null`, solange
+   * `meepleDatenVisibility` das für diesen Gast nicht freigibt (`INTERN`
+   * bleibt für Gäste immer verborgen, auch während der Anwesenheit). */
+  profileHref: string | null;
 };
 
 /** Erklärbären present at this event who can explain this specific game. */
@@ -89,10 +141,20 @@ export async function getAttendingExplainers(
   const attendances = await prisma.explainerAttendance.findMany({
     where: { eventId, meeple: { explainerGames: { some: { boardGameId } } } },
     include: {
+      event: { select: { slug: true } },
       meeple: {
         select: {
           id: true,
           displayName: true,
+          profilePictureUrl: true,
+          profilePictureVisibility: true,
+          meepleDatenVisibility: true,
+          telegramHandle: true,
+          signalHandle: true,
+          discordHandle: true,
+          address: true,
+          shareAddress: true,
+          member: { select: { email: true } },
           explainerGames: {
             where: { boardGameId },
             select: { level: true },
@@ -104,11 +166,35 @@ export async function getAttendingExplainers(
 
   return attendances
     .filter((a) => a.meeple.explainerGames.length > 0)
-    .map((a) => ({
-      meepleId: a.meeple.id,
-      displayName: a.meeple.displayName,
-      level: a.meeple.explainerGames[0].level,
-    }));
+    .map((a) => {
+      const viewer: ProfilePictureViewer = {
+        kind: "guest",
+        isAttendingExplainerNow: true,
+      };
+      const meepleDatenVisible = a.meeple.meepleDatenVisibility
+        ? isProfilePictureVisible(a.meeple.meepleDatenVisibility, viewer)
+        : false;
+      return {
+        meepleId: a.meeple.id,
+        displayName: a.meeple.displayName,
+        level: a.meeple.explainerGames[0].level,
+        profilePictureUrl: resolveVisibleProfilePictureUrl(a.meeple, viewer),
+        contact: meepleDatenVisible
+          ? getContactLinks({ ...a.meeple, email: meepleEmail(a.meeple) })
+          : getContactLinks({
+              email: null,
+              telegramHandle: null,
+              signalHandle: null,
+              discordHandle: null,
+              address: null,
+              shareAddress: false,
+            }),
+        profileHref:
+          meepleDatenVisible && a.event?.slug
+            ? `/events/${a.event.slug}/gast/erklaerbaer/${a.meeple.id}`
+            : null,
+      };
+    });
 }
 
 /**
@@ -119,21 +205,94 @@ export async function getFreeGamesInRoom(
   eventId: string,
   filters: LudothekFilters,
 ): Promise<LudothekGame[]> {
-  const [games, assignedUnitIds, parentById, holdingUnitByGame] =
+  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
+    resolveEventUnitId(eventId),
+    loadUnitParents(),
+    loadOpenHoldingUnitByGame(),
+  ]);
+  if (!eventUnitId) return [];
+  const assignedUnitIds = new Set([eventUnitId]);
+
+  // #526: erst die Exemplare im Raum bestimmen, dann nur diese laden — nicht
+  // den ganzen Bestand für einen anschließenden Filter.
+  const inRoomCopyIds = [...holdingUnitByGame]
+    .filter(([, unitId]) =>
+      unitOrAncestorAssigned(unitId, assignedUnitIds, parentById),
+    )
+    .map(([gameCopyId]) => gameCopyId);
+  if (inRoomCopyIds.length === 0) return [];
+
+  const games = await buildLudothekGames({
+    where: { id: { in: inRoomCopyIds } },
+  });
+  return filterLudothekGames(games, { ...filters, zustand: "frei" });
+}
+
+export type GuestCopyAvailability =
+  | { kind: "plain"; total: number }
+  | {
+      kind: "event";
+      total: number;
+      /** Present at the event ("im Raum", via Regal-Zuordnung). */
+      inRoom: number;
+      /** Of those, not currently loaned out. */
+      available: number;
+      shelfLabels: string[];
+    };
+
+/**
+ * A title's copy count for guests (2.10) — plain by default, or "X von Y
+ * verfügbar (Regal …)" once an event is running and at least one copy is
+ * assigned to a shelf there (#121). No per-copy zustand/standort leaks to
+ * guests, only this aggregate.
+ */
+export async function getGuestCopyAvailability(
+  copies: Pick<LudothekGame, "id" | "zustand">[],
+  eventId: string | null,
+): Promise<GuestCopyAvailability> {
+  const total = copies.length;
+  if (!eventId || total === 0) return { kind: "plain", total };
+
+  const [eventUnitId, parentById, unitLabelById, holdingUnitByGame] =
     await Promise.all([
-      buildLudothekGames(),
-      loadAssignedUnitIds(eventId),
+      resolveEventUnitId(eventId),
       loadUnitParents(),
+      loadUnitLabels(),
       loadOpenHoldingUnitByGame(),
     ]);
+  if (!eventUnitId) return { kind: "plain", total };
+  const assignedUnitIds = new Set([eventUnitId]);
 
-  const freeGames = filterLudothekGames(games, { ...filters, zustand: "frei" });
+  const inRoom = copies
+    .map((copy) => {
+      const unitId = holdingUnitByGame.get(copy.id);
+      const isInRoom =
+        unitId && unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
+      // Regal-Label wenn schon einem Regal zugeordnet (Stufe 2), sonst der
+      // Event-Unit-eigene Titel als Sammel-Platz-Label (Stufe 1, #273).
+      return isInRoom
+        ? { copy, shelfLabel: unitLabelById.get(unitId!) ?? "" }
+        : null;
+    })
+    .filter(
+      (entry): entry is { copy: (typeof copies)[number]; shelfLabel: string } =>
+        entry !== null,
+    );
 
-  return freeGames.filter((game) => {
-    const unitId = holdingUnitByGame.get(game.id);
-    if (!unitId) return false;
-    return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
-  });
+  if (inRoom.length === 0) return { kind: "plain", total };
+
+  const available = inRoom.filter(
+    (entry) => entry.copy.zustand === "frei",
+  ).length;
+  const shelfLabels = [...new Set(inRoom.map((entry) => entry.shelfLabel))];
+
+  return {
+    kind: "event",
+    total,
+    inRoom: inRoom.length,
+    available,
+    shelfLabels,
+  };
 }
 
 export type GuestFleaMarketItem = {
@@ -150,7 +309,7 @@ const GUEST_VISIBLE_STATUSES: FleaMarketItemStatus[] = ["FOR_SALE", "RESERVED"];
  * Flea market items visible in the guest area: never PENDING (not yet approved)
  * and SOLD items are hidden too, since they can no longer be bought (CONTEXT.md
  * "Flohmarkt-Artikel"). A separate, read-only query — no duplicate of the
- * cashier-side query in `src/components/feature/admin-bringbuy/cashier-actions.ts`.
+ * cashier-side query in `src/lib/bringbuy/actions.ts`.
  */
 export async function getGuestFleaMarketItems(
   eventId: string,

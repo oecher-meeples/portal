@@ -8,16 +8,28 @@ function Tooltip({
   content,
   children,
   delay = 200,
+  side = "top",
 }: {
   content: ReactNode;
   children: ReactElement;
   delay?: number;
+  side?: "top" | "right" | "bottom" | "left";
 }) {
   return (
     <TooltipPrimitive.Root>
       <TooltipPrimitive.Trigger delay={delay} render={children} />
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Positioner sideOffset={6}>
+        <TooltipPrimitive.Positioner
+          side={side}
+          sideOffset={6}
+          collisionPadding={{ top: 72 }}
+          // `z-50` on `Popup` alone has no effect — it isn't positioned
+          // itself, only `Positioner` is (Floating UI sets `position: fixed`
+          // there). Without it here, the tooltip could render behind a
+          // `fixed`/`sticky` ancestor with its own z-index — e.g. the
+          // header (`z-30`), which hid the Feedback-button tooltip (#282).
+          className="z-50"
+        >
           <TooltipPrimitive.Popup
             data-slot="tooltip-content"
             className={cn(

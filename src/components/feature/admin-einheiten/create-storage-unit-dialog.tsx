@@ -7,8 +7,20 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
 import { createStorageUnit } from "@/components/feature/admin-einheiten/actions";
 
-export function CreateStorageUnitDialog() {
-  const [kind, setKind] = useState<"BOX" | "SHELF">("BOX");
+/** Ein gescanntes, noch unbekanntes Einheiten-Etikett
+ * (`/admin/einheiten?neu=box-0001`, #549) — Art und Code stehen damit fest. */
+export type ScannedUnitPrefill = { kind: "BOX" | "SHELF"; code: string };
+
+export function CreateStorageUnitDialog({
+  prefill,
+}: {
+  prefill?: ScannedUnitPrefill;
+} = {}) {
+  const [open, setOpen] = useState(Boolean(prefill));
+  // Nur fürs erste Anlegen — danach ist der Code vergeben, der nächste
+  // Dialog vergibt wieder fortlaufend.
+  const [scanned, setScanned] = useState(prefill);
+  const [kind, setKind] = useState<"BOX" | "SHELF">(prefill?.kind ?? "BOX");
   const [label, setLabel] = useState("");
   const [locationNote, setLocationNote] = useState("");
 
@@ -26,38 +38,49 @@ export function CreateStorageUnitDialog() {
           Einheit anlegen
         </Button>
       }
+      open={open}
+      onOpenChange={setOpen}
       title="Neue Aufbewahrungseinheit"
-      description="Der Code (z. B. OM-BOX-0004) wird automatisch fortlaufend vergeben."
+      description={
+        scanned
+          ? `Code ${scanned.code} vom gescannten Etikett.`
+          : "Der Code (z. B. OM-BOX-0004) wird automatisch fortlaufend vergeben."
+      }
       submitLabel="Einheit anlegen"
       pendingLabel="Lege an…"
       canSubmit={Boolean(label.trim())}
-      action={() =>
-        createStorageUnit({
+      action={async () => {
+        const result = await createStorageUnit({
           kind,
           label,
+          code: scanned?.code,
           locationNote: locationNote || undefined,
-        })
-      }
+        });
+        if (!("error" in result)) setScanned(undefined);
+        return result;
+      }}
       onReset={reset}
     >
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant={kind === "BOX" ? "default" : "outline"}
-          onClick={() => setKind("BOX")}
-        >
-          Karton
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={kind === "SHELF" ? "default" : "outline"}
-          onClick={() => setKind("SHELF")}
-        >
-          Regal
-        </Button>
-      </div>
+      {!scanned && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={kind === "BOX" ? "default" : "outline"}
+            onClick={() => setKind("BOX")}
+          >
+            Karton
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={kind === "SHELF" ? "default" : "outline"}
+            onClick={() => setKind("SHELF")}
+          >
+            Regal
+          </Button>
+        </div>
+      )}
 
       <TextField
         id="unit-label"

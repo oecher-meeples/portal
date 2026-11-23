@@ -1,5 +1,18 @@
-import { describe, expect, it } from "vitest";
-import { getLfgStatus, isLfgExpired } from "./lfg";
+import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/lib/__mocks__/prisma";
+
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+
+const {
+  getLfgStatus,
+  isLfgExpired,
+  isLfgAttachmentEligible,
+  getLfgParticipantDisplayName,
+  getOpenLfgPostsForBoardGame,
+  getBoardGameIdsWithOpenLfgPosts,
+  matchesLfgTimeframeFilter,
+  parseLfgSearchParams,
+} = await import("./lfg");
 
 const NOW = new Date("2026-08-01T12:00:00Z");
 
@@ -54,5 +67,243 @@ describe("getLfgStatus", () => {
         NOW,
       ),
     ).toBe("geschlossen");
+  });
+});
+
+describe("getLfgParticipantDisplayName", () => {
+  it("uses the member's own name for a real participant", () => {
+    expect(
+      getLfgParticipantDisplayName({
+        meepleId: "meeple-1",
+        meepleDisplayName: "Anna",
+        addedByDisplayName: "Ben",
+      }),
+    ).toBe("Anna");
+  });
+
+  it("generates 'Gast von {name}' for anonymous guests, never free text", () => {
+    expect(
+      getLfgParticipantDisplayName({
+        meepleId: null,
+        meepleDisplayName: null,
+        addedByDisplayName: "Ben",
+      }),
+    ).toBe("Gast von Ben");
+  });
+});
+
+describe("getOpenLfgPostsForBoardGame", () => {
+  function post(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "post-1",
+      title: "Wer hat Lust auf Arche Nova?",
+      dateNote: "Nächsten Dienstag",
+      plannedAt: null,
+      location: "Vereinsraum",
+      maxParticipants: 4,
+      closedAt: null,
+      _count: { participants: 1 },
+      ...overrides,
+    };
+  }
+
+  it("returns only posts whose status is offen", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([
+      post({ id: "open-1" }),
+      post({ id: "voll-1", maxParticipants: 1, _count: { participants: 1 } }),
+      post({
+        id: "abgelaufen-1",
+        plannedAt: new Date("2020-01-01T00:00:00Z"),
+      }),
+    ] as never);
+
+    const result = await getOpenLfgPostsForBoardGame("board-1");
+
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("open-1");
+  });
+
+  it("excludes geschlossen posts at the query level", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([] as never);
+
+    await getOpenLfgPostsForBoardGame("board-1");
+
+    expect(prismaMock.lfgPost.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { boardGameId: "board-1", closedAt: null },
+      }),
+    );
+  });
+
+  it("maps the participant count correctly", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([
+      post({ _count: { participants: 3 } }),
+    ] as never);
+
+    const result = await getOpenLfgPostsForBoardGame("board-1");
+
+    expect(result[0].participantCount).toBe(3);
+  });
+
+  it("returns an empty array when nothing matches", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([] as never);
+
+    expect(await getOpenLfgPostsForBoardGame("board-1")).toEqual([]);
+  });
+});
+
+describe("getBoardGameIdsWithOpenLfgPosts", () => {
+  function post(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "post-1",
+      boardGameId: "board-1",
+      plannedAt: null,
+      maxParticipants: 4,
+      closedAt: null,
+      _count: { participants: 1 },
+      ...overrides,
+    };
+  }
+
+  it("returns an empty set without querying for an empty input", async () => {
+    const result = await getBoardGameIdsWithOpenLfgPosts([]);
+
+    expect(result).toEqual(new Set());
+    expect(prismaMock.lfgPost.findMany).not.toHaveBeenCalled();
+  });
+
+  it("includes a game with at least one offen post", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([
+      post({ boardGameId: "board-1" }),
+    ] as never);
+
+    const result = await getBoardGameIdsWithOpenLfgPosts(["board-1"]);
+
+    expect(result.has("board-1")).toBe(true);
+  });
+
+  it("excludes a game whose only posts are voll, abgelaufen or geschlossen", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([
+      post({
+        boardGameId: "board-1",
+        maxParticipants: 1,
+        _count: { participants: 1 },
+      }),
+      post({
+        boardGameId: "board-2",
+        plannedAt: new Date("2020-01-01T00:00:00Z"),
+      }),
+    ] as never);
+
+    const result = await getBoardGameIdsWithOpenLfgPosts([
+      "board-1",
+      "board-2",
+    ]);
+
+    expect(result.size).toBe(0);
+  });
+
+  it("scopes the query to the requested board games and open posts", async () => {
+    prismaMock.lfgPost.findMany.mockResolvedValue([] as never);
+
+    await getBoardGameIdsWithOpenLfgPosts(["board-1", "board-2"]);
+
+    expect(prismaMock.lfgPost.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          boardGameId: { in: ["board-1", "board-2"] },
+          closedAt: null,
+        },
+      }),
+    );
+  });
+});
+
+describe("matchesLfgTimeframeFilter", () => {
+  it("treats a post without a planned date as bevorstehend only", () => {
+    expect(
+      matchesLfgTimeframeFilter({ plannedAt: null }, "bevorstehend", NOW),
+    ).toBe(true);
+    expect(
+      matchesLfgTimeframeFilter({ plannedAt: null }, "abgelaufen", NOW),
+    ).toBe(false);
+  });
+
+  it("matches a past date only as abgelaufen", () => {
+    const past = { plannedAt: new Date("2026-07-01T00:00:00Z") };
+    expect(matchesLfgTimeframeFilter(past, "abgelaufen", NOW)).toBe(true);
+    expect(matchesLfgTimeframeFilter(past, "bevorstehend", NOW)).toBe(false);
+  });
+
+  it("matches a future date only as bevorstehend", () => {
+    const future = { plannedAt: new Date("2026-09-01T00:00:00Z") };
+    expect(matchesLfgTimeframeFilter(future, "abgelaufen", NOW)).toBe(false);
+    expect(matchesLfgTimeframeFilter(future, "bevorstehend", NOW)).toBe(true);
+  });
+
+  it("counts a post planned for today as both abgelaufen and bevorstehend (#409)", () => {
+    // NOW ist 2026-08-01T12:00:00Z — ein früherer Zeitpunkt am selben Tag
+    // gilt für den Zeitraum-Filter trotzdem als "heute", nicht als "abgelaufen".
+    const today = { plannedAt: new Date("2026-08-01T06:00:00Z") };
+    expect(matchesLfgTimeframeFilter(today, "abgelaufen", NOW)).toBe(true);
+    expect(matchesLfgTimeframeFilter(today, "bevorstehend", NOW)).toBe(true);
+  });
+});
+
+describe("isLfgAttachmentEligible", () => {
+  it("is false without a planned date", () => {
+    expect(isLfgAttachmentEligible({ plannedAt: null }, NOW)).toBe(false);
+  });
+
+  it("is true for a date in the past", () => {
+    expect(
+      isLfgAttachmentEligible(
+        { plannedAt: new Date("2026-07-01T00:00:00Z") },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("is true for today", () => {
+    expect(isLfgAttachmentEligible({ plannedAt: NOW }, NOW)).toBe(true);
+  });
+
+  it("is false for a future date", () => {
+    expect(
+      isLfgAttachmentEligible(
+        { plannedAt: new Date("2026-09-01T00:00:00Z") },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("parseLfgSearchParams", () => {
+  it("returns no filters when nothing is set", () => {
+    expect(parseLfgSearchParams({})).toEqual({
+      boardGameId: undefined,
+      status: undefined,
+      zeitraum: undefined,
+    });
+  });
+
+  it("parses all three filters", () => {
+    expect(
+      parseLfgSearchParams({
+        spiel: "board-1",
+        status: "frei",
+        zeitraum: "abgelaufen",
+      }),
+    ).toEqual({
+      boardGameId: "board-1",
+      status: "frei",
+      zeitraum: "abgelaufen",
+    });
+  });
+
+  it("ignores an invalid status/zeitraum value", () => {
+    expect(
+      parseLfgSearchParams({ status: "geschlossen", zeitraum: "irgendwann" }),
+    ).toEqual({ boardGameId: undefined, status: undefined, zeitraum: undefined });
   });
 });

@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, type ReactElement, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,15 +20,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAction, type ActionResult } from "@/components/ui/use-action";
 
+type OpenOverride = { open: boolean; onOpenChange: (open: boolean) => void };
+
+const OpenOverrideContext = createContext<OpenOverride | null>(null);
+
+/**
+ * Steuert den Open-State des (einen) `ActionDialog` darunter von außen, ohne
+ * dass der Aufrufer an dessen Props kommt — z. B. wenn die Seite den Dialog
+ * fertig komponiert als Slot übergibt und ein Menüeintrag ihn öffnen soll
+ * (#586). Der Dialog bleibt dabei außerhalb des Menüs montiert und wird
+ * nicht mit ihm ausgehängt. Verschachtelte Dialoge im Inhalt sind nicht
+ * betroffen.
+ */
+export function ActionDialogOpenOverride({
+  open,
+  onOpenChange,
+  children,
+}: OpenOverride & { children: ReactNode }) {
+  return (
+    <OpenOverrideContext.Provider value={{ open, onOpenChange }}>
+      {children}
+    </OpenOverrideContext.Provider>
+  );
+}
+
 /**
  * The dialog skeleton every mutating dialog in this app shares: open state,
  * reset-on-close, an error slot, and a footer submit button that closes the
- * dialog and refreshes the route on success.
+ * dialog on success (route refresh only with `refresh`, see `useAction`).
  *
  * Callers supply only the trigger, the copy and the body fields.
  */
 export function ActionDialog({
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   title,
   description,
   children,
@@ -29,13 +62,21 @@ export function ActionDialog({
   pendingLabel = "Speichere…",
   submitVariant,
   submitClassName,
+  contentClassName,
   canSubmit = true,
   action,
   onReset,
   onOpen,
+  refresh,
 }: {
-  /** Complete trigger element, including its label. */
-  trigger: ReactElement;
+  /** Complete trigger element, including its label. Omit for a fully
+   * controlled dialog (see `open`/`onOpenChange`) — e.g. one opened
+   * programmatically after a Exemplar-Auswahl-Popup (#121/#122). */
+  trigger?: ReactElement;
+  /** Controls open state externally instead of the dialog's own — both or
+   * neither, `trigger` is then typically omitted too. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   title: ReactNode;
   description?: ReactNode;
   children?: ReactNode;
@@ -43,6 +84,9 @@ export function ActionDialog({
   pendingLabel?: string;
   submitVariant?: React.ComponentProps<typeof Button>["variant"];
   submitClassName?: string;
+  /** Overrides `DialogContent`'s default `sm:max-w-sm` — e.g. a wider layout
+   * with several fields per row (#124). */
+  contentClassName?: string;
   /** Set false while required fields are empty. */
   canSubmit?: boolean;
   action: () => Promise<ActionResult>;
@@ -50,20 +94,36 @@ export function ActionDialog({
   onReset?: () => void;
   /** Load data the dialog needs when it opens. */
   onOpen?: () => void | Promise<void>;
+  /** See `useAction` — only for actions that don't revalidate this path. */
+  refresh?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const override = useContext(OpenOverrideContext);
+  const externalOpen = controlledOpen ?? override?.open;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen ?? internalOpen;
+  const setOpen =
+    controlledOnOpenChange ?? override?.onOpenChange ?? setInternalOpen;
   const { run, pending, error, setError } = useAction({
+    refresh,
     onSuccess: () => {
       setOpen(false);
       onReset?.();
     },
   });
 
+  // Ein von außen gesteuerter Dialog öffnet sich ohne eigenes
+  // `onOpenChange` (z. B. nach der Exemplar-Auswahl) — `onOpen` hängt daher
+  // am Wechsel von `open`, nicht am Trigger-Klick.
+  useEffect(() => {
+    if (externalOpen) void onOpen?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Öffnen, `onOpen` ist meist ein frischer Closure
+  }, [externalOpen]);
+
   async function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
     setError(null);
     if (nextOpen) {
-      await onOpen?.();
+      if (externalOpen === undefined) await onOpen?.();
     } else {
       onReset?.();
     }
@@ -71,13 +131,15 @@ export function ActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
-      <DialogContent>
+      {trigger && <DialogTrigger render={trigger} />}
+      <DialogContent className={contentClassName}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        {children}
+        <OpenOverrideContext.Provider value={null}>
+          {children}
+        </OpenOverrideContext.Provider>
         {error && <p className="text-destructive text-sm">{error}</p>}
         <DialogFooter>
           <Button

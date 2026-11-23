@@ -1,0 +1,395 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
+import { Field, TextField, TextAreaField } from "@/components/ui/field";
+import { ContributorNamesField } from "@/components/widgets/board-game/contributor-names-field";
+import { Button } from "@/components/ui/button";
+import { MultiSelectCombobox } from "@/components/ui/multi-select-combobox";
+import { NativeSelect } from "@/components/ui/native-select";
+import { BoardGameTraitsField } from "@/components/widgets/board-game/board-game-traits-field";
+import { EanField } from "@/components/widgets/board-game/ean-field";
+import { BggIdField } from "@/components/widgets/board-game/bgg-id-field";
+import { TitleOverviewDialog } from "@/components/widgets/board-game/title-overview-dialog";
+import { cn } from "@/lib/utils/cn";
+import {
+  formatMechanics,
+  parseMechanics,
+  parseCommaSeparatedList,
+} from "@/lib/ludothek/bgg-id";
+import { translateDescription } from "@/lib/ludothek/board-games-bgg-import";
+import { LANGUAGE_DEPENDENCE_LABELS } from "@/lib/ludothek/language-dependence";
+import { ExplainerVideoField } from "@/components/widgets/board-game/explainer-video-field";
+import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
+import type { BoardGameCompareField } from "@/lib/ludothek/board-game-bgg-compare";
+import { BOARD_GAME_KIND_LABELS } from "@/lib/ludothek/board-game-kind";
+
+/** Randfarbe je Abgleichsstatus im "Daten mit BGG abgleichen"-Modus (#189) —
+ * `undefined` (Feld nicht im `compareStatus` enthalten) lässt das Feld
+ * unverändert. */
+function diffClassName(status: boolean | undefined): string | undefined {
+  if (status === undefined) return undefined;
+  return status
+    ? "border-emerald-600 focus-visible:border-emerald-600 focus-visible:ring-emerald-600/50"
+    : "border-red-600 focus-visible:border-red-600 focus-visible:ring-red-600/50";
+}
+
+/**
+ * Title-level fields — everything shared by every physical copy of this
+ * title (see ADR 0008). `condition` lives in `EditBoardGameExemplar`
+ * instead: it's per-copy, not per-title.
+ *
+ * Row layout (#124, #493-Folge): Titel+Art, Autor+Illustrator (eine
+ * Zeile), Sprachabhängigkeit+Erstveröffentlichung, EAN+BGG-ID,
+ * Spielerzahl+Dauer+Komplexität, Mechaniken, Bild+Erklärvideo, Beschreibung.
+ */
+export function EditBoardGameTitle({
+  idPrefix,
+  values,
+  onChange,
+  mechanicsOptions,
+  titleWarning,
+  onLoadExistingTitle,
+  loadingExistingTitle,
+  compareStatus,
+  boardGameId,
+  hideEan,
+  onContributorsValidityChange,
+}: {
+  idPrefix: string;
+  values: BoardGameFormValues;
+  onChange: (patch: Partial<BoardGameFormValues>) => void;
+  /** Nur im Bearbeiten-Modus gesetzt (#203) — blendet den "Alternativtitel"-
+   * Dialog hinter dem Titel-Feld ein (#203-Folge: dort auch Sekundärtitel
+   * setzen/entfernen, kein eigenes Textfeld mehr dafür). Beim Anlegen eines
+   * neuen Titels gibt es noch keine ID, also auch keine
+   * Alternativtitel-Verwaltung. */
+  boardGameId?: string;
+  /** Autocomplete suggestions for the Mechaniken multiselect, sourced from
+   * the existing Bestand — omit to keep the plain comma-separated text
+   * field (e.g. when creating a brand-new title with no suggestions yet
+   * worth showing) (#124). */
+  mechanicsOptions?: string[];
+  /** Rahmt das Titel-Feld in derselben Warnfarbe wie die Duplikat-Warnung im
+   * Anlegen-Dialog — Titel existiert bereits, Eingabe wird verworfen (#183). */
+  titleWarning?: boolean;
+  /** Zeigt bei `titleWarning` einen "Titel laden"-Button unter dem Titel-Feld
+   * — übernimmt die echten Bestandsdaten statt die Eingabe zu verwerfen,
+   * damit Korrekturen möglich bleiben (#183). */
+  onLoadExistingTitle?: () => void;
+  /** Deaktiviert den "Titel laden"-Button während der Server-Anfrage. */
+  loadingExistingTitle?: boolean;
+  /** Grün/Rot-Randfarbe je Feld gegenüber frisch geladenen BGG-Daten — nur
+   * im "Daten mit BGG abgleichen"-Modus gesetzt (#189). Felder ohne
+   * BGG-Entsprechung (EAN, Art, BGG-ID, Erklärvideo) bleiben unberührt. */
+  compareStatus?: Partial<Record<BoardGameCompareField, boolean>>;
+  /** Blendet das EAN-Feld aus — der Anlegen-Wizard zeigt es erst im
+   * Exemplar-Schritt, neben der Version, zu der die EAN gehört. */
+  hideEan?: boolean;
+  /** Meldet, ob beide Mitwirkende-Felder nur bekannte Namen enthalten —
+   * die aufrufende Seite blockiert das Speichern, solange das nicht der Fall
+   * ist (#493). */
+  onContributorsValidityChange?: (valid: boolean) => void;
+}) {
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [contributorsValid, setContributorsValid] = useState({
+    author: true,
+    illustrator: true,
+  });
+  const [translationError, setTranslationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onContributorsValidityChange?.(
+      contributorsValid.author && contributorsValid.illustrator,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onContributorsValidityChange ist typischerweise ein frischer Closure pro Render
+  }, [contributorsValid]);
+
+  async function handleTranslateDescription() {
+    setIsTranslating(true);
+    setTranslationError(null);
+    try {
+      const result = await translateDescription(values.description);
+      if (!result.success) {
+        setTranslationError(result.error);
+        return;
+      }
+      onChange({ description: result.text });
+    } catch (err) {
+      setTranslationError(
+        err instanceof Error
+          ? err.message
+          : "Die Übersetzung ist fehlgeschlagen. Bitte erneut versuchen.",
+      );
+    } finally {
+      setIsTranslating(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-end gap-2">
+          <TextField
+            id={`${idPrefix}-title`}
+            label="Titel"
+            fieldClassName="flex-1"
+            value={values.title}
+            onChange={(event) => onChange({ title: event.target.value })}
+            required
+            warning={titleWarning}
+            className={cn(
+              titleWarning &&
+                "border-amber-600 focus-visible:border-amber-600 focus-visible:ring-amber-600/50",
+              diffClassName(compareStatus?.title),
+            )}
+          />
+          {boardGameId && (
+            <TitleOverviewDialog
+              boardGameId={boardGameId}
+              title={values.title}
+              secondaryTitle={values.secondaryTitle}
+              onTitleChange={(title) => onChange({ title })}
+              onSecondaryTitleChange={(secondaryTitle) =>
+                onChange({ secondaryTitle })
+              }
+            />
+          )}
+        </div>
+        {titleWarning && onLoadExistingTitle && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onLoadExistingTitle}
+            disabled={loadingExistingTitle}
+            className="self-start"
+          >
+            {loadingExistingTitle ? "Lade…" : "Titel laden"}
+          </Button>
+        )}
+      </div>
+      <Field label="Art" htmlFor={`${idPrefix}-kind`}>
+        <NativeSelect
+          id={`${idPrefix}-kind`}
+          value={values.kind}
+          onChange={(event) =>
+            onChange({ kind: event.target.value as BoardGameKind })
+          }
+          size="md"
+          className={diffClassName(compareStatus?.kind)}
+        >
+          {Object.values(BoardGameKind).map((kind) => (
+            <option key={kind} value={kind}>
+              {BOARD_GAME_KIND_LABELS[kind]}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
+
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1.5 sm:col-span-2 sm:grid-cols-2">
+        <ContributorNamesField
+          label="Autor(en)"
+          role="AUTHOR"
+          value={values.author}
+          onChange={(author) => onChange({ author })}
+          placeholder="z. B. Uwe Rosenberg"
+          onValidityChange={(valid) =>
+            setContributorsValid((prev) => ({ ...prev, author: valid }))
+          }
+        />
+        <ContributorNamesField
+          label="Illustrator(en)"
+          role="ILLUSTRATOR"
+          value={values.illustrator}
+          onChange={(illustrator) => onChange({ illustrator })}
+          placeholder="z. B. Klemens Franz"
+          onValidityChange={(valid) =>
+            setContributorsValid((prev) => ({ ...prev, illustrator: valid }))
+          }
+        />
+      </div>
+
+      <Field
+        label="Sprachabhängigkeit (BGG-Skala, optional)"
+        htmlFor={`${idPrefix}-language-dependence`}
+      >
+        <NativeSelect
+          id={`${idPrefix}-language-dependence`}
+          value={values.languageDependence ?? ""}
+          onChange={(event) =>
+            onChange({
+              languageDependence:
+                (event.target.value as LanguageDependence) || null,
+            })
+          }
+          size="md"
+          className={diffClassName(compareStatus?.languageDependence)}
+        >
+          <option value="">Nicht erfasst</option>
+          {Object.values(LanguageDependence).map((level) => (
+            <option key={level} value={level}>
+              {LANGUAGE_DEPENDENCE_LABELS[level]}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
+
+      <TextField
+        id={`${idPrefix}-year-published`}
+        label="Erstveröffentlichung"
+        type="number"
+        value={values.yearPublished}
+        onChange={(event) => onChange({ yearPublished: event.target.value })}
+        placeholder="z. B. 2021"
+      />
+
+      {!hideEan && (
+        <EanField
+          idPrefix={idPrefix}
+          value={values.ean}
+          onChange={(ean) => onChange({ ean })}
+          title={values.title}
+          publisherForSorting={parseCommaSeparatedList(values.publisher)}
+        />
+      )}
+      <BggIdField
+        idPrefix={idPrefix}
+        value={values.bggId}
+        title={values.title}
+        onChange={(bggId) => onChange({ bggId })}
+      />
+
+      <div className="flex gap-3 sm:col-span-2">
+        <TextField
+          id={`${idPrefix}-min-players`}
+          label="Spieler von"
+          type="number"
+          min={1}
+          fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.minPlayers)}
+          value={values.minPlayers}
+          onChange={(event) => onChange({ minPlayers: event.target.value })}
+        />
+        <TextField
+          id={`${idPrefix}-max-players`}
+          label="Spieler bis"
+          type="number"
+          min={1}
+          fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.maxPlayers)}
+          value={values.maxPlayers}
+          onChange={(event) => onChange({ maxPlayers: event.target.value })}
+        />
+        <TextField
+          id={`${idPrefix}-play-time`}
+          label="Spieldauer (Min.)"
+          type="number"
+          min={1}
+          fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.playTimeMinutes)}
+          value={values.playTimeMinutes}
+          onChange={(event) =>
+            onChange({ playTimeMinutes: event.target.value })
+          }
+        />
+        <TextField
+          id={`${idPrefix}-weight`}
+          label="Komplexität (1–5)"
+          type="number"
+          min={1}
+          max={5}
+          step={0.1}
+          fieldClassName="flex-1"
+          className={diffClassName(compareStatus?.weight)}
+          value={values.weight}
+          onChange={(event) => onChange({ weight: event.target.value })}
+        />
+      </div>
+
+      {mechanicsOptions ? (
+        <Field
+          label="Mechaniken"
+          htmlFor={`${idPrefix}-mechanics`}
+          className="sm:col-span-2"
+        >
+          <MultiSelectCombobox
+            id={`${idPrefix}-mechanics`}
+            options={mechanicsOptions}
+            value={parseMechanics(values.mechanics)}
+            onValueChange={(next) =>
+              onChange({ mechanics: formatMechanics(next) })
+            }
+            placeholder="Mechanik suchen …"
+            emptyLabel="Keine passende Mechanik"
+            className={diffClassName(compareStatus?.mechanics)}
+          />
+        </Field>
+      ) : (
+        <TextField
+          id={`${idPrefix}-mechanics`}
+          label="Mechaniken"
+          fieldClassName="sm:col-span-2"
+          className={diffClassName(compareStatus?.mechanics)}
+          value={values.mechanics}
+          onChange={(event) => onChange({ mechanics: event.target.value })}
+          placeholder="Worker Placement, Drafting, …"
+          hint="Kommagetrennt."
+        />
+      )}
+
+      <TextField
+        id={`${idPrefix}-image-url`}
+        label="Bild-URL"
+        className={diffClassName(compareStatus?.imageUrl)}
+        value={values.imageUrl}
+        onChange={(event) => onChange({ imageUrl: event.target.value })}
+        placeholder="https://…"
+      />
+      <ExplainerVideoField
+        idPrefix={idPrefix}
+        value={values.explainerVideoUrl}
+        bggIdText={values.bggId}
+        onChange={(url) => onChange({ explainerVideoUrl: url })}
+      />
+
+      <BoardGameTraitsField
+        idPrefix={idPrefix}
+        value={values.traits}
+        onChange={(traits) => onChange({ traits })}
+        diffTone={compareStatus?.traits}
+      />
+      <TextAreaField
+        id={`${idPrefix}-notes`}
+        label="Hinweis (Verleih-relevant, z. B. „App zwingend nötig“)"
+        fieldClassName="sm:col-span-2"
+        value={values.notes}
+        onChange={(event) => onChange({ notes: event.target.value })}
+        hint="Wird für alle im Detail-View angezeigt, nie aus BGG befüllt."
+      />
+
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <TextAreaField
+          id={`${idPrefix}-description`}
+          label="Beschreibung"
+          className={diffClassName(compareStatus?.description)}
+          value={values.description}
+          onChange={(event) => onChange({ description: event.target.value })}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleTranslateDescription}
+          disabled={isTranslating || !values.description.trim()}
+          className="self-start"
+        >
+          {isTranslating ? "Übersetze…" : "Übersetzen"}
+        </Button>
+        {translationError && (
+          <p className="text-destructive text-xs">{translationError}</p>
+        )}
+      </div>
+    </div>
+  );
+}

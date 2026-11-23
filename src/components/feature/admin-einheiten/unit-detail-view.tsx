@@ -1,11 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import type { ShelfCategory } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Card, CardTitle } from "@/components/ui/card";
+import {
+  SHELF_CATEGORY_LABELS,
+  SHELF_CATEGORY_VALUES,
+} from "@/lib/ludothek/shelf-category";
 import { useAction } from "@/components/ui/use-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -22,6 +27,12 @@ import {
   AssignKeeperDialog,
   type KeeperOption,
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
+import { PageContainer } from "@/components/ui/page-container";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Field } from "@/components/ui/field";
+import { MeepleAvatar } from "@/components/entities/meeple-avatar";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
+import type { ProfilePictureVisibility } from "@prisma/client";
 
 export type UnitDetail = {
   id: string;
@@ -29,8 +40,14 @@ export type UnitDetail = {
   kind: "BOX" | "SHELF";
   label: string;
   locationNote: string | null;
+  /** Feste Regal-Kategorie (#276), manuell vergeben — `null` bis gesetzt. */
+  category: ShelfCategory | null;
   keeperMeepleId: string | null;
   keeperName: string | null;
+  /** (#412) Verwahrer-Profilbild — Lagereinheiten-Verwaltung ist member-only,
+   * Viewer ist daher immer "meeple". */
+  keeperProfilePictureUrl: string | null;
+  keeperProfilePictureVisibility: ProfilePictureVisibility;
   retired: boolean;
 };
 
@@ -66,14 +83,19 @@ export function UnitDetailView({
 }) {
   const [label, setLabel] = useState(unit.label);
   const [locationNote, setLocationNote] = useState(unit.locationNote ?? "");
+  const [category, setCategory] = useState<ShelfCategory | "">(
+    unit.category ?? "",
+  );
   const save = useAction({ refresh: false });
-  const retire = useAction();
+  // retireStorageUnit revalidiert nur die Übersicht, nicht diese Detailseite.
+  const retire = useAction({ refresh: true });
 
   function handleSave() {
     save.run(() =>
       updateStorageUnit(unit.id, {
         label,
         locationNote: locationNote || undefined,
+        category: category || null,
       }),
     );
   }
@@ -85,7 +107,7 @@ export function UnitDetailView({
   const error = save.error ?? retire.error;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow={unit.kind === "BOX" ? "Karton" : "Regal"}
         title={unit.code}
@@ -93,18 +115,16 @@ export function UnitDetailView({
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-label">Label</Label>
+        <Card className="gap-4">
+          <Field label="Label" htmlFor="unit-label">
             <Input
               id="unit-label"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
               disabled={unit.retired || !isAdmin}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-location">Ortsangabe</Label>
+          </Field>
+          <Field label="Ortsangabe" htmlFor="unit-location">
             <Input
               id="unit-location"
               value={locationNote}
@@ -112,10 +132,45 @@ export function UnitDetailView({
               placeholder="z. B. Keller links"
               disabled={unit.retired || !isAdmin}
             />
-          </div>
+          </Field>
+          <Field label="Regal-Kategorie" htmlFor="unit-category">
+            <NativeSelect
+              id="unit-category"
+              value={category}
+              onChange={(event) =>
+                setCategory(event.target.value as ShelfCategory | "")
+              }
+              disabled={unit.retired || !isAdmin}
+              size="compact"
+            >
+              <option value="">Keine</option>
+              {SHELF_CATEGORY_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {SHELF_CATEGORY_LABELS[value]}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
           <div className="flex items-center justify-between gap-2">
-            <p className="text-muted-foreground text-sm">
-              Verwahrer: {unit.keeperName ?? "keiner"}
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              Verwahrer:{" "}
+              {unit.keeperName ? (
+                <MeepleAvatar
+                  name={unit.keeperName}
+                  profilePictureUrl={unit.keeperProfilePictureUrl}
+                  profilePictureVisibility={unit.keeperProfilePictureVisibility}
+                  viewer={{ kind: "meeple" }}
+                  size="md"
+                />
+              ) : null}
+              {unit.keeperName && unit.keeperMeepleId ? (
+                <MeepleContactDialog
+                  name={unit.keeperName}
+                  meepleId={unit.keeperMeepleId}
+                />
+              ) : (
+                (unit.keeperName ?? "keiner")
+              )}
             </p>
             {!unit.retired && (
               <AssignKeeperDialog
@@ -148,16 +203,14 @@ export function UnitDetailView({
               )}
             </div>
           )}
-        </div>
+        </Card>
 
-        <div className="bg-card rounded-lg border p-6">
-          <h2 className="font-serif text-lg font-bold">
-            Inhalt ({contents.length})
-          </h2>
+        <Card>
+          <CardTitle>Inhalt ({contents.length})</CardTitle>
           {contents.length === 0 ? (
-            <p className="text-muted-foreground mt-2 text-sm">Leer.</p>
+            <p className="text-muted-foreground text-sm">Leer.</p>
           ) : (
-            <ul className="mt-3 flex flex-col divide-y text-sm">
+            <ul className="flex flex-col divide-y text-sm">
               {contents.map((game) => (
                 <li key={game.id} className="py-2">
                   {game.title}
@@ -165,7 +218,7 @@ export function UnitDetailView({
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       </div>
 
       <div className="overflow-hidden rounded-lg border">
@@ -203,6 +256,6 @@ export function UnitDetailView({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </PageContainer>
   );
 }

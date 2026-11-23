@@ -1,24 +1,40 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function Logo() {
-  return (
-    <Link href="/" className="flex shrink-0 items-center gap-2.5">
+  const environment = process.env.ENVIRONMENT ?? "development";
+
+  const mark = (
+    <Link href="/" className="flex shrink-0 items-center">
       <Image
-        src="/meeple.png"
+        src="/icons/Logo-Oecher-Meeples.png"
         alt="Oecher Meeples Logo"
-        width={32}
-        height={32}
-        className="size-8 shrink-0"
+        width={3840}
+        height={1000}
+        priority
+        className="h-16 w-auto dark:hidden"
       />
-      <span className="leading-tight">
-        <span className="block font-serif text-base font-bold tracking-tight">
-          Oecher Meeples
-        </span>
-        <span className="text-muted-foreground block text-[10px] font-medium tracking-wider uppercase">
-          Ludothek &amp; Vereinsportal
-        </span>
-      </span>
+      <Image
+        src="/icons/oecher-meeples-header-dark.png"
+        alt="Oecher Meeples Logo"
+        width={3840}
+        height={1000}
+        priority
+        className="hidden h-16 w-auto dark:block"
+      />
     </Link>
+  );
+
+  if (environment === "production") return mark;
+
+  return (
+    <Tooltip
+      content={`Du befindest dich gerade in der ${environment}-Umgebung.`}
+    >
+      {mark}
+    </Tooltip>
   );
 }

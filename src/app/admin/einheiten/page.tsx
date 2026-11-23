@@ -1,43 +1,51 @@
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/utils/prisma";
 import { hasPermission } from "@/lib/auth/permissions";
-import { getCurrentUser } from "@/lib/auth/server";
-import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
+import { unitChainLabel } from "@/lib/ludothek/unit-chain";
+import { requireMember } from "@/lib/auth/session";
+import { getMembershipState } from "@/lib/members/meeples";
+import {
+  parseShortId,
+  unitCodeFromShortId,
+  unitKindFromShortId,
+} from "@/lib/short-id/short-id";
+import { firstString } from "@/lib/utils/search-params";
+import type { ScannedUnitPrefill } from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
 import {
   AdminEinheitenView,
   type ResignedHolderRow,
   type StorageUnitRow,
 } from "@/components/feature/admin-einheiten/admin-einheiten-view";
 
-function locationChain(
-  unit: { label: string; parentUnitId: string | null },
-  byId: Map<string, { label: string; parentUnitId: string | null }>,
-) {
-  const chain = [unit.label];
-  let parentId = unit.parentUnitId;
-  let depth = 0;
-  while (parentId && depth < 20) {
-    const parent = byId.get(parentId);
-    if (!parent) break;
-    chain.push(parent.label);
-    parentId = parent.parentUnitId;
-    depth += 1;
-  }
-  return chain.reverse().join(" → ");
+/** `?neu=box-0001` (#549): Ziel des Short-ID-Routers für ein gescanntes,
+ * noch unbekanntes Einheiten-Etikett — nur für Admins wirksam, und nur,
+ * solange der Code tatsächlich noch frei ist. */
+function scannedUnitPrefill(
+  neu: string | undefined,
+  existingCodes: Set<string>,
+): ScannedUnitPrefill | undefined {
+  const shortId = parseShortId(neu ?? "");
+  if (shortId?.kind !== "box" && shortId?.kind !== "shelf") return undefined;
+  const code = unitCodeFromShortId(shortId);
+  if (existingCodes.has(code)) return undefined;
+  return { kind: unitKindFromShortId(shortId) as "BOX" | "SHELF", code };
 }
 
-export default async function AdminEinheitenPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-  const [currentMeeple, isAdmin] = await Promise.all([
-    ensureMeeple(user),
-    hasPermission(user.id, "games:manage"),
-  ]);
+export default async function AdminEinheitenPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // #522: offen für jedes aktive Mitglied (Self-Claim einer Einheit),
+  // Verwaltung nur mit games:manage — requireMember setzt den
+  // Mitgliedsstatus durch, den der frühere Eigen-Guard ausließ.
+  const { user, meeple: currentMeeple } = await requireMember();
+  const isAdmin = await hasPermission(user.id, "games:manage");
 
   const [units, gameCounts, meeples] = await Promise.all([
+    // EVENT-Units sind system-verwaltet (lazy per `ensureEventUnit()`, #273)
+    // und gehören nicht in die manuelle Karton/Regal-Verwaltung hier.
     prisma.storageUnit.findMany({
+      where: { kind: { not: "EVENT" } },
       orderBy: { code: "asc" },
       include: { keeper: { select: { displayName: true } } },
     }),
@@ -46,7 +54,13 @@ export default async function AdminEinheitenPage() {
       where: { endedAt: null, unitId: { not: null } },
       _count: { _all: true },
     }),
-    prisma.meeple.findMany(),
+    prisma.meeple.findMany({
+      include: {
+        member: {
+          select: { id: true, resignedAt: true, membershipEndsAt: true },
+        },
+      },
+    }),
   ]);
 
   const unitById = new Map(units.map((u) => [u.id, u]));
@@ -54,14 +68,23 @@ export default async function AdminEinheitenPage() {
     gameCounts.map((row) => [row.unitId!, row._count._all]),
   );
 
+  function membershipStateOf(meeple: (typeof meeples)[number]) {
+    return getMembershipState({
+      meepleId: meeple.id,
+      resignedAt: meeple.member?.resignedAt ?? null,
+      membershipEndsAt: meeple.member?.membershipEndsAt ?? null,
+      anonymizedAt: meeple.anonymizedAt,
+    });
+  }
+
   const resignedMeeples = meeples.filter(
-    (m) => getMembershipState(m) === "ausgetreten",
+    (m) => membershipStateOf(m) === "ausgetreten",
   );
 
   const [openHoldingsAll, unitsWithKeeper] = await Promise.all([
     prisma.gameHolding.groupBy({
-      by: ["meepleId"],
-      where: { endedAt: null, meepleId: { not: null } },
+      by: ["vereinsmitgliedId"],
+      where: { endedAt: null, vereinsmitgliedId: { not: null } },
       _count: { _all: true },
     }),
     prisma.storageUnit.groupBy({
@@ -73,8 +96,11 @@ export default async function AdminEinheitenPage() {
 
   const resignedHolders: ResignedHolderRow[] = resignedMeeples
     .map((meeple) => {
-      const gameCount =
-        openHoldingsAll.find((r) => r.meepleId === meeple.id)?._count._all ?? 0;
+      const gameCount = meeple.member
+        ? (openHoldingsAll.find(
+            (r) => r.vereinsmitgliedId === meeple.member!.id,
+          )?._count._all ?? 0)
+        : 0;
       const unitCount =
         unitsWithKeeper.find((r) => r.keeperMeepleId === meeple.id)?._count
           ._all ?? 0;
@@ -85,9 +111,11 @@ export default async function AdminEinheitenPage() {
   const rows: StorageUnitRow[] = units.map((unit) => ({
     id: unit.id,
     code: unit.code,
-    kind: unit.kind,
+    // Die Query oben filtert EVENT-Units bereits aus — Prisma engt den
+    // Rückgabetyp dadurch nicht automatisch ein (#273).
+    kind: unit.kind as "BOX" | "SHELF",
     label: unit.label,
-    locationChain: locationChain(unit, unitById),
+    locationChain: unitChainLabel(unit.id, unitById),
     keeperMeepleId: unit.keeperMeepleId,
     keeperName: unit.keeper?.displayName ?? null,
     gameCount: gameCountByUnitId.get(unit.id) ?? 0,
@@ -95,7 +123,7 @@ export default async function AdminEinheitenPage() {
   }));
 
   const keeperOptions = meeples
-    .filter((m) => getMembershipState(m) !== "anonymisiert")
+    .filter((m) => membershipStateOf(m) !== "anonymisiert")
     .map((m) => ({ id: m.id, displayName: m.displayName }));
 
   return (
@@ -105,6 +133,14 @@ export default async function AdminEinheitenPage() {
       isAdmin={isAdmin}
       selfMeepleId={currentMeeple.id}
       keeperOptions={keeperOptions}
+      scannedUnit={
+        isAdmin
+          ? scannedUnitPrefill(
+              firstString((await searchParams).neu),
+              new Set(units.map((unit) => unit.code)),
+            )
+          : undefined
+      }
     />
   );
 }

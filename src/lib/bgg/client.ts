@@ -1,4 +1,18 @@
 import { XMLParser } from "fast-xml-parser";
+import {
+  selectEnglishExplainerVideos,
+  selectGermanExplainerVideos,
+} from "./explainer-videos";
+import { parseNumber, toArray } from "./xml-helpers";
+import {
+  BoardGameKind,
+  type BoardGameTrait,
+  type LanguageDependence,
+} from "@prisma/client";
+import { requireEnv } from "@/lib/utils/require-env";
+import { decodeHtmlEntities } from "@/lib/utils/decode-html-entities";
+import { LANGUAGE_DEPENDENCE_BY_LEVEL } from "@/lib/ludothek/language-dependence";
+import { parseTraits } from "@/lib/bgg/traits";
 
 const BGG_API_BASE = "https://boardgamegeek.com/xmlapi2";
 
@@ -19,16 +33,109 @@ export class BggApiError extends Error {
   }
 }
 
+/** Eine BGG-Edition/-Version dieses Titels (`versions=1`, #205) — Verlag und
+ * Product Code können je Edition abweichen (z. B. deutsche vs. englische
+ * Auflage bei unterschiedlichem Verlag), das Erstveröffentlichungsjahr wird
+ * unabhängig davon als ältestes über alle Versionen bestimmt. */
+/** Ein BGG-Link mit stabiler `id` (Verlag, Autor, Illustrator) — Grundlage für
+ * das Mitwirkenden-Register (Epic #490). */
+export interface BggLink {
+  bggId: number;
+  name: string;
+}
+
+export interface BggVersion {
+  /** BGGs ID dieses Versions-Items (`boardgameversion`). */
+  bggVersionId: number | null;
+  /** Versionsname, z. B. "German first edition". */
+  name: string | null;
+  yearPublished: number | null;
+  /** Alle `boardgamepublisher`-Links dieser Version — mehrere bei Co-Publishern. */
+  publisher: string[];
+  publisherLinks: BggLink[];
+  productCode: string | null;
+  /** Rohe `link type="language"`-Werte dieser Version, z. B. `["German"]` —
+   * Grundlage für die Erkennung der deutschen Edition (#205). */
+  languages: string[];
+}
+
 export interface BggGameData {
   title: string;
   minPlayers: number | null;
   maxPlayers: number | null;
   playTimeMinutes: number | null;
   weight: number | null;
+  /** BGGs Community-Durchschnittsbewertung (`statistics.ratings.average`,
+   * 0–10), `null` ohne Statistik-Block (#214). Kann außerhalb 1–10 liegen,
+   * z. B. `0` bei einem Titel ohne Bewertungen — das Hexagon wird dann nicht
+   * angezeigt, siehe `lib/bgg/rating-scale.ts`. */
+  averageRating: number | null;
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
+  /** BGGs `boardgamecategory`-Links (z. B. "Party Game", "Strategy Game"),
+   * analog `mechanics` geparst (#404). */
+  categories: string[];
+  /** Mechaniken/Kategorien mit BGG-`id` — Grundlage für das Tag-Register
+   * (Epic #490 Strang B). `mechanics`/`categories` bleiben bis zum Cutover. */
+  mechanicLinks: BggLink[];
+  categoryLinks: BggLink[];
+  /** BGG-Family-Signale mit Verleih-Auswirkung (#487-Konzept), über eine
+   * Family-ID-Whitelist aus `boardgamefamily`-Links erkannt. Nur ein
+   * Vorschlag, der Admin kann ihn vor dem Speichern ändern. */
+  traits: BoardGameTrait[];
+  /** Direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item — anders als
+   * `publisher` nicht versionsabhängig (#205). */
+  author: string[];
+  designers: BggLink[];
+  illustrators: BggLink[];
+  /** Ältestes Jahr über alle `versions` (falls vorhanden), sonst das
+   * Haupt-Items eigenes `yearpublished` (#205). */
+  yearPublished: number | null;
+  /** Alle BGG-Editionen dieses Titels (`versions=1`) — Grundlage für die
+   * Verlag-/Product-Code-Auto-Übernahme bzw. Auswahl-UI (#205). Leer, wenn
+   * BGG keine separaten Versionen listet. */
+  versions: BggVersion[];
+  /** Aus dem `type`-Attribut des BGG-Items (`boardgame`/`boardgameexpansion`,
+   * siehe #202) — jeder andere/fehlende Wert fällt auf `BOARDGAME` zurück. */
+  kind: BoardGameKind;
+  /** Meistgewähltes Level aus BGGs `language_dependence`-Community-Poll
+   * (#188) — `null` ohne Stimmen (`totalvotes="0"`) oder ohne Poll-Block.
+   * Nur ein Vorschlag, der Admin kann ihn vor dem Speichern ändern. */
+  languageDependence: LanguageDependence | null;
+  /** Alle `name type="alternate"`-Einträge, ungefiltert — Grundlage für die
+   * automatische Befüllung der Alternativnamen-Liste beim Import (#187).
+   * BGG liefert hier z. B. deutsche Titel neben dem meist englischen
+   * `primary`-Namen. */
+  alternateNames: string[];
+  /** Erstes deutsches, sonst erstes englisches instruktives YouTube-Video —
+   * nur diese beiden Sprachen gelten als Fallback, alles andere wird
+   * ignoriert (#185-Folgeanfrage: "Nur Deutsche und Englische Videos"). Beim
+   * automatischen Import wird die URL direkt übernommen; im "Video
+   * aktualisieren"-Dialog stehen dieselben Kandidaten mit Titel/Kanal über
+   * `germanExplainerVideos`/`englishExplainerVideos` zur Verfügung, damit der
+   * Admin auch dort aktiv auswählt statt sie stillschweigend übernommen zu
+   * bekommen (#185-Folge). */
   explainerVideoUrl: string | null;
+  /** Alle instruktiven YouTube-Videos mit `language="German"` im (auf die
+   * ~15 aktuellsten Einträge begrenzten) BGG-Videofenster — Grundlage für
+   * die Auswahlliste im Import-Dialog, siehe `selectGermanExplainerVideos()` (#185). */
+  germanExplainerVideos: BggExplainerVideo[];
+  /** Alle instruktiven YouTube-Videos ohne Sprachangabe oder mit
+   * `language="English"` — Grundlage für die Fallback-Auswahlliste im "Video
+   * aktualisieren"-Dialog, wenn kein deutschsprachiger Treffer existiert.
+   * Andere Sprachen werden bewusst nicht angezeigt (#185-Folgeanfrage). */
+  englishExplainerVideos: BggExplainerVideo[];
+}
+
+export interface BggExplainerVideo {
+  title: string;
+  url: string;
+  channel: string;
+  /** Nur für YouTube-Suchtreffer bekannt (#185-Folgeanfrage) — BGG liefert
+   * keine Abonnentenzahlen. In der Auswahlliste zeigt ein fehlender Wert
+   * dementsprechend "–" statt einer Zahl. */
+  subscriberCount?: number;
 }
 
 interface BggNameEntry {
@@ -38,17 +145,44 @@ interface BggNameEntry {
 
 interface BggLinkEntry {
   type?: string;
+  id?: string;
   value: string;
 }
 
-interface BggVideoEntry {
+export interface BggVideoEntry {
+  title?: string;
   category?: string;
   link?: string;
+  username?: string;
+  /** Ausgeschrieben, z. B. "German", "English" — trotz ursprünglicher Annahme
+   * liefert BGG das doch mit, siehe #185. */
+  language?: string;
 }
 
-interface BggItem {
+interface BggPollResult {
+  level?: string;
+  numvotes?: string;
+}
+
+interface BggPoll {
+  name?: string;
+  totalvotes?: string;
+  results?: { result?: BggPollResult | BggPollResult[] };
+}
+
+interface BggVersionItem {
+  id?: string;
+  name?: BggNameEntry | BggNameEntry[];
+  yearpublished?: { value?: string };
+  productcode?: { value?: string };
+  link?: BggLinkEntry | BggLinkEntry[];
+}
+
+export interface BggItem {
+  type?: string;
   name?: BggNameEntry | BggNameEntry[];
   description?: string;
+  yearpublished?: { value?: string };
   minplayers?: { value?: string };
   maxplayers?: { value?: string };
   playingtime?: { value?: string };
@@ -57,16 +191,39 @@ interface BggItem {
   statistics?: {
     ratings?: {
       averageweight?: { value?: string };
+      average?: { value?: string };
     };
   };
   videos?: {
     video?: BggVideoEntry | BggVideoEntry[];
   };
+  poll?: BggPoll | BggPoll[];
+  versions?: {
+    item?: BggVersionItem | BggVersionItem[];
+  };
 }
 
 interface BggThingResponse {
   items?: {
-    item?: BggItem;
+    item?: BggItem | BggItem[];
+  };
+}
+
+export interface BggSearchResult {
+  bggId: number;
+  title: string;
+  yearPublished: number | null;
+}
+
+interface BggSearchItem {
+  id?: string;
+  name?: BggNameEntry | BggNameEntry[];
+  yearpublished?: { value?: string };
+}
+
+interface BggSearchResponse {
+  items?: {
+    item?: BggSearchItem | BggSearchItem[];
   };
 }
 
@@ -75,72 +232,116 @@ const parser = new XMLParser({
   attributeNamePrefix: "",
   htmlEntities: true,
   isArray: (name, _jpath, _isLeafNode, isAttribute) =>
-    !isAttribute && (name === "name" || name === "link" || name === "video"),
+    !isAttribute &&
+    (name === "name" ||
+      name === "link" ||
+      name === "video" ||
+      name === "item" ||
+      name === "poll" ||
+      name === "result"),
 });
 
-const HTML_ENTITY_MAP: Record<string, string> = {
-  "&amp;": "&",
-  "&quot;": '"',
-  "&apos;": "'",
-  "&lt;": "<",
-  "&gt;": ">",
-  "&nbsp;": " ",
-  "&mdash;": "—",
-  "&ndash;": "–",
-  "&hellip;": "…",
-};
-
-function decodeHtmlEntities(input: string): string {
-  return input
-    .replace(
-      /&amp;|&quot;|&apos;|&lt;|&gt;|&nbsp;|&mdash;|&ndash;|&hellip;/g,
-      (match) => HTML_ENTITY_MAP[match],
-    )
-    .replace(/&#(\d+);/g, (_, code: string) =>
-      String.fromCharCode(Number(code)),
-    );
+function parseKind(type: string | undefined): BoardGameKind {
+  return type === "boardgameexpansion"
+    ? BoardGameKind.BOARDGAME_EXPANSION
+    : BoardGameKind.BOARDGAME;
 }
 
-function toArray<T>(value: T | T[] | undefined): T[] {
-  if (value === undefined) return [];
-  return Array.isArray(value) ? value : [value];
+/**
+ * Meistgewähltes Level aus dem `language_dependence`-Poll (#188) — `null`
+ * ohne Poll-Block oder ohne Stimmen. Bei Stimmengleichstand gewinnt das
+ * zuerst gefundene Level (BGG liefert Results in fester Level-Reihenfolge).
+ */
+function parseLanguageDependence(
+  polls: BggPoll | BggPoll[] | undefined,
+): LanguageDependence | null {
+  const poll = toArray(polls).find((p) => p.name === "language_dependence");
+  if (!poll || parseNumber(poll.totalvotes) === 0) return null;
+
+  const results = toArray(poll.results?.result);
+  const winner = results.reduce<BggPollResult | null>((best, result) => {
+    const votes = parseNumber(result.numvotes) ?? 0;
+    const bestVotes = best ? (parseNumber(best.numvotes) ?? 0) : -1;
+    return votes > bestVotes ? result : best;
+  }, null);
+  if (!winner) return null;
+
+  const level = parseNumber(winner.level);
+  if (level === null) return null;
+  return LANGUAGE_DEPENDENCE_BY_LEVEL[level - 1] ?? null;
 }
 
-function parseNumber(value: string | undefined): number | null {
-  if (value === undefined) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+/** Alle Links eines Typs mit BGG-`id` — Links ohne gültige `id` werden
+ * verworfen, weil sie sich nicht eindeutig zuordnen lassen. */
+function parseBggLinks(
+  links: BggLinkEntry | BggLinkEntry[] | undefined,
+  type: string,
+): BggLink[] {
+  return toArray(links)
+    .filter((link) => link.type === type)
+    .flatMap((link) => {
+      const bggId = parseNumber(link.id);
+      return bggId === null ? [] : [{ bggId, name: link.value }];
+    });
 }
 
-const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "youtu.be"]);
-
-function isYoutubeLink(link: string): boolean {
-  try {
-    return YOUTUBE_HOSTS.has(new URL(link).hostname);
-  } catch {
-    return false;
-  }
+/** Jede BGG-Edition aus `versions=1` (#205) — Verlag/Product-Code können je
+ * Version abweichen, deshalb ein eigener Datensatz statt eines Felds am
+ * Haupt-Item. */
+function parseVersions(versions: BggItem["versions"]): BggVersion[] {
+  return toArray(versions?.item).map((version) => {
+    const links = toArray(version.link);
+    return {
+      bggVersionId: parseNumber(version.id),
+      name: toArray(version.name)[0]?.value ?? null,
+      yearPublished: parseNumber(version.yearpublished?.value),
+      publisher: links
+        .filter((link) => link.type === "boardgamepublisher")
+        .map((link) => link.value),
+      publisherLinks: parseBggLinks(links, "boardgamepublisher"),
+      productCode: version.productcode?.value?.trim() || null,
+      languages: links
+        .filter((link) => link.type === "language")
+        .map((link) => link.value),
+    };
+  });
 }
 
-function selectExplainerVideoUrl(videos: BggItem["videos"]): string | null {
-  const entry = toArray(videos?.video).find(
-    (video) =>
-      video.category === "instructional" &&
-      video.link !== undefined &&
-      isYoutubeLink(video.link),
-  );
-  return entry?.link ?? null;
+/** Ältestes Jahr über alle Versionen, sonst das Haupt-Items eigenes
+ * `yearpublished` (#205) — z. B. wenn BGG für diesen Titel keine separaten
+ * Editionen listet. */
+function resolveYearPublished(
+  item: BggItem,
+  versions: BggVersion[],
+): number | null {
+  const versionYears = versions
+    .map((v) => v.yearPublished)
+    .filter((year): year is number => year !== null);
+  if (versionYears.length > 0) return Math.min(...versionYears);
+  return parseNumber(item.yearpublished?.value);
 }
 
 function mapItem(item: BggItem): BggGameData {
   const names = toArray(item.name);
   const primaryName = names.find((name) => name.type === "primary") ?? names[0];
+  const alternateNames = names
+    .filter((name) => name.type === "alternate")
+    .map((name) => decodeHtmlEntities(name.value));
 
   const mechanics = toArray(item.link)
     .filter((link) => link.type === "boardgamemechanic")
     .map((link) => link.value);
+  const categories = toArray(item.link)
+    .filter((link) => link.type === "boardgamecategory")
+    .map((link) => link.value);
 
   const rawWeight = parseNumber(item.statistics?.ratings?.averageweight?.value);
+  const rawAverageRating = parseNumber(
+    item.statistics?.ratings?.average?.value,
+  );
+  const germanExplainerVideos = selectGermanExplainerVideos(item.videos);
+  const englishExplainerVideos = selectEnglishExplainerVideos(item.videos);
+  const versions = parseVersions(item.versions);
 
   return {
     title: primaryName?.value ?? "",
@@ -148,13 +349,30 @@ function mapItem(item: BggItem): BggGameData {
     maxPlayers: parseNumber(item.maxplayers?.value),
     playTimeMinutes: parseNumber(item.playingtime?.value),
     weight: rawWeight === null ? null : Math.round(rawWeight * 10) / 10,
+    averageRating:
+      rawAverageRating === null ? null : Math.round(rawAverageRating * 10) / 10,
     imageUrl: item.image ?? null,
     description:
       item.description === undefined
         ? null
         : decodeHtmlEntities(item.description),
     mechanics,
-    explainerVideoUrl: selectExplainerVideoUrl(item.videos),
+    categories,
+    mechanicLinks: parseBggLinks(item.link, "boardgamemechanic"),
+    categoryLinks: parseBggLinks(item.link, "boardgamecategory"),
+    traits: parseTraits(item.link),
+    kind: parseKind(item.type),
+    languageDependence: parseLanguageDependence(item.poll),
+    author: parseBggLinks(item.link, "boardgamedesigner").map((d) => d.name),
+    designers: parseBggLinks(item.link, "boardgamedesigner"),
+    illustrators: parseBggLinks(item.link, "boardgameartist"),
+    yearPublished: resolveYearPublished(item, versions),
+    versions,
+    alternateNames,
+    explainerVideoUrl:
+      germanExplainerVideos[0]?.url ?? englishExplainerVideos[0]?.url ?? null,
+    germanExplainerVideos,
+    englishExplainerVideos,
   };
 }
 
@@ -162,16 +380,17 @@ const FETCH_TIMEOUT_MS = 8000;
 /** BGG-Metadaten (Titel, Spielerzahl, Beschreibung, …) ändern sich praktisch nie. */
 const REVALIDATE_SECONDS = 24 * 60 * 60;
 
-export async function fetchBggGame(bggId: number): Promise<BggGameData> {
+async function fetchBggXml(
+  path: string,
+  revalidateSeconds: number,
+): Promise<string> {
   let response: Response;
   try {
-    response = await fetch(
-      `${BGG_API_BASE}/thing?id=${bggId}&stats=1&videos=1`,
-      {
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-        next: { revalidate: REVALIDATE_SECONDS },
-      },
-    );
+    response = await fetch(`${BGG_API_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${requireEnv("BGG_BEARER_TOKEN")}` },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      next: { revalidate: revalidateSeconds },
+    });
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
       throw new BggApiError(
@@ -186,13 +405,110 @@ export async function fetchBggGame(bggId: number): Promise<BggGameData> {
       response.status,
     );
   }
+  return response.text();
+}
 
-  const xml = await response.text();
+/** Mind. so viel Zeit zwischen zwei `fetchBggGame`-Aufrufen in einer Schleife
+ * (#186) — BGGs Rate-Limit skaliert nicht ungebremst auf z. B. 50 Titel.
+ * Konservativ etwas über der geforderten "max. 2 Anfragen/Sekunde" (500ms),
+ * da jeder eindeutig auflösbare Name zwei aufeinanderfolgende BGG-Anfragen
+ * braucht (Suche + Detaildaten). Von Massenimport und privatem
+ * Collection-Sync gemeinsam genutzt. */
+export const BGG_REQUEST_THROTTLE_MS = 600;
+
+export async function fetchBggGame(bggId: number): Promise<BggGameData> {
+  const xml = await fetchBggXml(
+    `/thing?id=${bggId}&stats=1&videos=1&versions=1`,
+    REVALIDATE_SECONDS,
+  );
   const parsed = parser.parse(xml) as BggThingResponse;
-  const item = parsed.items?.item;
+  const item = toArray(parsed.items?.item)[0];
   if (!item) {
     throw new BggNotFoundError(bggId);
   }
 
   return mapItem(item);
 }
+
+/** Suchergebnisse ändern sich mit neuen BGG-Einträgen — kürzer cachen als Detaildaten. */
+const SEARCH_REVALIDATE_SECONDS = 60 * 60;
+
+/**
+ * BGG sortiert Suchergebnisse nicht nach Relevanz zum eingegebenen Text —
+ * ein exakter Treffer wie "Catan" kann hinter langen Titeln landen, die den
+ * Suchbegriff nur als Teilstring enthalten (z. B. Erweiterungen/Varianten).
+ * Rang 0 = exakter Treffer, 1 = beginnt damit, 2 = alles andere; je Rang
+ * gewinnt der kürzere Titel — je weniger "Rauschen" um den Treffer, desto
+ * wahrscheinlicher ist es das gesuchte Spiel.
+ */
+function titleMatchRank(title: string, query: string): number {
+  const normalisedTitle = title.trim().toLowerCase();
+  const normalisedQuery = query.trim().toLowerCase();
+  if (normalisedTitle === normalisedQuery) return 0;
+  if (normalisedTitle.startsWith(normalisedQuery)) return 1;
+  return 2;
+}
+
+async function searchBggGamesInternal(
+  query: string,
+  { exact = false }: { exact?: boolean } = {},
+): Promise<BggSearchResult[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const exactParam = exact ? "&exact=1" : "";
+  const xml = await fetchBggXml(
+    `/search?query=${encodeURIComponent(trimmed)}&type=boardgame${exactParam}`,
+    SEARCH_REVALIDATE_SECONDS,
+  );
+  const parsed = parser.parse(xml) as BggSearchResponse;
+
+  const results = toArray(parsed.items?.item)
+    .map((item) => {
+      const bggId = parseNumber(item.id);
+      const names = toArray(item.name);
+      const primaryName =
+        names.find((name) => name.type === "primary") ?? names[0];
+      if (bggId === null || !primaryName?.value) return null;
+      return {
+        bggId,
+        title: primaryName.value,
+        yearPublished: parseNumber(item.yearpublished?.value),
+      };
+    })
+    .filter((result): result is BggSearchResult => result !== null);
+
+  return results.sort(
+    (a, b) =>
+      titleMatchRank(a.title, trimmed) - titleMatchRank(b.title, trimmed) ||
+      a.title.length - b.title.length,
+  );
+}
+
+export async function searchBggGames(
+  query: string,
+): Promise<BggSearchResult[]> {
+  return searchBggGamesInternal(query);
+}
+
+/**
+ * Exakte Namenssuche für den Massenimport (#186) — BGGs `exact=1`-Parameter
+ * liefert nur Titel, die dem Suchbegriff exakt entsprechen (case-insensitiv),
+ * statt jeder Fundstelle mit dem Begriff als Teilstring. Genau ein Treffer
+ * gilt als eindeutig auflösbar und wird automatisch importiert; alles andere
+ * (0 oder >1 Treffer) landet in der Review-Liste.
+ */
+export async function searchBggGamesExact(
+  query: string,
+): Promise<BggSearchResult[]> {
+  return searchBggGamesInternal(query, { exact: true });
+}
+
+export {
+  fetchBggXml,
+  parser,
+  parseVersions,
+  toArray,
+  parseNumber,
+  SEARCH_REVALIDATE_SECONDS,
+};

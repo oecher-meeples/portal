@@ -1,10 +1,8 @@
 /**
- * Password policy enforced by Neon Auth (Better Auth default: length only,
- * not configurable via `createNeonAuth()` — see `docs/adr` for background).
- * Mirrored here so the UI can tell users exactly what's missing instead of
- * surfacing Neon Auth's generic "Password does not meet security
- * requirements" (WeakPassword) error, which collapses "too short" and "too
- * long" into one unhelpful message.
+ * Password policy (length only). Single source of truth: `src/lib/auth/config.ts`
+ * passes these limits to better-auth (`minPasswordLength`/`maxPasswordLength`),
+ * and the UI checks them up front so users get a precise German message
+ * instead of better-auth's English "Password too short/long" error.
  */
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 128;
@@ -27,9 +25,12 @@ export function validatePassword(password: string): string | null {
 export function translateAuthError(message: string | undefined): string {
   switch (message) {
     case "Password does not meet security requirements":
+    case "Password too short":
+    case "Password too long":
       return `Das Passwort muss zwischen ${MIN_PASSWORD_LENGTH} und ${MAX_PASSWORD_LENGTH} Zeichen lang sein.`;
     case "Email address already registered":
     case "User already exists":
+    case "User already exists. Use another email.":
       return "Für diese E-Mail-Adresse besteht bereits ein Konto.";
     case "Invalid email address format":
       return "Bitte gib eine gültige E-Mail-Adresse ein.";

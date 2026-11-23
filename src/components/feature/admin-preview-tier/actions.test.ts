@@ -38,13 +38,21 @@ describe("setPreviewTier", () => {
     expect(setMock).not.toHaveBeenCalled();
   });
 
-  it("clears the preview cookie when previewing back to admin", async () => {
+  it("stores the preview cookie when explicitly switching to admin", async () => {
     getRealSessionTierMock.mockResolvedValue("admin");
 
     await setPreviewTier("admin");
 
-    expect(deleteMock).toHaveBeenCalledWith("preview-tier");
-    expect(setMock).not.toHaveBeenCalled();
+    expect(deleteMock).not.toHaveBeenCalled();
+    expect(setMock).toHaveBeenCalledWith(
+      "preview-tier",
+      "admin",
+      expect.objectContaining({
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+      }),
+    );
   });
 
   it("sets a Secure, HttpOnly preview cookie for an admin lowering their tier", async () => {

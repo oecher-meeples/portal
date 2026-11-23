@@ -1,67 +1,44 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { StorageUnitKind } from "@prisma/client";
+import type { ShelfCategory } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { nextUnitCode } from "@/lib/inventory/codes";
-import { ensureMeeple } from "@/lib/members/meeples";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
-import { requirePermission, hasPermission } from "@/lib/auth/permissions";
-import { getCurrentUser } from "@/lib/auth/server";
+import { hasPermission } from "@/lib/auth/permissions";
+import {
+  createStorageUnit as libCreateStorageUnit,
+  findStorageUnitByCode as libFindStorageUnitByCode,
+  setUnitParent as libSetUnitParent,
+  type CreateStorageUnitInput,
+} from "@/lib/ludothek/storage-units";
 
-async function requireGamesManage() {
-  const user = await requirePermission("games:manage");
-  return ensureMeeple(user);
+// Thin wrappers so `/admin/einheiten` components keep importing from
+// "./actions" — the implementation moved to lib/ludothek (shared with the
+// Ludothek create-dialog's Standort-Feld, see #121/#122).
+// A "use server" file may only export async functions declared in the file
+// itself — `export { x } from "..."` re-exports are rejected by Next.js at
+// build time, hence the wrappers instead of a re-export (see #147).
+export async function createStorageUnit(input: CreateStorageUnitInput) {
+  return libCreateStorageUnit(input);
 }
 
-export type CreateStorageUnitInput = {
-  kind: StorageUnitKind;
-  label: string;
-  keeperMeepleId?: string | null;
-  parentUnitId?: string | null;
-  locationNote?: string | null;
-};
-
-export async function createStorageUnit(input: CreateStorageUnitInput) {
-  await requireGamesManage();
-
-  const label = input.label.trim();
-  if (!label) {
-    return { error: "Bitte ein Label angeben." };
-  }
-
-  const existingCodes = (
-    await prisma.storageUnit.findMany({
-      where: { kind: input.kind },
-      select: { code: true },
-    })
-  ).map((u) => u.code);
-
-  const unit = await prisma.storageUnit.create({
-    data: {
-      code: nextUnitCode(input.kind, existingCodes),
-      kind: input.kind,
-      label,
-      keeperMeepleId: input.keeperMeepleId ?? null,
-      parentUnitId: input.parentUnitId ?? null,
-      locationNote: input.locationNote ?? null,
-    },
-  });
-
-  revalidatePath("/admin/einheiten");
-  return { success: true as const, id: unit.id, code: unit.code };
+export async function findStorageUnitByCode(code: string) {
+  return libFindStorageUnitByCode(code);
 }
 
 export type UpdateStorageUnitInput = {
   label: string;
   locationNote?: string | null;
+  /** Feste Regal-Kategorie (#276) — `null`/`undefined` löscht sie wieder. */
+  category?: ShelfCategory | null;
 };
 
 export async function updateStorageUnit(
   id: string,
   input: UpdateStorageUnitInput,
 ) {
-  await requireGamesManage();
+  await requireActionPermission("games:manage");
 
   const label = input.label.trim();
   if (!label) {
@@ -70,7 +47,11 @@ export async function updateStorageUnit(
 
   await prisma.storageUnit.update({
     where: { id },
-    data: { label, locationNote: input.locationNote ?? null },
+    data: {
+      label,
+      locationNote: input.locationNote ?? null,
+      category: input.category ?? null,
+    },
   });
 
   revalidatePath("/admin/einheiten");
@@ -78,7 +59,7 @@ export async function updateStorageUnit(
 }
 
 export async function retireStorageUnit(id: string) {
-  await requireGamesManage();
+  await requireActionPermission("games:manage");
 
   const [openHoldings, childUnits] = await Promise.all([
     prisma.gameHolding.count({ where: { unitId: id, endedAt: null } }),
@@ -109,11 +90,10 @@ export async function assignStorageUnitKeeper(
   unitId: string,
   keeperMeepleId: string | null,
 ) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return { error: "Bitte anmelden." };
-  }
-  const actingMeeple = await ensureMeeple(user);
+  // Verwahren heißt Annehmen — dasselbe Recht wie Ausleihen, und wie dort
+  // ohne `settlement`: Ausgetretene übernehmen nichts mehr (#522).
+  const { user, meeple: actingMeeple } =
+    await requireActionPermission("ludothek:borrow");
   const isAdmin = await hasPermission(user.id, "games:manage");
 
   if (!isAdmin && keeperMeepleId !== actingMeeple.id) {
@@ -138,55 +118,9 @@ export async function assignStorageUnitKeeper(
   return { success: true as const };
 }
 
-/** Walks up from `parentId` to check whether `unitId` would become its own ancestor. */
-async function wouldCreateCycle(unitId: string, parentId: string) {
-  let currentId: string | null = parentId;
-  const seen = new Set<string>();
-
-  while (currentId) {
-    if (currentId === unitId) return true;
-    if (seen.has(currentId)) return false;
-    seen.add(currentId);
-
-    const parent: { parentUnitId: string | null } | null =
-      await prisma.storageUnit.findUnique({
-        where: { id: currentId },
-        select: { parentUnitId: true },
-      });
-    currentId = parent?.parentUnitId ?? null;
-  }
-
-  return false;
-}
-
 export async function setUnitParent(
   unitId: string,
   parentUnitId: string | null,
 ) {
-  const actor = await requireGamesManage();
-
-  if (parentUnitId) {
-    if (parentUnitId === unitId) {
-      return { error: "Eine Einheit kann nicht in sich selbst stehen." };
-    }
-    if (await wouldCreateCycle(unitId, parentUnitId)) {
-      return { error: "Das würde einen Kreis in der Standort-Kette erzeugen." };
-    }
-  }
-
-  const unit = await prisma.storageUnit.findUnique({ where: { id: unitId } });
-  if (!unit) {
-    return { error: "Einheit nicht gefunden." };
-  }
-
-  await moveStorageUnit({
-    unitId,
-    recordedByMeepleId: actor.id,
-    keeperMeepleId: unit.keeperMeepleId,
-    locationNote: unit.locationNote,
-    parentUnitId,
-  });
-
-  revalidatePath("/admin/einheiten");
-  return { success: true as const };
+  return libSetUnitParent(unitId, parentUnitId);
 }

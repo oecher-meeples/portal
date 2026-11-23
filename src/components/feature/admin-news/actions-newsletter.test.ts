@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 vi.mock("@/lib/instagram/queue", () => ({ processPost: vi.fn() }));
 
@@ -14,8 +17,8 @@ vi.mock("@/lib/newsletter/dispatch", () => ({
     queueNewsletterForPostMock(...args),
 }));
 
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: vi.fn(),
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: vi.fn(),
 }));
 
 const { createPost, updatePost } = await import("./actions");
@@ -31,7 +34,7 @@ const VALID_INPUT = {
 
 beforeEach(() => {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   queueNewsletterForPostMock.mockClear();
 });
 
@@ -73,7 +76,7 @@ describe("createPost — newsletter queueing", () => {
 describe("updatePost — newsletter queueing", () => {
   it("queues the newsletter when a formerly draft post is published with newsletter sharing enabled", async () => {
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: null,
+      instagramDetails: null,
       newsletterStatus: null,
     } as never);
 
@@ -89,7 +92,7 @@ describe("updatePost — newsletter queueing", () => {
 
   it("does not re-queue the newsletter for a post that was already queued/sent", async () => {
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: null,
+      instagramDetails: null,
       newsletterStatus: "SENT",
     } as never);
 

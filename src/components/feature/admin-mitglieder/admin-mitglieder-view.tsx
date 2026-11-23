@@ -1,18 +1,48 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeading } from "@/components/ui/page-heading";
-import { StatTile } from "@/components/ui/stat-tile";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { StatTile, StatValue } from "@/components/ui/stat-tile";
 import {
   MitgliederTable,
   type MeepleRow,
 } from "@/components/feature/admin-mitglieder/mitglieder-table";
 import {
+  VereinsmitgliederTable,
+  type VereinsmitgliedRow,
+} from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
+import {
+  CONTRIBUTION_CATEGORY_LABELS,
+  type ContributionCategory,
+} from "@/lib/members/contribution";
+import { nextContributionFilter } from "@/components/feature/admin-mitglieder/contribution-filter";
+import {
   InvitesSection,
   type InviteRow,
 } from "@/components/feature/admin-mitglieder/invites-section";
 import { AnonymiseMeepleDialog } from "@/components/feature/admin-mitglieder/anonymise-meeple-dialog";
+import { AnonymisationExplanation } from "@/components/entities/anonymisation-explanation";
+import { HelpDialog } from "@/components/ui/help-dialog";
+import { DeleteMemberDialog } from "@/components/feature/admin-mitglieder/delete-member-dialog";
+import {
+  RoleManagementSection,
+  type RoleManagementRow,
+} from "@/components/feature/admin-mitglieder/role-management-section";
+import type { PermissionOption } from "@/components/feature/admin-mitglieder/role-permissions-editor";
+import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
+import {
+  PendingChangesPanel,
+  type PendingChangeRow,
+} from "@/components/widgets/pending-changes/pending-changes-panel";
 import { formatDatePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type { MeepleRow, InviteRow };
 
@@ -31,16 +61,74 @@ function germanDate(value: string | null) {
 }
 
 export function AdminMitgliederView({
+  members,
   meeples,
+  roles,
+  permissions,
+  canManageMembers,
+  canManageRoles,
+  canManageInvites,
+  canReadBankData,
   isDecemberOrLater,
   deletionRequests,
   invites,
+  membersWithoutLogin,
+  defaultInviteDays,
+  canCreateSystemkonto,
+  canManageSystemAccounts,
+  pendingEmailChanges,
+  pendingStammdatenChanges,
+  stufe3Candidates,
 }: {
+  members: VereinsmitgliedRow[];
   meeples: MeepleRow[];
+  roles: RoleManagementRow[];
+  permissions: PermissionOption[];
+  /** = `members:manage` — Vereinsmitglied-CRUD (Erstellen-Button,
+   * Einladen bleibt separat auf `invites:manage` gegated, #365). */
+  canManageMembers: boolean;
+  /** = `roles:manage` (#365) — bewusst getrennt von `members:manage`, blendet
+   * die Rollenverwaltung aus. Die Actions selbst sind zusätzlich
+   * serverseitig gegated (#216). */
+  canManageRoles: boolean;
+  /** = `invites:manage` (#365) — blendet den "Einladen"-Button aus, sonst
+   * sieht ihn ein `members:manage`-only-Admin und bekommt beim Klick nur
+   * einen Server-Fehler. */
+  canManageInvites: boolean;
+  canReadBankData: boolean;
   isDecemberOrLater: boolean;
   deletionRequests: DeletionRequestRow[];
   invites: InviteRow[];
+  membersWithoutLogin: MemberWithoutLoginRow[];
+  defaultInviteDays: number;
+  /** = `admin:access` — reused as-is for the Systemrollen-Gate in
+   * `MeepleRoleSelect` (#353), not just for the Systemkonto button. */
+  canCreateSystemkonto: boolean;
+  /** = `members:manage-system-accounts` (#297) — blendet den Toggle zum
+   * Setzen/Entfernen der System-Konto-Markierung im Meeple-Edit-Dialog aus. */
+  canManageSystemAccounts: boolean;
+  pendingEmailChanges: PendingChangeRow[];
+  pendingStammdatenChanges: PendingChangeRow[];
+  stufe3Candidates: {
+    id: string;
+    memberNumber: number;
+    displayName: string;
+    membershipEndsAt: string;
+  }[];
 }) {
+  // Klick auf eine Beitragsart-Zahl filtert die Vereinsmitglieder-Tabelle
+  // (#340, Verifikations-Kommentar zu #334) — "Meeple" bündelt meeple +
+  // individuell (Eigenbetrag), da beide in derselben Zeile angezeigt werden.
+  const [contributionFilter, setContributionFilter] = useState<
+    ContributionCategory[] | null
+  >(null);
+
+  function toggleContributionFilter(categories: ContributionCategory[]) {
+    setContributionFilter((current) =>
+      nextContributionFilter(current, categories),
+    );
+  }
+
   const withOpenHoldings = meeples.filter(
     (m) =>
       m.membershipState === "gekuendigt" &&
@@ -53,16 +141,82 @@ export function AdminMitgliederView({
       m.openUnits === 0,
   );
 
+  const activeMembers = members.filter(
+    (m) =>
+      m.membershipState === "unregistriert" ||
+      m.membershipState === "registriert",
+  );
+  const activeByContribution = {
+    mini: activeMembers.filter((m) => m.contributionCategory === "mini").length,
+    jung: activeMembers.filter((m) => m.contributionCategory === "jung").length,
+    meeple: activeMembers.filter((m) => m.contributionCategory === "meeple")
+      .length,
+    individuell: activeMembers.filter(
+      (m) => m.contributionCategory === "individuell",
+    ).length,
+  };
+
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Onboarding & Lebenszyklus"
-        title="Mitglieder & Einladungen"
+        title="Benutzer & Einladungen"
         description="Geschlossenes Registrierungssystem: eine Einladung ist ein Token ohne Personenbezug, der Meeple entsteht beim ersten Login."
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Mitglieder" value={meeples.length} hint="insgesamt" />
+        <Card>
+          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+            Vereinsmitglieder
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <dl className="flex flex-col gap-1 text-sm">
+              {(
+                [
+                  { key: "mini", categories: ["mini"] },
+                  { key: "jung", categories: ["jung"] },
+                  { key: "meeple", categories: ["meeple", "individuell"] },
+                ] as const
+              ).map(({ key, categories }) => {
+                const count =
+                  key === "meeple"
+                    ? activeByContribution.meeple +
+                      activeByContribution.individuell
+                    : activeByContribution[key];
+                const active =
+                  contributionFilter?.join(",") === categories.join(",");
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      toggleContributionFilter([...categories]);
+                      document
+                        .getElementById("vereinsmitglieder")
+                        ?.scrollIntoView({ block: "nearest" });
+                    }}
+                    className={cn(
+                      "hover:text-foreground -mx-1 flex items-center justify-between gap-2 rounded-sm px-1 text-left",
+                      active
+                        ? "bg-primary/10 text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    <dt>{CONTRIBUTION_CATEGORY_LABELS[key]}</dt>
+                    <dd className="font-mono">{count}</dd>
+                  </button>
+                );
+              })}
+            </dl>
+            <a
+              href="#vereinsmitglieder"
+              className="hover:text-foreground flex flex-col items-center justify-center text-center"
+            >
+              <StatValue className="mt-0">{members.length}</StatValue>
+              <p className="text-muted-foreground mt-1 text-sm">insgesamt</p>
+            </a>
+          </div>
+        </Card>
         <StatTile
           label="Kündigungen mit Bestand"
           value={withOpenHoldings.length}
@@ -76,21 +230,22 @@ export function AdminMitgliederView({
       </div>
 
       {deletionRequests.length > 0 && (
-        <div
-          className={cn(
-            "bg-card rounded-lg border p-5",
-            deletionRequests.some((request) => request.overdue) &&
-              "border-destructive/50",
-          )}
+        <Card
+          variant={
+            deletionRequests.some((request) => request.overdue)
+              ? "destructive"
+              : "default"
+          }
         >
-          <h2 className="font-serif text-lg font-bold">
-            Löschanträge (Art. 17 DSGVO)
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Jeder Antrag muss binnen eines Monats bearbeitet sein (Art. 12 Abs.
-            3 DSGVO). Erledigt wird er durch die Anonymisierung des Mitglieds.
-          </p>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+          <CardHeader>
+            <CardTitle>Löschanträge (Art. 17 DSGVO)</CardTitle>
+            <CardDescription>
+              Jeder Antrag muss binnen eines Monats bearbeitet sein (Art. 12
+              Abs. 3 DSGVO). Erledigt wird er durch die Anonymisierung des
+              Mitglieds.
+            </CardDescription>
+          </CardHeader>
+          <ul className="flex flex-col divide-y text-sm">
             {deletionRequests.map((request) => (
               <li
                 key={request.id}
@@ -112,20 +267,13 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {withOpenHoldings.length > 0 && (
-        <div
-          className={cn(
-            "bg-card rounded-lg border p-5",
-            isDecemberOrLater && "border-amber-500/50",
-          )}
-        >
-          <h2 className="font-serif text-lg font-bold">
-            Kündigungen mit offenen Beständen
-          </h2>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+        <Card className={cn(isDecemberOrLater && "border-amber-500/50")}>
+          <CardTitle>Kündigungen mit offenen Beständen</CardTitle>
+          <ul className="flex flex-col divide-y text-sm">
             {withOpenHoldings.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{m.displayName}</span>
@@ -136,15 +284,18 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {readyForAnonymisation.length > 0 && (
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bereit zur Anonymisierung
-          </h2>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+        <Card>
+          <div className="flex items-center gap-1">
+            <CardTitle>Bereit zur Anonymisierung</CardTitle>
+            <HelpDialog title="Anonymisierung">
+              <AnonymisationExplanation />
+            </HelpDialog>
+          </div>
+          <ul className="flex flex-col divide-y text-sm">
             {readyForAnonymisation.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{m.displayName}</span>
@@ -155,12 +306,81 @@ export function AdminMitgliederView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
-      <MitgliederTable meeples={meeples} />
+      <PendingChangesPanel
+        titleSingular="Offener E-Mail-Änderungsantrag"
+        titlePlural="Offene E-Mail-Änderungsanträge"
+        changes={pendingEmailChanges}
+        isEmailChangePanel
+      />
 
-      <InvitesSection invites={invites} />
-    </div>
+      <PendingChangesPanel
+        titleSingular="Offene Stammdaten-Änderung"
+        titlePlural="Offene Stammdaten-Änderungen"
+        changes={pendingStammdatenChanges}
+      />
+
+      {stufe3Candidates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-1">
+              <CardTitle>Bereit zur endgültigen Löschung (Stufe 3)</CardTitle>
+              <HelpDialog title="Anonymisierung">
+                <AnonymisationExplanation />
+              </HelpDialog>
+            </div>
+            <CardDescription>
+              12 Monate seit Austritt vergangen, keine offenen Ausleihen mehr.
+            </CardDescription>
+          </CardHeader>
+          <ul className="flex flex-col divide-y text-sm">
+            {stufe3Candidates.map((member) => (
+              <li
+                key={member.id}
+                className="flex items-center justify-between py-2"
+              >
+                <span>
+                  #{member.memberNumber} {member.displayName}
+                </span>
+                <DeleteMemberDialog
+                  memberId={member.id}
+                  displayName={member.displayName}
+                />
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <VereinsmitgliederTable
+        members={members}
+        canManageMembers={canManageMembers}
+        canManageInvites={canManageInvites}
+        isAdmin={canCreateSystemkonto}
+        contributionFilter={contributionFilter}
+        onContributionFilterChange={setContributionFilter}
+      />
+
+      <MitgliederTable
+        meeples={meeples}
+        roles={roles}
+        canReadBankData={canReadBankData}
+        canManageAdminAccess={canCreateSystemkonto}
+        canCreateSystemkonto={canCreateSystemkonto}
+        canManageSystemAccounts={canManageSystemAccounts}
+      />
+
+      {canManageRoles && (
+        <RoleManagementSection roles={roles} permissions={permissions} />
+      )}
+
+      <InvitesSection
+        invites={invites}
+        membersWithoutLogin={membersWithoutLogin}
+        defaultDays={defaultInviteDays}
+      />
+    </PageContainer>
   );
 }

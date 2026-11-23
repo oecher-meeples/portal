@@ -1,0 +1,285 @@
+import "@testing-library/jest-dom/vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
+
+const scanBorrowGameMock = vi.fn().mockResolvedValue({ success: true });
+const scanAcceptReturnMock = vi.fn().mockResolvedValue({ success: true });
+const scanGiveToMeepleMock = vi.fn().mockResolvedValue({ success: true });
+const scanRelocateGameMock = vi.fn().mockResolvedValue({ success: true });
+const scanReturnToMeepleMock = vi.fn().mockResolvedValue({ success: true });
+const scanListMeeplesMock = vi.fn().mockResolvedValue([
+  { id: "meeple-1", displayName: "Lea Demo" },
+  { id: "meeple-2", displayName: "Max Demo" },
+]);
+const scanListUnitsMock = vi.fn().mockResolvedValue([
+  { id: "unit-1", code: "OM-BOX-0001", label: "Karton 1" },
+  { id: "unit-2", code: "OM-SHELF-0002", label: "Regal 2" },
+]);
+
+vi.mock("@/lib/ludothek/holding-actions", () => ({
+  scanBorrowGame: (...args: unknown[]) => scanBorrowGameMock(...args),
+  scanAcceptReturn: (...args: unknown[]) => scanAcceptReturnMock(...args),
+  scanGiveToMeeple: (...args: unknown[]) => scanGiveToMeepleMock(...args),
+  scanRelocateGame: (...args: unknown[]) => scanRelocateGameMock(...args),
+  scanReturnToMeeple: (...args: unknown[]) => scanReturnToMeepleMock(...args),
+  scanListMeeples: () => scanListMeeplesMock(),
+  scanListUnits: () => scanListUnitsMock(),
+}));
+
+// Combobox als natives Select: hält die Auswahl-Tests schlicht, das echte
+// Verhalten (Enter übernimmt den ersten Treffer) prüft id-combobox.test.tsx.
+vi.mock("@/components/ui/id-combobox", () => ({
+  IdCombobox: (props: {
+    options: { id: string; label: string }[];
+    value: string | null;
+    onValueChange: (id: string | null) => void;
+  }) => (
+    <select
+      value={props.value ?? ""}
+      onChange={(event) => props.onValueChange(event.target.value || null)}
+    >
+      <option value="">—</option>
+      {props.options.map((option) => (
+        <option key={option.id} value={option.id}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
+let nextScannedText = "";
+vi.mock("@/components/ui/scan-search-dialog", () => ({
+  ScanSearchDialog: ({ onScanned }: { onScanned: (text: string) => void }) => (
+    <button type="button" onClick={() => onScanned(nextScannedText)}>
+      simulate-scan
+    </button>
+  ),
+}));
+
+const {
+  BorrowGameDialog,
+  AcceptReturnDialog,
+  GiveToMeepleDialog,
+  RelocateGameDialog,
+} = await import("./holding-mini-dialogs");
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+describe("BorrowGameDialog", () => {
+  it("calls scanBorrowGame on submit", async () => {
+    render(<BorrowGameDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ausleihen" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Ausleihen" }));
+
+    expect(scanBorrowGameMock).toHaveBeenCalledWith("copy-1");
+  });
+});
+
+describe("AcceptReturnDialog", () => {
+  it("calls scanAcceptReturn on submit for the default 'an mich' mode", async () => {
+    render(<AcceptReturnDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Annehmen" }));
+
+    expect(scanAcceptReturnMock).toHaveBeenCalledWith("copy-1");
+  });
+
+  it("submits the manually selected person via scanReturnToMeeple", async () => {
+    render(<AcceptReturnDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "An Person" }));
+    fireEvent.change(await within(dialog).findByRole("combobox"), {
+      target: { value: "meeple-2" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "An Person übergeben" }),
+    );
+
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+  });
+
+  it("resolves a simulated scan against the meeple list and submits the match", async () => {
+    nextScannedText = "Max Demo";
+    render(<AcceptReturnDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "An Person" }));
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "An Person übergeben" }),
+    );
+
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+  });
+
+  // #465: ein gescannter persönlicher QR-Code matcht per Id, nicht per
+  // Freitext, und markiert die Auswahl als "via QR" für Sofort-Bestätigung.
+  it("resolves a scanned personal QR code by id and marks it as via-QR", async () => {
+    nextScannedText = "OM-MEEPLE-meeple-2";
+    render(<AcceptReturnDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "An Person" }));
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "An Person übergeben" }),
+    );
+
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      true,
+    );
+  });
+
+  // #443: der Betrachter hält das Exemplar bereits selbst — "An mich" ist
+  // dann sinnlos und wird unterdrückt, der Dialog startet direkt im
+  // "An Person"-Flow.
+  it("hides the 'an mich'-tab and starts in person-mode when hideSelfMode is set", async () => {
+    render(<AcceptReturnDialog gameCopyId="copy-1" hideSelfMode />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Rückgabe" }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      within(dialog).queryByRole("button", { name: "An mich" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "An Person" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(await within(dialog).findByRole("combobox"), {
+      target: { value: "meeple-2" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "An Person übergeben" }),
+    );
+
+    expect(scanReturnToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+    expect(scanAcceptReturnMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GiveToMeepleDialog", () => {
+  it("submits the manually selected meeple", async () => {
+    render(<GiveToMeepleDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Weitergeben" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByRole("combobox"), {
+      target: { value: "meeple-2" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Weitergeben" }),
+    );
+
+    expect(scanGiveToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+  });
+
+  it("resolves a simulated scan against the meeple list and submits the match", async () => {
+    nextScannedText = "Max Demo";
+    render(<GiveToMeepleDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Weitergeben" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Weitergeben" }),
+    );
+
+    expect(scanGiveToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      false,
+    );
+  });
+
+  // #465: siehe AcceptReturnDialog oben.
+  it("resolves a scanned personal QR code by id and marks it as via-QR", async () => {
+    nextScannedText = "OM-MEEPLE-meeple-2";
+    render(<GiveToMeepleDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Weitergeben" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Weitergeben" }),
+    );
+
+    expect(scanGiveToMeepleMock).toHaveBeenCalledWith(
+      "copy-1",
+      "meeple-2",
+      true,
+    );
+  });
+});
+
+describe("RelocateGameDialog", () => {
+  it("submits the manually selected unit", async () => {
+    render(<RelocateGameDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Umlagern" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByRole("combobox"), {
+      target: { value: "unit-2" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Umlagern" }));
+
+    expect(scanRelocateGameMock).toHaveBeenCalledWith("copy-1", "unit-2");
+  });
+
+  it("resolves a simulated scan against the unit code and submits the match", async () => {
+    nextScannedText = "OM-BOX-0001";
+    render(<RelocateGameDialog gameCopyId="copy-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Umlagern" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByRole("combobox");
+    fireEvent.click(within(dialog).getByText("simulate-scan"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Umlagern" }));
+
+    expect(scanRelocateGameMock).toHaveBeenCalledWith("copy-1", "unit-1");
+  });
+});

@@ -1,10 +1,65 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { CopyButton } from "@/components/ui/copy-button";
 import { cn } from "@/lib/utils/cn";
-import type { ContentItem } from "@/lib/content/content";
+import type { ContentItem } from "@/lib/content/content-types";
+import { subscribeOwnInternalCalendar } from "@/components/feature/news/actions";
+
+function toWebcalUrl(url: string) {
+  return url.replace(/^https?:\/\//, "webcal://");
+}
+
+/** #439: persönliches Abo des internen Kalenders. Den Roh-Token gibt es nur
+ * im Moment des Erzeugens (DB hält nur den Hash, #438) — jeder Klick erzeugt
+ * deshalb einen neuen Link; ein bestehender wird ersetzt, darum der Dialog. */
+function InternalCalendarSubscribe({ hasToken }: { hasToken: boolean }) {
+  const [subscribeUrl, setSubscribeUrl] = useState<string | null>(null);
+
+  async function handleSubscribe() {
+    const result = await subscribeOwnInternalCalendar();
+    if ("error" in result) return result;
+    setSubscribeUrl(result.subscribeUrl);
+    window.location.href = toWebcalUrl(result.subscribeUrl);
+    return result;
+  }
+
+  return (
+    <>
+      <ActionDialog
+        trigger={
+          <Button variant="outline" className="mt-2 w-full gap-1.5">
+            <CalendarPlus className="size-4" />
+            Kalender abonnieren (intern)
+          </Button>
+        }
+        title="Internen Kalender abonnieren"
+        description={
+          hasToken
+            ? "Du hast schon einen Abo-Link. Ein neuer Link ersetzt ihn – ein bestehendes Abo in deiner Kalender-App bekommt danach keine Termine mehr."
+            : "Wir erzeugen einen persönlichen Abo-Link für dich. Bitte nicht weitergeben – er zeigt alle internen Vereinstermine."
+        }
+        submitLabel={hasToken ? "Neuen Link erzeugen" : "Link erzeugen"}
+        pendingLabel="Erzeuge…"
+        action={handleSubscribe}
+        refresh
+      />
+      {subscribeUrl && (
+        <div className="bg-muted mt-2 flex flex-col gap-2 rounded-md p-3 text-xs">
+          <span>
+            Öffnet sich keine Kalender-App, diesen Link dort als Abo hinzufügen:
+          </span>
+          <span className="font-mono break-all">{subscribeUrl}</span>
+          <CopyButton value={subscribeUrl} label="Kopieren" icon={Copy} />
+        </div>
+      )}
+    </>
+  );
+}
 
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
@@ -35,24 +90,37 @@ export function NewsCalendar({
   selectedDate,
   onSelectDate,
   icsUrl,
+  internalSubscription,
 }: {
   items: Omit<ContentItem, "body">[];
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
   icsUrl?: string;
+  /** Nur für Meeple mit `news:internal:view` gesetzt (#439). */
+  internalSubscription?: { hasToken: boolean };
 }) {
   const [viewMonth, setViewMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  const eventDates = new Set(items.map((item) => item.date));
+  // #10 (Folgefehler beim Live-Test): volle Zellfarbe (bg-secondary) machte
+  // die Zifferfarbe auf sich selbst unlesbar (Weiß auf Weiß im Dark Mode, da
+  // secondary = foreground-Farbe). Zwei kleine Punkte unter der Zahl statt
+  // Zellfarbe umgehen das strukturell — die Tagesfarbe (Text/Ring) bleibt
+  // unverändert lesbar, unabhängig davon welche Termine der Tag hat.
+  const publicEventDates = new Set(
+    items.filter((item) => !item.internal).map((item) => item.date),
+  );
+  const internalEventDates = new Set(
+    items.filter((item) => item.internal).map((item) => item.date),
+  );
   const cells = buildMonthGrid(viewMonth);
   const todayKey = toDateKey(new Date());
 
   return (
-    <div className="bg-card self-start rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Google-Kalender</h2>
+    <Card className="mx-auto max-w-sm gap-0 self-start lg:sticky lg:top-24">
+      <CardTitle>Google-Kalender</CardTitle>
 
       <div className="mt-3 flex items-center justify-between">
         <Button
@@ -91,9 +159,15 @@ export function NewsCalendar({
         {cells.map((date, index) => {
           if (!date) return <span key={index} />;
           const key = toDateKey(date);
-          const hasEvent = eventDates.has(key);
+          const hasPublicEvent = publicEventDates.has(key);
+          const hasInternalEvent = internalEventDates.has(key);
+          const hasEvent = hasPublicEvent || hasInternalEvent;
           const isSelected = selectedDate === key;
           const isToday = key === todayKey;
+          // Aktiver Filter: alle anderen Tage mit Terminen treten optisch
+          // zurück, damit der ausgewählte Tag als einziger aktiver Filter
+          // erkennbar bleibt (statt gleichwertig neben ihm zu stehen).
+          const isDimmed = selectedDate !== null && !isSelected;
 
           return (
             <button
@@ -102,23 +176,44 @@ export function NewsCalendar({
               disabled={!hasEvent}
               onClick={() => onSelectDate(isSelected ? null : key)}
               className={cn(
-                "aspect-square rounded-md text-sm transition-colors",
-                hasEvent
-                  ? "bg-primary/15 hover:bg-primary/25 font-semibold"
-                  : "text-muted-foreground",
+                "hover:bg-accent relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-md text-sm transition-[opacity,background-color]",
+                hasEvent && "font-semibold",
+                !hasEvent && "text-muted-foreground",
                 isSelected && "bg-primary text-primary-foreground",
                 isToday && !isSelected && "ring-primary ring-1",
+                isDimmed && "opacity-35",
               )}
             >
               {date.getDate()}
+              {hasEvent && (
+                <span className="flex gap-0.5" aria-hidden>
+                  {hasPublicEvent && (
+                    <span className="bg-event-public size-1.5 rounded-full" />
+                  )}
+                  {hasInternalEvent && (
+                    <span className="bg-event-internal size-1.5 rounded-full" />
+                  )}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        <span className="flex items-center gap-1.5">
+          <span className="bg-event-public size-2 rounded-full" aria-hidden />
+          Öffentlich
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="bg-event-internal size-2 rounded-full" aria-hidden />
+          Intern
+        </span>
+      </div>
+
       <p className="text-muted-foreground mt-3 text-sm">
-        Automatisch synchronisiert aus dem öffentlichen Vereinskalender. Tage
-        mit Terminen sind markiert – anklicken filtert die Liste.
+        Automatisch synchronisiert aus dem Vereinskalender. Tage mit Terminen
+        sind markiert – anklicken filtert die Liste.
       </p>
 
       {icsUrl && (
@@ -126,13 +221,17 @@ export function NewsCalendar({
           variant="outline"
           className="mt-3 w-full gap-1.5"
           render={
-            <a href={icsUrl.replace(/^https?:\/\//, "webcal://")}>
+            <a href={toWebcalUrl(icsUrl)}>
               <CalendarPlus className="size-4" />
-              Kalender abonnieren (iCal)
+              Kalender abonnieren (
+              {internalSubscription ? "öffentlich" : "iCal"})
             </a>
           }
         />
       )}
-    </div>
+      {internalSubscription && (
+        <InternalCalendarSubscribe hasToken={internalSubscription.hasToken} />
+      )}
+    </Card>
   );
 }

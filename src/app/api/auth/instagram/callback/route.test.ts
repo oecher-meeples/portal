@@ -23,6 +23,9 @@ vi.mock("@/lib/instagram/graph-client", () => ({
   getInstagramBusinessAccount: (...args: unknown[]) =>
     getInstagramBusinessAccountMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const { GET } = await import("./route");
 const { buildStateCookie } = await import("@/lib/instagram/oauth-state");
@@ -57,7 +60,7 @@ function cookiePair(setCookieHeader: string) {
 
 describe("GET /api/auth/instagram/callback", () => {
   beforeEach(() => {
-    process.env.NEON_AUTH_COOKIE_SECRET = "test-cookie-secret";
+    process.env.BETTER_AUTH_SECRET = "test-cookie-secret";
     process.env.MEMBER_DATA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString(
       "base64",
     );

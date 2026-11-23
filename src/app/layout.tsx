@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { PageViewBeacon } from "@/components/layout/page-view-beacon";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { AppShell } from "@/components/layout/app-shell";
-import { BrandWatermark } from "@/components/layout/brand-watermark";
+import { BackgroundPattern } from "@/components/layout/background-pattern";
 import { CryptoRandomUuidPolyfill } from "@/components/layout/crypto-randomuuid-polyfill";
 import "./globals.css";
 
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     "Der Brettspielverein für Aachen und Umgebung: Termine, News, Ludothek und Vereinsleben.",
   icons: {
-    icon: "/meeple-150x150.png",
+    icon: "/icons/meeple-150x150.png",
   },
 };
 
@@ -42,7 +42,7 @@ export default async function RootLayout({
     >
       <body className="flex min-h-full flex-col antialiased">
         <CryptoRandomUuidPolyfill />
-        <BrandWatermark />
+        <BackgroundPattern />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -52,7 +52,7 @@ export default async function RootLayout({
         >
           <AppShell>{children}</AppShell>
         </ThemeProvider>
-        <Analytics />
+        <PageViewBeacon />
       </body>
     </html>
   );

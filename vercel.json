@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/instagram-queue",
-      "schedule": "0 5 * * *"
-    }
-  ]
-}

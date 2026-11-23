@@ -6,31 +6,83 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
+const requireBankReaderMock = vi.fn();
+// bank:read wird separat gesteuert, damit die Tests das Entschlüsselungs-Recht
+// unabhängig von members:manage verweigern können.
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    args[0] === "bank:read"
+      ? requireBankReaderMock(...args)
+      : requirePermissionMock(...args),
+  ),
+);
 
 // The anonymisation rules themselves live in the lib layer and are tested in
 // src/lib/members/anonymisation.test.ts — here only the action wrapper matters.
-const anonymiseMeepleRecordMock = vi.fn();
+const anonymiseMeepleStufe1Mock = vi.fn();
+const anonymiseMeepleStufe2Mock = vi.fn();
+const anonymiseMemberStufe3Mock = vi.fn();
 vi.mock("@/lib/members/anonymisation", () => ({
-  anonymiseMeepleRecord: (...args: unknown[]) =>
-    anonymiseMeepleRecordMock(...args),
+  anonymiseMeepleStufe1: (...args: unknown[]) =>
+    anonymiseMeepleStufe1Mock(...args),
+  anonymiseMeepleStufe2: (...args: unknown[]) =>
+    anonymiseMeepleStufe2Mock(...args),
+  anonymiseMemberStufe3: (...args: unknown[]) =>
+    anonymiseMemberStufe3Mock(...args),
+}));
+
+const removeAusgetretenRoleMock = vi.fn();
+vi.mock("@/lib/auth/ausgetreten-role", () => ({
+  removeAusgetretenRole: (...args: unknown[]) =>
+    removeAusgetretenRoleMock(...args),
+}));
+
+// Ditto for the bank-reveal and Selbstauskunft-mail rules — those are tested in
+// src/lib/members/bank-access-log.test.ts and selbstauskunft-mail.test.ts.
+const revealMeepleIbanMock = vi.fn();
+vi.mock("@/lib/members/bank-access-log", () => ({
+  revealMeepleIban: (...args: unknown[]) => revealMeepleIbanMock(...args),
+}));
+
+// The role CRUD and role-assignment wrappers have their own test file
+// (role-actions.test.ts) — kept separate purely to stay under the 400-line
+// file-size limit (CLAUDE.md), not a fachliche Grenze.
+vi.mock("@/lib/auth/roles", () => ({
+  createRole: vi.fn(),
+  updateRole: vi.fn(),
+  deleteRole: vi.fn(),
+  setRolePermissions: vi.fn(),
+}));
+vi.mock("@/lib/auth/user-roles", () => ({
+  assignMeepleRole: vi.fn(),
+  removeMeepleRole: vi.fn(),
+  listMeepleRoleAssignments: vi.fn(),
 }));
 
 const {
   anonymiseMeeple,
+  deleteMemberPermanently,
   getOpenHoldingsSummary,
   recordResignation,
+  renameMeeple,
   revokeResignation,
+  setMemberNumber,
+  setMeepleSystemAccount,
 } = await import("./actions");
 
 class ForbiddenError extends Error {}
 
 beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
-  anonymiseMeepleRecordMock.mockReset();
-  anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe1Mock.mockReset();
+  anonymiseMeepleStufe1Mock.mockResolvedValue({ success: true });
+  anonymiseMeepleStufe2Mock.mockReset();
+  anonymiseMeepleStufe2Mock.mockResolvedValue({ success: true });
+  anonymiseMemberStufe3Mock.mockReset();
+  anonymiseMemberStufe3Mock.mockResolvedValue({ success: true });
+  removeAusgetretenRoleMock.mockReset();
+  requireBankReaderMock.mockReset().mockResolvedValue({ id: "meeple-admin" });
+  revealMeepleIbanMock.mockReset();
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -45,23 +97,64 @@ describe("without the members:manage permission", () => {
     );
     await expect(revokeResignation("meeple-1")).rejects.toThrow(ForbiddenError);
     await expect(anonymiseMeeple("meeple-1")).rejects.toThrow(ForbiddenError);
+    await expect(deleteMemberPermanently("member-1")).rejects.toThrow(
+      ForbiddenError,
+    );
     await expect(getOpenHoldingsSummary("meeple-1")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(setMemberNumber("meeple-1", 10)).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(renameMeeple("meeple-1", "Neuer Name")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await expect(setMeepleSystemAccount("meeple-1", true)).rejects.toThrow(
       ForbiddenError,
     );
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
-    expect(anonymiseMeepleRecordMock).not.toHaveBeenCalled();
+    expect(anonymiseMeepleStufe1Mock).not.toHaveBeenCalled();
+  });
+});
+
+describe("setMeepleSystemAccount (#297)", () => {
+  it("requires members:manage-system-accounts, not members:manage", async () => {
+    await setMeepleSystemAccount("meeple-1", true);
+
+    expect(requirePermissionMock).toHaveBeenCalledWith(
+      "members:manage-system-accounts",
+    );
+  });
+
+  it("sets the flag and revalidates", async () => {
+    const result = await setMeepleSystemAccount("meeple-1", true);
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { isSystemAccount: true },
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it("can remove the flag again", async () => {
+    await setMeepleSystemAccount("meeple-1", false);
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { isSystemAccount: false },
+    });
   });
 });
 
 describe("recordResignation", () => {
-  it("sets both resignedAt and membershipEndsAt", async () => {
+  it("sets both resignedAt and membershipEndsAt on the linked Member", async () => {
     vi.setSystemTime(new Date("2026-07-29T12:00:00Z"));
 
     await recordResignation("meeple-1", new Date("2027-01-01T00:00:00Z"));
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: {
         resignedAt: new Date("2026-07-29T12:00:00Z"),
         membershipEndsAt: new Date("2027-01-01T00:00:00Z"),
@@ -82,31 +175,103 @@ describe("recordResignation", () => {
 });
 
 describe("revokeResignation", () => {
-  it("clears both date fields", async () => {
+  it("clears both date fields on the linked Member and any Ausgetreten-Rolle", async () => {
     await revokeResignation("meeple-1");
 
-    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
-      where: { id: "meeple-1" },
+    expect(prismaMock.member.update).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
       data: { resignedAt: null, membershipEndsAt: null },
     });
+    expect(removeAusgetretenRoleMock).toHaveBeenCalledWith("meeple-1");
   });
 });
 
 describe("anonymiseMeeple", () => {
-  it("delegates to the shared anonymisation rules and revalidates on success", async () => {
-    anonymiseMeepleRecordMock.mockResolvedValue({ success: true });
-
+  it("runs Stufe 1 then Stufe 2 and revalidates on success", async () => {
     expect(await anonymiseMeeple("meeple-1")).toEqual({ success: true });
-    expect(anonymiseMeepleRecordMock).toHaveBeenCalledWith("meeple-1");
+    expect(anonymiseMeepleStufe1Mock).toHaveBeenCalledWith("meeple-1");
+    expect(anonymiseMeepleStufe2Mock).toHaveBeenCalledWith("meeple-1");
   });
 
-  it("passes a rule violation straight back without revalidating", async () => {
-    anonymiseMeepleRecordMock.mockResolvedValue({
+  it("passes a Stufe-1 violation straight back without attempting Stufe 2", async () => {
+    anonymiseMeepleStufe1Mock.mockResolvedValue({
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
+    });
+
+    expect(await anonymiseMeeple("meeple-1")).toEqual({
+      error: "Dieses Mitglied ist bereits vollständig anonymisiert (Stufe 2).",
+    });
+    expect(anonymiseMeepleStufe2Mock).not.toHaveBeenCalled();
+  });
+
+  it("passes a Stufe-2 violation straight back without revalidating", async () => {
+    anonymiseMeepleStufe2Mock.mockResolvedValue({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
 
     expect(await anonymiseMeeple("meeple-1")).toEqual({
       error: "Nur ausgetretene Mitglieder können anonymisiert werden.",
     });
+  });
+});
+
+describe("deleteMemberPermanently", () => {
+  it("delegates to Stufe 3 and revalidates on success", async () => {
+    expect(await deleteMemberPermanently("member-1")).toEqual({
+      success: true,
+    });
+    expect(anonymiseMemberStufe3Mock).toHaveBeenCalledWith("member-1");
+  });
+
+  it("passes a rule violation straight back", async () => {
+    anonymiseMemberStufe3Mock.mockResolvedValue({
+      error: "Seit dem Austritt sind noch keine 12 Monate vergangen.",
+    });
+
+    expect(await deleteMemberPermanently("member-1")).toEqual({
+      error: "Seit dem Austritt sind noch keine 12 Monate vergangen.",
+    });
+  });
+});
+
+describe("setMemberNumber", () => {
+  it("assigns the number and revalidates on success", async () => {
+    prismaMock.meeple.findUnique
+      .mockResolvedValueOnce({ id: "meeple-1", memberNumber: 5 } as never)
+      .mockResolvedValueOnce(null);
+
+    expect(await setMemberNumber("meeple-1", 10)).toEqual({ success: true });
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { memberNumber: 10 },
+    });
+  });
+
+  it("passes a rule violation straight back", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(null);
+
+    expect(await setMemberNumber("meeple-1", 10)).toEqual({
+      error: "Mitglied nicht gefunden.",
+    });
+  });
+});
+
+describe("renameMeeple", () => {
+  it("trims and saves the new display name", async () => {
+    expect(await renameMeeple("meeple-1", "  Neuer Name  ")).toEqual({
+      success: true,
+    });
+
+    expect(prismaMock.meeple.update).toHaveBeenCalledWith({
+      where: { id: "meeple-1" },
+      data: { displayName: "Neuer Name" },
+    });
+  });
+
+  it("refuses a blank name", async () => {
+    expect(await renameMeeple("meeple-1", "   ")).toEqual({
+      error: "Bitte einen Anzeigenamen angeben.",
+    });
+    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
   });
 });

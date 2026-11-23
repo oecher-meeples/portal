@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ActionDialog } from "@/components/ui/action-dialog";
+import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import { MarketListingFields } from "@/components/feature/markt/market-listing-fields";
-import { updateOwnMarketListing } from "@/components/feature/markt/actions";
+import {
+  updateOwnMarketListing,
+  deleteOwnMarketListing,
+} from "@/components/feature/markt/actions";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 
 export function EditMarketListingDialog({
@@ -12,6 +17,7 @@ export function EditMarketListingDialog({
 }: {
   listing: MarketListingView;
 }) {
+  const router = useRouter();
   const [title, setTitle] = useState(listing.title);
   const [description, setDescription] = useState(listing.description ?? "");
   const [priceEuros, setPriceEuros] = useState(String(listing.priceEuros));
@@ -47,18 +53,30 @@ export function EditMarketListingDialog({
       }
       onReset={reset}
     >
-      <MarketListingFields
-        title={title}
-        onTitleChange={setTitle}
-        priceEuros={priceEuros}
-        onPriceEurosChange={setPriceEuros}
-        condition={condition}
-        onConditionChange={setCondition}
-        description={description}
-        onDescriptionChange={setDescription}
-        imageUrls={imageUrls}
-        onImageUrlsChange={setImageUrls}
-      />
+      <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
+        <MarketListingFields
+          title={title}
+          onTitleChange={setTitle}
+          priceEuros={priceEuros}
+          onPriceEurosChange={setPriceEuros}
+          condition={condition}
+          onConditionChange={setCondition}
+          description={description}
+          onDescriptionChange={setDescription}
+          imageUrls={imageUrls}
+          onImageUrlsChange={setImageUrls}
+        />
+        <ActionButton
+          variant="destructive"
+          size="sm"
+          className="self-start"
+          confirm="Diese Anzeige wirklich löschen?"
+          action={() => deleteOwnMarketListing(listing.id)}
+          onSuccess={() => router.push("/markt")}
+        >
+          Anzeige löschen
+        </ActionButton>
+      </div>
     </ActionDialog>
   );
 }

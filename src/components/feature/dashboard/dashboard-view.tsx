@@ -2,15 +2,26 @@ import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatTile } from "@/components/ui/stat-tile";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { formatDateShort } from "@/lib/utils/format";
+import { SETTLEMENT_HANDOVER_HINT } from "@/lib/members/membership-state";
 import type { requireMember } from "@/lib/auth/session";
 import type { getInternalContent } from "@/lib/content/content";
+import type { listImportantLinks } from "@/lib/links/links";
 import { ActionButton } from "@/components/ui/action-button";
 import { scanConfirmHolding } from "@/lib/ludothek/holding-actions";
+import { ImportantLinksGrid } from "@/components/widgets/important-links-grid";
+import { ImportantLinksEditor } from "@/components/feature/dashboard/important-links-editor";
+import { PageContainer } from "@/components/ui/page-container";
 
 const QUICK_LINKS = [
   { href: "/ludothek", label: "Ludothek", icon: Dice5 },
-  { href: "/scan", label: "Spiel scannen", icon: ScanLine },
+  { href: "/scan", label: "Scanner", icon: ScanLine },
   { href: "/lfg", label: "Spielergesuche", icon: Users },
   { href: "/markt", label: "Marktplatz", icon: Tag },
 ];
@@ -30,7 +41,17 @@ type DashboardViewProps = {
   unconfirmedReturns: PendingHolding[];
   ownOpenLfgCount: number;
   upcomingShiftCount: number;
+  totalOpenLfgCount: number;
+  activeMarketListingCount: number;
+  importantLinks: Awaited<ReturnType<typeof listImportantLinks>>;
+  /** Admin mit `links:manage` in der aktuellen Ansicht — Abschnitt bleibt
+   * dann immer sichtbar und wird inline editierbar (Pivot #110). */
+  canManageLinks: boolean;
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
+  /** Ausgetreten (#537): kein Scanner, stattdessen der Abwicklungshinweis. */
+  isAusgetreten: boolean;
+  /** Frühestes anstehendes Event mit `helpersWanted` (#155) — null blendet die Karte aus. */
+  openHelperRequestEvent: { id: string; title: string } | null;
 };
 
 export function DashboardView({
@@ -43,15 +64,31 @@ export function DashboardView({
   unconfirmedReturns,
   ownOpenLfgCount,
   upcomingShiftCount,
+  totalOpenLfgCount,
+  activeMarketListingCount,
+  importantLinks,
+  canManageLinks,
   resignationNotice,
+  isAusgetreten,
+  openHelperRequestEvent,
 }: DashboardViewProps) {
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Angemeldet als Mitglied"
         title={`Hallo, ${user.name}`}
         description="Dein persönlicher Einstieg in den internen Bereich."
       />
+
+      {openHelperRequestEvent && (
+        <Link
+          href="/helfer"
+          className="bg-primary/10 hover:bg-primary/15 rounded-md p-4 text-sm transition-colors"
+        >
+          Für <strong>{openHelperRequestEvent.title}</strong> werden noch Helfer
+          gesucht — jetzt eintragen.
+        </Link>
+      )}
 
       {resignationNotice && (
         <div className="bg-primary/10 rounded-md p-4 text-sm">
@@ -60,47 +97,72 @@ export function DashboardView({
             <>
               {" "}
               Bei dir liegen noch {resignationNotice.openHoldingsCount}{" "}
-              Vereinsspiele/-einheiten — bitte rechtzeitig zurückgeben.
+              Vereinsspiele/-einheiten — bitte rechtzeitig zurückgeben:{" "}
+              <Link
+                href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}
+                className="text-primary font-medium hover:underline"
+              >
+                zur Ludothek-Rückgabe
+              </Link>
+              , oder wende dich an den Spielewart. Nach dem Austritt kannst du
+              nichts mehr selbst buchen.
             </>
           )}
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}>
-          <StatTile
-            label="Eigene Ausleihen"
-            value={ownLoansCount}
-            hint="Spiele"
-          />
-        </Link>
-        <Link href={`/ludothek?bei=${meepleId}`}>
-          <StatTile
-            label="In meinen Kartons"
-            value={ownUnitContentsCount}
-            hint="Spiele"
-          />
-        </Link>
-        <Link href="/lfg">
-          <StatTile
-            label="Offene Gesuche"
-            value={ownOpenLfgCount}
-            hint="von dir"
-          />
-        </Link>
-        <Link href="/helfer">
-          <StatTile
-            label="Anstehende Schichten"
-            value={upcomingShiftCount}
-            hint="eigene Zusagen"
-          />
-        </Link>
+      {isAusgetreten && (
+        <div className="bg-primary/10 rounded-md p-4 text-sm">
+          Deine Mitgliedschaft ist beendet. {SETTLEMENT_HANDOVER_HINT}
+        </div>
+      )}
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        <StatTile
+          href={`/ludothek?bei=${meepleId}&ausgeliehen=1`}
+          label="Eigene Ausleihen"
+          value={ownLoansCount}
+          hint="Spiele"
+        />
+        <StatTile
+          href={`/ludothek?bei=${meepleId}`}
+          label="In meinen Kartons"
+          value={ownUnitContentsCount}
+          hint="Spiele"
+        />
+        <StatTile
+          href="/lfg"
+          label="Offene Gesuche"
+          value={ownOpenLfgCount}
+          hint="von dir"
+        />
+        <StatTile
+          href="/helfer"
+          label="Anstehende Schichten"
+          value={upcomingShiftCount}
+          hint="eigene Zusagen"
+        />
+      </div>
+
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        <StatTile
+          href="/lfg"
+          label="Offene Gesuche"
+          value={totalOpenLfgCount}
+          hint="im Verein"
+        />
+        <StatTile
+          href="/markt"
+          label="Marktplatz-Angebote"
+          value={activeMarketListingCount}
+          hint="aktiv"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Interner Newsroom</h2>
-          <ul className="mt-3 flex flex-col divide-y">
+        <Card>
+          <CardTitle>Interner Newsroom</CardTitle>
+          <ul className="flex flex-col divide-y">
             {internalNews.map((item) => (
               <li
                 key={item.slug}
@@ -123,73 +185,93 @@ export function DashboardView({
               </li>
             )}
           </ul>
-        </div>
+        </Card>
 
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Interner Kalender</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Öffentliche und interne Termine an einem Ort.
-          </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Interner Kalender</CardTitle>
+            <CardDescription>
+              Öffentliche und interne Termine an einem Ort.
+            </CardDescription>
+          </CardHeader>
+          {/* #209: /dashboard/kalender entfernt (News-Konsolidierung) — /news
+           * deckt Öffentlich+Intern bereits über die "Nur interne
+           * anzeigen"-Checkbox ab. */}
           <Link
-            href="/dashboard/kalender"
-            className="text-primary mt-3 inline-block text-sm hover:underline"
+            href="/news"
+            className="text-primary w-fit text-sm hover:underline"
           >
             Zum Vereinskalender →
           </Link>
-        </div>
+        </Card>
       </div>
 
-      {(unconfirmedHandovers.length > 0 || unconfirmedReturns.length > 0) && (
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">Offene Vorgänge</h2>
-          <ul className="mt-3 flex flex-col divide-y">
-            {unconfirmedHandovers.map((holding) => (
-              <li
-                key={holding.id}
-                className="flex items-center justify-between gap-3 py-2.5"
-              >
-                <span>{holding.gameTitle} — Weitergabe bestätigen</span>
-                <ActionButton
-                  size="sm"
-                  action={scanConfirmHolding.bind(null, holding.id)}
+      {!isAusgetreten &&
+        (unconfirmedHandovers.length > 0 || unconfirmedReturns.length > 0) && (
+          <Card>
+            <CardTitle>Offene Vorgänge</CardTitle>
+            <ul className="flex flex-col divide-y">
+              {unconfirmedHandovers.map((holding) => (
+                <li
+                  key={holding.id}
+                  className="flex items-center justify-between gap-3 py-2.5"
                 >
-                  Bestätigen
-                </ActionButton>
-              </li>
-            ))}
-            {unconfirmedReturns.map((holding) => (
-              <li
-                key={holding.id}
-                className="flex items-center justify-between gap-3 py-2.5"
-              >
-                <span>{holding.gameTitle} — Rückgabe: jetzt einlagern</span>
-                <Link
-                  href="/scan"
-                  className="text-primary text-sm hover:underline"
+                  <span>{holding.gameTitle} — Weitergabe bestätigen</span>
+                  <ActionButton
+                    refresh
+                    size="sm"
+                    action={scanConfirmHolding.bind(null, holding.id)}
+                  >
+                    Bestätigen
+                  </ActionButton>
+                </li>
+              ))}
+              {unconfirmedReturns.map((holding) => (
+                <li
+                  key={holding.id}
+                  className="flex items-center justify-between gap-3 py-2.5"
                 >
-                  Zum Scan →
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+                  <span>{holding.gameTitle} — Rückgabe: jetzt einlagern</span>
+                  <Link
+                    href="/scan"
+                    className="text-primary text-sm hover:underline"
+                  >
+                    Zum Scan →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
 
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-lg font-bold">Schnellzugriff</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {QUICK_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="bg-card hover:border-primary/60 flex flex-col items-center gap-2 rounded-lg border p-6 text-center transition-colors"
-            >
-              <link.icon className="text-primary size-6" />
-              <span className="font-serif font-semibold">{link.label}</span>
-            </Link>
-          ))}
-        </div>
+        <ImportantLinksGrid
+          items={
+            isAusgetreten
+              ? QUICK_LINKS.filter((link) => link.href !== "/scan")
+              : QUICK_LINKS
+          }
+        />
       </div>
-    </div>
+
+      {(importantLinks.length > 0 || canManageLinks) && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">Wichtige Links</h2>
+          {canManageLinks ? (
+            <ImportantLinksEditor links={importantLinks} />
+          ) : (
+            <ImportantLinksGrid
+              items={importantLinks.map((link) => ({
+                href: link.targetUrl,
+                label: link.title,
+                iconUrl: link.iconUrl ?? undefined,
+                external: true,
+              }))}
+            />
+          )}
+        </div>
+      )}
+    </PageContainer>
   );
 }

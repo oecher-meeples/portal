@@ -1,0 +1,342 @@
+import "@testing-library/jest-dom/vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
+import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collection";
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+const refreshMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: refreshMock }),
+}));
+
+vi.mock("@/lib/ludothek/private-collection-sync", () => ({
+  syncPrivateBggCollection: vi.fn(),
+}));
+
+// #122: zieht sonst requireMeeple() und damit die serverseitige
+// Auth-Kette in den Komponententest.
+vi.mock(
+  "@/components/widgets/private-collection/private-collection-actions",
+  () => ({
+    offerPrivateGameForEventAction: vi.fn(),
+    withdrawPrivateGameOfferAction: vi.fn(),
+    setPrivateCollectionVisibleAction: (visible: boolean) =>
+      setVisibleMock(visible),
+  }),
+);
+const setVisibleMock = vi.fn<(visible: boolean) => Promise<{ success: true }>>(
+  async () => ({ success: true }),
+);
+
+function entry(
+  overrides: Partial<OwnPrivateCollectionEntry> = {},
+): OwnPrivateCollectionEntry {
+  return {
+    id: "entry-1",
+    rating: null,
+    forTrade: false,
+    wantToPlay: false,
+    boardGame: {
+      id: "bg-1",
+      slug: "ark-nova",
+      title: "Ark Nova",
+      imageUrl: null,
+    },
+    version: null,
+    ...overrides,
+  };
+}
+
+describe("PrivateCollectionCard (#308)", () => {
+  it("shows the version chosen on BGG with a flag for a non-German one", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[
+          entry({
+            version: {
+              name: "English first edition",
+              yearPublished: 2017,
+              languages: ["English"],
+              publishers: ["Serious Poulp"],
+            },
+          }),
+        ]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Aus BGG importiert/ }),
+    );
+
+    expect(
+      screen.getByText("Version: Serious Poulp · English (2017)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Edition: English" }),
+    ).toBeInTheDocument();
+  });
+
+  it("links each title to its Ludothek detail page, with a link icon", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Aus BGG importiert/ }),
+    );
+
+    const link = screen.getByRole("link", { name: /Ark Nova/ });
+    expect(link).toHaveAttribute("href", "/ludothek/ark-nova");
+    expect(link.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("toggles the visibility for other meeples right on the card, without opening the dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={false}
+      />,
+    );
+
+    const toggle = screen.getByRole("switch", {
+      name: "Private BGG-Collection anderen Meeple anzeigen",
+    });
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText(/nicht auffindbar/)).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(setVisibleMock).toHaveBeenCalledWith(true);
+    expect(toggle).toBeChecked();
+    expect(screen.queryByText(/nicht auffindbar/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /Meine privaten Spiele \(/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens the dialog when clicking anywhere on the card (#Live-Review F9)", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByRole("heading", { name: "Meine privaten Spiele (1)" }),
+    ).toBeInTheDocument();
+  });
+
+  // (Live-Test): Base UI's DialogClose rendert per Portal außerhalb der
+  // Karte im DOM, bleibt im React-Baum aber ihr Kind — ein Klick auf das X
+  // bubbelte deshalb bis zur klickbaren Karte hoch und öffnete den Dialog im
+  // selben Tick wieder, sodass nur Esc tatsächlich schloss.
+  it("closes the dialog when clicking the close button, not just Escape", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(screen.getByText("Meine privaten Spiele"));
+    expect(
+      screen.getByRole("heading", { name: "Meine privaten Spiele (1)" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Schließen" }));
+
+    expect(
+      screen.queryByRole("heading", { name: "Meine privaten Spiele (1)" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not open the dialog when clicking the import button (#Live-Review F9)", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername="erika"
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "BGG-Collection importieren" }),
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: /Meine privaten Spiele \(/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("has no click/hover affordance on the card without any entries (#Live-Review F9)", () => {
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+});
+
+describe("PrivateCollectionCard — Event-Freigabe (#122)", () => {
+  const NEXT_EVENT = { id: "event-1", title: "Spieleabend Oktober" };
+
+  it("shows no offer control without an upcoming event", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.queryByRole("button", { name: /zur Ausleihe freigeben/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers a not-yet-offered title for the next event", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByRole("button", {
+        name: 'Für "Spieleabend Oktober" zur Ausleihe freigeben',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers withdrawal for an already-offered title", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[{ id: "loan-1", boardGameId: "bg-1", status: "OFFERED" }]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByRole("button", {
+        name: 'Freigabe für "Spieleabend Oktober" zurückziehen',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  // (#122-Folge, Live-Test): der Dialog blieb nach dem Klick offen und das
+  // X ließ sich nur noch nicht per Klick schließen (nur Esc) — Ursache war
+  // router.refresh() bei offenem Dialog. Der Toggle darf keinen
+  // Router-Refresh mehr auslösen, das Umschalten muss rein lokal passieren.
+  it("toggles the offer locally without triggering a router refresh", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    await user.click(
+      screen.getByRole("button", {
+        name: 'Für "Spieleabend Oktober" zur Ausleihe freigeben',
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: 'Freigabe für "Spieleabend Oktober" zurückziehen',
+      }),
+    ).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("shows a loaned pill instead of a control once issued", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        nextEvent={NEXT_EVENT}
+        ownOffers={[{ id: "loan-1", boardGameId: "bg-1", status: "LOANED" }]}
+      />,
+    );
+    await user.click(screen.getByText("Meine privaten Spiele"));
+
+    expect(
+      screen.getByText("Ausgeliehen (Spieleabend Oktober)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /zurückziehen|freigeben/ }),
+    ).not.toBeInTheDocument();
+  });
+});

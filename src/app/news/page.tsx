@@ -1,31 +1,45 @@
 ﻿import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
+import { PageContainer } from "@/components/ui/page-container";
 import { Button } from "@/components/ui/button";
 import { getAllContentWithCalendar } from "@/lib/content/calendar";
+import { NEWS_PAGE_SIZE } from "@/lib/content/content-types";
+import {
+  filterVisibleNews,
+  findAvailableContentTypes,
+  resolveNewsVisibility,
+} from "@/lib/content/news-visibility";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermissionInCurrentView } from "@/lib/auth/session";
+import { hasOwnCalendarToken } from "@/lib/members/calendar-token";
+import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
-  const [publicItems, user] = await Promise.all([
-    getAllContentWithCalendar().then((items) =>
-      items.filter((item) => !item.internal),
-    ),
-    getCurrentUser(),
-  ]);
-  const canEdit = user
-    ? await hasPermissionInCurrentView(user.id, "posts:write")
-    : false;
+  const [{ items: rawItems, hasMore, nextCursor }, user, sessionTier] =
+    await Promise.all([
+      getAllContentWithCalendar({ take: NEWS_PAGE_SIZE }),
+      getCurrentUser(),
+      getSessionTier(),
+    ]);
+  const visibility = await resolveNewsVisibility(user, sessionTier);
+  const items = filterVisibleNews(rawItems, visibility);
+  const [availableTypes, canEditPublic, canEditInternal, hasCalendarToken] =
+    await Promise.all([
+      findAvailableContentTypes(items, visibility),
+      user ? hasPermissionInCurrentView(user.id, "posts:public") : false,
+      user ? hasPermissionInCurrentView(user.id, "posts:internal") : false,
+      user && visibility.canSeeInternal ? hasOwnCalendarToken(user.id) : false,
+    ]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <PageHeading
         eyebrow="Newsroom"
         title="Termine & Blog"
         description="Alle Veranstaltungen, Turniere und Vereinsnews. Beiträge der Moderator:innen erscheinen automatisch auch auf Instagram."
         action={
-          canEdit ? (
+          canEditPublic || canEditInternal ? (
             <Button
               render={<Link href="/admin/news/new">+ Neuer Beitrag</Link>}
             />
@@ -34,10 +48,18 @@ export default async function NewsPage() {
       />
       <NewsletterInlineSignup />
       <NewsBrowser
-        items={publicItems}
+        items={items}
+        hasMore={hasMore}
+        nextCursor={nextCursor}
         icsUrl={process.env.PUBLIC_CALENDAR_ICS_URL}
-        canEdit={canEdit}
+        canEditPublic={canEditPublic}
+        canEditInternal={canEditInternal}
+        canSeeInternal={visibility.canSeeInternal}
+        availableTypes={availableTypes}
+        internalSubscription={
+          visibility.canSeeInternal ? { hasToken: hasCalendarToken } : undefined
+        }
       />
-    </div>
+    </PageContainer>
   );
 }

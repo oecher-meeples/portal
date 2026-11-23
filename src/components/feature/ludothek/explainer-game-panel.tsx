@@ -1,17 +1,10 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { ExplainerExperienceLevel } from "@prisma/client";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { ExplainerBadgeList } from "@/components/entities/explainer-badge-list";
+import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
+import { useAction } from "@/components/ui/use-action";
 import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
 import {
   addExplainerGame,
@@ -32,67 +25,33 @@ export function ExplainerGamePanel({
   /** null: eingeloggt, aber noch nicht als Erklärbär für dieses Spiel gemeldet. */
   myLevel: ExplainerExperienceLevel | null;
 }) {
-  const router = useRouter();
   const [level, setLevel] = useState<ExplainerExperienceLevel | null>(myLevel);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Die Actions revalidieren `/erklaerbaeren`, nicht diese Spielseite.
+  const { run, pending: isSubmitting, error } = useAction({ refresh: true });
 
   async function handleRegister(nextLevel: ExplainerExperienceLevel) {
     setLevel(nextLevel);
-    setIsSubmitting(true);
-    setError(null);
-    const result = await addExplainerGame(boardGameId, nextLevel);
-    setIsSubmitting(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    router.refresh();
+    await run(() => addExplainerGame(boardGameId, nextLevel));
   }
 
   async function handleLevelChange(nextLevel: ExplainerExperienceLevel) {
     setLevel(nextLevel);
-    setError(null);
-    const result = await updateExplainerGameLevel(boardGameId, nextLevel);
-    if (result.error) {
-      setError(result.error);
-    }
-    router.refresh();
+    await run(() => updateExplainerGameLevel(boardGameId, nextLevel));
   }
 
   async function handleRemove() {
-    setIsSubmitting(true);
-    setError(null);
-    await removeExplainerGame(boardGameId);
-    setIsSubmitting(false);
-    setLevel(null);
-    router.refresh();
+    if (await run(() => removeExplainerGame(boardGameId))) setLevel(null);
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-serif text-lg font-bold">Erklärbären</h2>
-        <Dialog>
-          <DialogTrigger
-            render={
-              <Button variant="outline" size="sm">
-                {explainers.length > 0
-                  ? `Alle ansehen (${explainers.length})`
-                  : "Ansehen"}
-              </Button>
-            }
-          />
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Erklärbären für {boardGameTitle}</DialogTitle>
-            </DialogHeader>
-            <ExplainerBadgeList
-              explainers={explainers}
-              emptyLabel="Noch niemand als Erklärbär für dieses Spiel gemeldet."
-            />
-          </DialogContent>
-        </Dialog>
+    <Card>
+      <div className="flex items-center gap-2">
+        <CardTitle>Erklärbären</CardTitle>
+        <ExplainerListDialogTrigger
+          boardGameTitle={boardGameTitle}
+          explainers={explainers}
+          badgeCount={explainers.length}
+        />
       </div>
 
       {myLevel === null ? (
@@ -116,6 +75,6 @@ export function ExplainerGamePanel({
         </div>
       )}
       {error && <p className="text-destructive text-sm">{error}</p>}
-    </div>
+    </Card>
   );
 }

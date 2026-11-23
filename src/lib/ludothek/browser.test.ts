@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { BoardGameKind } from "@prisma/client";
+import { BoardGameKind, LanguageDependence } from "@prisma/client";
 import {
   filterLudothekGames,
+  listDistinctCategories,
   parseLudothekSearchParams,
   toPublicGame,
   type LudothekGame,
@@ -12,16 +13,29 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     id: "game-1",
     boardGameId: "title-1",
     slug: "arche-nova",
+    boardGameSlug: "arche-nova",
     title: "Arche Nova",
     imageUrl: null,
     minPlayers: 1,
     maxPlayers: 4,
     playTimeMinutes: 90,
     weight: 3.7,
+    averageRating: 8.5,
     mechanics: ["Engine-Building"],
+    categories: [],
     ean: null,
     condition: null,
+    inventoryNumber: null,
     bggId: null,
+    alternateNames: [],
+    secondaryTitle: null,
+    languageDependence: null,
+    ruleBookLanguages: [],
+    publisher: [],
+    author: [],
+    illustrator: [],
+    yearPublished: null,
+    editionLanguages: [],
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -30,7 +44,17 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     zustand: "frei",
     isLoanedOut: false,
     responsibleMeepleId: "meeple-a",
+    responsibleName: "Alex",
+    responsibleProfilePictureUrl: null,
+    responsibleProfilePictureVisibility: "INTERN",
+    isUnconfirmed: false,
+    unitChain: "Karton 1",
     locationChain: "Karton 1",
+    explainerCount: 0,
+    hasOpenLfg: false,
+    traits: [],
+    notes: null,
+    isPrivate: false,
     ...overrides,
   };
 }
@@ -40,46 +64,6 @@ describe("filterLudothekGames", () => {
     const games = [game({ title: "Arche Nova" }), game({ title: "Wingspan" })];
 
     expect(filterLudothekGames(games, { search: "wing" })).toHaveLength(1);
-  });
-
-  it("filters by player-count range", () => {
-    const small = game({ minPlayers: 1, maxPlayers: 2 });
-    const mid = game({ minPlayers: 3, maxPlayers: 4 });
-    const large = game({ minPlayers: 5, maxPlayers: 8 });
-
-    expect(
-      filterLudothekGames([small, mid, large], { players: "1-2" }),
-    ).toEqual([small]);
-    expect(
-      filterLudothekGames([small, mid, large], { players: "3-4" }),
-    ).toEqual([mid]);
-    expect(filterLudothekGames([small, mid, large], { players: "5+" })).toEqual(
-      [large],
-    );
-  });
-
-  it("includes a game spanning a range across the filter boundary", () => {
-    const spanning = game({ minPlayers: 2, maxPlayers: 5 });
-
-    expect(filterLudothekGames([spanning], { players: "3-4" })).toEqual([
-      spanning,
-    ]);
-  });
-
-  it("filters by duration bucket", () => {
-    const short = game({ playTimeMinutes: 20 });
-    const mid = game({ playTimeMinutes: 90 });
-    const long = game({ playTimeMinutes: 180 });
-
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "short" }),
-    ).toEqual([short]);
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "mid" }),
-    ).toEqual([mid]);
-    expect(
-      filterLudothekGames([short, mid, long], { duration: "long" }),
-    ).toEqual([long]);
   });
 
   it("filters by maximum weight", () => {
@@ -101,6 +85,42 @@ describe("filterLudothekGames", () => {
     });
 
     expect(result).toEqual([tileLaying, both]);
+  });
+
+  it("filters by category with a multi-select OR match (#404)", () => {
+    const party = game({ categories: ["Partyspiel"] });
+    const strategy = game({ categories: ["Strategiespiel"] });
+    const both = game({ categories: ["Partyspiel", "Strategiespiel"] });
+
+    const result = filterLudothekGames([party, strategy, both], {
+      categories: ["Partyspiel"],
+    });
+
+    expect(result).toEqual([party, both]);
+  });
+
+  it("filters by maximum language dependence level (#188)", () => {
+    const neutral = game({
+      languageDependence: LanguageDependence.NO_NECESSARY_TEXT,
+    });
+    const extensive = game({
+      languageDependence: LanguageDependence.EXTENSIVE_TEXT,
+    });
+    const unrated = game({ languageDependence: null });
+
+    expect(
+      filterLudothekGames([neutral, extensive, unrated], {
+        languageDependenceMax: 1,
+      }),
+    ).toEqual([neutral]);
+  });
+
+  it("excludes games without a captured language dependence when the filter is set", () => {
+    const unrated = game({ languageDependence: null });
+
+    expect(
+      filterLudothekGames([unrated], { languageDependenceMax: 5 }),
+    ).toEqual([]);
   });
 
   it("hides expansions when hideExpansions is set", () => {
@@ -134,6 +154,75 @@ describe("filterLudothekGames", () => {
     ).toEqual([atA]);
   });
 
+  it("filters by 'nur mit offenen Spielergesuchen' (#144)", () => {
+    const withOpenLfg = game({ hasOpenLfg: true });
+    const withoutOpenLfg = game({ hasOpenLfg: false });
+
+    expect(
+      filterLudothekGames([withOpenLfg, withoutOpenLfg], {
+        onlyWithOpenLfg: true,
+      }),
+    ).toEqual([withOpenLfg]);
+    expect(
+      filterLudothekGames([withOpenLfg, withoutOpenLfg], {
+        onlyWithOpenLfg: false,
+      }),
+    ).toEqual([withOpenLfg, withoutOpenLfg]);
+  });
+
+  it("filters by 'Erklärbär vorhanden' in the Meeple context via explainerCount (#256)", () => {
+    const withExplainer = game({ explainerCount: 2 });
+    const withoutExplainer = game({ explainerCount: 0 });
+
+    expect(
+      filterLudothekGames([withExplainer, withoutExplainer], {
+        hasExplainer: true,
+      }),
+    ).toEqual([withExplainer]);
+  });
+
+  it("filters by 'Erklärbär vorhanden' in the Gast-während-Event context via the attending-set (#256)", () => {
+    const attending = game({
+      boardGameId: "game-attending",
+      explainerCount: 0,
+    });
+    const notAttending = game({
+      boardGameId: "game-not-attending",
+      explainerCount: 5, // has an Erklärbär profile, but none attending today
+    });
+
+    const result = filterLudothekGames(
+      [attending, notAttending],
+      { hasExplainer: true },
+      { attendingExplainerBoardGameIds: new Set(["game-attending"]) },
+    );
+
+    expect(result).toEqual([attending]);
+  });
+
+  it("filters by 'nur anwesende Spiele' via presentGameCopyIds (#273)", () => {
+    const present = game({ id: "copy-present" });
+    const absent = game({ id: "copy-absent" });
+
+    const result = filterLudothekGames(
+      [present, absent],
+      { onlyPresentAtEvent: true },
+      { presentGameCopyIds: new Set(["copy-present"]) },
+    );
+
+    expect(result).toEqual([present]);
+  });
+
+  it("shows nothing for 'nur anwesende Spiele' when no event is running", () => {
+    const result = filterLudothekGames(
+      [game({ id: "copy-1" })],
+      { onlyPresentAtEvent: true },
+      {},
+    );
+
+    expect(result).toEqual([]);
+  });
+
   it("combines multiple filters", () => {
     const match = game({
       title: "Arche Nova",
@@ -146,8 +235,9 @@ describe("filterLudothekGames", () => {
 
     const result = filterLudothekGames([match, wrongDuration], {
       search: "arche",
-      players: "3-4",
-      duration: "mid",
+      players: 3,
+      durationFrom: 60,
+      durationTo: 120,
       mechanics: ["Engine-Building"],
     });
 
@@ -159,16 +249,21 @@ describe("filterLudothekGames", () => {
       [],
     );
   });
+
+  // Erstveröffentlichung-, Bewertung- und Spieler/Dauer-Slider-Tests siehe
+  // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
+  // Textsuche (EAN/BGG-ID/Alternativname/Sekundärtitel/Verlag/Autor) siehe
+  // browser-search.test.ts (#287, ausgelagert wegen Dateigröße).
 });
 
 describe("parseLudothekSearchParams", () => {
-  it("parses search, players, duration, weight and mechanics", () => {
+  // spielerVon/dauerVon/jahrVon/bewertungVon-Parsing siehe
+  // browser-ranges.test.ts (#214-Folge, ausgelagert wegen Dateigröße).
+  it("parses search, weight and mechanics", () => {
     expect(
       parseLudothekSearchParams(
         {
           q: "arche",
-          spieler: "3-4",
-          dauer: "mid",
           gewicht: "3.5",
           mechanik: ["Engine-Building", "Plättchenlegen"],
         },
@@ -176,28 +271,91 @@ describe("parseLudothekSearchParams", () => {
       ),
     ).toEqual({
       search: "arche",
-      players: "3-4",
-      duration: "mid",
       maxWeight: 3.5,
       mechanics: ["Engine-Building", "Plättchenlegen"],
       hideExpansions: false,
+      hasExplainer: false,
+      onlyPresentAtEvent: false,
+      view: "grid",
     });
   });
 
-  it("ignores invalid enum values instead of applying a wrong filter", () => {
+  it("parses a valid view mode from ?ansicht=", () => {
     expect(
-      parseLudothekSearchParams(
-        { spieler: "nonsense", dauer: "nonsense" },
-        { internal: false },
-      ),
-    ).toEqual({
-      search: undefined,
-      players: undefined,
-      duration: undefined,
-      maxWeight: undefined,
-      mechanics: undefined,
-      hideExpansions: false,
-    });
+      parseLudothekSearchParams({ ansicht: "liste" }, { internal: false }).view,
+    ).toBe("liste");
+    expect(
+      parseLudothekSearchParams({ ansicht: "compact" }, { internal: false })
+        .view,
+    ).toBe("compact");
+  });
+
+  it("falls back to grid for an invalid view mode", () => {
+    expect(
+      parseLudothekSearchParams({ ansicht: "nonsense" }, { internal: false })
+        .view,
+    ).toBe("grid");
+    expect(parseLudothekSearchParams({}, { internal: false }).view).toBe(
+      "grid",
+    );
+  });
+
+  it("parses jahrVon/jahrBis as numbers (#205)", () => {
+    const result = parseLudothekSearchParams(
+      { jahrVon: "2000", jahrBis: "2020" },
+      { internal: false },
+    );
+
+    expect(result.yearFrom).toBe(2000);
+    expect(result.yearTo).toBe(2020);
+  });
+
+  it("ignores a non-numeric jahrVon/jahrBis instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { jahrVon: "nonsense", jahrBis: "" },
+      { internal: false },
+    );
+
+    expect(result.yearFrom).toBeUndefined();
+    expect(result.yearTo).toBeUndefined();
+  });
+
+  it("parses bewertungVon/bewertungBis as numbers (#214-Folge)", () => {
+    const result = parseLudothekSearchParams(
+      { bewertungVon: "6", bewertungBis: "9" },
+      { internal: false },
+    );
+
+    expect(result.ratingFrom).toBe(6);
+    expect(result.ratingTo).toBe(9);
+  });
+
+  it("ignores a non-numeric bewertungVon/bewertungBis instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { bewertungVon: "nonsense", bewertungBis: "" },
+      { internal: false },
+    );
+
+    expect(result.ratingFrom).toBeUndefined();
+    expect(result.ratingTo).toBeUndefined();
+  });
+
+  it("parses sprache as a number (#188)", () => {
+    const result = parseLudothekSearchParams(
+      { sprache: "2" },
+      { internal: false },
+    );
+
+    expect(result.languageDependenceMax).toBe(2);
+  });
+
+  it("ignores a non-numeric sprache instead of applying a wrong filter", () => {
+    const result = parseLudothekSearchParams(
+      { sprache: "nonsense" },
+      { internal: false },
+    );
+
+    expect(result.languageDependenceMax).toBeUndefined();
   });
 
   it("only parses internal filters when internal is true", () => {
@@ -207,6 +365,7 @@ describe("parseLudothekSearchParams", () => {
         ausgeliehen: "1",
         bei: "meeple-1",
         privatbesitz: "1",
+        nurGesuche: "1",
       },
       { internal: false },
     );
@@ -214,6 +373,7 @@ describe("parseLudothekSearchParams", () => {
     expect(publicResult.onlyLoanedOut).toBeUndefined();
     expect(publicResult.atMeepleId).toBeUndefined();
     expect(publicResult.showPrivateCollection).toBeUndefined();
+    expect(publicResult.onlyWithOpenLfg).toBeUndefined();
 
     const internalResult = parseLudothekSearchParams(
       {
@@ -221,6 +381,7 @@ describe("parseLudothekSearchParams", () => {
         ausgeliehen: "1",
         bei: "meeple-1",
         privatbesitz: "1",
+        nurGesuche: "1",
       },
       { internal: true },
     );
@@ -228,11 +389,18 @@ describe("parseLudothekSearchParams", () => {
     expect(internalResult.onlyLoanedOut).toBe(true);
     expect(internalResult.atMeepleId).toBe("meeple-1");
     expect(internalResult.showPrivateCollection).toBe(true);
+    expect(internalResult.onlyWithOpenLfg).toBe(true);
   });
 
   it("defaults showPrivateCollection to false when internal and unset", () => {
     expect(
       parseLudothekSearchParams({}, { internal: true }).showPrivateCollection,
+    ).toBe(false);
+  });
+
+  it("defaults onlyWithOpenLfg to false when internal and unset", () => {
+    expect(
+      parseLudothekSearchParams({}, { internal: true }).onlyWithOpenLfg,
     ).toBe(false);
   });
 
@@ -243,6 +411,24 @@ describe("parseLudothekSearchParams", () => {
         { internal: false },
       ).mechanics,
     ).toEqual(["Engine-Building"]);
+  });
+
+  it("parses categories (#404)", () => {
+    expect(
+      parseLudothekSearchParams(
+        { kategorie: ["Partyspiel", "Strategiespiel"] },
+        { internal: false },
+      ).categories,
+    ).toEqual(["Partyspiel", "Strategiespiel"]);
+  });
+
+  it("normalises a single kategorie value to an array (#404)", () => {
+    expect(
+      parseLudothekSearchParams(
+        { kategorie: "Partyspiel" },
+        { internal: false },
+      ).categories,
+    ).toEqual(["Partyspiel"]);
   });
 });
 
@@ -255,5 +441,25 @@ describe("toPublicGame", () => {
     expect(publicGame).not.toHaveProperty("responsibleMeepleId");
     expect(publicGame).not.toHaveProperty("locationChain");
     expect(publicGame.title).toBe("Arche Nova");
+  });
+});
+
+describe("listDistinctCategories (#404)", () => {
+  it("returns every distinct category across the Bestand, sorted", () => {
+    const games = [
+      game({ categories: ["Strategiespiel", "Partyspiel"] }),
+      game({ categories: ["Familienspiel"] }),
+      game({ categories: ["Partyspiel"] }),
+    ];
+
+    expect(listDistinctCategories(games)).toEqual([
+      "Familienspiel",
+      "Partyspiel",
+      "Strategiespiel",
+    ]);
+  });
+
+  it("returns an empty array for no games", () => {
+    expect(listDistinctCategories([])).toEqual([]);
   });
 });

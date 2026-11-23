@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+vi.mock("@/lib/members/contact-dialog", () => ({
+  fetchContactDialogMeeple: vi.fn(),
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -110,5 +114,45 @@ describe("ExplainerGamePanel", () => {
     expect(screen.getByRole("button", { name: "Ohne Anleitung" })).toHaveClass(
       "bg-primary",
     );
+  });
+
+  it("shows the Ansehen icon button without a badge when nobody explains this game (#146)", () => {
+    render(
+      <ExplainerGamePanel
+        boardGameId="game-1"
+        boardGameTitle="Ark Nova"
+        explainers={[]}
+        myLevel={null}
+      />,
+    );
+
+    const viewButton = screen.getByRole("button", {
+      name: "Alle Erklärbären ansehen",
+    });
+    expect(viewButton).toBeInTheDocument();
+    expect(viewButton).not.toHaveTextContent(/\d/);
+  });
+
+  it("shows the count badge once at least one Erklärbär is registered (#146)", () => {
+    render(
+      <ExplainerGamePanel
+        boardGameId="game-1"
+        boardGameTitle="Ark Nova"
+        explainers={[
+          {
+            meepleId: "m-1",
+            displayName: "Lea",
+            level: "BY_HEART",
+            profilePictureUrl: null,
+            profilePictureVisibility: "INTERN",
+          },
+        ]}
+        myLevel={null}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Alle Erklärbären ansehen" }),
+    ).toHaveTextContent("1");
   });
 });

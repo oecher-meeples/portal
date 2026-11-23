@@ -54,3 +54,14 @@ export async function removeExplainerGame(boardGameId: string) {
   revalidatePath("/erklaerbaeren");
   return { success: true as const };
 }
+
+export async function removeAllExplainerGames() {
+  const meeple = await requireMeeple();
+
+  await prisma.explainerGame.deleteMany({
+    where: { meepleId: meeple.id },
+  });
+
+  revalidatePath("/erklaerbaeren");
+  return { success: true as const };
+}

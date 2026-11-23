@@ -123,7 +123,8 @@ Das generierte `prisma/schema.prisma` mit dem Inhalt aus `schema.md` befüllen.
 
 ```env
 # Neon PostgreSQL (Connection String aus dem Neon-Dashboard)
-DATABASE_URL="postgresql://user:password@ep-xxx.eu-central-1.aws.neon.tech/dbname?sslmode=require"
+DATABASE_URL="postgresql://user:password@ep-xxx.eu-central-1.aws.neon.tech/dbname?sslmode=verify-full"
+# sslmode=verify-full statt require: pg warnt sonst vor der Semantik-Änderung in pg v9 (#502)
 
 # Auth.js
 AUTH_SECRET=""           # openssl rand -base64 32

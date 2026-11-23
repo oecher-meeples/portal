@@ -1,0 +1,5 @@
+# Schedules are UTC.
+# min hour dom mon dow  command
+0 5 * * *   /usr/local/bin/run-cron-job instagram-queue
+0 17 * * *  /usr/local/bin/run-cron-job market-digest
+0 2 2 1 *   /usr/local/bin/run-cron-job year-turn

@@ -1,13 +1,70 @@
 overrides:
-  sharp: ">=0.35.0"
+  # GHSA-wq5f-xc86-pv6w: librsvg-Schwachstelle, transitiv über next/@vercel/og/better-auth
+  sharp: ">=0.35.5"
   postcss: ">=8.5.18"
   "@hono/node-server@<2.0.5": ^2.0.5
   better-auth@<1.6.2: ^1.6.2
   better-auth@>=0.3.4 <1.6.11: ^1.6.11
-  brace-expansion@<1.1.17: ^1.1.18
-  brace-expansion@>=4.0.0 <5.0.9: ^5.0.9
-  fast-uri: ^3.1.5
-  nanoid@<3.3.17: ^3.3.17
+  brace-expansion@<1.1.20: ^1.1.20
+  brace-expansion@>=4.0.0 <5.0.11: ^5.0.11
+  fast-uri: ^3.1.9
+  # GHSA-j6r3-76f7-8jcv / GHSA-h3mg-xc3c-68pw / GHSA-rxp7-6hxx-x8q5: ip-address DoS / subnet matching,
+  # transitiv über shadcn > socks.
+  ip-address: ">=10.7.4"
+  # GHSA-wx4j-mvgx-mqwp: Satori-generated SVG escaping, transitiv über @vercel/og
+  satori: ">=0.33.5"
+  # GHSA-g3hv-75wg-m249: minimatch DoS via globparts amplification,
+  # transitiv über @typescript-eslint und shadcn > ts-morph.
+  "minimatch@>=7.0.0 <11.0.1": ^11.0.9
+  # GHSA-px8p-9vwx-vf98: fflate unzipSync-Endlosschleife bei malformten
+  # ZIP64-Archiven, transitiv über @vercel/og>satori (0.7.3, bereits an
+  # anderer Stelle im Baum auf 0.7.5 gefixt).
+  fflate: ^0.7.5
+  nanoid@<3.3.18: ^3.3.18
+  # GHSA-jqcg-44mw-7w3h: proxy-addr IP-Spoofing über IPv4-mapped-IPv6-Subnetze,
+  # transitiv über shadcn (CLI, nicht Laufzeit) > @modelcontextprotocol/sdk >
+  # express(-rate-limit) > proxy-addr.
+  proxy-addr: ^2.0.8
+  # GHSA-6qxp-vccf-f47h: OAuth-Client sendet Credentials an vom MCP-Server gewählten
+  # Autorisierungsserver, transitiv über shadcn (CLI, nicht Laufzeit).
+  "@modelcontextprotocol/sdk@>=1.12.0 <1.31.0": ">=1.31.0"
+  # GHSA-68fv-2mgg-jv7q: source-map-js Event-Loop-DoS über indizierte
+  # Source-Map-Section-Offsets, transitiv über @prisma/config > c12 >
+  # magicast > source-map-js (und dieselbe Kette über better-auth).
+  source-map-js: ^1.2.2
+  # GHSA-2883-xcg3-v3hh: js-yaml maxTotalMergeKeys CPU-DoS, transitiv über
+  # gray-matter (3.x) und eslint-Kette (4.x).
+  js-yaml@3: ^3.15.2
+  js-yaml@4: ^4.3.2
+  # GHSA-rfgv-xxqx-mfg5 / GHSA-w293-vg96-wgc3 / GHSA-vp8m-p9jh-q5pm: undici
+  # DoS/TLS-Bypass/Cache-Poisoning, transitiv über shadcn
+  # (7.x) und jsdom/better-auth/vitest (8.x).
+  # GHSA-xjj6-f33q-929c / GHSA-4w7w-5xrc-9h26 / GHSA-2m5v-pch6-74hx /
+  # GHSA-qrxm-fqhp-jwvm: weitere undici-TLS-/DoS-Funde, Fix ab 7.30.1 / 8.12.2.
+  undici@6: ^6.29.1
+  undici@7: ^7.30.2
+  undici@8: ^8.12.4
+  # GHSA-587h-7wmj-h5pm: vite Dev-Server, transitiv über vitest/@vitejs/plugin-react.
+  vite@8: ^8.3.8
+  # GHSA-27r3-jxmh-p828: body-parser, transitiv über shadcn (CLI, nicht Laufzeit)
+  # > @modelcontextprotocol/sdk > express.
+  body-parser@2: ^2.4.0
+  # GHSA-3f7j-7jwc-fxfj: systeminformation Windows-Command-Injection, transitiv
+  # über shadcn > @dotenvx/dotenvx (CLI, nicht Laufzeit).
+  systeminformation: ^5.33.19
+  # GHSA-mrhx-c7xc-m3w5: zod Memory-Exhaustion bei übergroßen Collections,
+  # transitiv über better-auth > @better-auth/core (pinnt 4.5.x).
+  zod@4: ^4.6.7
+  # GHSA-ggr8-5vv4-36mx: deepmerge-ts stack exhaustion, gepinnt auf 7.1.5 in
+  # @prisma/config@7.9.1 (kein stabiler Prisma-Release mit der Fix-Version
+  # verfügbar). @prisma/config nutzt nur die einfache deepmerge()-Funktion,
+  # keine der Breaking Changes in 8.0.0 (deepmergeInto-Mutationsverhalten,
+  # umbenannte Typen) betrifft diesen Aufruf — Override ist sicher.
+  deepmerge-ts: ">=8.0.0"
+  # GHSA-7589-6fvf-x4pw: effect ReDoS in Schema.TemplateLiteral, transitiv über
+  # prisma > @prisma/config (pinnt 3.20.0, kein Prisma-Release mit Fix). Minor-
+  # Update innerhalb von 3.x, @prisma/config nutzt keine TemplateLiteral-Schemas.
+  effect@3: ^3.22.4
 onlyBuiltDependencies:
   - sharp
   - unrs-resolver
@@ -33,11 +90,32 @@ auditConfig:
     - GHSA-fmh4-wcc4-5jm3
     - GHSA-pw9m-5jxm-xr6h
     - GHSA-qq9h-g4jm-xgf3
+    # mysql2 (better-auth → prisma → mysql2, transitiv) — Projekt nutzt
+    # ausschließlich Postgres/Neon, mysql2 wird nie tatsächlich verwendet.
+    - GHSA-3f6p-5ww8-9rcr
+    - GHSA-rgwj-5xj2-c3m3
+    # braces Stack-Exhaustion-DoS (transitiv über eslint-config-next/shadcn →
+    # fast-glob → micromatch → braces) — kein Fix verfügbar, npm führt
+    # aktuell nur bis 3.0.3 (Stand 2026-10-03), die von der Advisory
+    # geforderte 3.0.4 existiert noch nicht. Erneut prüfen, sobald ein
+    # Patch-Release erscheint.
+    - GHSA-vfj7-8cjw-p6xm
+    # picomatch ReDoS durch single-branch repeated extglobs (transitiv über
+    # eslint-config-next / shadcn / vitest, reines Dev-Tooling) — kein Fix
+    # verfügbar auf npm, npm führt aktuell nur bis 4.0.7 (Stand 2026-11-18),
+    # die von der Advisory geforderte Version 4.0.8 existiert noch nicht auf npm.
+    # Erneut prüfen, sobald ein Patch-Release erscheint.
+    - GHSA-fc5q-39xc-vjpf
 minimumReleaseAgeExclude:
   - better-auth@1.6.2 || 1.6.11
   - "@hono/node-server@2.0.5"
   - hono@4.12.34
-  - js-yaml@3.15.1 || 4.3.1
-  - brace-expansion@1.1.18 || 5.0.9
-  - fast-uri@3.1.5
-  - nanoid@3.3.17
+  - js-yaml@3.15.2 || 4.3.2
+  - brace-expansion@1.1.20 || 5.0.11
+  - fast-uri@3.1.9
+  - fflate@0.7.5
+  - nanoid@3.3.18
+  - next@16.3.8
+  - undici@6.28.1 || 7.29.1 || 8.10.2
+  - proxy-addr@2.0.8
+  - source-map-js@1.2.2

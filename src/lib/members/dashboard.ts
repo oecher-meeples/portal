@@ -1,10 +1,11 @@
 import type { HoldingOrigin } from "@prisma/client";
 import { isLoanHolding } from "@/lib/ludothek/holdings";
+import type { MembershipState } from "@/lib/members/membership-state";
 
 export type DashboardHolding = {
   id: string;
   gameCopyId: string;
-  meepleId: string | null;
+  vereinsmitgliedId: string | null;
   unitId: string | null;
   origin: HoldingOrigin;
   confirmedAt: Date | null;
@@ -25,12 +26,15 @@ export type MemberHoldingsSummary = {
 };
 
 /**
- * Splits a Meeple's stake in the ludothek into the categories the member
- * dashboard shows. Only ever looks at open holdings (`endedAt: null`) — a
- * closed one never counts, regardless of what the caller passed in.
+ * Splits a Vereinsmitglied's stake in the ludothek into the categories the
+ * member dashboard shows (#333). Only ever looks at open holdings
+ * (`endedAt: null`) — a closed one never counts, regardless of what the
+ * caller passed in. `meepleId` is still used for the kept-units lookup
+ * (`StorageUnit.keeperMeepleId` stays a Meeple reference).
  */
 export function summariseMemberHoldings(
   meepleId: string,
+  vereinsmitgliedId: string | null,
   holdings: DashboardHolding[],
   units: DashboardUnit[],
 ): MemberHoldingsSummary {
@@ -42,26 +46,26 @@ export function summariseMemberHoldings(
       .map((u) => u.id),
   );
 
+  const isOwn = (h: DashboardHolding) =>
+    vereinsmitgliedId !== null && h.vereinsmitgliedId === vereinsmitgliedId;
+
   return {
-    ownLoans: openHoldings.filter(
-      (h) => h.meepleId === meepleId && isLoanHolding(h),
-    ),
+    ownLoans: openHoldings.filter((h) => isOwn(h) && isLoanHolding(h)),
     ownUnitContents: openHoldings.filter(
       (h) => h.unitId !== null && keptUnitIds.has(h.unitId),
     ),
     unconfirmedHandovers: openHoldings.filter(
-      (h) =>
-        h.meepleId === meepleId && h.origin === "HANDOVER" && !h.confirmedAt,
+      (h) => isOwn(h) && h.origin === "HANDOVER" && !h.confirmedAt,
     ),
     unconfirmedReturns: openHoldings.filter(
-      (h) => h.meepleId === meepleId && h.origin === "RETURN" && !h.confirmedAt,
+      (h) => isOwn(h) && h.origin === "RETURN" && !h.confirmedAt,
     ),
   };
 }
 
 export type DashboardShiftBooking = {
   meepleId: string;
-  shift: { endsAt: Date };
+  shift: { targetEndsAt: Date };
 };
 
 /**
@@ -74,7 +78,9 @@ export function countUpcomingShiftBookings(
   now: Date = new Date(),
 ): number {
   return bookings.filter(
-    (b) => b.meepleId === meepleId && b.shift.endsAt.getTime() >= now.getTime(),
+    (b) =>
+      b.meepleId === meepleId &&
+      b.shift.targetEndsAt.getTime() >= now.getTime(),
   ).length;
 }
 
@@ -90,4 +96,32 @@ export function countActiveEvents(
   return events.filter(
     (e) => e.endsAt === null || e.endsAt.getTime() >= now.getTime(),
   ).length;
+}
+
+/** Dashboard-Rückgabewarnung nur in den letzten 31 Tagen vor `membershipEndsAt`
+ * (#360) — bei "gekündigt" allein wäre das bis zu ~2 Jahre lang (4-Wochen-
+ * Mindestfrist, #258), was das Konzept (`docs/mitglieder-konzept.md`
+ * Abschnitt 3.4) ausdrücklich nicht will. */
+export const RESIGNATION_NOTICE_WINDOW_DAYS = 31;
+
+export type ResignationNotice = {
+  endsAt: Date;
+  openHoldingsCount: number;
+};
+
+export function buildResignationNotice(
+  membershipState: MembershipState,
+  membershipEndsAt: Date | null,
+  openHoldingsCount: number,
+  now: Date = new Date(),
+): ResignationNotice | null {
+  if (membershipState !== "gekuendigt" || !membershipEndsAt) return null;
+
+  const windowStart = new Date(
+    membershipEndsAt.getTime() -
+      RESIGNATION_NOTICE_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+  );
+  if (now.getTime() < windowStart.getTime()) return null;
+
+  return { endsAt: membershipEndsAt, openHoldingsCount };
 }

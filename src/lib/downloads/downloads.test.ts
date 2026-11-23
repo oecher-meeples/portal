@@ -3,8 +3,12 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { listVisibleDownloads, listAllDownloadsForAdmin, formatFileSize } =
-  await import("@/lib/downloads/downloads");
+const {
+  listVisibleDownloads,
+  listOfflineDownloadsForAdmin,
+  findPublicDownloadByTitle,
+  formatFileSize,
+} = await import("@/lib/downloads/downloads");
 
 describe("listVisibleDownloads", () => {
   it("shows only PUBLIC downloads for a guest", async () => {
@@ -12,7 +16,7 @@ describe("listVisibleDownloads", () => {
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: "PUBLIC" },
-      orderBy: { createdAt: "asc" },
+      orderBy: { order: "asc" },
     });
   });
 
@@ -21,7 +25,7 @@ describe("listVisibleDownloads", () => {
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: { in: ["PUBLIC", "INTERNAL"] } },
-      orderBy: { createdAt: "asc" },
+      orderBy: { order: "asc" },
     });
   });
 
@@ -30,7 +34,7 @@ describe("listVisibleDownloads", () => {
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
       where: { status: { in: ["PUBLIC", "INTERNAL"] } },
-      orderBy: { createdAt: "asc" },
+      orderBy: { order: "asc" },
     });
   });
 
@@ -43,12 +47,23 @@ describe("listVisibleDownloads", () => {
   });
 });
 
-describe("listAllDownloadsForAdmin", () => {
-  it("queries all downloads, newest first", async () => {
-    await listAllDownloadsForAdmin();
+describe("listOfflineDownloadsForAdmin", () => {
+  it("queries only OFFLINE downloads, most recent file change first", async () => {
+    await listOfflineDownloadsForAdmin();
 
     expect(prismaMock.download.findMany).toHaveBeenCalledWith({
-      orderBy: { createdAt: "desc" },
+      where: { status: "OFFLINE" },
+      orderBy: { fileUpdatedAt: "desc" },
+    });
+  });
+});
+
+describe("findPublicDownloadByTitle (#423)", () => {
+  it("queries by title, restricted to PUBLIC", async () => {
+    await findPublicDownloadByTitle("Mitgliedsantrag");
+
+    expect(prismaMock.download.findFirst).toHaveBeenCalledWith({
+      where: { title: "Mitgliedsantrag", status: "PUBLIC" },
     });
   });
 });

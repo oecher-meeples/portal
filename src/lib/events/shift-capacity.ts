@@ -1,9 +1,8 @@
 /**
- * Füllstand einer Schicht — jede Buchung zählt zur Kapazität, unabhängig
- * davon, ob sie `uncertain` ist (siehe `docs/adr/0006`/Ausführungsplan Phase 6,
- * Regel "Schicht-Kapazität"). Reine Funktion, damit sie sowohl im Admin-Editor
- * (Füllstand-Anzeige) als auch später bei der Mitglieder-Buchung (Schritt 6:
- * volle Schicht lehnt weitere Buchungen ab) ohne Duplikat wiederverwendbar ist.
+ * Füllstand einer Schicht — jede Zuweisung zählt zur Kapazität, unabhängig
+ * vom Bestätigungsstatus (`confirmedAt`, siehe `docs/adr/0006`). Reine
+ * Funktion, damit sie sowohl im Admin-Editor (Füllstand-Anzeige) als auch
+ * im Helferplan (eigene Zuweisungen) ohne Duplikat wiederverwendbar ist.
  */
 export function computeShiftFillLevel(
   shift: { capacity: number },

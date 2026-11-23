@@ -3,86 +3,110 @@
 import { useState } from "react";
 import type { BoardGameKind } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
-import { ActionButton } from "@/components/ui/action-button";
 import { Button } from "@/components/ui/button";
 import {
-  assignExpansion,
-  removeExpansionAssignment,
-} from "@/lib/ludothek/board-games";
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+} from "@/components/ui/combobox";
+import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
+import { assignExpansion } from "@/lib/ludothek/board-games";
 
 export type GameOption = { id: string; title: string };
 
 /**
- * Manual base game ↔ expansion assignment for `games:manage` holders — BGG
- * import is blocked by #12, so this is the only way to link them (#30).
+ * Manual base game ↔ expansion assignment trigger for `games:manage`
+ * holders — BGG import is blocked by #12, so this is the only way to link
+ * them (#30). Just the trigger + dialog; removing an existing assignment
+ * happens on the `RelatedGameCard` itself (Plan-Schritt 4/5), not here.
+ *
+ * Durchsuchbare Combobox statt eines nativen Dropdowns (#204) — findet die
+ * Suche keinen Treffer, öffnet der `ComboboxEmpty`-Zustand denselben
+ * 3-Schritt-Anlegen-Dialog wie überall sonst, verschachtelt. Der neu
+ * angelegte (oder wiederverwendete) Titel wird automatisch übernommen, auch
+ * wenn er noch nicht in `options` steht — das Prop wird erst nach dem
+ * nächsten Server-Render aktuell.
  */
 export function AssignExpansionDialog({
   game,
-  linked,
   options,
 }: {
   game: { id: string; kind: BoardGameKind };
-  /** Already-linked base games (if `game` is an expansion) or expansions (if `game` is a base game). */
-  linked: GameOption[];
   /** Candidate games to link — excludes `game` itself and already-linked entries. */
   options: GameOption[];
 }) {
-  const [selected, setSelected] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [inputValue, setInputValue] = useState("");
+  const [justCreated, setJustCreated] = useState<GameOption | null>(null);
   const isExpansion = game.kind === "BOARDGAME_EXPANSION";
 
-  return (
-    <div className="flex flex-col gap-2">
-      {linked.length > 0 && (
-        <ul className="flex flex-wrap gap-2">
-          {linked.map((entry) => (
-            <li key={entry.id} className="flex items-center gap-1">
-              <span className="text-sm">{entry.title}</span>
-              <ActionButton
-                variant="ghost"
-                size="sm"
-                confirm={`"${entry.title}" wirklich entfernen?`}
-                action={() =>
-                  isExpansion
-                    ? removeExpansionAssignment(entry.id, game.id)
-                    : removeExpansionAssignment(game.id, entry.id)
-                }
-              >
-                Entfernen
-              </ActionButton>
-            </li>
-          ))}
-        </ul>
-      )}
+  const allOptions =
+    justCreated && !options.some((option) => option.id === justCreated.id)
+      ? [...options, justCreated]
+      : options;
+  const selectedTitle =
+    allOptions.find((option) => option.id === selectedId)?.title ?? null;
 
-      <ActionDialog
-        trigger={
-          <Button variant="outline" size="sm">
-            {isExpansion ? "Basisspiel zuordnen" : "Erweiterung hinzufügen"}
-          </Button>
-        }
-        title={isExpansion ? "Basisspiel zuordnen" : "Erweiterung hinzufügen"}
-        submitLabel="Zuordnen"
-        canSubmit={selected !== ""}
-        action={() =>
-          isExpansion
-            ? assignExpansion(selected, game.id)
-            : assignExpansion(game.id, selected)
-        }
-        onReset={() => setSelected("")}
+  function reset() {
+    setSelectedId("");
+    setInputValue("");
+    setJustCreated(null);
+  }
+
+  return (
+    <ActionDialog
+      trigger={
+        <Button variant="outline" size="sm">
+          {isExpansion ? "Basisspiel zuordnen" : "Erweiterung hinzufügen"}
+        </Button>
+      }
+      title={isExpansion ? "Basisspiel zuordnen" : "Erweiterung hinzufügen"}
+      submitLabel="Zuordnen"
+      canSubmit={selectedId !== ""}
+      action={() =>
+        isExpansion
+          ? assignExpansion(selectedId, game.id)
+          : assignExpansion(game.id, selectedId)
+      }
+      onReset={reset}
+    >
+      <Combobox
+        items={allOptions.map((option) => option.title)}
+        value={selectedTitle}
+        inputValue={inputValue}
+        onInputValueChange={setInputValue}
+        onValueChange={(title) => {
+          const selected = allOptions.find((option) => option.title === title);
+          setSelectedId(selected?.id ?? "");
+        }}
       >
-        <select
-          value={selected}
-          onChange={(event) => setSelected(event.target.value)}
-          className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
-        >
-          <option value="">— Spiel wählen —</option>
-          {options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.title}
-            </option>
-          ))}
-        </select>
-      </ActionDialog>
-    </div>
+        <ComboboxInput placeholder="Titel suchen …" />
+        <ComboboxPopup>
+          <ComboboxEmpty>
+            <div className="flex flex-col gap-1.5 p-1">
+              <p>Keine Treffer.</p>
+              <CreateBoardGameDialog
+                defaultBggQuery={inputValue}
+                onCreated={(created) => {
+                  setJustCreated(created);
+                  setSelectedId(created.id);
+                  setInputValue(created.title);
+                }}
+              />
+            </div>
+          </ComboboxEmpty>
+          <ComboboxList>
+            {(title: string) => (
+              <ComboboxItem key={title} value={title}>
+                {title}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxPopup>
+      </Combobox>
+    </ActionDialog>
   );
 }

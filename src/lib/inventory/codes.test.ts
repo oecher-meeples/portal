@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { nextUnitCode, parseScannedCode } from "./codes";
+import {
+  buildMeepleCode,
+  nextUnitCode,
+  normalizeUnitCode,
+  parseScannedCode,
+} from "./codes";
 
 describe("nextUnitCode", () => {
   it("starts at 0001 for boxes", () => {
@@ -30,6 +35,30 @@ describe("nextUnitCode", () => {
 });
 
 describe("parseScannedCode", () => {
+  it.each([
+    "https://short.oecher-meeples.org/id/inv-123",
+    "http://localhost:3002/id/inv-123",
+    "inv-123",
+  ])("recognises an exemplar short id in %s (#547)", (raw) => {
+    expect(parseScannedCode(raw)).toEqual({
+      kind: "copy",
+      inventoryNumber: 123,
+    });
+  });
+
+  it("maps a unit short id to its stored code (#547)", () => {
+    expect(
+      parseScannedCode("https://short.oecher-meeples.org/id/shelf-0002"),
+    ).toEqual({ kind: "unit", value: "OM-SHELF-0002" });
+  });
+
+  it("maps a meeple short id to the meeple id", () => {
+    expect(parseScannedCode("https://x.example/id/meeple-cm1abc")).toEqual({
+      kind: "meeple",
+      value: "cm1abc",
+    });
+  });
+
   it("recognises a box code", () => {
     expect(parseScannedCode("OM-BOX-0001")).toEqual({
       kind: "unit",
@@ -70,5 +99,45 @@ describe("parseScannedCode", () => {
       kind: "unknown",
       value: "12345",
     });
+  });
+
+  // #465: Meeple-QR-Code — statisch an die Meeple-Id gebunden.
+  it("recognises a Meeple's personal QR code", () => {
+    expect(parseScannedCode("OM-MEEPLE-clx8f0000000abcdef")).toEqual({
+      kind: "meeple",
+      value: "clx8f0000000abcdef",
+    });
+  });
+});
+
+describe("buildMeepleCode (#465)", () => {
+  it("builds the QR content for a Meeple's personal code", () => {
+    expect(buildMeepleCode("clx8f0000000abcdef")).toBe(
+      "OM-MEEPLE-clx8f0000000abcdef",
+    );
+  });
+
+  it("round-trips through parseScannedCode", () => {
+    const meepleId = "clx8f0000000abcdef";
+    expect(parseScannedCode(buildMeepleCode(meepleId))).toEqual({
+      kind: "meeple",
+      value: meepleId,
+    });
+  });
+});
+
+describe("normalizeUnitCode (#547)", () => {
+  it("resolves a scanned unit label to its code", () => {
+    expect(
+      normalizeUnitCode("https://short.oecher-meeples.org/id/box-0007"),
+    ).toBe("OM-BOX-0007");
+  });
+
+  it("upper-cases a typed code", () => {
+    expect(normalizeUnitCode(" om-shelf-c4 ")).toBe("OM-SHELF-C4");
+  });
+
+  it("keeps a freely chosen new code", () => {
+    expect(normalizeUnitCode("regal-links")).toBe("REGAL-LINKS");
   });
 });

@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  PressHoldReveal,
+  type RevealResult,
+} from "@/components/ui/press-hold-reveal";
 import { StatTile } from "@/components/ui/stat-tile";
 import {
   Table,
@@ -12,8 +23,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { revealIban } from "@/components/feature/admin-bank/actions";
+import {
+  revealMemberIban,
+  revealPendingMemberIban,
+} from "@/lib/members/iban-reveal-actions";
 import { BankCsvExportDialog } from "@/components/feature/admin-bank/bank-csv-export-dialog";
+import {
+  PendingChangesPanel,
+  type PendingChangeRow,
+} from "@/components/widgets/pending-changes/pending-changes-panel";
+import { PageContainer } from "@/components/ui/page-container";
 
 export type BankDataRow = {
   id: string;
@@ -40,32 +59,30 @@ const KIND_LABELS: Record<string, string> = {
 export function AdminBankView({
   rows,
   logs,
+  pendingIbanChanges,
 }: {
   rows: BankDataRow[];
   logs: BankAccessLogRow[];
+  pendingIbanChanges: PendingChangeRow[];
 }) {
-  const [revealed, setRevealed] = useState<Record<string, string>>({});
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Pro Zeile ein eigener Aufdeck-Zustand — der aufgedeckte Wert löst die
+  // maskierte IBAN direkt ab (siehe `press-hold-reveal.tsx`).
+  const [revealedIbanByRowId, setRevealedIbanByRowId] = useState<
+    Record<string, string | null>
+  >({});
 
-  async function handleReveal(id: string) {
-    setBusyId(id);
-    setError(null);
-
-    const result = await revealIban(id);
-    setBusyId(null);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setRevealed((current) => ({ ...current, [id]: result.iban! }));
+  async function revealRowIban(id: string): Promise<RevealResult> {
+    const result = await revealMemberIban(id);
+    return "error" in result
+      ? result
+      : { success: true as const, value: result.iban };
   }
 
   const withIban = rows.filter((row) => row.hasIban).length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer className="gap-6">
       <PageHeading
         eyebrow="Kassenwart"
         title="Beitragseinzug"
@@ -81,6 +98,18 @@ export function AdminBankView({
           hint="Nachpflege nötig"
         />
       </div>
+
+      <PendingChangesPanel
+        titleSingular="Offener IBAN-Änderungsantrag"
+        titlePlural="Offene IBAN-Änderungsanträge"
+        changes={pendingIbanChanges}
+        revealIban={async (changeId) => {
+          const result = await revealPendingMemberIban(changeId);
+          return "error" in result
+            ? result
+            : { success: true as const, value: result.iban };
+        }}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <BankCsvExportDialog ibanCount={withIban} />
@@ -108,18 +137,30 @@ export function AdminBankView({
               <TableCell>{row.displayName}</TableCell>
               <TableCell>{row.accountHolder ?? "—"}</TableCell>
               <TableCell className="font-mono">
-                {revealed[row.id] ?? row.maskedIban}
+                <span className="inline-block w-[22ch]">
+                  {revealedIbanByRowId[row.id] ?? row.maskedIban}
+                </span>
               </TableCell>
               <TableCell className="text-right">
-                {row.hasIban && !revealed[row.id] && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId === row.id}
-                    onClick={() => handleReveal(row.id)}
-                  >
-                    {busyId === row.id ? "Decke auf…" : "IBAN aufdecken"}
-                  </Button>
+                {row.hasIban && (
+                  <span className="inline-flex items-center gap-2">
+                    <PressHoldReveal
+                      reveal={() => revealRowIban(row.id)}
+                      onError={setError}
+                      onValueChange={(value) =>
+                        setRevealedIbanByRowId((prev) => ({
+                          ...prev,
+                          [row.id]: value,
+                        }))
+                      }
+                    />
+                    <CopyButton
+                      value={() => revealRowIban(row.id)}
+                      onError={setError}
+                      label="Kopieren"
+                      icon={Copy}
+                    />
+                  </span>
                 )}
               </TableCell>
             </TableRow>
@@ -127,19 +168,19 @@ export function AdminBankView({
         </TableBody>
       </Table>
 
-      <div className="bg-card rounded-lg border p-5">
-        <h2 className="font-serif text-lg font-bold">
-          Zugriffsprotokoll (letzte Einträge)
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Aufbewahrung 24 Monate, danach automatisch gelöscht.
-        </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Zugriffsprotokoll (letzte Einträge)</CardTitle>
+          <CardDescription>
+            Aufbewahrung 24 Monate, danach automatisch gelöscht.
+          </CardDescription>
+        </CardHeader>
         {logs.length === 0 ? (
-          <p className="text-muted-foreground mt-3 text-sm">
+          <p className="text-muted-foreground text-sm">
             Noch keine Zugriffe protokolliert.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+          <ul className="flex flex-col divide-y text-sm">
             {logs.map((log) => (
               <li key={log.id} className="flex flex-wrap gap-2 py-2">
                 <span className="font-mono">{log.at}</span>
@@ -152,7 +193,7 @@ export function AdminBankView({
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageContainer>
   );
 }

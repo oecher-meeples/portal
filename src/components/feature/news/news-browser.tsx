@@ -1,39 +1,170 @@
 "use client";
 
 import { useState } from "react";
-import type { ContentItem, ContentType } from "@/lib/content/content";
-import { ContentListRow } from "@/components/entities/content-list-row";
-import { PillToggle } from "@/components/ui/pill-toggle";
+import { CalendarDays, Eye, Rows3 } from "lucide-react";
+import {
+  CONTENT_TYPE_FILTERS,
+  type ContentItem,
+  type ContentType,
+} from "@/lib/content/content-types";
+import { PillToggle, type PillOption } from "@/components/ui/pill-toggle";
+import { Button } from "@/components/ui/button";
+import {
+  BottomSheet,
+  BottomSheetTrigger,
+  BottomSheetContent,
+} from "@/components/ui/bottom-sheet";
+import { getContentTypeIcon } from "@/components/entities/content-type-icon";
 import { formatDate } from "@/lib/utils/format";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
+import {
+  NewsResultsList,
+  type NewsViewMode,
+} from "@/components/feature/news/news-results-list";
+import { loadMoreNews } from "@/components/feature/news/actions";
 
-const FILTERS: { label: string; value: ContentType | "alle" }[] = [
-  { label: "Alle", value: "alle" },
-  { label: "Termine", value: "termin" },
-  { label: "Blog", value: "blog" },
-  { label: "Turniere", value: "turnier" },
+/** #576: nur Typen mit mindestens einem für den Betrachter sichtbaren
+ * Eintrag (serverseitig gezählt, `findAvailableContentTypes()` — deckt auch
+ * #424 ab: für Gäste gibt es keine sichtbaren Umfragen). "Alle" steht
+ * immer vorn; bliebe es allein, gibt es keine Leiste (leeres Array). */
+function typeFilterOptions(
+  availableTypes: ContentType[],
+): PillOption<ContentType | "alle">[] {
+  const options = CONTENT_TYPE_FILTERS.filter(
+    (option) =>
+      option.value === "alle" || availableTypes.includes(option.value),
+  );
+  if (options.length < 2) return [];
+  return options.map((option) => ({
+    ...option,
+    icon: getContentTypeIcon(option.value),
+  }));
+}
+
+const VIEW_MODE_OPTIONS: PillOption<NewsViewMode>[] = [
+  { label: "Vorschau", value: "vorschau", icon: Eye },
+  { label: "Vollansicht", value: "vollansicht", icon: Rows3 },
 ];
 
 export function NewsBrowser({
-  items,
+  items: initialItems,
+  hasMore: initialHasMore,
+  nextCursor: initialNextCursor,
   icsUrl,
-  canEdit,
+  canEditPublic,
+  canEditInternal,
+  canSeeInternal,
+  availableTypes = [],
+  internalSubscription,
 }: {
-  items: Omit<ContentItem, "body">[];
+  items: ContentItem[];
+  /** Serverseitige DB-Post-Pagination (#469/#470) — ohne Angabe (z. B. in
+   * älteren Tests) wird angenommen, dass `items` bereits alles ist. */
+  hasMore?: boolean;
+  nextCursor?: string | null;
   icsUrl?: string;
-  canEdit?: boolean;
+  canEditPublic?: boolean;
+  canEditInternal?: boolean;
+  canSeeInternal?: boolean;
+  /** Typen mit mindestens einem sichtbaren Eintrag (#576). */
+  availableTypes?: ContentType[];
+  /** Nur für Meeple mit internem Zugriff (#439), siehe `NewsCalendar`. */
+  internalSubscription?: { hasToken: boolean };
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
+  const [onlyInternal, setOnlyInternal] = useState(false);
+  const [viewMode, setViewMode] = useState<NewsViewMode>("vorschau");
+  // < lg: Kalender steht sonst als Grid-Zweitspalte ganz unten unter der
+  // Ergebnisliste — dort stattdessen über ein Bottom-Sheet erreichbar.
+  const [calendarSheetOpen, setCalendarSheetOpen] = useState(false);
+
+  // Vom Server initial geladene Seite (#470) — wächst clientseitig, wenn
+  // useInfiniteScroll (Server-Request-Modus) das Ende erreicht. Bleibt hier
+  // in NewsBrowser (nicht in NewsResultsList), damit die Seite beim
+  // Remount von NewsResultsList (Filterwechsel, s. u.) nicht verloren geht.
+  const [items, setItems] = useState(initialItems);
+  const [hasMore, setHasMore] = useState(initialHasMore ?? false);
+  const [nextCursor, setNextCursor] = useState(initialNextCursor ?? null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  async function handleLoadMore(cursor: string) {
+    setIsLoadingMore(true);
+    try {
+      const page = await loadMoreNews(cursor);
+      setItems((current) => [...current, ...page.items]);
+      setHasMore(page.hasMore);
+      setNextCursor(page.nextCursor);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  function selectDateAndCloseSheet(date: string | null) {
+    setSelectedDate(date);
+    setCalendarSheetOpen(false);
+  }
+
+  const typeOptions = typeFilterOptions(availableTypes);
 
   const visible = items
     .filter((item) => !selectedDate || item.date === selectedDate)
-    .filter((item) => filter === "alle" || item.type === filter);
+    .filter((item) => filter === "alle" || item.type === filter)
+    .filter((item) => !onlyInternal || item.internal);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <PillToggle options={FILTERS} value={filter} onChange={setFilter} />
+        <div className="flex flex-wrap items-center gap-4">
+          {typeOptions.length > 0 && (
+            <PillToggle
+              options={typeOptions}
+              value={filter}
+              onChange={setFilter}
+            />
+          )}
+          <PillToggle
+            options={VIEW_MODE_OPTIONS}
+            value={viewMode}
+            onChange={setViewMode}
+          />
+          {canSeeInternal && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={onlyInternal}
+                onChange={(event) => setOnlyInternal(event.target.checked)}
+              />
+              Nur interne anzeigen
+            </label>
+          )}
+          <BottomSheet
+            open={calendarSheetOpen}
+            onOpenChange={setCalendarSheetOpen}
+          >
+            <BottomSheetTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 lg:hidden"
+                />
+              }
+            >
+              <CalendarDays className="size-4" />
+              Nach Datum filtern
+            </BottomSheetTrigger>
+            <BottomSheetContent title="Kalender">
+              <NewsCalendar
+                items={items}
+                selectedDate={selectedDate}
+                onSelectDate={selectDateAndCloseSheet}
+                icsUrl={icsUrl}
+                internalSubscription={internalSubscription}
+              />
+            </BottomSheetContent>
+          </BottomSheet>
+        </div>
         {selectedDate && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">
@@ -53,22 +184,28 @@ export function NewsBrowser({
         )}
       </div>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col gap-3">
-          {visible.map((item) => (
-            <ContentListRow key={item.slug} item={item} canEdit={canEdit} />
-          ))}
-          {visible.length === 0 && (
-            <p className="text-muted-foreground text-sm">
-              Keine Beiträge in dieser Kategorie.
-            </p>
-          )}
-        </div>
-        <NewsCalendar
-          items={items}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          icsUrl={icsUrl}
+        <NewsResultsList
+          key={`${filter}-${onlyInternal}-${selectedDate ?? ""}`}
+          items={visible}
+          viewMode={viewMode}
+          canEditPublic={canEditPublic}
+          canEditInternal={canEditInternal}
+          onLoadMore={handleLoadMore}
+          cursor={nextCursor}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
         />
+        {/* < lg: Kalender nur noch über das Bottom-Sheet oben (s. "Nach
+            Datum filtern") erreichbar, nicht mehr zusätzlich hier unten. */}
+        <div className="hidden lg:block">
+          <NewsCalendar
+            items={items}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            icsUrl={icsUrl}
+            internalSubscription={internalSubscription}
+          />
+        </div>
       </div>
     </div>
   );

@@ -20,6 +20,22 @@ export function findUpcomingEvents<
 }
 
 /**
+ * Pure Zeitfenster-Prädikat: läuft dieses Event gerade (schon gestartet,
+ * noch nicht beendet)? Geteilte Grundlage für `isEventCurrentlyRunning()`
+ * (DB-Lookup per Id) und Aufrufer, die das Event bereits geladen haben
+ * (z. B. HelferPage, #338) — keine zweite Kopie der startsAt/endsAt-
+ * Fensterprüfung.
+ */
+export function isEventRunningAt(
+  event: { startsAt: Date; endsAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  return (
+    event.startsAt <= now && (event.endsAt === null || event.endsAt >= now)
+  );
+}
+
+/**
  * True only while an event is actually happening — started, not yet ended.
  * Stricter than `UPCOMING_EVENT_WHERE`, which also matches events that
  * haven't started yet. Used to gate unauthenticated guest-area actions,
@@ -30,14 +46,131 @@ export async function isEventCurrentlyRunning(
   eventId: string,
 ): Promise<boolean> {
   const event = await prisma.event.findFirst({
+    where: { id: eventId },
+    select: { startsAt: true, endsAt: true },
+  });
+  return event !== null && isEventRunningAt(event);
+}
+
+/**
+ * True while at least one upcoming event has an open helper request
+ * (`Event.helpersWanted`, #155) — gates both the Dashboard-Karte and the
+ * "Helferplan" nav entry (see sidebar.tsx/app-shell.tsx).
+ */
+export async function hasOpenHelperRequest(): Promise<boolean> {
+  const event = await findOpenHelperRequestEvent();
+  return event !== null;
+}
+
+/** The earliest upcoming event with an open helper request, if any — feeds
+ * the Dashboard-Karte's link target (#155). `helpersWanted` itself is the
+ * signal an admin uses to open Helferplanung to Meeples early, so it applies
+ * regardless of visibility — even an Entwurf-Event recruits helpers once
+ * this flag is set (see setHelperAvailability, same rule server-side). */
+export async function findOpenHelperRequestEvent() {
+  return prisma.event.findFirst({
     where: {
-      id: eventId,
+      helpersWanted: true,
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    select: { id: true, title: true },
+  });
+}
+
+/** Kommende Events, die für ein eingeloggtes Meeple sichtbar sind — Intern,
+ * Öffentlich, oder Entwurf mit aktivem "Helfer suchen" (Helferplanung darf
+ * dort schon vor der eigentlichen Freigabe beginnen). Grundlage für
+ * /helfer, wo ein Meeple sich sonst für ein noch nicht freigegebenes Event
+ * melden könnte. */
+export function findUpcomingEventsVisibleToMembers<
+  S extends Record<string, boolean> = { id: true; title: true },
+>(select?: S) {
+  return prisma.event.findMany({
+    where: {
+      AND: [
+        { OR: [{ visibility: { not: "DRAFT" } }, { helpersWanted: true }] },
+        { OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }] },
+      ],
+    },
+    orderBy: { startsAt: "asc" },
+    select: (select ?? { id: true, title: true }) as S,
+  });
+}
+
+/**
+ * The event happening right now, if any — for pages that aren't already
+ * event-scoped (e.g. the public Ludothek detail page, #121) but still want
+ * to show "im Raum"-style aggregates while a Spieleabend is running.
+ */
+export async function findCurrentEvent() {
+  return prisma.event.findFirst({
+    where: {
       startsAt: { lte: new Date() },
       OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
     },
+    orderBy: { startsAt: "asc" },
     select: { id: true },
   });
-  return event !== null;
+}
+
+/** Öffentliche, noch kommende Events — Grundlage für die öffentliche
+ * Termine-Seite (/news, siehe lib/content/calendar.ts). Entwurf/Intern
+ * bleiben dort unsichtbar, siehe lib/events/visibility.ts. */
+export function findPublicUpcomingEvents(limit?: number) {
+  return prisma.event.findMany({
+    where: {
+      visibility: "PUBLIC",
+      OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
+    },
+    orderBy: { startsAt: "asc" },
+    take: limit,
+    select: {
+      slug: true,
+      title: true,
+      startsAt: true,
+      location: true,
+    },
+  });
+}
+
+/** Bring&Buy is announced this far ahead of an event (#211). */
+export const BRING_AND_BUY_WINDOW_DAYS = 30;
+
+function bringAndBuyWindowEnd(now: Date): Date {
+  const windowEnd = new Date(now);
+  windowEnd.setDate(windowEnd.getDate() + BRING_AND_BUY_WINDOW_DAYS);
+  return windowEnd;
+}
+
+/**
+ * True once a single event's Bring&Buy market should be visible to guests
+ * (#211): the event has the flag, hasn't ended yet, and starts within the
+ * next `BRING_AND_BUY_WINDOW_DAYS` days. Kept as a pure function so callers
+ * that already loaded one event (e.g. the guest route) don't need a query.
+ */
+export function isBringAndBuyMarketOpen(
+  event: { hasBringAndBuyMarket: boolean; startsAt: Date; endsAt: Date | null },
+  now: Date = new Date(),
+): boolean {
+  if (!event.hasBringAndBuyMarket) return false;
+  if (event.endsAt !== null && event.endsAt < now) return false;
+  return event.startsAt <= bringAndBuyWindowEnd(now);
+}
+
+/** Events with an open Bring&Buy market (#211) — same window as `isBringAndBuyMarketOpen`. */
+export function findUpcomingBringAndBuyEvents<
+  S extends Record<string, boolean> = { id: true; title: true },
+>(select?: S, now: Date = new Date()) {
+  return prisma.event.findMany({
+    where: {
+      hasBringAndBuyMarket: true,
+      startsAt: { lte: bringAndBuyWindowEnd(now) },
+      OR: [{ endsAt: null }, { endsAt: { gte: now } }],
+    },
+    orderBy: { startsAt: "asc" },
+    select: (select ?? { id: true, title: true }) as S,
+  });
 }
 
 /**

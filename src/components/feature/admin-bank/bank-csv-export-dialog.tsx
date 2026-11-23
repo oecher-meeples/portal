@@ -3,16 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { exportBankDataCsv } from "@/components/feature/admin-bank/actions";
-
-function downloadCsv(filename: string, csv: string) {
-  const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
+import { downloadCsv } from "@/lib/utils/csv";
 
 /**
  * Access control and logging around the export are already correct; the gap this

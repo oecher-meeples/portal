@@ -1,4 +1,18 @@
-import { ExplainerBadgeList } from "@/components/entities/explainer-badge-list";
+"use client";
+
+import { Card, cardVariants } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionPanel,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { TextField } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 
 export type ExplainerDirectoryEntry = {
@@ -12,27 +26,78 @@ export function ExplainerDirectory({
 }: {
   entries: ExplainerDirectoryEntry[];
 }) {
-  if (entries.length === 0) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        Noch keine Erklärbären für ein Spiel eingetragen.
-      </p>
-    );
-  }
+  const [filter, setFilter] = useState("");
+  const [showWithoutExplainer, setShowWithoutExplainer] = useState(false);
+
+  const filteredEntries = useMemo(() => {
+    const term = filter.trim().toLowerCase();
+    return entries
+      .filter((entry) => showWithoutExplainer || entry.explainers.length > 0)
+      .filter((entry) => entry.boardGameTitle.toLowerCase().includes(term))
+      .sort((a, b) => a.boardGameTitle.localeCompare(b.boardGameTitle, "de"));
+  }, [entries, filter, showWithoutExplainer]);
 
   return (
-    <div className="flex flex-col gap-3">
-      {entries.map((entry) => (
-        <div
-          key={entry.boardGameId}
-          className="bg-card flex flex-col gap-2 rounded-lg border p-4"
-        >
-          <p className="font-serif text-lg font-semibold">
-            {entry.boardGameTitle}
-          </p>
-          <ExplainerBadgeList explainers={entry.explainers} />
-        </div>
-      ))}
-    </div>
+    <Accordion defaultValue={[]}>
+      <AccordionItem
+        value="directory"
+        className={cardVariants({ size: "flush" })}
+      >
+        <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 font-serif text-xl font-semibold hover:no-underline">
+          Erklärbären-Verzeichnis
+        </AccordionTrigger>
+        <AccordionPanel>
+          <div className="flex flex-col gap-3 px-4 pb-1">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TextField
+                id="explainer-directory-filter"
+                label="Spieltitel filtern"
+                fieldClassName="flex-1"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                onClear={() => setFilter("")}
+                placeholder="Spielname …"
+              />
+              <Label
+                htmlFor="explainer-directory-show-all"
+                className="font-normal"
+              >
+                Spiele ohne Erklärer anzeigen?
+                <Switch
+                  id="explainer-directory-show-all"
+                  checked={showWithoutExplainer}
+                  onCheckedChange={setShowWithoutExplainer}
+                />
+              </Label>
+            </div>
+
+            {filteredEntries.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Kein Spiel passt zu den aktuellen Filtern.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {filteredEntries.map((entry) => (
+                  <Card
+                    key={entry.boardGameId}
+                    size="sm"
+                    className="flex-row items-center"
+                  >
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {entry.boardGameTitle}
+                    </span>
+                    <Badge>{entry.explainers.length}</Badge>
+                    <ExplainerListDialogTrigger
+                      boardGameTitle={entry.boardGameTitle}
+                      explainers={entry.explainers}
+                    />
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
   );
 }

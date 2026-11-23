@@ -30,13 +30,26 @@ describe("ensureMeeple", () => {
 
     expect(prismaMock.meeple.upsert).toHaveBeenCalledWith({
       where: { neonAuthUserId: "user-1" },
-      update: { displayName: "Lea", email: "lea@example.org" },
+      update: { displayName: "Lea" },
       create: {
         neonAuthUserId: "user-1",
         displayName: "Lea",
-        email: "lea@example.org",
       },
     });
+  });
+
+  it("does not write when the meeple exists with an unchanged display name (#525)", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(MEEPLE as never);
+
+    const meeple = await ensureMeeple({
+      id: "user-1",
+      name: "Lea",
+      email: "lea@example.org",
+    });
+
+    expect(meeple).toBe(MEEPLE);
+    expect(prismaMock.meeple.upsert).not.toHaveBeenCalled();
+    expect(prismaMock.meeple.update).not.toHaveBeenCalled();
   });
 
   it("upserts instead of creating, so a second call cannot duplicate", async () => {
@@ -50,6 +63,7 @@ describe("ensureMeeple", () => {
   });
 
   it("updates the display name when it changed at the auth provider", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(MEEPLE as never);
     prismaMock.meeple.upsert.mockResolvedValue(MEEPLE as never);
 
     await ensureMeeple({
@@ -60,7 +74,7 @@ describe("ensureMeeple", () => {
 
     expect(prismaMock.meeple.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { displayName: "Lea Neuer Name", email: "lea@example.org" },
+        update: { displayName: "Lea Neuer Name" },
       }),
     );
   });
@@ -72,7 +86,7 @@ describe("ensureMeeple", () => {
 
     expect(prismaMock.meeple.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { displayName: "lea", email: "lea@example.org" },
+        update: { displayName: "lea" },
       }),
     );
   });
@@ -104,19 +118,39 @@ describe("getCurrentMeeple / requireMeeple", () => {
 describe("getMembershipState", () => {
   const NOW = new Date("2026-07-29T12:00:00Z");
 
-  it("is aktiv without a resignation", () => {
+  it("is unregistriert without a meepleId and without a resignation", () => {
     expect(
       getMembershipState(
-        { resignedAt: null, membershipEndsAt: null, anonymizedAt: null },
+        {
+          meepleId: null,
+          resignedAt: null,
+          membershipEndsAt: null,
+          anonymizedAt: null,
+        },
         NOW,
       ),
-    ).toBe("aktiv");
+    ).toBe("unregistriert");
+  });
+
+  it("is registriert with a meepleId and without a resignation (#361)", () => {
+    expect(
+      getMembershipState(
+        {
+          meepleId: "meeple-1",
+          resignedAt: null,
+          membershipEndsAt: null,
+          anonymizedAt: null,
+        },
+        NOW,
+      ),
+    ).toBe("registriert");
   });
 
   it("is gekuendigt while the membership still runs", () => {
     expect(
       getMembershipState(
         {
+          meepleId: "meeple-1",
           resignedAt: new Date("2026-07-01T00:00:00Z"),
           membershipEndsAt: new Date("2027-01-01T00:00:00Z"),
           anonymizedAt: null,
@@ -130,6 +164,7 @@ describe("getMembershipState", () => {
     expect(
       getMembershipState(
         {
+          meepleId: "meeple-1",
           resignedAt: new Date("2025-07-01T00:00:00Z"),
           membershipEndsAt: new Date("2026-01-01T00:00:00Z"),
           anonymizedAt: null,
@@ -143,6 +178,7 @@ describe("getMembershipState", () => {
     expect(
       getMembershipState(
         {
+          meepleId: "meeple-1",
           resignedAt: new Date("2025-07-01T00:00:00Z"),
           membershipEndsAt: new Date("2026-07-29T00:00:00Z"),
           anonymizedAt: null,
@@ -156,6 +192,7 @@ describe("getMembershipState", () => {
     expect(
       getMembershipState(
         {
+          meepleId: "meeple-1",
           resignedAt: new Date("2025-07-01T00:00:00Z"),
           membershipEndsAt: new Date("2026-07-29T23:00:00Z"),
           anonymizedAt: null,
@@ -169,6 +206,7 @@ describe("getMembershipState", () => {
     expect(
       getMembershipState(
         {
+          meepleId: null,
           resignedAt: new Date("2025-07-01T00:00:00Z"),
           membershipEndsAt: new Date("2026-01-01T00:00:00Z"),
           anonymizedAt: new Date("2026-03-01T00:00:00Z"),
@@ -182,6 +220,7 @@ describe("getMembershipState", () => {
     expect(
       getMembershipState(
         {
+          meepleId: "meeple-1",
           resignedAt: new Date("2026-07-01T00:00:00Z"),
           membershipEndsAt: null,
           anonymizedAt: null,

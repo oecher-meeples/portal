@@ -1,5 +1,6 @@
 "use server";
 
+import type { ExplainerExperienceLevel } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { resolveScannedCode } from "@/lib/ludothek/holdings";
 import {
@@ -7,6 +8,7 @@ import {
   isGameInEventRoom,
 } from "@/lib/events/guest-area";
 import { isEventCurrentlyRunning } from "@/lib/events/upcoming";
+import type { ContactLinks } from "@/lib/members/contact";
 
 export type GuestGameMatch = {
   id: string;
@@ -56,7 +58,10 @@ export type GuestGameDetail = {
   attendingExplainers: {
     meepleId: string;
     displayName: string;
-    level: string;
+    level: ExplainerExperienceLevel;
+    profilePictureUrl: string | null;
+    contact: ContactLinks;
+    profileHref: string | null;
   }[];
 };
 

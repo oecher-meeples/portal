@@ -4,15 +4,11 @@ import { useState } from "react";
 import { UserMinus } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { computeMembershipEndsAt } from "@/lib/members/membership-state";
 import {
   getOpenHoldingsSummary,
   recordResignation,
 } from "@/components/feature/admin-mitglieder/actions";
-
-function nextTurnOfTheYear() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1));
-}
 
 export function ResignMembershipDialog({
   meepleId,
@@ -35,9 +31,9 @@ export function ResignMembershipDialog({
         </Button>
       }
       title={`Kündigung für „${displayName}“ vermerken`}
-      description="Die Mitgliedschaft läuft bis zum Jahreswechsel unverändert weiter — ausleihen bleibt bis dahin möglich."
+      description="Die Mitgliedschaft läuft bis zum Jahreswechsel unverändert weiter (mind. 4 Wochen Vorlauf, sonst ein weiteres Jahr) — ausleihen bleibt bis dahin möglich."
       submitLabel="Kündigung vermerken"
-      action={() => recordResignation(meepleId, nextTurnOfTheYear())}
+      action={() => recordResignation(meepleId, computeMembershipEndsAt())}
       onOpen={async () => setSummary(await getOpenHoldingsSummary(meepleId))}
       onReset={() => setSummary(null)}
     >

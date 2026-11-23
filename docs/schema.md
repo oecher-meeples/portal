@@ -14,7 +14,7 @@ Die Fachsprache (Meeple, Aufenthalt, Aufbewahrungseinheit, Ausleihe, Weitergabe,
 
 ## 1. Benutzer und Berechtigungen
 
-**Benutzerkonten liegen nicht in diesem Schema.** Authentifizierung läuft über Neon Auth, die Konten liegen im separaten DB-Schema `neon_auth."user"`. Prisma kann darauf keinen Fremdschlüssel setzen — die Verknüpfung ist überall ein reines String-Feld (`neonAuthUserId`). Rollen und Rechte liegen dagegen in diesem Schema, damit sie ohne Abhängigkeit vom Auth-Anbieter erweiterbar sind.
+**Benutzerkonten** liegen in den better-auth-Tabellen `auth_users`/`auth_accounts`/`auth_sessions`/`auth_verifications` (Prisma-Modelle `AuthUser` …, self-hosted seit [ADR 0015](adr/0015-self-hosted-better-auth-statt-neon-auth.md); vorher Neon Auths Schema `neon_auth`). Fachtabellen verweisen bewusst **ohne** Fremdschlüssel darauf — die Verknüpfung ist überall ein reines String-Feld (`neonAuthUserId`, Name historisch), damit Fachdaten nicht an das Datenmodell der Auth-Library gekoppelt sind. Rollen und Rechte liegen in eigenen Tabellen, damit sie ohne Abhängigkeit vom Auth-Anbieter erweiterbar sind.
 
 Berechtigungen sind **nicht** als Rollen-Rangordnung modelliert, sondern als Permissions, die Rollen zugeordnet werden. Eine Person kann mehrere Rollen haben; geprüft wird immer die Permission, nie die Rolle.
 
@@ -38,7 +38,7 @@ erDiagram
     }
 
     UserRole {
-        String neonAuthUserId PK "kein FK — Neon-Auth-Schema"
+        String neonAuthUserId PK "kein FK — AuthUser.id"
         String roleId PK "FK"
     }
 
@@ -73,14 +73,16 @@ Eine Einladung (`Invite`) gibt es in zwei Ausprägungen, unterschieden allein ü
 
 Blogbeiträge und Termine liegen in **einer** Tabelle, unterschieden über `type`. Der Beitragstext ist Markdown. Termine kommen zusätzlich aus einem öffentlichen ICS-Feed und werden nicht persistiert — nur redaktionell angelegte Termine liegen in `posts`.
 
-`internal` markiert Beiträge, die nur eingeloggte Mitglieder sehen. Die Instagram-Spalten bilden eine Warteschlange ohne externen Queue-Dienst ab: `instagramStatus` wird von einem täglichen Cron-Job abgearbeitet, `instagramAttempts` begrenzt die Wiederholungen.
+`internal` markiert Beiträge, die nur eingeloggte Mitglieder sehen. Die Instagram-Versand-Ergebnisfelder liegen ausgelagert in `PostInstagramDetails` (#318) — `Post.instagram` bleibt die reine Redaktionsentscheidung "soll gecrosspostet werden", der Rest (Status, Retry-Zähler, Fehlertext) hängt 1:1 daran. `status` in `PostInstagramDetails` bildet eine Warteschlange ohne externen Queue-Dienst ab: ein täglicher Cron-Job arbeitet sie ab, `attempts` begrenzt die Wiederholungen.
+
+`PostType.UMFRAGE` (#2) ist ein Blog-Beitrag, der im Freitext auf eine externe Google-Umfrage verlinkt. Die sensiblen Zusatzfelder (Bearbeiten-/Auswertungslink, Deadline) liegen analog in `PostSurveyDetails` und sind ausschließlich im Admin-Editor sichtbar — nie auf der öffentlichen/Mitglieder-Ansicht.
 
 ```mermaid
 erDiagram
     Post {
         String id PK
         String slug UK
-        PostType type "BLOG, TERMIN, TURNIER"
+        PostType type "BLOG, TERMIN, TURNIER, UMFRAGE"
         String title
         String excerpt
         String body "Markdown"
@@ -90,10 +92,23 @@ erDiagram
         Boolean internal
         Boolean instagram
         String coverImageUrl
-        InstagramStatus instagramStatus "PENDING, QUEUED, POSTED, FAILED"
-        String instagramPostUrl
-        Int instagramAttempts
-        String instagramLastError
+    }
+
+    PostInstagramDetails {
+        String id PK
+        String postId FK UK
+        InstagramStatus status "PENDING, QUEUED, POSTED, FAILED"
+        String postUrl
+        Int attempts
+        String lastError
+    }
+
+    PostSurveyDetails {
+        String id PK
+        String postId FK UK
+        DateTime deadline
+        String editLink "Pflicht bei Veröffentlichung"
+        String analysisLink
     }
 
     InstagramConnection {
@@ -103,11 +118,16 @@ erDiagram
         String pageId
         DateTime expiresAt
     }
+
+    Post ||--o| PostInstagramDetails : "hat"
+    Post ||--o| PostSurveyDetails : "hat"
 ```
 
 | Tabelle | Stand |
 |---|---|
 | `posts` | ✅ migriert |
+| `post_instagram_details` | ✅ migriert |
+| `post_survey_details` | ✅ migriert |
 | `instagram_connections` | ✅ migriert |
 
 `InstagramConnection` hält genau eine Verbindung für den Vereins-Account; das Long-Lived-Token wird täglich erneuert.
@@ -159,12 +179,15 @@ erDiagram
         String location
         Int maxParticipants
         String createdByMeepleId FK
+        Boolean guestsMayBringGuests "#145"
         DateTime closedAt
     }
 
     LfgParticipant {
-        String postId PK "FK"
-        String meepleId PK "FK"
+        String id PK
+        String postId FK
+        String meepleId FK "nullable, null = anonymer Gast (#145)"
+        String addedByMeepleId FK "wer hinzugefügt hat"
         DateTime joinedAt
     }
 
@@ -172,6 +195,7 @@ erDiagram
     Meeple ||--o{ LfgPost : "erstellt"
     LfgPost ||--o{ LfgParticipant : "hat"
     Meeple ||--o{ LfgParticipant : "nimmt teil"
+    Meeple ||--o{ LfgParticipant : "hat hinzugefügt"
 ```
 
 | Tabelle | Stand |
@@ -181,6 +205,8 @@ erDiagram
 | `lfg_posts`, `lfg_participants` | ✅ migriert |
 
 `LfgPost.gameTitle` ist bewusst Freitext statt einer Relation auf `BoardGame`: Gesuche sollen auch für Spiele möglich sein, die dem Verein nicht gehören. „Voll" und „abgelaufen" werden aus `maxParticipants` und `plannedAt` berechnet, nicht gespeichert.
+
+`LfgParticipant.meepleId` ist nullable — `null` markiert einen anonymen Gast (#145). Der eigene `id`-PK (statt Composite-PK) macht das möglich, da mehrere Gäste pro Gesuch sonst mit `meepleId = null` kollidieren würden. `addedByMeepleId` (immer gesetzt) ist die einzige Quelle für den Anzeigenamen eines Gasts ("Gast von {Name}") — nie Freitext.
 
 ---
 
@@ -195,6 +221,22 @@ Diese Trennung löst den Teil von ADR 0001 ab, der sie ursprünglich verwarf ("n
 `GameCollection` (Grundspiel↔Erweiterung), `ExplainerGame` und `SparePartListing` bleiben auf Titel-Ebene — eine Erweiterung, ein Erklärbär-Profil oder ein Ersatzteil gehört zum Titel, nicht zum einzelnen Exemplar.
 
 Deinventarisierte Exemplare werden nie gelöscht (`GameCopy.status`, `archivedAt`, `archivedReason`), damit die Verleih-Historie erhalten bleibt. Sie sind überall standardmäßig ausgefiltert.
+
+### Sprache: zwei getrennte Achsen
+
+`BoardGame.languageDependence` ist BGGs 5-stufiges `language_dependence`-Community-Poll-Modell (Level 1 „kein notwendiger Text" bis Level 5 „unspielbar in einer anderen Sprache", `null` = nicht erfasst) — beim BGG-Import wird das meistgewählte Level als Vorschlag übernommen, der Admin kann es ändern (#188). Das ist eine Eigenschaft des **Titels**: wie stark ein Spiel überhaupt von Sprache abhängt, unabhängig davon, welche physischen Exemplare der Verein besitzt.
+
+`GameCopy.ruleBookLanguages` ist davon unabhängig eine Eigenschaft des **Exemplars**: welche Sprache(n) das mitgelieferte Regelheft hat (`DE`/`EN`/`OTHER`, Mehrfachauswahl — eine Schachtel bringt oft ein deutsches und ein englisches Regelheft gemeinsam mit).
+
+### Verlag, Autor, Illustrator, Erstveröffentlichung (#205, Epic #490)
+
+BGG kennt mehrere Editionen (`versions=1`) desselben Titels mit potenziell abweichendem Verlag und Product Code je Edition (z. B. deutsche vs. englische Auflage bei unterschiedlichem Verlag). `lib/ludothek/board-game-versions.ts` löst das auf: identisch über alle (bevorzugt auf deutsche Editionen eingeengten, siehe `selectRelevantVersions()`) Versionen → automatisch übernommen; sonst wählt der Admin im Anlegen-Wizard. `BoardGame.yearPublished` ist davon unabhängig immer das älteste Jahr über *alle* Versionen — keine gekoppelte Auswahl mit dem Verlag. Verlag, Autor und Illustrator liegen seit Epic #490 als `Contributor` mit BGG-ID über die Zwischentabelle `BoardGameContributor` (Rolle `PUBLISHER`/`AUTHOR`/`ILLUSTRATOR`) statt als String-Listen am Titel. Eindeutigkeit über `Contributor.dedupKey` (`bgg:<id>` bzw. `name:<normalisierter Name>`, siehe `lib/ludothek/taxonomy/normalize.ts`). Autoren kommen direkt aus BGGs `boardgamedesigner`-Links am Haupt-Item, nicht aus den Versionen.
+
+### Mechaniken und Kategorien (Epic #490 Strang B)
+
+Mechaniken (`boardgamemechanic`) und Kategorien (`boardgamecategory`) liegen als `Tag` (Typ `MECHANIC`/`CATEGORY`) mit BGG-ID über die Zwischentabelle `BoardGameTag` statt als String-Listen am Titel. `Tag.name` ist der englische BGG-Originalname und nicht umbenennbar, `Tag.displayName` die unter `/admin/tags` pflegbare deutsche Anzeige (leer → `name`). Eindeutigkeit über `Tag.dedupKey` mit Typ-Präfix (`MECHANIC:bgg:<id>` bzw. `MECHANIC:name:<normalisierter Name>`), weil BGG-IDs nur je Typ eindeutig sind. Die deutschen Startwerte kommen aus `prisma/seed-data/tag-display-names.ts` (früher feste Übersetzungstabellen); der Seed überschreibt einen gepflegten `displayName` nicht.
+
+Die EAN-Suche bevorzugt einen eindeutig aufgelösten BGG-Product-Code vor der UPCitemdb-Fallback-Suche; ohne eindeutigen Code sortiert der bekannte Verlag die UPCitemdb-Kandidaten nach oben.
 
 ### Standort: eine Kette von Aufenthalten
 
@@ -211,17 +253,20 @@ erDiagram
     BoardGame {
         String id PK
         String title
+        String secondaryTitle "zweiter Titel neben title, z. B. deutsch neben englisch (#203)"
         Int bggId UK "nullable — die einzige verlässliche Produkt-Identität"
         String ean "Index, nicht eindeutig — Produkt, nicht Exemplar"
         Int minPlayers
         Int maxPlayers
         Int playTimeMinutes
         Float weight
+        Float averageRating "nullable — BGGs Community-Durchschnittsbewertung 0-10 (#214)"
         String imageUrl
         String description
-        String_Array mechanics
         String explainerVideoUrl
         BoardGameKind kind "BOARDGAME, BOARDGAME_EXPANSION"
+        LanguageDependence languageDependence "nullable — BGGs 5-stufiges Poll-Level (#188)"
+        Int yearPublished "ältestes Jahr über alle BGG-Versionen (#205)"
     }
 
     GameCopy {
@@ -229,6 +274,7 @@ erDiagram
         String slug UK
         String boardGameId FK
         String condition "einzige Zustandsnotiz"
+        RuleBookLanguage_Array ruleBookLanguages "DE/EN/OTHER, Mehrfachauswahl (#188)"
         Boolean needsCompletenessCheck
         DateTime lastCheckedAt
         GameInventoryStatus status "ACTIVE, MAINTENANCE, DEINVENTARISED"
@@ -311,6 +357,8 @@ erDiagram
         DateTime startsAt
         DateTime endsAt
         String location
+        Boolean helpersWanted
+        String visibility "PUBLIC, INTERNAL, DRAFT"
     }
 
     EventShelfAssignment {
@@ -318,12 +366,27 @@ erDiagram
         String unitId FK
     }
 
+    HelperRole {
+        String id PK
+        String name UK
+        String grantsPermissionKey "optional"
+    }
+
+    EventDay {
+        String id PK
+        String eventId FK
+        DateTime date
+        DateTime startsAt "optional Öffnungszeit"
+        DateTime endsAt "optional Öffnungszeit"
+    }
+
     Shift {
         String id PK
         String eventId FK
-        String type "THEKE, KASSE, LEIHE"
-        DateTime startsAt
-        DateTime endsAt
+        String dayId FK
+        String roleId FK
+        DateTime targetStartsAt
+        DateTime targetEndsAt
         Int capacity
     }
 
@@ -331,6 +394,21 @@ erDiagram
         String shiftId FK
         String meepleId FK
         Boolean uncertain
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailability {
+        String id PK
+        String meepleId FK
+        String dayId FK
+        DateTime startsAt
+        DateTime endsAt
+    }
+
+    HelperAvailabilityRole {
+        String availabilityId FK
+        String roleId FK
     }
 
     ExplainerGame {
@@ -359,7 +437,14 @@ erDiagram
 
     Event ||--o{ EventShelfAssignment : "hat"
     StorageUnit ||--o{ EventShelfAssignment : "zugeordnet"
+    Event ||--o{ EventDay : "hat"
     Event ||--o{ Shift : "hat"
+    EventDay ||--o{ Shift : "an Tag"
+    HelperRole ||--o{ Shift : "besetzt als"
+    Meeple ||--o{ HelperAvailability : "meldet"
+    EventDay ||--o{ HelperAvailability : "an Tag"
+    HelperAvailability ||--o{ HelperAvailabilityRole : "wählt"
+    HelperRole ||--o{ HelperAvailabilityRole : "gewählt als"
     Shift ||--o{ ShiftBooking : "gebucht von"
     Meeple ||--o{ ShiftBooking : "bucht"
     Meeple ||--o{ ExplainerGame : "kann erklären"

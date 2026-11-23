@@ -1,8 +1,11 @@
 ---
 status: accepted
+generalized-by: 0012
 ---
 
 # Schicht-Buchung statt Permission für zeitgebundene Event-Rechte
+
+> Die Kopplung an einen festen Rollennamen (`KASSE`) ist mit [ADR-0012](0012-helferrolle-generalisiert-schicht-buchung-rechte.md) generalisiert worden — jede Rolle kann jetzt optional eine Permission hinterlegen. Die Grundentscheidung dieses ADRs (Rechte über Schicht-Zeitraum statt dauerhafter Permission) bleibt unverändert gültig.
 
 Wer die Flohmarkt-Kasse bedienen oder Flohmarkt-Artikel freigeben darf, wird nicht über eine eigene Permission im bestehenden RBAC-System vergeben (siehe `Permission`/`Role`-Modelle), sondern ergibt sich daraus, ob das Mitglied sich in die Flohmarkt-Schicht des jeweiligen Events eingetragen hat. Das weicht vom sonstigen Muster des Projekts ab, in dem Rechte durchgängig über Permissions laufen (Phase 2 Auth-Modell). Grund: die Berechtigung ist von Natur aus zeitgebunden und event-spezifisch — sie soll mit dem Ende des Verkaufstags automatisch wieder wegfallen, ohne dass ein Admin sie manuell wieder entziehen muss. Eine dauerhafte Permission hätte genau diese Befristung nicht abgebildet und würde nach jedem Event manuelles Aufräumen erfordern.
 

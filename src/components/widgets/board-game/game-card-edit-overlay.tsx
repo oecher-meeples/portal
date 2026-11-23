@@ -1,24 +1,25 @@
-"use client";
-
+import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import {
-  EditBoardGameDialog,
-  type EditableBoardGame,
-} from "@/components/widgets/board-game/edit-board-game-dialog";
+  EditBoardGameTitleDialog,
+  type EditableBoardGameTitle,
+} from "@/components/widgets/board-game/edit-board-game-title-dialog";
 
-/**
- * GameCard wraps the whole card in a Link — this stops the click from
- * bubbling into it so opening the edit dialog doesn't also navigate away.
- */
-export function GameCardEditOverlay({ game }: { game: EditableBoardGame }) {
+/** "Bearbeiten" opens the title dialog, not a per-copy one — with several
+ * exemplare per card (Plan-Schritt 8) there's no single "the" copy to edit
+ * here anymore (Plan-Schritt 10). */
+export function GameCardEditOverlay({
+  game,
+  mechanicsOptions,
+}: {
+  game: EditableBoardGameTitle;
+  mechanicsOptions?: string[];
+}) {
   return (
-    <div
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      }}
-      className="bg-background/90 rounded-md backdrop-blur-sm"
-    >
-      <EditBoardGameDialog game={game} />
-    </div>
+    <StopRowNavigation className="bg-background/90 rounded-md backdrop-blur-sm">
+      <EditBoardGameTitleDialog
+        game={game}
+        mechanicsOptions={mechanicsOptions}
+      />
+    </StopRowNavigation>
   );
 }

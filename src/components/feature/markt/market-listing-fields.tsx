@@ -1,8 +1,130 @@
 "use client";
 
+import { useState } from "react";
+import { Camera, Crop, GripVertical, Star, Trash2 } from "lucide-react";
 import { TextField, TextAreaField } from "@/components/ui/field";
+import { cn } from "@/lib/utils/cn";
+import { FileField } from "@/components/ui/file-field";
+import { Button } from "@/components/ui/button";
+import { CameraCapture } from "@/components/ui/camera-capture";
+import { CoverMedia } from "@/components/ui/cover-media";
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
-import { getMarketListingUploadToken } from "@/components/feature/markt/actions";
+import { compressImage } from "@/lib/utils/compress-image";
+import {
+  getMarketListingUploadToken,
+  deleteMarketListingImage,
+} from "@/components/feature/markt/actions";
+
+async function urlToFile(url: string): Promise<File> {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  const fileName = url.split("/").pop() ?? "bild.jpg";
+  return new File([blob], fileName, { type: blob.type });
+}
+
+/** Ein bereits hochgeladenes Bild mit Zuschneiden-/Löschen-/
+ * Titelbild-/Umsortieren-Aktionen (#175). Einmalig genutzt, daher kein
+ * eigener Dateiname. Umsortieren per natives HTML5-Drag&Drop statt
+ * @dnd-kit/sortable — die wenigen Kacheln in einem einzelnen Grid brauchen
+ * keinen eigenen DnD-Kontext, und @dnd-kit/sortable ist noch keine
+ * Abhängigkeit dieses Projekts. */
+function MarketImageThumbnail({
+  url,
+  index,
+  isCover,
+  isDragTarget,
+  onCrop,
+  onRemove,
+  onSetCover,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: {
+  url: string;
+  index: number;
+  isCover: boolean;
+  isDragTarget: boolean;
+  onCrop: () => void;
+  onRemove: () => void;
+  onSetCover: () => void;
+  onDragStart: (index: number) => void;
+  onDragOver: (index: number) => void;
+  onDragLeave: () => void;
+  onDrop: (index: number) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "border-border flex flex-col gap-1.5 rounded-lg border p-1.5",
+        isDragTarget && "border-primary",
+      )}
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver(index);
+      }}
+      onDragLeave={onDragLeave}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop(index);
+      }}
+    >
+      <div className="relative cursor-grab active:cursor-grabbing">
+        <CoverMedia
+          imageUrl={url}
+          alt="Hochgeladenes Bild"
+          aspect="aspect-square"
+          fit="contain"
+        />
+        {isCover && (
+          <span className="bg-primary text-primary-foreground absolute top-1 left-1 rounded px-1.5 py-0.5 text-[11px] font-medium">
+            Titelbild
+          </span>
+        )}
+        <span
+          className="bg-background/80 text-muted-foreground absolute top-1 right-1 rounded p-0.5"
+          title="Zum Sortieren ziehen"
+        >
+          <GripVertical className="size-3.5" />
+        </span>
+      </div>
+      <div className="flex justify-center gap-1">
+        {!isCover && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon-sm"
+            title="Als Titelbild markieren"
+            onClick={onSetCover}
+          >
+            <Star className="size-3.5" />
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon-sm"
+          title="Zuschneiden"
+          onClick={onCrop}
+        >
+          <Crop className="size-3.5" />
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon-sm"
+          title="Entfernen"
+          onClick={onRemove}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function MarketListingFields({
   title,
@@ -32,14 +154,81 @@ export function MarketListingFields({
     isUploading,
     error: uploadError,
   } = useBlobUpload("market-listings", getMarketListingUploadToken);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  // Bei Bearbeiten eines bereits hochgeladenen Bildes (statt einer neuen
+  // Kamera-Aufnahme) trägt dieser State die zu ersetzende URL.
+  const [cropTargetUrl, setCropTargetUrl] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  async function handleImagesChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
+  function handleReorder(targetIndex: number) {
+    const fromIndex = dragIndex;
+    setDragIndex(null);
+    setDragOverIndex(null);
+    if (fromIndex === null || fromIndex === targetIndex) return;
+    const next = [...imageUrls];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    onImageUrlsChange(next);
+  }
+
+  async function handleImagesChange(files: File[]) {
     const urls = await uploadFiles(files);
     onImageUrlsChange([...imageUrls, ...urls]);
+  }
+
+  /** Direkte Kamera-Aufnahme statt Datei-Auswahl (#108) — vor der Übernahme
+   * durchläuft die Aufnahme einen Crop-Schritt (#170), erst danach wird das
+   * zugeschnittene Bild wie ein hochgeladenes Bild behandelt: komprimiert,
+   * zu Blob Store hochgeladen, imageUrls ergänzt. */
+  function handleCameraCapture(file: File) {
+    setShowCamera(false);
+    setCropFile(file);
+  }
+
+  /** Zuschneiden eines bereits hochgeladenen Bildes (#175) — lädt das Bild
+   * erst zurück als File, der Crop-Dialog ersetzt anschließend die
+   * bestehende URL an derselben Position durch das neu hochgeladene Bild. */
+  async function handleCropExisting(url: string) {
+    setCropTargetUrl(url);
+    setCropFile(await urlToFile(url));
+  }
+
+  async function handleCropped(file: File) {
+    const targetUrl = cropTargetUrl;
+    setCropFile(null);
+    setCropTargetUrl(null);
+    const compressed = await compressImage(file);
+
+    if (targetUrl) {
+      const [newUrl] = await uploadFiles([compressed]);
+      if (!newUrl) return;
+      onImageUrlsChange(
+        imageUrls.map((url) => (url === targetUrl ? newUrl : url)),
+      );
+      await deleteMarketListingImage(targetUrl);
+    } else {
+      await handleImagesChange([compressed]);
+    }
+  }
+
+  function handleCropDialogOpenChange(open: boolean) {
+    if (!open) {
+      const wasCameraCapture = cropTargetUrl === null;
+      setCropFile(null);
+      setCropTargetUrl(null);
+      if (wasCameraCapture) setShowCamera(true);
+    }
+  }
+
+  async function handleRemoveImage(url: string) {
+    onImageUrlsChange(imageUrls.filter((entry) => entry !== url));
+    await deleteMarketListingImage(url);
+  }
+
+  function handleSetCover(url: string) {
+    onImageUrlsChange([url, ...imageUrls.filter((entry) => entry !== url)]);
   }
 
   return (
@@ -76,16 +265,38 @@ export function MarketListingFields({
         onChange={(event) => onDescriptionChange(event.target.value)}
       />
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm font-medium" htmlFor="market-listing-images">
-          Bilder
-        </label>
-        <input
+        <FileField
           id="market-listing-images"
-          type="file"
+          label="Bilder"
           accept="image/png,image/jpeg,image/webp"
           multiple
           disabled={isUploading}
-          onChange={handleImagesChange}
+          onFilesSelected={(files) => void handleImagesChange(files)}
+        />
+        {!showCamera && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-fit"
+            disabled={isUploading}
+            onClick={() => setShowCamera(true)}
+          >
+            <Camera className="size-4" />
+            Foto aufnehmen
+          </Button>
+        )}
+        {showCamera && (
+          <CameraCapture
+            onCapture={handleCameraCapture}
+            onClose={() => setShowCamera(false)}
+          />
+        )}
+        <ImageCropDialog
+          open={cropFile !== null}
+          onOpenChange={handleCropDialogOpenChange}
+          file={cropFile}
+          onCropped={(file) => void handleCropped(file)}
         />
         {isUploading && (
           <p className="text-muted-foreground text-sm">Lade Bilder hoch…</p>
@@ -94,9 +305,24 @@ export function MarketListingFields({
           <p className="text-destructive text-sm">{uploadError}</p>
         )}
         {imageUrls.length > 0 && (
-          <p className="text-muted-foreground text-xs">
-            {imageUrls.length} Bild(er) hochgeladen.
-          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {imageUrls.map((url, index) => (
+              <MarketImageThumbnail
+                key={url}
+                url={url}
+                index={index}
+                isCover={index === 0}
+                isDragTarget={dragOverIndex === index && dragIndex !== index}
+                onCrop={() => void handleCropExisting(url)}
+                onRemove={() => void handleRemoveImage(url)}
+                onSetCover={() => handleSetCover(url)}
+                onDragStart={setDragIndex}
+                onDragOver={setDragOverIndex}
+                onDragLeave={() => setDragOverIndex(null)}
+                onDrop={handleReorder}
+              />
+            ))}
+          </div>
         )}
       </div>
     </>

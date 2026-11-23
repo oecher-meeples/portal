@@ -8,8 +8,8 @@ describe("computeShiftFillLevel", () => {
     expect(result).toEqual({ booked: 2, capacity: 4, isFull: false });
   });
 
-  it("counts uncertain bookings the same as certain ones", () => {
-    const bookings = [{ uncertain: true }, { uncertain: false }];
+  it("counts unconfirmed bookings the same as confirmed ones", () => {
+    const bookings = [{ confirmedAt: null }, { confirmedAt: new Date() }];
 
     const result = computeShiftFillLevel({ capacity: 2 }, bookings);
 

@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const processPostMock = vi.fn();
 vi.mock("@/lib/instagram/queue", () => ({
@@ -15,10 +18,10 @@ vi.mock("@/lib/newsletter/dispatch", () => ({
   queueNewsletterForPost: vi.fn(),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const {
@@ -48,9 +51,9 @@ describe("createPost", () => {
     expect(prismaMock.post.create).not.toHaveBeenCalled();
   });
 
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the user lacks both posts:public and posts:internal", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await createPost(VALID_INPUT);
 
@@ -60,7 +63,7 @@ describe("createPost", () => {
 
   it("rejects when required fields are missing", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await createPost({ ...VALID_INPUT, title: "" });
 
@@ -70,51 +73,11 @@ describe("createPost", () => {
     expect(prismaMock.post.create).not.toHaveBeenCalled();
   });
 
-  it("derives the excerpt from the first 130 characters of the body when left empty", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
-    const body = "x".repeat(180);
-
-    await createPost({ ...VALID_INPUT, excerpt: "", body });
-
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ excerpt: `${"x".repeat(130)}...` }),
-    });
-  });
-
-  it("uses the full body as the excerpt when it is 130 characters or shorter", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
-    const body = "x".repeat(80);
-
-    await createPost({ ...VALID_INPUT, excerpt: "   ", body });
-
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ excerpt: body }),
-    });
-  });
-
-  it("keeps an explicitly given excerpt instead of deriving one from the body", async () => {
-    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
-
-    await createPost({
-      ...VALID_INPUT,
-      excerpt: "Handverlesen",
-      body: "x".repeat(180),
-    });
-
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ excerpt: "Handverlesen" }),
-    });
-  });
+  // Excerpt-Ableitung (deriveExcerpt) siehe actions-excerpt.test.ts (#448).
 
   it("creates the post when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     const result = await createPost(VALID_INPUT);
@@ -129,59 +92,60 @@ describe("createPost", () => {
     });
   });
 
-  it("initializes instagramStatus to PENDING when instagram sharing is enabled", async () => {
+  it("creates an instagramDetails row with status PENDING when instagram sharing is enabled", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost({ ...VALID_INPUT, instagram: true });
 
     expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ instagramStatus: "PENDING" }),
+      data: expect.objectContaining({
+        instagramDetails: { create: { status: "PENDING" } },
+      }),
     });
   });
 
-  it("leaves instagramStatus unset when instagram sharing is disabled", async () => {
+  it("creates no instagramDetails row when instagram sharing is disabled", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost(VALID_INPUT);
 
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ instagramStatus: null }),
-    });
+    const call = prismaMock.post.create.mock.calls.at(-1)?.[0];
+    expect(call?.data).not.toHaveProperty("instagramDetails");
   });
 
   it("never queues a draft for instagram, even with the flag set", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost({ ...VALID_INPUT, status: "DRAFT", instagram: true });
 
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ instagramStatus: null, status: "DRAFT" }),
-    });
+    const call = prismaMock.post.create.mock.calls.at(-1)?.[0];
+    expect(call?.data).not.toHaveProperty("instagramDetails");
+    expect(call?.data).toEqual(expect.objectContaining({ status: "DRAFT" }));
   });
 
   it("never queues an internal post for instagram, even with the flag set", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     await createPost({ ...VALID_INPUT, internal: true, instagram: true });
 
-    expect(prismaMock.post.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ instagramStatus: null, internal: true }),
-    });
+    const call = prismaMock.post.create.mock.calls.at(-1)?.[0];
+    expect(call?.data).not.toHaveProperty("instagramDetails");
+    expect(call?.data).toEqual(expect.objectContaining({ internal: true }));
   });
 });
 
 describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
   it("legt einen Blog-Beitrag mit allen vom Formular gesendeten Feldern an", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.create.mockResolvedValue({ id: "post-1" } as never);
 
     // Entspricht genau dem Input, den post-form.tsx beim Absenden sendet
@@ -218,16 +182,31 @@ describe("Blog-Beitrag speichern (technisch, ohne UI)", () => {
         sendAsNewsletter: false,
         newsletterCategory: null,
         coverImageUrl: null,
-        instagramStatus: null,
       },
     });
   });
 });
 
 describe("updatePost", () => {
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the post does not exist", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys("all");
+    prismaMock.post.findUnique.mockResolvedValue(null);
+
+    const result = await updatePost("post-1", VALID_INPUT);
+
+    expect(result).toEqual({ error: "Beitrag nicht gefunden." });
+    expect(prismaMock.post.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the user lacks both posts:public and posts:internal", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys([]);
+    prismaMock.post.findUnique.mockResolvedValue({
+      internal: null,
+      newsletterStatus: null,
+      instagramDetails: null,
+    } as never);
 
     const result = await updatePost("post-1", VALID_INPUT);
 
@@ -237,7 +216,12 @@ describe("updatePost", () => {
 
   it("updates the post when authorized and valid", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
+    prismaMock.post.findUnique.mockResolvedValue({
+      internal: null,
+      newsletterStatus: null,
+      instagramDetails: null,
+    } as never);
 
     const result = await updatePost("post-1", VALID_INPUT);
 
@@ -248,48 +232,57 @@ describe("updatePost", () => {
     });
   });
 
-  it("sets instagramStatus to PENDING when enabling instagram sharing for the first time", async () => {
+  it("creates an instagramDetails row with status PENDING when enabling instagram sharing for the first time", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: null,
+      instagramDetails: null,
     } as never);
 
     await updatePost("post-1", { ...VALID_INPUT, instagram: true });
 
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: "post-1" },
-      data: expect.objectContaining({ instagramStatus: "PENDING" }),
+      data: expect.objectContaining({
+        instagramDetails: { create: { status: "PENDING" } },
+      }),
     });
   });
 
-  it("does not reset instagramStatus when instagram was already active", async () => {
+  it("does not reset instagramDetails when instagram was already active", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: "POSTED",
+      instagramDetails: { id: "details-1" },
     } as never);
 
     await updatePost("post-1", { ...VALID_INPUT, instagram: true });
 
     const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
-    expect(call?.data).not.toHaveProperty("instagramStatus");
+    expect(call?.data).not.toHaveProperty("instagramDetails");
   });
 
-  it("does not touch instagramStatus when instagram sharing stays disabled", async () => {
+  it("does not touch instagramDetails when instagram sharing stays disabled", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
+    prismaMock.post.findUnique.mockResolvedValue({
+      internal: null,
+      newsletterStatus: null,
+      instagramDetails: null,
+    } as never);
 
     await updatePost("post-1", VALID_INPUT);
 
-    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     const call = prismaMock.post.update.mock.calls.at(-1)?.[0];
-    expect(call?.data).not.toHaveProperty("instagramStatus");
+    expect(call?.data).not.toHaveProperty("instagramDetails");
   });
 
-  it("clears an existing instagramStatus when a post stays a draft", async () => {
+  it("deletes an existing instagramDetails row when a post stays a draft", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
+    prismaMock.post.findUnique.mockResolvedValue({
+      instagramDetails: { id: "details-1" },
+    } as never);
 
     await updatePost("post-1", {
       ...VALID_INPUT,
@@ -297,18 +290,20 @@ describe("updatePost", () => {
       instagram: true,
     });
 
-    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: "post-1" },
-      data: expect.objectContaining({ instagramStatus: null, status: "DRAFT" }),
+      data: expect.objectContaining({
+        instagramDetails: { delete: true },
+        status: "DRAFT",
+      }),
     });
   });
 
-  it("sets instagramStatus to PENDING when a formerly draft post is published with instagram enabled", async () => {
+  it("creates an instagramDetails row with status PENDING when a formerly draft post is published with instagram enabled", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.findUnique.mockResolvedValue({
-      instagramStatus: null,
+      instagramDetails: null,
     } as never);
 
     await updatePost("post-1", {
@@ -319,13 +314,18 @@ describe("updatePost", () => {
 
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: "post-1" },
-      data: expect.objectContaining({ instagramStatus: "PENDING" }),
+      data: expect.objectContaining({
+        instagramDetails: { create: { status: "PENDING" } },
+      }),
     });
   });
 
-  it("clears an existing instagramStatus when a post becomes internal", async () => {
+  it("deletes an existing instagramDetails row when a post becomes internal", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
+    prismaMock.post.findUnique.mockResolvedValue({
+      instagramDetails: { id: "details-1" },
+    } as never);
 
     await updatePost("post-1", {
       ...VALID_INPUT,
@@ -333,18 +333,20 @@ describe("updatePost", () => {
       instagram: true,
     });
 
-    expect(prismaMock.post.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: "post-1" },
-      data: expect.objectContaining({ instagramStatus: null, internal: true }),
+      data: expect.objectContaining({
+        instagramDetails: { delete: true },
+        internal: true,
+      }),
     });
   });
 });
 
 describe("retryInstagramPost", () => {
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the user lacks the posts:public permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await retryInstagramPost("post-1");
 
@@ -355,11 +357,10 @@ describe("retryInstagramPost", () => {
 
   it("resets the attempt counter and immediately reprocesses the post", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.post.update.mockResolvedValue({
       id: "post-1",
-      instagramAttempts: 0,
-      instagramStatus: "PENDING",
+      instagramDetails: { attempts: 0, status: "PENDING" },
     } as never);
     processPostMock.mockResolvedValue(true);
 
@@ -368,10 +369,14 @@ describe("retryInstagramPost", () => {
     expect(prismaMock.post.update).toHaveBeenCalledWith({
       where: { id: "post-1" },
       data: {
-        instagramAttempts: 0,
-        instagramStatus: "PENDING",
-        instagramLastError: null,
+        instagramDetails: {
+          upsert: {
+            create: { status: "PENDING" },
+            update: { attempts: 0, status: "PENDING", lastError: null },
+          },
+        },
       },
+      include: { instagramDetails: true },
     });
     expect(processPostMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ success: true, posted: true });
@@ -381,7 +386,7 @@ describe("retryInstagramPost", () => {
 describe("deletePost", () => {
   it("rejects when the user lacks the posts:delete permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await deletePost("post-1");
 
@@ -391,7 +396,7 @@ describe("deletePost", () => {
 
   it("deletes the post when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await deletePost("post-1");
 
@@ -406,32 +411,33 @@ describe("getUploadToken", () => {
   it("rejects when there is no logged-in user", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    await expect(getUploadToken("instagram-covers/a.png")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getUploadToken("instagram-covers/a.png", "image/png"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
-  it("rejects when the user lacks the posts:write permission", async () => {
+  it("rejects when the user lacks the posts:public/posts:internal permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
-    await expect(getUploadToken("instagram-covers/a.png")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getUploadToken("instagram-covers/a.png", "image/png"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises a client-chosen prefix to the instagram-covers namespace", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    mockPermissionKeys("all");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getUploadToken("posts/../../evil.png");
+    const token = await getUploadToken("posts/../../evil.png", "image/png");
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "instagram-covers/evil.png",
+      contentType: "image/png",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,

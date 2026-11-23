@@ -5,7 +5,7 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const buildLudothekGamesMock = vi.fn();
 vi.mock("@/lib/ludothek/query", () => ({
-  buildLudothekGames: () => buildLudothekGamesMock(),
+  buildLudothekGames: (...args: unknown[]) => buildLudothekGamesMock(...args),
 }));
 
 const {
@@ -13,7 +13,8 @@ const {
   isGameInEventRoom,
   getAttendingExplainers,
   getFreeGamesInRoom,
-  getGuestFleaMarketItems,
+  getGuestCopyAvailability,
+  getPresentGameCopyIds,
 } = await import("./guest-area");
 
 describe("unitOrAncestorAssigned", () => {
@@ -42,19 +43,41 @@ describe("unitOrAncestorAssigned", () => {
   });
 });
 
+/** #273: `resolveEventUnitId()` looks up the event's slug, then the
+ * `OM-EVENT-{slug}` storage unit by code. `eventUnitId: null` simulates
+ * "nobody has checked anything into this event yet". */
+function mockEventUnit(eventUnitId: string | null) {
+  prismaMock.event.findUnique.mockResolvedValue({ slug: "spieletag" } as never);
+  prismaMock.storageUnit.findUnique.mockResolvedValue(
+    (eventUnitId ? { id: eventUnitId } : null) as never,
+  );
+}
+
 beforeEach(() => {
-  prismaMock.eventShelfAssignment.findMany.mockResolvedValue([]);
+  buildLudothekGamesMock.mockClear();
   prismaMock.storageUnit.findMany.mockResolvedValue([]);
   prismaMock.gameHolding.findMany.mockResolvedValue([]);
+  mockEventUnit(null);
 });
 
-describe("isGameInEventRoom", () => {
-  it("is true for a game directly in an assigned shelf", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1" },
-    ] as never);
+describe("isGameInEventRoom (#273)", () => {
+  it("is true for a game directly on the event unit (Stufe 1)", async () => {
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
+      { id: "event-unit-1", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "game-1", unitId: "event-unit-1" },
+    ] as never);
+
+    expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
+  });
+
+  it("is true through a two-level chain (shelf hung under the event unit, Stufe 2)", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-1", parentUnitId: "event-unit-1" },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
       { gameCopyId: "game-1", unitId: "shelf-1" },
@@ -63,24 +86,22 @@ describe("isGameInEventRoom", () => {
     expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
   });
 
-  it("is true through a two-level chain (box in assigned shelf)", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1" },
-    ] as never);
+  it("is false when the event has no unit yet (nobody checked in)", async () => {
+    mockEventUnit(null);
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
-      { id: "box-1", parentUnitId: "shelf-1" },
+      { id: "shelf-2", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { gameCopyId: "game-1", unitId: "box-1" },
+      { gameCopyId: "game-1", unitId: "shelf-2" },
     ] as never);
 
-    expect(await isGameInEventRoom("game-1", "event-1")).toBe(true);
+    expect(await isGameInEventRoom("game-1", "event-1")).toBe(false);
   });
 
-  it("is false for an unassigned shelf", async () => {
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([]);
+  it("is false for a copy sitting in an unrelated unit", async () => {
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
       { id: "shelf-2", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
@@ -98,6 +119,8 @@ describe("getAttendingExplainers", () => {
         meeple: {
           id: "meeple-1",
           displayName: "Lea",
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
           explainerGames: [{ level: "BY_HEART" }],
         },
       },
@@ -106,7 +129,20 @@ describe("getAttendingExplainers", () => {
     const result = await getAttendingExplainers("game-1", "event-1");
 
     expect(result).toEqual([
-      { meepleId: "meeple-1", displayName: "Lea", level: "BY_HEART" },
+      {
+        meepleId: "meeple-1",
+        displayName: "Lea",
+        level: "BY_HEART",
+        profilePictureUrl: null,
+        contact: {
+          mailHref: null,
+          telegramHref: null,
+          signalHref: null,
+          discordHandle: null,
+          address: null,
+        },
+        profileHref: null,
+      },
     ]);
     expect(prismaMock.explainerAttendance.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -116,6 +152,85 @@ describe("getAttendingExplainers", () => {
         },
       }),
     );
+  });
+
+  it("shows the profile picture only when EVENTS/IMMER visibility allows it (#389)", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      {
+        meeple: {
+          id: "meeple-1",
+          displayName: "Lea",
+          profilePictureUrl: "https://blob.example/lea.jpg",
+          profilePictureVisibility: "EVENTS",
+          explainerGames: [{ level: "BY_HEART" }],
+        },
+      },
+      {
+        meeple: {
+          id: "meeple-2",
+          displayName: "Ben",
+          profilePictureUrl: "https://blob.example/ben.jpg",
+          profilePictureVisibility: "INTERN",
+          explainerGames: [{ level: "WITH_MANUAL" }],
+        },
+      },
+    ] as never);
+
+    const result = await getAttendingExplainers("game-1", "event-1");
+
+    expect(result[0].profilePictureUrl).toBe("https://blob.example/lea.jpg");
+    expect(result[1].profilePictureUrl).toBeNull();
+  });
+
+  it("exposes contact info and the profile link only when meepleDatenVisibility allows it", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      {
+        event: { slug: "spieletreff-1" },
+        meeple: {
+          id: "meeple-1",
+          displayName: "Lea",
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
+          meepleDatenVisibility: "IMMER",
+          telegramHandle: "lea_tg",
+          signalHandle: null,
+          discordHandle: null,
+          address: null,
+          shareAddress: false,
+          member: { email: "lea@example.com" },
+          explainerGames: [{ level: "BY_HEART" }],
+        },
+      },
+      {
+        event: { slug: "spieletreff-1" },
+        meeple: {
+          id: "meeple-2",
+          displayName: "Ben",
+          profilePictureUrl: null,
+          profilePictureVisibility: "INTERN",
+          meepleDatenVisibility: "INTERN",
+          telegramHandle: "ben_tg",
+          signalHandle: null,
+          discordHandle: null,
+          address: null,
+          shareAddress: false,
+          member: { email: "ben@example.com" },
+          explainerGames: [{ level: "WITH_MANUAL" }],
+        },
+      },
+    ] as never);
+
+    const result = await getAttendingExplainers("game-1", "event-1");
+
+    expect(result[0].contact.telegramHref).toBe("https://t.me/lea_tg");
+    expect(result[0].contact.mailHref).toBe("mailto:lea@example.com");
+    expect(result[0].profileHref).toBe(
+      "/events/spieletreff-1/gast/erklaerbaer/meeple-1",
+    );
+
+    expect(result[1].contact.telegramHref).toBeNull();
+    expect(result[1].contact.mailHref).toBeNull();
+    expect(result[1].profileHref).toBeNull();
   });
 });
 
@@ -147,7 +262,7 @@ describe("getFreeGamesInRoom", () => {
         minPlayers: 2,
         maxPlayers: 4,
       }),
-      ludothekGame({ id: "game-2", zustand: "ausgeliehen" }),
+      ludothekGame({ id: "game-2", zustand: "ausgeliehen-verfuegbar" }),
       ludothekGame({
         id: "game-3",
         zustand: "frei",
@@ -155,62 +270,171 @@ describe("getFreeGamesInRoom", () => {
         maxPlayers: 8,
       }),
     ]);
-    prismaMock.eventShelfAssignment.findMany.mockResolvedValue([
-      { unitId: "shelf-1" },
-    ] as never);
+    mockEventUnit("event-unit-1");
     prismaMock.storageUnit.findMany.mockResolvedValue([
-      { id: "shelf-1", parentUnitId: null },
+      { id: "event-unit-1", parentUnitId: null },
     ] as never);
     prismaMock.gameHolding.findMany.mockResolvedValue([
-      { gameCopyId: "game-1", unitId: "shelf-1" },
-      { gameCopyId: "game-3", unitId: "shelf-1" },
+      { gameCopyId: "game-1", unitId: "event-unit-1" },
+      { gameCopyId: "game-3", unitId: "event-unit-1" },
     ] as never);
 
-    const result = await getFreeGamesInRoom("event-1", { players: "3-4" });
+    const result = await getFreeGamesInRoom("event-1", { players: 3 });
 
     expect(result.map((g) => g.id)).toEqual(["game-1"]);
+    // #526: nur die Exemplare im Raum geladen, nicht der ganze Bestand.
+    expect(buildLudothekGamesMock).toHaveBeenCalledWith({
+      where: { id: { in: ["game-1", "game-3"] } },
+    });
+  });
+
+  it("does not load any copies when nothing is in the room", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-elsewhere", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "game-1", unitId: "shelf-elsewhere" },
+    ] as never);
+
+    expect(await getFreeGamesInRoom("event-1", {})).toEqual([]);
+    expect(buildLudothekGamesMock).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty list when the event has no unit yet", async () => {
+    buildLudothekGamesMock.mockResolvedValue([ludothekGame()]);
+    mockEventUnit(null);
+
+    const result = await getFreeGamesInRoom("event-1", {});
+
+    expect(result).toEqual([]);
   });
 });
 
-describe("getGuestFleaMarketItems", () => {
-  it("never includes PENDING items", async () => {
-    prismaMock.fleaMarketItem.findMany.mockResolvedValue([
-      {
-        id: "item-1",
-        title: "Azul",
-        description: null,
-        priceEuros: 20,
-        status: "FOR_SALE",
-      },
-    ] as never);
+describe("getGuestCopyAvailability (#273)", () => {
+  const COPIES = [
+    { id: "copy-1", zustand: "frei" as const },
+    { id: "copy-2", zustand: "ausgeliehen-verfuegbar" as const },
+  ];
 
-    const result = await getGuestFleaMarketItems("event-1");
+  it("returns a plain count without an event", async () => {
+    const result = await getGuestCopyAvailability(COPIES, null);
 
-    expect(result).toEqual([
-      {
-        id: "item-1",
-        title: "Azul",
-        description: null,
-        priceEuros: 20,
-        status: "FOR_SALE",
-      },
-    ]);
-    expect(prismaMock.fleaMarketItem.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { eventId: "event-1", status: { in: ["FOR_SALE", "RESERVED"] } },
-      }),
-    );
+    expect(result).toEqual({ kind: "plain", total: 2 });
+    expect(prismaMock.event.findUnique).not.toHaveBeenCalled();
   });
 
-  it("queries only FOR_SALE and RESERVED, excluding SOLD", async () => {
-    prismaMock.fleaMarketItem.findMany.mockResolvedValue([]);
+  it("returns a plain count of zero for an empty title", async () => {
+    const result = await getGuestCopyAvailability([], "event-1");
 
-    await getGuestFleaMarketItems("event-1");
+    expect(result).toEqual({ kind: "plain", total: 0 });
+  });
 
-    const call = prismaMock.fleaMarketItem.findMany.mock.calls[0][0] as {
-      where: { status: { in: string[] } };
-    };
-    expect(call.where.status.in).not.toContain("SOLD");
-    expect(call.where.status.in).not.toContain("PENDING");
+  it("computes X von Y for copies on the event's collection unit (Stufe 1)", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null, label: "Spieletag" },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
+      { gameCopyId: "copy-2", unitId: "event-unit-1" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({
+      kind: "event",
+      total: 2,
+      inRoom: 2,
+      available: 1,
+      shelfLabels: ["Spieletag"],
+    });
+  });
+
+  it("shows the shelf's own label once it was moved out of the collection unit (Stufe 2)", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null, label: "Spieletag" },
+      { id: "shelf-1", parentUnitId: "event-unit-1", label: "Regal A" },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "shelf-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-1" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({
+      kind: "event",
+      total: 2,
+      inRoom: 2,
+      available: 1,
+      shelfLabels: ["Regal A"],
+    });
+  });
+
+  it("does not count copies outside the event unit's tree", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null, label: "Spieletag" },
+      { id: "shelf-2", parentUnitId: null, label: "Regal B" },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({
+      kind: "event",
+      total: 2,
+      inRoom: 1,
+      available: 1,
+      shelfLabels: ["Spieletag"],
+    });
+  });
+
+  it("falls back to a plain count when the event has no unit yet", async () => {
+    mockEventUnit(null);
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "shelf-2", parentUnitId: null, label: "Regal B" },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getGuestCopyAvailability(COPIES, "event-1");
+
+    expect(result).toEqual({ kind: "plain", total: 2 });
+  });
+});
+
+describe("getPresentGameCopyIds (#273)", () => {
+  it("returns an empty set when the event has no unit yet", async () => {
+    mockEventUnit(null);
+
+    const result = await getPresentGameCopyIds("event-1");
+
+    expect(result).toEqual(new Set());
+  });
+
+  it("includes copies directly on the event unit and on a nested shelf", async () => {
+    mockEventUnit("event-unit-1");
+    prismaMock.storageUnit.findMany.mockResolvedValue([
+      { id: "event-unit-1", parentUnitId: null },
+      { id: "shelf-1", parentUnitId: "event-unit-1" },
+      { id: "shelf-2", parentUnitId: null },
+    ] as never);
+    prismaMock.gameHolding.findMany.mockResolvedValue([
+      { gameCopyId: "copy-1", unitId: "event-unit-1" },
+      { gameCopyId: "copy-2", unitId: "shelf-1" },
+      { gameCopyId: "copy-3", unitId: "shelf-2" },
+    ] as never);
+
+    const result = await getPresentGameCopyIds("event-1");
+
+    expect(result).toEqual(new Set(["copy-1", "copy-2"]));
   });
 });

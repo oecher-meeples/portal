@@ -1,5 +1,5 @@
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
-import type { InviteStatus } from "@/lib/members/invites";
+import type { InviteStatus } from "@/lib/members/invite-format";
 import { INVITE_STATUS_LABELS } from "@/lib/utils/format";
 
 const TONES: Record<InviteStatus, StatusTone> = {

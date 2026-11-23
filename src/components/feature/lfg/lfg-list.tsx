@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ActionButton } from "@/components/ui/action-button";
 import {
@@ -20,30 +21,12 @@ export type LfgPostSummary = {
   isParticipant: boolean;
 };
 
-export function LfgList({
-  posts,
-  showExpiredHref,
-  showingExpired,
-}: {
-  posts: LfgPostSummary[];
-  showExpiredHref: string;
-  showingExpired: boolean;
-}) {
+export function LfgList({ posts }: { posts: LfgPostSummary[] }) {
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        href={showExpiredHref}
-        className="text-primary w-fit text-sm hover:underline"
-      >
-        {showingExpired ? "Nur aktuelle anzeigen" : "Auch vergangene anzeigen"}
-      </Link>
-
       <div className="grid gap-4 sm:grid-cols-2">
         {posts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-card flex flex-col gap-3 rounded-lg border p-4"
-          >
+          <Card key={post.id} size="sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <Link
@@ -60,7 +43,7 @@ export function LfgList({
               </div>
               <LfgStatusPill status={post.status} />
             </div>
-            <div className="flex items-center justify-between gap-3">
+            <div className="mt-auto flex items-center justify-between gap-3">
               <div className="text-sm">
                 {post.creatorName} · {post.participantCount}/
                 {post.maxParticipants}
@@ -82,7 +65,7 @@ export function LfgList({
                 </ActionButton>
               )}
             </div>
-          </div>
+          </Card>
         ))}
         {posts.length === 0 && (
           <p className="text-muted-foreground col-span-full text-sm">

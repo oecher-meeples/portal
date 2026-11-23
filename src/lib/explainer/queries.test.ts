@@ -3,7 +3,11 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getExplainersForGame } = await import("@/lib/explainer/queries");
+const {
+  getExplainersForGame,
+  getExplainerCountsForGames,
+  getAttendingExplainerBoardGameIds,
+} = await import("@/lib/explainer/queries");
 
 describe("getExplainersForGame", () => {
   it("returns an empty list when nobody explains this game", async () => {
@@ -44,5 +48,79 @@ describe("getExplainersForGame", () => {
     expect(prismaMock.explainerGame.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { boardGameId: "game-42" } }),
     );
+  });
+});
+
+describe("getExplainerCountsForGames", () => {
+  it("returns an empty map without querying for an empty input", async () => {
+    const result = await getExplainerCountsForGames([]);
+
+    expect(result).toEqual(new Map());
+    expect(prismaMock.explainerGame.groupBy).not.toHaveBeenCalled();
+  });
+
+  it("maps each boardGameId to its Erklärbären count", async () => {
+    vi.mocked(prismaMock.explainerGame.groupBy).mockResolvedValue([
+      { boardGameId: "game-1", _count: { _all: 2 } },
+      { boardGameId: "game-2", _count: { _all: 1 } },
+    ] as never);
+
+    const result = await getExplainerCountsForGames(["game-1", "game-2"]);
+
+    expect(result).toEqual(
+      new Map([
+        ["game-1", 2],
+        ["game-2", 1],
+      ]),
+    );
+  });
+
+  it("omits titles with no Erklärbär entirely", async () => {
+    vi.mocked(prismaMock.explainerGame.groupBy).mockResolvedValue([] as never);
+
+    const result = await getExplainerCountsForGames(["game-1"]);
+
+    expect(result.has("game-1")).toBe(false);
+  });
+});
+
+describe("getAttendingExplainerBoardGameIds (#256)", () => {
+  it("returns an empty set when nobody is attending", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([]);
+
+    const result = await getAttendingExplainerBoardGameIds("event-1");
+
+    expect(result).toEqual(new Set());
+    expect(prismaMock.explainerGame.findMany).not.toHaveBeenCalled();
+  });
+
+  it("returns the board games an attending Erklärbär knows", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      { meepleId: "meeple-1" },
+      { meepleId: "meeple-2" },
+    ] as never);
+    prismaMock.explainerGame.findMany.mockResolvedValue([
+      { boardGameId: "game-1" },
+      { boardGameId: "game-2" },
+    ] as never);
+
+    const result = await getAttendingExplainerBoardGameIds("event-1");
+
+    expect(result).toEqual(new Set(["game-1", "game-2"]));
+    expect(prismaMock.explainerGame.findMany).toHaveBeenCalledWith({
+      where: { meepleId: { in: ["meeple-1", "meeple-2"] } },
+      select: { boardGameId: true },
+    });
+  });
+
+  it("returns an empty set when the attending Erklärbär has no ExplainerGame entries", async () => {
+    prismaMock.explainerAttendance.findMany.mockResolvedValue([
+      { meepleId: "meeple-1" },
+    ] as never);
+    prismaMock.explainerGame.findMany.mockResolvedValue([] as never);
+
+    const result = await getAttendingExplainerBoardGameIds("event-1");
+
+    expect(result).toEqual(new Set());
   });
 });

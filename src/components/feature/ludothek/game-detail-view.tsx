@@ -1,41 +1,79 @@
-import type { ExplainerExperienceLevel } from "@prisma/client";
-import { StatusPill } from "@/components/ui/status-pill";
+import { Card, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { ExternalLink, Pencil } from "lucide-react";
+import type { BoardGameTrait, ExplainerExperienceLevel } from "@prisma/client";
+import { Button } from "@/components/ui/button";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
+import { RibbonCorner } from "@/components/ui/ribbon-corner";
+import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { YoutubeIcon } from "@/components/ui/youtube-icon";
+import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
+import { LanguageIndependentPill } from "@/components/entities/language-independent-pill";
+import {
+  GameContributorList,
+  GameIllustratorsCard,
+} from "@/components/entities/game-contributor-list";
+import { EditionFlag } from "@/components/entities/edition-flag";
+import {
+  groupGameContributorsByName,
+  splitContributorsForDetail,
+} from "@/lib/ludothek/taxonomy/game-contributors-display";
+import { BoardGameTraitsDisplay } from "@/components/entities/board-game-traits-display";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
-import { GameZustandPill } from "@/components/entities/game-zustand-pill";
+import { RelatedGameCard } from "@/components/entities/related-game-card";
 import { ExplainerVideo } from "@/components/entities/explainer-video";
 import { ExplainerGamePanel } from "@/components/feature/ludothek/explainer-game-panel";
+import {
+  GameTitleActions,
+  type GameTitleAction,
+} from "@/components/feature/ludothek/game-title-actions";
 import {
   AssignExpansionDialog,
   type GameOption,
 } from "@/components/widgets/board-game/assign-expansion-dialog";
+import { removeExpansionAssignment } from "@/lib/ludothek/board-games";
+import {
+  EditBoardGameTitleDialog,
+  type EditableBoardGameTitle,
+} from "@/components/widgets/board-game/edit-board-game-title-dialog";
+import {
+  GameCopiesSection,
+  type GameCopyRow,
+} from "@/components/feature/ludothek/game-copies-section";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
-import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
-import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
-
-export type HoldingHistoryEntry = {
-  id: string;
-  origin: string;
-  target: string;
-  startedAt: string;
-  endedAt: string | null;
-  confirmedAt: string | null;
-  recordedByName: string;
-};
+import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
+import type { GuestCopyAvailability } from "@/lib/events/guest-area";
+import { formatDateMedium } from "@/lib/utils/format";
+import { buildYoutubeRulesSearchUrl } from "@/lib/utils/youtube";
 
 export function GameDetailView({
   game,
-  internal,
+  bggId,
   explainer,
   expansionAssignment,
+  titleEdit,
+  mechanicsOptions,
+  copies,
+  canManageGames,
+  relatedLocationChains,
+  availability,
+  openLfgPosts,
+  createLfgAction,
+  marketListingAction,
+  traitTexts,
+  selectedCopy,
+  selectedCopyId,
 }: {
   game: PublicLudothekGame;
-  internal?: {
-    zustand: GameZustand;
-    locationChain: string;
-    responsibleName: string | null;
-    history: HoldingHistoryEntry[];
-  };
+  /** BGG-Verknüpfung dieses Titels, `null` bei manuell angelegten Titeln
+   * ohne BGG-Import — separat von `game`, weil `toPublicGame()` `bggId` als
+   * Bestandsdatum für Gäste entfernt, der externe Link aber für alle
+   * gedacht ist (#207). */
+  bggId?: number | null;
   /** Nur für eingeloggte Nutzer gesetzt — Erklärbär-Selbstauskunft ist kein Gast-Feature. */
   explainer?: {
     entries: ExplainerEntry[];
@@ -45,30 +83,141 @@ export function GameDetailView({
   expansionAssignment?: {
     options: GameOption[];
   };
+  /** Only set for `games:manage` holders — edits the shared title (#121/#122). */
+  titleEdit?: EditableBoardGameTitle;
+  /** Autocomplete-Vorschläge for `titleEdit`'s Mechaniken-Multiselect (#124). */
+  mechanicsOptions?: string[];
+  /** Every physical copy of this title — only set internally, guests get a
+   * plain count instead (#121, guest aggregation is a later step). */
+  copies?: GameCopyRow[];
+  canManageGames?: boolean;
+  /** Standort per linked base game/expansion id — only set internally (#121). */
+  relatedLocationChains?: Record<string, string>;
+  /** Only set for guests — internal viewers get the full `copies` breakdown instead (#121). */
+  availability?: GuestCopyAvailability;
+  /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
+  openLfgPosts?: OpenLfgPostForBoardGame[];
+  /** Fully rendered "Spielergesuch eröffnen" dialog+trigger plus its „⋯"-menu
+   * entry (#586), composed by the page — only passed for logged-in Meeples.
+   * Kept as a prop instead of an import so this feature stays isolated from
+   * `components/feature/lfg` (#142, see CLAUDE.md layer rules). */
+  createLfgAction?: GameTitleAction;
+  /** Fertig gerenderter Marktplatz-Hinweis/-Trigger ("wird verkauft" oder
+   * "Verkaufen") samt Menüeintrag, von der Seite komponiert — analog
+   * `createLfgAction`, hält diesen Titel von `components/feature/markt`
+   * isoliert (#278). */
+  marketListingAction?: GameTitleAction;
+  /** Admin-editierbare Anzeige-Texte je gesetztem Trait (#487-Konzept) — für
+   * alle (auch Gäste) geladen, analog `game.traits` selbst. */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
+  /** Fertig gerenderte Leiste des per QR-Code vorausgewählten Exemplars
+   * (`/ludothek/<spiel>/inv-<n>`, #548) — weit oben, von der Seite
+   * komponiert. */
+  selectedCopy?: ReactNode;
+  /** Id dieses Exemplars — hebt es im Exemplare-Bereich hervor. */
+  selectedCopyId?: string;
 }) {
+  const { inline: inlineContributors, illustrators } =
+    splitContributorsForDetail(groupGameContributorsByName(game));
+  const bggUrl = bggId ? `https://boardgamegeek.com/boardgame/${bggId}` : null;
+  const titleActions: GameTitleAction[] = [
+    // #503: „Titel bearbeiten" im Header neben dem Titel (Revert #399), bei
+    // schmalem Titelblock wie alle anderen im „⋯"-Menü (#586).
+    titleEdit && {
+      key: "title-edit",
+      label: "Titel bearbeiten",
+      icon: <Pencil />,
+      node: (
+        <EditBoardGameTitleDialog
+          game={titleEdit}
+          mechanicsOptions={mechanicsOptions}
+          showLabel
+        />
+      ),
+    },
+    createLfgAction,
+    marketListingAction,
+    bggUrl && {
+      key: "bgg",
+      label: "Auf BoardGameGeek ansehen",
+      icon: <ExternalLink />,
+      href: bggUrl,
+      external: true,
+      node: (
+        <Button
+          variant="outline"
+          className="gap-1.5 px-2.5"
+          aria-label="Auf BoardGameGeek ansehen"
+          render={<a href={bggUrl} target="_blank" rel="noopener noreferrer" />}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
+          <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
+          <ExternalLink className="size-4" />
+        </Button>
+      ),
+    },
+  ].filter((action): action is GameTitleAction => Boolean(action));
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
-      <div className="flex flex-col gap-4">
-        <GameCoverMedia imageUrl={game.imageUrl} title={game.title} />
-        {internal && (
-          <GameZustandPill zustand={internal.zustand} className="w-fit" />
-        )}
+    // Drei Top-Level-Grid-Items statt zwei Spalten (#400): auf schmalen
+    // Displays stapeln sie in Quelltext-Reihenfolge — Titelblock, Bild,
+    // Rest —, das Bild landet damit zwischen der Spieler/Dauer/Gewichtung-
+    // Zeile und den Mechaniken. Ab `lg` bekommt jedes Item eine explizite
+    // Grid-Position, die wieder das klassische Bild-neben-Text-Layout
+    // ergibt (Bild spannt beide Zeilen der rechten Spalte).
+    <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
+      <div className="@container/title-block lg:col-start-2 lg:row-start-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="min-w-0">
+              <PageTitle size="md">
+                {game.title}
+                <EditionFlag
+                  languages={game.editionLanguages}
+                  className="ml-2 text-base"
+                />
+              </PageTitle>
+              {game.secondaryTitle && (
+                <p className="text-muted-foreground">{game.secondaryTitle}</p>
+              )}
+              <LanguageIndependentPill
+                languageDependence={game.languageDependence}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <GameTitleActions actions={titleActions} />
+        </div>
+        <p className="text-muted-foreground mt-1">
+          {game.minPlayers && game.maxPlayers
+            ? `${game.minPlayers}–${game.maxPlayers} Spieler`
+            : null}
+          {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
+          {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
+        </p>
+        <GameContributorList contributors={inlineContributors} />
+        {selectedCopy && <div className="mt-4">{selectedCopy}</div>}
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight">
-            {game.title}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {game.minPlayers && game.maxPlayers
-              ? `${game.minPlayers}–${game.maxPlayers} Spieler`
-              : null}
-            {game.playTimeMinutes ? ` · ${game.playTimeMinutes} Min.` : ""}
-            {game.weight ? ` · Gewichtung ${game.weight.toFixed(1)}/5` : ""}
-          </p>
-        </div>
+      {/* #467: max-lg:w-fit + mx-auto lassen den Container unterhalb `lg`
+          auf die tatsächliche Bildgröße schrumpfen, statt die volle
+          Grid-Spaltenbreite als leere Aspect-Ratio-Box vorzuhalten. Ab `lg`
+          (Grid-Layout) unverändert volle Spaltenbreite. */}
+      <div className="relative overflow-hidden rounded-md max-lg:mx-auto max-lg:w-fit lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <GameCoverMedia
+          imageUrl={game.imageUrl}
+          title={game.title}
+          heroResponsive
+        />
+        {game.kind === "BOARDGAME_EXPANSION" && (
+          <RibbonCorner>Erweiterung</RibbonCorner>
+        )}
+        <CardCornerOverlay corner="top-right">
+          <BggRatingBadge averageRating={game.averageRating} />
+        </CardCornerOverlay>
+      </div>
 
+      <div className="flex flex-col gap-6 lg:col-start-2 lg:row-start-2">
         <div className="flex flex-wrap gap-2">
           {game.mechanics.map((mechanic) => (
             <span
@@ -78,66 +227,176 @@ export function GameDetailView({
               {mechanic}
             </span>
           ))}
+          {game.categories.map((category) => (
+            <span
+              key={category}
+              className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
+            >
+              {category}
+            </span>
+          ))}
         </div>
 
+        <BoardGameTraitsDisplay
+          traits={game.traits}
+          textsByTrait={traitTexts ?? {}}
+        />
+
+        {game.notes && (
+          <Card size="sm">
+            <p className="text-sm whitespace-pre-line">{game.notes}</p>
+          </Card>
+        )}
+
+        {availability && (
+          <p className="text-muted-foreground text-sm">
+            {availability.kind === "event"
+              ? `${availability.available} von ${availability.inRoom} verfügbar${
+                  availability.shelfLabels.length > 0
+                    ? ` (${availability.shelfLabels.join(", ")})`
+                    : ""
+                }`
+              : `${availability.total} ${availability.total === 1 ? "Exemplar" : "Exemplare"}`}
+          </p>
+        )}
+
+        {game.kind === "BOARDGAME_EXPANSION" && expansionAssignment && (
+          <AssignExpansionDialog
+            game={{ id: game.boardGameId, kind: game.kind }}
+            options={expansionAssignment.options}
+          />
+        )}
         {game.baseGames.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2">
             <span className="text-muted-foreground text-sm">
               Erweiterung zu:
             </span>
-            {game.baseGames.map((baseGame) => (
-              <span
-                key={baseGame.id}
-                className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
-              >
-                {baseGame.title}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {game.expansions.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-muted-foreground text-sm">
-              Erweiterungen:
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {game.expansions.map((expansion) => (
-                <span
-                  key={expansion.id}
-                  className="bg-muted rounded-full px-3 py-1 text-xs font-medium"
-                >
-                  {expansion.title}
-                </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {game.baseGames.map((baseGame) => (
+                <RelatedGameCard
+                  key={baseGame.id}
+                  game={baseGame}
+                  locationChain={relatedLocationChains?.[baseGame.id]}
+                  removeAction={
+                    expansionAssignment
+                      ? removeExpansionAssignment.bind(
+                          null,
+                          baseGame.id,
+                          game.boardGameId,
+                        )
+                      : undefined
+                  }
+                />
               ))}
             </div>
           </div>
         )}
 
-        {expansionAssignment && (
-          <AssignExpansionDialog
-            game={{ id: game.boardGameId, kind: game.kind }}
-            linked={
-              game.kind === "BOARDGAME_EXPANSION"
-                ? game.baseGames
-                : game.expansions
-            }
-            options={expansionAssignment.options}
-          />
+        {/* Nur auf echten Basisspielen anbieten (kein `kind`-Mismatch durch
+            fehlenden BGG-Abgleich, siehe Plan-Schritt 5) — eine Erweiterung
+            bekommt ihren "Basisspiel zuordnen"-Trigger oben stattdessen. */}
+        {game.kind !== "BOARDGAME_EXPANSION" &&
+          game.baseGames.length === 0 &&
+          expansionAssignment && (
+            <AssignExpansionDialog
+              game={{ id: game.boardGameId, kind: game.kind }}
+              options={expansionAssignment.options}
+            />
+          )}
+        {game.expansions.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-muted-foreground text-sm">
+              Erweiterungen:
+            </span>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {game.expansions.map((expansion) => (
+                <RelatedGameCard
+                  key={expansion.id}
+                  game={expansion}
+                  locationChain={relatedLocationChains?.[expansion.id]}
+                  removeAction={
+                    expansionAssignment
+                      ? removeExpansionAssignment.bind(
+                          null,
+                          game.boardGameId,
+                          expansion.id,
+                        )
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          </div>
         )}
 
-        {(game.description || game.explainerVideoUrl) && (
-          <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Erklärung</h2>
-            {game.description && (
-              <p className="text-sm leading-relaxed whitespace-pre-line">
-                {game.description}
-              </p>
-            )}
-            {game.explainerVideoUrl && (
-              <ExplainerVideo url={game.explainerVideoUrl} />
-            )}
+        <Card>
+          <CardTitle>Erklärung</CardTitle>
+          {game.description && (
+            <p className="text-sm leading-relaxed whitespace-pre-line">
+              {game.description}
+            </p>
+          )}
+          {game.explainerVideoUrl && (
+            <ExplainerVideo url={game.explainerVideoUrl} />
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a
+                  href={buildYoutubeRulesSearchUrl(game.title, "de")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <YoutubeIcon className="size-4" />
+              Nach Regeln auf Youtube suchen
+              <ExternalLink className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="gap-1.5"
+              render={
+                <a
+                  href={buildYoutubeRulesSearchUrl(game.title, "en")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <YoutubeIcon className="size-4" />
+              Search for rules on Youtube
+              <ExternalLink className="size-4" />
+            </Button>
           </div>
+        </Card>
+
+        {openLfgPosts && openLfgPosts.length > 0 && (
+          <Card>
+            <CardTitle>Offene Gesuche</CardTitle>
+            <ul className="flex flex-col divide-y">
+              {openLfgPosts.map((post) => (
+                <li key={post.id} className="flex flex-col gap-0.5 py-2.5">
+                  <Link
+                    href={`/lfg/${post.id}`}
+                    className="hover:text-primary font-medium"
+                  >
+                    {post.title}
+                  </Link>
+                  <span className="text-muted-foreground text-xs">
+                    {post.dateNote ??
+                      (post.plannedAt
+                        ? formatDateMedium(post.plannedAt)
+                        : "Termin offen")}
+                    {post.location ? ` · ${post.location}` : ""} ·{" "}
+                    {post.participantCount}/{post.maxParticipants}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
         )}
 
         {explainer && (
@@ -149,51 +408,21 @@ export function GameDetailView({
           />
         )}
 
-        {internal && (
-          <div className="bg-card rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">Standort</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {internal.locationChain || "—"}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              Verantwortlich: {internal.responsibleName ?? "—"}
-            </p>
-
-            <div className="mt-4 border-t pt-4">
-              <GameHoldingPanel gameCopyId={game.id} />
-            </div>
-          </div>
+        {/* Zuletzt platziert (Plan-Schritt 6) — bündelt Zustand/Standort,
+            Aufenthalts-Aktionen und die Historie je Exemplar in einem
+            Bereich statt der früher verstreuten Einzel-Cards. */}
+        {copies && (
+          <GameCopiesSection
+            copies={copies}
+            boardGameId={game.boardGameId}
+            boardGameTitle={game.title}
+            canManageGames={Boolean(canManageGames)}
+            selectedCopyId={selectedCopyId}
+          />
         )}
 
-        {internal && internal.history.length > 0 && (
-          <div className="bg-card rounded-lg border p-5">
-            <h2 className="font-serif text-lg font-bold">
-              Aufenthalts-Historie
-            </h2>
-            <ul className="mt-3 flex flex-col divide-y text-sm">
-              {internal.history.map((entry) => (
-                <li key={entry.id} className="flex flex-col gap-0.5 py-2.5">
-                  <span className="font-medium">
-                    {entry.origin} → {entry.target}
-                    {!entry.confirmedAt && (
-                      <StatusPill
-                        label="unbestätigt"
-                        tone="warning"
-                        className="ml-2"
-                      />
-                    )}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {entry.startedAt}
-                    {entry.endedAt ? ` – ${entry.endedAt}` : " – aktuell"} ·
-                    erfasst von {entry.recordedByName}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <GameIllustratorsCard illustrators={illustrators} />
       </div>
-    </div>
+    </PageContainer>
   );
 }

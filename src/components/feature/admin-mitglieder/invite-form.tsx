@@ -3,49 +3,73 @@
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import {
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+} from "@/components/ui/combobox";
+import { useControlledComboboxInput } from "@/components/ui/use-controlled-combobox-input";
+import { Field } from "@/components/ui/field";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
   buildRegistrationLink,
-  DEFAULT_BOUND_DAYS,
-  DEFAULT_UNBOUND_DAYS,
   formatInviteMessage,
-  MAX_INVITE_DAYS,
-} from "@/lib/members/invites";
+} from "@/lib/members/invite-format";
+import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
-export function InviteForm() {
-  const [unbound, setUnbound] = useState(false);
-  const [email, setEmail] = useState("");
-  const [days, setDays] = useState<number>(DEFAULT_BOUND_DAYS);
+/** Suchschlüssel eines Mitglieds in der Combobox — eindeutig (führt die
+ * Mitgliedsnummer), dient sowohl der Textsuche als auch als `value` des
+ * jeweiligen Items. Sichtbar dargestellt wird Name/E-Mail zweizeilig (s.
+ * `ComboboxItem` unten), nicht dieser String selbst. */
+function memberSearchKey(member: MemberWithoutLoginRow) {
+  return `#${member.memberNumber} ${member.displayName} (${member.email})`;
+}
+
+export function InviteForm({
+  membersWithoutLogin,
+  defaultDays,
+  initialSearch = "",
+}: {
+  membersWithoutLogin: MemberWithoutLoginRow[];
+  /** Zentraler Wert aus `/admin/einstellungen/einladungen` (#349) — hier nur
+   * noch angezeigt, nicht mehr pro Einladung überschreibbar. */
+  defaultDays: number;
+  /** Vorbelegt das Mitglied-Suchfeld, z. B. mit der (erfolglosen) Eingabe aus
+   * der Einladungen-Suche darüber (Live-Review) — läuft live mit, solange
+   * noch kein Mitglied ausgewählt ist (danach hat die Auswahl Vorrang, s.
+   * `useControlledComboboxInput`). */
+  initialSearch?: string;
+}) {
+  const [memberId, setMemberId] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
   const [result, setResult] = useState<{
     token: string;
+    email: string;
     expiresAt: string;
     extended: boolean;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function handleUnboundChange(checked: boolean) {
-    setUnbound(checked);
-    setDays(checked ? DEFAULT_UNBOUND_DAYS : DEFAULT_BOUND_DAYS);
-  }
+  const selectedMember =
+    membersWithoutLogin.find((member) => member.id === memberId) ?? null;
+  const [inputValue, setInputValue] = useControlledComboboxInput(
+    selectedMember?.displayName ?? initialSearch,
+  );
 
   async function handleCreateInvite() {
+    if (!memberId) {
+      setError("Bitte ein Mitglied auswählen.");
+      return;
+    }
     setIsPending(true);
     setError(null);
 
     try {
-      const created = await createInvite({
-        email: unbound ? null : email,
-        days,
-      });
-      setResult({
-        token: created.token,
-        expiresAt: created.expiresAt,
-        extended: created.extended,
-      });
+      const created = await createInvite({ memberId });
+      setResult(created);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -58,16 +82,12 @@ export function InviteForm() {
   }
 
   const inviteLink = result
-    ? buildRegistrationLink(
-        window.location.origin,
-        result.token,
-        unbound ? null : email,
-      )
+    ? buildRegistrationLink(window.location.origin, result.token, result.email)
     : null;
 
   const mailtoHref =
     inviteLink && result
-      ? `mailto:${unbound ? "" : email}?subject=${encodeURIComponent(
+      ? `mailto:${result.email}?subject=${encodeURIComponent(
           "Einladung zu Oecher Meeples",
         )}&body=${encodeURIComponent(
           formatInviteMessage(inviteLink, new Date(result.expiresAt)),
@@ -75,43 +95,63 @@ export function InviteForm() {
       : null;
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-      <h2 className="font-serif text-lg font-bold">Neues Mitglied einladen</h2>
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={unbound}
-          onChange={(event) => handleUnboundChange(event.target.checked)}
-        />
-        Ungebundene Einladung (mehrfach nutzbar, keine E-Mail-Bindung)
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-[2fr_1fr_auto]">
-        <TextField
-          id="invite-email"
-          type="email"
-          label="E-Mail-Adresse"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={unbound}
-          required={!unbound}
-        />
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite-days">Gültigkeit (Tage)</Label>
-          <Input
-            id="invite-days"
-            type="number"
-            min={0}
-            max={MAX_INVITE_DAYS}
-            step={0.5}
-            value={days}
-            onChange={(event) => setDays(Number(event.target.value))}
-          />
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-[2fr_auto]">
+        <Field label="Mitglied" htmlFor="invite-member">
+          <Combobox
+            items={membersWithoutLogin.map(memberSearchKey)}
+            value={selectedMember ? memberSearchKey(selectedMember) : null}
+            inputValue={inputValue}
+            onInputValueChange={setInputValue}
+            onValueChange={(key) => {
+              const selected = membersWithoutLogin.find(
+                (member) => memberSearchKey(member) === key,
+              );
+              setMemberId(selected?.id ?? "");
+            }}
+          >
+            {/* #451: nicht anhand von membersWithoutLogin.length deaktivieren
+             * — die Liste kann leer sein, weil aktuell einfach alle
+             * verbleibenden Mitglieder bereits eine offene Einladung haben
+             * (temporärer, gewöhnlicher Zustand), nicht weil es grundsätzlich
+             * niemanden zu suchen gäbe. Das Feld bleibt editierbar,
+             * ComboboxEmpty zeigt bei keinem Treffer "Keine Treffer." */}
+            <ComboboxInput
+              id="invite-member"
+              placeholder="Mitglied ohne Login suchen …"
+            />
+            <ComboboxPopup>
+              <ComboboxEmpty>Keine Treffer.</ComboboxEmpty>
+              <ComboboxList>
+                {(key: string) => {
+                  const member = membersWithoutLogin.find(
+                    (candidate) => memberSearchKey(candidate) === key,
+                  );
+                  if (!member) return null;
+                  return (
+                    <ComboboxItem key={key} value={key}>
+                      {/* Name/E-Mail zweizeilig statt einer langen Zeile
+                       * ("#num Name (email)") — hält die Combobox schmal,
+                       * sonst zwang die Breite des längsten Eintrags den
+                       * Button daneben aus dem Akkordeon hinaus. */}
+                      <span className="flex flex-col">
+                        <span>
+                          #{member.memberNumber} {member.displayName}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {member.email}
+                        </span>
+                      </span>
+                    </ComboboxItem>
+                  );
+                }}
+              </ComboboxList>
+            </ComboboxPopup>
+          </Combobox>
+        </Field>
         <Button
           onClick={handleCreateInvite}
-          disabled={isPending}
+          disabled={isPending || !memberId}
           className="self-end"
         >
           <UserPlus />
@@ -125,12 +165,13 @@ export function InviteForm() {
         <div className="flex flex-col gap-2">
           {result?.extended ? (
             <p className="text-sm">
-              E-Mail wurde bereits eingeladen, Gültigkeitsdauer wurde
-              verlängert.
+              Für dieses Mitglied lag bereits eine offene Einladung vor, die
+              Gültigkeitsdauer wurde verlängert.
             </p>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Registrierungslink ({days} {days === 1 ? "Tag" : "Tage"} gültig):
+              Registrierungslink ({defaultDays}{" "}
+              {defaultDays === 1 ? "Tag" : "Tage"} gültig):
             </p>
           )}
           <code className="bg-muted rounded px-2 py-1 text-xs break-all">

@@ -6,9 +6,6 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const ensureMeepleMock = vi.fn();
 vi.mock("@/lib/members/meeples", async () => {
@@ -17,6 +14,11 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return { ...actual, ensureMeeple: ensureMeepleMock };
 });
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   createStorageUnit,
@@ -81,6 +83,47 @@ describe("createStorageUnit", () => {
     const result = await createStorageUnit({ kind: "BOX", label: "  " });
 
     expect(result).toEqual({ error: "Bitte ein Label angeben." });
+    expect(prismaMock.storageUnit.create).not.toHaveBeenCalled();
+  });
+
+  it("uses an explicit code instead of generating one", async () => {
+    prismaMock.storageUnit.findUnique.mockResolvedValue(null);
+    prismaMock.storageUnit.create.mockResolvedValue({
+      id: "unit-3",
+      code: "OM-BOX-9999",
+    } as never);
+
+    const result = await createStorageUnit({
+      kind: "BOX",
+      label: "Sonderkarton",
+      code: "OM-BOX-9999",
+    });
+
+    expect(result).toEqual({
+      success: true,
+      id: "unit-3",
+      code: "OM-BOX-9999",
+    });
+    expect(prismaMock.storageUnit.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.storageUnit.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ code: "OM-BOX-9999" }),
+    });
+  });
+
+  it("rejects an explicit code that's already taken", async () => {
+    prismaMock.storageUnit.findUnique.mockResolvedValue({
+      id: "existing",
+    } as never);
+
+    const result = await createStorageUnit({
+      kind: "BOX",
+      label: "Sonderkarton",
+      code: "OM-BOX-0001",
+    });
+
+    expect(result).toEqual({
+      error: "Der Code „OM-BOX-0001“ ist bereits vergeben.",
+    });
     expect(prismaMock.storageUnit.create).not.toHaveBeenCalled();
   });
 });
@@ -177,6 +220,36 @@ describe("setUnitParent", () => {
       data: expect.objectContaining({
         unitId: "unit-1",
         parentUnitId: "unit-2",
+      }),
+    });
+  });
+
+  it("nests a shelf under an Event storage unit the same way (#273 Stufe 2)", async () => {
+    prismaMock.storageUnit.findUnique
+      // wouldCreateCycle walk: the event unit has no parent of its own
+      .mockResolvedValueOnce({ parentUnitId: null } as never)
+      // the shelf itself, read before moving
+      .mockResolvedValueOnce({
+        id: "shelf-1",
+        keeperMeepleId: null,
+        locationNote: null,
+        retiredAt: null,
+      } as never)
+      // requireOpenUnit inside moveStorageUnit
+      .mockResolvedValueOnce({ id: "shelf-1", retiredAt: null } as never);
+    prismaMock.storageUnitMove.updateMany.mockResolvedValue({
+      count: 0,
+    } as never);
+    prismaMock.storageUnitMove.create.mockResolvedValue({} as never);
+    prismaMock.storageUnit.update.mockResolvedValue({} as never);
+
+    const result = await setUnitParent("shelf-1", "event-unit-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.storageUnitMove.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        unitId: "shelf-1",
+        parentUnitId: "event-unit-1",
       }),
     });
   });

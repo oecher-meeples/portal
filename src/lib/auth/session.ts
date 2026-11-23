@@ -1,16 +1,27 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission, hasRole } from "@/lib/auth/permissions";
-import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
+import { getCurrentSession, getCurrentUser } from "@/lib/auth/server";
+import { hasPermission, type PermissionKey } from "@/lib/auth/permissions";
+import { logAdminLoginOnce } from "@/lib/auth/login-log";
+import { ensureMeeple, getMeepleMembership } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
 /**
  * Admin-only UI preview: lets an admin see the sidebar/nav as another tier
  * would. Never consulted by access-control checks (requireAdmin/requireMember
- * read the real role directly) — display only.
+ * read the real permission directly) — display only.
  */
 export const PREVIEW_TIER_COOKIE = "preview-tier";
+
+/**
+ * Grants the "admin" tier — a permission, not a role name. Deliberately not
+ * tied to any specific Role.name: which role(s) grant it is purely a
+ * RolePermission-Zuordnung, die in der Rollenverwaltung (#216) frei
+ * umbenannt/umstrukturiert werden kann, ohne diesen Zugriff lautlos zu
+ * entziehen (siehe #219-Review — genau das ist vorher mit der alten
+ * hasRole(userId, "admin")-Prüfung passiert).
+ */
+const ADMIN_ACCESS_PERMISSION: PermissionKey = "admin:access";
 
 function isTier(value: string | undefined): value is Tier {
   return !!value && (TIER_ORDER as string[]).includes(value);
@@ -21,15 +32,26 @@ export const PATHNAME_HEADER = "x-pathname";
 
 /**
  * The only routes an "ausgetreten" Meeple may still reach — settling up:
- * own profile, own holdings, giving games back or on, calendar, member directory.
- * Everything else (Ludothek, interne News, Spielergesuche) is closed.
+ * own profile, own holdings. Everything else (Ludothek, interne News,
+ * Spielergesuche) is closed.
+ *
+ * #537: `/scan` ist bewusst nicht dabei (Vier-Augen-Prinzip) — ein
+ * Ausgetretener bucht nichts selbst, seine Spiele bringt eine andere Person
+ * per Scan zurück.
+ *
+ * #209: `/dashboard/kalender` ist entfernt (News-Konsolidierung, #208) —
+ * `/news` deckt die Funktion ab, ist aber ein öffentlicher Weg (kein
+ * `requireMember()`-Gate) und braucht deshalb keinen eigenen Eintrag hier.
+ * Bewusste Konsequenz: Ausgetretene verlieren den bisherigen separaten
+ * internen Kalender-Zugriff (`news:internal:view` bleibt ihnen entzogen),
+ * s. `docs/mitglieder-konzept.md`.
  */
 export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   { path: "/dashboard", exact: true },
-  { path: "/dashboard/kalender" },
-  { path: "/profil" },
-  { path: "/scan" },
-  { path: "/mitglieder" },
+  // exact: /profil/[slug] wäre sonst für JEDEN Slug erreichbar — die eigene
+  // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
+  // gezielt über isOwnProfilPath durch, nicht über diese Liste.
+  { path: "/profil", exact: true },
 ];
 
 export function isSettlementPath(pathname: string) {
@@ -47,7 +69,7 @@ async function currentPathname() {
 export async function getRealSessionTier(): Promise<Tier> {
   const user = await getCurrentUser();
   if (!user) return "gast";
-  if (await hasRole(user.id, "admin")) return "admin";
+  if (await hasPermission(user.id, ADMIN_ACCESS_PERMISSION)) return "admin";
   return "mitglied";
 }
 
@@ -58,23 +80,47 @@ export async function getPreviewTier(): Promise<Tier | null> {
   return isTier(value) ? value : null;
 }
 
-/** Effective tier for display purposes — real role, overridden by an admin's preview choice. */
+/**
+ * Effective tier for display purposes — real role, overridden by an admin's
+ * preview choice. Admins see their full "admin" view until they pick another
+ * tier via the switcher (#516; #126 had defaulted to "mitglied", which hid
+ * every admin affordance right after login without any visible reason).
+ */
 export async function getSessionTier(): Promise<Tier> {
-  const realTier = await getRealSessionTier();
+  return resolveViewTier(await getRealSessionTier());
+}
+
+/**
+ * `getSessionTier` for callers that already know the real tier (AppShell).
+ * Shell and pages must share one admin default — they once disagreed, so the
+ * switcher showed "Admin" while every page rendered the member view (#504).
+ */
+export async function resolveViewTier(realTier: Tier): Promise<Tier> {
   if (realTier !== "admin") return realTier;
+  return adminViewTier();
+}
+
+/** A real admin's view: the preview choice, else the full admin view. */
+async function adminViewTier(): Promise<Tier> {
   return (await getPreviewTier()) ?? "admin";
 }
 
 /**
  * Permission check for UI affordances shown on non-admin pages (e.g. an edit
  * button on a public post). Unlike `hasPermission` this also hides while an
- * admin is previewing a lower tier — real access control never calls this.
+ * admin is previewing a non-admin tier — real access control never calls
+ * this. Only ever adjusts the result for real admins: `getPreviewTier()`
+ * presence alone isn't the signal (the cookie can legitimately hold
+ * `"admin"` itself, see `getSessionTier`), and a moderator/kassenwart's own
+ * permissions must never be tier-gated — they have no "admin" tier at all.
  */
 export async function hasPermissionInCurrentView(
   userId: string,
-  permissionKey: string,
+  permissionKey: PermissionKey,
 ) {
-  if (await getPreviewTier()) return false;
+  if (await hasPermission(userId, ADMIN_ACCESS_PERMISSION)) {
+    if ((await adminViewTier()) !== "admin") return false;
+  }
   return hasPermission(userId, permissionKey);
 }
 
@@ -89,11 +135,16 @@ export async function requireMember() {
   }
 
   const meeple = await ensureMeeple(user);
-  const membershipState = getMembershipState(meeple);
+  const { member, membershipState } = await getMeepleMembership(meeple);
 
-  if (membershipState !== "aktiv" && membershipState !== "gekuendigt") {
+  if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
-    if (!isSettlementPath(pathname)) {
+    // #386: die eigene `/profil/[slug]`-Seite muss für den
+    // Abwicklungs-Zustand ebenso erreichbar bleiben wie `/profil` selbst,
+    // aber nur die *eigene*, nicht jede beliebige.
+    const isOwnProfilPath =
+      member?.slug !== undefined && pathname === `/profil/${member.slug}`;
+    if (!isSettlementPath(pathname) && !isOwnProfilPath) {
       redirect("/403");
     }
   }
@@ -101,10 +152,73 @@ export async function requireMember() {
   return { user, meeple, membershipState };
 }
 
-export async function requireAdmin() {
+/**
+ * Zwangs-Logout für `admin:access`-Konten (#231): keine langlebige,
+ * still weiterlaufende Session — nach 12h ab Login (`session.createdAt`,
+ * unabhängig von fortgesetzter Aktivität) wird eine erneute Anmeldung
+ * verlangt. Der eigentliche Cookie-Löschvorgang läuft über einen Redirect
+ * auf einen Route Handler (`/api/auth/force-logout`), weil Server
+ * Components selbst keine Cookies schreiben dürfen (#242).
+ *
+ * Bewusst hier statt in `src/proxy.ts` verankert: der Check braucht die
+ * Permission-Abfrage (`hasPermission`) und `logAdminLoginOnce()` (liest
+ * `next/headers`) — beides gehört in den Render-Pfad, nicht in jeden
+ * Proxy-Durchlauf. Er greift bei jedem Zugriff auf eine `/admin`-Seite, was
+ * für ein praktisch admin-only genutztes Konto ausreicht.
+ */
+const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
+  if (!(await hasPermission(neonAuthUserId, ADMIN_ACCESS_PERMISSION))) return;
+
+  const session = await getCurrentSession();
+  if (!session) return;
+
+  // #371: Neon Auths SDK lieferte `createdAt` im Fallback-Pfad als rohen
+  // ISO-String statt `Date`. Das self-hosted better-auth (Prisma-Adapter)
+  // liefert ein echtes `Date`; die Normalisierung bleibt als billige
+  // Absicherung gegen Adapter-/Serialisierungswechsel.
+  const createdAt =
+    session.session.createdAt instanceof Date
+      ? session.session.createdAt
+      : new Date(session.session.createdAt);
+
+  await logAdminLoginOnce(neonAuthUserId, createdAt);
+
+  const ageMs = Date.now() - createdAt.getTime();
+  if (ageMs > ADMIN_SESSION_MAX_AGE_MS) {
+    const pathname = await currentPathname();
+    redirect(
+      `/api/auth/force-logout?next=${encodeURIComponent(`/login?next=${pathname}`)}`,
+    );
+  }
+}
+
+/**
+ * Guard for an admin-area route gated by one or more specific permissions
+ * (any match is enough) — unlike `requirePermission` this also enforces the
+ * membership-state check from `requireMember`, matching `requireAdmin`'s
+ * behaviour. Use this instead of `requireAdmin` wherever a route only needs
+ * one feature permission (e.g. `games:manage`), so a Spielewart/Kassenwart/
+ * Redakteur etc. can reach it without also holding `admin:access`.
+ */
+export async function requireAdminPermission(
+  permissionKey: PermissionKey | readonly PermissionKey[],
+) {
   const session = await requireMember();
-  if (!(await hasRole(session.user.id, "admin"))) {
+  await enforceAdminAccessSessionFreshness(session.user.id);
+
+  const keys: readonly PermissionKey[] =
+    typeof permissionKey === "string" ? [permissionKey] : permissionKey;
+  const results = await Promise.all(
+    keys.map((key) => hasPermission(session.user.id, key)),
+  );
+  if (!results.some(Boolean)) {
     redirect("/403");
   }
   return session;
+}
+
+export async function requireAdmin() {
+  return requireAdminPermission(ADMIN_ACCESS_PERMISSION);
 }

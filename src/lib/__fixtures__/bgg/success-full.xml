@@ -16,6 +16,7 @@
 		<link type="boardgamemechanic" id="2082" value="Card Play" />
 		<link type="boardgamemechanic" id="2015" value="Income" />
 		<link type="boardgamecategory" id="1015" value="Animals" />
+		<link type="boardgamedesigner" id="1" value="Mathias Wigge" />
 		<statistics page="1">
 			<ratings>
 				<usersrated value="12345" />

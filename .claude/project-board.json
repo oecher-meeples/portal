@@ -9,6 +9,7 @@
     "id": "PVTSSF_lADOCJfCSs4BertCzhZEEz0",
     "name": "Status",
     "options": {
+      "Waiting": "6441e8fa",
       "Epics": "46ebb7c4",
       "Backlog": "f75ad846",
       "Ready": "61e4505c",

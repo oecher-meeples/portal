@@ -1,76 +1,61 @@
 "use server";
 
 import { BankDataAccessKind } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { logBankDataAccess } from "@/lib/members/bank-access-log";
 import { decryptSecret } from "@/lib/utils/crypto";
-import { ensureMeeple } from "@/lib/members/meeples";
-import { requirePermission } from "@/lib/auth/permissions";
-
-/** The only columns the export ever contains. */
-export const BANK_CSV_COLUMNS = [
-  "Mitgliedsnummer",
-  "Name",
-  "Kontoinhaber",
-  "IBAN",
-] as const;
-
-async function requireBankReader() {
-  const user = await requirePermission("bank:read");
-  return ensureMeeple(user);
-}
+import { escapeCsvField } from "@/lib/utils/csv";
+import { memberDisplayName } from "@/lib/members/member-display-name";
+import { BANK_CSV_COLUMNS } from "@/components/feature/admin-bank/csv-columns";
 
 function csvCell(value: string | number) {
-  const text = String(value);
-  return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-export async function revealIban(meepleId: string) {
-  const actor = await requireBankReader();
-
-  const subject = await prisma.meeple.findUnique({
-    where: { id: meepleId },
-    select: { id: true, ibanEncrypted: true },
-  });
-
-  if (!subject?.ibanEncrypted) {
-    return { error: "Für dieses Mitglied ist keine IBAN gespeichert." };
-  }
-
-  const iban = decryptSecret(subject.ibanEncrypted);
-  await logBankDataAccess({
-    accessedByMeepleId: actor.id,
-    subjectMeepleId: subject.id,
-    kind: BankDataAccessKind.SINGLE_REVEAL,
-  });
-
-  return { success: true as const, iban };
+  return escapeCsvField(value, ";");
 }
 
 export async function exportBankDataCsv() {
-  const actor = await requireBankReader();
+  const { meeple: actor } = await requireActionPermission("bank:read");
 
-  const meeples = await prisma.meeple.findMany({
-    where: { ibanEncrypted: { not: null }, anonymizedAt: null },
+  // #395: Datenminimierung auf tatsächlich einzuziehende Zustände.
+  // "Gekündigt" (resignedAt gesetzt, membershipEndsAt in der Zukunft) bleibt
+  // beitragspflichtig bis Jahreswechsel und damit im Export — die Grenze ist
+  // das Zustandsdatum selbst, nicht ob der Jahreswechsel-Cron ein
+  // "Ausgetreten"-Meeple (membershipEndsAt in der Vergangenheit) bereits
+  // verarbeitet hat (z. B. wegen offener Ausleihen noch nicht).
+  const now = new Date();
+  const members = await prisma.member.findMany({
+    where: {
+      ibanEncrypted: { not: null },
+      AND: [
+        { OR: [{ meepleId: null }, { meeple: { anonymizedAt: null } }] },
+        {
+          OR: [{ membershipEndsAt: null }, { membershipEndsAt: { gte: now } }],
+        },
+      ],
+    },
     orderBy: { memberNumber: "asc" },
     select: {
       memberNumber: true,
-      displayName: true,
+      firstName: true,
+      lastName: true,
+      email: true,
       accountHolder: true,
       ibanEncrypted: true,
+      meeple: { select: { displayName: true } },
     },
   });
 
-  const rows = meeples.map((meeple) =>
-    [
-      meeple.memberNumber,
-      meeple.displayName,
-      meeple.accountHolder ?? meeple.displayName,
-      decryptSecret(meeple.ibanEncrypted!),
+  const rows = members.map((member) => {
+    const name = memberDisplayName(member);
+    return [
+      member.memberNumber,
+      name,
+      member.accountHolder ?? name,
+      decryptSecret(member.ibanEncrypted!),
     ]
       .map(csvCell)
-      .join(";"),
-  );
+      .join(";");
+  });
 
   await logBankDataAccess({
     accessedByMeepleId: actor.id,

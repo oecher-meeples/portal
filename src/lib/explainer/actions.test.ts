@@ -13,8 +13,12 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
-const { addExplainerGame, updateExplainerGameLevel, removeExplainerGame } =
-  await import("./actions");
+const {
+  addExplainerGame,
+  updateExplainerGameLevel,
+  removeExplainerGame,
+  removeAllExplainerGames,
+} = await import("./actions");
 
 class RedirectError extends Error {}
 
@@ -122,6 +126,21 @@ describe("removeExplainerGame", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.explainerGame.deleteMany).toHaveBeenCalledWith({
       where: { meepleId: "meeple-1", boardGameId: "game-1" },
+    });
+  });
+});
+
+describe("removeAllExplainerGames", () => {
+  it("deletes all of the caller's own entries", async () => {
+    prismaMock.explainerGame.deleteMany.mockResolvedValue({
+      count: 3,
+    } as never);
+
+    const result = await removeAllExplainerGames();
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.explainerGame.deleteMany).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
     });
   });
 });

@@ -1,25 +1,32 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from "react-markdown";
 import type { NewsletterCategory } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CoverMedia } from "@/components/ui/cover-media";
-import { useBlobUpload } from "@/lib/utils/use-blob-upload";
-import type { ContentType } from "@/lib/content/content";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Field } from "@/components/ui/field";
+import { useAction } from "@/components/ui/use-action";
 import {
-  NEWSLETTER_CATEGORIES,
-  NEWSLETTER_CATEGORY_LABELS,
-} from "@/lib/newsletter/labels";
+  SurveyFields,
+  usePostSurvey,
+} from "@/components/feature/admin-news/survey-fields";
+import {
+  PostPublishingOptions,
+  usePostInstagram,
+} from "@/components/feature/admin-news/post-publishing-options";
+import {
+  PostBodyField,
+  PostCoverField,
+} from "@/components/feature/admin-news/post-form-sections";
+import {
+  CONTENT_TYPE_LABELS,
+  type ContentType,
+} from "@/lib/content/content-types";
 import {
   createPost,
-  getUploadToken,
-  retryInstagramPost,
   updatePost,
   type PostInput,
 } from "@/components/feature/admin-news/actions";
@@ -32,30 +39,34 @@ const DEFAULT_NEWSLETTER_CATEGORY_BY_TYPE: Record<
   blog: "NEWS",
   termin: "TERMINE",
   turnier: "TURNIERE",
+  umfrage: "NEWS",
 };
 
-const INSTAGRAM_STATUS_LABELS: Record<string, string> = {
-  PENDING: "Ausstehend",
-  QUEUED: "In Warteschlange",
-  POSTED: "Erfolgreich gepostet",
-  FAILED: "Fehlgeschlagen",
-};
-
-const TYPE_OPTIONS: { value: ContentType; label: string }[] = [
-  { value: "blog", label: "Blog" },
-  { value: "termin", label: "Termin" },
-  { value: "turnier", label: "Turnier" },
-];
+const TYPE_OPTIONS = (
+  Object.entries(CONTENT_TYPE_LABELS) as [ContentType, string][]
+).map(([value, label]) => ({ value, label }));
 
 export function PostForm({
   postId,
   initialValues,
+  canEditPublic = true,
+  canEditInternal = true,
 }: {
   postId?: string;
-  initialValues?: Partial<PostInput> & { instagramStatus?: string | null };
+  initialValues?: Partial<PostInput> & {
+    instagramStatus?: string | null;
+    surveyDeadline?: string;
+    surveyEditLink?: string;
+    surveyAnalysisLink?: string;
+  };
+  /** Wer nur eines der beiden Rechte hat, bekommt die Checkbox "Nur intern"
+   * fest auf den erlaubten Wert gesperrt statt frei wählbar (#321). */
+  canEditPublic?: boolean;
+  canEditInternal?: boolean;
 }) {
   const isExistingDraft = Boolean(postId) && initialValues?.status === "DRAFT";
   const router = useRouter();
+  const internalLocked = canEditPublic !== canEditInternal;
   const [type, setType] = useState<ContentType>(initialValues?.type ?? "blog");
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [date, setDate] = useState(initialValues?.date ?? "");
@@ -63,22 +74,18 @@ export function PostForm({
   const [author, setAuthor] = useState(initialValues?.author ?? "");
   const [body, setBody] = useState(initialValues?.body ?? "");
   const [instagram, setInstagram] = useState(initialValues?.instagram ?? false);
-  const [internal, setInternal] = useState(initialValues?.internal ?? false);
+  const [internal, setInternal] = useState(
+    internalLocked ? canEditInternal : (initialValues?.internal ?? false),
+  );
   const [coverImageUrl, setCoverImageUrl] = useState(
     initialValues?.coverImageUrl ?? "",
   );
-  const {
-    uploadFiles,
-    isUploading: isUploadingCover,
-    error: coverUploadError,
-  } = useBlobUpload("instagram-covers", getUploadToken);
-  const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [instagramStatus, setInstagramStatus] = useState(
+  const survey = usePostSurvey(initialValues ?? {});
+  const instagramState = usePostInstagram(
+    postId,
     initialValues?.instagramStatus,
   );
-  const [isRetrying, setIsRetrying] = useState(false);
+  const submit = useAction({ onSuccess: () => router.push("/admin/news") });
   const [pendingStatus, setPendingStatus] = useState<
     "DRAFT" | "PUBLISHED" | null
   >(null);
@@ -92,34 +99,8 @@ export function PostForm({
         DEFAULT_NEWSLETTER_CATEGORY_BY_TYPE[type],
     );
 
-  async function handleRetry() {
-    if (!postId) return;
-    setIsRetrying(true);
-    setError(null);
-    const result = await retryInstagramPost(postId);
-    setIsRetrying(false);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setInstagramStatus(result.posted ? "POSTED" : "PENDING");
-  }
-
-  async function handleCoverImageChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const [url] = await uploadFiles([file]);
-    if (url) setCoverImageUrl(url);
-  }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
 
     const submitter = (event.nativeEvent as SubmitEvent)
       .submitter as HTMLButtonElement | null;
@@ -139,61 +120,44 @@ export function PostForm({
       sendAsNewsletter,
       newsletterCategory: sendAsNewsletter ? newsletterCategory : null,
       coverImageUrl: coverImageUrl || undefined,
+      ...(type === "umfrage" ? survey.input : {}),
     };
 
-    try {
-      const saveAsCopy = isExistingDraft && copyDraft;
-      const result =
-        postId && !saveAsCopy
-          ? await updatePost(postId, input)
-          : await createPost(input);
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      router.push("/admin/news");
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Der Beitrag konnte nicht gespeichert werden. Bitte erneut versuchen.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    const saveAsCopy = isExistingDraft && copyDraft;
+    await submit.run(() =>
+      postId && !saveAsCopy ? updatePost(postId, input) : createPost(input),
+    );
   }
+
+  const isSubmitting = submit.pending;
+  const error = submit.error ?? instagramState.error;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="title">Titel</Label>
+        <Field label="Titel" htmlFor="title">
           <Input
             id="title"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             required
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="type">Typ</Label>
-          <select
+        </Field>
+        <Field label="Typ" htmlFor="type">
+          <NativeSelect
             id="type"
             value={type}
             onChange={(event) => setType(event.target.value as ContentType)}
-            className="border-input h-9 rounded-md border bg-transparent px-3 text-sm"
+            size="md"
           >
             {TYPE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="date">Datum</Label>
+          </NativeSelect>
+        </Field>
+        <Field label="Datum" htmlFor="date">
           <Input
             id="date"
             type="date"
@@ -201,19 +165,17 @@ export function PostForm({
             onChange={(event) => setDate(event.target.value)}
             required
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="author">Autor</Label>
+        </Field>
+        <Field label="Autor" htmlFor="author">
           <Input
             id="author"
             value={author}
             onChange={(event) => setAuthor(event.target.value)}
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="excerpt">Excerpt</Label>
+      <Field label="Excerpt" htmlFor="excerpt">
         <Textarea
           id="excerpt"
           value={excerpt}
@@ -221,150 +183,33 @@ export function PostForm({
           rows={2}
           placeholder="Leer lassen, um die ersten 130 Zeichen des Inhalts zu verwenden"
         />
-      </div>
+      </Field>
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="body">Inhalt (Markdown)</Label>
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={activeTab === "editor" ? "default" : "outline"}
-              onClick={() => setActiveTab("editor")}
-            >
-              Editor
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={activeTab === "preview" ? "default" : "outline"}
-              onClick={() => setActiveTab("preview")}
-            >
-              Vorschau
-            </Button>
-          </div>
-        </div>
-        {activeTab === "editor" ? (
-          <Textarea
-            id="body"
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            rows={12}
-            className="font-mono text-sm"
-            required
-          />
-        ) : (
-          <div className="[&_a]:text-primary min-h-64 rounded-md border p-4 text-sm leading-relaxed [&_a]:underline [&_strong]:font-semibold">
-            <ReactMarkdown>{body || "*Keine Vorschau*"}</ReactMarkdown>
-          </div>
-        )}
-      </div>
+      <PostBodyField value={body} onChange={setBody} />
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="coverImage">Cover-Bild</Label>
-        <Input
-          id="coverImage"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={handleCoverImageChange}
-          disabled={isUploadingCover}
-        />
-        {isUploadingCover && (
-          <p className="text-muted-foreground text-sm">Lade Bild hoch…</p>
-        )}
-        {coverUploadError && (
-          <p className="text-destructive text-sm">{coverUploadError}</p>
-        )}
-        {coverImageUrl && !isUploadingCover && (
-          <CoverMedia
-            imageUrl={coverImageUrl}
-            alt="Cover-Bild-Vorschau"
-            aspect="aspect-square"
-            className="w-32"
-          />
-        )}
-      </div>
+      {type === "umfrage" && <SurveyFields {...survey.fieldProps} />}
 
-      <div className="flex flex-col gap-1.5">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={internal}
-            onChange={(event) => setInternal(event.target.checked)}
-          />
-          Nur intern (nur für eingeloggte Mitglieder sichtbar)
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={instagram}
-            disabled={internal}
-            onChange={(event) => setInstagram(event.target.checked)}
-          />
-          Auch auf Instagram teilen
-          {internal && (
-            <span className="text-muted-foreground text-xs">
-              (nicht möglich für interne Beiträge)
-            </span>
-          )}
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={sendAsNewsletter}
-            onChange={(event) => setSendAsNewsletter(event.target.checked)}
-          />
-          Als Newsletter versenden in
-          {sendAsNewsletter && (
-            <select
-              value={newsletterCategory}
-              onChange={(event) =>
-                setNewsletterCategory(event.target.value as NewsletterCategory)
-              }
-              className="border-primary bg-background h-9 w-fit rounded-md border-2 px-3 text-sm"
-            >
-              {NEWSLETTER_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {NEWSLETTER_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
-        {isExistingDraft && (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={copyDraft}
-              onChange={(event) => setCopyDraft(event.target.checked)}
-            />
-            Entwurf kopieren?
-            <span className="text-muted-foreground text-xs">
-              (legt beim Speichern einen neuen Beitrag an, der bestehende
-              Entwurf bleibt unverändert)
-            </span>
-          </label>
-        )}
-        {instagramStatus && (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="self-start">
-              {INSTAGRAM_STATUS_LABELS[instagramStatus] ?? instagramStatus}
-            </Badge>
-            {instagramStatus === "FAILED" && postId && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isRetrying}
-                onClick={handleRetry}
-              >
-                {isRetrying ? "Wird erneut versucht…" : "Erneut versuchen"}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+      <PostCoverField value={coverImageUrl} onChange={setCoverImageUrl} />
+
+      <PostPublishingOptions
+        internal={internal}
+        onInternalChange={setInternal}
+        internalLocked={internalLocked}
+        canEditInternal={canEditInternal}
+        instagram={instagram}
+        onInstagramChange={setInstagram}
+        sendAsNewsletter={sendAsNewsletter}
+        onSendAsNewsletterChange={setSendAsNewsletter}
+        newsletterCategory={newsletterCategory}
+        onNewsletterCategoryChange={setNewsletterCategory}
+        isExistingDraft={isExistingDraft}
+        copyDraft={copyDraft}
+        onCopyDraftChange={setCopyDraft}
+        instagramStatus={instagramState.status}
+        isRetrying={instagramState.isRetrying}
+        onRetry={instagramState.retry}
+        postId={postId}
+      />
 
       {error && <p className="text-destructive text-sm">{error}</p>}
       <div className="flex gap-2">

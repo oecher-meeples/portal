@@ -1,0 +1,127 @@
+import type { GameZustand } from "@/lib/ludothek/holdings";
+
+/** Best-Zustand-Priorität für die aggregierte Titel-Pille (Plan-Schritt 8):
+ * "frei" schlägt "ausgeliehen" schlägt "wartung" schlägt "nicht-erfasst" —
+ * ein Titel gilt als frei, sobald irgendein Exemplar frei ist. Die beiden
+ * "ausgeliehen"-Unterfälle (#333) teilen sich einen Rang — welcher
+ * repräsentativ gezeigt wird, wenn beide vorkommen, ist nicht fachlich
+ * entschieden, daher "verfügbar" zuerst (die freundlichere Auskunft). */
+const ZUSTAND_PRIORITY: Record<GameZustand, number> = {
+  frei: 0,
+  "ausgeliehen-verfuegbar": 1,
+  "ausgeliehen-nicht-verfuegbar": 1,
+  wartung: 2,
+  "nicht-erfasst": 3,
+  privat: 4,
+};
+
+type GroupableGame = {
+  id: string;
+  boardGameId: string;
+  zustand?: GameZustand;
+  /** Verlage/Sprachen der Edition dieses Exemplars. */
+  publisher?: string[];
+  editionLanguages?: string[];
+};
+
+/** Vereinigung der Werte über alle Exemplare, ohne Dubletten. */
+function unionOf(
+  copies: GroupableGame[],
+  key: "publisher" | "editionLanguages",
+) {
+  return [...new Set(copies.flatMap((copy) => copy[key] ?? []))];
+}
+
+export type LudothekTitleGroup<G extends GroupableGame> = G & {
+  /** Number of physical copies of this title in the (already filtered) input. */
+  copyCount: number;
+  /** GameCopy ids of every copy folded into this row — needed once actions
+   * (Schritt 10–12) must pick one of several exemplare. */
+  copyIds: string[];
+  /** Every copy folded into this row, unabridged — `GameActionsMenu`'s
+   * Exemplar-Auswahl-Popup (Plan-Schritt 12) needs each one's own
+   * zustand/Standort/Mängelvermerk, not just its id. */
+  copies: G[];
+  /** How many of `copies` share this row's own (representative) zustand —
+   * lets `GameZustandPill` show an "X/Y" ratio for mixed-condition titles
+   * (#125) instead of hiding that some copies are in a different state. */
+  zustandCount: number;
+};
+
+/**
+ * Groups per-copy rows into one row per title (Plan-Schritt 8) — Grid,
+ * Liste and Kompakt all render one card/row per `boardGameId` instead of one
+ * per `GameCopy`. Titles keep the order of their first-seen copy. Because
+ * the input is already filtered per copy, a title survives here exactly
+ * when at least one of its copies matched the active filters — the "any
+ * exemplar matches" rule falls out for free.
+ *
+ * Guest rows (`PublicLudothekGame`) have no `zustand` at all — the
+ * representative copy is then just the first one, no priority to compare.
+ */
+/**
+ * Schneidet eine Seite **Titel** aus Exemplar-Zeilen (#461): alle Exemplare
+ * eines Titels landen in derselben Seite, damit `groupGamesByTitle` über die
+ * aneinandergehängten Seiten dieselben Gruppen bildet wie über die ganze
+ * Liste. `offset`/`limit` zählen Titel in Reihenfolge ihres ersten
+ * Exemplars; `nextOffset` ist `null`, wenn danach kein Titel mehr kommt.
+ */
+export function paginateByTitle<G extends { boardGameId: string }>(
+  games: G[],
+  offset: number,
+  limit: number,
+): { items: G[]; nextOffset: number | null } {
+  const titleIndex = new Map<string, number>();
+  for (const game of games) {
+    if (!titleIndex.has(game.boardGameId)) {
+      titleIndex.set(game.boardGameId, titleIndex.size);
+    }
+  }
+  const end = offset + limit;
+  return {
+    items: games.filter((game) => {
+      const index = titleIndex.get(game.boardGameId)!;
+      return index >= offset && index < end;
+    }),
+    nextOffset: end < titleIndex.size ? end : null,
+  };
+}
+
+export function groupGamesByTitle<G extends GroupableGame>(
+  games: G[],
+): LudothekTitleGroup<G>[] {
+  const byTitle = new Map<string, G[]>();
+  for (const game of games) {
+    const existing = byTitle.get(game.boardGameId);
+    if (existing) existing.push(game);
+    else byTitle.set(game.boardGameId, [game]);
+  }
+
+  return [...byTitle.values()].map((copies) => {
+    const representative = copies.reduce((best, candidate) => {
+      if (best.zustand === undefined || candidate.zustand === undefined) {
+        return best;
+      }
+      return ZUSTAND_PRIORITY[candidate.zustand] <
+        ZUSTAND_PRIORITY[best.zustand]
+        ? candidate
+        : best;
+    });
+    return {
+      ...representative,
+      // Karte/Zeile zeigen die Editionen aller Exemplare, nicht nur die des
+      // repräsentativen — sonst fehlte der Verlag eines anderen Exemplars.
+      ...(representative.publisher
+        ? { publisher: unionOf(copies, "publisher") }
+        : {}),
+      ...(representative.editionLanguages
+        ? { editionLanguages: unionOf(copies, "editionLanguages") }
+        : {}),
+      copyCount: copies.length,
+      copyIds: copies.map((c) => c.id),
+      copies,
+      zustandCount: copies.filter((c) => c.zustand === representative.zustand)
+        .length,
+    };
+  });
+}

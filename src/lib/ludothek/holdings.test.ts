@@ -5,12 +5,10 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const {
   borrowGame,
-  confirmHolding,
   GameDeinventarisedError,
   handOverGame,
   HoldingConflictError,
   isLoanHolding,
-  moveStorageUnit,
   relocateGame,
   returnGame,
 } = await import("./holdings");
@@ -19,13 +17,15 @@ const GAME_ID = "game-1";
 const UNIT_ID = "unit-1";
 const MEEPLE_A = "meeple-a";
 const MEEPLE_B = "meeple-b";
+const MEMBER_A = "member-a";
+const MEMBER_B = "member-b";
 
 function openHolding(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "holding-1",
     gameCopyId: GAME_ID,
     unitId: null,
-    meepleId: null,
+    vereinsmitgliedId: null,
     origin: "INITIAL",
     startedAt: new Date(),
     endedAt: null,
@@ -53,15 +53,16 @@ beforeEach(() => {
 });
 
 describe("borrowGame", () => {
-  it("borrows a game out of a storage unit", async () => {
+  it("borrows a game out of a storage unit (isSelf)", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
       openHolding({ unitId: UNIT_ID }) as never,
     );
 
     await borrowGame({
       gameCopyId: GAME_ID,
-      meepleId: MEEPLE_A,
+      vereinsmitgliedId: MEMBER_A,
       recordedByMeepleId: MEEPLE_A,
+      isSelf: true,
     });
 
     expect(prismaMock.gameHolding.update).toHaveBeenCalledWith({
@@ -71,11 +72,29 @@ describe("borrowGame", () => {
     expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         gameCopyId: GAME_ID,
-        meepleId: MEEPLE_A,
+        vereinsmitgliedId: MEMBER_A,
         origin: "LOAN",
         recordedByMeepleId: MEEPLE_A,
         confirmedAt: expect.any(Date),
       }),
+    });
+  });
+
+  it("marks the copy for a completeness check in the same transaction (#563)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+
+    await borrowGame({
+      gameCopyId: GAME_ID,
+      vereinsmitgliedId: MEMBER_A,
+      recordedByMeepleId: MEEPLE_A,
+      isSelf: false,
+    });
+
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
+      where: { id: GAME_ID },
+      data: { needsCompletenessCheck: true },
     });
   });
 
@@ -92,22 +111,24 @@ describe("borrowGame", () => {
     await expect(
       borrowGame({
         gameCopyId: GAME_ID,
-        meepleId: MEEPLE_A,
+        vereinsmitgliedId: MEMBER_A,
         recordedByMeepleId: MEEPLE_A,
+        isSelf: true,
       }),
     ).resolves.toBeDefined();
   });
 
   it("rejects borrowing a game that is already with a person", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_B }) as never,
+      openHolding({ vereinsmitgliedId: MEMBER_B }) as never,
     );
 
     await expect(
       borrowGame({
         gameCopyId: GAME_ID,
-        meepleId: MEEPLE_A,
+        vereinsmitgliedId: MEMBER_A,
         recordedByMeepleId: MEEPLE_A,
+        isSelf: true,
       }),
     ).rejects.toThrow(HoldingConflictError);
   });
@@ -124,21 +145,71 @@ describe("borrowGame", () => {
     await expect(
       borrowGame({
         gameCopyId: GAME_ID,
-        meepleId: MEEPLE_A,
+        vereinsmitgliedId: MEMBER_A,
         recordedByMeepleId: MEEPLE_A,
+        isSelf: true,
       }),
     ).rejects.toThrow(GameDeinventarisedError);
   });
 
-  it("leaves the holding unconfirmed when the handing-out side records it", async () => {
+  it("leaves the holding unconfirmed when the handing-out side records it for someone else", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
       openHolding({ unitId: UNIT_ID }) as never,
     );
 
     await borrowGame({
       gameCopyId: GAME_ID,
-      meepleId: MEEPLE_A,
+      vereinsmitgliedId: MEMBER_A,
       recordedByMeepleId: MEEPLE_B,
+      isSelf: false,
+    });
+
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: null }),
+    });
+  });
+
+  it("confirms immediately when the recording Meeple holds games:manage (#274 Spielewart-Pfad, #333a)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      neonAuthUserId: "auth-b",
+    } as never);
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await borrowGame({
+      gameCopyId: GAME_ID,
+      vereinsmitgliedId: MEMBER_A,
+      recordedByMeepleId: MEEPLE_B,
+      isSelf: false,
+    });
+
+    expect(prismaMock.rolePermission.count).toHaveBeenCalledWith({
+      where: {
+        permission: { key: "games:manage" },
+        role: { users: { some: { neonAuthUserId: "auth-b" } } },
+      },
+    });
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
+    });
+  });
+
+  it("stays unconfirmed when the recording Meeple lacks games:manage", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      neonAuthUserId: "auth-b",
+    } as never);
+    prismaMock.rolePermission.count.mockResolvedValue(0);
+
+    await borrowGame({
+      gameCopyId: GAME_ID,
+      vereinsmitgliedId: MEMBER_A,
+      recordedByMeepleId: MEEPLE_B,
+      isSelf: false,
     });
 
     expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
@@ -150,20 +221,23 @@ describe("borrowGame", () => {
 describe("handOverGame (Weitergabe)", () => {
   it("hands the game to the next person and counts as a loan", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
     );
 
     await handOverGame({
       gameCopyId: GAME_ID,
-      toMeepleId: MEEPLE_B,
+      toVereinsmitgliedId: MEMBER_B,
       recordedByMeepleId: MEEPLE_B,
+      isSelf: true,
     });
 
     const created = prismaMock.gameHolding.create.mock.calls[0][0] as {
-      data: { origin: string; meepleId: string };
+      data: { origin: string; vereinsmitgliedId: string };
     };
     expect(created.data.origin).toBe("HANDOVER");
     expect(isLoanHolding(created.data as never)).toBe(true);
+    // #563: eine Weitergabe lässt das Kontroll-Flag unverändert.
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 
   it("rejects handing over a game that is currently in a unit", async () => {
@@ -174,17 +248,61 @@ describe("handOverGame (Weitergabe)", () => {
     await expect(
       handOverGame({
         gameCopyId: GAME_ID,
-        toMeepleId: MEEPLE_B,
+        toVereinsmitgliedId: MEMBER_B,
         recordedByMeepleId: MEEPLE_B,
+        isSelf: true,
       }),
     ).rejects.toThrow(HoldingConflictError);
+  });
+
+  it("confirms immediately when a games:manage Meeple hands the game to someone else (#274)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
+    );
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      neonAuthUserId: "auth-warden",
+    } as never);
+    prismaMock.rolePermission.count.mockResolvedValue(1);
+
+    await handOverGame({
+      gameCopyId: GAME_ID,
+      toVereinsmitgliedId: MEMBER_B,
+      recordedByMeepleId: "spielewart-1",
+      isSelf: false,
+    });
+
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
+    });
+  });
+
+  // #465: Ziel per persönlichem QR-Code der empfangenden Person aufgelöst —
+  // das Scannen gilt als Bestätigungsnachweis, unabhängig von games:manage.
+  it("confirms immediately when the target was resolved via their own QR code (#465)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
+    );
+
+    await handOverGame({
+      gameCopyId: GAME_ID,
+      toVereinsmitgliedId: MEMBER_B,
+      recordedByMeepleId: MEEPLE_B,
+      isSelf: false,
+      viaTargetQrScan: true,
+    });
+
+    expect(prismaMock.gameHolding.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ confirmedAt: expect.any(Date) }),
+    });
+    // Kein Permission-Check nötig, wenn der QR-Scan schon bestätigt.
+    expect(prismaMock.rolePermission.count).not.toHaveBeenCalled();
   });
 });
 
 describe("returnGame (Rückgabe)", () => {
   it("returning into a unit is immediately confirmed", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
     );
 
     await returnGame({
@@ -198,7 +316,7 @@ describe("returnGame (Rückgabe)", () => {
         origin: string;
         unitId: string;
         confirmedAt: Date | null;
-        meepleId?: string;
+        vereinsmitgliedId?: string;
       };
     };
     expect(created.data.origin).toBe("RETURN");
@@ -207,21 +325,44 @@ describe("returnGame (Rückgabe)", () => {
 
   it("a return to a person does not count as a loan and stays unconfirmed", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
     );
 
     await returnGame({
       gameCopyId: GAME_ID,
-      toMeepleId: MEEPLE_B,
+      toVereinsmitgliedId: MEMBER_B,
       recordedByMeepleId: MEEPLE_A,
     });
 
     const created = prismaMock.gameHolding.create.mock.calls[0][0] as {
-      data: { origin: string; meepleId: string; confirmedAt: Date | null };
+      data: {
+        origin: string;
+        vereinsmitgliedId: string;
+        confirmedAt: Date | null;
+      };
     };
     expect(created.data.origin).toBe("RETURN");
     expect(created.data.confirmedAt).toBeNull();
     expect(isLoanHolding(created.data as never)).toBe(false);
+  });
+
+  // #465: siehe handOverGame — dieselbe Sofort-Bestätigung bei QR-Scan-Ziel.
+  it("confirms immediately when the accepting person was resolved via their own QR code (#465)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
+    );
+
+    await returnGame({
+      gameCopyId: GAME_ID,
+      toVereinsmitgliedId: MEMBER_B,
+      recordedByMeepleId: MEEPLE_A,
+      viaTargetQrScan: true,
+    });
+
+    const created = prismaMock.gameHolding.create.mock.calls[0][0] as {
+      data: { confirmedAt: Date | null };
+    };
+    expect(created.data.confirmedAt).toBeInstanceOf(Date);
   });
 
   it("rejects returning a game that is already in a unit", async () => {
@@ -240,7 +381,7 @@ describe("returnGame (Rückgabe)", () => {
 
   it("allows returning a deinventarised game", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
     );
 
     await expect(
@@ -267,16 +408,16 @@ describe("relocateGame (Umlagern)", () => {
     });
 
     const created = prismaMock.gameHolding.create.mock.calls[0][0] as {
-      data: { origin: string; unitId: string; meepleId?: string };
+      data: { origin: string; unitId: string; vereinsmitgliedId?: string };
     };
     expect(created.data.origin).toBe("RELOCATION");
     expect(created.data.unitId).toBe("unit-2");
-    expect(created.data.meepleId).toBeUndefined();
+    expect(created.data.vereinsmitgliedId).toBeUndefined();
   });
 
   it("rejects relocating a game that is currently borrowed", async () => {
     prismaMock.gameHolding.findFirst.mockResolvedValue(
-      openHolding({ meepleId: MEEPLE_A }) as never,
+      openHolding({ vereinsmitgliedId: MEMBER_A }) as never,
     );
 
     await expect(
@@ -286,87 +427,5 @@ describe("relocateGame (Umlagern)", () => {
         recordedByMeepleId: MEEPLE_A,
       }),
     ).rejects.toThrow(HoldingConflictError);
-  });
-});
-
-describe("confirmHolding", () => {
-  it("confirms a handover when the receiver confirms", async () => {
-    prismaMock.gameHolding.findUnique.mockResolvedValue(
-      openHolding({
-        meepleId: MEEPLE_B,
-        origin: "HANDOVER",
-        confirmedAt: null,
-      }) as never,
-    );
-    prismaMock.gameHolding.update.mockResolvedValue({} as never);
-
-    await confirmHolding({
-      holdingId: "holding-1",
-      confirmingMeepleId: MEEPLE_B,
-    });
-
-    expect(prismaMock.gameHolding.update).toHaveBeenCalledWith({
-      where: { id: "holding-1" },
-      data: { confirmedAt: expect.any(Date) },
-    });
-  });
-
-  it("rejects confirmation by someone other than the receiver", async () => {
-    prismaMock.gameHolding.findUnique.mockResolvedValue(
-      openHolding({
-        meepleId: MEEPLE_B,
-        origin: "HANDOVER",
-        confirmedAt: null,
-      }) as never,
-    );
-
-    await expect(
-      confirmHolding({ holdingId: "holding-1", confirmingMeepleId: MEEPLE_A }),
-    ).rejects.toThrow(HoldingConflictError);
-  });
-
-  it("a Rückgabe can only be confirmed by einlagern, not by confirmHolding", async () => {
-    prismaMock.gameHolding.findUnique.mockResolvedValue(
-      openHolding({
-        meepleId: MEEPLE_B,
-        origin: "RETURN",
-        confirmedAt: null,
-      }) as never,
-    );
-
-    await expect(
-      confirmHolding({ holdingId: "holding-1", confirmingMeepleId: MEEPLE_B }),
-    ).rejects.toThrow(HoldingConflictError);
-  });
-});
-
-describe("moveStorageUnit", () => {
-  it("closes the previous move and opens a new one", async () => {
-    prismaMock.storageUnit.findUnique.mockResolvedValue({
-      id: UNIT_ID,
-      retiredAt: null,
-    } as never);
-    prismaMock.storageUnitMove.updateMany.mockResolvedValue({
-      count: 1,
-    } as never);
-    prismaMock.storageUnitMove.create.mockResolvedValue({} as never);
-    prismaMock.storageUnit.update.mockResolvedValue({} as never);
-
-    await moveStorageUnit({
-      unitId: UNIT_ID,
-      recordedByMeepleId: MEEPLE_A,
-      keeperMeepleId: MEEPLE_B,
-    });
-
-    expect(prismaMock.storageUnitMove.updateMany).toHaveBeenCalledWith({
-      where: { unitId: UNIT_ID, endedAt: null },
-      data: { endedAt: expect.any(Date) },
-    });
-    expect(prismaMock.storageUnitMove.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        unitId: UNIT_ID,
-        keeperMeepleId: MEEPLE_B,
-      }),
-    });
   });
 });

@@ -1,0 +1,121 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
+import { prisma } from "@/lib/utils/prisma";
+import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
+import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { toStoredBlobRef } from "@/lib/utils/blob-access";
+import { isLfgAttachmentEligible } from "@/lib/content/lfg";
+
+// Eigene Datei statt in actions.ts (#283) — dort wäre die Zeilengrenze
+// (max-lines) überschritten worden; Datei-Anhänge sind fachlich klar von den
+// übrigen LFG-Actions (Beitreten/Verlassen/Schließen/Ort) abgrenzbar.
+
+const MAX_LFG_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+
+/** Jeder Teilnehmer (Ersteller inklusive — der wird bei `createLfgPost()`
+ * selbst als `LfgParticipant` angelegt) darf Anhänge hoch-/herunterladen
+ * (#283) — ein einziger Check reicht, anders als bei `addLfgGuest()`, das dem
+ * Ersteller zusätzliche Rechte einräumt. */
+async function requireLfgParticipant(postId: string, meepleId: string) {
+  const participant = await prisma.lfgParticipant.findFirst({
+    where: { postId, meepleId },
+  });
+  if (!participant) {
+    return { error: "Nur Teilnehmende können darauf zugreifen." } as const;
+  }
+  return { participant } as const;
+}
+
+async function requireEligiblePost(postId: string) {
+  const post = await prisma.lfgPost.findUnique({ where: { id: postId } });
+  if (!post) {
+    return { error: "Gesuch nicht gefunden." } as const;
+  }
+  if (!isLfgAttachmentEligible(post)) {
+    return {
+      error: "Uploads sind erst am oder nach dem geplanten Termin möglich.",
+    } as const;
+  }
+  return { post } as const;
+}
+
+/** Token-Ausstellung für `useBlobUpload()` — wirft statt `{ error }`
+ * zurückzugeben, weil `getToken` laut `useBlobUpload`-Vertrag
+ * `Promise<BlobUploadToken>` liefert; der Aufrufer fängt das im try/catch auf. */
+export async function getLfgAttachmentUploadToken(
+  postId: string,
+  pathname: string,
+  contentType: string,
+) {
+  const { meeple } = await requireActionPermission("lfg:participate");
+
+  const eligible = await requireEligiblePost(postId);
+  if ("error" in eligible) throw new Error(eligible.error);
+
+  const participant = await requireLfgParticipant(postId, meeple.id);
+  if ("error" in participant) throw new Error(participant.error);
+
+  return createBlobUploadToken({
+    pathname: normaliseBlobPath(pathname, "lfg-attachments"),
+    contentType,
+    addRandomSuffix: true,
+    maximumSizeInBytes: MAX_LFG_ATTACHMENT_BYTES,
+  });
+}
+
+export async function createLfgAttachment(
+  postId: string,
+  /** URL aus dem Upload — gespeichert wird der Key (#112). */
+  url: string,
+  filename: string,
+) {
+  const { meeple } = await requireActionPermission("lfg:participate");
+
+  const eligible = await requireEligiblePost(postId);
+  if ("error" in eligible) return eligible;
+
+  const participant = await requireLfgParticipant(postId, meeple.id);
+  if ("error" in participant) return participant;
+
+  await prisma.lfgAttachment.create({
+    data: {
+      postId,
+      uploadedByMeepleId: meeple.id,
+      key: toStoredBlobRef(url, "lfg-attachments"),
+      filename,
+    },
+  });
+
+  revalidatePath(`/lfg/${postId}`);
+  return { success: true as const };
+}
+
+/** Löschen darf, wer die Datei hochgeladen hat, plus immer der Ersteller des
+ * Gesuchs (analog `removeLfgGuest()`). */
+export async function deleteLfgAttachment(attachmentId: string) {
+  const { meeple } = await requireActionPermission("lfg:participate");
+
+  const attachment = await prisma.lfgAttachment.findUnique({
+    where: { id: attachmentId },
+    include: { post: { select: { id: true, createdByMeepleId: true } } },
+  });
+  if (!attachment) {
+    return { error: "Datei nicht gefunden." };
+  }
+
+  const canDelete =
+    attachment.uploadedByMeepleId === meeple.id ||
+    attachment.post.createdByMeepleId === meeple.id;
+  if (!canDelete) {
+    return { error: "Du kannst diese Datei nicht löschen." };
+  }
+
+  await deleteBlobs([attachment.key]);
+  await prisma.lfgAttachment.delete({ where: { id: attachmentId } });
+
+  revalidatePath(`/lfg/${attachment.post.id}`);
+  return { success: true as const };
+}
