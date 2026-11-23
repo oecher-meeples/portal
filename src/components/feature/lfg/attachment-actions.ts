@@ -6,6 +6,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { toStoredBlobRef } from "@/lib/utils/blob-access";
 import { isLfgAttachmentEligible } from "@/lib/content/lfg";
 
 // Eigene Datei statt in actions.ts (#283) — dort wäre die Zeilengrenze
@@ -67,6 +68,7 @@ export async function getLfgAttachmentUploadToken(
 
 export async function createLfgAttachment(
   postId: string,
+  /** URL aus dem Upload — gespeichert wird der Key (#112). */
   url: string,
   filename: string,
 ) {
@@ -79,7 +81,12 @@ export async function createLfgAttachment(
   if ("error" in participant) return participant;
 
   await prisma.lfgAttachment.create({
-    data: { postId, uploadedByMeepleId: meeple.id, url, filename },
+    data: {
+      postId,
+      uploadedByMeepleId: meeple.id,
+      key: toStoredBlobRef(url, "lfg-attachments"),
+      filename,
+    },
   });
 
   revalidatePath(`/lfg/${postId}`);
@@ -106,7 +113,7 @@ export async function deleteLfgAttachment(attachmentId: string) {
     return { error: "Du kannst diese Datei nicht löschen." };
   }
 
-  await deleteBlobs([attachment.url]);
+  await deleteBlobs([attachment.key]);
   await prisma.lfgAttachment.delete({ where: { id: attachmentId } });
 
   revalidatePath(`/lfg/${attachment.post.id}`);

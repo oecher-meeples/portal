@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { prismaMock, prismaTxMock } from "@/lib/__mocks__/prisma";
 import { versionDisplay } from "./contributors-read";
 import { describeVersion } from "./version-label";
 
@@ -23,7 +23,7 @@ describe("upsertBoardGameVersion", () => {
       id: "v1",
     } as never);
 
-    const result = await upsertBoardGameVersion(prismaMock, "game-1", {
+    const result = await upsertBoardGameVersion(prismaTxMock, "game-1", {
       bggVersionId: 500002,
       name: "Deutsche Ausgabe",
       languages: ["German"],
@@ -47,7 +47,7 @@ describe("upsertBoardGameVersion", () => {
     prismaMock.boardGameVersion.findUnique.mockResolvedValue(null);
     prismaMock.boardGameVersion.create.mockResolvedValue({ id: "v2" } as never);
 
-    const result = await upsertBoardGameVersion(prismaMock, "game-1", {
+    const result = await upsertBoardGameVersion(prismaTxMock, "game-1", {
       bggVersionId: 7,
       languages: ["English"],
       publishers: [],
@@ -80,7 +80,7 @@ describe("upsertBoardGameVersion", () => {
       },
     ] as never);
 
-    const result = await upsertBoardGameVersion(prismaMock, "game-1", {
+    const result = await upsertBoardGameVersion(prismaTxMock, "game-1", {
       languages: ["German"],
       publishers: [{ bggId: null, name: "Kosmos" }],
     });
@@ -99,7 +99,7 @@ describe("upsertBoardGameVersion", () => {
     ] as never);
     prismaMock.boardGameVersion.create.mockResolvedValue({ id: "v4" } as never);
 
-    const result = await upsertBoardGameVersion(prismaMock, "game-1", {
+    const result = await upsertBoardGameVersion(prismaTxMock, "game-1", {
       languages: ["German"],
       publishers: [{ bggId: null, name: "Kosmos" }],
     });
@@ -110,10 +110,10 @@ describe("upsertBoardGameVersion", () => {
 
 describe("resolveEditionId", () => {
   it("leaves the edition unchanged for undefined and clears it for null", async () => {
-    expect(await resolveEditionId(prismaMock, "game-1", undefined)).toBe(
+    expect(await resolveEditionId(prismaTxMock, "game-1", undefined)).toBe(
       undefined,
     );
-    expect(await resolveEditionId(prismaMock, "game-1", null)).toBeNull();
+    expect(await resolveEditionId(prismaTxMock, "game-1", null)).toBeNull();
   });
 
   it("accepts an existing edition of the same title", async () => {
@@ -122,7 +122,7 @@ describe("resolveEditionId", () => {
     } as never);
 
     expect(
-      await resolveEditionId(prismaMock, "game-1", { versionId: "v1" }),
+      await resolveEditionId(prismaTxMock, "game-1", { versionId: "v1" }),
     ).toBe("v1");
   });
 
@@ -130,7 +130,7 @@ describe("resolveEditionId", () => {
     prismaMock.boardGameVersion.findFirst.mockResolvedValue(null);
 
     await expect(
-      resolveEditionId(prismaMock, "game-1", { versionId: "foreign" }),
+      resolveEditionId(prismaTxMock, "game-1", { versionId: "foreign" }),
     ).rejects.toThrow("Edition gehört nicht zu diesem Titel.");
   });
 });

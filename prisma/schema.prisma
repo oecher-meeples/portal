@@ -358,9 +358,10 @@ model Meeple {
   /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
   privateCollectionSyncedAt DateTime?
   doorbellNote              String?
-  /// Profilbild-URL im Blob-Storage (#389) — `null` solange kein Bild
-  /// hochgeladen wurde, unabhängig von `profilePictureVisibility`.
-  profilePictureUrl         String?
+  /// Objekt-Key des Profilbilds im Blob-Storage (#389, Key statt URL seit
+  /// #112) — `null` solange kein Bild hochgeladen wurde, unabhängig von
+  /// `profilePictureVisibility`. Anzeige nur über `signedBlobUrl()`.
+  profilePictureKey         String?
   /// Freigabe-Einstellung für das Profilbild (#389), siehe
   /// `ProfilePictureVisibility`. Default INTERN — bewusst nicht öffentlich,
   /// bis das Meeple aktiv eine weitergehende Freigabe wählt.
@@ -568,7 +569,8 @@ model LfgAttachment {
   id                 String   @id @default(cuid())
   postId             String
   uploadedByMeepleId String
-  url                String
+  /// Objekt-Key (`lfg-attachments/…`, #112) — Anzeige über `signedBlobUrl()`.
+  key                String
   filename           String
   createdAt          DateTime @default(now())
 
@@ -1127,7 +1129,9 @@ model MarketListing {
   description    String?
   priceEuros     Int
   condition      String
-  imageUrls      String[]
+  /// Objekt-Keys (`market-listings/…`, #112); Alt-Einträge können fremde
+  /// URLs sein, `signedBlobUrl()` lässt die unverändert.
+  imageKeys      String[]
   /// Optionaler Link zum Inventar-Titel — gesetzt bei Anlage per "BGG for
   /// trade importieren" (#275), erlaubt Anzeige/Rückverweis über den
   /// gemeinsamen `BoardGame`-Datensatz statt einer eigenen bggId (#278).
@@ -1607,7 +1611,8 @@ model Download {
   id            String         @id @default(cuid())
   title         String
   fileName      String
-  fileUrl       String         @unique
+  /// Objekt-Key (`downloads/…`, #112) — auch PUBLIC-Downloads nur signiert.
+  fileKey       String         @unique
   fileType      String
   fileSizeBytes Int
   status        DownloadStatus @default(PUBLIC)
@@ -1653,7 +1658,8 @@ model ImportantLink {
   id        String   @id @default(cuid())
   title     String
   targetUrl String
-  iconUrl   String?
+  /// Objekt-Key (`important-links/…`, #112) — Anzeige über `signedBlobUrl()`.
+  iconKey   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

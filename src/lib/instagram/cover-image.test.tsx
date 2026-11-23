@@ -5,6 +5,7 @@ const putMock = vi.fn();
 
 vi.mock("@/lib/utils/s3", () => ({
   putBlob: (...args: unknown[]) => putMock(...args),
+  publicUrlForKey: (key: string) => `https://files.example/meeples/${key}`,
 }));
 
 vi.mock("@vercel/og", () => ({
@@ -33,7 +34,8 @@ describe("resolveCoverImageUrl", () => {
   });
 
   it("generates and uploads a fallback image when none is set", async () => {
-    putMock.mockResolvedValue("https://files.example/generated-cover.png");
+    // putBlob liefert den Key (#112), das Cover bekommt die öffentliche URL.
+    putMock.mockResolvedValue("instagram-covers/spieleabend-juli-abc.png");
 
     const url = await resolveCoverImageUrl({
       slug: "spieleabend-juli",
@@ -48,6 +50,8 @@ describe("resolveCoverImageUrl", () => {
       expect.anything(),
       "image/png",
     );
-    expect(url).toBe("https://files.example/generated-cover.png");
+    expect(url).toBe(
+      "https://files.example/meeples/instagram-covers/spieleabend-juli-abc.png",
+    );
   });
 });

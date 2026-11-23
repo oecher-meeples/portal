@@ -7,14 +7,17 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { toStoredBlobRef } from "@/lib/utils/blob-access";
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MARKET_LISTING_PREFIX = "market-listings";
 
 export type MarketListingInput = {
   title: string;
   description?: string | null;
   priceEuros: number;
   condition: string;
+  /** Upload-URLs der Bilder — gespeichert werden die Keys (#112). */
   imageUrls?: string[];
   /** Link zum Inventar-Titel (#278) — nur bei Anlage per BGG-Import gesetzt,
    * `undefined` in den normalen Formularen lässt einen bestehenden Link beim
@@ -41,7 +44,9 @@ function toMarketListingData(input: MarketListingInput) {
     description: input.description?.trim() || null,
     priceEuros: input.priceEuros,
     condition: input.condition.trim(),
-    imageUrls: input.imageUrls ?? [],
+    imageKeys: (input.imageUrls ?? []).map((url) =>
+      toStoredBlobRef(url, MARKET_LISTING_PREFIX),
+    ),
     boardGameId: input.boardGameId,
   };
 }
@@ -107,7 +112,7 @@ export async function deleteOwnMarketListing(id: string) {
     return { error: "Nur die eigene Anzeige kann gelöscht werden." };
   }
 
-  await deleteBlobs(listing.imageUrls);
+  await deleteBlobs(listing.imageKeys);
   await prisma.marketListing.delete({ where: { id } });
 
   revalidatePath("/markt");
@@ -116,10 +121,12 @@ export async function deleteOwnMarketListing(id: string) {
 
 /** Löscht ein einzelnes, bereits hochgeladenes Bild aus dem Blob Store —
  * genutzt beim Entfernen/Ersetzen (Zuschneiden) einzelner Bilder im
- * Markt-Formular (#175), bevor/nachdem die Anzeige gespeichert wird. */
+ * Markt-Formular (#175), bevor/nachdem die Anzeige gespeichert wird. Nur
+ * unter `market-listings/` (#112) — sonst ließe sich jede Datei im Bucket
+ * löschen. */
 export async function deleteMarketListingImage(url: string) {
   await requireActionPermission("market:participate");
-  await deleteBlobs([url]);
+  await deleteBlobs([toStoredBlobRef(url, MARKET_LISTING_PREFIX)]);
   return { success: true as const };
 }
 
@@ -130,7 +137,7 @@ export async function getMarketListingUploadToken(
   await requireActionPermission("market:participate");
 
   return createBlobUploadToken({
-    pathname: normaliseBlobPath(pathname, "market-listings"),
+    pathname: normaliseBlobPath(pathname, MARKET_LISTING_PREFIX),
     contentType,
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,

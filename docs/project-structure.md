@@ -99,7 +99,11 @@ src/lib/
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → SeaweedFS per Presigned POST), `search-params.ts`,
-                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, Public-URL ↔ Key, `putBlob()`),
+                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, `putBlob()` → Key),
+                `blob-url.ts` (Public-URL ↔ Key, Endpoint/Bucket, ohne SDK/`server-only`), `blob-access.ts` (#112: `PUBLIC_BLOB_PREFIXES`, `signedBlobUrl()`
+                (synchrone SigV4-Signatur, 1 h), `toStoredBlobRef()` (Client-Verweis → Key mit Präfixprüfung)); die Prisma-Result-Extension in `prisma.ts`
+                liefert private `…Key`-Spalten unter den alten Feldnamen (`profilePictureUrl`, `fileUrl`, `imageUrls`, `iconUrl`, `LfgAttachment.url`)
+                als signierte URL, `DbClient` ersetzt `PrismaClient | Prisma.TransactionClient`,
                 `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt),
                 `action-result.ts` (`toResult`/`actionErrorMessage`/`UserFacingError` — catch-all für Server Actions mit `unstable_rethrow`),
                 `sorted-unique.ts` (`sortedUniqueLabels` — Kern von `tagLabelsByType`/`contributorNamesByRole`), `escape-html.ts` (`escapeHtml`, auch Anführungszeichen), `site-url.ts` (`siteUrl()`), `cron-auth.ts` (`requireCronAuth(request)` für `app/api/cron/*`)

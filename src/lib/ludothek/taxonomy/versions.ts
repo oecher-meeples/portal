@@ -1,8 +1,9 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
 import { upsertContributor } from "@/lib/ludothek/taxonomy/contributors";
 import { normalizeTaxonomyName } from "@/lib/ludothek/taxonomy/normalize";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /** Eine Edition (BGG-Version) mit ihren Verlagen — Eingabe für
  * `upsertBoardGameVersion()`. `bggVersionId: null` = manuell angelegt. */

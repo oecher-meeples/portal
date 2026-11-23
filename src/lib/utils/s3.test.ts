@@ -92,12 +92,12 @@ describe("getS3Client", () => {
 });
 
 describe("putBlob", () => {
-  it("uploads with a random suffix and returns the public URL", async () => {
+  it("uploads with a random suffix and returns the object key (#112)", async () => {
     const send = vi
       .spyOn(S3Client.prototype, "send")
       .mockResolvedValue({} as never);
 
-    const url = await putBlob(
+    const key = await putBlob(
       "instagram-covers/post.png",
       new ArrayBuffer(4),
       "image/png",
@@ -111,6 +111,6 @@ describe("putBlob", () => {
     });
     expect(command.input.Body).toBeInstanceOf(Uint8Array);
     expect(command.input.Key).toMatch(/^instagram-covers\/post-.+\.png$/);
-    expect(url).toBe(`${TEST_S3_PUBLIC_BASE}/${command.input.Key}`);
+    expect(key).toBe(command.input.Key);
   });
 });

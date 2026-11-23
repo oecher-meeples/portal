@@ -8,6 +8,7 @@ import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { toStoredBlobRef } from "@/lib/utils/blob-access";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
@@ -37,6 +38,7 @@ export async function getMeepleProfilePictureUploadToken(
 
 export async function saveMeepleProfilePicture(
   meepleId: string,
+  /** URL aus dem Upload — gespeichert wird der Key (#112). */
   url: string,
   visibility: ProfilePictureVisibility,
 ) {
@@ -44,14 +46,17 @@ export async function saveMeepleProfilePicture(
 
   const previous = await prisma.meeple.findUniqueOrThrow({
     where: { id: meepleId },
-    select: { profilePictureUrl: true },
+    select: { profilePictureKey: true },
   });
   await prisma.meeple.update({
     where: { id: meepleId },
-    data: { profilePictureUrl: url, profilePictureVisibility: visibility },
+    data: {
+      profilePictureKey: toStoredBlobRef(url, "meeple-profile-pictures"),
+      profilePictureVisibility: visibility,
+    },
   });
-  if (previous.profilePictureUrl) {
-    await deleteBlobs([previous.profilePictureUrl]);
+  if (previous.profilePictureKey) {
+    await deleteBlobs([previous.profilePictureKey]);
   }
 
   await revalidateMemberProfile({ meepleId: meepleId });
@@ -79,15 +84,15 @@ export async function deleteMeepleProfilePicture(meepleId: string) {
 
   const meeple = await prisma.meeple.findUniqueOrThrow({
     where: { id: meepleId },
-    select: { profilePictureUrl: true },
+    select: { profilePictureKey: true },
   });
-  if (meeple.profilePictureUrl) {
-    await deleteBlobs([meeple.profilePictureUrl]);
+  if (meeple.profilePictureKey) {
+    await deleteBlobs([meeple.profilePictureKey]);
   }
 
   await prisma.meeple.update({
     where: { id: meepleId },
-    data: { profilePictureUrl: null },
+    data: { profilePictureKey: null },
   });
 
   await revalidateMemberProfile({ meepleId: meepleId });

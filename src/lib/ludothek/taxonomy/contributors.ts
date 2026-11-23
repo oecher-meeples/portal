@@ -1,8 +1,10 @@
-import type { ContributorRole, Prisma, PrismaClient } from "@prisma/client";
+import type { ContributorRole } from "@prisma/client";
 import { normalizeTaxonomyName } from "@/lib/ludothek/taxonomy/normalize";
 import { upsertTaxonomyEntry } from "@/lib/ludothek/taxonomy/upsert";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 export type ContributorInput = {
   role: ContributorRole;

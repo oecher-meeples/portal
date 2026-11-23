@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -56,7 +59,7 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
     description: null,
     priceEuros: 12,
     condition: "Sehr gut",
-    imageUrls: [],
+    imageKeys: [],
     ...overrides,
   };
 }
@@ -105,22 +108,35 @@ describe("createMarketListing", () => {
         description: "Vollständig, Karten in Sleeves.",
         priceEuros: 12,
         condition: "Sehr gut",
-        imageUrls: [],
+        imageKeys: [],
       },
     });
   });
 
-  it("stores 0..n image urls as an array", async () => {
+  it("stores 0..n uploaded images as keys, keeping foreign legacy URLs (#112)", async () => {
     await createMarketListing({
       ...VALID_INPUT,
-      imageUrls: ["https://blob.example/a.png", "https://blob.example/b.png"],
+      imageUrls: [
+        `${TEST_S3_PUBLIC_BASE}/market-listings/a.png?X-Amz-Signature=abc`,
+        "https://cf.geekdo-images.com/legacy.jpg",
+      ],
     });
 
     expect(prismaMock.marketListing.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        imageUrls: ["https://blob.example/a.png", "https://blob.example/b.png"],
+        imageKeys: [
+          "market-listings/a.png",
+          "https://cf.geekdo-images.com/legacy.jpg",
+        ],
       }),
     });
+  });
+
+  it("refuses an image key outside market-listings/ (#112)", async () => {
+    await expect(
+      createMarketListing({ ...VALID_INPUT, imageUrls: ["downloads/x.pdf"] }),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(prismaMock.marketListing.create).not.toHaveBeenCalled();
   });
 
   it("rejects a missing title", async () => {
@@ -218,21 +234,21 @@ describe("deleteOwnMarketListing", () => {
   it("deletes the listing's uploaded images, not just the row referencing them", async () => {
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing({
-        imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"],
+        imageKeys: ["market-listings/a.jpg", "market-listings/b.jpg"],
       }) as never,
     );
 
     await deleteOwnMarketListing("listing-1");
 
     expect(deleteBlobsMock).toHaveBeenCalledWith([
-      "https://blob/a.jpg",
-      "https://blob/b.jpg",
+      "market-listings/a.jpg",
+      "market-listings/b.jpg",
     ]);
   });
 
   it("keeps the row when blob deletion fails, so the images do not silently leak", async () => {
     prismaMock.marketListing.findUnique.mockResolvedValue(
-      marketListing({ imageUrls: ["https://blob/a.jpg"] }) as never,
+      marketListing({ imageKeys: ["market-listings/a.jpg"] }) as never,
     );
     deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
 
@@ -259,10 +275,19 @@ describe("deleteOwnMarketListing", () => {
 
 describe("deleteMarketListingImage", () => {
   it("deletes a single image blob for the logged-in meeple (#175)", async () => {
-    const result = await deleteMarketListingImage("https://blob/a.jpg");
+    const result = await deleteMarketListingImage(
+      `${TEST_S3_PUBLIC_BASE}/market-listings/a.jpg`,
+    );
 
     expect(result).toEqual({ success: true });
-    expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/a.jpg"]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith(["market-listings/a.jpg"]);
+  });
+
+  it("refuses to delete a file outside market-listings/ (#112)", async () => {
+    await expect(
+      deleteMarketListingImage(`${TEST_S3_PUBLIC_BASE}/downloads/satzung.pdf`),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(deleteBlobsMock).not.toHaveBeenCalled();
   });
 });
 

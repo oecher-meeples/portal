@@ -61,5 +61,7 @@ async function postToBucket(token: BlobUploadToken, file: File) {
   if (!response.ok) {
     throw new Error(`Speicher antwortete mit HTTP ${response.status}`);
   }
-  return token.publicUrl;
+  // Anzeige-URL (für private Präfixe signiert, #112) — die speichernde Action
+  // macht daraus per `requireBlobKeyUnder()` wieder den Key.
+  return token.viewUrl;
 }

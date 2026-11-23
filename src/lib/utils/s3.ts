@@ -3,6 +3,19 @@ import { randomBytes } from "node:crypto";
 import { posix } from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { requireEnv } from "@/lib/utils/require-env";
+import {
+  getS3Bucket,
+  publicBlobEndpoint,
+  s3Region,
+  trimTrailingSlash,
+} from "@/lib/utils/blob-url";
+
+export {
+  getBlobPublicOrigin,
+  getS3Bucket,
+  keyFromPublicUrl,
+  publicUrlForKey,
+} from "@/lib/utils/blob-url";
 
 /**
  * Shared access to the S3-compatible blob store (self-hosted SeaweedFS, see
@@ -15,71 +28,27 @@ import { requireEnv } from "@/lib/utils/require-env";
  *
  * Objects are addressed path-style (`<endpoint>/<bucket>/<key>`) — SeaweedFS
  * needs `forcePathStyle`, and it keeps the public URL independent of DNS
- * wildcards. The bucket has anonymous read access (set up by the
- * `seaweedfs-init` compose service via a standard S3 bucket policy — unlike
- * MinIO, SeaweedFS has no root console user to grant/restrict this with), so
- * the public URL is the permanent URL stored in the database, just like the
- * former Vercel Blob URLs.
+ * wildcards. Anonymous read access exists only for the public prefixes in
+ * `PUBLIC_BLOB_PREFIXES` (`blob-access.ts`, #112, set up by the
+ * `seaweedfs-init` compose service via a standard S3 bucket policy); every
+ * other object is stored by key and shown via `signedBlobUrl()`. The pure URL
+ * helpers live in `blob-url.ts`.
  */
-const DEFAULT_REGION = "us-east-1";
-
-function trimTrailingSlash(url: string) {
-  return url.replace(/\/+$/, "");
-}
-
-export function getS3Bucket(): string {
-  return requireEnv("S3_BUCKET");
-}
-
-function getPublicEndpoint(): string {
-  return trimTrailingSlash(
-    process.env.S3_PUBLIC_ENDPOINT || requireEnv("S3_ENDPOINT"),
-  );
-}
-
-/** Origin browsers load blobs from and post uploads to — for the CSP
- * (`img-src`/`connect-src`). `null` when the store isn't configured, so a
- * missing env var never breaks page rendering. */
-export function getBlobPublicOrigin(): string | null {
-  const endpoint = process.env.S3_PUBLIC_ENDPOINT || process.env.S3_ENDPOINT;
-  if (!endpoint) return null;
-  try {
-    return new URL(endpoint).origin;
-  } catch {
-    return null;
-  }
-}
-
 /** S3 client for server-side calls. `public: true` builds one against the
  * browser-facing endpoint — needed for presigned POSTs, whose URL the
  * browser calls directly (the POST-policy signature itself is host-independent). */
 export function getS3Client({ public: usePublic = false } = {}): S3Client {
   return new S3Client({
     endpoint: usePublic
-      ? getPublicEndpoint()
+      ? publicBlobEndpoint()
       : trimTrailingSlash(requireEnv("S3_ENDPOINT")),
-    region: process.env.S3_REGION || DEFAULT_REGION,
+    region: s3Region(),
     forcePathStyle: true,
     credentials: {
       accessKeyId: requireEnv("S3_ACCESS_KEY"),
       secretAccessKey: requireEnv("S3_SECRET_KEY"),
     },
   });
-}
-
-/** Public, anonymously readable URL of an object key. */
-export function publicUrlForKey(key: string): string {
-  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
-  return `${getPublicEndpoint()}/${getS3Bucket()}/${encodedKey}`;
-}
-
-/** Inverse of `publicUrlForKey()` — `null` for URLs outside our bucket
- * (e.g. legacy Vercel Blob URLs or external hotlinks). */
-export function keyFromPublicUrl(url: string): string | null {
-  const prefix = `${getPublicEndpoint()}/${getS3Bucket()}/`;
-  if (!url.startsWith(prefix)) return null;
-  const key = url.slice(prefix.length).split(/[?#]/)[0];
-  return key ? key.split("/").map(decodeURIComponent).join("/") : null;
 }
 
 /** `foo/bar.png` → `foo/bar-<random>.png`, same as Vercel Blob's
@@ -92,7 +61,8 @@ export function withRandomSuffix(pathname: string): string {
 }
 
 /** Server-side upload (e.g. generated or re-hosted images). Always adds a
- * random suffix and returns the public URL. */
+ * random suffix and returns the object key (#112) — public callers wrap it
+ * in `publicUrlForKey()`, private ones store it as is. */
 export async function putBlob(
   pathname: string,
   body: Uint8Array | ArrayBuffer | Buffer,
@@ -107,5 +77,5 @@ export async function putBlob(
       ContentType: contentType,
     }),
   );
-  return publicUrlForKey(key);
+  return key;
 }

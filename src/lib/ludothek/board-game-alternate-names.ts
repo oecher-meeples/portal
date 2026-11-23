@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
 import { findActionActor } from "@/lib/auth/action-guards";
-import { prisma } from "@/lib/utils/prisma";
+import { prisma, type DbClient } from "@/lib/utils/prisma";
 
 /**
  * Gemeinsames Verschiebe-oder-Löschen-Muster hinter den "Als … verwenden"-
@@ -13,7 +12,7 @@ import { prisma } from "@/lib/utils/prisma";
  * dann gelöscht statt eine leere Zeile zu hinterlassen (#263).
  */
 async function replaceOrDeleteAlternateName(
-  tx: Prisma.TransactionClient,
+  tx: DbClient,
   alternateNameId: string,
   previousValue: string | null,
 ) {

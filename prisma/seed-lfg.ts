@@ -4,7 +4,7 @@ import { DEMO_LFG_POSTS } from "./seed-data/demo-lfg";
 /**
  * Upsertet auf die (in `demo-lfg.ts` fest vergebene) `id`, damit ein Re-Seed
  * die Demo-Gesuche nicht dupliziert — `LfgPost` hat sonst kein natürliches
- * Unique-Feld wie `slug`/`fileUrl` bei anderen Demo-Daten.
+ * Unique-Feld wie `slug`/`fileKey` bei anderen Demo-Daten.
  */
 export async function seedDemoLfgPosts(meepleIdByKey: Map<string, string>) {
   let created = 0;

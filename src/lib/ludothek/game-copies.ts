@@ -1,12 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  GameInventoryStatus,
-  type RuleBookLanguage,
-  type Prisma,
-  type PrismaClient,
-} from "@prisma/client";
+import { GameInventoryStatus, type RuleBookLanguage } from "@prisma/client";
 import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { ensureMeeple } from "@/lib/members/meeples";
@@ -24,7 +19,9 @@ import {
 } from "@/lib/ludothek/game-copy-placement";
 import { validateInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 export type { CopyPlacementInput };
 
