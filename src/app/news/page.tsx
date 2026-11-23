@@ -6,6 +6,7 @@ import { getAllContentWithCalendar } from "@/lib/content/calendar";
 import { NEWS_PAGE_SIZE } from "@/lib/content/content-types";
 import {
   filterVisibleNews,
+  findAvailableContentTypes,
   resolveNewsVisibility,
 } from "@/lib/content/news-visibility";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
@@ -22,12 +23,11 @@ export default async function NewsPage() {
     ]);
   const visibility = await resolveNewsVisibility(user, sessionTier);
   const items = filterVisibleNews(rawItems, visibility);
-  const [canEditPublic, canEditInternal] = user
-    ? await Promise.all([
-        hasPermissionInCurrentView(user.id, "posts:public"),
-        hasPermissionInCurrentView(user.id, "posts:internal"),
-      ])
-    : [false, false];
+  const [availableTypes, canEditPublic, canEditInternal] = await Promise.all([
+    findAvailableContentTypes(items, visibility),
+    user ? hasPermissionInCurrentView(user.id, "posts:public") : false,
+    user ? hasPermissionInCurrentView(user.id, "posts:internal") : false,
+  ]);
 
   return (
     <PageContainer>
@@ -52,7 +52,7 @@ export default async function NewsPage() {
         canEditPublic={canEditPublic}
         canEditInternal={canEditInternal}
         canSeeInternal={visibility.canSeeInternal}
-        canSeeSurveys={visibility.isMember}
+        availableTypes={availableTypes}
       />
     </PageContainer>
   );

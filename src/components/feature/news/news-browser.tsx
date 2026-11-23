@@ -23,14 +23,19 @@ import {
 } from "@/components/feature/news/news-results-list";
 import { loadMoreNews } from "@/components/feature/news/actions";
 
-/** #424: Kategorie "Umfragen" gehört nicht in die Filterleiste für Gäste —
- * es gibt keine öffentlichen Umfragen, nur Meeple sind abstimmungsberechtigt. */
+/** #576: nur Typen mit mindestens einem für den Betrachter sichtbaren
+ * Eintrag (serverseitig gezählt, `findAvailableContentTypes()` — deckt auch
+ * #424 ab: für Gäste gibt es keine sichtbaren Umfragen). "Alle" steht
+ * immer vorn; bliebe es allein, gibt es keine Leiste (leeres Array). */
 function typeFilterOptions(
-  canSeeSurveys: boolean,
+  availableTypes: ContentType[],
 ): PillOption<ContentType | "alle">[] {
-  return CONTENT_TYPE_FILTERS.filter(
-    (option) => canSeeSurveys || option.value !== "umfrage",
-  ).map((option) => ({
+  const options = CONTENT_TYPE_FILTERS.filter(
+    (option) =>
+      option.value === "alle" || availableTypes.includes(option.value),
+  );
+  if (options.length < 2) return [];
+  return options.map((option) => ({
     ...option,
     icon: getContentTypeIcon(option.value),
   }));
@@ -49,7 +54,7 @@ export function NewsBrowser({
   canEditPublic,
   canEditInternal,
   canSeeInternal,
-  canSeeSurveys,
+  availableTypes = [],
 }: {
   items: ContentItem[];
   /** Serverseitige DB-Post-Pagination (#469/#470) — ohne Angabe (z. B. in
@@ -60,7 +65,8 @@ export function NewsBrowser({
   canEditPublic?: boolean;
   canEditInternal?: boolean;
   canSeeInternal?: boolean;
-  canSeeSurveys?: boolean;
+  /** Typen mit mindestens einem sichtbaren Eintrag (#576). */
+  availableTypes?: ContentType[];
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
@@ -96,6 +102,8 @@ export function NewsBrowser({
     setCalendarSheetOpen(false);
   }
 
+  const typeOptions = typeFilterOptions(availableTypes);
+
   const visible = items
     .filter((item) => !selectedDate || item.date === selectedDate)
     .filter((item) => filter === "alle" || item.type === filter)
@@ -105,11 +113,13 @@ export function NewsBrowser({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4">
-          <PillToggle
-            options={typeFilterOptions(!!canSeeSurveys)}
-            value={filter}
-            onChange={setFilter}
-          />
+          {typeOptions.length > 0 && (
+            <PillToggle
+              options={typeOptions}
+              value={filter}
+              onChange={setFilter}
+            />
+          )}
           <PillToggle
             options={VIEW_MODE_OPTIONS}
             value={viewMode}

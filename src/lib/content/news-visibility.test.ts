@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/lib/__mocks__/prisma";
 
+vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/permissions", () => ({ hasPermission: vi.fn() }));
 
 const { hasPermission } = await import("@/lib/auth/permissions");
-const { resolveNewsVisibility, filterVisibleNews } = await import(
-  "@/lib/content/news-visibility"
-);
+const { resolveNewsVisibility, filterVisibleNews, findAvailableContentTypes } =
+  await import("@/lib/content/news-visibility");
 
 describe("resolveNewsVisibility", () => {
   it("denies internal content for a guest, without even checking the permission", async () => {
@@ -82,5 +83,75 @@ describe("filterVisibleNews", () => {
       "internal",
       "survey",
     ]);
+  });
+});
+
+describe("findAvailableContentTypes (#576)", () => {
+  const TERMIN_ITEM = {
+    slug: "kalender-1",
+    type: "termin" as const,
+    title: "Spieleabend",
+    excerpt: "",
+    body: "",
+    date: "2026-12-01",
+  };
+
+  it("merges distinct DB post types with the (unpaginated) calendar items", async () => {
+    prismaMock.post.findMany.mockResolvedValue([
+      { type: "BLOG" },
+      { type: "TERMIN" },
+    ] as never);
+
+    const types = await findAvailableContentTypes([TERMIN_ITEM], {
+      canSeeInternal: true,
+      isMember: true,
+    });
+
+    expect(types.sort()).toEqual(["blog", "termin"]);
+  });
+
+  it("returns no type without any visible entry", async () => {
+    prismaMock.post.findMany.mockResolvedValue([]);
+
+    const types = await findAvailableContentTypes([], {
+      canSeeInternal: true,
+      isMember: true,
+    });
+
+    expect(types).toEqual([]);
+  });
+
+  it("applies the visibility rules to the DB query for guests", async () => {
+    prismaMock.post.findMany.mockResolvedValue([]);
+
+    await findAvailableContentTypes([], {
+      canSeeInternal: false,
+      isMember: false,
+    });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith({
+      where: {
+        status: "PUBLISHED",
+        OR: [{ internal: null }, { internal: false }],
+        type: { not: "UMFRAGE" },
+      },
+      distinct: ["type"],
+      select: { type: true },
+    });
+  });
+
+  it("counts across all published posts for authorized members", async () => {
+    prismaMock.post.findMany.mockResolvedValue([]);
+
+    await findAvailableContentTypes([], {
+      canSeeInternal: true,
+      isMember: true,
+    });
+
+    expect(prismaMock.post.findMany).toHaveBeenCalledWith({
+      where: { status: "PUBLISHED" },
+      distinct: ["type"],
+      select: { type: true },
+    });
   });
 });
