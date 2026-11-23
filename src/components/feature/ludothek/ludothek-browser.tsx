@@ -1,7 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LayoutGrid, List, Rows3, X } from "lucide-react";
@@ -19,12 +19,9 @@ import { buildHref } from "@/lib/utils/query-string";
 import { classifyScannedSearch } from "@/lib/short-id/short-id";
 import type { BoardGameTrait } from "@prisma/client";
 import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
-import type {
-  LudothekFilters,
-  LudothekGame,
-  LudothekViewMode,
-  PublicLudothekGame,
-} from "@/lib/ludothek/browser";
+import type { LudothekFilters, LudothekViewMode } from "@/lib/ludothek/browser";
+import type { LudothekClientGame } from "@/lib/ludothek/browse";
+import { loadMoreLudothekGames } from "@/components/feature/ludothek/actions";
 import { cn } from "@/lib/utils/cn";
 
 /** #446: Kartengröße im Grid — persistiert je Gerät, nicht Teil der
@@ -79,8 +76,81 @@ function ViewModeSwitch({
   );
 }
 
+type LoadedGames = {
+  /** Die zuletzt vom Server gerenderte erste Seite — ändert sie sich, wird
+   * neu aufgesetzt (Filterwechsel) bzw. zusammengeführt (`router.refresh`). */
+  firstPage: LudothekClientGame[];
+  filterKey: string;
+  games: LudothekClientGame[];
+  nextOffset: number | null;
+};
+
+/** Nachgeladene Seiten (#461). Ein Filterwechsel kommt als neue erste Seite
+ * mit anderen `searchParams` und setzt auf Seite 1 zurück; ein Refresh mit
+ * denselben Filtern (z. B. nach einer Aktion) behält die schon nachgeladenen
+ * Titel, damit die Liste nicht unter dem Nutzer zusammenschrumpft. */
+function useLudothekPages(
+  firstPage: LudothekClientGame[],
+  firstNextOffset: number | null,
+  rawSearchParams: Record<string, string | string[] | undefined>,
+) {
+  const filterKey = JSON.stringify(rawSearchParams);
+  const [loaded, setLoaded] = useState<LoadedGames>({
+    firstPage,
+    filterKey,
+    games: firstPage,
+    nextOffset: firstNextOffset,
+  });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  if (loaded.firstPage !== firstPage) {
+    const keepExtras = loaded.filterKey === filterKey;
+    setLoaded({
+      firstPage,
+      filterKey,
+      games: keepExtras
+        ? appendNewTitles(
+            firstPage,
+            loaded.games.slice(loaded.firstPage.length),
+          )
+        : firstPage,
+      nextOffset: keepExtras ? loaded.nextOffset : firstNextOffset,
+    });
+  }
+
+  const loadMore = useCallback(
+    async (offset: number) => {
+      setIsLoadingMore(true);
+      try {
+        const page = await loadMoreLudothekGames(rawSearchParams, offset);
+        setLoaded((current) => ({
+          ...current,
+          games: appendNewTitles(current.games, page.games),
+          nextOffset: page.nextOffset,
+        }));
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [rawSearchParams],
+  );
+
+  return { ...loaded, isLoadingMore, loadMore };
+}
+
+/** Hängt nur Titel an, die noch nicht geladen sind — verschiebt sich der
+ * Bestand zwischen zwei Seiten, entsteht so keine doppelte Karte. */
+function appendNewTitles(
+  current: LudothekClientGame[],
+  next: LudothekClientGame[],
+) {
+  const known = new Set(current.map((game) => game.boardGameId));
+  return [...current, ...next.filter((game) => !known.has(game.boardGameId))];
+}
+
 export function LudothekBrowser({
-  games,
+  games: firstPage,
+  nextOffset: firstNextOffset = null,
   internal,
   canManageGames = false,
   basePath,
@@ -95,7 +165,10 @@ export function LudothekBrowser({
   traitTexts,
   createInventoryNumber,
 }: {
-  games: (PublicLudothekGame | LudothekGame)[];
+  /** Erste Seite Titel (#461), weitere lädt `loadMoreLudothekGames` nach. */
+  games: LudothekClientGame[];
+  /** Titel-Offset der zweiten Seite, `null`/weggelassen = schon alles da. */
+  nextOffset?: number | null;
   internal: boolean;
   /** Only meaningful when `games` are the unstripped internal shape. */
   canManageGames?: boolean;
@@ -131,6 +204,11 @@ export function LudothekBrowser({
   // `?ansicht=` bleibt dabei unangetastet und greift wieder ab `md`.
   const isMobile = useIsMobile();
   const view: LudothekViewMode = isMobile ? "grid" : (filters.view ?? "grid");
+  const { games, nextOffset, isLoadingMore, loadMore } = useLudothekPages(
+    firstPage,
+    firstNextOffset,
+    rawSearchParams,
+  );
 
   const [search, setSearch] = useState(filters.search ?? "");
   const debouncedSearch = useDebouncedValue(search);
@@ -266,6 +344,10 @@ export function LudothekBrowser({
         mechanicsOptions={mechanicsOptions}
         cardMinWidth={cardMinWidth}
         traitTexts={traitTexts}
+        onLoadMore={loadMore}
+        cursor={nextOffset}
+        hasMore={nextOffset !== null}
+        isLoadingMore={isLoadingMore}
       />
     </div>
   );

@@ -59,6 +59,9 @@ src/lib/
 │               │                      `tag-admin-actions.ts`/`tag-admin-queries.ts` für `/admin/tags`;
 │               │                      Versionen (`BoardGameVersion`): `versions.ts` (`upsertBoardGameVersion`, dedupliziert per BGG-Version-ID bzw. Name+Sprachen+Verlage),
 │               │                      `version-actions.ts` (gespeicherte Versionen eines Titels + noch nicht gespeicherte BGG-Versionen), `version-label.ts` (Anzeigetext)
+│               ├── browse.ts          Lese-Pipeline der Ludothek-Übersicht (#461): Kontext (Rechte, Filter, Event) → Bestand filtern (im Speicher) →
+│               │                      `toLudothekGamesPage` (Seite à 48 Titel per `paginateByTitle`, Gast-Strip, Beschreibung gekürzt);
+│               │                      geteilt von `app/ludothek/page.tsx` und `loadMoreLudothekGames` (`feature/ludothek/actions.ts`)
 │               ├── board-game-versions.ts BGG-Versionen auswerten: deutsche bevorzugen, Verlag/Product-Code auflösen, BGG-Version → `VersionInput`
 │               ├── edition-language.ts BGG-Sprachname → Flaggen-Ländercode (Anzeige über `entities/edition-flag.tsx`)
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
@@ -123,7 +126,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
 | `use-media-query.ts` | `useMediaQuery(query)` live per `matchMedia`; `useIsMobile()` = unterhalb `md`, SSR-sicher (startet mit Desktop-Variante, #585) |
 | `use-focus-mode.ts` | Fachfreier Fokusmodus-Kanal: setzt `data-focus-mode` am `<html>` (nur `< md`, Reset bei Unmount/Breakpoint-Wechsel); Header, MobileNav und App-Shell reagieren per `focus-mode:`-Variante (`globals.css`), #587 |
-| `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
+| `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring. Mit `onLoadMore`/`cursor`/`hasMore` echtes Server-Nachladen (News #470, Ludothek #461). Im Test: `stubIntersectionObserver()` aus `lib/__mocks__/intersection-observer.ts` |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `bar-row.tsx` | `BarRow` — beschriftete Balkenzeile (Label, Wert, relativer Balken) ohne Chart-Library; von Statistiken und Admin-Seitenaufrufen geteilt |

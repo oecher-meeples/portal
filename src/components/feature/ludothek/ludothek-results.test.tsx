@@ -4,6 +4,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { BoardGameKind } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { LudothekResults } from "@/components/feature/ludothek/ludothek-results";
+import { stubIntersectionObserver } from "@/lib/__mocks__/intersection-observer";
+
+stubIntersectionObserver();
 
 vi.mock("@/components/widgets/board-game/game-card-edit-overlay", () => ({
   GameCardEditOverlay: () => null,
@@ -233,5 +236,73 @@ describe("LudothekResults — private collection rows (#255-Folge)", () => {
     expect(
       screen.getByRole("link", { name: /Dune: Imperium/ }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("LudothekResults — Nachladen (#461)", () => {
+  it("requests the next page with the cursor once the sentinel is visible", () => {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(private callback: IntersectionObserverCallback) {}
+        observe() {
+          this.callback(
+            [{ isIntersecting: true } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          );
+        }
+        disconnect() {}
+      },
+    );
+    const onLoadMore = vi.fn();
+
+    render(
+      <LudothekResults
+        games={TWO_COPIES}
+        view="grid"
+        canManageGames={false}
+        onLoadMore={onLoadMore}
+        cursor={48}
+        hasMore
+      />,
+    );
+
+    expect(onLoadMore).toHaveBeenCalledExactlyOnceWith(48);
+    stubIntersectionObserver();
+  });
+
+  it.each(["grid", "liste"] as const)(
+    "shows skeleton placeholders while loading (%s)",
+    (view) => {
+      render(
+        <LudothekResults
+          games={TWO_COPIES}
+          view={view}
+          canManageGames={false}
+          onLoadMore={vi.fn()}
+          cursor={48}
+          hasMore
+          isLoadingMore
+        />,
+      );
+
+      expect(screen.getAllByRole("status", { name: "Lädt…" })).toHaveLength(4);
+    },
+  );
+
+  it("shows an end hint instead of loading once everything is there", () => {
+    render(
+      <LudothekResults
+        games={TWO_COPIES}
+        view="grid"
+        canManageGames={false}
+        onLoadMore={vi.fn()}
+        cursor={null}
+        hasMore={false}
+      />,
+    );
+
+    expect(screen.getByText("Alle Spiele geladen.")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import type { ContentItem } from "@/lib/content/content-types";
+import { stubIntersectionObserver } from "@/lib/__mocks__/intersection-observer";
 
 // news-browser.tsx importiert die Server Action loadMoreNews (#470), deren
 // Modulkette über @/lib/auth/server bis zu @neondatabase/auth/next/server
@@ -11,14 +12,7 @@ vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 // NewsResultsList lädt weitere Einträge per IntersectionObserver
 // (use-infinite-scroll.ts) — jsdom kennt die Browser-API nicht.
-vi.stubGlobal(
-  "IntersectionObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
+stubIntersectionObserver();
 
 const ITEMS: ContentItem[] = [];
 
