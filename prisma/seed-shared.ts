@@ -1,7 +1,9 @@
+import { StorageUnitKind } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "../src/lib/utils/prisma";
 import { uniqueSlug } from "../src/lib/utils/slug";
+import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import { encryptSecret, ibanFirst2, ibanLast4 } from "../src/lib/utils/crypto";
 
 /**
@@ -180,6 +182,21 @@ export async function ensureDemoMember(meepleId: string, info: DemoMemberInfo) {
       resignedAt: info.resignedAt,
       membershipEndsAt: info.membershipEndsAt,
       ...ibanFields,
+    },
+  });
+}
+
+/** Die feste Einheit „Unsortiert" (`UNSORTIERT_CODE`) — geteilt von Demo-
+ * und Release-Seed; ein Re-Seed setzt nur den Keeper neu. */
+export async function ensureUnsortiertUnit(keeperMeepleId: string) {
+  return prisma.storageUnit.upsert({
+    where: { code: UNSORTIERT_CODE },
+    update: { keeperMeepleId },
+    create: {
+      code: UNSORTIERT_CODE,
+      kind: StorageUnitKind.BOX,
+      label: "Unsortiert",
+      keeperMeepleId,
     },
   });
 }

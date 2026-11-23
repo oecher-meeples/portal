@@ -172,7 +172,7 @@ aber in der jeweiligen Situation nötig:
 | ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Erster Start auf **leerer** Datenbank    | Der App-Container bricht nach der Migration ab ([7](#7-erster-start-migration-und-seed)). Danach werden sie ignoriert                    |
 | `APP_DOMAIN`, `S3_DOMAIN`                 | Nur mit `--profile with-proxy`           | Caddy kann keine Site konfigurieren und startet nicht. Reine Hostnamen ohne `https://`, passend zu `BETTER_AUTH_URL`/`S3_PUBLIC_ENDPOINT` |
-| `SEED_DEMO_PASSWORD`                      | Nur mit `SEED_DEMO_DATA=true`            | Die Demo-Konten bekommen ein leeres Passwort und sind nicht nutzbar. Mindestens 8 Zeichen                                              |
+| `SEED_DEMO_PASSWORD`                      | Nur mit `SEED_PROFILE=develop`           | Die Demo-Konten bekommen ein leeres Passwort und sind nicht nutzbar. Mindestens 8 Zeichen                                              |
 
 ### Optional (mit funktionierendem Default)
 
@@ -182,7 +182,7 @@ aber in der jeweiligen Situation nötig:
 | `POSTGRES_USER`, `POSTGRES_DB`                    | `meeples`                                          | DB-User und -Name                                                                         |
 | `DATABASE_URL`                                    | aus `POSTGRES_*` gebaut, Host `postgres:5432`      | Nur setzen, um statt des Containers eine **externe** Postgres-Instanz zu nutzen           |
 | `BETTER_AUTH_TRUSTED_ORIGINS`                     | leer                                               | Weitere Origins (kommagetrennt), die `/api/auth` aufrufen dürfen                          |
-| `SEED_DEMO_DATA`                                  | `false`                                            | `true` = Demo-Daten beim ersten Start ([7](#7-erster-start-migration-und-seed))            |
+| `SEED_PROFILE`                                    | `release`                                          | `release` = Vereinsbestand, `develop` = Demo-Daten beim ersten Start ([7](#7-erster-start-migration-und-seed)) |
 | `S3_BUCKET`                                       | `meeples`                                          | Bucket-Name                                                                               |
 | `S3_ENDPOINT`                                     | `http://seaweedfs:8333`                            | Endpoint, über den die **App** SeaweedFS im Compose-Netz erreicht                         |
 | `S3_REGION`                                       | `us-east-1`                                        | Region für das AWS-SDK der App und für `seaweedfs-init`; der Default passt                |
@@ -277,12 +277,15 @@ Der Entrypoint des App-Containers (`docker/app/entrypoint.sh`) führt bei
    - **Leere DB, beide gesetzt** → Grundbestand: Admin-Konto mit der Rolle
      `sysadmin`, alle Rechte und Rollen, Spieleigenschafts-Texte sowie die
      Rechtliches-Seiten und Downloads.
-   - Zusätzlich mit **`SEED_DEMO_DATA=true`**: Demo-Spiele, -Mitglieder,
-     -Beiträge, Demo-Konten (Passwort `SEED_DEMO_PASSWORD`) usw. Nur für
-     Test-/Vorführinstanzen, nie für eine echte Vereinsdatenbank. Achtung:
-     Der Seed prüft auf den exakten Wert `false` — **jeder andere Wert**
-     (auch `0`, `no`, `FALSE`) aktiviert die Demo-Daten. Nur `true` oder
-     `false` eintragen.
+   - Danach je nach **`SEED_PROFILE`** (#603):
+     - `release` (Default): echter Vereinsbestand aus
+       `prisma/seed-data/release-inventory.csv` — Titel, Exemplare mit
+       Inventarnummer, Standorte (Regale/Kisten) und je Exemplar die letzte
+       Kontrolle (Kontrolleur: Admin-Konto). Keine Demo-Konten.
+     - `develop`: Demo-Spiele, -Mitglieder, -Beiträge, Demo-Konten (Passwort
+       `SEED_DEMO_PASSWORD`) usw. Nur für Test-/Vorführinstanzen, nie für eine
+       echte Vereinsdatenbank.
+     - Jeder andere Wert bricht den Seed ab.
 3. **`node server.js`** — der Next.js-Server übernimmt als Hauptprozess.
 
 Ablauf im Log (`docker compose logs app`):
@@ -290,7 +293,7 @@ Ablauf im Log (`docker compose logs app`):
 ```text
 [entrypoint] prisma migrate deploy
 … N migrations found … / No pending migrations to apply.
-[entrypoint] seed (only if database is empty, SEED_DEMO_DATA=false)
+[entrypoint] seed (only if database is empty, SEED_PROFILE=release)
 …
 [entrypoint] starting Next.js on 0.0.0.0:3000
 ```
