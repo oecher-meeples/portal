@@ -12,12 +12,33 @@ vi.mock("@/lib/content/termin-posts", () => ({
     verifyLinkedEventOrUnpublishMock(...args),
 }));
 
+const resolveActorMock = vi.fn();
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    resolveActorMock(...args),
+  ),
+);
+const generateMemberCalendarTokenMock = vi.fn();
+vi.mock("@/lib/members/calendar-token", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/members/calendar-token")>()),
+  generateMemberCalendarToken: (...args: unknown[]) =>
+    generateMemberCalendarTokenMock(...args),
+}));
+const revalidateMemberProfileMock = vi.fn();
+vi.mock("@/lib/members/revalidate-profile", () => ({
+  revalidateMemberProfile: (...args: unknown[]) =>
+    revalidateMemberProfileMock(...args),
+}));
+
 const { getCurrentUser } = await import("@/lib/auth/server");
 const { getSessionTier } = await import("@/lib/auth/session");
 const { hasPermission } = await import("@/lib/auth/permissions");
 const { getAllContentWithCalendar } = await import("@/lib/content/calendar");
-const { loadMoreNews, verifyLinkedEventOrUnpublish } =
-  await import("@/components/feature/news/actions");
+const {
+  loadMoreNews,
+  subscribeOwnInternalCalendar,
+  verifyLinkedEventOrUnpublish,
+} = await import("@/components/feature/news/actions");
 const { NEWS_PAGE_SIZE } = await import("@/lib/content/content-types");
 
 const PUBLIC_ITEM = {
@@ -83,6 +104,49 @@ describe("loadMoreNews (#470)", () => {
     const page = await loadMoreNews("cursor-1");
 
     expect(page.items.map((item) => item.slug)).toEqual(["public", "internal"]);
+  });
+});
+
+describe("subscribeOwnInternalCalendar (#439)", () => {
+  it("generates the token for the caller's own member and returns the .ics URL", async () => {
+    process.env.PUBLIC_SITE_URL = "https://example.org";
+    resolveActorMock.mockResolvedValue({
+      id: "meeple-1",
+      member: { id: "member-1" },
+    });
+    generateMemberCalendarTokenMock.mockResolvedValue("raw-token");
+
+    const result = await subscribeOwnInternalCalendar();
+
+    expect(resolveActorMock).toHaveBeenCalledWith("news:internal:view");
+    expect(generateMemberCalendarTokenMock).toHaveBeenCalledWith("member-1");
+    expect(revalidateMemberProfileMock).toHaveBeenCalledWith({
+      memberId: "member-1",
+    });
+    expect(result).toEqual({
+      success: true,
+      subscribeUrl: "https://example.org/api/calendar/internal/raw-token.ics",
+    });
+  });
+
+  it("refuses without news:internal:view, without touching any token", async () => {
+    resolveActorMock.mockResolvedValue(null);
+    generateMemberCalendarTokenMock.mockClear();
+
+    const result = await subscribeOwnInternalCalendar();
+
+    expect(result).toEqual({ error: "Keine Berechtigung." });
+    expect(generateMemberCalendarTokenMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses for an account without a linked member", async () => {
+    resolveActorMock.mockResolvedValue({ id: "meeple-1", member: null });
+    generateMemberCalendarTokenMock.mockClear();
+
+    const result = await subscribeOwnInternalCalendar();
+
+    expect(result).toHaveProperty("error");
+    expect(generateMemberCalendarTokenMock).not.toHaveBeenCalled();
   });
 });
 

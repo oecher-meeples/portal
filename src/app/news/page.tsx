@@ -12,6 +12,7 @@ import {
 import { NewsBrowser } from "@/components/feature/news/news-browser";
 import { NewsletterInlineSignup } from "@/components/feature/newsletter/newsletter-inline-signup";
 import { getCurrentUser } from "@/lib/auth/server";
+import { hasOwnCalendarToken } from "@/lib/members/calendar-token";
 import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
 
 export default async function NewsPage() {
@@ -23,11 +24,13 @@ export default async function NewsPage() {
     ]);
   const visibility = await resolveNewsVisibility(user, sessionTier);
   const items = filterVisibleNews(rawItems, visibility);
-  const [availableTypes, canEditPublic, canEditInternal] = await Promise.all([
-    findAvailableContentTypes(items, visibility),
-    user ? hasPermissionInCurrentView(user.id, "posts:public") : false,
-    user ? hasPermissionInCurrentView(user.id, "posts:internal") : false,
-  ]);
+  const [availableTypes, canEditPublic, canEditInternal, hasCalendarToken] =
+    await Promise.all([
+      findAvailableContentTypes(items, visibility),
+      user ? hasPermissionInCurrentView(user.id, "posts:public") : false,
+      user ? hasPermissionInCurrentView(user.id, "posts:internal") : false,
+      user && visibility.canSeeInternal ? hasOwnCalendarToken(user.id) : false,
+    ]);
 
   return (
     <PageContainer>
@@ -53,6 +56,9 @@ export default async function NewsPage() {
         canEditInternal={canEditInternal}
         canSeeInternal={visibility.canSeeInternal}
         availableTypes={availableTypes}
+        internalSubscription={
+          visibility.canSeeInternal ? { hasToken: hasCalendarToken } : undefined
+        }
       />
     </PageContainer>
   );

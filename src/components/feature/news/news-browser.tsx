@@ -55,6 +55,7 @@ export function NewsBrowser({
   canEditInternal,
   canSeeInternal,
   availableTypes = [],
+  internalSubscription,
 }: {
   items: ContentItem[];
   /** Serverseitige DB-Post-Pagination (#469/#470) — ohne Angabe (z. B. in
@@ -67,6 +68,8 @@ export function NewsBrowser({
   canSeeInternal?: boolean;
   /** Typen mit mindestens einem sichtbaren Eintrag (#576). */
   availableTypes?: ContentType[];
+  /** Nur für Meeple mit internem Zugriff (#439), siehe `NewsCalendar`. */
+  internalSubscription?: { hasToken: boolean };
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [filter, setFilter] = useState<ContentType | "alle">("alle");
@@ -157,6 +160,7 @@ export function NewsBrowser({
                 selectedDate={selectedDate}
                 onSelectDate={selectDateAndCloseSheet}
                 icsUrl={icsUrl}
+                internalSubscription={internalSubscription}
               />
             </BottomSheetContent>
           </BottomSheet>
@@ -199,6 +203,7 @@ export function NewsBrowser({
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
             icsUrl={icsUrl}
+            internalSubscription={internalSubscription}
           />
         </div>
       </div>
