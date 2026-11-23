@@ -54,6 +54,7 @@ const FIND_MANY_MOCKS = [
   "explainerAttendance",
   "explainerGame",
   "fleaMarketItem",
+  "gameCopyCheck",
   "gameHolding",
   "helperAvailability",
   "invite",
@@ -158,6 +159,14 @@ describe("collectMeeplePersonalData", () => {
           ],
         },
       }),
+    );
+  });
+
+  it("includes the copy checks the meeple carried out (#599)", async () => {
+    await collectMeeplePersonalData("meeple-1");
+
+    expect(prismaMock.gameCopyCheck.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { checkedByMeepleId: "meeple-1" } }),
     );
   });
 

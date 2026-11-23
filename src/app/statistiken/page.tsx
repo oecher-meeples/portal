@@ -8,28 +8,39 @@ import {
   countBoardGameTitles,
   countGameCopies,
 } from "@/lib/statistics/inventory-stats";
+import {
+  checksPerMonth,
+  checkStatsWindowStart,
+} from "@/lib/statistics/check-stats";
 import { StatistikenView } from "@/components/feature/statistiken/statistiken-view";
 
 export default async function StatistikenPage() {
   await requireMember();
 
-  const [holdings, boardGames, clubCopies, privateEntries] = await Promise.all([
-    prisma.gameHolding.findMany({
-      select: {
-        origin: true,
-        startedAt: true,
-        gameCopy: { select: { boardGameId: true } },
-      },
-    }),
-    prisma.boardGame.findMany({ select: { id: true, title: true } }),
-    prisma.gameCopy.findMany({
-      where: { status: "ACTIVE" },
-      select: { boardGameId: true },
-    }),
-    prisma.privateGameCollectionEntry.findMany({
-      select: { boardGameId: true },
-    }),
-  ]);
+  const now = new Date();
+  const [holdings, boardGames, clubCopies, privateEntries, checks] =
+    await Promise.all([
+      prisma.gameHolding.findMany({
+        select: {
+          origin: true,
+          startedAt: true,
+          gameCopy: { select: { boardGameId: true } },
+        },
+      }),
+      prisma.boardGame.findMany({ select: { id: true, title: true } }),
+      prisma.gameCopy.findMany({
+        where: { status: "ACTIVE" },
+        select: { boardGameId: true },
+      }),
+      prisma.privateGameCollectionEntry.findMany({
+        select: { boardGameId: true },
+      }),
+      // #599: nur Zeitpunkte — keine Namen, keine Exemplare.
+      prisma.gameCopyCheck.findMany({
+        where: { checkedAt: { gte: checkStatsWindowStart(now) } },
+        select: { checkedAt: true },
+      }),
+    ]);
   // "Most borrowed" is counted per title, not per physical copy.
   const statsHoldings = holdings.map((holding) => ({
     boardGameId: holding.gameCopy.boardGameId,
@@ -45,6 +56,10 @@ export default async function StatistikenPage() {
       weekdays={mostActiveLoanWeekdays(statsHoldings)}
       titleCounts={countBoardGameTitles(clubBoardGameIds, privateBoardGameIds)}
       copyCounts={countGameCopies(clubCopies.length, privateEntries.length)}
+      checksPerMonth={checksPerMonth(
+        checks.map((check) => check.checkedAt),
+        now,
+      )}
     />
   );
 }

@@ -17,7 +17,7 @@ import {
   GameCopyCard,
   GameCopyTableRow,
 } from "@/components/feature/ludothek/game-copy-accordion";
-import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
+import type { CopyHistory } from "@/lib/ludothek/copy-history";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ContactDialogMeeple } from "@/lib/members/contact";
 import { formatRuleBookLanguages } from "@/lib/ludothek/language-dependence";
@@ -48,8 +48,8 @@ export type GameCopyRow = {
   /** Whether the current session holds this copy — gates "Weitergeben" in
    * its actions menu (#128). */
   isMine: boolean;
-  /** This copy's own aufenthalts-history — merged into the accordion below its row (#121/#122). */
-  history: HoldingHistoryEntry[];
+  /** This copy's own aufenthalts-/kontroll-history — merged into the accordion below its row (#121/#122, #599). */
+  history: CopyHistory;
   /** True for a Meeple's privately imported title (#255-Folge) — no echtes
    * `GameCopy` dahinter, daher keine Aktionen (kein `GameActionsMenu`). */
   isPrivate: boolean;

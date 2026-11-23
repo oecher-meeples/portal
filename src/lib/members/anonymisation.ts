@@ -96,6 +96,11 @@ export async function anonymiseMeepleStufe1(
       where: { recordedByMeepleId: meepleId },
       data: { locationNote: null },
     });
+    // #599: Kontroll-Notizen leeren, die Datensätze selbst bleiben (Statistik).
+    await tx.gameCopyCheck.updateMany({
+      where: { checkedByMeepleId: meepleId },
+      data: { note: null },
+    });
 
     await tx.meeple.update({
       where: { id: meepleId },

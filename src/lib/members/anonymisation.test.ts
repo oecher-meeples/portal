@@ -161,6 +161,18 @@ describe("anonymiseMeepleStufe1", () => {
     });
   });
 
+  it("clears GameCopyCheck.note of the meeple's own checks, keeping the records (#599)", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.gameCopyCheck.updateMany).toHaveBeenCalledWith({
+      where: { checkedByMeepleId: "meeple-1" },
+      data: { note: null },
+    });
+    expect(prismaMock.gameCopyCheck.deleteMany).not.toHaveBeenCalled();
+  });
+
   it("clears StorageUnitMove.locationNote only where the meeple recorded it themselves", async () => {
     givenAnonymisableMeeple();
 
