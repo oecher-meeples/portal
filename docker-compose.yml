@@ -14,11 +14,7 @@
 # `${VAR:-x}` = optional, x is the default.
 services:
   app:
-    build:
-      context: .
-      args:
-        # Image-Optimizer-Allowlist wird beim Build festgelegt (#521).
-        S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-}
+    image: ghcr.io/oecher-meeples/portal-app:${IMAGE_TAG:-preview}
     restart: unless-stopped
     depends_on:
       # Entrypoint runs `prisma migrate deploy` + seed on every start — wait
