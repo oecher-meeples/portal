@@ -131,6 +131,22 @@ describe("listActiveNotificationsForViewer (#339)", () => {
     expect(isTriggeredMock).not.toHaveBeenCalled();
   });
 
+  it("passes the viewer (permissions + meepleId) to trigger and message (#338)", async () => {
+    prismaMock.systemNotification.findMany.mockResolvedValue([]);
+    prismaMock.automatedNotificationDisable.findMany.mockResolvedValue([]);
+    isTriggeredMock.mockResolvedValue(true);
+    messageMock.mockResolvedValue("Hallo");
+
+    await listActiveNotificationsForViewer(["admin:access"], "meeple-1");
+
+    const expectedViewer = {
+      permissionKeys: ["admin:access"],
+      meepleId: "meeple-1",
+    };
+    expect(isTriggeredMock).toHaveBeenCalledWith(expectedViewer);
+    expect(messageMock).toHaveBeenCalledWith(expectedViewer);
+  });
+
   it("excludes an automated notification whose condition isn't triggered", async () => {
     prismaMock.systemNotification.findMany.mockResolvedValue([]);
     prismaMock.automatedNotificationDisable.findMany.mockResolvedValue([]);
