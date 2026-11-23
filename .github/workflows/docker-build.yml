@@ -161,8 +161,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-seaweedfs
           tags: |
             type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref_name == 'release' || inputs.force_seaweed_build }}
-            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || inputs.force_seaweed_build }}
+            type=raw,value=latest,enable=${{ github.ref_name == 'release' || inputs.force_seaweed_build == true }}
+            type=raw,value=preview,enable=${{ github.ref_name == 'preview' || inputs.force_seaweed_build == true }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ steps.version.outputs.tag }},enable=${{ steps.version.outputs.tag != '' }}
