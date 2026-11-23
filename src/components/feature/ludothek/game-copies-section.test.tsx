@@ -39,7 +39,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     versionId: null,
     publisher: [],
     isMine: false,
-    history: [],
+    history: { holdings: [], holdingsTruncated: false, checks: null },
     isPrivate: false,
     ...overrides,
   };
@@ -274,17 +274,21 @@ describe("GameCopiesSection", () => {
       <GameCopiesSection
         copies={[
           copy({
-            history: [
-              {
-                id: "h1",
-                origin: "Ersterfassung",
-                target: "Regal A",
-                startedAt: "1.1.2026",
-                endedAt: null,
-                confirmedAt: "2026-01-01T00:00:00.000Z",
-                recordedByName: "Alex",
-              },
-            ],
+            history: {
+              holdings: [
+                {
+                  id: "h1",
+                  origin: "Ersterfassung",
+                  target: "Regal A",
+                  startedAt: "1.1.2026",
+                  endedAt: null,
+                  confirmedAt: "2026-01-01T00:00:00.000Z",
+                  recordedByName: "Alex",
+                },
+              ],
+              holdingsTruncated: false,
+              checks: null,
+            },
           }),
         ]}
         boardGameId="game-1"
@@ -309,17 +313,21 @@ describe("GameCopiesSection", () => {
           copy({
             id: "copy-2",
             unitChain: "Regal B",
-            history: [
-              {
-                id: "h2",
-                origin: "Ausleihe",
-                target: "Alex",
-                startedAt: "2.1.2026",
-                endedAt: null,
-                confirmedAt: null,
-                recordedByName: "Sam",
-              },
-            ],
+            history: {
+              holdings: [
+                {
+                  id: "h2",
+                  origin: "Ausleihe",
+                  target: "Alex",
+                  startedAt: "2.1.2026",
+                  endedAt: null,
+                  confirmedAt: null,
+                  recordedByName: "Sam",
+                },
+              ],
+              holdingsTruncated: false,
+              checks: null,
+            },
           }),
         ]}
         boardGameId="game-1"

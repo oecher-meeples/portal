@@ -80,7 +80,10 @@ src/lib/
 │               ├── scan-log.ts         Scan-Logs der Scanner-Seite (#574): Kürzen (25/50), Ablauf (24 h/3 Monate), Duplikat nach oben — rein, ohne Storage
 │               ├── scanner-actions.ts  Server Actions der Scanner-Serien: `scanReceiveGame`, `scanTransferGame`, `scanValidateTarget`, `scanPickCopy`
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
-│               ├── game-issue.ts / game-defects.ts  Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format (rein), Statusübergang `ACTIVE↔MAINTENANCE` (`reportGameCopyDefect`/`clearGameCopyDefect`, ohne `"use server"` — Guard liegt in `feature/scan/inventory-actions.ts`)
+│               ├── game-issue.ts       Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format, Kontroll-Ergebnis-Labels `GAME_COPY_CHECK_RESULT_LABELS` (rein, client-tauglich)
+│               ├── game-copy-checks.ts Kontrolle = Datensatz (#599): `applyCheck` (eine Transaktion für „Vollständig bestätigen" und „Mangel melden"), Status-Regel `statusAfterCheck` (nur „Nicht spielbar" → `MAINTENANCE`), ohne `"use server"` — Guard + Actor in `feature/scan/inventory-actions.ts`
+│               ├── game-copy-checks-read.ts  Kontroll-Historie je Exemplar (`loadCheckHistories`, nur `games:manage`)
+│               ├── copy-history.ts     Historien fürs Exemplar-Akkordeon (`loadCopyHistories`): Aufenthalte pro Exemplar `take: 16` (15 gezeigt + „ältere"-Flag) + Kontrollen
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern (einzeln oder `markUnitForCompletenessCheck` für die direkten Inhalte einer Einheit, #563)
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
@@ -91,7 +94,7 @@ src/lib/
 ├── short-id/   QR-Short-IDs (Epic #542, `https://short.oecher-meeples.org/id/<präfix>-<id>`): Präfix-Registry, `buildShortIdUrl`/
 │               `parseShortId` (ignoriert alles vor `/id/`), Einheiten-Code-Mapping `box-0001` ↔ `OM-BOX-0001` (`short-id.ts`, rein,
 │               client-sicher); Router-Ziel je Präfix und Recht (`resolve.ts`, `resolveShortId`)
-├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
+├── statistics/ Anonymisierte Auswertungen — Verleih (`loan-stats.ts`), Bestand (`inventory-stats.ts`), Exemplar-Kontrollen pro Berliner Monat (`check-stats.ts`, #599) — reine Zählwerte, keine Meeple-Referenzen
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
 │               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
 ├── instagram/  Cross-Posting
@@ -134,6 +137,8 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `bar-row.tsx` | `BarRow` — beschriftete Balkenzeile (Label, Wert, relativer Balken) ohne Chart-Library; von Statistiken und Admin-Seitenaufrufen geteilt |
+| `column-chart.tsx` | `ColumnChart` — Säulendiagramm für Zeitreihen ohne Chart-Library (HTML/CSS, Server-Komponente, `sr-only`-Tabelle), #599 |
+| `history-list.tsx` | `HistoryList` — Überschrift + Liste mit Limit (Default 5), „Alle anzeigen" lokal, optionaler Hinweis; Aufenthalts- und Kontroll-Historie (#599) |
 | `page-heading`, `page-title`, `stat-tile` (inkl. `StatValue`), `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
 | `page-container.tsx` | `PageContainer` — Seiten-Breitendeckel (`variant: "default" \| "wide"`); jede `*-view.tsx` legt ihre eigene Breite fest, statt dass `AppShell` global `max-w-6xl` erzwingt (#398) |
 
@@ -156,7 +161,8 @@ entities/
 ├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung (nicht erfasst rendert bewusst nichts, #121)
 ├── lfg-status-pill.tsx         offen / voll / abgelaufen / geschlossen
 ├── membership-state-pill.tsx   aktiv / gekündigt / ausgetreten / anonymisiert
-└── flea-market-status-pill.tsx Freigabe / Verkauf / reserviert / verkauft
+├── flea-market-status-pill.tsx Freigabe / Verkauf / reserviert / verkauft
+└── game-copy-check-result-pill.tsx Kontroll-Ergebnis: vollständig / unvollständig / beschädigt / nicht spielbar (#599)
 ```
 
 ## `src/components/widgets/` — geteilte Use Cases

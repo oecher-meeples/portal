@@ -38,6 +38,18 @@ enum GameInventoryStatus {
   DEINVENTARISED
 }
 
+/// Ergebnis einer Exemplar-Kontrolle (#599) — die Mangel-Arten entsprechen
+/// `GAME_ISSUE_LABELS` in `lib/ludothek/game-issue.ts`.
+enum GameCopyCheckResult {
+  COMPLETE
+  /// „Unvollständig spielbar"
+  INCOMPLETE
+  /// „Nicht spielbar" — einziges Ergebnis, das in `MAINTENANCE` führt.
+  UNPLAYABLE
+  /// „Beschädigt"
+  DAMAGED
+}
+
 enum StorageUnitKind {
   BOX
   SHELF
@@ -381,6 +393,7 @@ model Meeple {
   recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
   movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
   recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
+  gameCopyChecks           GameCopyCheck[]              @relation("GameCopyCheckChecker")
   lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
   lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
@@ -1093,11 +1106,33 @@ model GameCopy {
   boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
   version   BoardGameVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
   holdings  GameHolding[]
+  checks    GameCopyCheck[]
 
   @@index([boardGameId])
   @@index([versionId])
   @@index([status])
   @@map("game_copies")
+}
+
+/// Eine einzelne Kontrolle eines Exemplars (#599, Prüfbogen). `GameCopy`
+/// trägt den aktuellen Stand (`condition`, `lastCheckedAt`, `status`), die
+/// Historie steht hier.
+model GameCopyCheck {
+  id                String              @id @default(cuid())
+  gameCopyId        String
+  checkedByMeepleId String
+  checkedAt         DateTime            @default(now())
+  result            GameCopyCheckResult
+  /// Zustand/Mangel-Notiz — wird bei Anonymisierung des Urhebers geleert.
+  note              String?
+
+  gameCopy  GameCopy @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
+  checkedBy Meeple   @relation("GameCopyCheckChecker", fields: [checkedByMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([gameCopyId, checkedAt])
+  @@index([checkedAt])
+  @@index([checkedByMeepleId])
+  @@map("game_copy_checks")
 }
 
 /// A batch of spare parts kept for a game, or "Allgemeines" (`boardGameId: null`)

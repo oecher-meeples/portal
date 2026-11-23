@@ -36,7 +36,8 @@ import {
   seedDemoResignedMember,
   seedDemoAnonymisedMeeple,
 } from "./seed-departed";
-import { seedDemoLoanHistory } from "./seed-loans";
+import { seedDemoBusyCopy, seedDemoLoanHistory } from "./seed-loans";
+import { seedDemoChecks } from "./seed-checks";
 import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
 import { seedTagDisplayNames } from "./seed-tags";
 import { seedDemoLfgPosts } from "./seed-lfg";
@@ -493,6 +494,9 @@ async function seedDemoData(adminMeepleId: string) {
     ],
     spielewartMeepleId,
   );
+  await seedDemoBusyCopy(demoMeepleMemberIds, spielewartMeepleId);
+  // Nach den Aufenthalten: Kontrollen nur an Exemplaren im Lager (#599).
+  await seedDemoChecks(spielewartMeepleId);
 }
 
 main()

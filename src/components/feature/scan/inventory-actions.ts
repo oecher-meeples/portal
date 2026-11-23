@@ -1,30 +1,21 @@
 "use server";
 
 import { requireActionPermission } from "@/lib/auth/action-guards";
-import { prisma } from "@/lib/utils/prisma";
 import type { GameIssueKind } from "@/lib/ludothek/game-issue";
 import {
-  clearGameCopyDefect,
+  confirmGameCopyCheck,
   reportGameCopyDefect,
-} from "@/lib/ludothek/game-defects";
+} from "@/lib/ludothek/game-copy-checks";
 
-/** Prüfbogen (Scanner-Modus „Kontrollieren", #563) — nur `games:manage`. */
+/** Prüfbogen (Scanner-Modus „Kontrollieren", #563) — nur `games:manage`.
+ * Jede Kontrolle wird mit dem kontrollierenden Meeple protokolliert (#599). */
 export async function confirmGameCondition(
   gameCopyId: string,
   condition: string,
 ) {
-  await requireActionPermission("games:manage");
+  const actor = await requireActionPermission("games:manage");
 
-  await prisma.gameCopy.update({
-    where: { id: gameCopyId },
-    data: {
-      condition: condition.trim() || null,
-      lastCheckedAt: new Date(),
-      needsCompletenessCheck: false,
-    },
-  });
-
-  return { success: true as const };
+  return confirmGameCopyCheck(gameCopyId, actor.meeple.id, condition);
 }
 
 export async function reportGameDefect(
@@ -32,13 +23,7 @@ export async function reportGameDefect(
   kind: GameIssueKind,
   note: string,
 ) {
-  await requireActionPermission("games:manage");
+  const actor = await requireActionPermission("games:manage");
 
-  return reportGameCopyDefect(gameCopyId, kind, note);
-}
-
-export async function clearGameDefect(gameCopyId: string) {
-  await requireActionPermission("games:manage");
-
-  return clearGameCopyDefect(gameCopyId);
+  return reportGameCopyDefect(gameCopyId, actor.meeple.id, kind, note);
 }

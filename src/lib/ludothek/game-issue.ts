@@ -27,3 +27,26 @@ export function isGameIssueKind(value: unknown): value is GameIssueKind {
 export function formatDefectCondition(kind: GameIssueKind, note: string) {
   return `${GAME_ISSUE_LABELS[kind]}: ${note.trim()}`;
 }
+
+/** Ergebnis einer Kontrolle (#599) — Spiegel des Prisma-Enums
+ * `GameCopyCheckResult`, als String-Union, damit die Datei client-tauglich
+ * bleibt. */
+export type GameCopyCheckResultKey =
+  "COMPLETE" | "INCOMPLETE" | "UNPLAYABLE" | "DAMAGED";
+
+/** Welche Mangel-Art im Prüfbogen welches Kontroll-Ergebnis ergibt. */
+export const GAME_ISSUE_CHECK_RESULT = {
+  unvollstaendig: "INCOMPLETE",
+  nicht_spielbar: "UNPLAYABLE",
+  beschaedigt: "DAMAGED",
+} as const satisfies Record<GameIssueKind, GameCopyCheckResultKey>;
+
+export const GAME_COPY_CHECK_RESULT_LABELS: Record<
+  GameCopyCheckResultKey,
+  string
+> = {
+  COMPLETE: "Vollständig",
+  INCOMPLETE: GAME_ISSUE_LABELS.unvollstaendig,
+  UNPLAYABLE: GAME_ISSUE_LABELS.nicht_spielbar,
+  DAMAGED: GAME_ISSUE_LABELS.beschaedigt,
+};
