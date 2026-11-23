@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { prismaMock, prismaTxMock } from "@/lib/__mocks__/prisma";
 import {
   INVALID_INVENTORY_NUMBER_ERROR,
   isValidInventoryNumber,
@@ -42,7 +42,7 @@ describe("isValidInventoryNumber", () => {
 
 describe("validateInventoryNumber", () => {
   it("rejects an invalid number without a db query", async () => {
-    const error = await validateInventoryNumber(prismaMock, Number.NaN);
+    const error = await validateInventoryNumber(prismaTxMock, Number.NaN);
 
     expect(error).toBe(INVALID_INVENTORY_NUMBER_ERROR);
     expect(prismaMock.gameCopy.findFirst).not.toHaveBeenCalled();
@@ -51,7 +51,7 @@ describe("validateInventoryNumber", () => {
   it("returns null when the number is free", async () => {
     prismaMock.gameCopy.findFirst.mockResolvedValue(null);
 
-    const error = await validateInventoryNumber(prismaMock, 12);
+    const error = await validateInventoryNumber(prismaTxMock, 12);
 
     expect(error).toBeNull();
   });
@@ -59,7 +59,7 @@ describe("validateInventoryNumber", () => {
   it("returns an error message on collision", async () => {
     prismaMock.gameCopy.findFirst.mockResolvedValue({ id: "other" } as never);
 
-    const error = await validateInventoryNumber(prismaMock, 12);
+    const error = await validateInventoryNumber(prismaTxMock, 12);
 
     expect(error).toBe("Inventarnummer 12 ist bereits vergeben.");
   });
@@ -67,7 +67,7 @@ describe("validateInventoryNumber", () => {
   it("excludes the copy's own id (editing without changing the number)", async () => {
     prismaMock.gameCopy.findFirst.mockResolvedValue(null);
 
-    await validateInventoryNumber(prismaMock, 12, "copy-1");
+    await validateInventoryNumber(prismaTxMock, 12, "copy-1");
 
     expect(prismaMock.gameCopy.findFirst).toHaveBeenCalledWith({
       where: { inventoryNumber: 12, id: { not: "copy-1" } },

@@ -61,4 +61,13 @@ describe("isOptimizableImageUrl", () => {
       isOptimizableImageUrl("http://cf.geekdo-images.com/x.jpg", origins),
     ).toBe(false);
   });
+
+  it("never optimizes signed URLs of private files (#112)", () => {
+    expect(
+      isOptimizableImageUrl(
+        "https://files.example.org/meeples/market-listings/a.webp?X-Amz-Date=1&X-Amz-Signature=abc",
+        origins,
+      ),
+    ).toBe(false);
+  });
 });

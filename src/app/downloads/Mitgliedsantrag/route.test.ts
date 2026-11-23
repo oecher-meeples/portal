@@ -5,6 +5,10 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const { GET } = await import("./route");
 
+const REQUEST = new Request(
+  "https://portal.example.org/downloads/Mitgliedsantrag",
+);
+
 afterEach(() => {
   vi.clearAllMocks();
 });
@@ -19,7 +23,7 @@ describe("GET /downloads/Mitgliedsantrag (#423)", () => {
       status: "PUBLIC",
     } as never);
 
-    const response = await GET();
+    const response = await GET(REQUEST);
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
@@ -30,10 +34,22 @@ describe("GET /downloads/Mitgliedsantrag (#423)", () => {
     });
   });
 
+  it("resolves an app path from public/ against the request URL", async () => {
+    prismaMock.download.findFirst.mockResolvedValue({
+      fileUrl: "/downloads/Mitgliedsantrag.pdf",
+    } as never);
+
+    const response = await GET(REQUEST);
+
+    expect(response.headers.get("location")).toBe(
+      "https://portal.example.org/downloads/Mitgliedsantrag.pdf",
+    );
+  });
+
   it("returns 404 when no matching PUBLIC download exists", async () => {
     prismaMock.download.findFirst.mockResolvedValue(null);
 
-    const response = await GET();
+    const response = await GET(REQUEST);
 
     expect(response.status).toBe(404);
   });

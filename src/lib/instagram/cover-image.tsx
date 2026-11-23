@@ -1,6 +1,6 @@
 import { ImageResponse } from "@vercel/og";
 import type { Post } from "@prisma/client";
-import { putBlob } from "@/lib/utils/s3";
+import { publicUrlForKey, putBlob } from "@/lib/utils/s3";
 
 const IMAGE_SIZE = 1080;
 
@@ -48,5 +48,8 @@ export async function resolveCoverImageUrl(
   if (post.coverImageUrl) return post.coverImageUrl;
 
   const png = await generateFallbackCoverImage(post);
-  return putBlob(`instagram-covers/${post.slug}.png`, png, "image/png");
+  // `instagram-covers/` ist öffentlich (#112): Instagram lädt das Bild selbst.
+  return publicUrlForKey(
+    await putBlob(`instagram-covers/${post.slug}.png`, png, "image/png"),
+  );
 }

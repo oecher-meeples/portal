@@ -357,11 +357,11 @@ async function seedDemoPosts() {
   console.log(`${DEMO_POSTS.length} Demo-Beiträge angelegt/übersprungen.`);
 }
 
-/** Upsertet auf `fileUrl`, damit ein Re-Seed die migrierten Bestandsdateien nicht dupliziert. */
+/** Upsertet auf `fileKey`, damit ein Re-Seed die migrierten Bestandsdateien nicht dupliziert. */
 async function seedDemoDownloads() {
   for (const download of DEMO_DOWNLOADS) {
     await prisma.download.upsert({
-      where: { fileUrl: download.fileUrl },
+      where: { fileKey: download.fileKey },
       update: {},
       create: download,
     });

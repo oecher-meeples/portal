@@ -1,6 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { DbClient } from "@/lib/utils/prisma";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+type Tx = DbClient;
 
 /** Obergrenze der Postgres-`INTEGER`-Spalte `GameCopy.inventoryNumber`. */
 const MAX_INVENTORY_NUMBER = 2_147_483_647;

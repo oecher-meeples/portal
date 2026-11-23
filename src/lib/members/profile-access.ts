@@ -112,7 +112,9 @@ const MEMBER_PROFILE_INCLUDE = {
       meepleDatenVisibility: true,
     },
   },
-} satisfies Prisma.MemberInclude;
+  // Kein `satisfies Prisma.MemberInclude`: `profilePictureUrl` ist ein
+  // berechnetes Feld des erweiterten Clients (#112), das der Basistyp nicht kennt.
+} as const;
 
 /** Lädt `Member` + Zugriffskontext für `/profil`/`/profil/[slug]` und prüft
  * `canAccessMemberProfile` gleich mit — `null`, wenn der Member nicht

@@ -2,8 +2,6 @@ import {
   GameInventoryStatus,
   HoldingOrigin,
   type GameHolding,
-  type Prisma,
-  type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import {
@@ -14,7 +12,9 @@ import {
   UnitRetiredError,
 } from "@/lib/ludothek/errors";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /** Whether a Meeple currently has any open, unconfirmed handover/return
  * waiting on them (#290) — backs the Ludothek "meine Ausleihen"-Filters

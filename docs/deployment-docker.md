@@ -35,7 +35,7 @@ Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
 | `app`          | `Dockerfile` (Repo-Wurzel)   | Next.js-Server; führt bei jedem Start Migrationen und ggf. den Seed aus                             | `3000` (`APP_PORT`)                |
 | `postgres`     | `postgres:16`                | Datenbank, Volume `postgres-data`                                                                   | `5432` (`POSTGRES_PORT`)           |
 | `seaweedfs`    | `docker/seaweedfs/Dockerfile` (Basis `chrislusf/seaweedfs:4.48`) | S3-kompatibler Datei-Speicher (Uploads, erzeugte Bilder), Volume `seaweedfs-data` | `8333` S3-API (`S3_API_PORT`)      |
-| `seaweedfs-init` | `amazon/aws-cli:2.33.0`    | One-Shot: legt Bucket und öffentliche Lese-Policy an, beendet sich danach                           | —                                  |
+| `seaweedfs-init` | `amazon/aws-cli:2.33.0`    | One-Shot: legt Bucket und Lese-Policy (nur öffentliche Präfixe) an, beendet sich danach            | —                                  |
 | `cron-sidecar` | `docker/cron/Dockerfile`     | Ruft die geplanten Hintergrund-Jobs der App auf                                                     | —                                  |
 | `caddy`        | `caddy:2`                    | **Optional** (Profil `with-proxy`): TLS-Reverse-Proxy mit Let's-Encrypt-Zertifikaten                | `80`, `443` (öffentlich)           |
 
@@ -466,9 +466,34 @@ idempotent nach dem SeaweedFS-Healthcheck und
 
 1. legt den Bucket `S3_BUCKET` an (`aws s3 mb`, falls nicht vorhanden),
 2. setzt per `aws s3api put-bucket-policy` eine Bucket-Policy, die anonymes
-   Lesen einzelner Dateien erlaubt (`Principal: "*"`, `Action: s3:GetObject`)
-   — Datei-URLs sind öffentlich abrufbar, wie früher bei Vercel Blob; das
-   Auflisten des Buckets gibt die Policy nicht frei.
+   Lesen (`Principal: "*"`, `Action: s3:GetObject`) **nur für die
+   öffentlichen Präfixe** `instagram-covers/` (News-Cover, Instagram lädt sie
+   selbst) und `legal/` (Rechtstexte) erlaubt. Das Auflisten des Buckets gibt
+   die Policy nicht frei. `put-bucket-policy` ersetzt die Policy vollständig,
+   eine ältere „ganzer Bucket öffentlich"-Policy ist nach dem nächsten `up`
+   also weg.
+
+**Private Dateien (#112, deny by default):** Alle übrigen Präfixe
+(`downloads/`, `market-listings/`, `lfg-attachments/`,
+`meeple-profile-pictures/`, `important-links/` und jedes künftige) antworten
+ohne Signatur mit **403**. In der Datenbank steht nur der Objekt-Key
+(`…Key`-Spalten), die App liefert beim Lesen eine **signierte GET-URL mit 1 h
+Gültigkeit** aus (`src/lib/utils/blob-access.ts`, eingehängt als
+Prisma-Result-Extension in `src/lib/utils/prisma.ts`). Das gilt auch für
+`PUBLIC`-Downloads (dort ohne Login, aber trotzdem signiert). Die Liste der
+öffentlichen Präfixe steht genau einmal in `PUBLIC_BLOB_PREFIXES`; ein Test
+prüft, dass die Policy hier dieselbe Liste freigibt. Statische Dateien unter
+`public/` (z. B. die Demo-Downloads `/downloads/…`) liefert Next.js aus, nicht
+der Bucket, sie bleiben also öffentlich.
+
+> **Migrationshinweis:** Mit dem Policy-Wechsel (erstes `docker compose up`
+> nach dem Update) werden alle bisherigen, dauerhaften URLs privater Dateien
+> **sofort ungültig**: alte Newsletter-Mails, geteilte Links, Lesezeichen und
+> Browser-Caches mit direkten Datei-URLs liefern dann 403. Die Portal-Seiten
+> selbst zeigen die Dateien weiter, weil sie bei jedem Aufruf frisch
+> signieren. Die Migration `20261123140000_private_blob_keys` wandelt die
+> gespeicherten URLs in Keys um; fremde URLs (Alt-URLs von Vercel Blob,
+> BGG-Bilder) bleiben unverändert stehen.
 
 Bewusst kein automatisches Bucket-Anlegen im App-Code: Bucket-Policy braucht
 Admin-Rechte, die die App-Identität nicht hat.
@@ -484,10 +509,12 @@ Env-Var. Wer das einschränken will, ergänzt das Flag in
 `docker/seaweedfs/entrypoint.sh` beim Aufruf von `weed server` und baut
 `seaweedfs` neu (`docker compose up -d --build seaweedfs`).
 
-**`S3_PUBLIC_ENDPOINT` nicht nachträglich ändern:** Gespeicherte Datei-URLs
-enthalten ihn. Ein Wechsel lässt alle bisherigen Bilder/Dateien ins Leere
-zeigen (Reparatur nur per SQL-`replace()` auf den URL-Spalten). Die
-Content-Security-Policy erlaubt den Origin automatisch.
+**`S3_PUBLIC_ENDPOINT` nicht nachträglich ändern:** Die gespeicherten URLs
+öffentlicher Dateien (News-Cover `Post.coverImageUrl`, Rechtstexte
+`LegalDocument.pdfFileUrl`) enthalten ihn. Ein Wechsel lässt diese ins Leere
+zeigen (Reparatur nur per SQL-`replace()` auf diesen Spalten). Private Dateien
+speichern seit #112 nur den Key und werden gegen den jeweils aktuellen
+Endpunkt signiert. Die Content-Security-Policy erlaubt den Origin automatisch.
 
 **Lizenz:** SeaweedFS steht unter Apache-2.0. Der Stack nutzte ursprünglich
 MinIO, dessen Kern unter AGPLv3 steht; mit dem Wechsel enthält der
@@ -804,9 +831,16 @@ zu löschen). Für einen vollständigen Umzug:
      'aws --endpoint-url http://seaweedfs:8333 s3 cp --recursive /import "s3://$S3_BUCKET"'
    ```
 
-3. Die URL-Spalten per SQL-`replace()` von
+3. Die Verweise per SQL umschreiben: in den öffentlichen URL-Spalten
+   (`posts.coverImageUrl`, `legal_documents.pdfFileUrl`) per `replace()` von
    `https://<store>.public.blob.vercel-storage.com/` auf
-   `<S3_PUBLIC_ENDPOINT>/<S3_BUCKET>/` umschreiben.
+   `<S3_PUBLIC_ENDPOINT>/<S3_BUCKET>/`; in den privaten Key-Spalten
+   (`meeples.profilePictureKey`, `lfg_attachments.key`,
+   `market_listings.imageKeys`, `downloads.fileKey`,
+   `important_links.iconKey`, #112) das Präfix
+   `https://<store>.public.blob.vercel-storage.com/` ganz entfernen, sodass
+   nur der Key übrig bleibt. Solange dort noch eine Vercel-URL steht, zeigt
+   die App sie unverändert an.
 
 Erst danach den Vercel-Blob-Store löschen.
 
@@ -883,7 +917,14 @@ Browser aufgerufen wird (Schema, Host, ohne `/` am Ende). Weitere Origins in
 - `S3_PUBLIC_ENDPOINT` ist im Browser nicht erreichbar → Proxy-Eintrag für
   den Datei-Host prüfen; `https://<S3_DOMAIN>/<S3_BUCKET>/` sollte eine
   XML-Fehlerantwort von SeaweedFS liefern (die Bucket-Policy gibt nur das
-  Lesen einzelner Dateien frei, nicht das Auflisten).
+  Lesen einzelner Dateien unter `instagram-covers/` und `legal/` frei, nicht
+  das Auflisten).
+- Private Bilder/Downloads liefern **403** → erwartet für eine rohe URL ohne
+  Signatur (#112). Kommt die 403 auch über die Portal-Seite, ist die
+  Signatur ungültig: `S3_PUBLIC_ENDPOINT` muss exakt der Host sein, den der
+  Browser aufruft (er geht in die Signatur ein), und `S3_ACCESS_KEY` /
+  `S3_SECRET_KEY` müssen zur App-Identität in `seaweedfs` passen. Eine Seite,
+  die länger als 1 h offen war, einmal neu laden.
 - Upload bricht mit CORS-Fehler ab → SeaweedFS erlaubt standardmäßig alle
   Origins, eine Einschränkung im Datei-Speicher ist also unwahrscheinlich.
   Meist erreicht der Browser `S3_PUBLIC_ENDPOINT` gar nicht richtig (falscher

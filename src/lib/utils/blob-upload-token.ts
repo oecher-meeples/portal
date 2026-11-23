@@ -1,24 +1,23 @@
 import "server-only";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
-import {
-  getS3Bucket,
-  getS3Client,
-  publicUrlForKey,
-  withRandomSuffix,
-} from "@/lib/utils/s3";
+import { getS3Bucket, getS3Client, withRandomSuffix } from "@/lib/utils/s3";
+import { signedBlobUrl } from "@/lib/utils/blob-access";
 
 /** Lifetime of an upload grant — enough for one large file on a slow
  * connection, short enough that a leaked grant is useless soon after. */
 const UPLOAD_TOKEN_TTL_SECONDS = 10 * 60;
 
 /** What a feature's `get…UploadToken` server action returns to
- * `useBlobUpload()`: an S3 presigned POST (form `url` + signed `fields`) plus
- * the public URL the object will have once uploaded. Plain JSON, so it
- * crosses the server-action boundary. */
+ * `useBlobUpload()`: an S3 presigned POST (form `url` + signed `fields`)
+ * plus the URL to show the object once uploaded. Plain JSON, so it crosses
+ * the server-action boundary. */
 export type BlobUploadToken = {
   url: string;
   fields: Record<string, string>;
-  publicUrl: string;
+  /** Permanent URL for `PUBLIC_BLOB_PREFIXES`, a short-lived signed URL for
+   * every private prefix (#112). The saving action turns it back into the
+   * key via `requireBlobKeyUnder()`. */
+  viewUrl: string;
 };
 
 export type BlobUploadTokenOptions = {
@@ -68,5 +67,5 @@ export async function createBlobUploadToken({
     },
   );
 
-  return { url, fields, publicUrl: publicUrlForKey(key) };
+  return { url, fields, viewUrl: signedBlobUrl(key) };
 }
