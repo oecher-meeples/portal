@@ -45,7 +45,8 @@ services:
       # itself refuses to run on an empty DB without them.
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
-      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      # release = echter Vereinsbestand, develop = Demo-Daten (#603).
+      SEED_PROFILE: ${SEED_PROFILE:-release}
       # An empty string here would beat the seed script's own "demo1234"
       # fallback (`??` only catches null/undefined, not ""), leaving demo
       # accounts with an empty password hash — so default matches the code.

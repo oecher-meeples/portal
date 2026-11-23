@@ -1,10 +1,5 @@
-import {
-  BoardGameKind,
-  InstagramStatus,
-  StorageUnitKind,
-} from "@prisma/client";
+import { BoardGameKind, InstagramStatus } from "@prisma/client";
 import { prisma } from "../src/lib/utils/prisma";
-import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import {
   findOrCreateBoardGameTitle,
   uniqueBoardGameSlug,
@@ -46,8 +41,10 @@ import {
   upsertAuthUser,
   ensureMeeple,
   ensureDemoMember,
+  ensureUnsortiertUnit,
   nextMemberNumber,
 } from "./seed-shared";
+import { resolveSeedProfile, seedReleaseInventory } from "./seed-release";
 import { ANONYMER_MEEPLE_NAME } from "../src/lib/ludothek/anonymer-meeple";
 import { slugify } from "../src/lib/utils/slug";
 
@@ -110,16 +107,7 @@ async function ensureAnonymerMeeple() {
  * sind reale, per Wikipedia verifizierte Daten — kein BGG-Import, aber echte Spiele.
  */
 async function seedDemoGames(adminMeepleId: string, keeperMeepleId: string) {
-  const unsortiert = await prisma.storageUnit.upsert({
-    where: { code: UNSORTIERT_CODE },
-    update: { keeperMeepleId },
-    create: {
-      code: UNSORTIERT_CODE,
-      kind: StorageUnitKind.BOX,
-      label: "Unsortiert",
-      keeperMeepleId,
-    },
-  });
+  const unsortiert = await ensureUnsortiertUnit(keeperMeepleId);
 
   const existingTitles = await prisma.boardGame.findMany({
     where: { title: { in: DEMO_GAMES.map((g) => g.title) } },
@@ -410,10 +398,15 @@ async function seedBase() {
  * Docker-Entrypoint (`docker/app/entrypoint.sh`) setzt
  * `SEED_ONLY_IF_EMPTY=true`: dann wird nur eine DB ohne Auth-User geseedet,
  * damit ein Container-Neustart weder Admin-Passwort noch Daten überschreibt.
- * `SEED_DEMO_DATA=false` beschränkt den Seed auf `seedBase()`; ungesetzt
- * bleibt es (für `pnpm db:seed` lokal) beim vollen Demo-Seed.
+ *
+ * `SEED_PROFILE` (#603) wählt, was nach `seedBase()` kommt:
+ * `develop` (Default für `pnpm db:seed` lokal) = Demo-Daten,
+ * `release` (Default im Docker-Entrypoint) = echter Vereinsbestand aus
+ * `seed-data/release-inventory.csv`, ohne Demo-Konten.
  */
 async function main() {
+  const profile = resolveSeedProfile(process.env.SEED_PROFILE);
+
   if (process.env.SEED_ONLY_IF_EMPTY === "true") {
     if ((await prisma.authUser.count()) > 0) {
       console.log("Seed übersprungen: Datenbank enthält bereits Auth-User.");
@@ -429,12 +422,14 @@ async function main() {
   }
 
   const adminMeeple = await seedBase();
-  if (process.env.SEED_DEMO_DATA !== "false") {
+  if (profile === "release") {
+    await seedReleaseInventory(adminMeeple.id);
+  } else {
     await seedDemoData(adminMeeple.id);
   }
   await ensureAnonymerMeeple();
 
-  console.log("Seed abgeschlossen.");
+  console.log(`Seed abgeschlossen (Profil: ${profile}).`);
 }
 
 async function seedDemoData(adminMeepleId: string) {

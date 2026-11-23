@@ -2,7 +2,8 @@
 # App-Container-Start (siehe Dockerfile, docs/deployment-docker.md):
 #   1. prisma migrate deploy   — bei jedem Start, idempotent
 #   2. Seed, nur bei leerer DB — Admin-Account (+ Rechte/Rollen, Rechtliches)
-#      immer, Demo-Daten nur mit SEED_DEMO_DATA=true
+#      immer, danach je nach SEED_PROFILE der echte Vereinsbestand
+#      (release, Default) oder Demo-Daten (develop)
 #   3. exec node server.js     — Next.js-standalone-Server als PID 1
 set -eu
 
@@ -15,8 +16,8 @@ echo "[entrypoint] prisma migrate deploy"
 cd /app/db
 node node_modules/prisma/build/index.js migrate deploy
 
-echo "[entrypoint] seed (only if database is empty, SEED_DEMO_DATA=${SEED_DEMO_DATA:-false})"
-SEED_ONLY_IF_EMPTY=true SEED_DEMO_DATA="${SEED_DEMO_DATA:-false}" node seed.cjs
+echo "[entrypoint] seed (only if database is empty, SEED_PROFILE=${SEED_PROFILE:-release})"
+SEED_ONLY_IF_EMPTY=true SEED_PROFILE="${SEED_PROFILE:-release}" node seed.cjs
 
 cd /app
 echo "[entrypoint] starting Next.js on ${HOSTNAME}:${PORT}"

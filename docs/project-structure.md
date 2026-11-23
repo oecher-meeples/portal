@@ -227,8 +227,11 @@ Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `en
 
 `app-shell`, `header`, `sidebar`, `logo`, `theme-provider`, `theme-toggle`, `user-menu`, `brand-watermark`. Reine Struktur/Positionierung; darf als oberste Schicht aus allen anderen importieren.
 
-## `prisma/seed-data/` & `scripts/` — Demo-Daten
+## `prisma/seed-data/` & `scripts/` — Demo- und Release-Daten
 
+`prisma/seed.ts` legt immer den Grundbestand an; `SEED_PROFILE` wählt danach `develop` (Demo-Daten, lokaler Default) oder `release` (Vereinsbestand, Docker-Default, #603).
+
+- `prisma/seed-data/release-inventory.csv` — bereinigter Vereinsbestand ohne Personendaten, erzeugt von `scripts/build-release-inventory.ts` aus dem Export der Tabelle „Inventar Spiele"; `bggId` per `scripts/match-release-inventory-bgg.ts` vorbefüllt und von Hand korrigiert. Regeln (Zustand → Kontroll-Ergebnis, Platz → Standort) in `release-inventory.ts`, Anlage in `prisma/seed-release.ts`.
 - `prisma/seed-data/demo-games.ts` — Demo-Titel inkl. ihrer BGG-Version (`version`); `demo-editions.ts` legt die Version samt Verlagen an und übernimmt bei bestehender DB ältere Demo-Versionen ohne BGG-Bezug.
 - `scripts/lib/demo-games-seed-file.ts` — Lesen/Schreiben von `demo-games.ts` und Versionswahl (`pickDemoVersion`), geteilt von `refresh-demo-games-seed.ts` (alle Felder) und `backfill-demo-game-versions.ts` (nur die Version).
 
