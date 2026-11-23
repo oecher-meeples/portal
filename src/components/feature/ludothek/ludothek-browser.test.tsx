@@ -9,7 +9,12 @@ import {
 } from "@testing-library/react";
 import { BoardGameKind } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
+import { stubIntersectionObserver } from "@/lib/__mocks__/intersection-observer";
 
+stubIntersectionObserver();
+vi.mock("@/components/feature/ludothek/actions", () => ({
+  loadMoreLudothekGames: vi.fn(),
+}));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/lib/auth/permissions", () => ({
   requirePermission: vi.fn(),

@@ -59,6 +59,34 @@ export type LudothekTitleGroup<G extends GroupableGame> = G & {
  * Guest rows (`PublicLudothekGame`) have no `zustand` at all — the
  * representative copy is then just the first one, no priority to compare.
  */
+/**
+ * Schneidet eine Seite **Titel** aus Exemplar-Zeilen (#461): alle Exemplare
+ * eines Titels landen in derselben Seite, damit `groupGamesByTitle` über die
+ * aneinandergehängten Seiten dieselben Gruppen bildet wie über die ganze
+ * Liste. `offset`/`limit` zählen Titel in Reihenfolge ihres ersten
+ * Exemplars; `nextOffset` ist `null`, wenn danach kein Titel mehr kommt.
+ */
+export function paginateByTitle<G extends { boardGameId: string }>(
+  games: G[],
+  offset: number,
+  limit: number,
+): { items: G[]; nextOffset: number | null } {
+  const titleIndex = new Map<string, number>();
+  for (const game of games) {
+    if (!titleIndex.has(game.boardGameId)) {
+      titleIndex.set(game.boardGameId, titleIndex.size);
+    }
+  }
+  const end = offset + limit;
+  return {
+    items: games.filter((game) => {
+      const index = titleIndex.get(game.boardGameId)!;
+      return index >= offset && index < end;
+    }),
+    nextOffset: end < titleIndex.size ? end : null,
+  };
+}
+
 export function groupGamesByTitle<G extends GroupableGame>(
   games: G[],
 ): LudothekTitleGroup<G>[] {
