@@ -1,18 +1,14 @@
 "use server";
 
-import { siteUrl } from "@/lib/utils/site-url";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import {
+  calendarSubscribeUrl as subscribeUrl,
   generateMemberCalendarToken,
   revokeMemberCalendarToken,
 } from "@/lib/members/calendar-token";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
-
-function subscribeUrl(token: string): string {
-  return `${siteUrl()}/api/calendar/internal/${token}.ics`;
-}
 
 /** Erzeugt einen neuen Abo-Token und ersetzt einen eventuell bestehenden
  * (#438) — nur `admin:access`. Die Abo-URL geht als Rückgabewert einmalig an

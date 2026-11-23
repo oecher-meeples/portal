@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/utils/prisma";
-import { AUTOMATED_NOTIFICATIONS } from "@/lib/notifications/registry";
+import {
+  AUTOMATED_NOTIFICATIONS,
+  type NotificationViewer,
+} from "@/lib/notifications/registry";
 import type {
   ActiveNotification,
   NotificationCloseable,
@@ -44,7 +47,9 @@ function isVisibleToViewer(
  */
 export async function listActiveNotificationsForViewer(
   permissionKeys: readonly string[],
+  meepleId: string | null = null,
 ): Promise<ActiveNotification[]> {
+  const viewer: NotificationViewer = { permissionKeys, meepleId };
   const manualRows = await prisma.systemNotification.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "asc" },
@@ -73,12 +78,12 @@ export async function listActiveNotificationsForViewer(
 
     for (const definition of eligible) {
       if (disabledNames.has(definition.name)) continue;
-      if (!(await definition.isTriggered())) continue;
+      if (!(await definition.isTriggered(viewer))) continue;
       automated.push({
         id: `automated:${definition.name}`,
         type: definition.type,
         closeable: definition.closeable,
-        message: await definition.message(),
+        message: await definition.message(viewer),
       });
     }
   }

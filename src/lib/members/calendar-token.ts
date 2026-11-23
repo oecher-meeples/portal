@@ -1,6 +1,26 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/utils/prisma";
 import { generateToken } from "@/lib/utils/generate-token";
+import { siteUrl } from "@/lib/utils/site-url";
+
+/** Abo-URL zu einem Roh-Token — `.ics`-Suffix für Kalender-Apps, die es zur
+ * Erkennung brauchen (siehe `/api/calendar/internal/[token]`). */
+export function calendarSubscribeUrl(token: string): string {
+  return `${siteUrl()}/api/calendar/internal/${token}.ics`;
+}
+
+/** #439: ob das Mitglied hinter einem Login schon einen Abo-Token hat —
+ * `/news` fragt vor dem Self-Service-Erzeugen nach, weil ein neuer Token das
+ * bisherige Abo ungültig macht. */
+export async function hasOwnCalendarToken(
+  neonAuthUserId: string,
+): Promise<boolean> {
+  const member = await prisma.member.findFirst({
+    where: { meeple: { neonAuthUserId } },
+    select: { calendarTokenHash: true },
+  });
+  return member?.calendarTokenHash != null;
+}
 
 /**
  * Personalisierter Abo-Token für den internen ICS-Kalender-Feed (#438).

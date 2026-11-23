@@ -1,6 +1,11 @@
 import { hasPermission } from "@/lib/auth/permissions";
+import { prisma } from "@/lib/utils/prisma";
 import { tierAtLeast, type Tier } from "@/lib/utils/nav-config";
-import type { ContentItem } from "@/lib/content/content-types";
+import {
+  DB_TO_TYPE,
+  type ContentItem,
+  type ContentType,
+} from "@/lib/content/content-types";
 
 export type NewsVisibility = { canSeeInternal: boolean; isMember: boolean };
 
@@ -39,4 +44,36 @@ export function filterVisibleNews(
   return items
     .filter((item) => canSeeInternal || !item.internal)
     .filter((item) => isMember || item.type !== "umfrage");
+}
+
+/**
+ * #576: Beitragstypen, zu denen der Betrachter mindestens einen Eintrag
+ * sehen kann — steuert, welche Typ-Filter-Pills `/news` anzeigt. Die
+ * DB-Posts sind paginiert (#469/#470), die erste Seite reicht also nicht:
+ * die Typen kommen per `distinct` über alle veröffentlichten Posts, mit
+ * denselben Sichtbarkeitsregeln wie `filterVisibleNews()`. ICS-/Event-
+ * Termine sind nicht paginiert und stecken vollständig in `visibleItems`
+ * (bereits gefilterte erste Seite).
+ */
+export async function findAvailableContentTypes(
+  visibleItems: ContentItem[],
+  { canSeeInternal, isMember }: NewsVisibility,
+): Promise<ContentType[]> {
+  const dbTypes = await prisma.post.findMany({
+    where: {
+      status: "PUBLISHED",
+      ...(canSeeInternal
+        ? {}
+        : { OR: [{ internal: null }, { internal: false }] }),
+      ...(isMember ? {} : { type: { not: "UMFRAGE" } }),
+    },
+    distinct: ["type"],
+    select: { type: true },
+  });
+  return [
+    ...new Set([
+      ...dbTypes.map((post) => DB_TO_TYPE[post.type]),
+      ...visibleItems.map((item) => item.type),
+    ]),
+  ];
 }

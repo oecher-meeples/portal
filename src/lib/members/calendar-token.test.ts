@@ -13,7 +13,32 @@ const {
   revokeMemberCalendarToken,
   resolveMemberByCalendarToken,
   hashCalendarToken,
+  hasOwnCalendarToken,
 } = await import("./calendar-token");
+
+describe("hasOwnCalendarToken (#439)", () => {
+  it("is true when the login's member has a token hash", async () => {
+    prismaMock.member.findFirst.mockResolvedValue({
+      calendarTokenHash: "hash",
+    } as never);
+
+    expect(await hasOwnCalendarToken("auth-1")).toBe(true);
+    expect(prismaMock.member.findFirst).toHaveBeenCalledWith({
+      where: { meeple: { neonAuthUserId: "auth-1" } },
+      select: { calendarTokenHash: true },
+    });
+  });
+
+  it("is false without a token or without a member", async () => {
+    prismaMock.member.findFirst.mockResolvedValueOnce({
+      calendarTokenHash: null,
+    } as never);
+    expect(await hasOwnCalendarToken("auth-1")).toBe(false);
+
+    prismaMock.member.findFirst.mockResolvedValueOnce(null);
+    expect(await hasOwnCalendarToken("auth-1")).toBe(false);
+  });
+});
 
 describe("generateMemberCalendarToken (#438)", () => {
   it("stores only the hash, never the raw token", async () => {
