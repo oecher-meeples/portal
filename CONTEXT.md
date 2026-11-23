@@ -21,7 +21,7 @@ _Avoid_: Meeple als Synonym (das ist der Portal-Account), Member im Fließtext (
 _Avoid_: Als eigene DB-Entität oder Rolle missverstehen
 
 **Systemkonto**:
-Ein `Meeple` ohne `Vereinsmitglied`-Referenz, aber mit Login — für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` in einem Schritt: Neon-Auth-User per `auth.admin.createUser()`, `Meeple` mit vorgegebenem Displaynamen, danach ein Passwort-Reset-Link an die angegebene E-Mail — kein Invite-Mechanismus (der ließe für die kurze Zeit bis zur Einlösung einen Zwischenzustand entstehen, der von einem Anonymen Konto nicht unterscheidbar wäre).
+Ein `Meeple` ohne `Vereinsmitglied`-Referenz, aber mit Login — für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` in einem Schritt: Login per `createLoginAccount()` (self-hosted better-auth, ADR 0015), `Meeple` mit vorgegebenem Displaynamen, danach ein Passwort-Reset-Link an die angegebene E-Mail — kein Invite-Mechanismus (der ließe für die kurze Zeit bis zur Einlösung einen Zwischenzustand entstehen, der von einem Anonymen Konto nicht unterscheidbar wäre).
 _Avoid_: Verwechslung mit Anonymem Konto (das hat kein Login mehr), Systemkonto per Einladung anlegen
 
 **Anonymes Konto**:
@@ -38,8 +38,8 @@ Der Vermerk, dass ein Vereinsmitglied austritt (`resignedAt`). Kündigungsfrist 
 _Avoid_: Austritt (der Austritt ist erst die Wirkung), Deaktivierung, reine Stichtagsregel ohne 4-Wochen-Mindestvorlauf
 
 **Ausgetreten**:
-Der Zustand nach Ablauf von `membershipEndsAt`. Der Zugang beschränkt sich auf das Abwickeln: eigenes Profil, eigene Bestände, Rückgabe und Weitergabe, Kalender und Mitgliederverzeichnis. Ludothek, interne News und Spielergesuche sind gesperrt; annehmen darf die Person nichts mehr. Login bleibt bis zur Anonymisierung möglich. Technisch eine echte `Role` (Fachbegriff: **Systemrolle**, `Role.isSystemRole`) mit eigenem Rechte-Satz, die nur mit `admin:access` manuell zuweisbar ist — regulär pflegt ein Cron-Job am 2.1. 02:00 die `UserRole`-Zeile für alle betroffenen Vereinsmitglieder in einem Rutsch, da Vertragslaufzeiten fest an den Jahreswechsel gebunden sind. **Bekannte Abweichung:** aktuell ohne `admin:access`-Schutz über das normale Rollen-Dropdown zuweisbar, siehe #353.
-_Avoid_: Inaktiv, gesperrt, ehemalig, Login-Verlust gleichzeitig mit Austritt annehmen, unbeschränkte manuelle Rollenzuweisung
+Der Zustand nach Ablauf von `membershipEndsAt`. Der Zugang beschränkt sich auf das Abwickeln: eigenes Profil, eigene Bestände, Kalender und Mitgliederverzeichnis. Ludothek, interne News, Spielergesuche und der Scanner (`/scan`) sind gesperrt. **Vier-Augen-Prinzip (#537):** Ein ausgetretenes Mitglied löst nie selbst eine Buchung aus — auch keine Rückgabe in eine Aufbewahrungseinheit — und ist nie Empfänger oder Ziel einer Buchung. Seine Spiele kommen nur zurück, wenn eine **andere** Person sie scannt (Scanner-Modus „Erhalten" oder „Übergeben" an eine Einheit) oder der Spielewart sie umbucht; so kann ein Ausgetretener keine Behauptungen über den Verbleib aufstellen. Abwicklungshinweis an die Person: „Lass deine Spiele von der Person scannen, die sie übernimmt, oder gib sie beim Spielewart ab." Login bleibt bis zur Anonymisierung möglich. Technisch eine echte `Role` (Fachbegriff: **Systemrolle**, `Role.isSystemRole`) mit eigenem Rechte-Satz, die nur mit `admin:access` manuell zuweisbar ist — regulär pflegt ein Cron-Job am 2.1. 02:00 die `UserRole`-Zeile für alle betroffenen Vereinsmitglieder in einem Rutsch, da Vertragslaufzeiten fest an den Jahreswechsel gebunden sind. **Bekannte Abweichung:** aktuell ohne `admin:access`-Schutz über das normale Rollen-Dropdown zuweisbar, siehe #353.
+_Avoid_: Inaktiv, gesperrt, ehemalig, Login-Verlust gleichzeitig mit Austritt annehmen, unbeschränkte manuelle Rollenzuweisung, Selbstbedienungs-Rückgabe durch Ausgetretene
 
 **Anonymisierung** (3 Stufen, löst die bisherige Sanft/Hart-Unterscheidung ab):
 
@@ -55,7 +55,7 @@ IBAN wird nie direkt vom Meeple überschrieben — nur beantragt. Ein neuer Antr
 _Avoid_: Direktes Überschreiben der IBAN durchs Profilformular, Ablehnen ohne Benachrichtigung des Meeples, IBAN separat von der Vereinsmitglied-Löschung behandeln
 
 **E-Mail-Änderung** (neu, 3 unabhängige Adressen):
-Login-E-Mail (Neon Auth) und Profil-Kontakt-E-Mail (`Meeple.email`) ändert das Meeple direkt selbst, wirksam nach Bestätigungslink an die neue Adresse. Die `Vereinsmitglied.email` läuft dagegen wie die IBAN als Änderungsantrag (inkl. Ablehnen mit Mail) — Bestätigungslink verifiziert nur die Erreichbarkeit, ersetzt aber nicht die Freigabe durch den Vorstand.
+Login-E-Mail (`AuthUser`) und Profil-Kontakt-E-Mail (`Meeple.email`) ändert das Meeple direkt selbst, wirksam nach Bestätigungslink an die neue Adresse. Die `Vereinsmitglied.email` läuft dagegen wie die IBAN als Änderungsantrag (inkl. Ablehnen mit Mail) — Bestätigungslink verifiziert nur die Erreichbarkeit, ersetzt aber nicht die Freigabe durch den Vorstand.
 _Avoid_: Vereinsmitglied-E-Mail ohne Vorstandsfreigabe direkt ändern lassen, alle drei E-Mail-Adressen für dieselbe halten
 
 **Kassenwart**:
@@ -93,6 +93,10 @@ _Avoid_: Als alleiniges Kriterium für „ist Erweiterung" heranziehen; 1:1-Kard
 Eine Diff-Ansicht, die die aktuellen BGG-Daten eines Titels neben die eigenen stellt. BGG ist dabei **kein automatischer Sieger bei Abweichungen** — nur Vorschlag, feldweise und manuell durch den Admin zu übernehmen. Deckt sich mit dem Prinzip bei **Erweiterung** (siehe unten): eine manuelle Korrektur ist immer maßgeblich, eine BGG-Ableitung nie automatisch bindend.
 _Avoid_: BGG als vorrangige/automatisch gewinnende Quelle
 
+**Tag** (Mechanik / Kategorie):
+Eine BGG-Mechanik (z. B. „Worker Placement“) oder BGG-Kategorie (z. B. „Party Game“) als eigener Datensatz mit BGG-ID, über alle Titel hinweg geteilt. Der BGG-Name bleibt unverändert; angezeigt, gefiltert und im Editor ausgewählt wird der pflegbare deutsche **Anzeigename** („Arbeitereinsatz“), ohne ihn der BGG-Name. Regeln, die auf einen Tag reagieren (z. B. Regal-Kategorien), prüfen den BGG-Namen, nie den Anzeigenamen.
+_Avoid_: Mechaniken/Kategorien als freie Strings am Titel; den Anzeigenamen als Schlüssel verwenden
+
 **Aufbewahrungseinheit**:
 Ein mit QR-Code etikettiertes physisches Behältnis für Spiele — entweder ein **Karton** (`OM-BOX-0001`, wandert als Ganzes) oder ein **Regal** (`OM-SHELF-C4`, vereinseigen, wird bei Events aufgebaut). Eine Einheit kann in einer anderen stehen (Karton im Regal) und steht am Ende der Kette bei einem Meeple.
 _Avoid_: Lager, Ort, Location, Box vs. Shelf als getrennte Konzepte
@@ -123,7 +127,7 @@ Für Vereinsmitglieder **ohne Portal-Zugang** gibt es vier Wege, wie ein Aufenth
 _Avoid_: Besitzer, Eigentümer
 
 **Vollständigkeitsprüfung**:
-Die Kontrolle, ob ein Spiel noch alle Teile hat. Ist sie fällig, trägt das Spiel ein Flag; fällt sie negativ aus, geht das Spiel in den Zustand Wartung. Prüfbedürftige Spiele bleiben ausleihbar.
+Die Kontrolle, ob ein Spiel noch alle Teile hat. Ist sie fällig, trägt das Spiel ein Flag. Jede Kontrolle — **Vollständig bestätigen** oder **Mangel melden** (Unvollständig spielbar, Beschädigt, Nicht spielbar) — wird mit Zeitpunkt, kontrollierender Person und Notiz protokolliert (Kontroll-Historie, #599), setzt das Flag zurück und bestimmt den Status: **nur „Nicht spielbar" führt in Wartung**, jedes andere Ergebnis zurück in den Bestand. Der Status folgt immer der neuesten Kontrolle; ein „Mangel beheben" gibt es nicht — aus der Wartung kommt ein Spiel nur durch eine neue Kontrolle. Ein deinventarisiertes Spiel darf kontrolliert werden, bleibt aber deinventarisiert. Prüfbedürftige Spiele bleiben ausleihbar. **Jede Ausleihe** (vereinsintern, Event-Ausgabe, an extern) setzt das Flag automatisch (#563), eine Weitergabe ändert es nicht. Es bleibt gesetzt, bis der Prüfbogen ausgefüllt ist. Im Scanner (nur Spielewart, `games:manage`): **Kontrolle anfordern** setzt das Flag für ein gescanntes Spiel oder nach Rückfrage für alle Spiele direkt in einer gescannten Einheit (Unterkisten nicht). **Kontrollieren** (früher „Prüfbogen") öffnet für ein gescanntes Spiel den Prüfbogen, auch ohne gesetztes Flag (mit Hinweis). Eine gescannte Einheit listet ihre markierten Spiele auf.
 _Avoid_: Inventur (Inventur meint den Durchgang durch viele Spiele), Zustandsprüfung
 
 **Deinventarisierung**:
@@ -131,7 +135,7 @@ Ein Spiel scheidet aus dem Bestand aus (Verkauf, Verlust, Zerstörung), ohne gel
 _Avoid_: Löschen, Archivieren, Aussortieren
 
 **Zustand**:
-Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einem Vereinsmitglied, Abholung ggf. aufwendiger — Unterfall **verfügbar** wenn das Mitglied ein Meeple hat, sonst **nicht verfügbar**, siehe **Verantwortliche:r**), **Wartung** (bei der Vollständigkeitsprüfung durchgefallen), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
+Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einem Vereinsmitglied, Abholung ggf. aufwendiger — Unterfall **verfügbar** wenn das Mitglied ein Meeple hat, sonst **nicht verfügbar**, siehe **Verantwortliche:r**), **Wartung** (letzte Vollständigkeitsprüfung „Nicht spielbar"), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
 _Avoid_: Verfügbarkeit, Status (Status meint die Bestandszugehörigkeit: aktiv oder deinventarisiert), Zustand für den materiellen Zustand eines Exemplars (das ist der **Mängelvermerk**, siehe unten)
 
 **Regelheft-Sprache(n)** (`GameCopy.ruleBookLanguages`, geplant, siehe #188):
@@ -169,6 +173,10 @@ _Avoid_: Verschieben, Move, Standortkorrektur
 **Unbestätigter Standort**:
 Ein Standort, den die abgebende Person eingetragen hat und die empfangende noch nicht. Blockiert nichts und wird mit Herkunftshinweis („eingetragen von \<Person\>") angezeigt. Eine Weitergabe bestätigt der Empfänger per Klick; eine Rückgabe bestätigt er, indem er das Spiel in eine Einheit einlagert.
 _Avoid_: Pending, vorläufig, unsicher
+
+**Scanner** (`/scan`):
+Die Scan-Seite mit Modi (`?modus=`). **Einzel-Scan** (Standard): ein Spiel oder eine Einheit scannen und den passenden Vorgang wählen. **Erhalten** (`?modus=erhalten`): beliebig viele Spiele nacheinander scannen, jedes landet sofort bestätigt bei mir. Das System wählt die Buchung selbst: aus einer Einheit → Ausleihe, von einer anderen Person (auch vom Sammelkonto) → Weitergabe, mir zum Einlagern zurückgegeben → als Ausleihe übernommen, offene Übergabe an mich → bestätigt, liegt schon bestätigt bei mir → nur Hinweis. **Übergeben** (`?modus=uebergeben`, optional `&ziel=<Einheit>`): erst das Ziel festlegen (Einheiten-Etikett, persönlicher Meeple-QR oder manuelle Wahl), dann beliebig viele Spiele scannen. Ziel Einheit → Rückgabe bzw. Umlagern in die Einheit. Ziel Person → Weitergabe oder, per Umschalter, Rückgabe an die Person; per QR gescannt → sofort bestätigt, manuell gewählt → unbestätigt. Ein ausgetretenes Mitglied oder man selbst ist kein gültiges Ziel. Alternativ: Name der externen Person eintragen und „An Anonymen Meeple weitergeben" einschalten (nur mit Namen möglich) → Weitergabe aufs Sammelkonto mit dem Namen als Notiz, sofort bestätigt; der Spielewart bucht später um. Liegt ein Spiel schon beim Ziel → nur Hinweis. Ein neues Ziel während der Serie wird erst nach Rückfrage übernommen; dort lässt sich auch eine Einheit in die Ziel-Einheit einlagern (löst die frühere Einlagern-Serie ab). Ein Fehlscan wird nicht rückgängig gemacht, sondern auf der Exemplar-Seite per normaler Gegenbuchung korrigiert.
+_Avoid_: Sammel-Ausleihe, Batch-Scan, Rückgängig
 
 **Sammel-Umlagern**:
 Variante des Umlagerns für den Event-Abbau: die Ziel-Einheit wird einmal gescannt, danach werden mehrere Spiele nacheinander gescannt und alle auf dieses eine Ziel gebucht, bis eine neue Ziel-Einheit gescannt wird. Bleibt fachlich ein gewöhnliches Umlagern je Spiel, nur die Scan-Reihenfolge ist umgekehrt.

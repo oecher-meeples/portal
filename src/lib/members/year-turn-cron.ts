@@ -8,6 +8,7 @@ import { countOpenHoldingsByMemberId } from "@/lib/members/open-holdings";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
 import { applyAusgetretenRole } from "@/lib/auth/ausgetreten-role";
+import { escapeHtml } from "@/lib/utils/escape-html";
 
 type BlockedMember = { memberId: string; displayName: string };
 
@@ -108,13 +109,6 @@ async function listMembersOverdueForStufe3WithOpenHoldings(
     }
   }
   return blocked;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>]/g,
-    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char]!,
-  );
 }
 
 function blockedListHtml(title: string, blocked: BlockedMember[]): string {

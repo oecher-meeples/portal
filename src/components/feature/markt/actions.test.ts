@@ -1,22 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requireMeeplePermissionMock = vi.fn();
-vi.mock("@/lib/members/meeples", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/members/meeples")>(
-    "@/lib/members/meeples",
-  );
-  return { ...actual, requireMeeplePermission: requireMeeplePermissionMock };
-});
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
 
 const deleteBlobsMock = vi.fn();
@@ -28,6 +25,11 @@ const hasPermissionMock = vi.fn();
 vi.mock("@/lib/auth/permissions", () => ({
   hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireMeeplePermissionMock(...args),
+  ),
+);
 
 const {
   createMarketListing,
@@ -57,7 +59,7 @@ function marketListing(overrides: Partial<Record<string, unknown>> = {}) {
     description: null,
     priceEuros: 12,
     condition: "Sehr gut",
-    imageUrls: [],
+    imageKeys: [],
     ...overrides,
   };
 }
@@ -85,7 +87,7 @@ describe("without a session", () => {
       RedirectError,
     );
     await expect(
-      getMarketListingUploadToken("market-listings/foo.png"),
+      getMarketListingUploadToken("market-listings/foo.png", "image/png"),
     ).rejects.toThrow(RedirectError);
 
     expect(prismaMock.marketListing.create).not.toHaveBeenCalled();
@@ -106,22 +108,35 @@ describe("createMarketListing", () => {
         description: "Vollständig, Karten in Sleeves.",
         priceEuros: 12,
         condition: "Sehr gut",
-        imageUrls: [],
+        imageKeys: [],
       },
     });
   });
 
-  it("stores 0..n image urls as an array", async () => {
+  it("stores 0..n uploaded images as keys, keeping foreign legacy URLs (#112)", async () => {
     await createMarketListing({
       ...VALID_INPUT,
-      imageUrls: ["https://blob.example/a.png", "https://blob.example/b.png"],
+      imageUrls: [
+        `${TEST_S3_PUBLIC_BASE}/market-listings/a.png?X-Amz-Signature=abc`,
+        "https://cf.geekdo-images.com/legacy.jpg",
+      ],
     });
 
     expect(prismaMock.marketListing.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        imageUrls: ["https://blob.example/a.png", "https://blob.example/b.png"],
+        imageKeys: [
+          "market-listings/a.png",
+          "https://cf.geekdo-images.com/legacy.jpg",
+        ],
       }),
     });
+  });
+
+  it("refuses an image key outside market-listings/ (#112)", async () => {
+    await expect(
+      createMarketListing({ ...VALID_INPUT, imageUrls: ["downloads/x.pdf"] }),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(prismaMock.marketListing.create).not.toHaveBeenCalled();
   });
 
   it("rejects a missing title", async () => {
@@ -219,21 +234,21 @@ describe("deleteOwnMarketListing", () => {
   it("deletes the listing's uploaded images, not just the row referencing them", async () => {
     prismaMock.marketListing.findUnique.mockResolvedValue(
       marketListing({
-        imageUrls: ["https://blob/a.jpg", "https://blob/b.jpg"],
+        imageKeys: ["market-listings/a.jpg", "market-listings/b.jpg"],
       }) as never,
     );
 
     await deleteOwnMarketListing("listing-1");
 
     expect(deleteBlobsMock).toHaveBeenCalledWith([
-      "https://blob/a.jpg",
-      "https://blob/b.jpg",
+      "market-listings/a.jpg",
+      "market-listings/b.jpg",
     ]);
   });
 
   it("keeps the row when blob deletion fails, so the images do not silently leak", async () => {
     prismaMock.marketListing.findUnique.mockResolvedValue(
-      marketListing({ imageUrls: ["https://blob/a.jpg"] }) as never,
+      marketListing({ imageKeys: ["market-listings/a.jpg"] }) as never,
     );
     deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
 
@@ -260,22 +275,35 @@ describe("deleteOwnMarketListing", () => {
 
 describe("deleteMarketListingImage", () => {
   it("deletes a single image blob for the logged-in meeple (#175)", async () => {
-    const result = await deleteMarketListingImage("https://blob/a.jpg");
+    const result = await deleteMarketListingImage(
+      `${TEST_S3_PUBLIC_BASE}/market-listings/a.jpg`,
+    );
 
     expect(result).toEqual({ success: true });
-    expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/a.jpg"]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith(["market-listings/a.jpg"]);
+  });
+
+  it("refuses to delete a file outside market-listings/ (#112)", async () => {
+    await expect(
+      deleteMarketListingImage(`${TEST_S3_PUBLIC_BASE}/downloads/satzung.pdf`),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(deleteBlobsMock).not.toHaveBeenCalled();
   });
 });
 
 describe("getMarketListingUploadToken", () => {
   it("issues a token scoped to image content types", async () => {
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getMarketListingUploadToken("market-listings/a.png");
+    const token = await getMarketListingUploadToken(
+      "market-listings/a.png",
+      "image/png",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "market-listings/a.png",
+      contentType: "image/png",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,
@@ -283,11 +311,11 @@ describe("getMarketListingUploadToken", () => {
   });
 
   it("normalises a client-chosen prefix to the market-listings namespace", async () => {
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    await getMarketListingUploadToken("posts/../../evil.png");
+    await getMarketListingUploadToken("posts/../../evil.png", "image/png");
 
-    expect(generateClientTokenMock).toHaveBeenCalledWith(
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: "market-listings/evil.png" }),
     );
   });

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ShelfCategory } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
+import { Card, CardTitle } from "@/components/ui/card";
 import {
   SHELF_CATEGORY_LABELS,
   SHELF_CATEGORY_VALUES,
@@ -10,7 +11,6 @@ import {
 import { useAction } from "@/components/ui/use-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -28,8 +28,10 @@ import {
   type KeeperOption,
 } from "@/components/feature/admin-einheiten/assign-keeper-dialog";
 import { PageContainer } from "@/components/ui/page-container";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Field } from "@/components/ui/field";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 import type { ProfilePictureVisibility } from "@prisma/client";
 
 export type UnitDetail = {
@@ -85,7 +87,8 @@ export function UnitDetailView({
     unit.category ?? "",
   );
   const save = useAction({ refresh: false });
-  const retire = useAction();
+  // retireStorageUnit revalidiert nur die Übersicht, nicht diese Detailseite.
+  const retire = useAction({ refresh: true });
 
   function handleSave() {
     save.run(() =>
@@ -112,18 +115,16 @@ export function UnitDetailView({
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-label">Label</Label>
+        <Card className="gap-4">
+          <Field label="Label" htmlFor="unit-label">
             <Input
               id="unit-label"
               value={label}
               onChange={(event) => setLabel(event.target.value)}
               disabled={unit.retired || !isAdmin}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-location">Ortsangabe</Label>
+          </Field>
+          <Field label="Ortsangabe" htmlFor="unit-location">
             <Input
               id="unit-location"
               value={locationNote}
@@ -131,17 +132,16 @@ export function UnitDetailView({
               placeholder="z. B. Keller links"
               disabled={unit.retired || !isAdmin}
             />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-category">Regal-Kategorie</Label>
-            <select
+          </Field>
+          <Field label="Regal-Kategorie" htmlFor="unit-category">
+            <NativeSelect
               id="unit-category"
               value={category}
               onChange={(event) =>
                 setCategory(event.target.value as ShelfCategory | "")
               }
               disabled={unit.retired || !isAdmin}
-              className="border-input bg-background h-8 rounded-md border px-2 text-sm disabled:opacity-60"
+              size="compact"
             >
               <option value="">Keine</option>
               {SHELF_CATEGORY_VALUES.map((value) => (
@@ -149,8 +149,8 @@ export function UnitDetailView({
                   {SHELF_CATEGORY_LABELS[value]}
                 </option>
               ))}
-            </select>
-          </div>
+            </NativeSelect>
+          </Field>
           <div className="flex items-center justify-between gap-2">
             <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
               Verwahrer:{" "}
@@ -164,7 +164,7 @@ export function UnitDetailView({
                 />
               ) : null}
               {unit.keeperName && unit.keeperMeepleId ? (
-                <ContactDialog
+                <MeepleContactDialog
                   name={unit.keeperName}
                   meepleId={unit.keeperMeepleId}
                 />
@@ -203,16 +203,14 @@ export function UnitDetailView({
               )}
             </div>
           )}
-        </div>
+        </Card>
 
-        <div className="bg-card rounded-lg border p-6">
-          <h2 className="font-serif text-lg font-bold">
-            Inhalt ({contents.length})
-          </h2>
+        <Card>
+          <CardTitle>Inhalt ({contents.length})</CardTitle>
           {contents.length === 0 ? (
-            <p className="text-muted-foreground mt-2 text-sm">Leer.</p>
+            <p className="text-muted-foreground text-sm">Leer.</p>
           ) : (
-            <ul className="mt-3 flex flex-col divide-y text-sm">
+            <ul className="flex flex-col divide-y text-sm">
               {contents.map((game) => (
                 <li key={game.id} className="py-2">
                   {game.title}
@@ -220,7 +218,7 @@ export function UnitDetailView({
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       </div>
 
       <div className="overflow-hidden rounded-lg border">

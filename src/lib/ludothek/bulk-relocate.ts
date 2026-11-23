@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { relocateGame, returnGame } from "@/lib/ludothek/holdings";
 import { HoldingConflictError } from "@/lib/ludothek/errors";
 import { ensureMeeple } from "@/lib/members/meeples";
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
 
 /**
  * Sammel-Umlagern (#273, CONTEXT.md-Konzept, hier erstmals implementiert):
@@ -16,7 +16,7 @@ import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
  * fachlich dieselbe Operation, nur mit unterschiedlicher Ziel-Einheit.
  * `games:manage`-only wie die übrigen neuen `admin/bestand`-Unterseiten.
  *
- * Wie `scanPlaceGameInUnit()` (`holding-actions.ts`) akzeptiert dies auch
+ * Wie `scanTransferGame(…, { kind: "unit" })` (`scanner-actions.ts`) akzeptiert dies auch
  * Exemplare, die gerade bei einer Person liegen (RETURN statt RELOCATION) —
  * ein Spielewart soll ein Exemplar auch dann einsammeln können, wenn es
  * gerade ausgeliehen zurückkommt, nicht nur aus einer Einheit.
@@ -25,7 +25,7 @@ export async function bulkRelocateGameCopy(
   gameCopyId: string,
   targetUnitId: string,
 ) {
-  const user = await requireGamesManagePermission();
+  const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { error: "Keine Berechtigung." };
   }

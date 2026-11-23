@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { redirect } from "next/navigation";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
@@ -25,7 +26,6 @@ const {
   findFleaMarketItemByCode,
   sellFleaMarketItems,
   reserveFleaMarketCart,
-  listReservedFleaMarketCarts,
 } = await import("./actions");
 
 const ME = { id: "meeple-1", neonAuthUserId: "auth-1" };
@@ -247,30 +247,38 @@ describe("reserveFleaMarketCart", () => {
   });
 });
 
-describe("listReservedFleaMarketCarts", () => {
-  it("summarises each cart's items", async () => {
-    prismaMock.fleaMarketCart.findMany.mockResolvedValue([
-      {
-        id: "cart-1",
-        name: "Anna",
-        createdAt: new Date("2026-08-01"),
-        items: [
-          item({ id: "a", priceEuros: 5 }),
-          item({ id: "b", priceEuros: 7 }),
-        ],
-      },
-    ] as never);
+describe("guard order and redirect (#519)", () => {
+  it("checks cashier rights before reading the item", async () => {
+    hasRoleGrantedPermissionMock.mockResolvedValue(false);
 
-    const result = await listReservedFleaMarketCarts("event-1");
+    await approveFleaMarketItem("item-1");
+    await setFleaMarketItemStatus("item-1", "FOR_SALE");
 
-    expect(result).toEqual([
-      {
-        id: "cart-1",
-        name: "Anna",
-        createdAt: new Date("2026-08-01"),
-        itemIds: ["a", "b"],
-        totalEuros: 12,
-      },
-    ]);
+    expect(prismaMock.fleaMarketItem.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("lets the login redirect propagate instead of returning NEXT_REDIRECT", async () => {
+    requireMeepleMock.mockImplementation(() => redirect("/login"));
+
+    await expect(approveFleaMarketItem("item-1")).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    );
+    await expect(sellFleaMarketItems(["item-1"])).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    );
+    await expect(
+      reserveFleaMarketCart("event-1", ["item-1"], "Anna"),
+    ).rejects.toThrow(/NEXT_REDIRECT/);
+  });
+
+  it("hides unexpected errors behind a generic message", async () => {
+    hasRoleGrantedPermissionMock.mockRejectedValue(
+      new Error("PrismaClientKnownRequestError: P1001"),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await findFleaMarketItemByCode("event-1", "FM-0001");
+
+    expect(result).toEqual({ error: "Unbekannter Fehler." });
   });
 });

@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/utils/prisma";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
+import { siteUrl } from "@/lib/utils/site-url";
 
 const DIGEST_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
 
 function digestEmailHtml(
   listings: { id: string; title: string; priceEuros: number }[],
@@ -29,7 +26,7 @@ function digestEmailHtml(
  * (`Meeple.marketNewsletterOptIn`). Bei 0 neuen Angeboten wird nicht
  * versendet (keine Leer-Mail).
  *
- * Der Cron läuft laut `vercel.json` genau einmal täglich, daher genügt ein
+ * Der Cron läuft laut `docker/cron/crontab` genau einmal täglich, daher genügt ein
  * festes 24h-Fenster als "seit dem letzten Versand" — kein zusätzlicher
  * persistierter Zeitstempel nötig.
  */

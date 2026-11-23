@@ -1,3 +1,11 @@
+import {
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
+} from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  BOARD_GAME_DISPLAY_SELECT,
+  boardGameDisplayFields,
+} from "@/lib/ludothek/board-game-display";
 import { GameInventoryStatus } from "@prisma/client";
 import type { LudothekGame } from "@/lib/ludothek/browser";
 import { prisma } from "@/lib/utils/prisma";
@@ -16,6 +24,13 @@ export type OwnPrivateCollectionEntry = {
     title: string;
     imageUrl: string | null;
   };
+  /** Die auf BGG hinterlegte Version, `null` ohne Angabe. */
+  version: {
+    name: string | null;
+    yearPublished: number | null;
+    languages: string[];
+    publishers: string[];
+  } | null;
 };
 
 /**
@@ -27,7 +42,7 @@ export type OwnPrivateCollectionEntry = {
 export async function getOwnPrivateCollection(
   meepleId: string,
 ): Promise<OwnPrivateCollectionEntry[]> {
-  return prisma.privateGameCollectionEntry.findMany({
+  const entries = await prisma.privateGameCollectionEntry.findMany({
     where: { meepleId },
     orderBy: { boardGame: { title: "asc" } },
     select: {
@@ -38,7 +53,27 @@ export async function getOwnPrivateCollection(
       boardGame: {
         select: { id: true, slug: true, title: true, imageUrl: true },
       },
+      version: {
+        select: {
+          name: true,
+          yearPublished: true,
+          ...VERSION_DISPLAY_SELECT.select,
+        },
+      },
     },
+  });
+  return entries.map(({ version, ...entry }) => {
+    if (!version) return { ...entry, version: null };
+    const { publisher, editionLanguages } = versionDisplay(version);
+    return {
+      ...entry,
+      version: {
+        name: version.name,
+        yearPublished: version.yearPublished,
+        languages: editionLanguages,
+        publishers: publisher,
+      },
+    };
   });
 }
 
@@ -102,17 +137,24 @@ export async function getImportCooldownEndsAt(meeple: {
  * Mechaniken/Gewicht/Dauer funktionieren also auch für privat importierte
  * Titel.
  */
-export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
+export async function buildPrivateLudothekGames({
+  boardGameSlug,
+}: {
+  /** Nur diesen Titel (#526: Detailseiten-Fallback), sonst alle. */
+  boardGameSlug?: string;
+} = {}): Promise<LudothekGame[]> {
   const entries = await prisma.privateGameCollectionEntry.findMany({
     where: {
       meeple: { privateCollectionVisible: true },
       boardGame: {
+        ...(boardGameSlug ? { slug: boardGameSlug } : {}),
         copies: {
           none: { status: { not: GameInventoryStatus.DEINVENTARISED } },
         },
       },
     },
     include: {
+      version: VERSION_DISPLAY_SELECT,
       meeple: {
         select: {
           id: true,
@@ -121,7 +163,7 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
           profilePictureVisibility: true,
         },
       },
-      boardGame: { include: { alternateNames: { select: { name: true } } } },
+      boardGame: BOARD_GAME_DISPLAY_SELECT,
     },
   });
 
@@ -129,32 +171,14 @@ export async function buildPrivateLudothekGames(): Promise<LudothekGame[]> {
     const boardGame = entry.boardGame;
     return {
       id: entry.id,
-      boardGameId: boardGame.id,
+      ...boardGameDisplayFields(boardGame),
       slug: entry.id,
-      boardGameSlug: boardGame.slug,
-      title: boardGame.title,
-      imageUrl: boardGame.imageUrl,
-      minPlayers: boardGame.minPlayers,
-      maxPlayers: boardGame.maxPlayers,
-      playTimeMinutes: boardGame.playTimeMinutes,
-      weight: boardGame.weight,
-      averageRating: boardGame.averageRating,
-      mechanics: boardGame.mechanics,
-      categories: boardGame.categories,
+      // Privatbesitz hat kein Vereins-Exemplar — exemplarbezogene Felder leer.
       ean: null,
       condition: null,
       inventoryNumber: null,
-      bggId: boardGame.bggId,
-      alternateNames: boardGame.alternateNames.map((a) => a.name),
-      secondaryTitle: boardGame.secondaryTitle,
-      description: boardGame.description,
-      explainerVideoUrl: boardGame.explainerVideoUrl,
-      kind: boardGame.kind,
-      languageDependence: boardGame.languageDependence,
       ruleBookLanguages: [],
-      publisher: boardGame.publisher,
-      author: boardGame.author,
-      yearPublished: boardGame.yearPublished,
+      ...versionDisplay(entry.version),
       baseGames: [],
       expansions: [],
       zustand: "privat" as const,

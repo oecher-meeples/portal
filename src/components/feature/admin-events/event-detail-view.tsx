@@ -1,3 +1,5 @@
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import type { EventVisibility } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
@@ -99,7 +101,7 @@ export function EventDetailView({
       >
         <AccordionItem
           value="stammdaten"
-          className="bg-card rounded-lg border px-4"
+          className={cn(cardVariants({ size: "flush" }), "px-4")}
         >
           <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
             Stammdaten
@@ -116,7 +118,7 @@ export function EventDetailView({
 
         <AccordionItem
           value="schichten"
-          className="bg-card rounded-lg border px-4"
+          className={cn(cardVariants({ size: "flush" }), "px-4")}
         >
           <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
             Schichten
@@ -133,7 +135,7 @@ export function EventDetailView({
 
         <AccordionItem
           value="schichtplan"
-          className="bg-card rounded-lg border px-4"
+          className={cn(cardVariants({ size: "flush" }), "px-4")}
         >
           <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
             Schichtplan

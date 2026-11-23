@@ -107,6 +107,7 @@ export default async function DashboardPage() {
       importantLinks={importantLinks}
       canManageLinks={canManageLinks}
       resignationNotice={resignationNoticeView}
+      isAusgetreten={membershipState === "ausgetreten"}
       openHelperRequestEvent={openHelperRequestEvent}
     />
   );

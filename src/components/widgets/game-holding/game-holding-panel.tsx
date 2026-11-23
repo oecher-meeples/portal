@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
 import { useAction } from "@/components/ui/use-action";
-import { MeepleCombobox } from "@/components/entities/meeple-combobox";
 import { MemberCombobox } from "@/components/entities/member-combobox";
+import {
+  HoldingTargetPicker,
+  meepleTargets,
+  unitTargets,
+  type HoldingTarget,
+  type TargetPickSource,
+} from "@/components/widgets/game-holding/holding-target-picker";
 import {
   confirmHoldingForGamesManager,
   scanAcceptHandover,
@@ -16,8 +22,7 @@ import {
   scanGetGameContext,
   scanGiveToMeeple,
   scanListMeeples,
-  scanPlaceGameInUnit,
-  scanResolveCode,
+  scanListUnits,
   scanReturnToMeeple,
   type ScannedGameContext,
 } from "@/lib/ludothek/holding-actions";
@@ -29,8 +34,10 @@ import {
   scanRebookToMember,
   type MemberOption,
 } from "@/lib/ludothek/holding-actions-external";
+import { scanTransferGame } from "@/lib/ludothek/scanner-actions";
 
-type MeeplePickerFor = "handover" | "return-to-person" | null;
+/** Ziel-Picker mit Scan (#573): Person bzw. Einheit. */
+type TargetPickerFor = "handover" | "return-to-person" | "unit" | null;
 type MemberPickerFor = "lend-to-external" | "rebook" | null;
 
 /**
@@ -60,17 +67,15 @@ export function GameHoldingPanel({
     id: string;
     context: ScannedGameContext | null;
   } | null>(null);
-  const [meeplePicker, setMeeplePicker] = useState<MeeplePickerFor>(null);
-  const [meeples, setMeeples] = useState<{ id: string; displayName: string }[]>(
-    [],
-  );
+  const [targetPicker, setTargetPicker] = useState<TargetPickerFor>(null);
+  const [meeples, setMeeples] = useState<HoldingTarget[]>([]);
+  const [units, setUnits] = useState<HoldingTarget[]>([]);
   const [memberPicker, setMemberPicker] = useState<MemberPickerFor>(null);
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [externalNameOpen, setExternalNameOpen] = useState(false);
   const [externalName, setExternalName] = useState("");
-  const [targetCodeInput, setTargetCodeInput] = useState("");
   const [message, setMessage] = useState<string | null>(null);
-  const { run, pending, error, setError } = useAction({ refresh: false });
+  const { run, pending, error } = useAction({ refresh: false });
 
   const isCurrent = loaded?.id === gameCopyId;
   const context = isCurrent ? loaded.context : null;
@@ -85,22 +90,30 @@ export function GameHoldingPanel({
     };
   }, [gameCopyId]);
 
-  async function openMeeplePicker(target: MeeplePickerFor) {
-    setMeeplePicker(target);
+  function closePickers() {
+    setTargetPicker(null);
     setMemberPicker(null);
-    if (meeples.length === 0) setMeeples(await scanListMeeples());
+    setExternalNameOpen(false);
+  }
+
+  async function openTargetPicker(target: Exclude<TargetPickerFor, null>) {
+    closePickers();
+    setTargetPicker(target);
+    if (target === "unit") {
+      if (units.length === 0) setUnits(unitTargets(await scanListUnits()));
+    } else if (meeples.length === 0) {
+      setMeeples(meepleTargets(await scanListMeeples()));
+    }
   }
 
   async function openMemberPicker(target: MemberPickerFor) {
+    closePickers();
     setMemberPicker(target);
-    setMeeplePicker(null);
     if (members.length === 0) setMembers(await scanListMembers());
   }
 
   async function perform(action: () => Promise<{ error?: string }>) {
-    setMeeplePicker(null);
-    setMemberPicker(null);
-    setExternalNameOpen(false);
+    closePickers();
     const ok = await run(action);
     if (!ok) return;
 
@@ -115,17 +128,31 @@ export function GameHoldingPanel({
     });
   }
 
-  async function handlePlaceInUnit() {
-    const code = targetCodeInput.trim();
-    if (!code) return;
+  async function placeInUnit(unitId: string) {
+    const code = units.find((unit) => unit.id === unitId)?.matchValue;
+    let alreadyThere = false;
+    await perform(async () => {
+      const result = await scanTransferGame(gameCopyId, {
+        kind: "unit",
+        unitId,
+      });
+      alreadyThere = result.value?.outcome === "already-there";
+      return result;
+    });
+    // Keine überflüssige Umlagerung (#537) — nur ein Hinweis.
+    if (alreadyThere) setMessage(`Liegt schon in ${code}.`);
+  }
 
-    const resolved = await scanResolveCode(code);
-    if (resolved.kind !== "unit") {
-      setError("Kein Einheiten-Code erkannt.");
-      return;
-    }
-    await perform(() => scanPlaceGameInUnit(gameCopyId, resolved.unit.id));
-    setTargetCodeInput("");
+  /** Jede Wahl löst sofort aus (#573): ohne Bestätigung, korrigiert wird per
+   * Gegenbuchung. Ein Meeple-QR bestätigt die Übergabe direkt (#465). */
+  function handleTargetPicked(id: string, source: TargetPickSource) {
+    if (targetPicker === "unit") return placeInUnit(id);
+    const viaMeepleQrScan = source === "meeple-qr";
+    return perform(() =>
+      targetPicker === "handover"
+        ? scanGiveToMeeple(gameCopyId, id, viaMeepleQrScan)
+        : scanReturnToMeeple(gameCopyId, id, viaMeepleQrScan),
+    );
   }
 
   if (!isCurrent) {
@@ -212,7 +239,7 @@ export function GameHoldingPanel({
               size="sm"
               variant="outline"
               disabled={pending}
-              onClick={() => openMeeplePicker("handover")}
+              onClick={() => openTargetPicker("handover")}
             >
               Weitergeben
             </Button>
@@ -220,7 +247,7 @@ export function GameHoldingPanel({
               size="sm"
               variant="outline"
               disabled={pending}
-              onClick={() => openMeeplePicker("return-to-person")}
+              onClick={() => openTargetPicker("return-to-person")}
             >
               An Person zurückgeben
             </Button>
@@ -229,9 +256,8 @@ export function GameHoldingPanel({
               variant="outline"
               disabled={pending}
               onClick={() => {
+                closePickers();
                 setExternalNameOpen(true);
-                setMeeplePicker(null);
-                setMemberPicker(null);
               }}
             >
               An extern weitergegeben
@@ -299,65 +325,75 @@ export function GameHoldingPanel({
               Umbuchen
             </Button>
           )}
+
+        {(holding?.unitId || holding?.vereinsmitgliedId) && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={pending}
+            onClick={() => openTargetPicker("unit")}
+          >
+            {holding?.unitId ? "Umlagern" : "Einlagern"}
+          </Button>
+        )}
       </div>
 
       {externalNameOpen && (
-        <div className="bg-muted/40 flex flex-col gap-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Name der externen Person</p>
-          <Input
-            value={externalName}
-            onChange={(event) => setExternalName(event.target.value)}
-            placeholder="Vor- und Nachname"
-          />
-          <div className="flex gap-2">
+        <PickerBox
+          title="Name der externen Person"
+          onCancel={() => setExternalNameOpen(false)}
+        >
+          {/* Bewusst ohne Scan: externe Personen haben keinen QR-Code. */}
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!externalName.trim()) return;
+              void perform(() => scanHandOverToExternal(game.id, externalName));
+            }}
+          >
+            <Input
+              value={externalName}
+              onChange={(event) => setExternalName(event.target.value)}
+              placeholder="Vor- und Nachname"
+            />
             <Button
+              type="submit"
               size="sm"
               disabled={pending || !externalName.trim()}
-              onClick={() =>
-                perform(() => scanHandOverToExternal(game.id, externalName))
-              }
             >
               Weitergeben
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setExternalNameOpen(false)}
-            >
-              Abbrechen
-            </Button>
-          </div>
-        </div>
+          </form>
+        </PickerBox>
       )}
 
-      {meeplePicker && (
-        <div className="bg-muted/40 flex flex-col gap-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Person auswählen</p>
-          <MeepleCombobox
-            options={meeples}
+      {targetPicker && (
+        <PickerBox
+          title={TARGET_PICKER_TITLES[targetPicker](Boolean(holding?.unitId))}
+          onCancel={() => setTargetPicker(null)}
+        >
+          <HoldingTargetPicker
+            key={targetPicker}
+            targets={targetPicker === "unit" ? units : meeples}
             value={null}
-            onValueChange={(meepleId) => {
-              if (!meepleId) return;
-              perform(() =>
-                meeplePicker === "handover"
-                  ? scanGiveToMeeple(game.id, meepleId)
-                  : scanReturnToMeeple(game.id, meepleId),
-              );
+            placeholder={
+              targetPicker === "unit"
+                ? "Einheit suchen oder scannen …"
+                : "Person suchen oder scannen …"
+            }
+            onPick={(id, source) => {
+              if (id) void handleTargetPicked(id, source);
             }}
           />
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setMeeplePicker(null)}
-          >
-            Abbrechen
-          </Button>
-        </div>
+        </PickerBox>
       )}
 
       {memberPicker && (
-        <div className="bg-muted/40 flex flex-col gap-2 rounded-md border p-3">
-          <p className="text-sm font-medium">Vereinsmitglied auswählen</p>
+        <PickerBox
+          title="Vereinsmitglied auswählen"
+          onCancel={() => setMemberPicker(null)}
+        >
           <MemberCombobox
             options={members}
             value={null}
@@ -370,43 +406,38 @@ export function GameHoldingPanel({
               );
             }}
           />
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setMemberPicker(null)}
-          >
-            Abbrechen
-          </Button>
-        </div>
+        </PickerBox>
       )}
+    </div>
+  );
+}
 
-      {(holding?.unitId || holding?.vereinsmitgliedId) && (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="holding-target-code"
-              className="text-muted-foreground text-xs"
-            >
-              In Einheit legen (Code)
-            </label>
-            <Input
-              id="holding-target-code"
-              value={targetCodeInput}
-              onChange={(event) => setTargetCodeInput(event.target.value)}
-              placeholder="OM-BOX-0002"
-              className="h-8 w-auto"
-            />
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={pending || !targetCodeInput.trim()}
-            onClick={handlePlaceInUnit}
-          >
-            {holding?.unitId ? "Umlagern" : "Einlagern"}
-          </Button>
-        </div>
-      )}
+const TARGET_PICKER_TITLES: Record<
+  Exclude<TargetPickerFor, null>,
+  (inUnit: boolean) => string
+> = {
+  handover: () => "Weitergeben an",
+  "return-to-person": () => "Zurückgeben an",
+  unit: (inUnit) => (inUnit ? "Umlagern nach" : "Einlagern in"),
+};
+
+/** Aufgeklappte Zielwahl unter den Aktions-Buttons. */
+function PickerBox({
+  title,
+  onCancel,
+  children,
+}: {
+  title: string;
+  onCancel: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="bg-muted/40 flex flex-col gap-2 rounded-md border p-3">
+      <p className="text-sm font-medium">{title}</p>
+      {children}
+      <Button size="sm" variant="outline" className="w-fit" onClick={onCancel}>
+        Abbrechen
+      </Button>
     </div>
   );
 }

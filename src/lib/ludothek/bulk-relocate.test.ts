@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -27,13 +27,13 @@ const { bulkRelocateGameCopy } = await import("./bulk-relocate");
 beforeEach(() => {
   vi.clearAllMocks();
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   ensureMeepleMock.mockResolvedValue({ id: "meeple-1" });
 });
 
 describe("bulkRelocateGameCopy (#273 Sammel-Umlagern)", () => {
   it("rejects without games:manage", async () => {
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await bulkRelocateGameCopy("copy-1", "unit-1");
 

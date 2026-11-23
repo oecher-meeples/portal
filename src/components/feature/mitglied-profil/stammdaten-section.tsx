@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { TextField } from "@/components/ui/field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { birthDateValidator } from "@/components/ui/constraints";
 import { useAction } from "@/components/ui/use-action";
+import { NativeSelect } from "@/components/ui/native-select";
 import { formatDatePlain } from "@/lib/utils/format";
 import { ageInYears } from "@/lib/members/contribution";
 import { STAMMDATEN_FIELD_LABELS } from "@/lib/members/stammdaten-labels";
@@ -126,16 +128,18 @@ export function StammdatenSection({
   const canEdit = canManage || canRequestChange;
 
   return (
-    <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="font-serif text-lg font-bold">Stammdaten</h2>
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle>Stammdaten</CardTitle>
         {canEdit && !editing && (
-          <Button variant="outline" size="sm" onClick={startEdit}>
-            <Pencil className="size-3.5" />
-            Bearbeiten
-          </Button>
+          <CardAction>
+            <Button variant="outline" size="sm" onClick={startEdit}>
+              <Pencil className="size-3.5" />
+              Bearbeiten
+            </Button>
+          </CardAction>
         )}
-      </div>
+      </CardHeader>
 
       {editing ? (
         <div className="flex flex-col gap-4">
@@ -149,7 +153,7 @@ export function StammdatenSection({
                   >
                     {STAMMDATEN_FIELD_LABELS.tshirtSizeId}
                   </label>
-                  <select
+                  <NativeSelect
                     id="stammdaten-tshirtSizeId"
                     value={form.tshirtSizeId ?? ""}
                     onChange={(event) =>
@@ -158,7 +162,7 @@ export function StammdatenSection({
                         tshirtSizeId: event.target.value || null,
                       }))
                     }
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                    size="md"
                   >
                     <option value="">— keine Angabe —</option>
                     {tshirtSizeOptions.map((option) => (
@@ -166,7 +170,7 @@ export function StammdatenSection({
                         {option.label}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </div>
               ) : key === "birthDate" || key === "joinedAt" ? (
                 <DatePicker
@@ -253,6 +257,6 @@ export function StammdatenSection({
           changes={openChanges}
         />
       )}
-    </div>
+    </Card>
   );
 }

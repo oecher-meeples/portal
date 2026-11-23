@@ -60,6 +60,7 @@ const {
   getRealSessionTier,
   getPreviewTier,
   getSessionTier,
+  resolveViewTier,
   hasPermissionInCurrentView,
 } = await import("./session");
 
@@ -87,11 +88,12 @@ describe("isSettlementPath", () => {
   it("allows the settlement routes", () => {
     expect(isSettlementPath("/dashboard")).toBe(true);
     expect(isSettlementPath("/profil")).toBe(true);
-    expect(isSettlementPath("/scan")).toBe(true);
   });
 
   it("blocks everything else, including nested internal routes", () => {
     expect(isSettlementPath("/ludothek")).toBe(false);
+    // #537: Vier-Augen-Prinzip — Ausgetretene scannen nicht selbst.
+    expect(isSettlementPath("/scan")).toBe(false);
     expect(isSettlementPath("/lfg")).toBe(false);
     expect(isSettlementPath("/dashboard/news")).toBe(false);
     expect(isSettlementPath("/admin/bestand")).toBe(false);
@@ -153,8 +155,15 @@ describe("requireMember", () => {
     expect(redirectMock).toHaveBeenCalledWith("/403");
   });
 
-  it("lets a resigned member through on a settlement route", async () => {
+  it("rejects a resigned member on /scan — Vier-Augen-Prinzip (#537)", async () => {
     withUser(RESIGNED_AND_GONE, "/scan", RESIGNED_AND_GONE_MEMBER);
+
+    await expect(requireMember()).rejects.toThrow(RedirectError);
+    expect(redirectMock).toHaveBeenCalledWith("/403");
+  });
+
+  it("lets a resigned member through on a settlement route", async () => {
+    withUser(RESIGNED_AND_GONE, "/dashboard", RESIGNED_AND_GONE_MEMBER);
 
     const session = await requireMember();
 
@@ -315,12 +324,12 @@ describe("getSessionTier", () => {
     expect(await getSessionTier()).toBe("mitglied");
   });
 
-  it("defaults to mitglied for a real admin without a preview cookie", async () => {
+  it("defaults to admin for a real admin without a preview cookie (#516)", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1", name: "Lea" });
     mockPermissions({ "admin:access": true });
     previewCookie = undefined;
 
-    expect(await getSessionTier()).toBe("mitglied");
+    expect(await getSessionTier()).toBe("admin");
   });
 
   it("lets a real admin explicitly switch back up to admin", async () => {
@@ -340,12 +349,32 @@ describe("getSessionTier", () => {
   });
 });
 
+describe("resolveViewTier", () => {
+  it("defaults a real admin without a preview cookie to admin, like the pages do", async () => {
+    previewCookie = undefined;
+
+    expect(await resolveViewTier("admin")).toBe("admin");
+  });
+
+  it("uses the preview cookie for a real admin", async () => {
+    previewCookie = "mitglied";
+
+    expect(await resolveViewTier("admin")).toBe("mitglied");
+  });
+
+  it("keeps a non-admin's real tier regardless of the cookie", async () => {
+    previewCookie = "admin";
+
+    expect(await resolveViewTier("gast")).toBe("gast");
+  });
+});
+
 describe("hasPermissionInCurrentView", () => {
   it("defers to the real permission for a non-admin (e.g. a moderator), preview cookie or not", async () => {
     previewCookie = undefined;
-    mockPermissions({ "admin:access": false, "posts:write": true });
+    mockPermissions({ "admin:access": false, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       true,
     );
   });
@@ -353,39 +382,40 @@ describe("hasPermissionInCurrentView", () => {
   it("hides an admin's permission while previewing a non-admin tier, even with the real permission", async () => {
     previewCookie = "gast";
     hasPermissionMock.mockClear();
-    mockPermissions({ "admin:access": true, "posts:write": true });
+    mockPermissions({ "admin:access": true, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       false,
     );
-    expect(hasPermissionMock).not.toHaveBeenCalledWith("user-1", "posts:write");
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(
+      "user-1",
+      "posts:public",
+    );
   });
 
-  it("hides an admin's permission by default (no preview cookie) — mitglied is the default view (#126)", async () => {
+  it("shows an admin's permission by default (no preview cookie) — admin is the default view (#516)", async () => {
     previewCookie = undefined;
-    hasPermissionMock.mockClear();
-    mockPermissions({ "admin:access": true, "posts:write": true });
+    mockPermissions({ "admin:access": true, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
-      false,
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
+      true,
     );
-    expect(hasPermissionMock).not.toHaveBeenCalledWith("user-1", "posts:write");
   });
 
   it("shows an admin's permission once they explicitly preview back to admin", async () => {
     previewCookie = "admin";
-    mockPermissions({ "admin:access": true, "posts:write": true });
+    mockPermissions({ "admin:access": true, "posts:public": true });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       true,
     );
   });
 
   it("stays false without the real permission, preview or not", async () => {
     previewCookie = undefined;
-    mockPermissions({ "admin:access": false, "posts:write": false });
+    mockPermissions({ "admin:access": false, "posts:public": false });
 
-    expect(await hasPermissionInCurrentView("user-1", "posts:write")).toBe(
+    expect(await hasPermissionInCurrentView("user-1", "posts:public")).toBe(
       false,
     );
   });

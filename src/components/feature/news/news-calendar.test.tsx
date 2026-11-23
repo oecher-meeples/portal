@@ -1,8 +1,18 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { NewsCalendar } from "@/components/feature/news/news-calendar";
 import type { ContentItem } from "@/lib/content/content-types";
+
+const subscribeMock = vi.fn();
+vi.mock("@/components/feature/news/actions", () => ({
+  subscribeOwnInternalCalendar: () => subscribeMock(),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+const { NewsCalendar } =
+  await import("@/components/feature/news/news-calendar");
 
 afterEach(cleanup);
 
@@ -115,5 +125,46 @@ describe("NewsCalendar — Farbunterscheidung intern/extern (#10)", () => {
     expect(screen.getByRole("button", { name: "12" })).toHaveClass(
       "opacity-35",
     );
+  });
+});
+
+describe("NewsCalendar — Abo-Buttons öffentlich/intern (#439)", () => {
+  const ICS_URL = "https://calendar.example.org/public.ics";
+
+  it("shows only the public subscribe button for guests", () => {
+    render(
+      <NewsCalendar
+        items={[]}
+        selectedDate={null}
+        onSelectDate={vi.fn()}
+        icsUrl={ICS_URL}
+      />,
+    );
+
+    expect(
+      screen.getByText("Kalender abonnieren (iCal)").closest("a"),
+    ).toHaveAttribute("href", "webcal://calendar.example.org/public.ics");
+    expect(
+      screen.queryByText("Kalender abonnieren (intern)"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows public and internal subscribe buttons for Meeple with internal access", () => {
+    render(
+      <NewsCalendar
+        items={[]}
+        selectedDate={null}
+        onSelectDate={vi.fn()}
+        icsUrl={ICS_URL}
+        internalSubscription={{ hasToken: false }}
+      />,
+    );
+
+    expect(
+      screen.getByText("Kalender abonnieren (öffentlich)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Kalender abonnieren (intern)"),
+    ).toBeInTheDocument();
   });
 });

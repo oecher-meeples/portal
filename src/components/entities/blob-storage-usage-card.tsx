@@ -1,3 +1,5 @@
+import { Card } from "@/components/ui/card";
+import { StatValue } from "@/components/ui/stat-tile";
 import { StatusPill, type StatusTone } from "@/components/ui/status-pill";
 import { formatBytes } from "@/lib/utils/format";
 import { getStorageTone, type StorageTone } from "@/lib/utils/storage-tone";
@@ -15,13 +17,13 @@ const TONE_TO_STATUS_TONE: Record<StorageTone, StatusTone> = {
   critical: "negative",
 };
 
-/** Admin-only info card showing the Vercel Blob storage fill level — read-only,
+/** Admin-only info card showing the blob storage (SeaweedFS) fill level — read-only,
  * no mutation, so it lives here rather than in `feature/`. */
 export function BlobStorageUsageCard({ usage }: { usage: BlobStorageUsage }) {
   const tone = getStorageTone(usage.percent);
 
   return (
-    <div className="bg-card rounded-lg border p-5">
+    <Card className="block">
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
           Blob-Speicher
@@ -31,12 +33,10 @@ export function BlobStorageUsageCard({ usage }: { usage: BlobStorageUsage }) {
           tone={TONE_TO_STATUS_TONE[tone]}
         />
       </div>
-      <p className="mt-2 font-serif text-3xl font-bold">
-        {usage.percent.toFixed(1)} %
-      </p>
+      <StatValue>{usage.percent.toFixed(1)} %</StatValue>
       <p className="text-muted-foreground mt-1 text-sm">
         {formatBytes(usage.used)} von {formatBytes(usage.limit)} belegt
       </p>
-    </div>
+    </Card>
   );
 }

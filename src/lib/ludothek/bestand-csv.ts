@@ -1,6 +1,6 @@
 "use server";
 
-import { requireGamesManagePermission } from "@/lib/ludothek/permissions";
+import { findActionActor } from "@/lib/auth/action-guards";
 import { buildAdminBoardGameRows } from "@/lib/ludothek/admin-bestand-rows";
 import {
   buildBestandCsv,
@@ -21,7 +21,7 @@ export async function exportBestandCsv(
   scope: BestandCsvScope,
   filteredRows?: BestandCsvRow[],
 ) {
-  const actor = await requireGamesManagePermission();
+  const actor = (await findActionActor("games:manage"))?.user;
   if (!actor) {
     return { error: "Keine Berechtigung für den Bestands-Export." };
   }

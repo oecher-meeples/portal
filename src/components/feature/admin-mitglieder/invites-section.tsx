@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { Fragment, useMemo, useState } from "react";
 import {
   Ban,
@@ -42,7 +43,7 @@ import {
   buildRegistrationLink,
   formatInviteMessage,
   type InviteStatus,
-} from "@/lib/members/invites";
+} from "@/lib/members/invite-format";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
 export type InviteRow = {
@@ -114,7 +115,7 @@ export function InvitesSection({
   }, [invites, search, activeStatuses]);
 
   return (
-    <Accordion id="einladungen" className="bg-card rounded-lg border">
+    <Accordion id="einladungen" className={cardVariants({ size: "flush" })}>
       <AccordionItem value="einladungen" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">

@@ -4,6 +4,9 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 vi.mock("@/lib/auth/permissions", () => ({ hasPermission: vi.fn() }));
 vi.mock("@/lib/notifications/registry", () => ({
   AUTOMATED_NOTIFICATIONS: [

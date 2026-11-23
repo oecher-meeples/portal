@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAction } from "@/components/ui/use-action";
 import { resignOwnMembership } from "@/lib/members/own-profile-actions";
 import { formatDatePlain } from "@/lib/utils/format";
+import { SETTLEMENT_HANDOVER_HINT } from "@/lib/members/membership-state";
 
 export function ResignMembershipPanel({
   resignedAt,
@@ -15,27 +17,21 @@ export function ResignMembershipPanel({
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(resignedAt !== null);
   const [endsAt, setEndsAt] = useState(membershipEndsAt);
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const { run, pending: isSaving, error } = useAction();
 
   async function handleResign() {
-    setIsSaving(true);
-    setError(null);
-
-    const result = await resignOwnMembership();
-    setIsSaving(false);
-
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    setDone(true);
-    setConfirming(false);
-    setEndsAt(
-      result.membershipEndsAt
-        ? new Date(result.membershipEndsAt).toISOString()
-        : null,
-    );
+    await run(async () => {
+      const result = await resignOwnMembership();
+      if ("error" in result) return result;
+      setDone(true);
+      setConfirming(false);
+      setEndsAt(
+        result.membershipEndsAt
+          ? new Date(result.membershipEndsAt).toISOString()
+          : null,
+      );
+      return result;
+    });
   }
 
   if (done) {
@@ -44,8 +40,8 @@ export function ResignMembershipPanel({
         Deine Kündigung ist vermerkt. Die Mitgliedschaft läuft unverändert
         weiter bis zum Jahreswechsel
         {endsAt ? ` (${formatDatePlain(endsAt)})` : ""}. Bis dahin kannst du
-        weiter ausleihen. Danach bleibt dir nur noch die Abwicklung: Profil,
-        eigene Bestände, Rückgabe und Weitergabe.
+        weiter ausleihen. Danach siehst du nur noch dein Profil und deine
+        eigenen Bestände. {SETTLEMENT_HANDOVER_HINT}
       </p>
     );
   }

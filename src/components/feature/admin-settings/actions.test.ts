@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -7,17 +7,14 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
 
-const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/auth/permissions")>()),
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
-
 const setDefaultInviteDaysMock = vi.fn();
 vi.mock("@/lib/members/invite-settings", () => ({
   setDefaultInviteDays: (...args: unknown[]) =>
     setDefaultInviteDaysMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const { disconnectInstagram, updateDefaultInviteDays } =
   await import("./actions");
@@ -25,7 +22,7 @@ const { disconnectInstagram, updateDefaultInviteDays } =
 describe("disconnectInstagram", () => {
   it("rejects when the user lacks the instagram:connect permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await disconnectInstagram();
 
@@ -35,7 +32,7 @@ describe("disconnectInstagram", () => {
 
   it("deletes the active instagram connection when authorized", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
 
     const result = await disconnectInstagram();
 
@@ -46,7 +43,8 @@ describe("disconnectInstagram", () => {
 
 describe("updateDefaultInviteDays", () => {
   it("rejects a value outside the valid range", async () => {
-    requirePermissionMock.mockResolvedValue({ id: "admin-1" });
+    getCurrentUserMock.mockResolvedValue({ id: "admin-1" });
+    mockPermissionKeys("all");
 
     const result = await updateDefaultInviteDays(200);
 
@@ -55,7 +53,8 @@ describe("updateDefaultInviteDays", () => {
   });
 
   it("stores a valid value", async () => {
-    requirePermissionMock.mockResolvedValue({ id: "admin-1" });
+    getCurrentUserMock.mockResolvedValue({ id: "admin-1" });
+    mockPermissionKeys("all");
 
     const result = await updateDefaultInviteDays(10);
 

@@ -1,13 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import type { ProfilePictureVisibility } from "@prisma/client";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { toStoredBlobRef } from "@/lib/utils/blob-access";
 
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
@@ -16,33 +17,28 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 async function assertMayEdit(meepleId: string) {
   const session = await requireMember();
   if (session.meeple.id === meepleId) return;
-  await requirePermission("members:manage");
+  await requireActionPermission("members:manage");
 }
 
 export async function getMeepleProfilePictureUploadToken(
   meepleId: string,
   pathname: string,
+  contentType: string,
 ) {
   await assertMayEdit(meepleId);
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "meeple-profile-pictures"),
+    contentType,
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,
   });
 }
 
-async function revalidateProfile(meepleId: string) {
-  const member = await prisma.member.findUnique({
-    where: { meepleId },
-    select: { slug: true },
-  });
-  if (member) revalidatePath(`/profil/${member.slug}`);
-}
-
 export async function saveMeepleProfilePicture(
   meepleId: string,
+  /** URL aus dem Upload — gespeichert wird der Key (#112). */
   url: string,
   visibility: ProfilePictureVisibility,
 ) {
@@ -50,17 +46,20 @@ export async function saveMeepleProfilePicture(
 
   const previous = await prisma.meeple.findUniqueOrThrow({
     where: { id: meepleId },
-    select: { profilePictureUrl: true },
+    select: { profilePictureKey: true },
   });
   await prisma.meeple.update({
     where: { id: meepleId },
-    data: { profilePictureUrl: url, profilePictureVisibility: visibility },
+    data: {
+      profilePictureKey: toStoredBlobRef(url, "meeple-profile-pictures"),
+      profilePictureVisibility: visibility,
+    },
   });
-  if (previous.profilePictureUrl) {
-    await deleteBlobs([previous.profilePictureUrl]);
+  if (previous.profilePictureKey) {
+    await deleteBlobs([previous.profilePictureKey]);
   }
 
-  await revalidateProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }
 
@@ -75,7 +74,7 @@ export async function updateMeepleProfilePictureVisibility(
     data: { profilePictureVisibility: visibility },
   });
 
-  await revalidateProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }
 
@@ -85,17 +84,17 @@ export async function deleteMeepleProfilePicture(meepleId: string) {
 
   const meeple = await prisma.meeple.findUniqueOrThrow({
     where: { id: meepleId },
-    select: { profilePictureUrl: true },
+    select: { profilePictureKey: true },
   });
-  if (meeple.profilePictureUrl) {
-    await deleteBlobs([meeple.profilePictureUrl]);
+  if (meeple.profilePictureKey) {
+    await deleteBlobs([meeple.profilePictureKey]);
   }
 
   await prisma.meeple.update({
     where: { id: meepleId },
-    data: { profilePictureUrl: null },
+    data: { profilePictureKey: null },
   });
 
-  await revalidateProfile(meepleId);
+  await revalidateMemberProfile({ meepleId: meepleId });
   return { success: true as const };
 }

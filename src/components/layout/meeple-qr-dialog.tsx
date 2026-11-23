@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import {
   Dialog,
   DialogContent,
@@ -32,11 +31,15 @@ export function MeepleQrDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    QRCode.toDataURL(buildMeepleCode(meepleId), { margin: 1, width: 240 }).then(
-      (url) => {
+    // `qrcode` erst beim Öffnen laden (#529) — der Dialog hängt im Layout
+    // jeder Seite, geöffnet wird er selten.
+    import("qrcode")
+      .then(({ default: QRCode }) =>
+        QRCode.toDataURL(buildMeepleCode(meepleId), { margin: 1, width: 240 }),
+      )
+      .then((url) => {
         if (!cancelled) setDataUrl(url);
-      },
-    );
+      });
     return () => {
       cancelled = true;
     };

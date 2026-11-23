@@ -4,9 +4,6 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const getLoginBackoffStatusMock = vi.fn();
 const adminResetLoginBackoffMock = vi.fn();
@@ -18,6 +15,11 @@ vi.mock("@/lib/utils/rate-limit", () => ({
     adminResetLoginBackoffMock(...args),
   setManualLoginLock: (...args: unknown[]) => setManualLoginLockMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   getMeepleLoginRateLimitStatus,

@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { PageHeading } from "@/components/ui/page-heading";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
   Table,
@@ -9,7 +15,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreateStorageUnitDialog } from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
+import {
+  CreateStorageUnitDialog,
+  type ScannedUnitPrefill,
+} from "@/components/feature/admin-einheiten/create-storage-unit-dialog";
 import {
   AssignKeeperDialog,
   type KeeperOption,
@@ -40,12 +49,16 @@ export function AdminEinheitenView({
   isAdmin,
   selfMeepleId,
   keeperOptions,
+  scannedUnit,
 }: {
   units: StorageUnitRow[];
   resignedHolders: ResignedHolderRow[];
   isAdmin: boolean;
   selfMeepleId: string;
   keeperOptions: KeeperOption[];
+  /** Gescanntes, unbekanntes Etikett (`?neu=box-0001`, #549) — öffnet den
+   * Anlegen-Dialog mit festem Code. Nur für Admins gesetzt. */
+  scannedUnit?: ScannedUnitPrefill;
 }) {
   return (
     <PageContainer className="gap-6">
@@ -53,19 +66,23 @@ export function AdminEinheitenView({
         eyebrow="Ludothek"
         title="Aufbewahrungseinheiten"
         description="Aufbewahrungseinheiten sind die Kartons/Regal mit QR-Codes, welche für die Einlagerung oder Events verwendet werden."
-        action={isAdmin ? <CreateStorageUnitDialog /> : undefined}
+        action={
+          isAdmin ? (
+            <CreateStorageUnitDialog prefill={scannedUnit} />
+          ) : undefined
+        }
       />
 
       {isAdmin && resignedHolders.length > 0 && (
-        <div className="bg-card rounded-lg border p-5">
-          <h2 className="font-serif text-lg font-bold">
-            Bestände bei ausgetretenen Mitgliedern
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Rückholliste — diese Personen haben den Verein verlassen und haben
-            noch Vereinsspiele oder -einheiten.
-          </p>
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+        <Card>
+          <CardHeader>
+            <CardTitle>Bestände bei ausgetretenen Mitgliedern</CardTitle>
+            <CardDescription>
+              Rückholliste — diese Personen haben den Verein verlassen und haben
+              noch Vereinsspiele oder -einheiten.
+            </CardDescription>
+          </CardHeader>
+          <ul className="flex flex-col divide-y text-sm">
             {resignedHolders.map((holder) => (
               <li
                 key={holder.meepleName}
@@ -78,7 +95,7 @@ export function AdminEinheitenView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       <div className="overflow-hidden rounded-lg border">

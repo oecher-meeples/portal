@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -96,7 +97,7 @@ export function HelferView({
             <AccordionItem
               key={event.id}
               value={event.id}
-              className="bg-card overflow-hidden rounded-lg border"
+              className={cardVariants({ size: "flush" })}
             >
               <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 hover:no-underline">
                 <span className="flex flex-wrap items-baseline gap-2 text-left">

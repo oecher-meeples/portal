@@ -15,12 +15,20 @@ vi.mock("@/lib/ludothek/game-copies", () => ({
   getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
 }));
 
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
 
-getSuggestedInventoryNumberMock.mockResolvedValue("1");
+getSuggestedInventoryNumberMock.mockResolvedValue(1);
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /Weiteres Exemplar/ }));
@@ -56,7 +64,8 @@ describe("AddGameCopyDialog", () => {
     expect(createGameCopyMock).toHaveBeenCalledWith("game-1", {
       condition: "Leicht bespielt",
       ruleBookLanguages: ["DE", "EN"],
-      inventoryNumber: "1",
+      inventoryNumber: 1,
+      edition: null,
     });
   });
 
@@ -73,7 +82,36 @@ describe("AddGameCopyDialog", () => {
     expect(createGameCopyMock).toHaveBeenCalledWith("game-1", {
       condition: undefined,
       ruleBookLanguages: [],
-      inventoryNumber: "1",
+      inventoryNumber: 1,
+      edition: null,
     });
+  });
+
+  it("sends a new edition with its language when 'Neue Edition' is chosen", async () => {
+    const user = userEvent.setup();
+    createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });
+    render(
+      <AddGameCopyDialog boardGameId="game-1" boardGameTitle="Arche Nova" />,
+    );
+    await openDialog(user);
+
+    await user.selectOptions(
+      screen.getByLabelText("Version"),
+      "Neue Version manuell eingeben …",
+    );
+    await user.type(screen.getByLabelText("Sprache(n) der Version"), "English");
+    await user.click(screen.getByRole("button", { name: "Anlegen" }));
+
+    expect(createGameCopyMock).toHaveBeenCalledWith(
+      "game-1",
+      expect.objectContaining({
+        edition: {
+          version: expect.objectContaining({
+            languages: ["English"],
+            publishers: [],
+          }),
+        },
+      }),
+    );
   });
 });

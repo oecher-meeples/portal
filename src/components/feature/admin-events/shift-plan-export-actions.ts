@@ -1,7 +1,7 @@
 "use server";
 
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { formatTimePlain } from "@/lib/utils/format";
 import { SHIFT_PLAN_CSV_COLUMNS } from "@/components/feature/admin-events/shift-plan-csv-columns";
@@ -14,7 +14,7 @@ function csvCell(value: string) {
  * (bestätigt/offen aus `confirmedAt`), sorted by role then start time so the
  * export reads like the grid, top to bottom (#296). */
 export async function exportShiftPlanDayCsv(dayId: string) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const day = await prisma.eventDay.findUnique({
     where: { id: dayId },

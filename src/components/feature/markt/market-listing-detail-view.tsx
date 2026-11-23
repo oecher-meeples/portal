@@ -11,6 +11,7 @@ import { EditMarketListingDialog } from "@/components/feature/markt/edit-market-
 import { cn } from "@/lib/utils/cn";
 import type { MarketListingView } from "@/lib/markt/market-listings";
 import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
 
 export function MarketListingDetailView({
   listing,
@@ -89,6 +90,7 @@ export function MarketListingDetailView({
                   onClick={() => setLightboxIndex(offset + 1)}
                 >
                   <CoverMedia
+                    sizes="(min-width: 1024px) 15vw, 33vw"
                     imageUrl={url}
                     alt={listing.title}
                     aspect="aspect-square"
@@ -101,7 +103,7 @@ export function MarketListingDetailView({
         </div>
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
-            <h1 className="font-serif text-2xl font-bold">{listing.title}</h1>
+            <PageTitle size="sm">{listing.title}</PageTitle>
             <span className="text-primary shrink-0 font-serif text-2xl font-bold">
               {listing.priceEuros} €
             </span>
@@ -178,6 +180,7 @@ export function MarketListingDetailView({
                       )}
                     >
                       <CoverMedia
+                        sizes="96px"
                         imageUrl={url}
                         alt=""
                         aspect="aspect-square"

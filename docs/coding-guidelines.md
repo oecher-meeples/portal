@@ -57,7 +57,7 @@ Jede Server Action folgt demselben Aufbau:
 "use server";
 
 export async function createShift(eventId: string, input: ShiftInput) {
-  await requirePermission("events:manage");        // 1. Guard zuerst
+  await requireActionPermission("events:manage");  // 1. Guard zuerst
 
   const validationError = validateShift(input);     // 2. Validierung
   if (validationError) return { error: validationError };
@@ -70,13 +70,19 @@ export async function createShift(eventId: string, input: ShiftInput) {
 
 Verbindlich daran:
 
-1. **Guard ist die erste Zeile.** `requireMeeple()` / `requirePermission(...)` / `requireGamesManage()` — nie erst nach dem Lesen von Daten. Berechtigungen werden **serverseitig** geprüft, nie nur durch Ausblenden im UI.
+1. **Guard ist die erste Zeile.** `requireMeeple()` für Self-Service, sonst die Action-Guards aus [`src/lib/auth/action-guards.ts`](../src/lib/auth/action-guards.ts) — nie erst nach dem Lesen von Daten. Berechtigungen werden **serverseitig** geprüft, nie nur durch Ausblenden im UI.
+   - `requireActionPermission(key)` (redirect), `findActionActor(key)` (`null`), `actionPermissionDenied(key)` (`{ error }`) prüfen Permission **und** Mitgliedsstatus: Ausgetretene behalten Zusatzrollen, dürfen aber nur abwickeln (`docs/mitglieder-konzept.md` §3.4). Abwicklungs-Actions (eigene Bestände zurückgeben/weitergeben) setzen dafür explizit `{ settlement: true }`.
+   - `requirePermission()` (ohne Mitgliedsstatus) ist kein Action-Guard. Seiten nehmen `requireMember()` / `requireAdminPermission()`.
+   - Permission-Keys sind `PermissionKey` ([`permission-keys.ts`](../src/lib/auth/permission-keys.ts)) — ein neuer Key wird dort eingetragen, nicht als freier String.
 2. **Rückgabeformat** ist `{ error: string }` oder `{ success: true as const }` (optional mit Zusatzfeldern wie `{ success: true as const, id }`). Kein Werfen für erwartbare Fehler — das UI braucht die Nachricht. Der Typ dazu ist `ActionResult` in [`src/components/ui/use-action.ts`](../src/components/ui/use-action.ts).
 3. **Fehlermeldungen sind deutsch und nutzerlesbar** („Keine Berechtigung.", nicht „FORBIDDEN").
-4. **`revalidatePath`** nach Mutationen, die Server-Komponenten betreffen.
+4. **`revalidatePath`** nach Mutationen, die Server-Komponenten betreffen — für **jeden Pfad, auf dem die auslösende Komponente angezeigt wird**. Das ist der Refresh: `useAction`/`ActionButton`/`ActionDialog` rufen `router.refresh()` seit #525 nur noch mit `refresh` auf. Fehlt das Revalidate (oder trifft es nicht den angezeigten Pfad), `refresh` explizit setzen.
 5. Actions liegen bei ihrem Anwendungsfall (`feature/<domäne>/actions.ts`) oder — wenn mehrere Features sie brauchen — im Domain-Layer (`lib/<domäne>/*-actions.ts`).
+6. **Jeder Export einer `"use server"`-Datei ist ein öffentlicher POST-Endpunkt.** Reine Lesefunktionen ohne eigenen Guard gehören in eine Datei **ohne** `"use server"` (z. B. `lib/bringbuy/queries.ts`, mit `import "server-only"`).
+7. **Gebundene Argumente sind keine Autorisierung.** `action.bind(null, x)` schickt `x` an den Client, der es beim Aufruf manipuliert zurückschicken kann. Identität (Meeple-ID, Verkäufer-ID) löst die Action selbst auf — per Session oder durch erneute Prüfung eines Tokens.
+8. **catch-all-Blöcke** laufen über `actionErrorMessage(error)` bzw. `toResult(run)` aus [`src/lib/utils/action-result.ts`](../src/lib/utils/action-result.ts): zuerst `unstable_rethrow` (sonst verschluckt der `catch` `redirect()`/`notFound()` und die UI zeigt „NEXT_REDIRECT"), dann nur die Message eines `UserFacingError` — alles andere wird geloggt und als „Unbekannter Fehler." gemeldet. Nie `(error as Error).message` in die UI.
 
-**Unerwartete** Zustandsverletzungen sind Ausnahmen, keine Rückgabewerte: dafür gibt es benannte Fehlerklassen in [`src/lib/ludothek/errors.ts`](../src/lib/ludothek/errors.ts) (`HoldingConflictError`, `GameNotFoundError`, …), jeweils mit gesetztem `this.name` und deutscher Message.
+**Unerwartete** Zustandsverletzungen sind Ausnahmen, keine Rückgabewerte: dafür gibt es benannte Fehlerklassen in [`src/lib/ludothek/errors.ts`](../src/lib/ludothek/errors.ts) (`HoldingConflictError`, `GameNotFoundError`, …), jeweils mit gesetztem `this.name` und deutscher Message. Sie erben von `UserFacingError`, damit `toResult` ihre Message durchreicht.
 
 Es gibt **kein Schema-Validierungs-Framework** (kein zod). Validiert wird von Hand in kleinen, testbaren Funktionen im Domain-Layer.
 

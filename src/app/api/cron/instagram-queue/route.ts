@@ -4,24 +4,14 @@ import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
 import { deleteExpiredLoginLogs } from "@/lib/auth/login-log";
 import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
 import { resetExplainerAttendance } from "@/lib/explainer/attendance-cleanup";
-import { isAuthorizedCronRequest } from "@/lib/utils/cron-auth";
+import { requireCronAuth } from "@/lib/utils/cron-auth";
 
-// Brevo's free tier caps at 300 mails/day; this cron runs once a day (see vercel.json).
+// Brevo's free tier caps at 300 mails/day; this cron runs once a day (see docker/cron/crontab).
 const NEWSLETTER_DAILY_LIMIT = 300;
 
 export async function GET(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    return NextResponse.json(
-      { error: "CRON_SECRET is not configured" },
-      { status: 500 },
-    );
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (!isAuthorizedCronRequest(authHeader, cronSecret)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = requireCronAuth(request);
+  if (denied) return denied;
 
   await refreshConnectionIfNeeded();
   const summary = await processQueue();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 // Split out of board-games-bulk-import.test.ts (#289) — the
 // Inventarnummer-Trennzeichen coverage pushed the original file past the
@@ -16,6 +16,9 @@ vi.mock("@/lib/utils/sleep", () => ({
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const searchBggGamesExactMock = vi.fn();
 vi.mock("@/lib/bgg/client", async () => {
@@ -60,6 +63,10 @@ const VALID_BGG_DATA = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
+  mechanicLinks: [],
+  categoryLinks: [],
   author: [],
   yearPublished: null,
   versions: [],
@@ -67,9 +74,9 @@ const VALID_BGG_DATA = {
 
 function beforeEachSetup() {
   getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-  prismaMock.rolePermission.count.mockResolvedValue(1);
+  mockPermissionKeys("all");
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
-  getSuggestedInventoryNumberMock.mockResolvedValue("1");
+  getSuggestedInventoryNumberMock.mockResolvedValue(1);
 }
 
 describe("bulkImportBoardGames — Inventarnummer-Trennzeichen (#289)", () => {
@@ -88,18 +95,18 @@ describe("bulkImportBoardGames — Inventarnummer-Trennzeichen (#289)", () => {
       boardGameSlug: "ark-nova",
     });
 
-    await bulkImportBoardGames(["OM-0142;Ark Nova"], ";");
+    await bulkImportBoardGames(["142;Ark Nova"], ";");
 
     expect(searchBggGamesExactMock).toHaveBeenCalledWith("Ark Nova");
     expect(createBoardGameMock).toHaveBeenCalledWith(
-      expect.objectContaining({ inventoryNumber: "OM-0142" }),
+      expect.objectContaining({ inventoryNumber: 142 }),
     );
     expect(getSuggestedInventoryNumberMock).not.toHaveBeenCalled();
   });
 
   it("falls back to the auto-suggested number when no delimiter is chosen", async () => {
     beforeEachSetup();
-    getSuggestedInventoryNumberMock.mockResolvedValue("7");
+    getSuggestedInventoryNumberMock.mockResolvedValue(7);
     searchBggGamesExactMock.mockResolvedValue([
       { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
     ]);
@@ -116,13 +123,32 @@ describe("bulkImportBoardGames — Inventarnummer-Trennzeichen (#289)", () => {
     await bulkImportBoardGames(["Ark Nova"]);
 
     expect(createBoardGameMock).toHaveBeenCalledWith(
-      expect.objectContaining({ inventoryNumber: "7" }),
+      expect.objectContaining({ inventoryNumber: 7 }),
     );
+  });
+
+  it("reports a non-numeric inventory number as a failed row (#543)", async () => {
+    beforeEachSetup();
+
+    const result = await bulkImportBoardGames(["OM-0142;Ark Nova"], ";");
+
+    expect(result).toEqual({
+      success: true,
+      results: [
+        {
+          name: "OM-0142;Ark Nova",
+          status: "failed",
+          error: "Inventarnummer muss eine positive ganze Zahl sein.",
+        },
+      ],
+    });
+    expect(searchBggGamesExactMock).not.toHaveBeenCalled();
+    expect(createBoardGameMock).not.toHaveBeenCalled();
   });
 
   it("treats a line without the chosen delimiter as a plain entry", async () => {
     beforeEachSetup();
-    getSuggestedInventoryNumberMock.mockResolvedValue("3");
+    getSuggestedInventoryNumberMock.mockResolvedValue(3);
     searchBggGamesExactMock.mockResolvedValue([
       { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
     ]);
@@ -140,15 +166,15 @@ describe("bulkImportBoardGames — Inventarnummer-Trennzeichen (#289)", () => {
 
     expect(searchBggGamesExactMock).toHaveBeenCalledWith("Ark Nova");
     expect(createBoardGameMock).toHaveBeenCalledWith(
-      expect.objectContaining({ inventoryNumber: "3" }),
+      expect.objectContaining({ inventoryNumber: 3 }),
     );
   });
 
   it("asks for a new suggestion per new copy, sequentially, avoiding duplicates within one batch", async () => {
     beforeEachSetup();
     getSuggestedInventoryNumberMock
-      .mockResolvedValueOnce("5")
-      .mockResolvedValueOnce("6");
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(6);
     searchBggGamesExactMock
       .mockResolvedValueOnce([
         { bggId: 1, title: "Ark Nova", yearPublished: 2021 },
@@ -182,11 +208,11 @@ describe("bulkImportBoardGames — Inventarnummer-Trennzeichen (#289)", () => {
     expect(getSuggestedInventoryNumberMock).toHaveBeenCalledTimes(2);
     expect(createBoardGameMock).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ inventoryNumber: "5" }),
+      expect.objectContaining({ inventoryNumber: 5 }),
     );
     expect(createBoardGameMock).toHaveBeenNthCalledWith(
       2,
-      expect.objectContaining({ inventoryNumber: "6" }),
+      expect.objectContaining({ inventoryNumber: 6 }),
     );
   });
 });

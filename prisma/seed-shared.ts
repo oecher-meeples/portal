@@ -1,16 +1,24 @@
+import { StorageUnitKind } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "../src/lib/utils/prisma";
 import { uniqueSlug } from "../src/lib/utils/slug";
+import { UNSORTIERT_CODE } from "../src/lib/inventory/codes";
 import { encryptSecret, ibanFirst2, ibanLast4 } from "../src/lib/utils/crypto";
 
 /**
+ * Legt einen Login im self-hosted better-auth an (`AuthUser` + Credential-
+ * `AuthAccount`, docs/adr/0015) — dieselbe Form, die better-auths eigenes
+ * Sign-up schreibt: `providerId = "credential"`, `accountId = userId`,
+ * sonst findet der Sign-in das Passwort nicht.
+ *
  * #370: ein bereits existierender User bricht hier NICHT früh ab, sondern
  * synct den Passwort-Hash auf den aktuell übergebenen Wert — sonst bleibt
  * nach einer Passwort-Änderung in `.env.local` (z. B. `SEED_ADMIN_PASSWORD`)
  * der alte Hash bestehen und der Login schlägt trotz "korrektem" Passwort
  * fehl, ohne dass Rate-Limiting oder ein Code-Bug beteiligt wäre.
  */
-export async function upsertNeonAuthUser({
+export async function upsertAuthUser({
   email,
   password,
   name,
@@ -19,37 +27,54 @@ export async function upsertNeonAuthUser({
   password: string;
   name: string;
 }) {
+  const normalizedEmail = email.trim().toLowerCase();
   const hashedPassword = await hashPassword(password);
 
-  const existing = await prisma.$queryRaw<{ id: string }[]>`
-    SELECT id FROM neon_auth."user" WHERE email = ${email}
-  `;
-  if (existing.length > 0) {
-    const userId = existing[0].id;
-    await prisma.$executeRaw`
-      UPDATE neon_auth."account"
-      SET password = ${hashedPassword}, "updatedAt" = now()
-      WHERE "userId" = ${userId}::uuid AND "providerId" = 'credential'
-    `;
+  const existing = await prisma.authUser.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true },
+  });
+  if (existing) {
+    await prisma.authAccount.upsert({
+      where: {
+        providerId_accountId: {
+          providerId: "credential",
+          accountId: existing.id,
+        },
+      },
+      update: { password: hashedPassword },
+      create: {
+        accountId: existing.id,
+        providerId: "credential",
+        userId: existing.id,
+        password: hashedPassword,
+      },
+    });
     console.log(
-      `Neon-Auth-User "${email}" existiert bereits, Passwort synchronisiert.`,
+      `Auth-User "${normalizedEmail}" existiert bereits, Passwort synchronisiert.`,
     );
-    return userId;
+    return existing.id;
   }
 
-  const [user] = await prisma.$queryRaw<{ id: string }[]>`
-    INSERT INTO neon_auth."user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
-    VALUES (gen_random_uuid(), ${name}, ${email}, true, now(), now())
-    RETURNING id
-  `;
+  const userId = randomUUID();
+  await prisma.authUser.create({
+    data: {
+      id: userId,
+      name,
+      email: normalizedEmail,
+      emailVerified: true,
+      accounts: {
+        create: {
+          accountId: userId,
+          providerId: "credential",
+          password: hashedPassword,
+        },
+      },
+    },
+  });
 
-  await prisma.$executeRaw`
-    INSERT INTO neon_auth."account" (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
-    VALUES (gen_random_uuid(), ${user.id}, 'credential', ${user.id}::uuid, ${hashedPassword}, now(), now())
-  `;
-
-  console.log(`Neon-Auth-Test-User "${email}" angelegt (id: ${user.id}).`);
-  return user.id;
+  console.log(`Auth-Test-User "${normalizedEmail}" angelegt (id: ${userId}).`);
+  return userId;
 }
 
 export async function ensureMeeple(
@@ -157,6 +182,21 @@ export async function ensureDemoMember(meepleId: string, info: DemoMemberInfo) {
       resignedAt: info.resignedAt,
       membershipEndsAt: info.membershipEndsAt,
       ...ibanFields,
+    },
+  });
+}
+
+/** Die feste Einheit „Unsortiert" (`UNSORTIERT_CODE`) — geteilt von Demo-
+ * und Release-Seed; ein Re-Seed setzt nur den Keeper neu. */
+export async function ensureUnsortiertUnit(keeperMeepleId: string) {
+  return prisma.storageUnit.upsert({
+    where: { code: UNSORTIERT_CODE },
+    update: { keeperMeepleId },
+    create: {
+      code: UNSORTIERT_CODE,
+      kind: StorageUnitKind.BOX,
+      label: "Unsortiert",
+      keeperMeepleId,
     },
   });
 }

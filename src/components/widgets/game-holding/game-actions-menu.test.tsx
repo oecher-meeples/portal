@@ -28,7 +28,12 @@ vi.mock(
   }),
 );
 vi.mock("@/components/widgets/board-game/add-game-copy-dialog", () => ({
-  AddGameCopyDialog: () => <button type="button">Weiteres Exemplar</button>,
+  AddGameCopyDialog: ({ open }: { open?: boolean }) =>
+    open === undefined ? (
+      <button type="button">Weiteres Exemplar</button>
+    ) : open ? (
+      <p>Weiteres-Exemplar-Dialog offen</p>
+    ) : null,
 }));
 vi.mock(
   "@/components/widgets/board-game/edit-board-game-exemplar-dialog",
@@ -118,8 +123,8 @@ function copy(overrides: Partial<GameActionsCopy> = {}): GameActionsCopy {
   };
 }
 
-describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
-  it("always shows the placeholder Aufenthalt entries except Weitergeben on a free copy", async () => {
+describe("GameActionsMenu — single copy", () => {
+  it("offers Ausleihen/Umlagern on a free copy, not Rückgabe/Weitergeben (#548)", async () => {
     render(
       <GameActionsMenu
         copies={[copy()]}
@@ -131,12 +136,13 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    for (const label of ["Geprüft", "Ausleihen", "Rückgabe", "Umlagern"]) {
+    for (const label of ["Geprüft", "Ausleihen", "Umlagern"]) {
       expect(await screen.findByText(label)).toBeInTheDocument();
     }
     // "frei" (in einer Einheit) heißt: niemand hält das Exemplar gerade, also
-    // gibt es niemanden, der es weitergeben könnte (#405).
+    // gibt es niemanden, der es weitergeben (#405) oder zurückgeben könnte.
     expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rückgabe")).not.toBeInTheDocument();
   });
 
   it("shows Weitergeben when the copy is currently with the acting session (#128)", async () => {
@@ -202,8 +208,11 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
 
-    expect(await screen.findByText("Ausleihen")).toBeInTheDocument();
+    expect(await screen.findByText("Rückgabe")).toBeInTheDocument();
     expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
+    // Verliehen — nicht aus einer Einheit ausleihbar oder umlagerbar (#548).
+    expect(screen.queryByText("Ausleihen")).not.toBeInTheDocument();
+    expect(screen.queryByText("Umlagern")).not.toBeInTheDocument();
   });
 
   it("shows Weitergeben for games:manage on any exemplar currently with a person, regardless of isMine (#405)", async () => {
@@ -235,6 +244,47 @@ describe("GameActionsMenu — single copy (unchanged behaviour)", () => {
 
     expect(await screen.findByText("Exemplar bearbeiten")).toBeInTheDocument();
   });
+
+  it("opens Exemplar bearbeiten outside the menu, so its text fields accept typing", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy()]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Exemplar bearbeiten" }),
+    );
+
+    expect(
+      await screen.findByText("Mängelvermerk-Dialog offen für copy-1"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Exemplar wählen")).not.toBeInTheDocument();
+  });
+
+  it("opens Weiteres Exemplar outside the menu", async () => {
+    render(
+      <GameActionsMenu
+        copies={[copy()]}
+        boardGameId="game-1"
+        boardGameTitle="Arche Nova"
+        canManageGames={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Weiteres Exemplar" }),
+    );
+
+    expect(
+      await screen.findByText("Weiteres-Exemplar-Dialog offen"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup first (Plan-Schritt 12)", () => {
@@ -247,10 +297,15 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
     }),
   ];
 
+  const TWO_FREE_COPIES = [
+    copy({ id: "copy-1", zustand: "frei", locationChain: "Regal A" }),
+    copy({ id: "copy-2", zustand: "frei", locationChain: "Regal B" }),
+  ];
+
   it("opens the picker instead of the mini-dialog directly for an exemplar-bound action", async () => {
     render(
       <GameActionsMenu
-        copies={TWO_COPIES}
+        copies={TWO_FREE_COPIES}
         boardGameId="game-1"
         boardGameTitle="Arche Nova"
         canManageGames={false}
@@ -262,7 +317,7 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
 
     expect(await screen.findByText("Exemplar wählen")).toBeInTheDocument();
     expect(screen.getByText("Regal A")).toBeInTheDocument();
-    expect(screen.getByText("bei Alex")).toBeInTheDocument();
+    expect(screen.getByText("Regal B")).toBeInTheDocument();
     expect(
       screen.queryByText(/Ausleihen-Dialog offen/),
     ).not.toBeInTheDocument();
@@ -271,7 +326,7 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
   it("opens the correct mini-dialog with the chosen gameCopyId after picking", async () => {
     render(
       <GameActionsMenu
-        copies={TWO_COPIES}
+        copies={TWO_FREE_COPIES}
         boardGameId="game-1"
         boardGameTitle="Arche Nova"
         canManageGames={false}
@@ -280,7 +335,7 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
 
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
     fireEvent.click(await screen.findByText("Ausleihen"));
-    fireEvent.click(await screen.findByText("bei Alex"));
+    fireEvent.click(await screen.findByText("Regal B"));
 
     expect(
       await screen.findByText("Ausleihen-Dialog offen für copy-2"),
@@ -326,7 +381,7 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
     expect(screen.queryByText("Weitergeben")).not.toBeInTheDocument();
   });
 
-  it("only lists copies currently with a person in the Weitergeben-Exemplar-Auswahl (#405)", async () => {
+  it("skips the picker when only one copy is eligible for the action (#405, #548)", async () => {
     render(
       <GameActionsMenu
         copies={TWO_COPIES}
@@ -339,11 +394,12 @@ describe("GameActionsMenu — several copies open the Exemplar-Auswahl-Popup fir
     fireEvent.click(screen.getByRole("button", { name: "Aktionen" }));
     fireEvent.click(await screen.findByText("Weitergeben"));
 
-    expect(await screen.findByText("Exemplar wählen")).toBeInTheDocument();
-    // copy-1 is "frei" (in a unit, not with a person) — excluded.
-    expect(screen.queryByText("Regal A")).not.toBeInTheDocument();
-    // copy-2 is "ausgeliehen-verfuegbar" — the only eligible one.
-    expect(screen.getByText("bei Alex")).toBeInTheDocument();
+    // copy-1 is "frei" (in a unit, not with a person) — excluded, so the
+    // only eligible copy-2 opens directly.
+    expect(
+      await screen.findByText("Weitergeben-Dialog offen für copy-2"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Exemplar wählen")).not.toBeInTheDocument();
   });
 
   it("skips the picker for 'Weiteres Exemplar hinzufügen'", async () => {

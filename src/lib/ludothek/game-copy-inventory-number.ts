@@ -1,48 +1,52 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { DbClient } from "@/lib/utils/prisma";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+type Tx = DbClient;
+
+/** Obergrenze der Postgres-`INTEGER`-Spalte `GameCopy.inventoryNumber`. */
+const MAX_INVENTORY_NUMBER = 2_147_483_647;
+
+export const INVALID_INVENTORY_NUMBER_ERROR =
+  "Inventarnummer muss eine positive ganze Zahl sein.";
 
 /**
- * Vorschlag für ein neues `GameCopy.inventoryNumber` (#270): höchste bereits
- * vergebene, rein numerische Nummer + 1. Bewusst **kein** Lücken-Auffüllen
- * wie `nextUnitCode()` (`inventory/codes.ts`) — die Inventarnummer ist
- * freier Text, der eine bestehende externe/physische Nummerierung fortsetzt,
- * kein systematisch lückenloses Schema. Nicht-numerische Bestandswerte
- * (z. B. eine ältere Freitext-Nummerierung) werden beim Vorschlag ignoriert.
+ * Formular-/Import-Text → Inventarnummer (#543). Leer → `null` (keine
+ * Nummer); alles, was keine reine Ziffernfolge ist, wird zu `NaN` und fällt
+ * damit bei `validateInventoryNumber()` durch — die eigentliche Prüfung lebt
+ * serverseitig an genau einer Stelle.
  */
-export function suggestNextInventoryNumber(
-  existing: (string | null | undefined)[],
-): string {
-  const numbers = existing
-    .map((value) =>
-      value && /^\d+$/.test(value.trim()) ? Number(value) : null,
-    )
-    .filter((n): n is number => n !== null);
+export function parseInventoryNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+}
 
-  if (numbers.length === 0) return "1";
-  return String(Math.max(...numbers) + 1);
+export function isValidInventoryNumber(value: number): boolean {
+  return Number.isInteger(value) && value > 0 && value <= MAX_INVENTORY_NUMBER;
 }
 
 /**
- * Eindeutigkeits-Prüfung beim Speichern (#270) — der DB-`@unique`-Constraint
- * greift ohnehin, aber diese Prüfung liefert vorab eine sprechende
- * Fehlermeldung statt eines rohen Prisma-Constraint-Fehlers.
+ * Gültigkeits- und Eindeutigkeits-Prüfung beim Speichern (#270, #543) — der
+ * DB-`@unique`-Constraint greift ohnehin, aber diese Prüfung liefert vorab
+ * eine sprechende Fehlermeldung statt eines rohen Prisma-Fehlers.
  */
-export async function validateInventoryNumberUniqueness(
+export async function validateInventoryNumber(
   tx: Tx,
-  inventoryNumber: string,
+  inventoryNumber: number,
   excludeGameCopyId?: string,
 ): Promise<string | null> {
-  const trimmed = inventoryNumber.trim();
-  if (!trimmed) return null;
+  if (!isValidInventoryNumber(inventoryNumber)) {
+    return INVALID_INVENTORY_NUMBER_ERROR;
+  }
 
   const existing = await tx.gameCopy.findFirst({
     where: {
-      inventoryNumber: trimmed,
+      inventoryNumber,
       ...(excludeGameCopyId ? { id: { not: excludeGameCopyId } } : {}),
     },
     select: { id: true },
   });
 
-  return existing ? `Inventarnummer "${trimmed}" ist bereits vergeben.` : null;
+  return existing
+    ? `Inventarnummer ${inventoryNumber} ist bereits vergeben.`
+    : null;
 }

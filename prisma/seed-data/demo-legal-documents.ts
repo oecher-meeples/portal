@@ -105,7 +105,7 @@ export const DEMO_LEGAL_DOCUMENTS: {
         id: "cookies",
         heading: "7. Cookies und Analyse-Tools",
         paragraphs: [
-          "Wir setzen ein technisch notwendiges Session-Cookie von Neon Auth ein, um eingeloggte Mitglieder wiederzuerkennen. Es ist zur Bereitstellung des Portals erforderlich und einwilligungsfrei nach § 25 Abs. 2 TDDDG.",
+          "Wir setzen ein technisch notwendiges Session-Cookie ein, um eingeloggte Mitglieder wiederzuerkennen. Es wird von unserem eigenen Server gesetzt; ein externer Anmeldedienst ist nicht beteiligt. Es ist zur Bereitstellung des Portals erforderlich und einwilligungsfrei nach § 25 Abs. 2 TDDDG.",
           "Zur anonymisierten Reichweitenmessung nutzen wir Vercel Web Analytics. Der Dienst setzt keine Cookies und speichert keine dauerhafte, gerätebezogene Kennung — Besucher werden anhand eines aus der einzelnen Anfrage abgeleiteten Hash-Werts identifiziert, der nach 24 Stunden verfällt. Erhoben werden ausschließlich aggregierte, anonyme Daten (aufgerufene Seite, Referrer, grobe Geolocation, Browser/Betriebssystem, Gerätetyp) — keine Wiedererkennung einzelner Besucher über mehrere Sitzungen hinweg. Näheres bei Vercel: https://vercel.com/docs/analytics/privacy-policy.",
           "Da Vercel Web Analytics ohne Cookies und ohne persistente Client-ID arbeitet, greift § 25 Abs. 2 TDDDG hier nicht — es ist kein Einwilligungsbanner erforderlich. Sollte künftig ein Analyse- oder Tracking-Tool mit nicht-notwendigen Cookies hinzukommen, wird dieser Abschnitt entsprechend erweitert.",
         ],

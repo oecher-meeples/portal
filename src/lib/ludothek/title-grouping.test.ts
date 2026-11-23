@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { groupGamesByTitle } from "@/lib/ludothek/title-grouping";
+import {
+  groupGamesByTitle,
+  paginateByTitle,
+} from "@/lib/ludothek/title-grouping";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 
-type Copy = { id: string; boardGameId: string; zustand?: GameZustand };
+type Copy = {
+  id: string;
+  boardGameId: string;
+  zustand?: GameZustand;
+  publisher?: string[];
+  editionLanguages?: string[];
+};
 
 function copy(overrides: Partial<Copy> = {}): Copy {
   return {
@@ -94,5 +103,74 @@ describe("groupGamesByTitle", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].copyCount).toBe(2);
     expect(rows[0].id).toBe("copy-1");
+  });
+
+  it("unites the publishers and edition languages of all folded copies", () => {
+    const [row] = groupGamesByTitle([
+      copy({
+        id: "a",
+        publisher: ["Kosmos"],
+        editionLanguages: ["German"],
+      }),
+      copy({
+        id: "b",
+        publisher: ["Kosmos", "Capstone Games"],
+        editionLanguages: ["English"],
+      }),
+    ]);
+
+    expect(row.publisher).toEqual(["Kosmos", "Capstone Games"]);
+    expect(row.editionLanguages).toEqual(["German", "English"]);
+  });
+
+  it("leaves rows without edition data untouched", () => {
+    const [row] = groupGamesByTitle([copy()]);
+
+    expect(row).not.toHaveProperty("publisher");
+    expect(row).not.toHaveProperty("editionLanguages");
+  });
+});
+
+describe("paginateByTitle (#461)", () => {
+  // Drei Titel, der erste mit zwei Exemplaren, eines davon weiter hinten.
+  const games = [
+    copy({ id: "a1", boardGameId: "a" }),
+    copy({ id: "b1", boardGameId: "b" }),
+    copy({ id: "a2", boardGameId: "a" }),
+    copy({ id: "c1", boardGameId: "c" }),
+  ];
+
+  it("counts titles, not copies, and keeps all copies of a title together", () => {
+    const page = paginateByTitle(games, 0, 1);
+    expect(page.items.map((g) => g.id)).toEqual(["a1", "a2"]);
+    expect(page.nextOffset).toBe(1);
+  });
+
+  it("returns the following titles from the offset on", () => {
+    const page = paginateByTitle(games, 1, 1);
+    expect(page.items.map((g) => g.id)).toEqual(["b1"]);
+    expect(page.nextOffset).toBe(2);
+  });
+
+  it("ends with nextOffset null once no title follows", () => {
+    expect(paginateByTitle(games, 2, 1)).toEqual({
+      items: [games[3]],
+      nextOffset: null,
+    });
+    expect(paginateByTitle(games, 0, 3).nextOffset).toBeNull();
+  });
+
+  it("returns an empty page past the end", () => {
+    expect(paginateByTitle(games, 10, 5)).toEqual({
+      items: [],
+      nextOffset: null,
+    });
+  });
+
+  it("groups the concatenated pages exactly like the whole list", () => {
+    const pages = [0, 1, 2].flatMap(
+      (offset) => paginateByTitle(games, offset, 1).items,
+    );
+    expect(groupGamesByTitle(pages)).toEqual(groupGamesByTitle(games));
   });
 });

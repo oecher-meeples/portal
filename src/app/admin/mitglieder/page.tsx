@@ -17,6 +17,7 @@ import { ANONYMER_MEEPLE_NAME } from "@/lib/ludothek/anonymer-meeple";
 import { listTshirtSizes } from "@/lib/members/tshirt-sizes";
 import { formatStammdatenDiffSummary } from "@/lib/members/stammdaten";
 import { PendingChangeKind } from "@prisma/client";
+import { memberFullName } from "@/lib/members/member-display-name";
 
 export default async function AdminMitgliederPage() {
   const session = await requireAdminPermission(MITGLIEDER_PERMISSIONS);
@@ -217,11 +218,9 @@ export default async function AdminMitgliederPage() {
         // getrennt vom Meeple-`displayName` (frei wählbarer Portal-Name,
         // kann vom bürgerlichen Namen abweichen). `null`, wenn (noch) keins
         // gepflegt ist (#328: nullable, nicht bei jedem Bestand befüllt).
-        memberFullName:
-          [meeple.member?.firstName, meeple.member?.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .trim() || null,
+        memberFullName: meeple.member
+          ? memberFullName(meeple.member) || null
+          : null,
         email: meeple.member?.email ?? null,
         hasAccount: meeple.neonAuthUserId !== null,
         roleAssignments: (meeple.neonAuthUserId

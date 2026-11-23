@@ -8,7 +8,7 @@ Drei getrennte Bereiche mit unterschiedlichen Eigentümern und Zugriffsrechten:
 
 1. **Vereinsmitgliedschaft** — administrative Verwaltung durch den Vorstand.
 2. **Meeple-Profil** — Selbstdarstellung und Interaktion, vom Mitglied selbst gepflegt.
-3. **Benutzerkonto (Neon Auth)** — reiner Login, unverändert gegenüber heute.
+3. **Benutzerkonto (better-auth, self-hosted)** — reiner Login, unverändert gegenüber heute.
 
 ### 1.1 Vereinsmitglied
 
@@ -55,13 +55,13 @@ Die IBAN wandert vollständig von Meeple zu Vereinsmitglied (siehe [3.2](#32-ban
 
 **Ausnahmen von der Vereinsmitglied-Referenz** — bewusst zugelassen:
 
-- **Systemkonto**: Meeple ohne Vereinsmitglied-Referenz, aber mit Login. Für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` über einen Button "Systemkonto anlegen" im Meeple-/Benutzer-Akkordeon-Panel — legt `Meeple` **und** den Neon-Auth-User in einem Schritt an, kein Einladungs-Umweg (Details in [2.2](#22-systemkonto-anlegen)).
+- **Systemkonto**: Meeple ohne Vereinsmitglied-Referenz, aber mit Login. Für Sammel-/Funktionskonten (z. B. Kassenzugang Flohmarkt). Angelegt von `admin:access` über einen Button "Systemkonto anlegen" im Meeple-/Benutzer-Akkordeon-Panel — legt `Meeple` **und** den Login in einem Schritt an, kein Einladungs-Umweg (Details in [2.2](#22-systemkonto-anlegen)).
 - **Anonymes Konto**: Meeple ohne Vereinsmitglied-Referenz *und* ohne Login. Entsteht ausschließlich durch harte Anonymisierung (Stufe 2/3, siehe [4](#4-anonymisierung-3-stufen)) und dient nur der lesbaren Historie (Aufenthalte, Gesuche). Einbahnstraße — ein anonymes Konto bekommt nie wieder ein Login. Erscheint deshalb in keiner Auswahlliste/keinem Formular mehr, in dem ein Meeple ausgewählt werden kann (Filter auf `anonymizedAt: null`).
   Ein einziges, dauerhaftes **Sammelkonto "Anonymer Meeple"** ist ein Sonderfall davon: kein Login, keine Vereinsmitglied-Referenz, aber bewusst als **Platzhalter für ungeklärte externe Interaktionspartner** angelegt (nicht aus einer echten Anonymisierung entstanden, kein `anonymizedAt`). Trägt denselben generischen Displaynamen wie echte anonymisierte Alt-Meeples — das ist gewollt (zusätzliche Anonymität für ausgeschiedene Mitglieder): für jeden außer `games:manage` sind beide identisch "Anonymer Meeple", nicht unterscheidbar (#364), und beide ohnehin aus jeder Auswahlliste ausgeblendet. Nur `games:manage` sieht bei einem **echten** anonymisierten Alt-Meeple zusätzlich einen 6-stelligen Hex-Suffix, aus dessen Meeple-ID abgeleitet (kein Jahresbezug, kein Zähler — bewusst keine Nummerierung, siehe Kollisionsanalyse im Issue), z. B. "Anonymer Meeple #a3f9c2" — für die Klärung ungeklärter Ludothek-Übergaben (siehe [5](#5-spiel-ausleihe)). Das Sammelkonto selbst bekommt nie einen Suffix, unabhängig vom Betrachter.
 
-### 1.3 Benutzerkonto (Neon Auth)
+### 1.3 Benutzerkonto (Login)
 
-Unverändert. Login bleibt an Meeple gekoppelt. Wichtig für den Rest dieses Dokuments: Neon Auth führt eine eigene `email`-Spalte, unabhängig von `Meeple.email` — ein Meeple ohne eigenes `email`-Feld kann trotzdem ein funktionierendes Login haben.
+Unverändert. Login bleibt an Meeple gekoppelt. Wichtig für den Rest dieses Dokuments: das Login (`AuthUser`, bis ADR 0015 Neon Auth) führt eine eigene `email`-Spalte, unabhängig von `Meeple.email` — ein Meeple ohne eigenes `email`-Feld kann trotzdem ein funktionierendes Login haben.
 
 ## 2. Einladungen & Kontoerstellung
 
@@ -77,9 +77,9 @@ Wird aus einem `Vereinsmitglied`-Datensatz heraus erstellt ("Einladung erstellen
 
 Button im Meeple-/Benutzer-Akkordeon-Panel (#348), erfordert `admin:access`. Popup fragt E-Mail-Adresse **und** Displayname ab. Der Server-Vorgang legt in einem Schritt an:
 
-1. den Neon-Auth-User über `auth.admin.createUser({ email, name })` (offizielle Admin-API von `@neondatabase/auth`/better-auth — kein Raw-SQL wie im Seed-Script),
+1. den Login (`AuthUser` + Passwort-Konto) über `createLoginAccount()` in `src/lib/auth/server.ts` — better-auths interner Adapter, ohne Session und ohne das Admin-Plugin (seit [ADR 0015](adr/0015-self-hosted-better-auth-statt-neon-auth.md); vorher `auth.admin.createUser()` von Neon Auth),
 2. das `Meeple` mit dem vorgegebenen Displaynamen, sofort verknüpft mit dem neuen `neonAuthUserId`, ohne Vereinsmitglied-Referenz,
-3. einen Passwort-Reset-Link an die angegebene E-Mail (`auth.requestPasswordReset()`, baut auf dem "Passwort vergessen"-Flow auf, siehe #324) — der Link dient ausschließlich dazu, ein erstes Passwort zu setzen, nicht der Kontoerstellung selbst.
+3. einen Passwort-Reset-Link an die angegebene E-Mail (`auth.api.requestPasswordReset()`, baut auf dem "Passwort vergessen"-Flow auf, siehe #324) — der Link dient ausschließlich dazu, ein erstes Passwort zu setzen, nicht der Kontoerstellung selbst.
 
 ### 2.3 E-Mail-Änderung bei offener Einladung
 
@@ -105,7 +105,7 @@ Der Kassenwart kann einen Antrag auch **ablehnen** (Pflichtgrund als Freitext) �
 
 Ein Meeple hat bis zu drei verschiedene E-Mail-Adressen, jede änderbar, aber mit unterschiedlichem Ablauf:
 
-- **Login-E-Mail** (Neon Auth, siehe [1.3](#13-benutzerkonto-neon-auth)) und **Profil-Kontakt-E-Mail** (`Meeple.email`, siehe [1.2](#12-meeple)): direkt vom Meeple änderbar, keine Freigabe nötig. Die Änderung greift erst nach Klick auf einen Bestätigungslink, der an die **neue** Adresse geschickt wird (Verifizierung, dass diese Adresse wirklich der Person gehört und erreichbar ist).
+- **Login-E-Mail** (`AuthUser`, siehe [1.3](#13-benutzerkonto-login)) und **Profil-Kontakt-E-Mail** (`Meeple.email`, siehe [1.2](#12-meeple)): direkt vom Meeple änderbar, keine Freigabe nötig. Die Änderung greift erst nach Klick auf einen Bestätigungslink, der an die **neue** Adresse geschickt wird (Verifizierung, dass diese Adresse wirklich der Person gehört und erreichbar ist).
 - **Vereinsmitglied-E-Mail** (`Vereinsmitglied.email`, siehe [1.1](#11-vereinsmitglied)): läuft wie die IBAN als **Änderungsantrag** (siehe [3.2](#32-bankverbindung)) — der Bestätigungslink verifiziert nur, dass die neue Adresse erreichbar ist, ersetzt aber nicht die Freigabe durch den Vorstand. Erst wenn beides vorliegt (Link geklickt **und** Vorstand freigegeben), wird die aktive `Vereinsmitglied.email` ersetzt. Ein neuer Antrag ersetzt automatisch einen noch offenen, analog zur IBAN — inklusive **Ablehnen** mit Pflichtgrund und automatischer Mail an das Meeple.
 
 ### 3.4 Kündigen

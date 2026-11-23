@@ -40,6 +40,11 @@ export function getMembershipState(
   return "gekuendigt";
 }
 
+/** Abwicklungshinweis für Ausgetretene (#537, Vier-Augen-Prinzip): sie buchen
+ * nichts mehr selbst — Dashboard und Kündigungs-Panel nennen denselben Weg. */
+export const SETTLEMENT_HANDOVER_HINT =
+  "Lass deine Spiele von der Person scannen, die sie übernimmt, oder gib sie beim Spielewart ab.";
+
 /** The turn of the year a resignation recorded now takes effect on. */
 export function nextTurnOfTheYear(now: Date = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0));

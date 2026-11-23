@@ -24,7 +24,7 @@ export function InstagramConnectionView({
     const result = await disconnectInstagram();
     setIsDisconnecting(false);
 
-    if (result.error) {
+    if ("error" in result) {
       setError(result.error);
       return;
     }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -9,6 +9,9 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: getCurrentUserMock }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const searchEanByNameMock = vi.fn();
 vi.mock("@/lib/upc-lookup/client", async () => {
@@ -26,7 +29,7 @@ const { searchEanForBoardGame } = await import("./ean-search");
 describe("searchEanForBoardGame", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await searchEanForBoardGame("Ark Nova");
 
@@ -36,7 +39,7 @@ describe("searchEanForBoardGame", () => {
 
   it("returns the mapped search results", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     searchEanByNameMock.mockResolvedValue([
       { ean: "0850000576407", title: "Ark Nova", brand: "Capstone Games" },
     ]);
@@ -54,7 +57,7 @@ describe("searchEanForBoardGame", () => {
 
   it("translates an UpcLookupError into a speaking error", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     const { UpcLookupError } = await import("@/lib/upc-lookup/client");
     searchEanByNameMock.mockRejectedValue(new UpcLookupError("boom", 403));
 
@@ -69,7 +72,7 @@ describe("searchEanForBoardGame", () => {
 
   it("rethrows unexpected errors", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     searchEanByNameMock.mockRejectedValue(new Error("unexpected"));
 
     await expect(searchEanForBoardGame("Ark Nova")).rejects.toThrow(
@@ -80,7 +83,7 @@ describe("searchEanForBoardGame", () => {
   describe("BGG-Product-Code-Priorität (#205)", () => {
     it("returns a valid BGG product code directly, without calling UPCitemdb", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      prismaMock.rolePermission.count.mockResolvedValue(1);
+      mockPermissionKeys("all");
 
       const result = await searchEanForBoardGame("Ark Nova", {
         bggProductCode: "0850000576407",
@@ -102,7 +105,7 @@ describe("searchEanForBoardGame", () => {
 
     it("falls back to UPCitemdb when no BGG product code is given", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      prismaMock.rolePermission.count.mockResolvedValue(1);
+      mockPermissionKeys("all");
       searchEanByNameMock.mockResolvedValue([
         { ean: "0850000576407", title: "Ark Nova" },
       ]);
@@ -119,7 +122,7 @@ describe("searchEanForBoardGame", () => {
 
     it("falls back to UPCitemdb when the BGG product code is not a valid EAN (#322)", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      prismaMock.rolePermission.count.mockResolvedValue(1);
+      mockPermissionKeys("all");
       searchEanByNameMock.mockResolvedValue([
         { ean: "0850000576407", title: "Ark Nova", brand: "Feuerland Spiele" },
       ]);
@@ -141,7 +144,7 @@ describe("searchEanForBoardGame", () => {
   describe("Verlags-Sortierung der UPCitemdb-Kandidaten (#205)", () => {
     it("moves a hit with a matching brand to the front", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      prismaMock.rolePermission.count.mockResolvedValue(1);
+      mockPermissionKeys("all");
       searchEanByNameMock.mockResolvedValue([
         { ean: "US0001", title: "Ark Nova (US)", brand: "Capstone Games" },
         { ean: "DE0001", title: "Ark Nova (DE)", brand: "Feuerland Spiele" },
@@ -159,7 +162,7 @@ describe("searchEanForBoardGame", () => {
 
     it("matches case-insensitively and via substring", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      prismaMock.rolePermission.count.mockResolvedValue(1);
+      mockPermissionKeys("all");
       searchEanByNameMock.mockResolvedValue([
         { ean: "US0001", title: "Ark Nova (US)", brand: "Capstone Games" },
         { ean: "DE0001", title: "Ark Nova (DE)", brand: "feuerland" },
@@ -177,7 +180,7 @@ describe("searchEanForBoardGame", () => {
 
     it("leaves the order unchanged without a publisher to sort by", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      prismaMock.rolePermission.count.mockResolvedValue(1);
+      mockPermissionKeys("all");
       searchEanByNameMock.mockResolvedValue([
         { ean: "US0001", title: "Ark Nova (US)", brand: "Capstone Games" },
         { ean: "DE0001", title: "Ark Nova (DE)", brand: "Feuerland Spiele" },

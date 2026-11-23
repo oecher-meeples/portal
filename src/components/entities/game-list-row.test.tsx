@@ -30,7 +30,9 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     ruleBookLanguages: [],
     publisher: [],
     author: [],
+    illustrator: [],
     yearPublished: null,
+    editionLanguages: [],
     description: "Baue den modernsten Zoo der Welt.",
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -38,6 +40,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     expansions: [],
     explainerCount: 0,
     hasOpenLfg: false,
+    traits: [],
+    notes: null,
     isPrivate: false,
     ...overrides,
   };

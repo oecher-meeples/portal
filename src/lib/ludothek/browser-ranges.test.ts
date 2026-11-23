@@ -34,7 +34,9 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     ruleBookLanguages: [],
     publisher: [],
     author: [],
+    illustrator: [],
     yearPublished: null,
+    editionLanguages: [],
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -51,6 +53,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     locationChain: "Karton 1",
     explainerCount: 0,
     hasOpenLfg: false,
+    traits: [],
+    notes: null,
     isPrivate: false,
     ...overrides,
   };

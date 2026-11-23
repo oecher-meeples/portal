@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,10 +11,10 @@ import { validatePassword } from "@/lib/auth/password";
 
 /**
  * Klassischer Link-Flow (Token in der URL) — separat vom OTP-Flow in
- * `passwort-vergessen-form.tsx` (#324), weil Neon Auth für serverseitig
- * ausgelöste Resets (kein eingeloggter Nutzer, der `forgetPassword.emailOtp`
- * selbst aufrufen könnte) nur `auth.requestPasswordReset({email, redirectTo})`
- * anbietet — das verschickt einen Link mit Token, keinen Code. Genutzt vom
+ * `passwort-vergessen-form.tsx` (#324), weil der serverseitig ausgelöste
+ * Reset (kein eingeloggter Nutzer, der `emailOtp.requestPasswordReset` selbst
+ * aufrufen könnte) über `auth.api.requestPasswordReset({ body: { email,
+ * redirectTo } })` läuft — das verschickt einen Link mit Token, keinen Code. Genutzt vom
  * Systemkonto-Flow (#363): `createSystemkonto()` setzt `redirectTo` auf diese
  * Seite.
  */
@@ -68,10 +70,7 @@ export function PasswortEinloesenForm({ token }: { token: string | null }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-    >
+    <form onSubmit={handleSubmit} className={cn(cardVariants(), "gap-4")}>
       <TextField
         id="einloesen-password"
         label="Neues Passwort"

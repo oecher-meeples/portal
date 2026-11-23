@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils/cn";
 import { GameCopyExpandedDetails } from "@/components/feature/ludothek/game-copy-expanded-details";
-import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
+import type { CopyHistory } from "@/lib/ludothek/copy-history";
 
 function ToggleButton({
   open,
@@ -29,24 +29,33 @@ function ToggleButton({
   );
 }
 
+/** Hintergrund des per QR-Code vorausgewählten Exemplars (#548). */
+const SELECTED_CLASS = "bg-primary/5";
+
 /** Table row per exemplar, plus its own aufenthalt/history accordion below
- * — `children` are the static cells (Zustand, Standort, Bearbeiten). */
+ * — `children` are the static cells (Zustand, Standort, Bearbeiten). A
+ * `selected` row (#548) is highlighted and starts expanded. */
 export function GameCopyTableRow({
   gameCopyId,
   history,
   colSpan,
+  selected = false,
   children,
 }: {
   gameCopyId: string;
-  history: HoldingHistoryEntry[];
+  history: CopyHistory;
   colSpan: number;
+  selected?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(selected);
 
   return (
     <>
-      <TableRow>
+      <TableRow
+        className={cn(selected && SELECTED_CLASS)}
+        aria-current={selected || undefined}
+      >
         {children}
         <TableCell className="text-right">
           <ToggleButton open={open} onClick={() => setOpen((o) => !o)} />
@@ -74,17 +83,25 @@ export function GameCopyCard({
   gameCopyId,
   history,
   actions,
+  selected = false,
   children,
 }: {
   gameCopyId: string;
-  history: HoldingHistoryEntry[];
+  history: CopyHistory;
   actions: ReactNode;
+  selected?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(selected);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className={cn(
+        "flex flex-col gap-3",
+        selected && cn(SELECTED_CLASS, "-m-2 rounded-md p-2"),
+      )}
+      aria-current={selected || undefined}
+    >
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">{children}</div>
         <div className="flex shrink-0 items-center gap-1">

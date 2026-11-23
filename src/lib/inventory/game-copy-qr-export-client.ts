@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import JSZip from "jszip";
 import {
   buildExemplarUrl,
+  exemplarLabelText,
   qrExportFilename,
   selectQrExportableCopies,
   type QrExportableCopy,
@@ -19,9 +20,9 @@ const LABEL_WIDTH = 400;
 const TEXT_AREA_HEIGHT = 90;
 
 async function renderLabelPng(
-  copy: QrExportableCopy & { inventoryNumber: string },
+  copy: QrExportableCopy & { inventoryNumber: number },
 ): Promise<Blob> {
-  const url = buildExemplarUrl(window.location.origin, copy.inventoryNumber);
+  const url = buildExemplarUrl(copy.inventoryNumber);
 
   const qrCanvas = document.createElement("canvas");
   await QRCode.toCanvas(qrCanvas, url, { margin: 1, width: QR_SIZE });
@@ -41,7 +42,11 @@ async function renderLabelPng(
   ctx.font = "bold 20px sans-serif";
   ctx.fillText(copy.title, canvas.width / 2, QR_SIZE + 32, canvas.width - 20);
   ctx.font = "16px monospace";
-  ctx.fillText(copy.inventoryNumber, canvas.width / 2, QR_SIZE + 60);
+  ctx.fillText(
+    exemplarLabelText(copy.inventoryNumber),
+    canvas.width / 2,
+    QR_SIZE + 60,
+  );
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {

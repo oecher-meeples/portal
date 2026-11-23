@@ -1,3 +1,10 @@
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
+vi.mock("@/lib/ludothek/taxonomy/version-actions", () => ({
+  getBoardGameEditions: async () => [],
+  getUnsavedBggVersions: async () => [],
+}));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -87,7 +94,7 @@ const { CreateBoardGameDialog } = await import("./create-board-game-dialog");
 
 function reviewNextButton(dialog: HTMLElement) {
   return within(dialog).getByRole("button", {
-    name: "Weiter",
+    name: "Exemplar anlegen…",
   });
 }
 
@@ -98,79 +105,101 @@ function useExistingCopyButton(dialog: HTMLElement) {
 }
 
 describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
-  it("routes a BGG-import duplicate straight to the exemplar step instead of creating a second title", async () => {
-    const user = userEvent.setup();
-    previewBggImportMock.mockResolvedValue({
-      success: true,
-      data: {
+  // #549: mit `defaultInventoryNumber` (gescanntes, unbekanntes Etikett)
+  // öffnet der Dialog sofort und das weitere Exemplar bekommt die Nummer.
+  it.each([
+    [undefined, null],
+    [42, 42],
+  ] as const)(
+    "routes a BGG-import duplicate straight to the exemplar step instead of creating a second title (Inventarnummer %s)",
+    async (defaultInventoryNumber, expectedInventoryNumber) => {
+      const user = userEvent.setup();
+      previewBggImportMock.mockResolvedValue({
+        success: true,
+        data: {
+          title: "Ark Nova",
+          minPlayers: 1,
+          maxPlayers: 4,
+          playTimeMinutes: 150,
+          weight: 3.7,
+          imageUrl: null,
+          description: null,
+          mechanics: [],
+          categories: [],
+          traits: [],
+          explainerVideoUrl: null,
+          germanExplainerVideos: [],
+          englishExplainerVideos: [],
+          designers: [],
+          illustrators: [],
+          author: [],
+          yearPublished: null,
+          versions: [],
+        },
+      });
+      findDuplicateBoardGameMock.mockResolvedValue({
+        id: "game-existing",
         title: "Ark Nova",
-        minPlayers: 1,
-        maxPlayers: 4,
-        playTimeMinutes: 150,
-        weight: 3.7,
-        imageUrl: null,
-        description: null,
-        mechanics: [],
-        categories: [],
-        explainerVideoUrl: null,
-        germanExplainerVideos: [],
-        englishExplainerVideos: [],
-        author: [],
-        yearPublished: null,
-        versions: [],
-      },
-    });
-    findDuplicateBoardGameMock.mockResolvedValue({
-      id: "game-existing",
-      title: "Ark Nova",
-    });
-    createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });
+      });
+      createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });
 
-    render(<CreateBoardGameDialog />);
-    const dialog = await openDialog(user);
+      render(
+        <CreateBoardGameDialog
+          defaultInventoryNumber={defaultInventoryNumber}
+        />,
+      );
+      const dialog =
+        defaultInventoryNumber === undefined
+          ? await openDialog(user)
+          : await screen.findByRole("dialog");
 
-    await submitBggInput(dialog, user, "342942");
+      await submitBggInput(dialog, user, "342942");
 
-    await waitFor(
-      () =>
-        expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
-          "Ark Nova",
-          342942,
-        ),
-      { timeout: 2000 },
-    );
-    expect(
-      await within(dialog).findByText("existiert bereits im Bestand", {
-        exact: false,
-      }),
-    ).toBeInTheDocument();
-    // "Weiter" no longer creates a second title once a duplicate is known.
-    expect(
-      within(dialog).queryByRole("button", { name: "Weiter" }),
-    ).not.toBeInTheDocument();
+      await waitFor(
+        () =>
+          expect(findDuplicateBoardGameMock).toHaveBeenCalledWith(
+            "Ark Nova",
+            342942,
+          ),
+        { timeout: 2000 },
+      );
+      expect(
+        await within(dialog).findByText("existiert bereits im Bestand", {
+          exact: false,
+        }),
+      ).toBeInTheDocument();
+      // "Exemplar anlegen…" no longer creates a second title once a duplicate is known.
+      expect(
+        within(dialog).queryByRole("button", { name: "Exemplar anlegen…" }),
+      ).not.toBeInTheDocument();
 
-    await user.click(useExistingCopyButton(dialog));
+      await user.click(useExistingCopyButton(dialog));
 
-    expect(
-      within(dialog).getByText("Schritt 3 von 3 — Exemplar-Daten"),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText("Ark Nova", { exact: false }),
-    ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Schritt 3 von 3 — Exemplar anlegen"),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Ark Nova", { exact: false }),
+      ).toBeInTheDocument();
 
-    await user.click(
-      within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),
-    );
+      await user.click(within(dialog).getByLabelText("Englisch"));
+      await user.click(
+        within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),
+      );
 
-    await waitFor(() =>
-      expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
-        condition: undefined,
-      }),
-    );
-    expect(createBoardGameMock).not.toHaveBeenCalled();
-    await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
+      await waitFor(() =>
+        expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
+          condition: undefined,
+          ruleBookLanguages: ["EN"],
+          edition: null,
+          inventoryNumber: expectedInventoryNumber,
+        }),
+      );
+      expect(createBoardGameMock).not.toHaveBeenCalled();
+      await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    },
+  );
 
   it("routes a manually typed duplicate title straight to the exemplar step (debounced check)", async () => {
     const user = userEvent.setup();
@@ -205,13 +234,13 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       "border-amber-600",
     );
     expect(
-      within(dialog).queryByRole("button", { name: "Weiter" }),
+      within(dialog).queryByRole("button", { name: "Exemplar anlegen…" }),
     ).not.toBeInTheDocument();
 
     await user.click(useExistingCopyButton(dialog));
 
     expect(
-      within(dialog).getByText("Schritt 3 von 3 — Exemplar-Daten"),
+      within(dialog).getByText("Schritt 3 von 3 — Exemplar anlegen"),
     ).toBeInTheDocument();
   });
 
@@ -239,7 +268,11 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       explainerVideoUrl: null,
       publisher: [],
       author: [],
+      illustrator: [],
       yearPublished: null,
+      editionLanguages: [],
+      traits: [],
+      notes: null,
     });
     updateBoardGameMock.mockResolvedValue({ success: true, hint: undefined });
     createGameCopyMock.mockResolvedValue({ success: true, id: "copy-1" });
@@ -267,14 +300,17 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
         "game-existing",
       ),
     );
-    // The warning clears once the loaded title matches itself — "Weiter"
-    // reappears and lets the admin continue after correcting fields.
+    // The warning clears once the loaded title matches itself — "Exemplar
+    // anlegen…" reappears and lets the admin continue after correcting fields.
     expect(
-      await within(dialog).findByRole("button", { name: "Weiter" }),
+      await within(dialog).findByRole("button", { name: "Exemplar anlegen…" }),
     ).toBeEnabled();
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
 
-    await user.click(within(dialog).getByRole("button", { name: "Weiter" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Exemplar anlegen…" }),
+    );
+    // Korrektur am Titel — die EAN des Bestands steht im Exemplar-Schritt.
+    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
     await user.click(
       within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),
     );
@@ -287,6 +323,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
     );
     expect(createGameCopyMock).toHaveBeenCalledWith("game-existing", {
       condition: undefined,
+      ruleBookLanguages: [],
+      edition: null,
+      inventoryNumber: null,
     });
     expect(createBoardGameMock).not.toHaveBeenCalled();
     await waitFor(() => expect(routerRefreshMock).toHaveBeenCalledTimes(1));

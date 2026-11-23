@@ -1,3 +1,5 @@
+import { buildShortIdUrl, shortIdFromUnitCode } from "@/lib/short-id/short-id";
+
 export type LabelUnit = {
   id: string;
   code: string;
@@ -6,6 +8,14 @@ export type LabelUnit = {
 };
 
 export type LabelSelection = "all" | "boxes" | "shelves" | "selected";
+
+/** QR-Inhalt eines Einheiten-Etiketts (#546): Short-ID-URL
+ * (`OM-BOX-0001` → `…/id/box-0001`); `null` für Codes ohne Short-ID — die
+ * bekommen kein QR, statt eines Codes, den kein Scanner mehr versteht. */
+export function unitLabelQrContent(unit: Pick<LabelUnit, "code">) {
+  const shortId = shortIdFromUnitCode(unit.code);
+  return shortId ? buildShortIdUrl(shortId) : null;
+}
 
 const LABELS_PER_PAGE = 12;
 

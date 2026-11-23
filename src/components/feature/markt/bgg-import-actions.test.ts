@@ -18,8 +18,8 @@ vi.mock("@/lib/bgg/collection", async () => {
 });
 
 const putMock = vi.fn();
-vi.mock("@vercel/blob", () => ({
-  put: (...args: unknown[]) => putMock(...args),
+vi.mock("@/lib/utils/s3", () => ({
+  putBlob: (...args: unknown[]) => putMock(...args),
 }));
 
 const createMarketListingMock = vi.fn();
@@ -103,7 +103,7 @@ describe("fetchOwnBggForTradeEntries", () => {
 
 describe("createMarketListingFromBgg", () => {
   it("downloads the BGG image and creates the listing with it", async () => {
-    putMock.mockResolvedValue({ url: "https://blob/bgg-1.jpg" });
+    putMock.mockResolvedValue("https://blob/bgg-1.jpg");
 
     const result = await createMarketListingFromBgg({
       bggId: 1,
@@ -126,7 +126,7 @@ describe("createMarketListingFromBgg", () => {
   });
 
   it("links the listing to the matching inventory title (#278)", async () => {
-    putMock.mockResolvedValue({ url: "https://blob/bgg-1.jpg" });
+    putMock.mockResolvedValue("https://blob/bgg-1.jpg");
     boardGameFindUniqueMock.mockResolvedValue({ id: "board-game-1" });
 
     await createMarketListingFromBgg({

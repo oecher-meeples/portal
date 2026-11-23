@@ -1,14 +1,15 @@
 "use server";
 
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
 import {
   InstagramStatus,
   type NewsletterCategory,
   type Prisma,
 } from "@prisma/client";
+import {
+  actionPermissionDenied,
+  findActionActor,
+} from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { TYPE_TO_DB, type ContentType } from "@/lib/content/content-types";
 import {
   canManagePostType,
@@ -17,7 +18,12 @@ import {
 import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { stripMarkdown } from "@/lib/utils/strip-markdown";
+
+/** Mindestens eines der beiden Beitragsrechte — welcher Typ konkret
+ * erlaubt ist, prüft danach `canManagePostType`. */
+const POST_PERMISSIONS = ["posts:public", "posts:internal"] as const;
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
@@ -139,7 +145,7 @@ function buildSurveyDetailsUpdate(
 }
 
 export async function createPost(input: PostInput) {
-  const user = await getCurrentUser();
+  const user = (await findActionActor(POST_PERMISSIONS))?.user;
   if (!user) return { error: "Keine Berechtigung." };
   const perms = await getPostPermissions(user.id);
   if (!canManagePostType(perms, input.internal)) {
@@ -174,7 +180,7 @@ export async function createPost(input: PostInput) {
 }
 
 export async function updatePost(id: string, input: PostInput) {
-  const user = await getCurrentUser();
+  const user = (await findActionActor(POST_PERMISSIONS))?.user;
   if (!user) return { error: "Keine Berechtigung." };
 
   const validationError = validatePostInput(input);
@@ -236,15 +242,16 @@ export async function updatePost(id: string, input: PostInput) {
   return { success: true as const };
 }
 
-export async function getUploadToken(pathname: string) {
-  const user = await getCurrentUser();
+export async function getUploadToken(pathname: string, contentType: string) {
+  const user = (await findActionActor(POST_PERMISSIONS))?.user;
   const perms = user ? await getPostPermissions(user.id) : null;
   if (!perms || (!perms.canEditPublic && !perms.canEditInternal)) {
     throw new Error("Keine Berechtigung.");
   }
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "instagram-covers"),
+    contentType,
     allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,
@@ -255,10 +262,8 @@ export async function getUploadToken(pathname: string) {
  * ist in post-form.tsx bei internen Beiträgen deaktiviert) — daher genügt
  * hier posts:public, kein posts:internal-Fall zu prüfen. */
 export async function retryInstagramPost(postId: string) {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:public"))) {
-    return { error: "Keine Berechtigung." };
-  }
+  const denied = await actionPermissionDenied("posts:public");
+  if (denied) return denied;
 
   const post = await prisma.post.update({
     where: { id: postId },
@@ -282,10 +287,8 @@ export async function retryInstagramPost(postId: string) {
 }
 
 export async function deletePost(id: string) {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "posts:delete"))) {
-    return { error: "Keine Berechtigung." };
-  }
+  const denied = await actionPermissionDenied("posts:delete");
+  if (denied) return denied;
 
   await prisma.post.delete({ where: { id } });
 

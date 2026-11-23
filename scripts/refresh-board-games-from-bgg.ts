@@ -4,7 +4,7 @@
  * ohne echten BGG-Abgleich angelegt und entsprechen nicht mehr dem
  * Qualitätsanspruch. Nutzt bewusst dieselben Bausteine wie der reguläre
  * BGG-Import (`fetchBggGame`, `searchBggGamesExact`, `translateToGerman`,
- * `translateMechanics`, `resolvePublisherFromVersions`) statt die
+ * `bggTagInputs`, `resolvePublisherFromVersions`) statt die
  * BGG-Mapping-Logik zu duplizieren.
  *
  * Läuft direkt gegen Prisma statt über `updateBoardGame()`/`createBoardGame()`
@@ -31,16 +31,13 @@ import {
   type BggGameData,
 } from "../src/lib/bgg/client";
 import { translateToGerman } from "../src/lib/bgg/translate";
-import { translateMechanics } from "../src/lib/ludothek/mechanics-translations";
-import { resolvePublisherFromVersions } from "../src/lib/ludothek/board-game-versions";
-
-// BGGs tatsächliches Rate-Limit ist strenger als die im Massenimport (#186)
-// dokumentierten "2 Anfragen/Sekunde" — ein erster Lauf mit 600ms brach nach
-// ca. 30 Titeln in eine Serie von 429ern ein. Deutlich konservativer, dafür
-// mit Backoff-Retry statt einem harten Fail bei einem gelegentlichen 429.
-const THROTTLE_MS = 4000;
-const RATE_LIMIT_RETRIES = 3;
-const RATE_LIMIT_BACKOFF_MS = 30_000;
+import { bggDataToTitleInput } from "../src/lib/ludothek/board-game-versions";
+import { replaceBggContributors } from "../src/lib/ludothek/taxonomy/contributors";
+import { replaceBggTags } from "../src/lib/ludothek/taxonomy/tags";
+import {
+  BGG_SCRIPT_THROTTLE_MS as THROTTLE_MS,
+  withRateLimitRetry,
+} from "./lib/bgg-rate-limit";
 
 type Row = { id: string; title: string; bggId: number | null };
 
@@ -50,19 +47,18 @@ type Outcome =
   | { status: "failed"; title: string; error: string };
 
 async function translateGameData(data: BggGameData): Promise<BggGameData> {
-  const mechanics = translateMechanics(data.mechanics);
   if (!data.description) {
-    return { ...data, mechanics };
+    return data;
   }
   try {
     const description = await translateToGerman(data.description);
-    return { ...data, description, mechanics };
+    return { ...data, description };
   } catch (error) {
     // Schlägt die Übersetzung fehl (z. B. MyMemorys Tageslimit), bleibt die
     // englische Beschreibung stehen statt sie zu leeren — analog zu
     // `translateBggGameData()` in `board-games-bgg-import.ts` (#184).
     console.warn(`  Übersetzung fehlgeschlagen für "${data.title}":`, error);
-    return { ...data, mechanics };
+    return data;
   }
 }
 
@@ -86,23 +82,6 @@ async function resolveBggId(
     };
   }
   return { bggId: candidates[0].bggId };
-}
-
-/** BGGs 429 ist meist eine kurzfristige Drossel, keine dauerhafte Sperre —
- * ein paar Anläufe mit langer Pause dazwischen kommen fast immer durch. */
-async function withRateLimitRetry<T>(fn: () => Promise<T>): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      const isRateLimit = error instanceof BggApiError && error.status === 429;
-      if (!isRateLimit || attempt >= RATE_LIMIT_RETRIES) throw error;
-      console.warn(
-        `  429 von BGG — warte ${RATE_LIMIT_BACKOFF_MS / 1000}s (Versuch ${attempt + 1}/${RATE_LIMIT_RETRIES})…`,
-      );
-      await sleep(RATE_LIMIT_BACKOFF_MS);
-    }
-  }
 }
 
 async function refreshOne(row: Row): Promise<Outcome> {
@@ -147,7 +126,7 @@ async function refreshOne(row: Row): Promise<Outcome> {
   }
 
   const data = await translateGameData(raw);
-  const publisher = resolvePublisherFromVersions(data.versions);
+  const mapped = bggDataToTitleInput(resolved.bggId, data);
 
   await prisma.$transaction(async (tx) => {
     await tx.boardGame.update({
@@ -163,14 +142,15 @@ async function refreshOne(row: Row): Promise<Outcome> {
         averageRating: data.averageRating,
         imageUrl: data.imageUrl,
         description: data.description,
-        mechanics: data.mechanics,
         explainerVideoUrl: data.explainerVideoUrl,
         languageDependence: data.languageDependence,
-        publisher: publisher.value ?? [],
-        author: data.author,
         yearPublished: data.yearPublished,
+        traits: data.traits,
       },
     });
+
+    await replaceBggContributors(tx, row.id, mapped.contributors);
+    await replaceBggTags(tx, row.id, mapped.tags);
 
     // Alternativnamen komplett aus BGG neu aufbauen — die Demodaten hatten
     // hier keine belastbare Auswahl.

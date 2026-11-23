@@ -1,70 +1,78 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { getBlobStorageUsage } from "@/lib/admin/blob-storage";
+import { stubS3Env } from "@/lib/__mocks__/s3-env";
 
-const listMock = vi.fn();
-vi.mock("@vercel/blob", () => ({
-  list: (...args: unknown[]) => listMock(...args),
-}));
-
-const { getBlobStorageUsage } = await import("@/lib/admin/blob-storage");
+const ONE_GB = 1 * 1024 * 1024 * 1024;
+const sendMock = vi.fn();
 
 beforeEach(() => {
-  listMock.mockReset();
-  process.env.BLOB_READ_WRITE_TOKEN = "test-token";
+  stubS3Env();
+  sendMock.mockReset();
+  vi.spyOn(S3Client.prototype, "send").mockImplementation(sendMock);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe("getBlobStorageUsage", () => {
-  it("sums blob sizes from a single page", async () => {
-    listMock.mockResolvedValue({
-      blobs: [{ size: 1000 }, { size: 2000 }],
-      hasMore: false,
+  it("sums object sizes from a single page", async () => {
+    sendMock.mockResolvedValue({
+      Contents: [{ Size: 1000 }, { Size: 2000 }, {}],
+      IsTruncated: false,
     });
 
     const result = await getBlobStorageUsage();
 
     expect(result.used).toBe(3000);
-    expect(result.limit).toBe(1 * 1024 * 1024 * 1024);
-    expect(result.percent).toBeCloseTo((3000 / (1 * 1024 * 1024 * 1024)) * 100);
-    expect(listMock).toHaveBeenCalledTimes(1);
+    expect(result.limit).toBe(ONE_GB);
+    expect(result.percent).toBeCloseTo((3000 / ONE_GB) * 100);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const command = sendMock.mock.calls[0][0] as ListObjectsV2Command;
+    expect(command).toBeInstanceOf(ListObjectsV2Command);
+    expect(command.input).toMatchObject({ Bucket: "meeples", MaxKeys: 1000 });
   });
 
-  it("paginates through multiple pages until hasMore is false", async () => {
-    listMock
+  it("paginates through multiple pages until the listing is complete", async () => {
+    sendMock
       .mockResolvedValueOnce({
-        blobs: [{ size: 1000 }],
-        hasMore: true,
-        cursor: "cursor-1",
+        Contents: [{ Size: 1000 }],
+        IsTruncated: true,
+        NextContinuationToken: "cursor-1",
       })
-      .mockResolvedValueOnce({
-        blobs: [{ size: 500 }],
-        hasMore: false,
-      });
+      .mockResolvedValueOnce({ Contents: [{ Size: 500 }], IsTruncated: false });
 
     const result = await getBlobStorageUsage();
 
     expect(result.used).toBe(1500);
-    expect(listMock).toHaveBeenCalledTimes(2);
-    expect(listMock).toHaveBeenNthCalledWith(2, {
-      token: "test-token",
-      cursor: "cursor-1",
-      limit: 1000,
-    });
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(
+      (sendMock.mock.calls[1][0] as ListObjectsV2Command).input
+        .ContinuationToken,
+    ).toBe("cursor-1");
   });
 
-  it("uses the BLOB_READ_WRITE_TOKEN env var", async () => {
-    listMock.mockResolvedValue({ blobs: [], hasMore: false });
+  it("handles an empty bucket", async () => {
+    sendMock.mockResolvedValue({ IsTruncated: false });
 
-    await getBlobStorageUsage();
-
-    expect(listMock).toHaveBeenCalledWith(
-      expect.objectContaining({ token: "test-token" }),
-    );
+    expect((await getBlobStorageUsage()).used).toBe(0);
   });
 
-  it("throws with a clear message when the token is missing", async () => {
-    delete process.env.BLOB_READ_WRITE_TOKEN;
+  it("uses S3_STORAGE_LIMIT_BYTES as the quota when set", async () => {
+    vi.stubEnv("S3_STORAGE_LIMIT_BYTES", "4000");
+    sendMock.mockResolvedValue({ Contents: [{ Size: 1000 }] });
 
-    await expect(getBlobStorageUsage()).rejects.toThrow(
-      "BLOB_READ_WRITE_TOKEN",
-    );
+    const result = await getBlobStorageUsage();
+
+    expect(result.limit).toBe(4000);
+    expect(result.percent).toBe(25);
+  });
+
+  it("throws with a clear message when the bucket is not configured", async () => {
+    vi.stubEnv("S3_BUCKET", "");
+
+    await expect(getBlobStorageUsage()).rejects.toThrow("S3_BUCKET");
   });
 });

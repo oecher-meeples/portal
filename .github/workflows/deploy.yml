@@ -1,0 +1,222 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Target environment to deploy"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment to deploy"
+        required: true
+        type: choice
+        options:
+          - preview
+          - production
+        default: preview
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Generate .env file from GitHub Variables and Secrets
+        id: prepare
+        env:
+          DEPLOY_ENV: ${{ inputs.environment }}
+          ENABLE_CRON: ${{ vars.ENABLE_CRON }}
+          # Variables
+          ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+          IMAGE_TAG: ${{ vars.IMAGE_TAG }}
+          BETTER_AUTH_URL: ${{ vars.BETTER_AUTH_URL }}
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          S3_PUBLIC_ENDPOINT: ${{ vars.S3_PUBLIC_ENDPOINT }}
+          BETTER_AUTH_TRUSTED_ORIGINS: ${{ vars.BETTER_AUTH_TRUSTED_ORIGINS }}
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          SEED_ADMIN_EMAIL: ${{ vars.SEED_ADMIN_EMAIL }}
+          SEED_PROFILE: ${{ vars.SEED_PROFILE }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+          S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+          S3_BUCKET: ${{ vars.S3_BUCKET }}
+          S3_STORAGE_LIMIT_BYTES: ${{ vars.S3_STORAGE_LIMIT_BYTES }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          SMTP_USER: ${{ vars.SMTP_USER }}
+          SMTP_FROM: ${{ vars.SMTP_FROM }}
+          PUBLIC_CALENDAR_ICS_URL: ${{ vars.PUBLIC_CALENDAR_ICS_URL }}
+          META_APP_ID: ${{ vars.META_APP_ID }}
+          META_REDIRECT_URI: ${{ vars.META_REDIRECT_URI }}
+          META_GRAPH_API_VERSION: ${{ vars.META_GRAPH_API_VERSION }}
+          TRANSLATION_CONTACT_EMAIL: ${{ vars.TRANSLATION_CONTACT_EMAIL }}
+          APP_PORT: ${{ vars.APP_PORT }}
+          POSTGRES_PORT: ${{ vars.POSTGRES_PORT }}
+          S3_API_PORT: ${{ vars.S3_API_PORT }}
+          SEAWEEDFS_IMAGE_TAG: ${{ vars.SEAWEEDFS_IMAGE_TAG }}
+          # Secrets
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          MEMBER_DATA_ENCRYPTION_KEY: ${{ secrets.MEMBER_DATA_ENCRYPTION_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+          SEED_DEMO_PASSWORD: ${{ secrets.SEED_DEMO_PASSWORD }}
+          SEAWEEDFS_ADMIN_ACCESS_KEY: ${{ secrets.SEAWEEDFS_ADMIN_ACCESS_KEY }}
+          SEAWEEDFS_ADMIN_SECRET_KEY: ${{ secrets.SEAWEEDFS_ADMIN_SECRET_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          ICS_FEED_URL_INTERNAL: ${{ secrets.ICS_FEED_URL_INTERNAL }}
+          META_APP_SECRET: ${{ secrets.META_APP_SECRET }}
+          BGG_BEARER_TOKEN: ${{ secrets.BGG_BEARER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const keys = [
+              "ENVIRONMENT",
+              "IMAGE_TAG",
+              "BETTER_AUTH_URL",
+              "PUBLIC_SITE_URL",
+              "S3_PUBLIC_ENDPOINT",
+              "BETTER_AUTH_TRUSTED_ORIGINS",
+              "POSTGRES_USER",
+              "POSTGRES_PASSWORD",
+              "POSTGRES_DB",
+              "DATABASE_URL",
+              "BETTER_AUTH_SECRET",
+              "MEMBER_DATA_ENCRYPTION_KEY",
+              "CRON_SECRET",
+              "SEED_ADMIN_EMAIL",
+              "SEED_ADMIN_PASSWORD",
+              "SEED_PROFILE",
+              "SEED_DEMO_PASSWORD",
+              "SEAWEEDFS_ADMIN_ACCESS_KEY",
+              "SEAWEEDFS_ADMIN_SECRET_KEY",
+              "SEAWEEDFS_IMAGE_TAG",
+              "AWS_ACCESS_KEY_ID",
+              "AWS_SECRET_ACCESS_KEY",
+              "AWS_DEFAULT_REGION",
+              "S3_ACCESS_KEY",
+              "S3_SECRET_KEY",
+              "S3_ENDPOINT",
+              "S3_REGION",
+              "S3_BUCKET",
+              "S3_STORAGE_LIMIT_BYTES",
+              "SMTP_HOST",
+              "SMTP_PORT",
+              "SMTP_USER",
+              "SMTP_PASS",
+              "SMTP_FROM",
+              "PUBLIC_CALENDAR_ICS_URL",
+              "ICS_FEED_URL_INTERNAL",
+              "META_APP_ID",
+              "META_APP_SECRET",
+              "META_REDIRECT_URI",
+              "META_GRAPH_API_VERSION",
+              "BGG_BEARER_TOKEN",
+              "GITHUB_TOKEN",
+              "TRANSLATION_CONTACT_EMAIL",
+              "YOUTUBE_API_KEY",
+              "APP_PORT",
+              "POSTGRES_PORT",
+              "S3_API_PORT",
+            ];
+            const lines = keys.map((k) => {
+              const val = (process.env[k] ?? "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+              return `${k}="${val}"`;
+            });
+            fs.writeFileSync(".env.deploy", lines.join("\n") + "\n", { mode: 0o600 });
+
+            // Crons sind für Preview standardmäßig deaktiviert, für Production standardmäßig aktiviert.
+            // Kann über die GitHub-Variable ENABLE_CRON ("true" / "false") überschrieben werden.
+            const deployEnv = process.env.DEPLOY_ENV || "preview";
+            const enableCron = process.env.ENABLE_CRON !== undefined && process.env.ENABLE_CRON !== ""
+              ? process.env.ENABLE_CRON === "true"
+              : deployEnv === "production";
+
+            if (enableCron) {
+              const appPort = process.env.APP_PORT || "3000";
+              const cronSecret = process.env.CRON_SECRET || "";
+              const crontab = fs
+                .readFileSync("crontab", "utf8")
+                .replace(/^APP_URL=.*$/m, `APP_URL=http://127.0.0.1:${appPort}`)
+                .replace(/^CRON_SECRET=.*$/m, `CRON_SECRET=${cronSecret}`);
+              fs.writeFileSync(".crontab.deploy", crontab, { mode: 0o600 });
+            }
+
+            if (process.env.GITHUB_OUTPUT) {
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, `enable_cron=${enableCron}\n`);
+            }
+          '
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "${SSH_PORT:-22}" "${SSH_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Copy files and deploy via Docker Compose
+        env:
+          ENABLE_CRON: ${{ steps.prepare.outputs.enable_cron }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PORT="${SSH_PORT:-22}"
+          if printf '%s' "$SSH_HOST" | grep -q '@'; then
+            TARGET="$SSH_HOST"
+          else
+            TARGET="${SSH_USER}@${SSH_HOST}"
+          fi
+
+          SSH_OPTS="-i ~/.ssh/id_deploy -p ${PORT} -o StrictHostKeyChecking=accept-new"
+
+          ssh $SSH_OPTS "$TARGET" "mkdir -p '$DEPLOY_PATH'"
+          scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+            .env.deploy "$TARGET:$DEPLOY_PATH/.env"
+          scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+            docker-compose.yml "$TARGET:$DEPLOY_PATH/docker-compose.yml"
+
+          if [ "$ENABLE_CRON" = "true" ]; then
+            scp -i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=accept-new \
+              .crontab.deploy "$TARGET:$DEPLOY_PATH/crontab"
+            CRON_COMMAND="chmod 600 crontab && crontab crontab && "
+          else
+            CRON_COMMAND=""
+          fi
+
+          printf '%s\n' "$GHCR_TOKEN" | ssh $SSH_OPTS "$TARGET" \
+            "docker login ghcr.io -u '$GHCR_USER' --password-stdin && cd '$DEPLOY_PATH' && chmod 600 .env && ${CRON_COMMAND}docker compose pull && docker compose up -d"
+
+      - name: Clean up SSH key and .env
+        if: always()
+        run: rm -f ~/.ssh/id_deploy .env.deploy .crontab.deploy

@@ -8,7 +8,7 @@ import { prisma } from "@/lib/utils/prisma";
  * mehrtägigen Event muss sich ein Erklärbär also jeden Tag neu anmelden,
  * unabhängig vom `endsAt` des Events selbst. Läuft im bestehenden
  * täglichen Cron mit (`api/cron/instagram-queue/route.ts`, 05:00 Uhr,
- * s. `vercel.json`) statt einen eigenen Cron-Slot zu belegen — analog
+ * s. `docker/cron/crontab`) statt einen eigenen Cron-Slot zu belegen — analog
  * `deleteExpiredLoginLogs()`/`deleteExpiredBankDataAccessLogs()` dort.
  */
 export async function resetExplainerAttendance() {

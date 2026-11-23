@@ -15,9 +15,24 @@ const ZUSTAND_PRIORITY: Record<GameZustand, number> = {
   privat: 4,
 };
 
-export type LudothekTitleGroup<
-  G extends { id: string; boardGameId: string; zustand?: GameZustand },
-> = G & {
+type GroupableGame = {
+  id: string;
+  boardGameId: string;
+  zustand?: GameZustand;
+  /** Verlage/Sprachen der Edition dieses Exemplars. */
+  publisher?: string[];
+  editionLanguages?: string[];
+};
+
+/** Vereinigung der Werte über alle Exemplare, ohne Dubletten. */
+function unionOf(
+  copies: GroupableGame[],
+  key: "publisher" | "editionLanguages",
+) {
+  return [...new Set(copies.flatMap((copy) => copy[key] ?? []))];
+}
+
+export type LudothekTitleGroup<G extends GroupableGame> = G & {
   /** Number of physical copies of this title in the (already filtered) input. */
   copyCount: number;
   /** GameCopy ids of every copy folded into this row — needed once actions
@@ -44,9 +59,37 @@ export type LudothekTitleGroup<
  * Guest rows (`PublicLudothekGame`) have no `zustand` at all — the
  * representative copy is then just the first one, no priority to compare.
  */
-export function groupGamesByTitle<
-  G extends { id: string; boardGameId: string; zustand?: GameZustand },
->(games: G[]): LudothekTitleGroup<G>[] {
+/**
+ * Schneidet eine Seite **Titel** aus Exemplar-Zeilen (#461): alle Exemplare
+ * eines Titels landen in derselben Seite, damit `groupGamesByTitle` über die
+ * aneinandergehängten Seiten dieselben Gruppen bildet wie über die ganze
+ * Liste. `offset`/`limit` zählen Titel in Reihenfolge ihres ersten
+ * Exemplars; `nextOffset` ist `null`, wenn danach kein Titel mehr kommt.
+ */
+export function paginateByTitle<G extends { boardGameId: string }>(
+  games: G[],
+  offset: number,
+  limit: number,
+): { items: G[]; nextOffset: number | null } {
+  const titleIndex = new Map<string, number>();
+  for (const game of games) {
+    if (!titleIndex.has(game.boardGameId)) {
+      titleIndex.set(game.boardGameId, titleIndex.size);
+    }
+  }
+  const end = offset + limit;
+  return {
+    items: games.filter((game) => {
+      const index = titleIndex.get(game.boardGameId)!;
+      return index >= offset && index < end;
+    }),
+    nextOffset: end < titleIndex.size ? end : null,
+  };
+}
+
+export function groupGamesByTitle<G extends GroupableGame>(
+  games: G[],
+): LudothekTitleGroup<G>[] {
   const byTitle = new Map<string, G[]>();
   for (const game of games) {
     const existing = byTitle.get(game.boardGameId);
@@ -66,6 +109,14 @@ export function groupGamesByTitle<
     });
     return {
       ...representative,
+      // Karte/Zeile zeigen die Editionen aller Exemplare, nicht nur die des
+      // repräsentativen — sonst fehlte der Verlag eines anderen Exemplars.
+      ...(representative.publisher
+        ? { publisher: unionOf(copies, "publisher") }
+        : {}),
+      ...(representative.editionLanguages
+        ? { editionLanguages: unionOf(copies, "editionLanguages") }
+        : {}),
       copyCount: copies.length,
       copyIds: copies.map((c) => c.id),
       copies,

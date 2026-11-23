@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* #587: Fokusmodus (z. B. Scanner auf Mobile) — gesetzt von `useFocusMode`
+   (ui/use-focus-mode.ts) als `data-focus-mode` am <html>. */
+@custom-variant focus-mode (&:is([data-focus-mode] *));
 
 @theme inline {
   --color-event-public: var(--event-public);
@@ -135,14 +138,19 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* #464: `clip` statt `hidden` — `overflow-x: hidden` auf html UND body
+     macht body zum Scroll-Container (overflow-y wird dann `auto`), und
+     `position: sticky` (News-Kalender, Scanner-Zeile, Rechtstext-Navigation)
+     klebt dann nirgends mehr. `clip` schneidet genauso ab, ohne Scroll-
+     Container zu erzeugen. */
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
+    @apply bg-background text-foreground overflow-x-clip;
   }
   html {
     /* Verhindert horizontales Scrollen der ganzen Seite (z. B. durch eine
        versehentlich zu breite Zeile) — sonst zieht das auf Mobile die
        `fixed` MobileNav-Bottom-Bar beim horizontalen Scroll seitlich aus
        dem sichtbaren Bereich mit heraus. */
-    @apply overflow-x-hidden font-sans;
+    @apply overflow-x-clip font-sans;
   }
 }

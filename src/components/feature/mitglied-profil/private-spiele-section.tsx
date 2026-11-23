@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
+import { Card, CardTitle } from "@/components/ui/card";
 
 /** Private-Spiele-Bereich für **andere** Meeple, die dieses Profil öffnen
  * (#384) — nur sichtbar bei `privateCollectionVisible`-Freigabe. Der
@@ -16,13 +17,8 @@ import { CARD_HOVER_CLASS } from "@/components/ui/card-hover";
 export function PrivateSpieleSection({ meepleId }: { meepleId: string }) {
   return (
     <Link href={`/ludothek?privatbesitz=1&bei=${meepleId}`} className="group">
-      <div
-        className={cn(
-          "bg-card flex flex-col gap-2 rounded-lg border p-5",
-          CARD_HOVER_CLASS,
-        )}
-      >
-        <h2 className="font-serif text-lg font-bold">Private Spiele</h2>
+      <Card className={cn("gap-2", CARD_HOVER_CLASS)}>
+        <CardTitle>Private Spiele</CardTitle>
         <p className="text-muted-foreground text-sm">
           Dieses Mitglied hat seine private BGG-Collection für andere Meeple
           freigegeben.
@@ -31,7 +27,7 @@ export function PrivateSpieleSection({ meepleId }: { meepleId: string }) {
           In der Ludothek ansehen
           <ExternalLink className="size-4" />
         </span>
-      </div>
+      </Card>
     </Link>
   );
 }

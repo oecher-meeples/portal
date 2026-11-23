@@ -80,6 +80,24 @@ describe("borrowGame", () => {
     });
   });
 
+  it("marks the copy for a completeness check in the same transaction (#563)", async () => {
+    prismaMock.gameHolding.findFirst.mockResolvedValue(
+      openHolding({ unitId: UNIT_ID }) as never,
+    );
+
+    await borrowGame({
+      gameCopyId: GAME_ID,
+      vereinsmitgliedId: MEMBER_A,
+      recordedByMeepleId: MEEPLE_A,
+      isSelf: false,
+    });
+
+    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
+      where: { id: GAME_ID },
+      data: { needsCompletenessCheck: true },
+    });
+  });
+
   it("allows borrowing a game whose completeness check is still pending", async () => {
     prismaMock.gameCopy.findUnique.mockResolvedValue({
       id: GAME_ID,
@@ -218,6 +236,8 @@ describe("handOverGame (Weitergabe)", () => {
     };
     expect(created.data.origin).toBe("HANDOVER");
     expect(isLoanHolding(created.data as never)).toBe(true);
+    // #563: eine Weitergabe lässt das Kontroll-Flag unverändert.
+    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
   });
 
   it("rejects handing over a game that is currently in a unit", async () => {

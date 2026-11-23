@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BoardGameKind, LanguageDependence } from "@prisma/client";
+import {
+  BoardGameKind,
+  BoardGameTrait,
+  LanguageDependence,
+} from "@prisma/client";
 import {
   BggApiError,
   BggNotFoundError,
@@ -53,6 +57,12 @@ describe("fetchBggGame", () => {
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
       categories: ["Animals"],
+      mechanicLinks: [
+        { bggId: 2082, name: "Card Play" },
+        { bggId: 2015, name: "Income" },
+      ],
+      categoryLinks: [{ bggId: 1015, name: "Animals" }],
+      traits: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
       author: ["Mathias Wigge"],
@@ -62,6 +72,8 @@ describe("fetchBggGame", () => {
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [{ bggId: 1, name: "Mathias Wigge" }],
+      illustrators: [],
     });
   });
 
@@ -81,6 +93,9 @@ describe("fetchBggGame", () => {
       description: null,
       mechanics: [],
       categories: [],
+      mechanicLinks: [],
+      categoryLinks: [],
+      traits: [],
       kind: BoardGameKind.BOARDGAME,
       languageDependence: null,
       author: [],
@@ -90,6 +105,8 @@ describe("fetchBggGame", () => {
       explainerVideoUrl: null,
       germanExplainerVideos: [],
       englishExplainerVideos: [],
+      designers: [],
+      illustrators: [],
     });
   });
 
@@ -144,14 +161,20 @@ describe("fetchBggGame", () => {
 
     expect(result.versions).toEqual([
       {
+        bggVersionId: 500001,
+        name: "Ark Nova (English first edition)",
         yearPublished: 2021,
         publisher: ["Capstone Games"],
+        publisherLinks: [{ bggId: 1, name: "Capstone Games" }],
         productCode: "CAPS001",
         languages: ["English"],
       },
       {
+        bggVersionId: 500002,
+        name: "Ark Nova (Deutsche Ausgabe)",
         yearPublished: 2022,
         publisher: ["Feuerland Spiele"],
+        publisherLinks: [{ bggId: 2, name: "Feuerland Spiele" }],
         productCode: "FEU001",
         languages: ["German"],
       },
@@ -184,6 +207,22 @@ describe("fetchBggGame", () => {
       expect.stringContaining("versions=1"),
       expect.anything(),
     );
+  });
+
+  it("maps whitelisted boardgamefamily links to traits, deduping solitaire and ignoring unrelated families (#487)", async () => {
+    mockFetchOnce(true, 200, loadFixture("success-with-traits.xml"));
+
+    const result = await fetchBggGame(161936);
+
+    expect(result.traits).toEqual(
+      expect.arrayContaining([
+        BoardGameTrait.LEGACY,
+        BoardGameTrait.CAMPAIGN,
+        BoardGameTrait.LIMITED_REPLAYABILITY,
+        BoardGameTrait.SOLITAIRE_SUPPORTED,
+      ]),
+    );
+    expect(result.traits).toHaveLength(4);
   });
 
   it('collects every name type="alternate" entry, ungefiltert (#187)', async () => {

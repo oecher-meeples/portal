@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   createHelperRoleAction,
   updateHelperRoleAction,
@@ -43,7 +45,7 @@ export function HelperRoleManagementSection({
   const sortedRoles = [...roles].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <Accordion className="bg-card rounded-lg border">
+    <Accordion className={cardVariants({ size: "flush" })}>
       <AccordionItem value="helper-roles" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">
@@ -147,9 +149,10 @@ function HelperRoleDialog({
           )?.description
         }
       >
-        <select
+        <NativeSelect
           id={`helper-role-permission-${role?.id ?? "new"}`}
-          className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+          size="md"
+          className="w-full"
           value={grantsPermissionKey}
           onChange={(event) => setGrantsPermissionKey(event.target.value)}
         >
@@ -159,7 +162,7 @@ function HelperRoleDialog({
               {permission.key}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
     </ActionDialog>
   );

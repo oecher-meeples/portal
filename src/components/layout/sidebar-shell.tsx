@@ -54,10 +54,13 @@ export function SidebarShell({
       {/* ml folgt der Sidebar-Breite (#336, #471): < md ausgeblendet (keine
           Margin), md–lg Icon-only (w-16) außer bei aktivem Pin (dann w-64,
           Attached-Zustand), ab xl immer w-64. pb (< md): Platz für die fixed
-          MobileNav-Bottom-Bar (#437), die bis exakt md sichtbar ist. */}
+          MobileNav-Bottom-Bar (#437), die bis exakt md sichtbar ist.
+          #587: im Fokusmodus (nur < md) sind Header und Bottom-Bar
+          ausgeblendet, beide Abstände entfallen (`!`, damit `sm:pt-24`
+          nicht gewinnt). */}
       <main
         className={cn(
-          "min-w-0 flex-1 px-4 pt-[5.5rem] pb-20 sm:px-8 sm:pt-24 md:pb-8 xl:ml-64",
+          "focus-mode:pt-4! focus-mode:pb-4! min-w-0 flex-1 px-4 pt-[5.5rem] pb-20 sm:px-8 sm:pt-24 md:pb-8 xl:ml-64",
           pinned ? "md:ml-64" : "md:ml-16",
         )}
       >

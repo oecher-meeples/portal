@@ -1,13 +1,13 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { ExplainerExperienceLevel } from "@prisma/client";
 import { ActionButton } from "@/components/ui/action-button";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
+import { TextField, Field } from "@/components/ui/field";
 import {
   Combobox,
   ComboboxEmpty,
@@ -108,8 +108,7 @@ export function MyExplainerGames({
           onReset={resetDialog}
         >
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="explainer-search">Spiel suchen</Label>
+            <Field label="Spiel suchen" htmlFor="explainer-search">
               <Combobox
                 items={selectableGames.map((game) => game.title)}
                 value={selectedGame?.title ?? null}
@@ -132,14 +131,13 @@ export function MyExplainerGames({
                   </ComboboxList>
                 </ComboboxPopup>
               </Combobox>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Erfahrungsstufe</Label>
+            </Field>
+            <Field label="Erfahrungsstufe">
               <ExplainerLevelSlider
                 value={selectedLevel}
                 onChange={setSelectedLevel}
               />
-            </div>
+            </Field>
           </div>
         </ActionDialog>
       </div>
@@ -169,9 +167,10 @@ export function MyExplainerGames({
           </p>
         )}
         {filteredGames.map((game) => (
-          <div
+          <Card
             key={game.boardGameId}
-            className="bg-card flex items-center gap-4 rounded-lg border p-3"
+            size="sm"
+            className="flex-row items-center gap-4"
           >
             <span className="max-w-[30%] truncate font-medium">
               {game.boardGameTitle}
@@ -191,7 +190,7 @@ export function MyExplainerGames({
               <Trash2 className="size-4" />
               Entfernen
             </ActionButton>
-          </div>
+          </Card>
         ))}
       </div>
 

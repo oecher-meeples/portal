@@ -3,6 +3,12 @@ import type {
   FleaMarketItemStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { findUnitAncestor } from "@/lib/ludothek/unit-chain";
+import {
+  getGameCopyIdsInUnitTree,
+  loadOpenHoldingUnitByGame,
+  loadUnitParents,
+} from "@/lib/ludothek/unit-contents";
 import { buildLudothekGames } from "@/lib/ludothek/query";
 import {
   filterLudothekGames,
@@ -19,8 +25,6 @@ import {
   meepleEmail,
   type ContactLinks,
 } from "@/lib/members/contact";
-
-const MAX_UNIT_CHAIN_DEPTH = 20;
 
 /**
  * True if `unitId` or one of its ancestors (box in shelf) is in `assignedUnitIds` —
@@ -42,16 +46,7 @@ export function findAssignedAncestor(
   assignedUnitIds: Set<string>,
   parentById: Map<string, string | null>,
 ): string | null {
-  let currentId: string | null = unitId;
-  let depth = 0;
-
-  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    if (assignedUnitIds.has(currentId)) return currentId;
-    currentId = parentById.get(currentId) ?? null;
-    depth += 1;
-  }
-
-  return null;
+  return findUnitAncestor(unitId, parentById, (id) => assignedUnitIds.has(id));
 }
 
 /**
@@ -74,26 +69,11 @@ async function resolveEventUnitId(eventId: string): Promise<string | null> {
   return unit?.id ?? null;
 }
 
-async function loadUnitParents() {
-  const units = await prisma.storageUnit.findMany({
-    select: { id: true, parentUnitId: true },
-  });
-  return new Map(units.map((u) => [u.id, u.parentUnitId]));
-}
-
 async function loadUnitLabels() {
   const units = await prisma.storageUnit.findMany({
     select: { id: true, label: true },
   });
   return new Map(units.map((u) => [u.id, u.label]));
-}
-
-async function loadOpenHoldingUnitByGame() {
-  const holdings = await prisma.gameHolding.findMany({
-    where: { endedAt: null, unitId: { not: null } },
-    select: { gameCopyId: true, unitId: true },
-  });
-  return new Map(holdings.map((h) => [h.gameCopyId, h.unitId as string]));
 }
 
 /**
@@ -129,21 +109,8 @@ export async function isGameInEventRoom(gameCopyId: string, eventId: string) {
 export async function getPresentGameCopyIds(
   eventId: string,
 ): Promise<Set<string>> {
-  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
-    resolveEventUnitId(eventId),
-    loadUnitParents(),
-    loadOpenHoldingUnitByGame(),
-  ]);
-  if (!eventUnitId) return new Set();
-  const assignedUnitIds = new Set([eventUnitId]);
-
-  const present = new Set<string>();
-  for (const [gameCopyId, unitId] of holdingUnitByGame) {
-    if (unitOrAncestorAssigned(unitId, assignedUnitIds, parentById)) {
-      present.add(gameCopyId);
-    }
-  }
-  return present;
+  const eventUnitId = await resolveEventUnitId(eventId);
+  return eventUnitId ? getGameCopyIdsInUnitTree(eventUnitId) : new Set();
 }
 
 export type AttendingExplainer = {
@@ -238,24 +205,27 @@ export async function getFreeGamesInRoom(
   eventId: string,
   filters: LudothekFilters,
 ): Promise<LudothekGame[]> {
-  const [games, eventUnitId, parentById, holdingUnitByGame] = await Promise.all(
-    [
-      buildLudothekGames(),
-      resolveEventUnitId(eventId),
-      loadUnitParents(),
-      loadOpenHoldingUnitByGame(),
-    ],
-  );
+  const [eventUnitId, parentById, holdingUnitByGame] = await Promise.all([
+    resolveEventUnitId(eventId),
+    loadUnitParents(),
+    loadOpenHoldingUnitByGame(),
+  ]);
   if (!eventUnitId) return [];
   const assignedUnitIds = new Set([eventUnitId]);
 
-  const freeGames = filterLudothekGames(games, { ...filters, zustand: "frei" });
+  // #526: erst die Exemplare im Raum bestimmen, dann nur diese laden — nicht
+  // den ganzen Bestand für einen anschließenden Filter.
+  const inRoomCopyIds = [...holdingUnitByGame]
+    .filter(([, unitId]) =>
+      unitOrAncestorAssigned(unitId, assignedUnitIds, parentById),
+    )
+    .map(([gameCopyId]) => gameCopyId);
+  if (inRoomCopyIds.length === 0) return [];
 
-  return freeGames.filter((game) => {
-    const unitId = holdingUnitByGame.get(game.id);
-    if (!unitId) return false;
-    return unitOrAncestorAssigned(unitId, assignedUnitIds, parentById);
+  const games = await buildLudothekGames({
+    where: { id: { in: inRoomCopyIds } },
   });
+  return filterLudothekGames(games, { ...filters, zustand: "frei" });
 }
 
 export type GuestCopyAvailability =

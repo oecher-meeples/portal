@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,18 +20,15 @@ import {
   type FreeGameEntry,
 } from "@/components/feature/guest-area/free-games-list";
 import type { GuestFleaMarketItem } from "@/lib/events/guest-area";
-import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
+import {
+  EXPLAINER_EXPERIENCE_LEVEL_LABELS,
+  FLEA_MARKET_ITEM_STATUS_LABELS,
+} from "@/lib/utils/format";
 import { RegisterExternalSellerDialog } from "@/components/widgets/bringbuy/register-external-seller-dialog";
 import { PageContainer } from "@/components/ui/page-container";
 
 export type SellerAccess =
   { kind: "meeple"; href: string } | { kind: "guest"; eventId: string };
-
-const EXPLAINER_LEVEL_LABELS: Record<string, string> = {
-  WITH_MANUAL: "Mit Anleitung",
-  WITHOUT_MANUAL: "Ohne Anleitung",
-  BY_HEART: "Im Schlaf",
-};
 
 type ViewState =
   | { kind: "idle" }
@@ -84,7 +82,7 @@ export function GuestAreaView({
         description="Scanne den Barcode einer Spielebox oder gib ihn manuell ein."
       />
 
-      <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
+      <Card>
         <CodeScanner onDetected={handleCode} frame={false} stopOnDetect />
         <div className="flex gap-2">
           <Input
@@ -99,7 +97,7 @@ export function GuestAreaView({
             Suchen
           </Button>
         </div>
-      </div>
+      </Card>
 
       {state.kind === "unknown" && (
         <p className="text-destructive text-sm">
@@ -108,7 +106,7 @@ export function GuestAreaView({
       )}
 
       {state.kind === "select" && (
-        <div className="bg-card flex flex-col gap-2 rounded-lg border p-4">
+        <Card size="sm" className="gap-2">
           <p className="text-sm font-medium">
             Mehrere Treffer — bitte auswählen:
           </p>
@@ -122,12 +120,12 @@ export function GuestAreaView({
               {game.title}
             </Button>
           ))}
-        </div>
+        </Card>
       )}
 
       {state.kind === "detail" && (
-        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-          <h2 className="font-serif text-xl font-bold">{state.detail.title}</h2>
+        <Card>
+          <CardTitle className="text-xl">{state.detail.title}</CardTitle>
           {state.detail.description && (
             <p className="text-muted-foreground text-sm">
               {state.detail.description}
@@ -174,38 +172,42 @@ export function GuestAreaView({
                           profileHref: explainer.profileHref,
                         }}
                       />{" "}
-                      ·{" "}
-                      {EXPLAINER_LEVEL_LABELS[explainer.level] ??
-                        explainer.level}
+                      · {EXPLAINER_EXPERIENCE_LEVEL_LABELS[explainer.level]}
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       <FreeGamesList games={freeGames} />
 
       {fleaMarketItems.length > 0 && (
-        <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="font-serif text-lg font-bold">
-              Bring &amp; Buy Flohmarkt
-            </h2>
-            {sellerAccess?.kind === "meeple" && (
-              <Button
-                size="sm"
-                render={
-                  <Link href={sellerAccess.href}>Spieleverkauf anmelden</Link>
-                }
-              />
+        <Card>
+          <CardHeader>
+            <CardTitle>Bring &amp; Buy Flohmarkt</CardTitle>
+            {sellerAccess && (
+              <CardAction>
+                {sellerAccess.kind === "meeple" && (
+                  <Button
+                    size="sm"
+                    render={
+                      <Link href={sellerAccess.href}>
+                        Spieleverkauf anmelden
+                      </Link>
+                    }
+                  />
+                )}
+                {sellerAccess.kind === "guest" && (
+                  <RegisterExternalSellerDialog
+                    eventId={sellerAccess.eventId}
+                  />
+                )}
+              </CardAction>
             )}
-            {sellerAccess?.kind === "guest" && (
-              <RegisterExternalSellerDialog eventId={sellerAccess.eventId} />
-            )}
-          </div>
+          </CardHeader>
           <ul className="flex flex-col divide-y text-sm">
             {fleaMarketItems.map((item) => (
               <li
@@ -229,7 +231,7 @@ export function GuestAreaView({
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
     </PageContainer>
   );

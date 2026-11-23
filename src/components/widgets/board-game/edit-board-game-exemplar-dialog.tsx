@@ -5,10 +5,14 @@ import { Pencil } from "lucide-react";
 import type { RuleBookLanguage } from "@prisma/client";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { InventoryNumberField } from "@/components/widgets/board-game/inventory-number-field";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
-import { EMPTY_BOARD_GAME_FORM } from "@/components/widgets/board-game/board-game-form-values";
+import {
+  EMPTY_BOARD_GAME_FORM,
+  exemplarFormToCopyInput,
+  type BoardGameFormValues,
+} from "@/components/widgets/board-game/board-game-form-values";
 
 /** Edits one physical copy's condition (Mängelvermerk) and Regelheft-Sprache(n)
  * (#188) — the counterpart to `EditBoardGameTitleDialog`, scoped to a single
@@ -22,6 +26,8 @@ export function EditBoardGameExemplarDialog({
   condition,
   ruleBookLanguages,
   inventoryNumber,
+  boardGameId,
+  versionId,
   triggerLabel = "Bearbeiten",
   open,
   onOpenChange,
@@ -29,26 +35,38 @@ export function EditBoardGameExemplarDialog({
   copyId: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber?: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber?: number | null;
+  /** Titel des Exemplars — liefert die zur Auswahl stehenden Editionen. */
+  boardGameId?: string;
+  /** Aktuelle Edition des Exemplars. */
+  versionId?: string | null;
   triggerLabel?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
-  const [value, setValue] = useState(condition ?? "");
-  const [languages, setLanguages] = useState(ruleBookLanguages);
+  const initialForm = (): BoardGameFormValues => ({
+    ...EMPTY_BOARD_GAME_FORM,
+    condition: condition ?? "",
+    ruleBookLanguages,
+    editionMode: versionId ? "existing" : "none",
+    editionVersionId: versionId ?? "",
+  });
+  const [form, setForm] = useState(initialForm);
+  const initialInventoryNumber =
+    inventoryNumber != null ? String(inventoryNumber) : "";
   const [inventoryNumberValue, setInventoryNumberValue] = useState(
-    inventoryNumber ?? "",
+    initialInventoryNumber,
   );
 
   function reset() {
-    setValue(condition ?? "");
-    setLanguages(ruleBookLanguages);
-    setInventoryNumberValue(inventoryNumber ?? "");
+    setForm(initialForm());
+    setInventoryNumberValue(initialInventoryNumber);
   }
 
   return (
     <ActionDialog
+      refresh
       trigger={
         open === undefined ? (
           <Button size="sm" variant="outline">
@@ -60,34 +78,26 @@ export function EditBoardGameExemplarDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Exemplar bearbeiten"
+      contentClassName="sm:max-w-2xl"
       submitLabel="Speichern"
       action={() =>
-        updateGameCopy(copyId, {
-          condition: value || undefined,
-          ruleBookLanguages: languages,
-          inventoryNumber: inventoryNumberValue,
-        })
+        updateGameCopy(
+          copyId,
+          exemplarFormToCopyInput(form, inventoryNumberValue),
+        )
       }
       onReset={reset}
     >
-      <TextField
+      <InventoryNumberField
         id={`copy-${copyId}-inventory-number`}
-        label="Inventarnummer"
         value={inventoryNumberValue}
-        onChange={(event) => setInventoryNumberValue(event.target.value)}
+        onChange={setInventoryNumberValue}
       />
       <EditBoardGameExemplar
         idPrefix={`copy-${copyId}`}
-        values={{
-          ...EMPTY_BOARD_GAME_FORM,
-          condition: value,
-          ruleBookLanguages: languages,
-        }}
-        onChange={(patch) => {
-          if (patch.condition !== undefined) setValue(patch.condition);
-          if (patch.ruleBookLanguages !== undefined)
-            setLanguages(patch.ruleBookLanguages);
-        }}
+        boardGameId={boardGameId}
+        values={form}
+        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
       />
     </ActionDialog>
   );

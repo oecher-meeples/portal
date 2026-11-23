@@ -1,108 +1,83 @@
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
-import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { prisma } from "@/lib/utils/prisma";
 import {
-  filterLudothekGames,
   findMaxDurationBound,
   listDistinctCategories,
   listDistinctMechanics,
-  parseLudothekSearchParams,
-  toPublicGame,
 } from "@/lib/ludothek/browser";
-import { buildLudothekGames } from "@/lib/ludothek/query";
-import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
+import {
+  loadFilteredLudothekGames,
+  resolveLudothekBrowseContext,
+  toLudothekGamesPage,
+} from "@/lib/ludothek/browse";
 import { hasUnconfirmedHoldingsForMeeple } from "@/lib/ludothek/holdings";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
-import { findCurrentEvent } from "@/lib/events/upcoming";
-import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
-import { getPresentGameCopyIds } from "@/lib/events/guest-area";
+import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
+import { parseShortId } from "@/lib/short-id/short-id";
+import { firstString } from "@/lib/utils/search-params";
+import { buildHref } from "@/lib/utils/query-string";
 
 export default async function LudothekPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const tier = await getSessionTier();
-  const user = await getCurrentUser();
-  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
-  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
-  const internal =
-    tier !== "gast" &&
-    (user ? await hasPermission(user.id, "ludothek:view") : false);
-  const canManageGames = user
-    ? await hasPermissionInCurrentView(user.id, "games:manage")
-    : false;
-
   const rawSearchParams = await searchParams;
-  const filters = parseLudothekSearchParams(rawSearchParams, { internal });
+  // Dieselbe Pipeline wie das Nachladen in `loadMoreLudothekGames` (#461).
+  const [context, traitTexts] = await Promise.all([
+    resolveLudothekBrowseContext(rawSearchParams),
+    loadBoardGameTraitTextsByTrait(),
+  ]);
+  const { internal, canManageGames, filters, currentEvent } = context;
+  // `?neu=inv-<n>` (#549): Ziel des Short-ID-Routers für ein gescanntes,
+  // noch unbekanntes Exemplar-Etikett — ohne Recht wirkungslos.
+  const createShortId = canManageGames
+    ? parseShortId(firstString(rawSearchParams.neu) ?? "")
+    : null;
+  const createInventoryNumber =
+    createShortId?.kind === "inv" ? createShortId.id : undefined;
+  const showExplainerFilter = internal || currentEvent !== null;
+  const showPresentFilter = currentEvent !== null;
+
+  const [currentMeeple, { allGames, filtered, unitFilter }] = await Promise.all(
+    [internal ? getCurrentMeeple() : null, loadFilteredLudothekGames(context)],
+  );
+  const firstPage = toLudothekGamesPage(filtered, { ...context, offset: 0 });
 
   // "Meine Ausleihen"-Filter (#290): kein eigener Bestätigen-Weg hier, nur
   // ein Hinweis zurück zum Dashboard, wo die eigentliche Aktion sitzt.
-  const currentMeeple = internal ? await getCurrentMeeple() : null;
   const showsOwnLoans =
     currentMeeple !== null && filters.atMeepleId === currentMeeple.id;
-  const hasUnconfirmedOwnHoldings = showsOwnLoans
-    ? await hasUnconfirmedHoldingsForMeeple(currentMeeple.id)
-    : false;
-
-  const clubGames = await buildLudothekGames();
-  // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
-  // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
-  // eines separaten, statischen Blocks).
-  const privateGames =
-    internal && filters.showPrivateCollection
-      ? await buildPrivateLudothekGames()
-      : [];
-  const allGames = [...clubGames, ...privateGames];
-
-  // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-Filters
-  // (#256) als auch für "nur anwesende Spiele" (#273) — beide Filter sind
-  // nur sinnvoll, solange ein Event läuft, für Meeples wie Gäste gleichermaßen.
-  const currentEvent = await findCurrentEvent();
-  const showExplainerFilter = internal || currentEvent !== null;
-  const attendingExplainerBoardGameIds =
-    !internal && filters.hasExplainer
-      ? currentEvent
-        ? await getAttendingExplainerBoardGameIds(currentEvent.id)
-        : new Set<string>()
-      : undefined;
-  const showPresentFilter = currentEvent !== null;
-  const presentGameCopyIds =
-    filters.onlyPresentAtEvent && currentEvent
-      ? await getPresentGameCopyIds(currentEvent.id)
-      : undefined;
-
-  const filtered = filterLudothekGames(allGames, filters, {
-    attendingExplainerBoardGameIds,
-    presentGameCopyIds,
-  });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
   const categoriesOptions = listDistinctCategories(allGames);
   const maxDurationBound = findMaxDurationBound(allGames);
 
-  const meepleOptions = internal
-    ? await (async () => {
-        const ids = [
-          ...new Set(
-            allGames
-              .map((g) => g.responsibleMeepleId)
-              .filter((id): id is string => id !== null),
-          ),
-        ];
-        if (ids.length === 0) return [];
-        return prisma.meeple.findMany({
-          where: { id: { in: ids } },
-          select: { id: true, displayName: true },
-          orderBy: { displayName: "asc" },
-        });
-      })()
-    : undefined;
+  const [hasUnconfirmedOwnHoldings, meepleOptions] = await Promise.all([
+    showsOwnLoans ? hasUnconfirmedHoldingsForMeeple(currentMeeple.id) : false,
+    internal
+      ? (async () => {
+          const ids = [
+            ...new Set(
+              allGames
+                .map((g) => g.responsibleMeepleId)
+                .filter((id): id is string => id !== null),
+            ),
+          ];
+          if (ids.length === 0) return [];
+          return prisma.meeple.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, displayName: true },
+            orderBy: { displayName: "asc" },
+          });
+        })()
+      : undefined,
+  ]);
 
   return (
     <PageContainer variant="wide">
@@ -112,17 +87,48 @@ export default async function LudothekPage({
         description="Durchstöbere den Vereinsbestand und filtere nach Spieleranzahl, Dauer oder Mechanik."
       />
       {hasUnconfirmedOwnHoldings && (
-        <p className="bg-card rounded-lg border p-4 text-sm">
+        <p className={cn(cardVariants({ size: "sm" }), "block text-sm")}>
           Du hast noch unbestätigte Spiele.{" "}
           <Link href="/dashboard" className="text-primary hover:underline">
             Zum Dashboard
           </Link>
         </p>
       )}
+      {filters.unit && (
+        <p
+          className={cn(
+            cardVariants({ size: "sm" }),
+            "flex-row flex-wrap items-center gap-x-3 gap-y-1 text-sm",
+          )}
+        >
+          <span>
+            {unitFilter
+              ? `Gefiltert nach ${unitFilter.unit.label} (${unitFilter.unit.code}) – inklusive allem, was darin steht.`
+              : "Diese Einheit gibt es nicht."}
+          </span>
+          <Link
+            href={buildHref("/ludothek", rawSearchParams, {
+              einheit: undefined,
+            })}
+            className="text-primary hover:underline"
+          >
+            Filter entfernen
+          </Link>
+          {unitFilter && canManageGames && (
+            <Link
+              href={`/admin/einheiten/${unitFilter.unit.id}`}
+              className="text-primary hover:underline"
+            >
+              Zur Einheit
+            </Link>
+          )}
+        </p>
+      )}
       <LudothekBrowser
-        games={internal ? filtered : filtered.map(toPublicGame)}
+        games={firstPage.games}
+        nextOffset={firstPage.nextOffset}
         internal={internal}
-        canManageGames={internal && canManageGames}
+        canManageGames={canManageGames}
         basePath="/ludothek"
         rawSearchParams={rawSearchParams}
         filters={filters}
@@ -132,6 +138,8 @@ export default async function LudothekPage({
         meepleOptions={meepleOptions}
         showExplainerFilter={showExplainerFilter}
         showPresentFilter={showPresentFilter}
+        traitTexts={traitTexts}
+        createInventoryNumber={createInventoryNumber}
       />
     </PageContainer>
   );

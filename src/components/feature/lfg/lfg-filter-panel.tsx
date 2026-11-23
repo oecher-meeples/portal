@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -55,7 +56,7 @@ export function LfgFilterPanel({
     buildHref(basePath, rawSearchParams, patch);
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
+    <Card size="sm">
       {gameOptions.length > 0 && (
         <div className="flex max-w-xs flex-col gap-1">
           <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
@@ -123,6 +124,6 @@ export function LfgFilterPanel({
           active={filters.zeitraum === "abgelaufen"}
         />
       </div>
-    </div>
+    </Card>
   );
 }

@@ -1,3 +1,6 @@
+vi.mock("@/lib/ludothek/taxonomy/contributor-actions", () => ({
+  listContributorNames: async () => [],
+}));
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -59,7 +62,9 @@ const GAME_WITHOUT_BGG_ID = {
   languageDependence: null,
   publisher: [],
   author: [],
+  illustrator: [],
   yearPublished: null,
+  editionLanguages: [],
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -73,6 +78,8 @@ const GAME_WITHOUT_BGG_ID = {
   mechanics: [],
   categories: [],
   explainerVideoUrl: null,
+  traits: [],
+  notes: null,
 };
 
 const GAME_WITH_BGG_ID = { ...GAME_WITHOUT_BGG_ID, bggId: 342942 };
@@ -88,12 +95,16 @@ const BGG_DATA = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel"],
   categories: [],
+  traits: [],
   alternateNames: [],
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
   author: [],
   yearPublished: null,
+  editionLanguages: [],
   versions: [],
 };
 

@@ -13,7 +13,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { FileField } from "@/components/ui/file-field";
 import {
   Table,
@@ -23,6 +22,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
+import { Field } from "@/components/ui/field";
 import { parseFleaMarketCsv } from "@/lib/bringbuy/csv";
 import { importFleaMarketItemsCsv } from "@/components/feature/admin-bringbuy/import-actions";
 import type { CashierEventOption } from "@/components/feature/admin-bringbuy/admin-bringbuy-view";
@@ -93,21 +94,20 @@ export function ImportFleaMarketItemsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="import-event">Event</Label>
-          <select
+        <Field label="Event" htmlFor="import-event">
+          <NativeSelect
             id="import-event"
             value={eventId}
             onChange={(event) => setEventId(event.target.value)}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            size="md"
           >
             {events.map((event) => (
               <option key={event.id} value={event.id}>
                 {event.title}
               </option>
             ))}
-          </select>
-        </div>
+          </NativeSelect>
+        </Field>
 
         <FileField
           id="import-file"

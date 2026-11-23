@@ -1,6 +1,7 @@
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import {
   BoardGameKind,
+  type BoardGameTrait,
   type LanguageDependence,
   type RuleBookLanguage,
   type ProfilePictureVisibility,
@@ -48,8 +49,11 @@ export type LudothekGame = {
   /** Only needed to seed the edit form for games:manage holders — not for display. */
   ean: string | null;
   condition: string | null;
-  /** Freie Inventarnummer des Exemplars (#270) — internes Identifikationsfeld. */
-  inventoryNumber: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543) — internes Identifikationsfeld. */
+  inventoryNumber: number | null;
+  /** Edition (BGG-Version) dieses Exemplars - nur zum Vorbelegen des
+   * Exemplar-Editors fuer `games:manage`, nicht zur Anzeige. */
+  versionId?: string | null;
   bggId: number | null;
   /** BGG-Alternativnamen, ungefiltert (#187) — matcht in der Suche wie der
    * Titel selbst; die Anzeige zeigt nur `secondaryTitle` (falls gesetzt),
@@ -69,8 +73,19 @@ export type LudothekGame = {
   publisher: string[];
   /** Autor(en)/Designer (#205). */
   author: string[];
+  /** Illustrator(en) aus den Mitwirkenden (Epic #490). */
+  illustrator: string[];
   /** Erstveröffentlichungsjahr (#205). */
   yearPublished: number | null;
+  /** BGG-Sprachnamen der Vereinsedition — Grundlage der Flagge an der Karte. */
+  editionLanguages: string[];
+  /** BGGs Family-Signale mit Verleih-Auswirkung (#487-Konzept) — für alle
+   * sichtbar (auch Gäste), analog `mechanics`/`categories` nicht gestrippt
+   * in `toPublicGame()`. */
+  traits: BoardGameTrait[];
+  /** Freier Admin-Hinweis je Titel (#487-Konzept) — für alle sichtbar, kein
+   * Bestandsdatum wie `condition`/`inventoryNumber`. */
+  notes: string | null;
   /** Base game(s) this expansion belongs to — empty unless `kind` is BOARDGAME_EXPANSION. */
   baseGames: LudothekGameRef[];
   /** Expansions in the collection that belong to this base game. */
@@ -126,6 +141,7 @@ export type PublicLudothekGame = Omit<
   | "ean"
   | "condition"
   | "inventoryNumber"
+  | "versionId"
   | "bggId"
 >;
 
@@ -145,6 +161,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     ean: _ean,
     condition: _condition,
     inventoryNumber: _inventoryNumber,
+    versionId: _versionId,
     bggId: _bggId,
     ...rest
   } = game;
@@ -160,6 +177,10 @@ export type LudothekViewMode = "grid" | "liste" | "compact";
 
 export type LudothekFilters = {
   search?: string;
+  /** Teilstring-Filter über Verlag/Autor/Illustrator (Epic #490). */
+  publisher?: string;
+  author?: string;
+  illustrator?: string;
   /** Exakte Spieleranzahl — matcht jeden Titel, dessen min/maxPlayers diese
    * Zahl einschließt (Ein-Knoten-Slider statt fester Buckets, #214-Folge). */
   players?: number;
@@ -205,6 +226,10 @@ export type LudothekFilters = {
    * das nach Event-Ende noch auf der Event-Unit liegt, gilt bewusst
    * weiterhin als anwesend. */
   onlyPresentAtEvent?: boolean;
+  /** Short-ID einer Kiste/eines Regals (`box-0001`, #550) — Ziel des
+   * QR-Routers für ein Einheiten-Etikett, auch für Gäste. Nur Exemplare in
+   * dieser Einheit oder einer darin stehenden, siehe `unitGameCopyIds`. */
+  unit?: string;
 };
 
 type PlayerCounted = { minPlayers: number | null; maxPlayers: number | null };
@@ -245,6 +270,17 @@ export function matchesDurationRange(
   return true;
 }
 
+/** Teilstring-Filter über Verlag/Autor/Illustrator — Groß-/Kleinschreibung
+ * egal, `undefined`/leer matcht alles (Epic #490). */
+export function matchesContributorFilter(
+  names: string[],
+  term: string | undefined,
+): boolean {
+  if (!term) return true;
+  const needle = term.trim().toLowerCase();
+  return names.some((name) => name.toLowerCase().includes(needle));
+}
+
 const VIEW_MODE_VALUES = new Set<LudothekViewMode>([
   "grid",
   "liste",
@@ -270,6 +306,9 @@ export function parseLudothekSearchParams(
 
   const filters: LudothekFilters = {
     search: firstString(searchParams.q) || undefined,
+    publisher: firstString(searchParams.verlag) || undefined,
+    author: firstString(searchParams.autor) || undefined,
+    illustrator: firstString(searchParams.illustrator) || undefined,
     view: VIEW_MODE_VALUES.has(view as LudothekViewMode)
       ? (view as LudothekViewMode)
       : "grid",
@@ -298,6 +337,7 @@ export function parseLudothekSearchParams(
     languageDependenceMax: parseNumberParam(firstString(searchParams.sprache)),
     hasExplainer: firstString(searchParams.erklaerbaer) === "1",
     onlyPresentAtEvent: firstString(searchParams.anwesend) === "1",
+    unit: firstString(searchParams.einheit) || undefined,
   };
 
   if (internal) {
@@ -326,6 +366,7 @@ export function matchesLudothekSearch(
     | "alternateNames"
     | "publisher"
     | "author"
+    | "illustrator"
   >,
   search: string,
 ): boolean {
@@ -342,6 +383,8 @@ export function matchesLudothekSearch(
     return true;
   if (game.author.some((name) => name.toLowerCase().includes(term)))
     return true;
+  if (game.illustrator.some((name) => name.toLowerCase().includes(term)))
+    return true;
 
   return false;
 }
@@ -352,6 +395,7 @@ export function filterLudothekGames(
   {
     attendingExplainerBoardGameIds,
     presentGameCopyIds,
+    unitGameCopyIds,
   }: {
     /** Gast-während-Event-Kontext (#256): wenn gesetzt, ersetzt diese Menge
      * die einfache `explainerCount > 0`-Prüfung durch "hat ein gerade
@@ -361,10 +405,22 @@ export function filterLudothekGames(
      * nötig für `filters.onlyPresentAtEvent`. Weglassen/leer lassen, solange
      * kein Event läuft. */
     presentGameCopyIds?: Set<string>;
+    /** GameCopy-Ids im Teilbaum der Einheit aus `filters.unit` (#550) —
+     * fehlt sie (unbekannte Einheit), bleibt die Liste leer. */
+    unitGameCopyIds?: Set<string>;
   } = {},
 ): LudothekGame[] {
   return games.filter((game) => {
     if (filters.search && !matchesLudothekSearch(game, filters.search)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.publisher, filters.publisher)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.author, filters.author)) {
+      return false;
+    }
+    if (!matchesContributorFilter(game.illustrator, filters.illustrator)) {
       return false;
     }
     if (!matchesPlayerCount(game, filters.players)) {
@@ -450,6 +506,7 @@ export function filterLudothekGames(
     if (filters.onlyPresentAtEvent) {
       if (!presentGameCopyIds?.has(game.id)) return false;
     }
+    if (filters.unit && !unitGameCopyIds?.has(game.id)) return false;
     return true;
   });
 }

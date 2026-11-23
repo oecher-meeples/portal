@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, X } from "lucide-react";
@@ -122,10 +123,10 @@ export function PendingChangesPanel({
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">
+    <Card>
+      <CardTitle>
         {changes.length === 1 ? titleSingular : titlePlural}
-      </h2>
+      </CardTitle>
       {error && <p className="text-destructive text-sm">{error}</p>}
       {revealError && <p className="text-destructive text-sm">{revealError}</p>}
       <ul className="flex flex-col divide-y text-sm">
@@ -250,6 +251,6 @@ export function PendingChangesPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }

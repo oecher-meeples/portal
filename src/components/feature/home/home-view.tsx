@@ -1,3 +1,4 @@
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import Image from "next/image";
 import { Calendar, HeartHandshake } from "lucide-react";
@@ -7,6 +8,7 @@ import { formatDate } from "@/lib/utils/format";
 import type { getLatestPosts } from "@/lib/content/content";
 import type { getUpcomingEventsWithCalendar } from "@/lib/content/calendar";
 import { PageContainer } from "@/components/ui/page-container";
+import { PageTitle } from "@/components/ui/page-title";
 
 type HomeViewProps = {
   events: Awaited<ReturnType<typeof getUpcomingEventsWithCalendar>>;
@@ -21,9 +23,7 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
         <p className="text-primary text-xs font-semibold tracking-wider uppercase">
           Willkommen bei den Oecher Meeples
         </p>
-        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-          Der Brettspielverein für Aachen und Umgebung
-        </h1>
+        <PageTitle>Der Brettspielverein für Aachen und Umgebung</PageTitle>
         <p className="text-muted-foreground max-w-2xl">
           Spielen, leihen, treffen. Von Kennerspiel bis Familienabend – bei uns
           findest du Runde, Regelerklärung und über {gameCount} Spiele in der
@@ -32,7 +32,7 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-6">
+        <Card className="gap-4">
           {/*
             Echtes Vereinsfoto steht noch aus (#TODO) – bis dahin dient das
             Logo als Platzhalter statt der leeren PlaceholderMedia-Box.
@@ -60,22 +60,24 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
               render={<Link href="/news">Nächster Spieleabend →</Link>}
             />
           </div>
-        </div>
+        </Card>
 
         <div className="flex flex-col gap-4">
-          <div className="bg-card flex flex-1 flex-col rounded-lg border p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Calendar className="text-primary size-4" />
                 Nächste Termine
-              </h2>
-              <Link
-                href="/news"
-                className="text-primary text-sm hover:underline"
-              >
-                Kalender
-              </Link>
-            </div>
+              </CardTitle>
+              <CardAction>
+                <Link
+                  href="/news"
+                  className="text-primary text-sm hover:underline"
+                >
+                  Kalender
+                </Link>
+              </CardAction>
+            </CardHeader>
             <ul className="flex flex-col divide-y">
               {events.map((event) => (
                 <li
@@ -94,11 +96,11 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
                 </li>
               ))}
             </ul>
-          </div>
+          </Card>
 
           {/* #420: Sperre aus #96 aufgehoben — der PayPal-Link war damals
            * nur ein Mock, ist seit #267 aber real, deshalb auch für Gäste. */}
-          <div className="bg-primary/10 rounded-lg border p-5">
+          <Card className="bg-primary/10 block">
             <h2 className="flex items-center gap-2 font-serif text-lg font-bold">
               <HeartHandshake className="size-4" />
               Unterstütze uns
@@ -111,7 +113,7 @@ export function HomeView({ events, posts, gameCount }: HomeViewProps) {
               className="mt-3"
               render={<Link href="/spenden">Jetzt spenden (PayPal)</Link>}
             />
-          </div>
+          </Card>
         </div>
       </section>
 

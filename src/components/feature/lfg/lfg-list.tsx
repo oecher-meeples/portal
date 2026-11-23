@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ActionButton } from "@/components/ui/action-button";
 import {
@@ -25,10 +26,7 @@ export function LfgList({ posts }: { posts: LfgPostSummary[] }) {
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         {posts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-card flex flex-col gap-3 rounded-lg border p-4"
-          >
+          <Card key={post.id} size="sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <Link
@@ -67,7 +65,7 @@ export function LfgList({ posts }: { posts: LfgPostSummary[] }) {
                 </ActionButton>
               )}
             </div>
-          </div>
+          </Card>
         ))}
         {posts.length === 0 && (
           <p className="text-muted-foreground col-span-full text-sm">

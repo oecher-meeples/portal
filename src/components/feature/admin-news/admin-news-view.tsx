@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tri-state-filter";
 import {
   CONTENT_TYPE_FILTERS,
+  CONTENT_TYPE_LABELS,
   DB_TO_TYPE,
   TYPE_TO_DB,
   type ContentType,
@@ -40,13 +41,6 @@ const TYPE_FILTER_OPTIONS: PillOption<ContentType | "alle">[] =
     ...option,
     icon: getContentTypeIcon(option.value),
   }));
-
-const TYPE_LABELS: Record<ContentType, string> = {
-  termin: "Termin",
-  blog: "Blog",
-  turnier: "Turnier",
-  umfrage: "Umfrage",
-};
 
 /** Prüft ein boolesches Merkmal (z. B. `post.internal`) gegen einen
  * Drei-Zustands-Filter: "nur" verlangt `true`, "keine" verlangt `false`. */
@@ -178,7 +172,7 @@ export function AdminNewsView({
                 DB_TO_TYPE[
                   post.type as "BLOG" | "TERMIN" | "TURNIER" | "UMFRAGE"
                 ];
-              const typeLabel = TYPE_LABELS[contentType];
+              const typeLabel = CONTENT_TYPE_LABELS[contentType];
               const TypeIcon = getContentTypeIcon(contentType);
               const canEditThis = post.internal
                 ? canEditInternal
@@ -238,6 +232,7 @@ export function AdminNewsView({
                         />
                       )}
                       <ActionButton
+                        refresh
                         variant="destructive"
                         size="sm"
                         confirm="Beitrag wirklich löschen?"

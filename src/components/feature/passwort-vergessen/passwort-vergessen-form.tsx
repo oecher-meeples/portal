@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,11 +10,12 @@ import { authClient } from "@/lib/auth/client";
 import { validatePassword } from "@/lib/auth/password";
 
 /**
- * Zwei-Schritt-Flow (#324): erst E-Mail anfordern (Neon Auth verschickt den
- * OTP-Code selbst — sendet immer `{success:true}`, unabhängig davon, ob ein
- * Konto existiert, siehe `authClient.forgetPassword.emailOtp`), dann Code +
- * neues Passwort auf derselben Seite eingeben. Kein eigenes Token-Modell
- * nötig — Neon Auth verwaltet Ausstellung/Ablauf/Einmalverwendung des OTP.
+ * Zwei-Schritt-Flow (#324): erst E-Mail anfordern (better-auths
+ * email-OTP-Plugin verschickt den Code über `src/lib/auth/config.ts` — Antwort
+ * immer `{success:true}`, unabhängig davon, ob ein Konto existiert, siehe
+ * `authClient.emailOtp.requestPasswordReset`), dann Code + neues Passwort auf
+ * derselben Seite eingeben. Kein eigenes Token-Modell nötig — better-auth
+ * verwaltet Ausstellung/Ablauf/Einmalverwendung des OTP.
  */
 export function PasswortVergessenForm({
   initialEmail = "",
@@ -35,7 +38,7 @@ export function PasswortVergessenForm({
     setError(null);
     setIsSubmitting(true);
     try {
-      await authClient.forgetPassword.emailOtp({ email });
+      await authClient.emailOtp.requestPasswordReset({ email });
     } catch {
       // Absichtlich keine Fehleranzeige — sonst wäre erkennbar, ob die
       // E-Mail-Adresse existiert (Enumeration-Schutz, #324/#326).
@@ -79,10 +82,7 @@ export function PasswortVergessenForm({
 
   if (step === "request") {
     return (
-      <form
-        onSubmit={handleRequest}
-        className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-      >
+      <form onSubmit={handleRequest} className={cn(cardVariants(), "gap-4")}>
         <TextField
           id="forgot-email"
           label="E-Mail"
@@ -100,10 +100,7 @@ export function PasswortVergessenForm({
   }
 
   return (
-    <form
-      onSubmit={handleReset}
-      className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-    >
+    <form onSubmit={handleReset} className={cn(cardVariants(), "gap-4")}>
       <p className="text-muted-foreground text-sm">
         Falls für <strong>{email}</strong> ein Konto besteht, wurde ein Code per
         E-Mail versendet. Trage ihn hier zusammen mit deinem neuen Passwort ein.

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PageHeading } from "@/components/ui/page-heading";
 import { TextField } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
 import { useAction, type ActionResult } from "@/components/ui/use-action";
 import { FLEA_MARKET_ITEM_STATUS_LABELS } from "@/lib/utils/format";
 import type { OwnFleaMarketItemInput } from "@/lib/bringbuy/own-items";
@@ -72,6 +73,7 @@ function NewItemForm({
   const [language, setLanguage] = useState("");
   const [priceEuros, setPriceEuros] = useState("");
   const { run, pending, error } = useAction({
+    refresh: true,
     onSuccess: () => {
       setTitle("");
       setLanguage("");
@@ -80,8 +82,8 @@ function NewItemForm({
   });
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Artikel anmelden</h2>
+    <Card>
+      <CardTitle>Artikel anmelden</CardTitle>
       <div className="grid gap-3 sm:grid-cols-3">
         <TextField
           id="new-item-title"
@@ -117,7 +119,7 @@ function NewItemForm({
       >
         {pending ? "Speichere…" : "Anmelden"}
       </Button>
-    </div>
+    </Card>
   );
 }
 
@@ -136,13 +138,14 @@ function ItemRow({
   const [language, setLanguage] = useState(item.language ?? "");
   const [priceEuros, setPriceEuros] = useState(String(item.priceEuros));
   const { run, pending, error } = useAction({
+    refresh: true,
     onSuccess: () => setEditing(false),
   });
   const canEdit = item.status === "PENDING";
 
   if (!editing) {
     return (
-      <div className="bg-card flex items-center justify-between gap-3 rounded-lg border p-4">
+      <Card size="sm" className="flex-row items-center justify-between">
         <div>
           <p className="font-medium">
             {item.title}{" "}
@@ -162,12 +165,12 @@ function ItemRow({
             Bearbeiten
           </Button>
         )}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
+    <Card size="sm">
       <div className="grid gap-3 sm:grid-cols-3">
         <TextField
           id={`edit-title-${item.id}`}
@@ -212,6 +215,6 @@ function ItemRow({
           Abbrechen
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }

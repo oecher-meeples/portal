@@ -2,7 +2,10 @@
 
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/auth/permissions";
+import {
+  requireActionPermission,
+  type ActionActor,
+} from "@/lib/auth/action-guards";
 import {
   computeExpiresAt,
   daysToMinutes,
@@ -11,11 +14,7 @@ import {
 import { getDefaultInviteDays } from "@/lib/members/invite-settings";
 import { prisma } from "@/lib/utils/prisma";
 
-async function requireInvitesManage() {
-  return requirePermission("invites:manage");
-}
-
-type InvitesManageAdmin = Awaited<ReturnType<typeof requireInvitesManage>>;
+type InvitesManageAdmin = ActionActor["user"];
 
 /** Shared by the duplicate-email path in `createInvite` and the
  * "Verlängern"-Button — recomputes `expiresAt` from now, not from the old one. */
@@ -82,7 +81,7 @@ async function createInviteForMember(
  * `createInvite` liest sie selbst aus `/admin/einstellungen/einladungen`
  * (`getDefaultInviteDays()`), ein Aufrufer kann sie nicht überschreiben. */
 export async function createInvite({ memberId }: { memberId: string }) {
-  const admin = await requireInvitesManage();
+  const { user: admin } = await requireActionPermission("invites:manage");
   const days = await getDefaultInviteDays();
   const expiresIn = daysToMinutes(days);
 
@@ -108,7 +107,7 @@ export type BulkInviteResult = {
 export async function bulkImportInvites(
   emails: string[],
 ): Promise<BulkInviteResult> {
-  const admin = await requireInvitesManage();
+  const { user: admin } = await requireActionPermission("invites:manage");
   const days = await getDefaultInviteDays();
   const expiresIn = daysToMinutes(days);
 
@@ -147,7 +146,7 @@ export async function bulkImportInvites(
 
 /** Reapplies the invite's own stored `expiresIn` from now — no new input needed. */
 export async function extendInvite(id: string) {
-  await requireInvitesManage();
+  await requireActionPermission("invites:manage");
   await applyExpiresIn(id);
   revalidatePath("/admin/mitglieder");
   return { success: true as const };
@@ -156,7 +155,7 @@ export async function extendInvite(id: string) {
 /** Invalidates a still-open invite link without deleting its record — the
  * audit trail (who created it, when) stays visible in the list. */
 export async function revokeInvite(id: string) {
-  await requireInvitesManage();
+  await requireActionPermission("invites:manage");
 
   await prisma.invite.update({
     where: { id },

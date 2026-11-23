@@ -22,8 +22,10 @@ import {
   HandHeart,
   PackageOpen,
   Bell,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
+import type { PermissionKey } from "@/lib/auth/permission-keys";
 
 export type NavItem = {
   label: string;
@@ -40,13 +42,15 @@ export type NavItem = {
    * tier gating the whole group. Overrides minTier when set — an admin
    * previewing a lower tier still hides these (see sidebar.tsx).
    */
-  permission?: string | string[];
+  permission?: PermissionKey | readonly PermissionKey[];
   /**
    * Extra data-dependent visibility gate on top of tier/permission —
    * "openHelperRequest" (#155, event-wide): hides "Helferplan" unless a
    * future event has `Event.helpersWanted` set. "activeAusleiheShift"
    * (#433, per Nutzer): hides "Ausleihe & Rückgabe" unless the current
-   * Meeple is inside a currently active "Leihe"-Schichtbuchung. Resolved
+   * Meeple is inside a currently active "Leihe"-Schichtbuchung.
+   * "activeMembership" (#537): hides the Scanner for an "ausgetreten"
+   * Meeple — Vier-Augen-Prinzip, they never book anything themselves. Resolved
    * server-side in app-shell.tsx and passed to Sidebar; direct navigation to
    * the href itself stays reachable regardless (the page shows its own
    * empty state / 403).
@@ -54,7 +58,8 @@ export type NavItem = {
   requiresFlag?: NavFlag;
 };
 
-export type NavFlag = "openHelperRequest" | "activeAusleiheShift";
+export type NavFlag =
+  "openHelperRequest" | "activeAusleiheShift" | "activeMembership";
 
 export type Tier = "gast" | "mitglied" | "admin";
 
@@ -139,8 +144,11 @@ export const ADMIN_PERMISSIONS = [
   "notifications:manage",
 ] as const;
 
-export const MITGLIEDER_PERMISSIONS = ["members:manage", "invites:manage"];
-export const EINSTELLUNGEN_PERMISSIONS = [
+export const MITGLIEDER_PERMISSIONS: PermissionKey[] = [
+  "members:manage",
+  "invites:manage",
+];
+export const EINSTELLUNGEN_PERMISSIONS: PermissionKey[] = [
   "games:manage",
   "instagram:connect",
   "invites:manage",
@@ -200,10 +208,11 @@ export const NAV_GROUPS: NavGroup[] = [
         section: "Mitgliederbereich",
       },
       {
-        label: "QR-/EAN-Scan",
+        label: "Scanner",
         href: "/scan",
         icon: ScanLine,
         section: "Mitgliederbereich",
+        requiresFlag: "activeMembership",
       },
       {
         label: "Spielergesuche",
@@ -338,6 +347,13 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Bell,
         section: "Administration",
         permission: "notifications:manage",
+      },
+      {
+        label: "Seitenaufrufe",
+        href: "/admin/analytics",
+        icon: Activity,
+        section: "Administration",
+        permission: "admin:access",
       },
     ],
   },

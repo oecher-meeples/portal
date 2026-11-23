@@ -6,9 +6,6 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 // The role CRUD rules themselves live in the lib layer and are tested in
 // src/lib/auth/roles.test.ts — here only the action wrappers matter.
@@ -37,6 +34,11 @@ vi.mock("@/lib/auth/user-roles", () => ({
   listMeepleRoleAssignments: (...args: unknown[]) =>
     listMeepleRoleAssignmentsMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   assignMeepleRole,

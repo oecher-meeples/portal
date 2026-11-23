@@ -1,10 +1,9 @@
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import {
-  getMembershipState,
-  requireMeeplePermission,
-} from "@/lib/members/meeples";
+import { getMembershipState } from "@/lib/members/membership-state";
 import { HoldingConflictError } from "@/lib/ludothek/holdings";
+import { toResult } from "@/lib/utils/action-result";
 
 /**
  * Shared helpers between `holding-actions.ts` and `holding-actions-external.ts`
@@ -12,31 +11,16 @@ import { HoldingConflictError } from "@/lib/ludothek/holdings";
  * fachliche Grenze: both modules are "the Server-Action layer for GameHolding".
  */
 
+/**
+ * Vier-Augen-Prinzip (#537): ein ausgetretenes Mitglied löst nie eine
+ * Buchung aus — auch keine Rückgabe in eine Einheit. Seine Spiele kommen nur
+ * zurück, wenn eine andere Person sie scannt (siehe CONTEXT.md „Abwicklung").
+ * Deshalb hier bewusst ohne `settlement`.
+ */
 export async function requireActingMeeple() {
-  const meeple = await requireMeeplePermission("ludothek:borrow");
-  // resignedAt/membershipEndsAt moved to the linked Member (#328).
-  const member = await prisma.member.findUnique({
-    where: { meepleId: meeple.id },
-    select: { id: true, resignedAt: true, membershipEndsAt: true },
-  });
-  const membershipState = getMembershipState({
-    meepleId: meeple.id,
-    resignedAt: member?.resignedAt ?? null,
-    membershipEndsAt: member?.membershipEndsAt ?? null,
-    anonymizedAt: meeple.anonymizedAt,
-  });
+  const { meeple, member, membershipState } =
+    await requireActionPermission("ludothek:borrow");
   return { meeple, member, membershipState };
-}
-
-/** Ausgetretene Meeples dürfen abgeben, aber nichts mehr annehmen (siehe CONTEXT.md). */
-export function assertCanReceive(
-  membershipState: ReturnType<typeof getMembershipState>,
-) {
-  if (membershipState === "ausgetreten") {
-    throw new HoldingConflictError(
-      "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    );
-  }
 }
 
 /**
@@ -59,29 +43,32 @@ export function requireOwnMember(member: { id: string } | null) {
 export async function requireMemberForMeeple(meepleId: string) {
   const member = await prisma.member.findUnique({
     where: { meepleId },
-    select: { id: true },
+    select: {
+      id: true,
+      meepleId: true,
+      resignedAt: true,
+      membershipEndsAt: true,
+      meeple: { select: { anonymizedAt: true } },
+    },
   });
   if (!member) {
     throw new HoldingConflictError(
       "Diese Person ist mit keinem Vereinsmitglied verknüpft.",
     );
   }
-  return member;
-}
-
-export async function toResult<T>(
-  run: () => Promise<T> | T,
-  onSuccess?: (value: T) => Promise<void> | void,
-) {
-  try {
-    const value = await run();
-    if (onSuccess) await onSuccess(value);
-    return { success: true as const, value };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unbekannter Fehler.",
-    };
+  // Vier-Augen-Prinzip (#537): ein ausgetretenes Mitglied ist nie Ziel.
+  const state = getMembershipState({
+    meepleId: member.meepleId,
+    resignedAt: member.resignedAt,
+    membershipEndsAt: member.membershipEndsAt,
+    anonymizedAt: member.meeple?.anonymizedAt ?? null,
+  });
+  if (state === "ausgetreten" || state === "anonymisiert") {
+    throw new HoldingConflictError(
+      "Diese Person ist ausgetreten und kann keine Spiele mehr annehmen.",
+    );
   }
+  return { id: member.id };
 }
 
 /** Revalidates the list, admin overview and (if resolvable) the copy's detail page — only called on success. */

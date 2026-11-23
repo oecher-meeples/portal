@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -17,11 +20,14 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const {
   createImportantLink,
@@ -33,7 +39,14 @@ const {
 const VALID_INPUT = {
   title: "Vereinssatzung",
   targetUrl: "https://example.org/satzung.pdf",
-  iconUrl: "https://blob.example/important-links/icon.webp",
+  iconUrl: `${TEST_S3_PUBLIC_BASE}/important-links/icon.webp`,
+};
+
+/** Gespeichert wird der Key, nicht die Upload-URL (#112). */
+const STORED_DATA = {
+  title: VALID_INPUT.title,
+  targetUrl: VALID_INPUT.targetUrl,
+  iconKey: "important-links/icon.webp",
 };
 
 describe("createImportantLink", () => {
@@ -64,7 +77,7 @@ describe("createImportantLink", () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.importantLink.create).toHaveBeenCalledWith({
-      data: VALID_INPUT,
+      data: STORED_DATA,
     });
   });
 });
@@ -89,7 +102,7 @@ describe("updateImportantLink", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.importantLink.update).toHaveBeenCalledWith({
       where: { id: "link-1" },
-      data: VALID_INPUT,
+      data: STORED_DATA,
     });
   });
 });
@@ -126,13 +139,13 @@ describe("deleteImportantLink", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.importantLink.findUnique.mockResolvedValue({
-      iconUrl: VALID_INPUT.iconUrl,
+      iconKey: STORED_DATA.iconKey,
     } as never);
 
     const result = await deleteImportantLink("link-1");
 
     expect(result).toEqual({ success: true });
-    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.iconUrl]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith([STORED_DATA.iconKey]);
     expect(prismaMock.importantLink.delete).toHaveBeenCalledWith({
       where: { id: "link-1" },
     });
@@ -142,7 +155,7 @@ describe("deleteImportantLink", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.importantLink.findUnique.mockResolvedValue({
-      iconUrl: null,
+      iconKey: null,
     } as never);
 
     const result = await deleteImportantLink("link-1");
@@ -160,9 +173,9 @@ describe("getImportantLinkUploadToken", () => {
     getCurrentUserMock.mockResolvedValue(null);
 
     await expect(
-      getImportantLinkUploadToken("important-links/a.webp"),
+      getImportantLinkUploadToken("important-links/a.webp", "image/webp"),
     ).rejects.toThrow("Keine Berechtigung.");
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("rejects when the user lacks the links:manage permission", async () => {
@@ -170,21 +183,25 @@ describe("getImportantLinkUploadToken", () => {
     hasPermissionMock.mockResolvedValue(false);
 
     await expect(
-      getImportantLinkUploadToken("important-links/a.webp"),
+      getImportantLinkUploadToken("important-links/a.webp", "image/webp"),
     ).rejects.toThrow("Keine Berechtigung.");
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises the pathname to the important-links namespace", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getImportantLinkUploadToken("../evil.webp");
+    const token = await getImportantLinkUploadToken(
+      "../evil.webp",
+      "image/webp",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "important-links/evil.webp",
+      contentType: "image/webp",
       allowedContentTypes: ["image/png", "image/jpeg", "image/webp"],
       addRandomSuffix: true,
       maximumSizeInBytes: 8 * 1024 * 1024,

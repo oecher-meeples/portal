@@ -1,8 +1,17 @@
+import {
+  VERSION_DISPLAY_SELECT,
+  versionDisplay,
+} from "@/lib/ludothek/taxonomy/contributors-read";
+import {
+  BOARD_GAME_DISPLAY_SELECT,
+  boardGameDisplayFields,
+} from "@/lib/ludothek/board-game-display";
 import { prisma } from "@/lib/utils/prisma";
 import {
   BoardGameKind,
   GameInventoryStatus,
   ProfilePictureVisibility,
+  type Prisma,
 } from "@prisma/client";
 import {
   isLoanHolding,
@@ -23,19 +32,30 @@ import { memberDisplayName } from "@/lib/members/member-display-name";
  * avoids an N+1 per copy for zustand/location/responsibility. One row per
  * physical copy; title-level fields (description, mechanics, …) come from
  * the shared `BoardGame`.
+ *
+ * `where` (#526) engt die Exemplare ein, z. B. auf einen Titel
+ * (`{ boardGame: { slug } }`) für die Detailseite — deinventarisierte
+ * Exemplare bleiben immer draußen.
  */
-export async function buildLudothekGames(): Promise<LudothekGame[]> {
+export async function buildLudothekGames({
+  where,
+}: { where?: Prisma.GameCopyWhereInput } = {}): Promise<LudothekGame[]> {
   const [copies, units] = await Promise.all([
     prisma.gameCopy.findMany({
-      where: { status: { not: GameInventoryStatus.DEINVENTARISED } },
+      where: {
+        ...where,
+        status: { not: GameInventoryStatus.DEINVENTARISED },
+      },
       // Default sort: highest-rated first, titles without a rating last (#214).
       orderBy: [
         { boardGame: { averageRating: { sort: "desc", nulls: "last" } } },
         { boardGame: { title: "asc" } },
       ],
       include: {
+        version: VERSION_DISPLAY_SELECT,
         boardGame: {
           include: {
+            ...BOARD_GAME_DISPLAY_SELECT.include,
             baseGameCollections: {
               include: {
                 expansion: {
@@ -50,7 +70,6 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
                 },
               },
             },
-            alternateNames: { select: { name: true } },
           },
         },
         holdings: {
@@ -102,32 +121,13 @@ export async function buildLudothekGames(): Promise<LudothekGame[]> {
     const holding = copy.holdings[0] ?? null;
     const base = {
       id: copy.id,
-      boardGameId: boardGame.id,
+      ...boardGameDisplayFields(boardGame),
       slug: copy.slug,
-      boardGameSlug: boardGame.slug,
-      title: boardGame.title,
-      imageUrl: boardGame.imageUrl,
-      minPlayers: boardGame.minPlayers,
-      maxPlayers: boardGame.maxPlayers,
-      playTimeMinutes: boardGame.playTimeMinutes,
-      weight: boardGame.weight,
-      averageRating: boardGame.averageRating,
-      mechanics: boardGame.mechanics,
-      categories: boardGame.categories,
-      ean: boardGame.ean,
       condition: copy.condition,
       ruleBookLanguages: copy.ruleBookLanguages,
       inventoryNumber: copy.inventoryNumber,
-      bggId: boardGame.bggId,
-      alternateNames: boardGame.alternateNames.map((a) => a.name),
-      secondaryTitle: boardGame.secondaryTitle,
-      description: boardGame.description,
-      explainerVideoUrl: boardGame.explainerVideoUrl,
-      kind: boardGame.kind,
-      languageDependence: boardGame.languageDependence,
-      publisher: boardGame.publisher,
-      author: boardGame.author,
-      yearPublished: boardGame.yearPublished,
+      versionId: copy.versionId,
+      ...versionDisplay(copy.version),
       baseGames: boardGame.expansionCollections.map((c) => c.baseGame),
       expansions: boardGame.baseGameCollections.map((c) => c.expansion),
       explainerCount: explainerCounts.get(boardGame.id) ?? 0,

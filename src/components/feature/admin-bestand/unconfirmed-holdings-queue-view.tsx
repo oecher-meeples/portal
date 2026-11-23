@@ -1,5 +1,7 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -29,7 +31,7 @@ export function UnconfirmedHoldingsQueueView({
           Aktuell keine offenen unbestätigten Übergaben.
         </p>
       ) : (
-        <ul className="bg-card flex flex-col divide-y rounded-lg border">
+        <ul className={cn(cardVariants({ size: "flush" }), "divide-y")}>
           {rows.map((row) => (
             <li
               key={row.id}
@@ -49,6 +51,7 @@ export function UnconfirmedHoldingsQueueView({
                 </span>
               </span>
               <ActionButton
+                refresh
                 size="sm"
                 action={confirmHoldingForGamesManager.bind(null, row.id)}
               >

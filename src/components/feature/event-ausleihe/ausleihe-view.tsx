@@ -1,14 +1,21 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CodeScanner } from "@/components/ui/code-scanner";
+import { cn } from "@/lib/utils/cn";
+import {
+  BOARD_GAME_TRAIT_TONE_TO_NOTIFICATION_TYPE,
+  NOTIFICATION_BANNER_CLASS,
+} from "@/components/entities/notification-tone";
 import {
   ausleiheGetAvailability,
   ausleiheIssueGame,
   ausleiheReturnToUnit,
   ausleiheResolveCode,
+  type LoanWarningTrait,
 } from "@/components/feature/event-ausleihe/ausleihe-actions";
 import { PageContainer } from "@/components/ui/page-container";
 
@@ -19,7 +26,12 @@ type ViewState =
       kind: "select-game";
       games: { id: string; title: string }[];
     }
-  | { kind: "available"; gameCopyId: string; title: string }
+  | {
+      kind: "available";
+      gameCopyId: string;
+      title: string;
+      loanWarnings: LoanWarningTrait[];
+    }
   | {
       kind: "on-loan";
       gameCopyId: string;
@@ -53,7 +65,12 @@ export function AusleiheView() {
     }
     setState(
       availability.kind === "available"
-        ? { kind: "available", gameCopyId, title }
+        ? {
+            kind: "available",
+            gameCopyId,
+            title,
+            loanWarnings: availability.loanWarnings,
+          }
         : {
             kind: "on-loan",
             gameCopyId,
@@ -141,7 +158,7 @@ export function AusleiheView() {
     <PageContainer className="grid gap-6 lg:grid-cols-[2fr_1fr]">
       <CodeScanner onDetected={handleCode} />
 
-      <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
+      <Card className="gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="manual-code" className="text-sm font-medium">
             Manuelle Eingabe
@@ -151,7 +168,7 @@ export function AusleiheView() {
               id="manual-code"
               value={manualInput}
               onChange={(event) => setManualInput(event.target.value)}
-              placeholder="OM-BOX-0001 oder EAN"
+              placeholder="inv-123, OM-BOX-0001 oder EAN"
             />
             <Button
               onClick={() => {
@@ -207,6 +224,20 @@ export function AusleiheView() {
           {state.kind === "available" && (
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">{state.title}</p>
+              {state.loanWarnings.map((warning) => (
+                <p
+                  key={warning.trait}
+                  role="alert"
+                  className={cn(
+                    "rounded-md border px-3 py-2 text-sm",
+                    NOTIFICATION_BANNER_CLASS[
+                      BOARD_GAME_TRAIT_TONE_TO_NOTIFICATION_TYPE[warning.tone]
+                    ],
+                  )}
+                >
+                  {warning.loanMessage}
+                </p>
+              ))}
               <Button
                 disabled={pending}
                 onClick={() => void issue(state.gameCopyId, state.title)}
@@ -269,7 +300,7 @@ export function AusleiheView() {
             <p className="text-muted-foreground mt-3 text-sm">{message}</p>
           )}
         </div>
-      </div>
+      </Card>
     </PageContainer>
   );
 }

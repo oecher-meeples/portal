@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { Copy } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
   PressHoldReveal,
@@ -18,9 +24,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  revealIban,
-  revealPendingIban,
-} from "@/components/feature/admin-bank/actions";
+  revealMemberIban,
+  revealPendingMemberIban,
+} from "@/lib/members/iban-reveal-actions";
 import { BankCsvExportDialog } from "@/components/feature/admin-bank/bank-csv-export-dialog";
 import {
   PendingChangesPanel,
@@ -67,7 +73,7 @@ export function AdminBankView({
   >({});
 
   async function revealRowIban(id: string): Promise<RevealResult> {
-    const result = await revealIban(id);
+    const result = await revealMemberIban(id);
     return "error" in result
       ? result
       : { success: true as const, value: result.iban };
@@ -98,7 +104,7 @@ export function AdminBankView({
         titlePlural="Offene IBAN-Änderungsanträge"
         changes={pendingIbanChanges}
         revealIban={async (changeId) => {
-          const result = await revealPendingIban(changeId);
+          const result = await revealPendingMemberIban(changeId);
           return "error" in result
             ? result
             : { success: true as const, value: result.iban };
@@ -162,19 +168,19 @@ export function AdminBankView({
         </TableBody>
       </Table>
 
-      <div className="bg-card rounded-lg border p-5">
-        <h2 className="font-serif text-lg font-bold">
-          Zugriffsprotokoll (letzte Einträge)
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Aufbewahrung 24 Monate, danach automatisch gelöscht.
-        </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Zugriffsprotokoll (letzte Einträge)</CardTitle>
+          <CardDescription>
+            Aufbewahrung 24 Monate, danach automatisch gelöscht.
+          </CardDescription>
+        </CardHeader>
         {logs.length === 0 ? (
-          <p className="text-muted-foreground mt-3 text-sm">
+          <p className="text-muted-foreground text-sm">
             Noch keine Zugriffe protokolliert.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-col divide-y text-sm">
+          <ul className="flex flex-col divide-y text-sm">
             {logs.map((log) => (
               <li key={log.id} className="flex flex-wrap gap-2 py-2">
                 <span className="font-mono">{log.at}</span>
@@ -187,7 +193,7 @@ export function AdminBankView({
             ))}
           </ul>
         )}
-      </div>
+      </Card>
     </PageContainer>
   );
 }

@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { Card, CardTitle } from "@/components/ui/card";
 import type { GuardianLinkOption } from "@/lib/members/guardians";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 
 /** "Meine Kinder"-Sektion (#376) — nur auf der eigenen Profilseite
  * eingebunden (`mitglied-profil-view.tsx` rendert sie nur, wenn
@@ -15,8 +16,8 @@ export function MeineKinderSection({
   if (guardianChildren.length === 0) return null;
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Meine Kinder</h2>
+    <Card>
+      <CardTitle>Meine Kinder</CardTitle>
       <ul className="flex flex-col gap-1.5 text-sm">
         {guardianChildren.map((child) => (
           <li key={child.id} className="flex items-center gap-1.5">
@@ -28,7 +29,7 @@ export function MeineKinderSection({
               size="md"
             />
             {child.meepleId ? (
-              <ContactDialog
+              <MeepleContactDialog
                 name={child.displayName}
                 meepleId={child.meepleId}
               />
@@ -47,6 +48,6 @@ export function MeineKinderSection({
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

@@ -3,24 +3,28 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
+const requirePermissionMock = vi.fn().mockResolvedValue({ id: "admin-user" });
 
 const createUserMock = vi.fn();
 const requestPasswordResetMock = vi.fn();
 vi.mock("@/lib/auth/server", () => ({
+  createLoginAccount: (...args: unknown[]) => createUserMock(...args),
   auth: {
-    admin: { createUser: (...args: unknown[]) => createUserMock(...args) },
-    requestPasswordReset: (...args: unknown[]) =>
-      requestPasswordResetMock(...args),
+    api: {
+      requestPasswordReset: (...args: unknown[]) =>
+        requestPasswordResetMock(...args),
+    },
   },
 }));
 
 vi.mock("@/lib/utils/request-origin", () => ({
   getRequestOrigin: () => Promise.resolve("https://example.com"),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { createSystemkonto } = await import("@/lib/members/systemkonto");
 
@@ -46,10 +50,7 @@ describe("createSystemkonto", () => {
   });
 
   it("surfaces the error when the auth service rejects user creation", async () => {
-    createUserMock.mockResolvedValue({
-      data: null,
-      error: { message: "FORBIDDEN" },
-    });
+    createUserMock.mockResolvedValue({ error: "User already exists" });
 
     const result = await createSystemkonto({
       email: "bot@example.com",
@@ -57,13 +58,13 @@ describe("createSystemkonto", () => {
     });
 
     expect(result).toEqual({
-      error: "Systemkonto konnte nicht angelegt werden: FORBIDDEN",
+      error: "Systemkonto konnte nicht angelegt werden: User already exists",
     });
     expect(prismaMock.meeple.create).not.toHaveBeenCalled();
   });
 
   it("creates the auth user, the Meeple and triggers a password reset", async () => {
-    createUserMock.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    createUserMock.mockResolvedValue({ userId: "user-1" });
     prismaMock.meeple.create.mockResolvedValue({ id: "meeple-1" } as never);
 
     const result = await createSystemkonto({
@@ -82,8 +83,10 @@ describe("createSystemkonto", () => {
       data: { neonAuthUserId: "user-1", displayName: "Kassenbot" },
     });
     expect(requestPasswordResetMock).toHaveBeenCalledWith({
-      email: "bot@example.com",
-      redirectTo: "https://example.com/passwort-vergessen/einloesen",
+      body: {
+        email: "bot@example.com",
+        redirectTo: "https://example.com/passwort-vergessen/einloesen",
+      },
     });
   });
 });

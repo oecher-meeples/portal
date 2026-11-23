@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useState } from "react";
 import { GripVertical, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   setRolePermissions,
   reorderRoles,
 } from "@/components/feature/admin-mitglieder/actions";
+import type { PermissionKey } from "@/lib/auth/permission-keys";
 
 export type RoleManagementRow = {
   id: string;
@@ -40,8 +42,7 @@ export type RoleManagementRow = {
 /** Eigener MIME-Typ für den Drag-Payload — analog role-permissions-editor.tsx. */
 const REORDER_DRAG_MIME = "application/x-role-id";
 
-/** Muss zum in prisma/seed-roles.ts gepflegten Permission-Key passen. */
-const ADMIN_ACCESS_PERMISSION_KEY = "admin:access";
+const ADMIN_ACCESS_PERMISSION_KEY: PermissionKey = "admin:access";
 
 /**
  * Rollenverwaltung — nur sichtbar mit `members:manage` (Gate liegt beim
@@ -99,7 +100,7 @@ export function RoleManagementSection({
   }
 
   return (
-    <Accordion className="bg-card rounded-lg border">
+    <Accordion className={cardVariants({ size: "flush" })}>
       <AccordionItem value="roles" className="border-b-0">
         <AccordionTrigger className="px-5">
           <span className="flex items-center gap-2">

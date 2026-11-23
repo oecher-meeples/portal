@@ -11,7 +11,7 @@ import {
 } from "./seed-data/demo-family";
 import { randomDemoContactFields } from "./seed-data/demo-contacts";
 import {
-  upsertNeonAuthUser,
+  upsertAuthUser,
   ensureMeeple,
   ensureDemoMember,
   nextMemberNumber,
@@ -20,7 +20,7 @@ import {
 /** Vater/Mutter — Meeple-Account (Login) plus zugehöriges `Member` (inkl.
  * Adresse und IBAN, siehe `ensureDemoMember`) und zufällige Kontaktfelder. */
 async function ensureFamilyParentMember(person: DemoFamilyParent) {
-  const userId = await upsertNeonAuthUser(person);
+  const userId = await upsertAuthUser(person);
   await assignRole(userId, "Meeple");
   const meeple = await ensureMeeple(userId, person.name);
   await prisma.meeple.update({

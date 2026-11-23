@@ -33,7 +33,7 @@ const RESIGNED_MEMBER = {
 };
 
 function givenAnonymisableMeeple(
-  listings: { id: string; imageUrls: string[] }[] = [],
+  listings: { id: string; imageKeys: string[] }[] = [],
 ) {
   prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
   prismaMock.member.findUnique.mockResolvedValue(RESIGNED_MEMBER as never);
@@ -100,12 +100,12 @@ describe("anonymiseMeepleStufe1", () => {
   it("deletes uploaded images before touching the database", async () => {
     prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
     prismaMock.marketListing.findMany.mockResolvedValue([
-      { id: "l-1", imageUrls: ["https://blob/a.jpg"] },
+      { id: "l-1", imageKeys: ["market-listings/a.jpg"] },
     ] as never);
 
     await anonymiseMeepleStufe1("meeple-1");
 
-    expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/a.jpg"]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith(["market-listings/a.jpg"]);
   });
 
   // #394: je Feld wird nur über die Autor-/Erfasser-Relation der zu
@@ -133,7 +133,7 @@ describe("anonymiseMeepleStufe1", () => {
 
     expect(prismaMock.marketListing.updateMany).toHaveBeenCalledWith({
       where: { sellerMeepleId: "meeple-1" },
-      data: { imageUrls: [], title: "", description: null },
+      data: { imageKeys: [], title: "", description: null },
     });
   });
 
@@ -159,6 +159,18 @@ describe("anonymiseMeepleStufe1", () => {
       where: { recordedByMeepleId: "meeple-1" },
       data: { note: null },
     });
+  });
+
+  it("clears GameCopyCheck.note of the meeple's own checks, keeping the records (#599)", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.gameCopyCheck.updateMany).toHaveBeenCalledWith({
+      where: { checkedByMeepleId: "meeple-1" },
+      data: { note: null },
+    });
+    expect(prismaMock.gameCopyCheck.deleteMany).not.toHaveBeenCalled();
   });
 
   it("clears StorageUnitMove.locationNote only where the meeple recorded it themselves", async () => {
@@ -222,7 +234,9 @@ describe("anonymiseMeepleStufe2", () => {
     expect(await anonymiseMeepleStufe2("meeple-1", NOW)).toEqual({
       success: true,
     });
-    expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(3);
+    expect(prismaMock.authUser.deleteMany).toHaveBeenCalledWith({
+      where: { id: "11111111-1111-1111-1111-111111111111" },
+    });
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { id: "member-1" },
       data: { meepleId: null },
@@ -245,7 +259,9 @@ describe("anonymiseMeepleStufe2", () => {
   });
 
   it("leaves the member un-anonymised when blob deletion fails", async () => {
-    givenAnonymisableMeeple([{ id: "l-1", imageUrls: ["https://blob/a.jpg"] }]);
+    givenAnonymisableMeeple([
+      { id: "l-1", imageKeys: ["market-listings/a.jpg"] },
+    ]);
     deleteBlobsMock.mockRejectedValue(new Error("blob boom"));
 
     await expect(anonymiseMeepleStufe2("meeple-1", NOW)).rejects.toThrow(
@@ -254,9 +270,9 @@ describe("anonymiseMeepleStufe2", () => {
     expect(prismaMock.meeple.update).not.toHaveBeenCalled();
   });
 
-  it("rolls back when the raw sql fails", async () => {
+  it("rolls back when deleting the login fails", async () => {
     givenAnonymisableMeeple();
-    prismaMock.$executeRaw.mockRejectedValueOnce(new Error("db boom"));
+    prismaMock.authUser.deleteMany.mockRejectedValueOnce(new Error("db boom"));
 
     await expect(anonymiseMeepleStufe2("meeple-1", NOW)).rejects.toThrow(
       "db boom",

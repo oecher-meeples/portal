@@ -63,7 +63,9 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     ruleBookLanguages: [],
     publisher: [],
     author: [],
+    illustrator: [],
     yearPublished: null,
+    editionLanguages: [],
     description: null,
     explainerVideoUrl: null,
     kind: BoardGameKind.BOARDGAME,
@@ -71,6 +73,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
     expansions: [],
     explainerCount: 0,
     hasOpenLfg: false,
+    traits: [],
+    notes: null,
     isPrivate: false,
     ...overrides,
   };
@@ -124,7 +128,9 @@ const TITLE_EDIT_FIXTURE = {
   languageDependence: null,
   publisher: [],
   author: [],
+  illustrator: [],
   yearPublished: null,
+  editionLanguages: [],
   ean: null,
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
@@ -138,6 +144,8 @@ const TITLE_EDIT_FIXTURE = {
   mechanics: [],
   categories: [],
   explainerVideoUrl: null,
+  traits: [],
+  notes: null,
 };
 
 describe("GameDetailView — Titel bearbeiten (#121/#122)", () => {

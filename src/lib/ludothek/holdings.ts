@@ -2,8 +2,6 @@ import {
   GameInventoryStatus,
   HoldingOrigin,
   type GameHolding,
-  type Prisma,
-  type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import {
@@ -14,7 +12,9 @@ import {
   UnitRetiredError,
 } from "@/lib/ludothek/errors";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /** Whether a Meeple currently has any open, unconfirmed handover/return
  * waiting on them (#290) — backs the Ludothek "meine Ausleihen"-Filters
@@ -199,7 +199,7 @@ export async function borrowGame({
       );
     }
 
-    return closeAndOpen(tx, {
+    const holding = await closeAndOpen(tx, {
       gameCopyId,
       previous,
       target: { vereinsmitgliedId },
@@ -208,6 +208,14 @@ export async function borrowGame({
       confirmedAt: await confirmationFor(tx, recordedByMeepleId, isSelf),
       note,
     });
+    // #563: jede Ausleihe (Verein, Event-Ausgabe, extern) markiert das
+    // Exemplar zur Kontrolle — bis der Prüfbogen ausgefüllt ist. Eine
+    // Weitergabe (HANDOVER) lässt das Flag unverändert.
+    await tx.gameCopy.update({
+      where: { id: gameCopyId },
+      data: { needsCompletenessCheck: true },
+    });
+    return holding;
   });
 }
 

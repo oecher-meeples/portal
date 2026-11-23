@@ -1,10 +1,12 @@
-﻿"use client";
+"use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/ui/field";
 import { redeemInvite } from "@/components/feature/registrieren/actions";
 import { validatePassword } from "@/lib/auth/password";
 
@@ -54,12 +56,8 @@ export function RegisterForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-    >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="token">Einladungs-Token</Label>
+    <form onSubmit={handleSubmit} className={cn(cardVariants(), "gap-4")}>
+      <Field label="Einladungs-Token" htmlFor="token">
         <Input
           id="token"
           value={token}
@@ -68,18 +66,16 @@ export function RegisterForm({
           className="font-mono text-sm"
           required
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="name">Name</Label>
+      </Field>
+      <Field label="Name" htmlFor="name">
         <Input
           id="name"
           value={name}
           onChange={(event) => setName(event.target.value)}
           required
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="reg-email">E-Mail</Label>
+      </Field>
+      <Field label="E-Mail" htmlFor="reg-email">
         <Input
           id="reg-email"
           type="email"
@@ -88,9 +84,8 @@ export function RegisterForm({
           readOnly={emailLocked}
           required
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="reg-password">Passwort festlegen</Label>
+      </Field>
+      <Field label="Passwort festlegen" htmlFor="reg-password">
         <Input
           id="reg-password"
           type="password"
@@ -98,9 +93,8 @@ export function RegisterForm({
           onChange={(event) => setPassword(event.target.value)}
           required
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="reg-password-confirm">Passwort wiederholen</Label>
+      </Field>
+      <Field label="Passwort wiederholen" htmlFor="reg-password-confirm">
         <Input
           id="reg-password-confirm"
           type="password"
@@ -108,7 +102,7 @@ export function RegisterForm({
           onChange={(event) => setPasswordConfirm(event.target.value)}
           required
         />
-      </div>
+      </Field>
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Konto wird aktiviert…" : "Konto aktivieren"}

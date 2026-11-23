@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -17,11 +20,14 @@ vi.mock("@/lib/utils/blob-delete", () => ({
   deleteBlobs: (...args: unknown[]) => deleteBlobsMock(...args),
 }));
 
-const generateClientTokenMock = vi.fn();
-vi.mock("@vercel/blob/client", () => ({
-  generateClientTokenFromReadWriteToken: (...args: unknown[]) =>
-    generateClientTokenMock(...args),
+const createBlobUploadTokenMock = vi.fn();
+vi.mock("@/lib/utils/blob-upload-token", () => ({
+  createBlobUploadToken: (...args: unknown[]) =>
+    createBlobUploadTokenMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).currentUserGuards(),
+);
 
 const {
   createDownload,
@@ -33,10 +39,13 @@ const {
   getDownloadUploadToken,
 } = await import("./actions");
 
+/** Gespeichert wird der Key, nicht die Upload-URL (#112). */
+const VALID_KEY = "downloads/mitgliedsantrag.pdf";
+
 const VALID_INPUT = {
   title: "Mitgliedsantrag",
   fileName: "mitgliedsantrag.pdf",
-  fileUrl: "https://blob.example/downloads/mitgliedsantrag.pdf",
+  fileUrl: `${TEST_S3_PUBLIC_BASE}/downloads/mitgliedsantrag.pdf`,
   fileType: "PDF",
   fileSizeBytes: 1234,
 };
@@ -69,7 +78,13 @@ describe("createDownload", () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.download.create).toHaveBeenCalledWith({
-      data: VALID_INPUT,
+      data: {
+        title: VALID_INPUT.title,
+        fileName: VALID_INPUT.fileName,
+        fileType: VALID_INPUT.fileType,
+        fileSizeBytes: VALID_INPUT.fileSizeBytes,
+        fileKey: VALID_KEY,
+      },
     });
   });
 });
@@ -162,13 +177,13 @@ describe("deleteDownload", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.download.findUnique.mockResolvedValue({
-      fileUrl: VALID_INPUT.fileUrl,
+      fileKey: VALID_KEY,
     } as never);
 
     const result = await deleteDownload("download-1");
 
     expect(result).toEqual({ success: true });
-    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.fileUrl]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_KEY]);
     expect(prismaMock.download.delete).toHaveBeenCalledWith({
       where: { id: "download-1" },
     });
@@ -181,7 +196,7 @@ describe("replaceDownloadFile", () => {
   });
 
   const NEW_FILE = {
-    fileUrl: "https://blob.example/downloads/mitgliedsantrag-v2.pdf",
+    fileUrl: `${TEST_S3_PUBLIC_BASE}/downloads/mitgliedsantrag-v2.pdf`,
     fileType: "PDF",
     fileSizeBytes: 4321,
     fileName: "mitgliedsantrag-v2.pdf",
@@ -214,7 +229,7 @@ describe("replaceDownloadFile", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.download.findUnique.mockResolvedValue({
-      fileUrl: VALID_INPUT.fileUrl,
+      fileKey: VALID_KEY,
     } as never);
     const callOrder: string[] = [];
     prismaMock.download.update.mockImplementation((async () => {
@@ -230,9 +245,15 @@ describe("replaceDownloadFile", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.download.update).toHaveBeenCalledWith({
       where: { id: "download-1" },
-      data: { ...NEW_FILE, fileUpdatedAt: expect.any(Date) },
+      data: {
+        fileType: NEW_FILE.fileType,
+        fileSizeBytes: NEW_FILE.fileSizeBytes,
+        fileName: NEW_FILE.fileName,
+        fileKey: "downloads/mitgliedsantrag-v2.pdf",
+        fileUpdatedAt: expect.any(Date),
+      },
     });
-    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.fileUrl]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_KEY]);
     expect(callOrder).toEqual(["update", "delete"]);
   });
 });
@@ -298,32 +319,36 @@ describe("getDownloadUploadToken", () => {
   it("rejects when there is no logged-in user", async () => {
     getCurrentUserMock.mockResolvedValue(null);
 
-    await expect(getDownloadUploadToken("downloads/a.pdf")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getDownloadUploadToken("downloads/a.pdf", "application/pdf"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("rejects when the user lacks the downloads:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(false);
 
-    await expect(getDownloadUploadToken("downloads/a.pdf")).rejects.toThrow(
-      "Keine Berechtigung.",
-    );
-    expect(generateClientTokenMock).not.toHaveBeenCalled();
+    await expect(
+      getDownloadUploadToken("downloads/a.pdf", "application/pdf"),
+    ).rejects.toThrow("Keine Berechtigung.");
+    expect(createBlobUploadTokenMock).not.toHaveBeenCalled();
   });
 
   it("normalises the pathname to the downloads namespace without a content-type restriction", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
-    generateClientTokenMock.mockResolvedValue("token-123");
+    createBlobUploadTokenMock.mockResolvedValue("token-123");
 
-    const token = await getDownloadUploadToken("../evil.pdf");
+    const token = await getDownloadUploadToken(
+      "../evil.pdf",
+      "application/pdf",
+    );
 
     expect(token).toBe("token-123");
-    expect(generateClientTokenMock).toHaveBeenCalledWith({
+    expect(createBlobUploadTokenMock).toHaveBeenCalledWith({
       pathname: "downloads/evil.pdf",
+      contentType: "application/pdf",
       addRandomSuffix: true,
       maximumSizeInBytes: 20 * 1024 * 1024,
     });

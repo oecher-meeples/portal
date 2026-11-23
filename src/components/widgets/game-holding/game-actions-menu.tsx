@@ -14,76 +14,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/components/ui/use-action";
 import { requestCompletenessCheck } from "@/lib/ludothek/game-copies";
-import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
-import { DeinventoriseBoardGameDialog } from "@/components/widgets/board-game/deinventorise-board-game-dialog";
-import { EditBoardGameExemplarDialog } from "@/components/widgets/board-game/edit-board-game-exemplar-dialog";
 import {
-  AcceptReturnDialog,
-  BorrowGameDialog,
-  GiveToMeepleDialog,
-  RelocateGameDialog,
-} from "@/components/widgets/game-holding/holding-mini-dialogs";
+  AUFENTHALT_ACTIONS,
+  COPY_ACTION_LABELS,
+  VERWALTUNG_ACTIONS,
+  isCopyActionAvailable,
+  type CopyActionKey,
+} from "@/lib/ludothek/copy-actions";
+import { AddGameCopyDialog } from "@/components/widgets/board-game/add-game-copy-dialog";
+import {
+  CopyActionDialog,
+  type DialogCopyAction,
+  type GameActionsCopy,
+} from "@/components/widgets/game-holding/copy-action-dialog";
 import { CopyPickerDialog } from "@/components/widgets/game-holding/copy-picker-dialog";
-import type { GameZustand } from "@/lib/ludothek/holdings";
-import type { RuleBookLanguage } from "@prisma/client";
 
-export type GameActionsCopy = {
-  id: string;
-  zustand: GameZustand;
-  locationChain: string;
-  condition: string | null;
-  ruleBookLanguages: RuleBookLanguage[];
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber: string | null;
-  /** Whether the current session holds this copy right now — gates
-   * "Weitergeben" for the non-ambiguous case (#128). Omitted callers keep
-   * showing it unconditionally, matching the previous behaviour. */
-  isMine?: boolean;
-};
-
-type ActionKey =
-  | "borrow"
-  | "give"
-  | "return"
-  | "relocate"
-  | "condition"
-  | "deinventorise"
-  | "completeness-check";
-
-const ACTION_LABELS: Record<ActionKey, string> = {
-  borrow: "Ausleihen",
-  give: "Weitergeben",
-  return: "Rückgabe",
-  relocate: "Umlagern",
-  condition: "Exemplar bearbeiten",
-  deinventorise: "Deinventarisieren",
-  "completeness-check": "Prüfung anfordern",
-};
-
-const AUFENTHALT_ACTIONS: ActionKey[] = [
-  "borrow",
-  "give",
-  "return",
-  "relocate",
-];
-
-/** "Weitergeben" setzt voraus, dass das Exemplar gerade bei einer Person
- * liegt (#405) — sonst gibt es niemanden, der es weitergeben könnte. Ein
- * normaler Meeple darf nur eigene Exemplare weitergeben (`isMine`);
- * `games:manage` administrativ jedes gerade ausgeliehene, unabhängig davon,
- * wer es hält (analog #274/#290, "sein Wort ist Gesetz"). */
-function canGiveAway(copy: GameActionsCopy, canManageGames: boolean): boolean {
-  const heldByPerson =
-    copy.zustand === "ausgeliehen-verfuegbar" ||
-    copy.zustand === "ausgeliehen-nicht-verfuegbar";
-  if (!heldByPerson) return false;
-  return canManageGames || (copy.isMine ?? true);
-}
-const VERWALTUNG_ACTIONS: ActionKey[] = [
-  "completeness-check",
-  "condition",
-  "deinventorise",
-];
+export type { GameActionsCopy };
 
 /**
  * Rights-based aufenthalt/admin actions for one title's exemplare, replacing
@@ -91,11 +37,13 @@ const VERWALTUNG_ACTIONS: ActionKey[] = [
  * "Geprüft" stays a placeholder — it needs its own Mängelvermerk input, out
  * of scope here (see `PruefbogenPanel`).
  *
- * With `copies.length > 1` (Plan-Schritt 12) every exemplar-bound entry is
- * ambiguous — clicking it opens the `CopyPickerDialog` first, and only once
- * an exemplar is chosen does the actual mini-dialog open, now scoped to that
- * one copy. "Weiteres Exemplar hinzufügen" needs no existing copy and always
- * skips the picker.
+ * Ein Eintrag erscheint nur, wenn er für mindestens ein Exemplar Sinn ergibt
+ * (`isCopyActionAvailable`, #548 — dieselbe Regel wie die Quick-Actions der
+ * Detailseite). With several eligible copies (Plan-Schritt 12) the entry is
+ * ambiguous — clicking it opens the `CopyPickerDialog` with just those
+ * copies first, and only once an exemplar is chosen does the actual
+ * mini-dialog open. "Weiteres Exemplar hinzufügen" needs no existing copy
+ * and always skips the picker.
  */
 export function GameActionsMenu({
   copies,
@@ -108,22 +56,21 @@ export function GameActionsMenu({
   boardGameTitle: string;
   canManageGames: boolean;
 }) {
-  const { run, pending } = useAction();
-  const [pendingPick, setPendingPick] = useState<ActionKey | null>(null);
+  const { run, pending } = useAction({ refresh: true });
+  const [pendingPick, setPendingPick] = useState<CopyActionKey | null>(null);
   const [chosen, setChosen] = useState<{
-    action: ActionKey;
+    action: DialogCopyAction;
     copyId: string;
   } | null>(null);
-  const ambiguous = copies.length > 1;
-  const sole = copies[0];
-  const giveEligibleCopies = copies.filter((c) =>
-    canGiveAway(c, canManageGames),
-  );
+  const [addCopyOpen, setAddCopyOpen] = useState(false);
 
-  async function pickCopy(copyId: string) {
-    const action = pendingPick;
-    setPendingPick(null);
-    if (!action) return;
+  function eligibleCopies(action: CopyActionKey) {
+    return copies.filter((copy) =>
+      isCopyActionAvailable(action, copy, { canManageGames }),
+    );
+  }
+
+  async function runOnCopy(action: CopyActionKey, copyId: string) {
     if (action === "completeness-check") {
       await run(() => requestCompletenessCheck(copyId));
       return;
@@ -131,14 +78,33 @@ export function GameActionsMenu({
     setChosen({ action, copyId });
   }
 
-  function closeChosen(open: boolean) {
-    if (!open) setChosen(null);
+  /** Bei mehreren passenden Exemplaren erst die Exemplar-Auswahl, sonst
+   * direkt der Dialog für das eine Exemplar. */
+  function startAction(action: CopyActionKey) {
+    const eligible = eligibleCopies(action);
+    if (eligible.length > 1) {
+      setPendingPick(action);
+      return;
+    }
+    void runOnCopy(action, eligible[0].id);
+  }
+
+  async function pickCopy(copyId: string) {
+    const action = pendingPick;
+    setPendingPick(null);
+    if (action) await runOnCopy(action, copyId);
   }
 
   const chosenCopy = chosen
     ? copies.find((c) => c.id === chosen.copyId)
     : undefined;
-  const chosenCondition = chosenCopy?.condition ?? null;
+
+  const aufenthaltItems = AUFENTHALT_ACTIONS.filter(
+    (key) => eligibleCopies(key).length > 0,
+  );
+  const verwaltungItems = VERWALTUNG_ACTIONS.filter(
+    (key) => eligibleCopies(key).length > 0,
+  );
 
   return (
     <>
@@ -152,35 +118,18 @@ export function GameActionsMenu({
           }
         />
         <DropdownMenuContent align="end">
+          {/* Nur Einträge, keine eingebetteten Dialoge: das Menü fängt für
+              seine Tippsuche Buchstaben-Tasten ab, auch aus per Portal
+              gerenderten Kind-Dialogen — deren Textfelder wären sonst nicht
+              beschreibbar. Die Dialoge stehen unten außerhalb des Menüs. */}
           <DropdownMenuGroup>
             <DropdownMenuLabel>Aufenthalt</DropdownMenuLabel>
             <DropdownMenuItem disabled>Geprüft</DropdownMenuItem>
-            {ambiguous ? (
-              AUFENTHALT_ACTIONS.filter(
-                (key) => key !== "give" || giveEligibleCopies.length > 0,
-              ).map((key) => (
-                <DropdownMenuItem key={key} onClick={() => setPendingPick(key)}>
-                  {ACTION_LABELS[key]}
-                </DropdownMenuItem>
-              ))
-            ) : (
-              <>
-                <div className="px-1.5 py-1">
-                  <BorrowGameDialog gameCopyId={sole.id} />
-                </div>
-                {canGiveAway(sole, canManageGames) && (
-                  <div className="px-1.5 py-1">
-                    <GiveToMeepleDialog gameCopyId={sole.id} />
-                  </div>
-                )}
-                <div className="px-1.5 py-1">
-                  <AcceptReturnDialog gameCopyId={sole.id} />
-                </div>
-                <div className="px-1.5 py-1">
-                  <RelocateGameDialog gameCopyId={sole.id} />
-                </div>
-              </>
-            )}
+            {aufenthaltItems.map((key) => (
+              <DropdownMenuItem key={key} onClick={() => startAction(key)}>
+                {COPY_ACTION_LABELS[key]}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuGroup>
 
           {canManageGames && (
@@ -188,51 +137,18 @@ export function GameActionsMenu({
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Verwaltung</DropdownMenuLabel>
-                {ambiguous ? (
-                  VERWALTUNG_ACTIONS.map((key) => (
-                    <DropdownMenuItem
-                      key={key}
-                      disabled={key === "completeness-check" && pending}
-                      onClick={() => setPendingPick(key)}
-                    >
-                      {ACTION_LABELS[key]}
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <>
-                    <DropdownMenuItem
-                      disabled={pending}
-                      onClick={() =>
-                        run(() => requestCompletenessCheck(sole.id))
-                      }
-                    >
-                      {ACTION_LABELS["completeness-check"]}
-                    </DropdownMenuItem>
-                    <div className="px-1.5 py-1">
-                      <EditBoardGameExemplarDialog
-                        copyId={sole.id}
-                        condition={sole.condition}
-                        ruleBookLanguages={sole.ruleBookLanguages}
-                        inventoryNumber={sole.inventoryNumber}
-                        triggerLabel={ACTION_LABELS.condition}
-                      />
-                    </div>
-                  </>
-                )}
-                <div className="px-1.5 py-1">
-                  <AddGameCopyDialog
-                    boardGameId={boardGameId}
-                    boardGameTitle={boardGameTitle}
-                  />
-                </div>
-                {!ambiguous && (
-                  <div className="px-1.5 py-1">
-                    <DeinventoriseBoardGameDialog
-                      gameId={sole.id}
-                      gameTitle={boardGameTitle}
-                    />
-                  </div>
-                )}
+                {verwaltungItems.map((key) => (
+                  <DropdownMenuItem
+                    key={key}
+                    disabled={key === "completeness-check" && pending}
+                    onClick={() => startAction(key)}
+                  >
+                    {COPY_ACTION_LABELS[key]}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuItem onClick={() => setAddCopyOpen(true)}>
+                  Weiteres Exemplar
+                </DropdownMenuItem>
               </DropdownMenuGroup>
             </>
           )}
@@ -245,56 +161,28 @@ export function GameActionsMenu({
           onOpenChange={(open) => {
             if (!open) setPendingPick(null);
           }}
-          copies={pendingPick === "give" ? giveEligibleCopies : copies}
+          copies={eligibleCopies(pendingPick)}
           onPick={pickCopy}
         />
       )}
 
-      {chosen?.action === "borrow" && (
-        <BorrowGameDialog
-          gameCopyId={chosen.copyId}
-          open
-          onOpenChange={closeChosen}
+      {chosen && chosenCopy && (
+        <CopyActionDialog
+          action={chosen.action}
+          copy={chosenCopy}
+          boardGameId={boardGameId}
+          boardGameTitle={boardGameTitle}
+          onOpenChange={(open) => {
+            if (!open) setChosen(null);
+          }}
         />
       )}
-      {chosen?.action === "give" && (
-        <GiveToMeepleDialog
-          gameCopyId={chosen.copyId}
+      {addCopyOpen && (
+        <AddGameCopyDialog
+          boardGameId={boardGameId}
+          boardGameTitle={boardGameTitle}
           open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "return" && (
-        <AcceptReturnDialog
-          gameCopyId={chosen.copyId}
-          open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "relocate" && (
-        <RelocateGameDialog
-          gameCopyId={chosen.copyId}
-          open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "condition" && (
-        <EditBoardGameExemplarDialog
-          copyId={chosen.copyId}
-          condition={chosenCondition}
-          ruleBookLanguages={chosenCopy?.ruleBookLanguages ?? []}
-          inventoryNumber={chosenCopy?.inventoryNumber ?? null}
-          triggerLabel={ACTION_LABELS.condition}
-          open
-          onOpenChange={closeChosen}
-        />
-      )}
-      {chosen?.action === "deinventorise" && (
-        <DeinventoriseBoardGameDialog
-          gameId={chosen.copyId}
-          gameTitle={boardGameTitle}
-          open
-          onOpenChange={closeChosen}
+          onOpenChange={setAddCopyOpen}
         />
       )}
     </>

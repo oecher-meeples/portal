@@ -9,11 +9,10 @@ import {
   reportGameDefect,
 } from "@/components/feature/scan/inventory-actions";
 import {
+  GAME_ISSUE_KINDS,
   GAME_ISSUE_LABELS,
   type GameIssueKind,
-} from "@/components/feature/scan/game-issue-labels";
-
-const ISSUE_KINDS = Object.keys(GAME_ISSUE_LABELS) as GameIssueKind[];
+} from "@/lib/ludothek/game-issue";
 
 export function PruefbogenPanel({
   gameCopyId,
@@ -23,8 +22,8 @@ export function PruefbogenPanel({
 }: {
   gameCopyId: string;
   title: string;
-  /** Freie Inventarnummer des Exemplars (#270). */
-  inventoryNumber?: string | null;
+  /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
+  inventoryNumber?: number | null;
   onDone: () => void;
 }) {
   const [mode, setMode] = useState<"idle" | GameIssueKind>("idle");
@@ -78,7 +77,7 @@ export function PruefbogenPanel({
             <Button size="sm" disabled={busy} onClick={handleConfirm}>
               Vollständig — bestätigen
             </Button>
-            {ISSUE_KINDS.map((kind) => (
+            {GAME_ISSUE_KINDS.map((kind) => (
               <Button
                 key={kind}
                 size="sm"

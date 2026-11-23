@@ -10,7 +10,11 @@ afterEach(() => {
   localStorage.clear();
 });
 
-const FLAGS = { openHelperRequest: false, activeAusleiheShift: false };
+const FLAGS = {
+  openHelperRequest: false,
+  activeAusleiheShift: false,
+  activeMembership: true,
+};
 
 // #471: main muss dieselbe Breite bekommen, die die Sidebar bei aktivem Pin
 // tatsächlich einnimmt (Attached- statt Overlay-Zustand auf md/lg) — ein

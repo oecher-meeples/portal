@@ -1,9 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { BoardGameTraitTone } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { toResult } from "@/lib/utils/action-result";
 import { requireMeeple } from "@/lib/members/meeples";
 import { findActiveShiftEvent } from "@/lib/events/shift-rights";
+import { resolveBoardGameTraits } from "@/lib/ludothek/board-game-traits";
+import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
 import {
   borrowGame,
   returnGame,
@@ -45,15 +49,8 @@ async function requireAusleiheShift() {
   return { meeple, eventId: activeShift.eventId };
 }
 
-async function toResult(run: () => Promise<unknown>) {
-  try {
-    await run();
-    return { success: true as const };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Unbekannter Fehler.",
-    };
-  }
+function revalidateAusleihe() {
+  revalidatePath("/ausleihe");
 }
 
 export async function ausleiheResolveCode(raw: string): Promise<ResolvedScan> {
@@ -65,8 +62,22 @@ export async function ausleiheResolveCode(raw: string): Promise<ResolvedScan> {
   }
 }
 
+/** Nur die für den Verleih-Warnbanner nötigen Felder — bewusst ohne `icon`
+ * (eine Lucide-Komponente ist über eine Server Action nicht serialisierbar,
+ * s. `ResolvedBoardGameTrait`) und ohne Traits ohne `loanMessage` (#487-Konzept). */
+export type LoanWarningTrait = {
+  trait: string;
+  tone: BoardGameTraitTone;
+  loanMessage: string;
+};
+
 export type CopyAvailability =
-  | { kind: "available" }
+  | {
+      kind: "available";
+      /** Grundlage für den Verleih-Warnbanner direkt vor "Ausgeben" —
+       * rein informativ, blockiert die Ausgabe nicht (#487-Konzept). */
+      loanWarnings: LoanWarningTrait[];
+    }
   | {
       kind: "on-loan";
       previousUnit: { id: string; code: string; label: string } | null;
@@ -85,11 +96,26 @@ export async function ausleiheGetAvailability(
 
   const holding = await prisma.gameHolding.findFirst({
     where: { gameCopyId, endedAt: null },
+    include: {
+      gameCopy: { include: { boardGame: { select: { traits: true } } } },
+    },
   });
   if (!holding) return null;
 
   if (!holding.vereinsmitgliedId) {
-    return { kind: "available" };
+    const textsByTrait = await loadBoardGameTraitTextsByTrait();
+    const resolved = resolveBoardGameTraits(
+      holding.gameCopy.boardGame.traits,
+      textsByTrait,
+    );
+    const loanWarnings: LoanWarningTrait[] = resolved
+      .filter((trait) => Boolean(trait.loanMessage))
+      .map((trait) => ({
+        trait: trait.trait,
+        tone: trait.tone,
+        loanMessage: trait.loanMessage!,
+      }));
+    return { kind: "available", loanWarnings };
   }
 
   const previous = await prisma.gameHolding.findFirst({
@@ -115,7 +141,7 @@ export async function ausleiheGetAvailability(
  * CONTEXT.md "Ausleiher".
  */
 export async function ausleiheIssueGame(gameCopyId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     const meeple = await requireAusleiheMeeple();
     const member = await prisma.member.findUnique({
       where: { meepleId: meeple.id },
@@ -126,28 +152,24 @@ export async function ausleiheIssueGame(gameCopyId: string) {
         "Dieses Konto ist mit keinem Vereinsmitglied verknüpft — Ausgabe an einen Gast ist nur für Vereinsmitglieder möglich.",
       );
     }
-    return borrowGame({
+    await borrowGame({
       gameCopyId,
       vereinsmitgliedId: member.id,
       recordedByMeepleId: meeple.id,
       isSelf: true,
     });
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
 
 export async function ausleiheReturnToUnit(gameCopyId: string, unitId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     const meeple = await requireAusleiheMeeple();
-    return returnGame({
+    await returnGame({
       gameCopyId,
       toUnitId: unitId,
       recordedByMeepleId: meeple.id,
     });
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
 
 /** Private Exemplare (#122), die für die laufende Ausleihe-Schicht zur
@@ -161,21 +183,17 @@ export async function ausleiheListOfferedPrivateLoans(): Promise<
 }
 
 export async function ausleiheIssuePrivateLoan(loanId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     const { meeple } = await requireAusleiheShift();
     const outcome = await issuePrivateLoan(loanId, meeple.id);
     if ("error" in outcome) throw new HoldingConflictError(outcome.error);
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }
 
 export async function ausleiheReturnPrivateLoan(loanId: string) {
-  const result = await toResult(async () => {
+  return toResult(async () => {
     await requireAusleiheShift();
     const outcome = await returnPrivateLoan(loanId);
     if ("error" in outcome) throw new HoldingConflictError(outcome.error);
-  });
-  if ("success" in result) revalidatePath("/ausleihe");
-  return result;
+  }, revalidateAusleihe);
 }

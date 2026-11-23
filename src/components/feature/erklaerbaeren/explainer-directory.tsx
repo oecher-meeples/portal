@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, cardVariants } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import {
   Accordion,
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { TextField } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ExplainerListDialogTrigger } from "@/components/entities/explainer-list-dialog-trigger";
+import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 
 export type ExplainerDirectoryEntry = {
@@ -40,7 +41,7 @@ export function ExplainerDirectory({
     <Accordion defaultValue={[]}>
       <AccordionItem
         value="directory"
-        className="bg-card overflow-hidden rounded-lg border"
+        className={cardVariants({ size: "flush" })}
       >
         <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 font-serif text-xl font-semibold hover:no-underline">
           Erklärbären-Verzeichnis
@@ -77,9 +78,10 @@ export function ExplainerDirectory({
             ) : (
               <div className="flex flex-col gap-2">
                 {filteredEntries.map((entry) => (
-                  <div
+                  <Card
                     key={entry.boardGameId}
-                    className="bg-card flex items-center gap-3 rounded-lg border p-3"
+                    size="sm"
+                    className="flex-row items-center"
                   >
                     <span className="min-w-0 flex-1 truncate font-medium">
                       {entry.boardGameTitle}
@@ -89,7 +91,7 @@ export function ExplainerDirectory({
                       boardGameTitle={entry.boardGameTitle}
                       explainers={entry.explainers}
                     />
-                  </div>
+                  </Card>
                 ))}
               </div>
             )}

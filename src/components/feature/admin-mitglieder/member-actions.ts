@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import {
   createMember as createMemberRecord,
   type CreateMemberInput,
@@ -19,15 +19,11 @@ import {
   removeGuardianLink,
 } from "@/lib/members/guardians";
 
-async function requireMembersManage() {
-  return requirePermission("members:manage");
-}
-
 /** Vereinsmitglied-zentrische Mutationen (#342/#343) — bewusst getrennt von
  * `actions.ts`, das Meeple-zentrisch ist (siehe `vereinsmitglied-row.ts` vs.
  * `meeple-row.ts`). */
 export async function createMember(input: CreateMemberInput) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const result = await createMemberRecord(input);
   if ("error" in result) return result;
@@ -37,7 +33,7 @@ export async function createMember(input: CreateMemberInput) {
 }
 
 export async function updateMember(memberId: string, input: UpdateMemberInput) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const result = await updateMemberRecord(memberId, input);
   if ("error" in result) return result;
@@ -51,7 +47,7 @@ export async function updateMember(memberId: string, input: UpdateMemberInput) {
  * (`collectMeeplePersonalData`); ohne Portal-Konto gibt es nichts zu
  * sammeln, der Aufrufer blendet den Button dafür aus. */
 export async function sendSelbstauskunft(meepleId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   return sendSelbstauskunftMail(meepleId);
 }
@@ -60,7 +56,7 @@ export async function sendSelbstauskunft(meepleId: string) {
  * auf `Member`. Liefert die aktuell verknüpften Erziehungsberechtigten plus
  * alle übrigen Members als Auswahlkandidaten in einem Aufruf. */
 export async function listGuardianManagement(childMemberId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const [guardians, candidates] = await Promise.all([
     listGuardiansOf(childMemberId),
@@ -73,7 +69,7 @@ export async function addGuardian(
   childMemberId: string,
   guardianMemberId: string,
 ) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   await addGuardianLink(childMemberId, guardianMemberId);
   revalidatePath("/admin/mitglieder");
@@ -84,7 +80,7 @@ export async function removeGuardian(
   childMemberId: string,
   guardianMemberId: string,
 ) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   await removeGuardianLink(childMemberId, guardianMemberId);
   revalidatePath("/admin/mitglieder");
@@ -96,7 +92,7 @@ export async function removeGuardian(
  * Auswahlkandidaten. `addWard`/`removeWard` rufen dieselben
  * `*GuardianLink()`-Funktionen wie oben, nur mit vertauschten Parametern. */
 export async function listWardManagement(guardianMemberId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   const [wards, candidates] = await Promise.all([
     listChildrenOf(guardianMemberId),
@@ -106,7 +102,7 @@ export async function listWardManagement(guardianMemberId: string) {
 }
 
 export async function addWard(guardianMemberId: string, childMemberId: string) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   await addGuardianLink(childMemberId, guardianMemberId);
   revalidatePath("/admin/mitglieder");
@@ -117,7 +113,7 @@ export async function removeWard(
   guardianMemberId: string,
   childMemberId: string,
 ) {
-  await requireMembersManage();
+  await requireActionPermission("members:manage");
 
   await removeGuardianLink(childMemberId, guardianMemberId);
   revalidatePath("/admin/mitglieder");

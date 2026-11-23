@@ -1,12 +1,14 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/ui/field";
 import { authClient } from "@/lib/auth/client";
 import { translateAuthError } from "@/lib/auth/password";
 import {
@@ -80,12 +82,8 @@ export function LoginForm() {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
       <PageHeading eyebrow="Mitgliederbereich" title="Anmelden" />
-      <form
-        onSubmit={handleSubmit}
-        className="bg-card flex flex-col gap-4 rounded-lg border p-6"
-      >
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">E-Mail</Label>
+      <form onSubmit={handleSubmit} className={cn(cardVariants(), "gap-4")}>
+        <Field label="E-Mail" htmlFor="email">
           <Input
             id="email"
             type="email"
@@ -94,9 +92,8 @@ export function LoginForm() {
             onChange={(event) => setEmail(event.target.value)}
             required
           />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Passwort</Label>
+        </Field>
+        <Field label="Passwort" htmlFor="password">
           <Input
             id="password"
             type="password"
@@ -105,7 +102,7 @@ export function LoginForm() {
             onChange={(event) => setPassword(event.target.value)}
             required
           />
-        </div>
+        </Field>
         {error && <p className="text-destructive text-sm">{error}</p>}
         {cooldownSeconds > 0 && (
           <p className="text-muted-foreground text-sm">

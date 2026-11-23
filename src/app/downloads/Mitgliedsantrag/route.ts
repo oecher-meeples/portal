@@ -6,11 +6,14 @@ import { findPublicDownloadByTitle } from "@/lib/downloads/downloads";
  * `fileUrl` — `title` ist im `Download`-Modell frei editierbar, ein fester
  * Link würde beim nächsten Admin-Reupload lautlos brechen. Leitet auf die
  * aktuelle Datei weiter, 404 wenn (noch) kein passender Download existiert.
+ * `fileUrl` ist seit #112 eine frisch signierte URL; App-Pfade aus `public/`
+ * (Demo-Daten) werden gegen die Request-URL aufgelöst, weil `redirect` eine
+ * absolute URL verlangt.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const download = await findPublicDownloadByTitle("Mitgliedsantrag");
   if (!download) {
     return new NextResponse("Not Found", { status: 404 });
   }
-  return NextResponse.redirect(download.fileUrl);
+  return NextResponse.redirect(new URL(download.fileUrl, request.url));
 }

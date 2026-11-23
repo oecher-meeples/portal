@@ -1,5 +1,6 @@
 "use client";
 
+import { cardVariants } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -151,7 +152,7 @@ export function MitgliederTable({
   return (
     <Accordion
       id="mitglieder"
-      className="bg-card rounded-lg border"
+      className={cardVariants({ size: "flush" })}
       value={openItems}
       onValueChange={setOpenItems}
     >

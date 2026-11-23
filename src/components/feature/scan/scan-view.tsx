@@ -1,432 +1,169 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import { useRef, useState } from "react";
+import { Camera, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { CodeScanner } from "@/components/ui/code-scanner";
-import { GameHoldingPanel } from "@/components/widgets/game-holding/game-holding-panel";
-import { PruefbogenPanel } from "@/components/feature/scan/pruefbogen-panel";
-import { RelocateConfirmPanel } from "@/components/feature/scan/relocate-confirm-panel";
-import {
-  scanPlaceGameInUnit,
-  scanResolveCode,
-} from "@/lib/ludothek/holding-actions";
-import type { ResolvedScan } from "@/lib/ludothek/holdings";
 import { PageContainer } from "@/components/ui/page-container";
+import { useFocusMode } from "@/components/ui/use-focus-mode";
+import { CheckSeries } from "@/components/feature/scan/check-series";
+import { MarkSeries } from "@/components/feature/scan/mark-series";
+import { ReceiveSeries } from "@/components/feature/scan/receive-series";
+import { SingleScan } from "@/components/feature/scan/single-scan";
+import { TransferSeries } from "@/components/feature/scan/transfer-series";
+import type { ScanModeHandle } from "@/components/feature/scan/use-scan-series";
+import {
+  SCANNER_PAGE_MODE_LABELS,
+  scannerModeHref,
+  scannerModesFor,
+  type ScannerPageMode,
+} from "@/lib/ludothek/scanner-modes";
 
-export type SeriesMode =
-  | { type: "einlagern"; unitId: string; unitCode: string }
-  | { type: "pruefen" }
-  | null;
-
-type ViewState =
-  | { kind: "idle" }
-  | { kind: "unknown"; raw: string }
-  | {
-      kind: "select-game";
-      games: { id: string; title: string; inventoryNumber: string | null }[];
-      /** Selecting here places directly into the active Serienmodus-Kiste
-       * instead of opening the GameHoldingPanel (#5). */
-      forEinlagern: boolean;
-    }
-  | { kind: "game"; gameCopyId: string }
-  | {
-      kind: "pruefen";
-      gameCopyId: string;
-      title: string;
-      inventoryNumber: string | null;
-    }
-  | {
-      kind: "unit";
-      unitId: string;
-      code: string;
-      label: string;
-      contents: string[];
-    }
-  | {
-      kind: "confirm-relocate";
-      game: { id: string; title: string };
-      fromUnitCode: string;
-      toUnit: { id: string; code: string; label: string; contents: string[] };
-    };
-
-export function ScanView({ canManageGames }: { canManageGames: boolean }) {
-  const [state, setState] = useState<ViewState>({ kind: "idle" });
+/**
+ * Rahmen der Scanner-Seite (#538): Moduswahl (in der URL, `?modus=`),
+ * Kamera und manuelle Eingabe. Jeder erkannte Code geht über eine Ref an den
+ * aktiven Modus — die Kamera hält ihren `onDetected`-Callback ab dem Start
+ * fest, die Ref sorgt dafür, dass ein Moduswechsel trotzdem greift.
+ */
+export function ScanView({
+  canManageGames,
+  initialMode,
+  initialTargetUnitId = null,
+}: {
+  canManageGames: boolean;
+  initialMode: ScannerPageMode;
+  /** `?ziel=<unitId>` im Modus „Übergeben" (#539). */
+  initialTargetUnitId?: string | null;
+}) {
+  const [mode, setMode] = useState(initialMode);
+  const [targetUnitId, setTargetUnitId] = useState(initialTargetUnitId);
   const [manualInput, setManualInput] = useState("");
-  const [seriesMode, setSeriesMode] = useState<SeriesMode>(null);
-  const [seriesLog, setSeriesLog] = useState<string[]>([]);
-  const [lastRaw, setLastRaw] = useState("");
-  const [lastPlacedGame, setLastPlacedGame] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
+  // #573: Im Einzel-Scan ersetzt das Ergebnis die Kamera, bis
+  // „Nächster Scan“ sie wieder einblendet (Unmount stoppt den Stream).
+  const [cameraPaused, setCameraPaused] = useState(false);
+  const showCamera = mode !== "einzel" || !cameraPaused;
+  // Die Kamera hält `handleCode` ab dem Start fest — der Modus kommt daher
+  // aus einer Ref, nicht aus der Closure.
+  const currentModeRef = useRef(mode);
+  const modeRef = useRef<ScanModeHandle>(null);
+  const focusMode = useFocusMode();
 
-  async function placeInActiveUnit(
-    game: { id: string; title: string },
-    unit: { id: string; code: string },
-  ) {
-    const result = await scanPlaceGameInUnit(game.id, unit.id);
-    setSeriesLog((log) => [
-      result.error
-        ? `${game.title}: ${result.error}`
-        : `${game.title} → ${unit.code}`,
-      ...log,
-    ]);
-    if (!result.error) setLastPlacedGame(game);
-  }
-
-  function enterUnit(unit: {
-    id: string;
-    code: string;
-    label: string;
-    contents: string[];
-  }) {
-    setSeriesMode({ type: "einlagern", unitId: unit.id, unitCode: unit.code });
-    setState({ kind: "idle" });
-  }
-
-  async function handleResolved(resolved: ResolvedScan) {
-    if (resolved.kind === "unknown") {
-      setState({ kind: "unknown", raw: resolved.raw });
-      return;
-    }
-    // #465: Meeple-QR-Code hat im allgemeinen Scan-Flow keine Bedeutung —
-    // nur die Weitergabe-/Rückgabe-Zielauswahl (TargetPicker) versteht ihn.
-    if (resolved.kind === "meeple") {
-      setState({ kind: "unknown", raw: resolved.meeple.displayName });
-      return;
-    }
-
-    if (resolved.kind === "unit") {
-      const unit = {
-        id: resolved.unit.id,
-        code: resolved.unit.code,
-        label: resolved.unit.label,
-        contents: resolved.contents.map((g) => g.boardGame.title),
-      };
-
-      if (seriesMode?.type === "einlagern") {
-        if (unit.id === seriesMode.unitId) {
-          setSeriesLog((log) => [
-            `Einheit ${unit.code} kann nicht in sich selbst eingelagert werden.`,
-            ...log,
-          ]);
-          return;
-        }
-        if (!lastPlacedGame) {
-          enterUnit(unit);
-          return;
-        }
-        setState({
-          kind: "confirm-relocate",
-          game: lastPlacedGame,
-          fromUnitCode: seriesMode.unitCode,
-          toUnit: unit,
-        });
-        return;
-      }
-
-      setState({ kind: "unit", unitId: unit.id, ...unit });
-      return;
-    }
-
-    // resolved.kind === "games"
-    if (seriesMode?.type === "einlagern") {
-      const unit = { id: seriesMode.unitId, code: seriesMode.unitCode };
-      if (resolved.games.length > 1) {
-        setState({
-          kind: "select-game",
-          games: resolved.games.map((g) => ({
-            id: g.id,
-            title: g.condition
-              ? `${g.boardGame.title} (${g.condition})`
-              : g.boardGame.title,
-            inventoryNumber: g.inventoryNumber,
-          })),
-          forEinlagern: true,
-        });
-        return;
-      }
-      const game = resolved.games[0];
-      await placeInActiveUnit(
-        { id: game.id, title: game.boardGame.title },
-        unit,
-      );
-      return;
-    }
-
-    if (resolved.games.length === 1) {
-      const game = resolved.games[0];
-      setState(
-        seriesMode?.type === "pruefen"
-          ? {
-              kind: "pruefen",
-              gameCopyId: game.id,
-              title: game.boardGame.title,
-              inventoryNumber: game.inventoryNumber,
-            }
-          : { kind: "game", gameCopyId: game.id },
-      );
-      return;
-    }
-    setState({
-      kind: "select-game",
-      games: resolved.games.map((g) => ({
-        id: g.id,
-        title: g.condition
-          ? `${g.boardGame.title} (${g.condition})`
-          : g.boardGame.title,
-        inventoryNumber: g.inventoryNumber,
-      })),
-      forEinlagern: false,
-    });
-  }
-
-  async function handleRelocateConfirm(
-    confirmState: Extract<ViewState, { kind: "confirm-relocate" }>,
-    relocate: boolean,
-  ) {
-    if (relocate) {
-      await placeInActiveUnit(confirmState.game, {
-        id: confirmState.toUnit.id,
-        code: confirmState.toUnit.code,
-      });
-    }
-    enterUnit(confirmState.toUnit);
+  function changeMode(next: ScannerPageMode, ziel: string | null = null) {
+    setMode(next);
+    currentModeRef.current = next;
+    setTargetUnitId(ziel);
+    setCameraPaused(false);
+    // Ohne Server-Roundtrip — die Kamera läuft weiter (Next.js integriert
+    // `replaceState` in den Router).
+    window.history.replaceState(null, "", scannerModeHref(next, ziel));
   }
 
   async function handleCode(raw: string) {
-    setLastRaw(raw);
-    const resolved = await scanResolveCode(raw);
-    await handleResolved(resolved);
-  }
-
-  function reset() {
-    setState({ kind: "idle" });
+    if (currentModeRef.current === "einzel") setCameraPaused(true);
+    await modeRef.current?.handleCode(raw);
   }
 
   return (
     <PageContainer className="gap-6">
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <CodeScanner onDetected={handleCode} />
-
-        <div className="bg-card flex flex-col gap-4 rounded-lg border p-5">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="manual-code" className="text-sm font-medium">
-              Manuelle Eingabe
-            </label>
-            <div className="flex gap-2">
-              <Input
-                id="manual-code"
-                value={manualInput}
-                onChange={(event) => setManualInput(event.target.value)}
-                placeholder="OM-BOX-0001 oder EAN"
-              />
-              <Button
-                onClick={() => {
-                  if (manualInput.trim()) handleCode(manualInput.trim());
-                }}
-              >
-                Suchen
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Serienmodus</span>
-            <PillToggle
-              options={[
-                { value: "aus", label: "Aus" },
-                { value: "pruefen", label: "Prüfen" },
-              ]}
-              value={seriesMode?.type === "pruefen" ? "pruefen" : "aus"}
-              onChange={(value) => {
-                setSeriesMode(value === "pruefen" ? { type: "pruefen" } : null);
-                setSeriesLog([]);
-              }}
-            />
-            {seriesMode?.type === "einlagern" && (
-              <p className="bg-primary/10 rounded-md p-2 text-sm">
-                Alles was jetzt gescannt wird, wird eingelagert in{" "}
-                <strong>{seriesMode.unitCode}</strong>.{" "}
-                <button
-                  type="button"
-                  className="underline"
-                  onClick={() => {
-                    setSeriesMode(null);
-                    setLastPlacedGame(null);
-                  }}
-                >
-                  beenden
-                </button>
-              </p>
-            )}
-            {seriesMode && seriesLog.length > 0 && (
-              <ul className="text-muted-foreground flex flex-col gap-0.5 text-xs">
-                {seriesLog.slice(0, 8).map((line, i) => (
-                  <li key={i}>{line}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="border-t pt-4">
-            {state.kind === "idle" && (
-              <p className="text-muted-foreground text-sm">
-                Noch nichts gescannt.
-              </p>
-            )}
-
-            {state.kind === "unknown" && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Nicht im Bestand</p>
-                <p className="text-muted-foreground text-sm">
-                  Code: <span className="font-mono">{state.raw}</span>
-                </p>
-                {canManageGames && (
-                  <Link
-                    href={`/admin/bestand?ean=${encodeURIComponent(state.raw)}`}
-                    className="text-primary text-sm hover:underline"
-                  >
-                    Spiel jetzt anlegen →
-                  </Link>
-                )}
-              </div>
-            )}
-
-            {state.kind === "select-game" && (
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  Mehrere Spiele mit dieser EAN — welches?
-                </p>
-                <div className="flex flex-col gap-1">
-                  {state.games.map((game) => (
-                    <button
-                      key={game.id}
-                      type="button"
-                      className="hover:bg-muted cursor-pointer rounded-md border px-3 py-2 text-left text-sm"
-                      onClick={() => {
-                        if (
-                          state.forEinlagern &&
-                          seriesMode?.type === "einlagern"
-                        ) {
-                          void placeInActiveUnit(game, {
-                            id: seriesMode.unitId,
-                            code: seriesMode.unitCode,
-                          });
-                          setState({ kind: "idle" });
-                          return;
-                        }
-                        setState(
-                          seriesMode?.type === "pruefen"
-                            ? {
-                                kind: "pruefen",
-                                gameCopyId: game.id,
-                                title: game.title,
-                                inventoryNumber: game.inventoryNumber,
-                              }
-                            : { kind: "game", gameCopyId: game.id },
-                        );
-                      }}
-                    >
-                      {game.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {state.kind === "game" && (
-              <GameHoldingPanel
-                gameCopyId={state.gameCopyId}
-                advanceAfterAction={Boolean(seriesMode)}
-                onDone={reset}
-              />
-            )}
-
-            {state.kind === "pruefen" && (
-              <PruefbogenPanel
-                gameCopyId={state.gameCopyId}
-                title={state.title}
-                inventoryNumber={state.inventoryNumber}
-                onDone={reset}
-              />
-            )}
-
-            {state.kind === "unit" && (
-              <div className="flex flex-col gap-2">
-                <p className="font-serif text-lg font-bold">{state.label}</p>
-                <p className="text-muted-foreground font-mono text-sm">
-                  {state.code}
-                </p>
-                <div>
-                  <p className="text-sm font-medium">
-                    Inhalt ({state.contents.length})
-                  </p>
-                  {state.contents.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">Leer.</p>
-                  ) : (
-                    <ul className="text-muted-foreground text-sm">
-                      {state.contents.map((title) => (
-                        <li key={title}>{title}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-fit"
-                  onClick={() => {
-                    setSeriesMode({
-                      type: "einlagern",
-                      unitId: state.unitId,
-                      unitCode: state.code,
-                    });
-                    setSeriesLog([]);
-                    setLastPlacedGame(null);
-                    reset();
-                  }}
-                >
-                  Serienmodus: Einlagern in {state.code}
-                </Button>
-              </div>
-            )}
-
-            {state.kind === "confirm-relocate" && (
-              <RelocateConfirmPanel
-                game={state.game}
-                fromUnitCode={state.fromUnitCode}
-                toUnitCode={state.toUnit.code}
-                onConfirm={(relocate) =>
-                  void handleRelocateConfirm(state, relocate)
-                }
-              />
-            )}
-
-            {(state.kind === "unknown" ||
-              state.kind === "game" ||
-              state.kind === "pruefen") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-                onClick={reset}
-              >
-                Zurücksetzen
-              </Button>
-            )}
-          </div>
+      {/* #587: Zeile sticky — normal unter dem fixen Header, im Fokusmodus
+          (Header ausgeblendet) am oberen Rand. Bei 5 Modi (Admin) dürfen die
+          Pills umbrechen, das Icon bleibt rechts. */}
+      <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 focus-mode:top-0 sticky top-16 z-20 -my-2 flex items-start justify-between gap-2 py-2 backdrop-blur md:static md:my-0 md:bg-transparent md:py-0 md:backdrop-blur-none">
+        <div className="min-w-0 flex-1">
+          <PillToggle
+            options={scannerModesFor(canManageGames).map((value) => ({
+              value,
+              label: SCANNER_PAGE_MODE_LABELS[value],
+            }))}
+            value={mode}
+            onChange={(next) => changeMode(next)}
+          />
         </div>
+        {focusMode.available && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            aria-label={
+              focusMode.active ? "Fokusmodus beenden" : "Fokusmodus starten"
+            }
+            aria-pressed={focusMode.active}
+            onClick={focusMode.toggle}
+          >
+            {focusMode.active ? (
+              <Minimize2 className="size-4" />
+            ) : (
+              <Maximize2 className="size-4" />
+            )}
+          </Button>
+        )}
       </div>
 
-      {lastRaw && (
-        <p className="text-muted-foreground text-xs">
-          Zuletzt gescannt: <span className="font-mono">{lastRaw}</span>
-        </p>
-      )}
+      <div
+        className={
+          showCamera ? "grid gap-6 lg:grid-cols-[2fr_1fr]" : "grid gap-4"
+        }
+      >
+        {showCamera ? (
+          <CodeScanner onDetected={handleCode} />
+        ) : (
+          <Button
+            size="lg"
+            className="w-full sm:w-fit"
+            onClick={() => setCameraPaused(false)}
+          >
+            <Camera className="size-4" />
+            Nächster Scan
+          </Button>
+        )}
+
+        <div className="flex flex-col gap-6">
+          <Card>
+            <form
+              className="flex flex-col gap-1.5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (manualInput.trim()) void handleCode(manualInput.trim());
+              }}
+            >
+              <label htmlFor="manual-code" className="text-sm font-medium">
+                Manuelle Eingabe
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  id="manual-code"
+                  value={manualInput}
+                  onChange={(event) => setManualInput(event.target.value)}
+                  placeholder="inv-123, OM-BOX-0001 oder EAN"
+                />
+                <Button type="submit">Suchen</Button>
+              </div>
+            </form>
+          </Card>
+
+          {mode === "erhalten" && <ReceiveSeries ref={modeRef} />}
+          {mode === "uebergeben" && (
+            <TransferSeries
+              key={targetUnitId ?? ""}
+              ref={modeRef}
+              initialUnitId={targetUnitId}
+            />
+          )}
+          {mode === "markieren" && <MarkSeries ref={modeRef} />}
+          {mode === "kontrollieren" && <CheckSeries ref={modeRef} />}
+          {mode === "einzel" && (
+            <SingleScan
+              ref={modeRef}
+              canManageGames={canManageGames}
+              onFillUnit={(unitId) => changeMode("uebergeben", unitId)}
+              onRescan={(raw) => void handleCode(raw)}
+            />
+          )}
+        </div>
+      </div>
     </PageContainer>
   );
 }

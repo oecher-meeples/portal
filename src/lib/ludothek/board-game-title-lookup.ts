@@ -1,14 +1,26 @@
 import {
   BoardGameKind,
+  type BoardGameTrait,
   type LanguageDependence,
-  type Prisma,
-  type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { uniqueSlug } from "@/lib/utils/slug";
+import {
+  type ContributorInput,
+  linkContributors,
+  replaceAuthorIllustratorLinksByName,
+} from "@/lib/ludothek/taxonomy/contributors";
+import {
+  linkTags,
+  replaceTitleTagsByLabel,
+  type TagInput,
+} from "@/lib/ludothek/taxonomy/tags";
+import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /**
  * Reine Titel-Lookup-/Anlage-Logik, bewusst ohne Import aus
@@ -33,8 +45,9 @@ export type BoardGameTitleInput = {
   averageRating?: number | null;
   imageUrl?: string | null;
   description?: string | null;
+  /** Anzeigenamen der Mechaniken/Kategorien — ohne `tags` (BGG-Links) über
+   * `replaceTitleTagsByLabel()` als `BoardGameTag` gespeichert, keine Spalte. */
   mechanics?: string[];
-  /** BGGs `boardgamecategory`-Links, analog `mechanics` importiert (#404). */
   categories?: string[];
   explainerVideoUrl?: string | null;
   /** Manual override until the BGG import (blocked by #12) can set this reliably — see #30. */
@@ -42,16 +55,36 @@ export type BoardGameTitleInput = {
   /** BGGs Language-Dependence-Poll-Level, als Vorschlag beim BGG-Import
    * übernommen, vom Admin frei änderbar (#188). */
   languageDependence?: LanguageDependence | null;
-  /** Verlag(e) — mehrere möglich (Co-Publisher). Auto übernommen bei
-   * identischem Wert über alle (ggf. deutschen) BGG-Versionen, sonst wählt
-   * der Admin (#205, siehe `resolvePublisherFromVersions()`). */
-  publisher?: string[];
-  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205). */
+  /** Edition (BGG-Version) des ersten Exemplars samt Verlagen — Auto
+   * übernommen, wenn eindeutig, sonst wählt der Admin (#205, siehe
+   * `resolveVersionInput()`). Wird an der Edition gespeichert, nicht am Titel. */
+  version?: VersionInput;
+  /** Autor(en)/Designer, direkt aus BGGs `boardgamedesigner`-Links (#205).
+   * Nur über `BoardGameContributor` gespeichert, keine eigene Spalte. */
   author?: string[];
+  /** Illustrator(en) (Epic #490) — analog `publisher`/`author`, nur über
+   * `BoardGameContributor` gespeichert, keine eigene Spalte. */
+  illustrator?: string[];
   /** Erstveröffentlichungsjahr — ältestes Jahr über alle BGG-Versionen (#205). */
   yearPublished?: number | null;
+  /** BGGs Family-Signale mit Verleih-Auswirkung, als Vorschlag beim BGG-
+   * Import übernommen, vom Admin frei änderbar (#487-Konzept). */
+  traits?: BoardGameTrait[];
+  /** Freier Admin-Hinweis je Titel — nie aus BGG befüllt (#487-Konzept). */
+  notes?: string | null;
+  /** Mitwirkende mit BGG-ID (Epic #490) — werden zusätzlich zu den
+   * Namenslisten `publisher`/`author`/`illustrator` als Relation gespeichert. */
+  contributors?: ContributorInput[];
+  /** Mechaniken/Kategorien mit BGG-ID (Epic #490 Strang B) — haben beim
+   * Anlegen Vorrang vor den Namenslisten `mechanics`/`categories`. */
+  tags?: TagInput[];
 };
 
+/** `author`/`illustrator`/`mechanics`/`categories`/`version` sind bewusst nicht Teil dieses
+ * Rückgabewerts — sie sind keine `BoardGame`-Spalten, sondern werden separat
+ * über `replaceAuthorIllustratorLinksByName()`/`linkContributors()`,
+ * `linkTags()`/`replaceTitleTagsByLabel()` bzw. `upsertBoardGameVersion()`
+ * gespeichert. */
 export function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
     secondaryTitle: input.secondaryTitle || null,
@@ -64,13 +97,11 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
     averageRating: input.averageRating ?? null,
     imageUrl: input.imageUrl || null,
     description: input.description || null,
-    mechanics: input.mechanics ?? [],
-    categories: input.categories ?? [],
     explainerVideoUrl: input.explainerVideoUrl || null,
     languageDependence: input.languageDependence ?? null,
-    publisher: input.publisher ?? [],
-    author: input.author ?? [],
     yearPublished: input.yearPublished ?? null,
+    traits: input.traits ?? [],
+    notes: input.notes || null,
     ...(input.kind ? { kind: input.kind } : {}),
   };
 }
@@ -113,11 +144,32 @@ export async function findOrCreateBoardGameTitle(
     const existing = await tx.boardGame.findUnique({
       where: { bggId: input.bggId },
     });
-    if (existing) return existing;
+    if (existing) {
+      await linkContributors(tx, existing.id, input.contributors ?? []);
+      await linkTags(tx, existing.id, input.tags ?? []);
+      return existing;
+    }
   }
 
   const slug = await uniqueBoardGameSlug(tx, input.title);
-  return tx.boardGame.create({
+  const created = await tx.boardGame.create({
     data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
+  if (input.contributors?.length) {
+    await linkContributors(tx, created.id, input.contributors);
+  } else {
+    await replaceAuthorIllustratorLinksByName(tx, created.id, {
+      author: input.author ?? [],
+      illustrator: input.illustrator ?? [],
+    });
+  }
+  if (input.tags?.length) {
+    await linkTags(tx, created.id, input.tags);
+  } else {
+    await replaceTitleTagsByLabel(tx, created.id, {
+      mechanics: input.mechanics ?? [],
+      categories: input.categories ?? [],
+    });
+  }
+  return created;
 }

@@ -3,12 +3,9 @@ import { prisma } from "@/lib/utils/prisma";
 import { isValidEmail } from "@/lib/utils/validate-email";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
 import { generateToken as generateManageToken } from "@/lib/utils/generate-token";
+import { siteUrl } from "@/lib/utils/site-url";
 
 const CONFIRMATION_COOLDOWN_MS = 15 * 60 * 1000;
-
-function siteUrl(): string {
-  return process.env.PUBLIC_SITE_URL ?? "";
-}
 
 function confirmationEmailHtml(manageToken: string): string {
   const confirmUrl = `${siteUrl()}/newsletter/confirm?token=${manageToken}`;

@@ -6,6 +6,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
+import { normalizeUnitCode } from "@/lib/inventory/codes";
 import {
   createStorageUnit,
   findStorageUnitByCode,
@@ -51,7 +52,7 @@ export function CreateBoardGameLocationField({
   }
 
   async function createAndAssignToSelf() {
-    const code = codeInput.trim().toUpperCase();
+    const code = normalizeUnitCode(codeInput);
     const kind = code.startsWith("OM-SHELF-")
       ? StorageUnitKind.SHELF
       : StorageUnitKind.BOX;

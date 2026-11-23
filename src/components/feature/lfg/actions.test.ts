@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
+import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -14,9 +14,13 @@ vi.mock("@/lib/members/meeples", async () => {
   return {
     ...actual,
     requireMeeple: requireMeepleMock,
-    requireMeeplePermission: requireMeeplePermissionMock,
   };
 });
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requireMeeplePermissionMock(...args),
+  ),
+);
 
 const {
   addLfgGuest,
@@ -46,7 +50,7 @@ beforeEach(() => {
   );
   prismaMock.lfgPost.create.mockResolvedValue({ id: "post-1" } as never);
   prismaMock.lfgParticipant.create.mockResolvedValue({} as never);
-  prismaMock.rolePermission.count.mockResolvedValue(0);
+  mockPermissionKeys([]);
 });
 
 describe("without a session", () => {
@@ -240,7 +244,7 @@ describe("closeLfgPost", () => {
       id: "post-1",
       createdByMeepleId: CREATOR.id,
     } as never);
-    prismaMock.rolePermission.count.mockResolvedValue(1);
+    mockPermissionKeys("all");
     prismaMock.lfgPost.update.mockResolvedValue({} as never);
 
     const result = await closeLfgPost("post-1");
@@ -254,7 +258,7 @@ describe("closeLfgPost", () => {
       id: "post-1",
       createdByMeepleId: CREATOR.id,
     } as never);
-    prismaMock.rolePermission.count.mockResolvedValue(0);
+    mockPermissionKeys([]);
 
     const result = await closeLfgPost("post-1");
 

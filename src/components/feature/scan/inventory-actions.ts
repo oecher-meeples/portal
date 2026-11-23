@@ -1,30 +1,21 @@
 "use server";
 
-import { GameInventoryStatus } from "@prisma/client";
-import { prisma } from "@/lib/utils/prisma";
-import { requireMeeple } from "@/lib/members/meeples";
-import { requirePermission } from "@/lib/auth/permissions";
+import { requireActionPermission } from "@/lib/auth/action-guards";
+import type { GameIssueKind } from "@/lib/ludothek/game-issue";
 import {
-  GAME_ISSUE_LABELS,
-  type GameIssueKind,
-} from "@/components/feature/scan/game-issue-labels";
+  confirmGameCopyCheck,
+  reportGameCopyDefect,
+} from "@/lib/ludothek/game-copy-checks";
 
+/** Prüfbogen (Scanner-Modus „Kontrollieren", #563) — nur `games:manage`.
+ * Jede Kontrolle wird mit dem kontrollierenden Meeple protokolliert (#599). */
 export async function confirmGameCondition(
   gameCopyId: string,
   condition: string,
 ) {
-  await requireMeeple();
+  const actor = await requireActionPermission("games:manage");
 
-  await prisma.gameCopy.update({
-    where: { id: gameCopyId },
-    data: {
-      condition: condition.trim() || null,
-      lastCheckedAt: new Date(),
-      needsCompletenessCheck: false,
-    },
-  });
-
-  return { success: true as const };
+  return confirmGameCopyCheck(gameCopyId, actor.meeple.id, condition);
 }
 
 export async function reportGameDefect(
@@ -32,31 +23,7 @@ export async function reportGameDefect(
   kind: GameIssueKind,
   note: string,
 ) {
-  await requireMeeple();
+  const actor = await requireActionPermission("games:manage");
 
-  if (!note.trim()) {
-    return { error: "Bitte eine Notiz zum Mangel angeben." };
-  }
-
-  await prisma.gameCopy.update({
-    where: { id: gameCopyId },
-    data: {
-      condition: `${GAME_ISSUE_LABELS[kind]}: ${note.trim()}`,
-      lastCheckedAt: new Date(),
-      status: GameInventoryStatus.MAINTENANCE,
-    },
-  });
-
-  return { success: true as const };
-}
-
-export async function clearGameDefect(gameCopyId: string) {
-  await requirePermission("games:manage");
-
-  await prisma.gameCopy.update({
-    where: { id: gameCopyId },
-    data: { status: GameInventoryStatus.ACTIVE },
-  });
-
-  return { success: true as const };
+  return reportGameCopyDefect(gameCopyId, actor.meeple.id, kind, note);
 }

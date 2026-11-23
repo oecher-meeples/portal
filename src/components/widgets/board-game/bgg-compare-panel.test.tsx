@@ -23,6 +23,9 @@ const BGG_DATA: BggGameData = {
   description: "Baue einen modernen Zoo.",
   mechanics: ["Kartenspiel", "Engine-Building"],
   categories: [],
+  mechanicLinks: [],
+  categoryLinks: [],
+  traits: [],
   kind: BoardGameKind.BOARDGAME,
   languageDependence: LanguageDependence.MODERATE_TEXT,
   author: [],
@@ -32,6 +35,8 @@ const BGG_DATA: BggGameData = {
   explainerVideoUrl: null,
   germanExplainerVideos: [],
   englishExplainerVideos: [],
+  designers: [],
+  illustrators: [],
 };
 
 const FORM: BoardGameFormValues = {
@@ -55,7 +60,14 @@ const FORM: BoardGameFormValues = {
   ruleBookLanguages: [],
   publisher: "",
   author: "",
+  illustrator: "",
   yearPublished: "",
+  editionLanguages: "",
+  editionMode: "none",
+  editionVersionId: "",
+  bggVersion: null,
+  traits: [],
+  notes: "",
 };
 
 function renderPanel(

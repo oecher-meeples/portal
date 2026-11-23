@@ -11,18 +11,24 @@ vi.mock("@/lib/members/meeples", async () => {
   );
   return {
     ...actual,
-    requireMeeplePermission: requireMeeplePermissionMock,
     getMembershipState: getMembershipStateMock,
     ensureMeeple: ensureMeepleMock,
   };
 });
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
+vi.mock("@/lib/auth/action-guards", async () => {
+  const guards = await import("@/lib/__mocks__/action-guards");
+  return guards.actionGuardsFrom(
+    guards.holdingActorResolver({
+      actingMeeple: (...args) => requireMeeplePermissionMock(...args),
+      gamesManager: () => requireGamesManagePermissionMock(),
+      findMember: (args) => memberFindUniqueMock(args),
+      membershipState: () => getMembershipStateMock(),
+    }),
+  );
+});
 
 const requireGamesManagePermissionMock = vi.fn();
-vi.mock("@/lib/ludothek/permissions", () => ({
-  requireGamesManagePermission: (...args: unknown[]) =>
-    requireGamesManagePermissionMock(...args),
-}));
 
 const gameCopyFindUniqueMock = vi.fn();
 const memberFindUniqueMock = vi.fn();
@@ -186,11 +192,7 @@ describe("scanConfirmExternalReturn (#333c/d)", () => {
   it("blocks a resigned meeple from confirming", async () => {
     getMembershipStateMock.mockReturnValue("ausgetreten");
 
-    const result = await scanConfirmExternalReturn("holding-1");
-
-    expect(result).toEqual({
-      error: "Ausgetretene Mitglieder können keine Spiele mehr annehmen.",
-    });
+    await expect(scanConfirmExternalReturn("holding-1")).rejects.toThrow();
     expect(confirmExternalReturnMock).not.toHaveBeenCalled();
   });
 });

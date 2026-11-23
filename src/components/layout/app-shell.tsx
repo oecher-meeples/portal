@@ -2,10 +2,10 @@ import type { ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { SidebarShell } from "@/components/layout/sidebar-shell";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { getPreviewTier, getRealSessionTier } from "@/lib/auth/session";
+import { getRealSessionTier, resolveViewTier } from "@/lib/auth/session";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUserPermissionKeys } from "@/lib/auth/permissions";
-import { ensureMeeple } from "@/lib/members/meeples";
+import { ensureMeeple, getMeepleMembership } from "@/lib/members/meeples";
 import { hasOpenHelperRequest } from "@/lib/events/upcoming";
 import { hasActiveAusleiheShift } from "@/lib/events/shift-rights";
 import { listActiveNotificationsForViewer } from "@/lib/notifications/queries";
@@ -16,8 +16,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
     getCurrentUser(),
     hasOpenHelperRequest(),
   ]);
-  const previewTier = realTier === "admin" ? await getPreviewTier() : null;
-  const tier = previewTier ?? realTier;
+  const tier = await resolveViewTier(realTier);
   // #433: activeAusleiheShift ist pro Nutzer, braucht deshalb user.id — kann
   // erst nach dem obigen Promise.all starten, läuft dafür parallel zu
   // permissions. #465: meepleId fürs Header-Longpress-QR-Popup, ebenfalls
@@ -30,7 +29,16 @@ export async function AppShell({ children }: { children: ReactNode }) {
   // #339: Banner + Glocke teilen sich dieselbe Liste — ein Server-Lookup
   // statt je einer eigenen Query. Braucht `permissions` (Zielgruppen-Filter),
   // kann daher erst nach dem zweiten Promise.all starten.
-  const notifications = await listActiveNotificationsForViewer(permissions);
+  // #537: Ausgetretene sehen den Scanner nicht (Vier-Augen-Prinzip).
+  const [notifications, membership] = await Promise.all([
+    listActiveNotificationsForViewer(permissions, meeple?.id ?? null),
+    meeple ? getMeepleMembership(meeple) : Promise.resolve(null),
+  ]);
+  const flags = {
+    openHelperRequest,
+    activeAusleiheShift,
+    activeMembership: membership?.membershipState !== "ausgetreten",
+  };
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -43,7 +51,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest, activeAusleiheShift }}
+        flags={flags}
         notifications={notifications}
       >
         {children}
@@ -55,8 +63,8 @@ export async function AppShell({ children }: { children: ReactNode }) {
         tier={tier}
         realTier={realTier}
         permissions={permissions}
-        flags={{ openHelperRequest, activeAusleiheShift }}
-        user={user ? { name: user.name } : null}
+        flags={flags}
+        user={user && meeple ? { name: user.name, meepleId: meeple.id } : null}
       />
     </div>
   );

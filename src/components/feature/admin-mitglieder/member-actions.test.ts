@@ -3,9 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const createMemberRecordMock = vi.fn();
 vi.mock("@/lib/members/create-member", () => ({
@@ -34,6 +31,11 @@ vi.mock("@/lib/members/guardians", () => ({
   addGuardianLink: (...args: unknown[]) => addGuardianLinkMock(...args),
   removeGuardianLink: (...args: unknown[]) => removeGuardianLinkMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const {
   createMember,

@@ -42,6 +42,7 @@ Eine ausführliche Beschreibung aller Funktionsbereiche findet sich in [`docs/Co
 | [`docs/project-structure.md`](./docs/project-structure.md) | Schichtenarchitektur, Ordner-Semantik und erzwungene Import-Richtung     |
 | [`docs/coding-guidelines.md`](./docs/coding-guidelines.md) | Coding-Richtlinien: Sprache, TypeScript, Server Actions, Tailwind, Tests |
 | [`docs/design.md`](./docs/design.md)                       | Markenfarben, Farbtokens, Light-/Dark-Mode                               |
+| [`docs/deployment-docker.md`](./docs/deployment-docker.md) | Self-Hosting via Docker Compose, GHCR & GitHub Actions CI/CD             |
 | [`docs/adr/`](./docs/adr/)                                 | Architecture Decision Records – fachliche Entscheidungen mit Begründung  |
 | [`CLAUDE.md`](./CLAUDE.md)                                 | Kurzfassung der Regeln für KI-Agenten                                    |
 
@@ -49,19 +50,19 @@ Eine ausführliche Beschreibung aller Funktionsbereiche findet sich in [`docs/Co
 
 ## 🛠️ Technologie-Stack
 
-| Kategorie         | Entscheidung                     |
-| ----------------- | -------------------------------- |
-| Framework         | Next.js 16 (App Router)          |
-| Sprache           | TypeScript                       |
-| Datenbank         | PostgreSQL via Neon              |
-| ORM               | Prisma                           |
-| Styling           | Tailwind CSS v4                  |
-| Komponenten       | shadcn/ui-Stil auf Base UI       |
-| Authentifizierung | Neon Auth (`@neondatabase/auth`) |
-| Tests             | Vitest + Testing Library         |
-| Hosting           | Vercel                           |
+| Kategorie         | Entscheidung                                             |
+| ----------------- | -------------------------------------------------------- |
+| Framework         | Next.js 16 (App Router)                                  |
+| Sprache           | TypeScript                                               |
+| Datenbank         | PostgreSQL (Self-Hosted / Neon)                          |
+| ORM               | Prisma                                                   |
+| Styling           | Tailwind CSS v4                                          |
+| Komponenten       | shadcn/ui-Stil auf Base UI                               |
+| Authentifizierung | better-auth (self-hosted)                                |
+| Tests             | Vitest + Testing Library                                 |
+| Hosting & Deploy  | Docker (Self-Hosted via GHCR, CI/CD über GitHub Actions) |
 
-Details und Begründungen siehe [`docs/setup.md`](./docs/setup.md), Architektur- und Coding-Regeln in [`docs/project-structure.md`](./docs/project-structure.md) und [`docs/coding-guidelines.md`](./docs/coding-guidelines.md).
+Details und Begründungen siehe [`docs/setup.md`](./docs/setup.md) und [`docs/deployment-docker.md`](./docs/deployment-docker.md), Architektur- und Coding-Regeln in [`docs/project-structure.md`](./docs/project-structure.md) und [`docs/coding-guidelines.md`](./docs/coding-guidelines.md).
 
 ---
 
@@ -74,9 +75,10 @@ Details und Begründungen siehe [`docs/setup.md`](./docs/setup.md), Architektur-
 
 ---
 
-## 🚀 Lokales Setup
+## 🚀 Lokales Setup & Deployment
 
-Eine Schritt-für-Schritt-Anleitung zum Aufsetzen der lokalen Entwicklungsumgebung befindet sich in [`docs/setup.md`](./docs/setup.md).
+- **Lokale Entwicklung:** Schritt-für-Schritt-Anleitung zum Aufsetzen der lokalen Entwicklungsumgebung in [`docs/setup.md`](./docs/setup.md).
+- **Produktionsbetrieb & Docker:** Self-Hosting-Anleitung für Docker Compose, GHCR-Images und GitHub Actions Deployment in [`docs/deployment-docker.md`](./docs/deployment-docker.md).
 
 ---
 

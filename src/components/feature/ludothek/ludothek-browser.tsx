@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LayoutGrid, List, Rows3, X } from "lucide-react";
@@ -11,15 +12,16 @@ import { LudothekFilterPanel } from "@/components/feature/ludothek/ludothek-filt
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { SingleSlider } from "@/components/ui/range-slider";
 import { useLocalStorageState } from "@/components/ui/use-local-storage-state";
+import { useIsMobile } from "@/components/ui/use-media-query";
 import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { CreateBoardGameDialog } from "@/components/widgets/board-game/create-board-game-dialog";
 import { buildHref } from "@/lib/utils/query-string";
-import type {
-  LudothekFilters,
-  LudothekGame,
-  LudothekViewMode,
-  PublicLudothekGame,
-} from "@/lib/ludothek/browser";
+import { classifyScannedSearch } from "@/lib/short-id/short-id";
+import type { BoardGameTrait } from "@prisma/client";
+import type { BoardGameTraitTextData } from "@/lib/ludothek/board-game-traits";
+import type { LudothekFilters, LudothekViewMode } from "@/lib/ludothek/browser";
+import type { LudothekClientGame } from "@/lib/ludothek/browse";
+import { loadMoreLudothekGames } from "@/components/feature/ludothek/actions";
 import { cn } from "@/lib/utils/cn";
 
 /** #446: Kartengröße im Grid — persistiert je Gerät, nicht Teil der
@@ -48,7 +50,8 @@ function ViewModeSwitch({
   href: (patch: Record<string, string | string[] | undefined>) => string;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    // #585: auf `< md` ausgeblendet — dort gilt immer das Raster.
+    <div className="hidden items-center gap-1 md:flex">
       {VIEW_MODE_OPTIONS.filter(
         (option) => option.value !== "compact" || canManageGames,
       ).map((option) => (
@@ -73,8 +76,81 @@ function ViewModeSwitch({
   );
 }
 
+type LoadedGames = {
+  /** Die zuletzt vom Server gerenderte erste Seite — ändert sie sich, wird
+   * neu aufgesetzt (Filterwechsel) bzw. zusammengeführt (`router.refresh`). */
+  firstPage: LudothekClientGame[];
+  filterKey: string;
+  games: LudothekClientGame[];
+  nextOffset: number | null;
+};
+
+/** Nachgeladene Seiten (#461). Ein Filterwechsel kommt als neue erste Seite
+ * mit anderen `searchParams` und setzt auf Seite 1 zurück; ein Refresh mit
+ * denselben Filtern (z. B. nach einer Aktion) behält die schon nachgeladenen
+ * Titel, damit die Liste nicht unter dem Nutzer zusammenschrumpft. */
+function useLudothekPages(
+  firstPage: LudothekClientGame[],
+  firstNextOffset: number | null,
+  rawSearchParams: Record<string, string | string[] | undefined>,
+) {
+  const filterKey = JSON.stringify(rawSearchParams);
+  const [loaded, setLoaded] = useState<LoadedGames>({
+    firstPage,
+    filterKey,
+    games: firstPage,
+    nextOffset: firstNextOffset,
+  });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  if (loaded.firstPage !== firstPage) {
+    const keepExtras = loaded.filterKey === filterKey;
+    setLoaded({
+      firstPage,
+      filterKey,
+      games: keepExtras
+        ? appendNewTitles(
+            firstPage,
+            loaded.games.slice(loaded.firstPage.length),
+          )
+        : firstPage,
+      nextOffset: keepExtras ? loaded.nextOffset : firstNextOffset,
+    });
+  }
+
+  const loadMore = useCallback(
+    async (offset: number) => {
+      setIsLoadingMore(true);
+      try {
+        const page = await loadMoreLudothekGames(rawSearchParams, offset);
+        setLoaded((current) => ({
+          ...current,
+          games: appendNewTitles(current.games, page.games),
+          nextOffset: page.nextOffset,
+        }));
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [rawSearchParams],
+  );
+
+  return { ...loaded, isLoadingMore, loadMore };
+}
+
+/** Hängt nur Titel an, die noch nicht geladen sind — verschiebt sich der
+ * Bestand zwischen zwei Seiten, entsteht so keine doppelte Karte. */
+function appendNewTitles(
+  current: LudothekClientGame[],
+  next: LudothekClientGame[],
+) {
+  const known = new Set(current.map((game) => game.boardGameId));
+  return [...current, ...next.filter((game) => !known.has(game.boardGameId))];
+}
+
 export function LudothekBrowser({
-  games,
+  games: firstPage,
+  nextOffset: firstNextOffset = null,
   internal,
   canManageGames = false,
   basePath,
@@ -86,8 +162,13 @@ export function LudothekBrowser({
   meepleOptions,
   showExplainerFilter = true,
   showPresentFilter = false,
+  traitTexts,
+  createInventoryNumber,
 }: {
-  games: (PublicLudothekGame | LudothekGame)[];
+  /** Erste Seite Titel (#461), weitere lädt `loadMoreLudothekGames` nach. */
+  games: LudothekClientGame[];
+  /** Titel-Offset der zweiten Seite, `null`/weggelassen = schon alles da. */
+  nextOffset?: number | null;
   internal: boolean;
   /** Only meaningful when `games` are the unstripped internal shape. */
   canManageGames?: boolean;
@@ -109,10 +190,25 @@ export function LudothekBrowser({
    * läuft, für Meeples wie Gäste gleichermaßen. Default aus, da meistens
    * kein Event läuft. */
   showPresentFilter?: boolean;
+  /** Admin-editierbare Anzeige-Texte je Trait (#487-Konzept). */
+  traitTexts?: Partial<Record<BoardGameTrait, BoardGameTraitTextData>>;
+  /** Inventarnummer eines gescannten, unbekannten Exemplar-Etiketts
+   * (`?neu=inv-<n>`, #549) — öffnet sofort den Anlegen-Dialog. Nur mit
+   * `canManageGames` gesetzt. */
+  createInventoryNumber?: number;
 }) {
   const router = useRouter();
   const href = (patch: Record<string, string | string[] | undefined>) =>
     buildHref(basePath, rawSearchParams, patch);
+  // #585: Liste/Kompakt sind auf `< md` unbrauchbar — dort immer Raster.
+  // `?ansicht=` bleibt dabei unangetastet und greift wieder ab `md`.
+  const isMobile = useIsMobile();
+  const view: LudothekViewMode = isMobile ? "grid" : (filters.view ?? "grid");
+  const { games, nextOffset, isLoadingMore, loadMore } = useLudothekPages(
+    firstPage,
+    firstNextOffset,
+    rawSearchParams,
+  );
 
   const [search, setSearch] = useState(filters.search ?? "");
   const debouncedSearch = useDebouncedValue(search);
@@ -127,9 +223,23 @@ export function LudothekBrowser({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the debounced value settling
   }, [debouncedSearch]);
 
+  // #570: QR-Etiketten öffnen ihr Ziel über den Router statt als Roh-URL
+  // im Suchfeld zu landen; EAN/Freitext bleiben Suchtext.
+  const [scanHint, setScanHint] = useState<string | null>(null);
+  function handleScanned(text: string) {
+    const input = classifyScannedSearch(text);
+    setScanHint(
+      input.kind === "unsupported"
+        ? "Meeple-Codes kann die Ludothek-Suche noch nicht auflösen."
+        : null,
+    );
+    if (input.kind === "navigate") router.push(input.href);
+    if (input.kind === "search") setSearch(input.text);
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="bg-card flex flex-col gap-3 rounded-lg border p-4">
+      <Card size="sm">
         <form
           action={basePath}
           onSubmit={(event) => {
@@ -173,8 +283,13 @@ export function LudothekBrowser({
             )}
           </div>
           <Button type="submit">Suchen</Button>
-          <ScanSearchDialog onScanned={setSearch} />
+          <ScanSearchDialog onScanned={handleScanned} />
         </form>
+        {scanHint && (
+          <p role="status" className="text-muted-foreground text-sm">
+            {scanHint}
+          </p>
+        )}
 
         <LudothekFilterPanel
           href={href}
@@ -189,18 +304,21 @@ export function LudothekBrowser({
           showExplainerFilter={showExplainerFilter}
           showPresentFilter={showPresentFilter}
         />
-      </div>
+      </Card>
 
       <div className="flex items-center justify-between gap-2">
         {canManageGames ? (
-          <CreateBoardGameDialog defaultBggQuery={search} />
+          <CreateBoardGameDialog
+            defaultBggQuery={search}
+            defaultInventoryNumber={createInventoryNumber}
+          />
         ) : (
           <div />
         )}
         <div className="flex items-center gap-3">
           {/* #446: nur Grid-Ansicht, nur Desktop — auf Mobile/Tablet
               ausgeblendet, List/Compact bleiben unbeeinflusst. */}
-          {(filters.view ?? "grid") === "grid" && (
+          {view === "grid" && (
             <SingleSlider
               className="hidden w-24 md:flex"
               min={CARD_MIN_WIDTH_RANGE.min}
@@ -212,7 +330,7 @@ export function LudothekBrowser({
             />
           )}
           <ViewModeSwitch
-            view={filters.view ?? "grid"}
+            view={view}
             canManageGames={canManageGames}
             href={href}
           />
@@ -221,10 +339,15 @@ export function LudothekBrowser({
 
       <LudothekResults
         games={games}
-        view={filters.view ?? "grid"}
+        view={view}
         canManageGames={canManageGames}
         mechanicsOptions={mechanicsOptions}
         cardMinWidth={cardMinWidth}
+        traitTexts={traitTexts}
+        onLoadMore={loadMore}
+        cursor={nextOffset}
+        hasMore={nextOffset !== null}
+        isLoadingMore={isLoadingMore}
       />
     </div>
   );

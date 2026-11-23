@@ -2,18 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { StorageUnitKind } from "@prisma/client";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { nextUnitCode } from "@/lib/inventory/codes";
-import { ensureMeeple } from "@/lib/members/meeples";
-import { requirePermission } from "@/lib/auth/permissions";
+import { nextUnitCode, normalizeUnitCode } from "@/lib/inventory/codes";
 import { moveStorageUnit } from "@/lib/ludothek/holdings";
-
-/** Shared by every `/admin/einheiten` action and by the Ludothek
- * create-dialog's Standort-Feld — both need the same permission + actor. */
-export async function requireGamesManage() {
-  const user = await requirePermission("games:manage");
-  return ensureMeeple(user);
-}
 
 export type CreateStorageUnitInput = {
   kind: StorageUnitKind;
@@ -29,7 +21,7 @@ export type CreateStorageUnitInput = {
 };
 
 export async function createStorageUnit(input: CreateStorageUnitInput) {
-  const actor = await requireGamesManage();
+  const { meeple: actor } = await requireActionPermission("games:manage");
 
   const label = input.label.trim();
   if (!label) {
@@ -79,10 +71,10 @@ export async function createStorageUnit(input: CreateStorageUnitInput) {
  * create-dialog's Standort-Feld uses this before offering to create a new
  * one (#121/#122). */
 export async function findStorageUnitByCode(code: string) {
-  await requireGamesManage();
+  await requireActionPermission("games:manage");
 
   const unit = await prisma.storageUnit.findFirst({
-    where: { code: code.trim().toUpperCase(), retiredAt: null },
+    where: { code: normalizeUnitCode(code), retiredAt: null },
     select: { id: true, label: true, code: true },
   });
   return unit;
@@ -119,7 +111,7 @@ export async function setUnitParent(
   unitId: string,
   parentUnitId: string | null,
 ) {
-  const actor = await requireGamesManage();
+  const { meeple: actor } = await requireActionPermission("games:manage");
 
   if (parentUnitId) {
     if (parentUnitId === unitId) {

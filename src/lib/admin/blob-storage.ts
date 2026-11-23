@@ -1,51 +1,57 @@
-import { list } from "@vercel/blob";
-import { requireEnv } from "@/lib/utils/require-env";
+import { ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { getS3Bucket, getS3Client } from "@/lib/utils/s3";
 
 /**
- * Vercel's Blob REST API has no endpoint that returns numeric storage usage.
- * The documented `GET /storage/stores/{id}` endpoint
- * (https://vercel.com/docs/rest-api/storage/get-a-store, checked 2026-08-25)
- * only returns a boolean `usageQuotaExceeded` flag and a `status` enum — no
- * used/limit byte counts, and no other REST endpoint exposes them either
- * (confirmed against the full endpoint listing and the OpenAPI spec).
- *
- * So this sums the `size` of every blob via the `@vercel/blob` SDK's
- * `list()` instead, using the same read-write token the app already uses
- * for uploads (`BLOB_READ_WRITE_TOKEN`, see `use-blob-upload.ts`) — that is
- * exact, documented, and needs no extra token/scope.
- *
- * The included-storage limit is likewise not exposed by any API — it's
- * Vercel's included storage volume for this project's actual plan/usage
- * tier, confirmed against the Vercel dashboard (1 GB, checked 2026-08-26)
- * rather than assumed from the generic Hobby-plan pricing page.
+ * Soft quota for the admin dashboard's fill-level card. The self-hosted
+ * blob store (SeaweedFS, see docker-compose.yml) has no plan limit — it is bounded only
+ * by the host's disk — so this keeps the 1 GB the club had on Vercel Blob as
+ * the "time to clean up" reference value. Override with
+ * `S3_STORAGE_LIMIT_BYTES` once the server's disk budget is known.
  */
-const INCLUDED_STORAGE_BYTES = 1 * 1024 * 1024 * 1024;
+const DEFAULT_STORAGE_LIMIT_BYTES = 1 * 1024 * 1024 * 1024;
+
+function getStorageLimitBytes(): number {
+  const configured = Number(process.env.S3_STORAGE_LIMIT_BYTES);
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : DEFAULT_STORAGE_LIMIT_BYTES;
+}
 
 export type BlobStorageUsage = {
   /** Total bytes currently stored across all blobs. */
   used: number;
-  /** Included storage volume in bytes (Hobby/Pro plan default). */
+  /** Soft quota in bytes (see `S3_STORAGE_LIMIT_BYTES`). */
   limit: number;
   /** `used / limit`, as a percentage (0-100+, may exceed 100 if over quota). */
   percent: number;
 };
 
-/** Fetches the current Vercel Blob storage usage by paginating through
- * every stored blob and summing their sizes. */
+/** Fetches the current blob storage usage by paginating through every
+ * object in the bucket and summing their sizes — S3 has no "bucket size"
+ * call, and the store's own API would need extra credentials/scope. */
 export async function getBlobStorageUsage(): Promise<BlobStorageUsage> {
-  const token = requireEnv("BLOB_READ_WRITE_TOKEN");
+  const client = getS3Client();
+  const bucket = getS3Bucket();
 
   let used = 0;
-  let cursor: string | undefined;
+  let continuationToken: string | undefined;
   do {
-    const page = await list({ token, cursor, limit: 1000 });
-    used += page.blobs.reduce((sum, blob) => sum + blob.size, 0);
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor);
+    const page = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        ContinuationToken: continuationToken,
+        MaxKeys: 1000,
+      }),
+    );
+    used += (page.Contents ?? []).reduce(
+      (sum, object) => sum + (object.Size ?? 0),
+      0,
+    );
+    continuationToken = page.IsTruncated
+      ? page.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
 
-  return {
-    used,
-    limit: INCLUDED_STORAGE_BYTES,
-    percent: (used / INCLUDED_STORAGE_BYTES) * 100,
-  };
+  const limit = getStorageLimitBytes();
+  return { used, limit, percent: (used / limit) * 100 };
 }

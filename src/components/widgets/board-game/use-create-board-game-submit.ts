@@ -11,10 +11,14 @@ import { createGameCopy } from "@/lib/ludothek/game-copies";
 import {
   boardGameFormToInput,
   boardGameFormToTitleInput,
+  editionSelectionFromForm,
   type BoardGameFormValues,
 } from "@/components/widgets/board-game/board-game-form-values";
+import { parseInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
 import type { LocationPlacement } from "@/components/widgets/board-game/create-board-game-location-field";
 import type { BggGameData } from "@/lib/bgg/client";
+import { bggContributorInputs } from "@/lib/ludothek/taxonomy/bgg-contributors";
+import { bggTagInputs } from "@/lib/ludothek/taxonomy/tags";
 
 /**
  * Owns the Anlegen-Dialog's Speichern-Flow — pulled out of
@@ -25,6 +29,7 @@ import type { BggGameData } from "@/lib/bgg/client";
  */
 export function useCreateBoardGameSubmit({
   form,
+  inventoryNumber,
   existingBoardGame,
   correctingExistingTitle,
   placement,
@@ -33,6 +38,8 @@ export function useCreateBoardGameSubmit({
   onSuccess,
 }: {
   form: BoardGameFormValues;
+  /** Rohtext des Inventarnummer-Felds (#549) — leer = keine Nummer. */
+  inventoryNumber: string;
   existingBoardGame: { id: string } | null;
   correctingExistingTitle: boolean;
   placement: LocationPlacement | null;
@@ -56,6 +63,7 @@ export function useCreateBoardGameSubmit({
     resetSubmitState();
     setIsSubmitting(true);
     const eanPatch = eanOverride !== undefined ? { ean: eanOverride } : {};
+    const parsedInventoryNumber = parseInventoryNumber(inventoryNumber);
 
     try {
       if (existingBoardGame) {
@@ -73,6 +81,9 @@ export function useCreateBoardGameSubmit({
 
         const result = await createGameCopy(existingBoardGame.id, {
           condition: form.condition || undefined,
+          ruleBookLanguages: form.ruleBookLanguages,
+          edition: editionSelectionFromForm(form),
+          inventoryNumber: parsedInventoryNumber,
           ...(placement ? { placement } : {}),
         });
         if (result.error) {
@@ -84,9 +95,12 @@ export function useCreateBoardGameSubmit({
       } else {
         const input: CreateBoardGameInput = {
           ...boardGameFormToInput(form),
+          inventoryNumber: parsedInventoryNumber,
           ...(placement ? { placement } : {}),
           ...eanPatch,
           alternateNames: preview?.alternateNames,
+          contributors: bggContributorInputs(preview),
+          tags: bggTagInputs(preview),
         };
         const result = await createBoardGame(input);
         if (result.error) {

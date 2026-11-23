@@ -1,29 +1,48 @@
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
+import { EanField } from "@/components/widgets/board-game/ean-field";
+import { InventoryNumberField } from "@/components/widgets/board-game/inventory-number-field";
 import {
   CreateBoardGameLocationField,
   type LocationPlacement,
 } from "@/components/widgets/board-game/create-board-game-location-field";
 import type { BoardGameFormValues } from "@/components/widgets/board-game/board-game-form-values";
 import type { DuplicateBoardGameMatch } from "@/lib/ludothek/board-games";
+import type { BggGameData, BggVersion } from "@/lib/bgg/client";
+import { parseCommaSeparatedList } from "@/lib/ludothek/bgg-id";
 
-/** Schritt 3 des Anlegen-Wizards (#183): Mängelvermerk + Standort, plus ein
- * Hinweis, wenn die Kopie einem bereits vorhandenen Titel zugeordnet wird
- * (statt einen neuen anzulegen). */
+/** Schritt 3 des Anlegen-Wizards (#183): alles, was zum Exemplar und seiner
+ * Version gehört — Version/Edition, EAN, Mängelvermerk, Regelheft, Standort —
+ * plus ein Hinweis, wenn die Kopie einem bereits vorhandenen Titel zugeordnet
+ * wird (statt einen neuen anzulegen). */
 export function CreateBoardGameExemplarStep({
   values,
   onChange,
+  inventoryNumber,
+  onInventoryNumberChange,
   onPlacementResolved,
   placement,
   existingBoardGame,
   correctingExistingTitle,
+  preview,
+  onSelectVersion,
 }: {
   values: BoardGameFormValues;
   onChange: (patch: Partial<BoardGameFormValues>) => void;
+  /** Inventarnummer des neuen Exemplars (#549) — Rohtext, z. B. per
+   * `?neu=inv-<n>` aus einem gescannten Etikett vorbelegt. */
+  inventoryNumber: string;
+  onInventoryNumberChange: (value: string) => void;
   onPlacementResolved: (placement: LocationPlacement | null) => void;
   placement: LocationPlacement | null;
   existingBoardGame: DuplicateBoardGameMatch | null;
   correctingExistingTitle: boolean;
+  preview: BggGameData | null;
+  /** Übernimmt eine BGG-Version der Vorschau ins Formular. */
+  onSelectVersion: (version: BggVersion) => void;
 }) {
+  // Die EAN steht (noch) am Titel — beim reinen Hinzufügen eines Exemplars zu
+  // einem vorhandenen Titel wird sie nicht gespeichert, also nicht anbieten.
+  const showEan = !existingBoardGame || correctingExistingTitle;
   return (
     <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pr-1">
       {existingBoardGame && (
@@ -33,11 +52,34 @@ export function CreateBoardGameExemplarStep({
             : `Weiteres Exemplar von „${existingBoardGame.title}“ — es wird kein neuer Titel angelegt.`}
         </p>
       )}
+      <InventoryNumberField
+        id="game-inventory-number"
+        value={inventoryNumber}
+        onChange={onInventoryNumberChange}
+      />
       <EditBoardGameExemplar
         idPrefix="game"
         values={values}
         onChange={onChange}
+        boardGameId={existingBoardGame?.id}
+        bggVersions={preview?.versions}
+        onSelectBggVersion={onSelectVersion}
       />
+      {showEan && (
+        <EanField
+          // Neu mounten je Version: die automatische EAN-Suche läuft dann mit
+          // deren Product Code und Verlag erneut, sofern das Feld leer ist.
+          key={values.bggVersion?.bggVersionId ?? values.editionMode}
+          idPrefix="game"
+          value={values.ean}
+          onChange={(ean) => onChange({ ean })}
+          title={values.title}
+          autoSearchOnMount
+          alternateTitles={preview?.alternateNames}
+          bggProductCode={values.bggVersion?.productCode ?? null}
+          publisherForSorting={parseCommaSeparatedList(values.publisher)}
+        />
+      )}
       <CreateBoardGameLocationField onResolved={onPlacementResolved} />
       {!placement && (
         <p className="text-muted-foreground text-xs">

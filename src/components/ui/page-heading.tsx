@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PageTitle } from "@/components/ui/page-title";
 
 export function PageHeading({
   eyebrow,
@@ -32,9 +33,7 @@ export function PageHeading({
             {eyebrow}
           </p>
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-              {title}
-            </h1>
+            <PageTitle>{title}</PageTitle>
             {action}
           </div>
         </div>

@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { Card, CardTitle } from "@/components/ui/card";
 import type { GuardianLinkOption } from "@/lib/members/guardians";
 import { MeepleAvatar } from "@/components/entities/meeple-avatar";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 
 /** Erziehungsberechtigten-Sektion auf dem Kind-Profil (#385, Gegenstück zu
  * `MeineKinderSection`) — sichtbar für Vorstand (`isAdmin`/`canManageMembers`)
@@ -16,8 +17,8 @@ export function ErziehungsberechtigteSection({
   if (guardians.length === 0) return null;
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-lg border p-5">
-      <h2 className="font-serif text-lg font-bold">Erziehungsberechtigte</h2>
+    <Card>
+      <CardTitle>Erziehungsberechtigte</CardTitle>
       <ul className="flex flex-col gap-1.5 text-sm">
         {guardians.map((guardian) => (
           <li key={guardian.id} className="flex items-center gap-1.5">
@@ -29,7 +30,7 @@ export function ErziehungsberechtigteSection({
               size="md"
             />
             {guardian.meepleId ? (
-              <ContactDialog
+              <MeepleContactDialog
                 name={guardian.displayName}
                 meepleId={guardian.meepleId}
               />
@@ -47,6 +48,6 @@ export function ErziehungsberechtigteSection({
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }

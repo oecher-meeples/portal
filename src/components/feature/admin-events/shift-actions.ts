@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { requirePermission } from "@/lib/auth/permissions";
 
 export type ShiftInput = {
   roleId: string;
@@ -26,7 +26,7 @@ function validateShiftInput(input: ShiftInput) {
 }
 
 export async function createShift(eventId: string, input: ShiftInput) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const validationError = validateShiftInput(input);
   if (validationError) {
@@ -49,7 +49,7 @@ export async function createShift(eventId: string, input: ShiftInput) {
 }
 
 export async function updateShift(shiftId: string, input: ShiftInput) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const validationError = validateShiftInput(input);
   if (validationError) {
@@ -76,7 +76,7 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
  * Löschen belegter Schichten faktisch unmöglich gemacht (Bugreport). Die
  * Bestätigungsabfrage vor dem Klick ist die einzige Absicherung. */
 export async function deleteShift(shiftId: string) {
-  await requirePermission("events:manage");
+  await requireActionPermission("events:manage");
 
   const shift = await prisma.shift.delete({ where: { id: shiftId } });
 

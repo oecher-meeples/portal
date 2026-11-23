@@ -1,10 +1,9 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/utils/prisma";
 import { getCurrentSession, getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
+import { hasPermission, type PermissionKey } from "@/lib/auth/permissions";
 import { logAdminLoginOnce } from "@/lib/auth/login-log";
-import { ensureMeeple, getMembershipState } from "@/lib/members/meeples";
+import { ensureMeeple, getMeepleMembership } from "@/lib/members/meeples";
 import { TIER_ORDER, type Tier } from "@/lib/utils/nav-config";
 
 /**
@@ -22,7 +21,7 @@ export const PREVIEW_TIER_COOKIE = "preview-tier";
  * entziehen (siehe #219-Review — genau das ist vorher mit der alten
  * hasRole(userId, "admin")-Prüfung passiert).
  */
-const ADMIN_ACCESS_PERMISSION = "admin:access";
+const ADMIN_ACCESS_PERMISSION: PermissionKey = "admin:access";
 
 function isTier(value: string | undefined): value is Tier {
   return !!value && (TIER_ORDER as string[]).includes(value);
@@ -33,8 +32,12 @@ export const PATHNAME_HEADER = "x-pathname";
 
 /**
  * The only routes an "ausgetreten" Meeple may still reach — settling up:
- * own profile, own holdings, giving games back or on.
- * Everything else (Ludothek, interne News, Spielergesuche) is closed.
+ * own profile, own holdings. Everything else (Ludothek, interne News,
+ * Spielergesuche) is closed.
+ *
+ * #537: `/scan` ist bewusst nicht dabei (Vier-Augen-Prinzip) — ein
+ * Ausgetretener bucht nichts selbst, seine Spiele bringt eine andere Person
+ * per Scan zurück.
  *
  * #209: `/dashboard/kalender` ist entfernt (News-Konsolidierung, #208) —
  * `/news` deckt die Funktion ab, ist aber ein öffentlicher Weg (kein
@@ -49,7 +52,6 @@ export const SETTLEMENT_ROUTES: { path: string; exact?: boolean }[] = [
   // Profilseite unter /profil/{eigener-slug} lässt requireMember() unten
   // gezielt über isOwnProfilPath durch, nicht über diese Liste.
   { path: "/profil", exact: true },
-  { path: "/scan" },
 ];
 
 export function isSettlementPath(pathname: string) {
@@ -80,14 +82,27 @@ export async function getPreviewTier(): Promise<Tier | null> {
 
 /**
  * Effective tier for display purposes — real role, overridden by an admin's
- * preview choice. Admins default to "mitglied" until they explicitly pick a
- * tier via the switcher (including picking "admin" itself, which stores that
- * choice rather than falling back to it).
+ * preview choice. Admins see their full "admin" view until they pick another
+ * tier via the switcher (#516; #126 had defaulted to "mitglied", which hid
+ * every admin affordance right after login without any visible reason).
  */
 export async function getSessionTier(): Promise<Tier> {
-  const realTier = await getRealSessionTier();
+  return resolveViewTier(await getRealSessionTier());
+}
+
+/**
+ * `getSessionTier` for callers that already know the real tier (AppShell).
+ * Shell and pages must share one admin default — they once disagreed, so the
+ * switcher showed "Admin" while every page rendered the member view (#504).
+ */
+export async function resolveViewTier(realTier: Tier): Promise<Tier> {
   if (realTier !== "admin") return realTier;
-  return (await getPreviewTier()) ?? "mitglied";
+  return adminViewTier();
+}
+
+/** A real admin's view: the preview choice, else the full admin view. */
+async function adminViewTier(): Promise<Tier> {
+  return (await getPreviewTier()) ?? "admin";
 }
 
 /**
@@ -101,11 +116,10 @@ export async function getSessionTier(): Promise<Tier> {
  */
 export async function hasPermissionInCurrentView(
   userId: string,
-  permissionKey: string,
+  permissionKey: PermissionKey,
 ) {
   if (await hasPermission(userId, ADMIN_ACCESS_PERMISSION)) {
-    const previewTier = (await getPreviewTier()) ?? "mitglied";
-    if (previewTier !== "admin") return false;
+    if ((await adminViewTier()) !== "admin") return false;
   }
   return hasPermission(userId, permissionKey);
 }
@@ -121,18 +135,7 @@ export async function requireMember() {
   }
 
   const meeple = await ensureMeeple(user);
-  // resignedAt/membershipEndsAt moved to the linked Member (#328) —
-  // anonymizedAt stays on Meeple.
-  const member = await prisma.member.findUnique({
-    where: { meepleId: meeple.id },
-    select: { slug: true, resignedAt: true, membershipEndsAt: true },
-  });
-  const membershipState = getMembershipState({
-    meepleId: meeple.id,
-    resignedAt: member?.resignedAt ?? null,
-    membershipEndsAt: member?.membershipEndsAt ?? null,
-    anonymizedAt: meeple.anonymizedAt,
-  });
+  const { member, membershipState } = await getMeepleMembership(meeple);
 
   if (membershipState !== "registriert" && membershipState !== "gekuendigt") {
     const pathname = await currentPathname();
@@ -157,10 +160,11 @@ export async function requireMember() {
  * auf einen Route Handler (`/api/auth/force-logout`), weil Server
  * Components selbst keine Cookies schreiben dürfen (#242).
  *
- * Bewusst hier statt in `src/proxy.ts` verankert: `auth.getSession()`
- * braucht den `next/headers`-Request-Context, den Middleware nicht hat —
- * dieser Check greift dafür bei jedem Zugriff auf eine `/admin`-Seite,
- * was für ein praktisch admin-only genutztes Konto ausreicht.
+ * Bewusst hier statt in `src/proxy.ts` verankert: der Check braucht die
+ * Permission-Abfrage (`hasPermission`) und `logAdminLoginOnce()` (liest
+ * `next/headers`) — beides gehört in den Render-Pfad, nicht in jeden
+ * Proxy-Durchlauf. Er greift bei jedem Zugriff auf eine `/admin`-Seite, was
+ * für ein praktisch admin-only genutztes Konto ausreicht.
  */
 const ADMIN_SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
@@ -170,10 +174,10 @@ async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
   const session = await getCurrentSession();
   if (!session) return;
 
-  // #371: `auth.getSession()` normalisiert `createdAt` nur auf seinem
-  // Cache-Hit-Pfad zu einem echten `Date` — im Fallback-Pfad (Cache-Cookie
-  // fehlt/abgelaufen, z. B. direkt nach einem Server-Neustart) kommt ein
-  // roher ISO-String durch, obwohl die SDK-Typen immer `Date` versprechen.
+  // #371: Neon Auths SDK lieferte `createdAt` im Fallback-Pfad als rohen
+  // ISO-String statt `Date`. Das self-hosted better-auth (Prisma-Adapter)
+  // liefert ein echtes `Date`; die Normalisierung bleibt als billige
+  // Absicherung gegen Adapter-/Serialisierungswechsel.
   const createdAt =
     session.session.createdAt instanceof Date
       ? session.session.createdAt
@@ -198,11 +202,14 @@ async function enforceAdminAccessSessionFreshness(neonAuthUserId: string) {
  * one feature permission (e.g. `games:manage`), so a Spielewart/Kassenwart/
  * Redakteur etc. can reach it without also holding `admin:access`.
  */
-export async function requireAdminPermission(permissionKey: string | string[]) {
+export async function requireAdminPermission(
+  permissionKey: PermissionKey | readonly PermissionKey[],
+) {
   const session = await requireMember();
   await enforceAdminAccessSessionFreshness(session.user.id);
 
-  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  const keys: readonly PermissionKey[] =
+    typeof permissionKey === "string" ? [permissionKey] : permissionKey;
   const results = await Promise.all(
     keys.map((key) => hasPermission(session.user.id, key)),
   );

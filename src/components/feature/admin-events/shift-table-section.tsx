@@ -14,6 +14,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
 import { Field } from "@/components/ui/field";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   ShiftDialog,
   type EditableShift,
@@ -29,9 +30,6 @@ export type ShiftRow = EditableShift & {
   dayDate: string;
   bookings: { confirmedAt: Date | null }[];
 };
-
-const SELECT_CLASSNAME =
-  "border-input bg-background h-9 rounded-md border px-3 text-sm";
 
 type FillLevelFilter = "alle" | "unvollstaendig";
 
@@ -74,9 +72,9 @@ export function ShiftTableSection({
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-wrap items-end gap-3">
             <Field label="Tag" htmlFor="shift-filter-day">
-              <select
+              <NativeSelect
                 id="shift-filter-day"
-                className={SELECT_CLASSNAME}
+                size="md"
                 value={filterDayId}
                 onChange={(event) => setFilterDayId(event.target.value)}
               >
@@ -86,12 +84,12 @@ export function ShiftTableSection({
                     {formatWeekdayDate(day.date)}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </Field>
             <Field label="Rolle" htmlFor="shift-filter-role">
-              <select
+              <NativeSelect
                 id="shift-filter-role"
-                className={SELECT_CLASSNAME}
+                size="md"
                 value={filterRoleId}
                 onChange={(event) => setFilterRoleId(event.target.value)}
               >
@@ -101,12 +99,12 @@ export function ShiftTableSection({
                     {role.name}
                   </option>
                 ))}
-              </select>
+              </NativeSelect>
             </Field>
             <Field label="Füllstand" htmlFor="shift-filter-fill-level">
-              <select
+              <NativeSelect
                 id="shift-filter-fill-level"
-                className={SELECT_CLASSNAME}
+                size="md"
                 value={filterFillLevel}
                 onChange={(event) =>
                   setFilterFillLevel(event.target.value as FillLevelFilter)
@@ -114,7 +112,7 @@ export function ShiftTableSection({
               >
                 <option value="alle">Alle</option>
                 <option value="unvollstaendig">Unvollständige</option>
-              </select>
+              </NativeSelect>
             </Field>
           </div>
           <Button

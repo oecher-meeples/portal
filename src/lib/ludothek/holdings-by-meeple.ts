@@ -22,7 +22,7 @@ export type ActiveMeepleHolding = {
   locationChain: string;
   condition: string | null;
   ruleBookLanguages: RuleBookLanguage[];
-  inventoryNumber: string | null;
+  inventoryNumber: number | null;
   /** Offene Weitergabe/Ausleihe, die die empfangende Person noch nicht
    * bestätigt hat (#406). */
   isUnconfirmed: boolean;

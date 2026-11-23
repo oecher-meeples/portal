@@ -1,5 +1,6 @@
 "use client";
 
+import { Card, cardVariants } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
@@ -13,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Input } from "@/components/ui/input";
 import { GameActionsMenu } from "@/components/widgets/game-holding/game-actions-menu";
-import { ContactDialog } from "@/components/entities/contact-dialog";
+import { MeepleContactDialog } from "@/components/widgets/contact/meeple-contact-dialog";
 import { formatDatePlain } from "@/lib/utils/format";
 import { PageContainer } from "@/components/ui/page-container";
 import type {
@@ -83,17 +84,17 @@ export function BorrowedGamesByMeepleView({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-card text-muted-foreground rounded-lg border p-5 text-sm">
+        <Card className="text-muted-foreground block text-sm">
           {meeples.length === 0
             ? "Aktuell hat niemand ein Spiel bei sich."
             : "Kein Treffer für diese Suche."}
-        </div>
+        </Card>
       ) : (
         <Accordion
           // Remount bei jeder Sucheingabe (statt controlled): Treffer sollen
           // sofort aufgeklappt sein, manuelles Zu-/Aufklappen bleibt möglich.
           key={search}
-          className="bg-card rounded-lg border"
+          className={cardVariants({ size: "flush" })}
           defaultValue={
             search.trim()
               ? filtered.map((meeple) => meeple.vereinsmitgliedId)
@@ -120,7 +121,7 @@ export function BorrowedGamesByMeepleView({
                    * Öffnen selbst das große Bild (mit `hideWithoutPicture`,
                    * kein leerer Initialen-Kreis ohne Bild). */}
                   {meeple.meepleId ? (
-                    <ContactDialog
+                    <MeepleContactDialog
                       name={meeple.memberName}
                       meepleId={meeple.meepleId}
                       className="font-medium"

@@ -5,10 +5,8 @@ import { ContactDialog } from "@/components/entities/contact-dialog";
 import type { ContactDialogMeeple } from "@/lib/members/contact";
 
 const fetchContactDialogMeepleMock = vi.fn();
-vi.mock("@/lib/members/contact-dialog", () => ({
-  fetchContactDialogMeeple: (...args: unknown[]) =>
-    fetchContactDialogMeepleMock(...args),
-}));
+const loadMeeple = (...args: unknown[]) =>
+  fetchContactDialogMeepleMock(...args);
 
 afterEach(() => {
   cleanup();
@@ -128,7 +126,13 @@ describe("ContactDialog — meeple-Prop (Daten bereits geladen)", () => {
 
 describe("ContactDialog — meepleId-Prop (Selbstlade-Pfad)", () => {
   it("stays a clickable trigger without knowing upfront whether contact options exist", () => {
-    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+    render(
+      <ContactDialog
+        name="Lea Demo"
+        meepleId="meeple-1"
+        loadMeeple={loadMeeple}
+      />,
+    );
 
     expect(
       screen.getByRole("button", { name: "Lea Demo" }),
@@ -142,7 +146,13 @@ describe("ContactDialog — meepleId-Prop (Selbstlade-Pfad)", () => {
         contact: { ...NO_CONTACT, mailHref: "mailto:lea@example.com" },
       }),
     );
-    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+    render(
+      <ContactDialog
+        name="Lea Demo"
+        meepleId="meeple-1"
+        loadMeeple={loadMeeple}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
 
@@ -154,7 +164,13 @@ describe("ContactDialog — meepleId-Prop (Selbstlade-Pfad)", () => {
 
   it("shows a fallback message once loaded without any contact option", async () => {
     fetchContactDialogMeepleMock.mockResolvedValue(meeple());
-    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+    render(
+      <ContactDialog
+        name="Lea Demo"
+        meepleId="meeple-1"
+        loadMeeple={loadMeeple}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
 
@@ -165,7 +181,13 @@ describe("ContactDialog — meepleId-Prop (Selbstlade-Pfad)", () => {
 
   it("shows an error message when the meeple could not be loaded", async () => {
     fetchContactDialogMeepleMock.mockResolvedValue(null);
-    render(<ContactDialog name="Lea Demo" meepleId="meeple-1" />);
+    render(
+      <ContactDialog
+        name="Lea Demo"
+        meepleId="meeple-1"
+        loadMeeple={loadMeeple}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Lea Demo" }));
 

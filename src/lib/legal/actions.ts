@@ -2,11 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { generateClientTokenFromReadWriteToken } from "@vercel/blob/client";
+import { actionPermissionDenied } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
+import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
 import { extractPdfText } from "@/lib/legal/pdf-extract";
 
@@ -25,26 +24,22 @@ const legalSectionSchema = z.object({
 
 const legalSectionsSchema = z.array(legalSectionSchema);
 
-async function requireManagePermission() {
-  const user = await getCurrentUser();
-  if (!user || !(await hasPermission(user.id, "legal:manage"))) {
-    return { error: "Keine Berechtigung." } as const;
-  }
-  return null;
-}
-
 function revalidateLegalPaths(slug: string) {
   revalidatePath(`/rechtliches/${slug}`);
   revalidatePath(`/rechtliches/${slug}/edit`);
   revalidatePath("/downloads");
 }
 
-export async function getLegalUploadToken(pathname: string) {
-  const forbidden = await requireManagePermission();
+export async function getLegalUploadToken(
+  pathname: string,
+  contentType: string,
+) {
+  const forbidden = await actionPermissionDenied("legal:manage");
   if (forbidden) throw new Error(forbidden.error);
 
-  return generateClientTokenFromReadWriteToken({
+  return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "legal"),
+    contentType,
     allowedContentTypes: ["application/pdf"],
     addRandomSuffix: true,
     maximumSizeInBytes: MAX_UPLOAD_BYTES,
@@ -54,7 +49,7 @@ export async function getLegalUploadToken(pathname: string) {
 /** Returns the raw extracted text for the admin to read and copy-paste into
  * the sections editor — never written to the DB by itself. */
 export async function extractLegalPdfText(fileUrl: string) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("legal:manage");
   if (forbidden) return forbidden;
 
   const text = await extractPdfText(fileUrl);
@@ -67,7 +62,7 @@ export async function saveLegalDocument(
   sections: unknown,
   pdfFileUrl?: string,
 ) {
-  const forbidden = await requireManagePermission();
+  const forbidden = await actionPermissionDenied("legal:manage");
   if (forbidden) return forbidden;
 
   const parsedSections = legalSectionsSchema.safeParse(sections);

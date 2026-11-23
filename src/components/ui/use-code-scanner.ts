@@ -1,17 +1,27 @@
 import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
-import { BarcodeFormat, DecodeHintType } from "@zxing/library";
+import type { IScannerControls } from "@zxing/browser";
 import { notifyCodeDetected } from "@/components/ui/scan-feedback";
 
-// Nur die hier tatsächlich gebrauchten Formate erkennen: QR (OM-BOX-XXXX-Lagereinheiten)
-// und EAN-13/EAN-8 (Spiele). Ohne diese Einschränkung versucht der Reader bei jedem Frame
-// alle Barcode-Formate (Micro QR, Aztec, Codabar, PDF417, …), was die Erkennung unzuverlässig macht.
-const HINTS = new Map([
-  [
-    DecodeHintType.POSSIBLE_FORMATS,
-    [BarcodeFormat.QR_CODE, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8],
-  ],
-]);
+/**
+ * ZXing erst laden, wenn jemand die Kamera startet (#529) — sonst landet es
+ * im JS jeder Seite mit Scanner-Dialog (u. a. die öffentliche Ludothek),
+ * auch wenn ihn nie jemand öffnet.
+ */
+async function createReader() {
+  const [{ BrowserMultiFormatReader }, { BarcodeFormat, DecodeHintType }] =
+    await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
+  // Nur die hier tatsächlich gebrauchten Formate erkennen: QR (Short-ID-
+  // Etiketten für Exemplare/Einheiten) und EAN-13/EAN-8 (Spiele). Ohne diese Einschränkung
+  // versucht der Reader bei jedem Frame alle Barcode-Formate (Micro QR,
+  // Aztec, Codabar, PDF417, …), was die Erkennung unzuverlässig macht.
+  const hints = new Map([
+    [
+      DecodeHintType.POSSIBLE_FORMATS,
+      [BarcodeFormat.QR_CODE, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8],
+    ],
+  ]);
+  return new BrowserMultiFormatReader(hints);
+}
 
 // Ein liegengelassener Barcode wird sonst bei jedem Video-Frame erneut erkannt —
 // dieselbe Erkennung innerhalb dieses Fensters ignorieren wir, ein neuer Code
@@ -47,9 +57,10 @@ export function useCodeScanner({
     if (!videoRef.current) return;
 
     setStatus("starting");
-    const reader = new BrowserMultiFormatReader(HINTS);
 
     try {
+      const reader = await createReader();
+      if (!videoRef.current) return;
       const controls = await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current,

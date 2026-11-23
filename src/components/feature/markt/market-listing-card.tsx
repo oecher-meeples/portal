@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Camera } from "lucide-react";
 import { CoverMedia } from "@/components/ui/cover-media";
@@ -19,7 +20,7 @@ export function MarketListingCard({
   isOwn: boolean;
 }) {
   return (
-    <div className="bg-card flex flex-col overflow-hidden rounded-lg border">
+    <Card size="flush">
       <div className="relative">
         <Link href={`/markt/${listing.id}`}>
           <CoverMedia
@@ -71,6 +72,6 @@ export function MarketListingCard({
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

@@ -5,9 +5,6 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requirePermissionMock = vi.fn();
-vi.mock("@/lib/auth/permissions", () => ({
-  requirePermission: (...args: unknown[]) => requirePermissionMock(...args),
-}));
 
 const assertMaySubmitChangeForMock = vi.fn();
 vi.mock("@/lib/members/guardians", () => ({
@@ -20,6 +17,11 @@ vi.mock("@/lib/members/pending-changes", () => ({
   requestStammdatenChange: (...args: unknown[]) =>
     requestStammdatenChangeMock(...args),
 }));
+vi.mock("@/lib/auth/action-guards", async () =>
+  (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
+    requirePermissionMock(...args),
+  ),
+);
 
 const { updateMemberStammdaten, requestMemberStammdatenChange } =
   await import("./stammdaten-actions");

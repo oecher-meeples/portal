@@ -1,30 +1,31 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { LogIn, LogOut, UserRound } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth/client";
-import { clearPreviewTier } from "@/components/feature/admin-preview-tier/actions";
-import { MeepleQrDialog } from "@/components/layout/meeple-qr-dialog";
-import { useLongPress } from "@/components/ui/use-long-press";
+import { Tooltip } from "@/components/ui/tooltip";
+import { ProfileLink } from "@/components/layout/profile-link";
+import { useSignOut } from "@/components/layout/use-sign-out";
 
+/**
+ * Anmelden/Profil/Abmelden im Header. `< md` komplett ausgeblendet — dort
+ * stehen die Einträge im ersten Bottom-Sheet der `MobileNav` (#582).
+ * Zwischen `md` und `lg` nur Icons mit Tooltip, damit der Header nie
+ * überläuft; ab `lg` mit Text.
+ */
 export function UserMenu({
   user,
 }: {
   user: { name: string; meepleId: string } | null;
 }) {
-  const router = useRouter();
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
-  const { consumeFired, handlers } = useLongPress(() => setQrDialogOpen(true));
+  const signOut = useSignOut();
 
   if (!user) {
     return (
       <Button
         variant="ghost"
         size="sm"
-        className="gap-1.5"
+        className="hidden gap-1.5 md:inline-flex"
         render={
           <Link href="/login">
             <LogIn className="size-4" />
@@ -35,54 +36,21 @@ export function UserMenu({
     );
   }
 
-  async function handleSignOut() {
-    await Promise.all([authClient.signOut(), clearPreviewTier()]);
-    // #472/#339: Client-Präferenzen (Sidebar-Pin, geschlossene
-    // Notification-Hinweise) sind geräte-, nicht kontogebunden — ohne das
-    // hier zu räumen, würde die nächste Person am selben Gerät (auch ein
-    // anderes Meeple) im zuletzt angehefteten Sidebar-Zustand starten bzw.
-    // eine für die vorige Person geschlossene Notification nie mehr sehen.
-    localStorage.clear();
-    router.push("/");
-    router.refresh();
-  }
-
   return (
-    <div className="flex items-center gap-2 text-sm">
-      {/* #465: Longpress öffnet den persönlichen QR-Code statt zu navigieren
-          — ein normaler (kurzer) Klick geht weiterhin aufs eigene Profil. */}
-      <Link
-        href="/profil"
-        className="text-muted-foreground hover:text-foreground hidden items-center gap-1.5 sm:inline-flex"
-        onClick={(event) => {
-          if (consumeFired()) {
-            event.preventDefault();
-            // Der durchs Loslassen ausgelöste Klick bubbelt sonst bis zum
-            // Dialog-Root hoch und wird dort als Klick "außerhalb" gewertet
-            // — der gerade erst geöffnete QR-Dialog ging dadurch sofort
-            // wieder zu, noch bevor man ihn zeigen konnte.
-            event.stopPropagation();
-          }
-        }}
-        {...handlers}
-      >
-        <UserRound className="text-primary size-4" />
-        {user.name}
-      </Link>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="gap-1.5"
-        onClick={handleSignOut}
-      >
-        <LogOut className="size-4" />
-        Abmelden
-      </Button>
-      <MeepleQrDialog
-        meepleId={user.meepleId}
-        open={qrDialogOpen}
-        onOpenChange={setQrDialogOpen}
-      />
+    <div className="hidden items-center gap-2 text-sm md:flex">
+      <ProfileLink user={user} labelClassName="hidden lg:inline" tooltip />
+      <Tooltip content="Abmelden" side="bottom">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5"
+          aria-label="Abmelden"
+          onClick={signOut}
+        >
+          <LogOut className="size-4" />
+          <span className="hidden lg:inline">Abmelden</span>
+        </Button>
+      </Tooltip>
     </div>
   );
 }

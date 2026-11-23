@@ -4,17 +4,18 @@ import {
   type BoardGame,
   type GameCopy,
   type GameHolding,
-  type Prisma,
-  type PrismaClient,
   type StorageUnit,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { UNSORTIERT_CODE, parseScannedCode } from "@/lib/inventory/codes";
 import { HoldingConflictError } from "@/lib/ludothek/errors";
+import { MAX_UNIT_CHAIN_DEPTH } from "@/lib/ludothek/unit-chain";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+export { walkUnitChain, type UnitChainNode } from "@/lib/ludothek/unit-chain";
 
-const MAX_UNIT_CHAIN_DEPTH = 20;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /**
  * "ausgeliehen" hat seit dem Vereinsmitglied/Meeple-Split (#333) zwei
@@ -38,39 +39,6 @@ export type GameZustand =
    * `zustandFromHoldingAndUnit()` zurückgegeben, nur von
    * `buildPrivateLudothekGames()` gesetzt. */
   | "privat";
-
-export type UnitChainNode = {
-  label: string;
-  parentUnitId: string | null;
-  keeperMeepleId: string | null;
-};
-
-/** Walks a unit chain from a leaf up towards the root, stopping at the first
- * keeper found — that person is the pickup orientation point, further
- * ancestor units aren't shown (see #121 Standort-Kette). */
-export function walkUnitChain(
-  unitId: string,
-  unitById: Map<string, UnitChainNode>,
-) {
-  const labels: string[] = [];
-  let keeperMeepleId: string | null = null;
-  let currentId: string | null = unitId;
-  let depth = 0;
-
-  while (currentId && depth < MAX_UNIT_CHAIN_DEPTH) {
-    const unit = unitById.get(currentId);
-    if (!unit) break;
-    labels.push(unit.label);
-    if (unit.keeperMeepleId) {
-      keeperMeepleId = unit.keeperMeepleId;
-      break;
-    }
-    currentId = unit.parentUnitId;
-    depth += 1;
-  }
-
-  return { unitChain: labels.reverse().join(" → "), keeperMeepleId };
-}
 
 export type StorageUnitLite = {
   id: string;
@@ -178,7 +146,9 @@ export type ResolvedScan =
   | { kind: "games"; games: ScannedGameCopy[] }
   | { kind: "unit"; unit: StorageUnit; contents: ScannedGameCopy[] }
   | { kind: "meeple"; meeple: { id: string; displayName: string } }
-  | { kind: "unknown"; raw: string };
+  /** `unitCode`: ein Einheiten-Etikett, dessen Einheit nicht angelegt ist —
+   * damit die Anzeige nicht „Nicht im Bestand" sagt, als wäre es ein Spiel. */
+  | { kind: "unknown"; raw: string; unitCode?: string };
 
 export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
   const parsed = parseScannedCode(raw);
@@ -199,13 +169,27 @@ export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
       where: { code: parsed.value },
     });
     if (!unit) {
-      return { kind: "unknown", raw };
+      return { kind: "unknown", raw, unitCode: parsed.value };
     }
     const contents = await prisma.gameCopy.findMany({
       where: { holdings: { some: { unitId: unit.id, endedAt: null } } },
       include: { boardGame: true },
     });
     return { kind: "unit", unit, contents };
+  }
+
+  if (parsed.kind === "copy") {
+    // Exemplar-Etikett (#547): genau ein Exemplar — als Ein-Element-Liste,
+    // damit jeder Scan-Flow es wie einen eindeutigen EAN-Treffer behandelt
+    // (direkt zum Exemplar, keine Auswahl).
+    const copy = await prisma.gameCopy.findFirst({
+      where: {
+        inventoryNumber: parsed.inventoryNumber,
+        status: { not: GameInventoryStatus.DEINVENTARISED },
+      },
+      include: { boardGame: true },
+    });
+    return copy ? { kind: "games", games: [copy] } : { kind: "unknown", raw };
   }
 
   if (parsed.kind === "ean") {
