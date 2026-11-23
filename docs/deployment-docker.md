@@ -425,7 +425,9 @@ nicht das Passwort in der Datenbank, sondern nur das, was die App versucht
 (siehe [14](#14-fehlerbehebung)).
 
 Eine externe Postgres-Instanz (≥ 16) ist möglich: `DATABASE_URL` setzen
-(ggf. mit `?sslmode=require`). Der `postgres`-Container läuft dann trotzdem
+(ggf. mit `?sslmode=verify-full`; `require`, `prefer` und `verify-ca` lösen
+in `pg` eine Deprecation-Warnung aus, weil sie ab `pg` v9 schwächere
+libpq-Semantik bekommen, siehe #502). Der `postgres`-Container läuft dann trotzdem
 mit (`POSTGRES_PASSWORD` bleibt Pflicht), wird aber nicht benutzt.
 
 ### 9.2 Datei-Speicher (`seaweedfs`, `seaweedfs-init`)
