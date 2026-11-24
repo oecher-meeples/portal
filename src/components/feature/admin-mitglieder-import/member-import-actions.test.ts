@@ -39,8 +39,11 @@ const DECISIONS = {
   2: {
     role: "adult" as const,
     email: "erika@example.com",
+    noEmail: false,
+    keepsSharedEmail: false,
     linkMeeple: false,
-    guardians: [],
+    family: null,
+    skip: false,
   },
 };
 
@@ -115,9 +118,9 @@ describe("commitMemberImport", () => {
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid guardian references", async () => {
+  it("rejects invalid family references", async () => {
     const result = await commitMemberImport([ROW], {
-      2: { ...DECISIONS[2], guardians: ["drop table"] },
+      2: { ...DECISIONS[2], family: "drop table" },
     });
 
     expect(result).toEqual({ error: "Ungültige Zuordnungen." });
