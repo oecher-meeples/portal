@@ -1,10 +1,13 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import { UserFacingError } from "@/lib/utils/action-result";
 
 const DEFAULT_FROM = '"Oecher Meeples" <newsletter@oecher-meeples.org>';
 const DEFAULT_PORT = 587;
 const TIMEOUT_MS = 8000;
 
-export class MailerError extends Error {
+/** User-facing (#612): "Versand fehlgeschlagen" is exactly what the person
+ * who triggered the mail needs to see, not a generic "Unbekannter Fehler". */
+export class MailerError extends UserFacingError {
   constructor(message: string) {
     super(message);
     this.name = "MailerError";
@@ -18,7 +21,7 @@ type SmtpConfig = {
   pass?: string;
 };
 
-/** `null` = SMTP not configured → sending is a deliberate no-op (see docs/deployment-docker.md). */
+/** `null` = SMTP not configured → every send fails with a `MailerError` (#612). */
 function readSmtpConfig(): SmtpConfig | null {
   const host = process.env.SMTP_HOST?.trim();
   if (!host) return null;
@@ -54,11 +57,11 @@ function getTransporter(config: SmtpConfig): Transporter {
   return transporter;
 }
 
-let warnedUnconfigured = false;
-
 /**
  * Provider-agnostic SMTP mailer — one recipient per call, no BCC/merge.
- * Without SMTP_HOST it logs once and resolves without sending (no crash).
+ * Without SMTP_HOST it throws instead of pretending to send (#612): a silent
+ * no-op let callers mark newsletter jobs SENT and report "Mail verschickt"
+ * although nothing left the server.
  */
 export async function sendTransactionalEmail({
   to,
@@ -71,14 +74,9 @@ export async function sendTransactionalEmail({
 }): Promise<void> {
   const config = readSmtpConfig();
   if (!config) {
-    if (!warnedUnconfigured) {
-      warnedUnconfigured = true;
-      console.warn(
-        "[mailer] SMTP_HOST ist nicht gesetzt — E-Mail-Versand ist deaktiviert, Mails werden verworfen.",
-      );
-    }
-    console.info(`[mailer] Nicht versendet (SMTP aus): "${subject}"`);
-    return;
+    throw new MailerError(
+      "E-Mail-Versand ist nicht konfiguriert (SMTP_HOST fehlt).",
+    );
   }
 
   try {

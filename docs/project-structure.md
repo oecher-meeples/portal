@@ -98,7 +98,7 @@ src/lib/
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
 │               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
 ├── instagram/  Cross-Posting
-├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, No-op ohne `SMTP_HOST`), Abonnenten beider Quellen — anonym mit Double-Opt-in
+├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, ohne `SMTP_HOST` → `MailerError`, #612), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → SeaweedFS per Presigned POST), `search-params.ts`,
