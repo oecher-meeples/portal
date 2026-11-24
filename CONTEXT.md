@@ -54,9 +54,9 @@ _Avoid_: Kontolöschung, DSGVO-Löschung und Anonymisierung synonym für nur ein
 IBAN wird nie direkt vom Meeple überschrieben — nur beantragt. Ein neuer Antrag ersetzt automatisch einen noch offenen. Freigabe ausschließlich durch den Kassenwart; erst danach wird die aktive IBAN ersetzt. Für aktive Vereinsmitglieder ist ein Löschen der Bankdaten nicht möglich (nur Ändern) — auch für gekündigte/ausgetretene gibt es **keine eigene Löschaktion**: Aufbewahrungspflicht von 12 Monaten nach `membershipEndsAt`, danach nur bei fehlenden offenen Ausleihen. Der komplette `Vereinsmitglied`-Datensatz (inkl. IBAN) wird erst unter genau diesen Bedingungen über Anonymisierungs-Stufe 3 gelöscht (siehe **Anonymisierung** oben), nicht früher und nicht separat. Der Kassenwart kann eine reguläre Änderung auch ablehnen (Pflichtgrund) — löst automatisch eine Mail mit dem Grund ans Meeple aus. **Bekannte Abweichung:** aktuell existiert zusätzlich ein Self-Service-„Bankdaten löschen"-Button, der die IBAN vorzeitig und ohne Freigabe löscht — soll entfallen, siehe #358.
 _Avoid_: Direktes Überschreiben der IBAN durchs Profilformular, Ablehnen ohne Benachrichtigung des Meeples, IBAN separat von der Vereinsmitglied-Löschung behandeln
 
-**E-Mail-Änderung** (neu, 3 unabhängige Adressen):
-Login-E-Mail (`AuthUser`) und Profil-Kontakt-E-Mail (`Meeple.email`) ändert das Meeple direkt selbst, wirksam nach Bestätigungslink an die neue Adresse. Die `Vereinsmitglied.email` läuft dagegen wie die IBAN als Änderungsantrag (inkl. Ablehnen mit Mail) — Bestätigungslink verifiziert nur die Erreichbarkeit, ersetzt aber nicht die Freigabe durch den Vorstand.
-_Avoid_: Vereinsmitglied-E-Mail ohne Vorstandsfreigabe direkt ändern lassen, alle drei E-Mail-Adressen für dieselbe halten
+**E-Mail-Änderung** (eine Adresse pro Person, #614):
+`Vereinsmitglied.email` und Login-E-Mail (`AuthUser.email`) sind dieselbe Adresse. Das Meeple ändert sie im eigenen Profil (Karte „E-Mail-Adresse") als Änderungsantrag wie die IBAN (inkl. Ablehnen mit Mail): Bestätigungslink an die neue Adresse verifiziert die Erreichbarkeit, die bisherige Adresse bekommt zeitgleich eine Warnung, danach gibt der Vorstand frei. Erst mit der Freigabe werden beide Adressen ersetzt, und die neue Adresse bekommt eine Mail, dass die alte ungültig ist. Eine direkte Änderung durch den Vorstand (`/admin/mitglieder`) zieht die Login-E-Mail ebenfalls mit. Eine eigene Profil-Kontakt-E-Mail (`Meeple.email`) gibt es nicht mehr.
+_Avoid_: Vereinsmitglied-E-Mail ohne Vorstandsfreigabe direkt ändern lassen, Login-E-Mail getrennt von der Vereinsmitglied-E-Mail ändern (die alte Adresse bliebe am Login hängen und wäre für eine neue Registrierung blockiert)
 
 **Kassenwart**:
 Rolle mit dem alleinigen Recht, gespeicherte Bankdaten zu entschlüsseln **und** Bankverbindungs-Änderungsanträge freizugeben. Jeder Entschlüsselungs-Zugriff wird protokolliert.
@@ -76,6 +76,10 @@ _Avoid_: Exemplar (das ist die physische Ebene, siehe unten), Kopie
 **Exemplar** (`GameCopy`, seit ADR 0008):
 Ein einzelnes physisches Spiel im Vereinsbesitz — Zustand, Inventarstatus und Standort (über `GameHolding`). Ein Titel kann mehrere Exemplare haben, unterscheidbar über Standort und Zustand, nicht über die EAN (die ist Produkt-, nicht Exemplar-Eigenschaft). Löst den Teil von ADR 0001 ab, der eine Titel-/Exemplar-Trennung noch verwarf, solange kein Titel mehr als ein Exemplar hatte.
 _Avoid_: Spiel als Synonym für Exemplar (Spiel meint den Titel), Kopie, GameCopy im Fließtext
+
+**Wert / Erhalten am** (`GameCopy.valueCents`, `GameCopy.acquiredOn`, #615):
+Was ein Exemplar wert ist (in Cent) und wann der Verein es erhalten hat — beides optional, `null` heißt unbekannt. Nur die Ludothek-Verwaltung (`games:manage`) sieht und pflegt sie. Der **Bestandswert** ist die Summe der bekannten Werte aller nicht deinventarisierten Exemplare; ein deinventarisiertes Exemplar behält seinen Wert, zählt aber nicht mehr mit. „Erhalten am" ist unabhängig vom Erfassungsdatum im Portal (`createdAt`).
+_Avoid_: Preis (das ist der Marktplatz), Euro-Beträge als Gleitkommazahl speichern
 
 **EAN**:
 Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt** (den Titel), nicht das einzelne Exemplar — mehrere Exemplare desselben Titels tragen dieselbe EAN, ein Scan kann daher mehrere Treffer liefern.
@@ -127,7 +131,7 @@ Für Vereinsmitglieder **ohne Portal-Zugang** gibt es vier Wege, wie ein Aufenth
 _Avoid_: Besitzer, Eigentümer
 
 **Vollständigkeitsprüfung**:
-Die Kontrolle, ob ein Spiel noch alle Teile hat. Ist sie fällig, trägt das Spiel ein Flag; fällt sie negativ aus, geht das Spiel in den Zustand Wartung. Prüfbedürftige Spiele bleiben ausleihbar. **Jede Ausleihe** (vereinsintern, Event-Ausgabe, an extern) setzt das Flag automatisch (#563), eine Weitergabe ändert es nicht. Es bleibt gesetzt, bis der Prüfbogen ausgefüllt ist. Im Scanner (nur Spielewart, `games:manage`): **Kontrolle anfordern** setzt das Flag für ein gescanntes Spiel oder nach Rückfrage für alle Spiele direkt in einer gescannten Einheit (Unterkisten nicht). **Kontrollieren** (früher „Prüfbogen") öffnet für ein gescanntes Spiel den Prüfbogen, auch ohne gesetztes Flag (mit Hinweis). Eine gescannte Einheit listet ihre markierten Spiele auf.
+Die Kontrolle, ob ein Spiel noch alle Teile hat. Ist sie fällig, trägt das Spiel ein Flag. Jede Kontrolle — **Vollständig bestätigen** oder **Mangel melden** (Unvollständig spielbar, Beschädigt, Nicht spielbar) — wird mit Zeitpunkt, kontrollierender Person und Notiz protokolliert (Kontroll-Historie, #599), setzt das Flag zurück und bestimmt den Status: **nur „Nicht spielbar" führt in Wartung**, jedes andere Ergebnis zurück in den Bestand. Der Status folgt immer der neuesten Kontrolle; ein „Mangel beheben" gibt es nicht — aus der Wartung kommt ein Spiel nur durch eine neue Kontrolle. Ein deinventarisiertes Spiel darf kontrolliert werden, bleibt aber deinventarisiert. Prüfbedürftige Spiele bleiben ausleihbar. **Jede Ausleihe** (vereinsintern, Event-Ausgabe, an extern) setzt das Flag automatisch (#563), eine Weitergabe ändert es nicht. Es bleibt gesetzt, bis der Prüfbogen ausgefüllt ist. Im Scanner (nur Spielewart, `games:manage`): **Kontrolle anfordern** setzt das Flag für ein gescanntes Spiel oder nach Rückfrage für alle Spiele direkt in einer gescannten Einheit (Unterkisten nicht). **Kontrollieren** (früher „Prüfbogen") öffnet für ein gescanntes Spiel den Prüfbogen, auch ohne gesetztes Flag (mit Hinweis). Eine gescannte Einheit listet ihre markierten Spiele auf.
 _Avoid_: Inventur (Inventur meint den Durchgang durch viele Spiele), Zustandsprüfung
 
 **Deinventarisierung**:
@@ -135,7 +139,7 @@ Ein Spiel scheidet aus dem Bestand aus (Verkauf, Verlust, Zerstörung), ohne gel
 _Avoid_: Löschen, Archivieren, Aussortieren
 
 **Zustand**:
-Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einem Vereinsmitglied, Abholung ggf. aufwendiger — Unterfall **verfügbar** wenn das Mitglied ein Meeple hat, sonst **nicht verfügbar**, siehe **Verantwortliche:r**), **Wartung** (bei der Vollständigkeitsprüfung durchgefallen), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
+Die abgeleitete Ausleih-Situation eines Spiels: **frei** (liegt in einer Einheit, unkompliziert abzuholen), **ausgeliehen** (liegt bei einem Vereinsmitglied, Abholung ggf. aufwendiger — Unterfall **verfügbar** wenn das Mitglied ein Meeple hat, sonst **nicht verfügbar**, siehe **Verantwortliche:r**), **Wartung** (letzte Vollständigkeitsprüfung „Nicht spielbar"), **nicht erfasst** (liegt in „Unsortiert"). Ausleihbar sind Spiele in allen Zuständen — auch solche, für die eine Prüfung aussteht.
 _Avoid_: Verfügbarkeit, Status (Status meint die Bestandszugehörigkeit: aktiv oder deinventarisiert), Zustand für den materiellen Zustand eines Exemplars (das ist der **Mängelvermerk**, siehe unten)
 
 **Regelheft-Sprache(n)** (`GameCopy.ruleBookLanguages`, geplant, siehe #188):

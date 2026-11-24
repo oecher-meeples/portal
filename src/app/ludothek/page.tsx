@@ -3,111 +3,56 @@ import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
-import { getSessionTier, hasPermissionInCurrentView } from "@/lib/auth/session";
-import { getCurrentUser } from "@/lib/auth/server";
-import { hasPermission } from "@/lib/auth/permissions";
 import { getCurrentMeeple } from "@/lib/members/meeples";
 import { prisma } from "@/lib/utils/prisma";
 import {
-  filterLudothekGames,
   findMaxDurationBound,
   listDistinctCategories,
   listDistinctMechanics,
-  parseLudothekSearchParams,
-  toPublicGame,
 } from "@/lib/ludothek/browser";
-import { buildLudothekGames } from "@/lib/ludothek/query";
-import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
+import {
+  loadFilteredLudothekGames,
+  resolveLudothekBrowseContext,
+  toLudothekGamesPage,
+} from "@/lib/ludothek/browse";
 import { hasUnconfirmedHoldingsForMeeple } from "@/lib/ludothek/holdings";
 import { LudothekBrowser } from "@/components/feature/ludothek/ludothek-browser";
-import { findCurrentEvent } from "@/lib/events/upcoming";
-import { getAttendingExplainerBoardGameIds } from "@/lib/explainer/queries";
-import { getPresentGameCopyIds } from "@/lib/events/guest-area";
 import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
 import { parseShortId } from "@/lib/short-id/short-id";
 import { firstString } from "@/lib/utils/search-params";
 import { buildHref } from "@/lib/utils/query-string";
-import { resolveUnitFilter } from "@/lib/ludothek/unit-contents";
 
 export default async function LudothekPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  // #525: alles, was nicht voneinander abhängt, in Wellen parallel statt
-  // nacheinander — Auth-Lookups sind per `cache()` ohnehin je Request einmal.
-  const [tier, user, rawSearchParams, clubGames, traitTexts, currentEvent] =
-    await Promise.all([
-      getSessionTier(),
-      getCurrentUser(),
-      searchParams,
-      buildLudothekGames(),
-      loadBoardGameTraitTextsByTrait(),
-      // Gebraucht sowohl für den Gast-während-Event-Kontext des Erklärbär-
-      // Filters (#256) als auch für "nur anwesende Spiele" (#273) — beide
-      // Filter sind nur sinnvoll, solange ein Event läuft.
-      findCurrentEvent(),
-    ]);
-
-  // "internal" braucht mehr als nur eingeloggt zu sein — eine "Ausgetreten"-
-  // Rolle (#332) verliert das Recht, während sie noch eingeloggt bleibt.
-  const [canViewInternal, canManageGames] = user
-    ? await Promise.all([
-        hasPermission(user.id, "ludothek:view"),
-        hasPermissionInCurrentView(user.id, "games:manage"),
-      ])
-    : [false, false];
-  const internal = tier !== "gast" && canViewInternal;
-
-  const filters = parseLudothekSearchParams(rawSearchParams, { internal });
+  const rawSearchParams = await searchParams;
+  // Dieselbe Pipeline wie das Nachladen in `loadMoreLudothekGames` (#461).
+  const [context, traitTexts] = await Promise.all([
+    resolveLudothekBrowseContext(rawSearchParams),
+    loadBoardGameTraitTextsByTrait(),
+  ]);
+  const { internal, canManageGames, filters, currentEvent } = context;
   // `?neu=inv-<n>` (#549): Ziel des Short-ID-Routers für ein gescanntes,
   // noch unbekanntes Exemplar-Etikett — ohne Recht wirkungslos.
-  const createShortId =
-    internal && canManageGames
-      ? parseShortId(firstString(rawSearchParams.neu) ?? "")
-      : null;
+  const createShortId = canManageGames
+    ? parseShortId(firstString(rawSearchParams.neu) ?? "")
+    : null;
   const createInventoryNumber =
     createShortId?.kind === "inv" ? createShortId.id : undefined;
   const showExplainerFilter = internal || currentEvent !== null;
   const showPresentFilter = currentEvent !== null;
 
-  const [
-    currentMeeple,
-    privateGames,
-    attendingExplainerBoardGameIds,
-    presentGameCopyIds,
-    unitFilter,
-  ] = await Promise.all([
-    internal ? getCurrentMeeple() : null,
-    // Nur geladen, wenn der "Auch Privatbesitz anzeigen"-Filter an ist — nie
-    // für Gäste (#255-Folge: läuft in derselben Liste/denselben Filtern statt
-    // eines separaten, statischen Blocks).
-    internal && filters.showPrivateCollection
-      ? buildPrivateLudothekGames()
-      : [],
-    !internal && filters.hasExplainer
-      ? currentEvent
-        ? getAttendingExplainerBoardGameIds(currentEvent.id)
-        : new Set<string>()
-      : undefined,
-    filters.onlyPresentAtEvent && currentEvent
-      ? getPresentGameCopyIds(currentEvent.id)
-      : undefined,
-    // Gescanntes Einheiten-Etikett (#550) — auch für Gäste.
-    filters.unit ? resolveUnitFilter(filters.unit) : null,
-  ]);
-  const allGames = [...clubGames, ...privateGames];
+  const [currentMeeple, { allGames, filtered, unitFilter }] = await Promise.all(
+    [internal ? getCurrentMeeple() : null, loadFilteredLudothekGames(context)],
+  );
+  const firstPage = toLudothekGamesPage(filtered, { ...context, offset: 0 });
 
   // "Meine Ausleihen"-Filter (#290): kein eigener Bestätigen-Weg hier, nur
   // ein Hinweis zurück zum Dashboard, wo die eigentliche Aktion sitzt.
   const showsOwnLoans =
     currentMeeple !== null && filters.atMeepleId === currentMeeple.id;
-
-  const filtered = filterLudothekGames(allGames, filters, {
-    attendingExplainerBoardGameIds,
-    presentGameCopyIds,
-    unitGameCopyIds: unitFilter?.gameCopyIds,
-  });
 
   const mechanicsOptions = listDistinctMechanics(allGames);
   const categoriesOptions = listDistinctCategories(allGames);
@@ -169,7 +114,7 @@ export default async function LudothekPage({
           >
             Filter entfernen
           </Link>
-          {unitFilter && internal && canManageGames && (
+          {unitFilter && canManageGames && (
             <Link
               href={`/admin/einheiten/${unitFilter.unit.id}`}
               className="text-primary hover:underline"
@@ -180,9 +125,10 @@ export default async function LudothekPage({
         </p>
       )}
       <LudothekBrowser
-        games={internal ? filtered : filtered.map(toPublicGame)}
+        games={firstPage.games}
+        nextOffset={firstPage.nextOffset}
         internal={internal}
-        canManageGames={internal && canManageGames}
+        canManageGames={canManageGames}
         basePath="/ludothek"
         rawSearchParams={rawSearchParams}
         filters={filters}

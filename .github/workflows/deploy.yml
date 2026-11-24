@@ -50,7 +50,7 @@ jobs:
           POSTGRES_USER: ${{ vars.POSTGRES_USER }}
           POSTGRES_DB: ${{ vars.POSTGRES_DB }}
           SEED_ADMIN_EMAIL: ${{ vars.SEED_ADMIN_EMAIL }}
-          SEED_DEMO_DATA: ${{ vars.SEED_DEMO_DATA }}
+          SEED_PROFILE: ${{ vars.SEED_PROFILE }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           S3_ENDPOINT: ${{ vars.S3_ENDPOINT }}
           S3_REGION: ${{ vars.S3_REGION }}
@@ -108,7 +108,7 @@ jobs:
               "CRON_SECRET",
               "SEED_ADMIN_EMAIL",
               "SEED_ADMIN_PASSWORD",
-              "SEED_DEMO_DATA",
+              "SEED_PROFILE",
               "SEED_DEMO_PASSWORD",
               "SEAWEEDFS_ADMIN_ACCESS_KEY",
               "SEAWEEDFS_ADMIN_SECRET_KEY",

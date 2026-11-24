@@ -7,6 +7,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
 import { createBlobUploadToken } from "@/lib/utils/blob-upload-token";
 import { deleteBlobs } from "@/lib/utils/blob-delete";
+import { toStoredBlobRef } from "@/lib/utils/blob-access";
 
 const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 
@@ -17,16 +18,25 @@ function revalidateDownloadPaths() {
 export type CreateDownloadInput = {
   title: string;
   fileName: string;
+  /** URL aus dem Upload — gespeichert wird der Key (#112). */
   fileUrl: string;
   fileType: string;
   fileSizeBytes: number;
 };
 
+/** Upload-URL → Objekt-Key, nur unter `downloads/` (#112). */
+function toDownloadFileData<T extends { fileUrl: string }>({
+  fileUrl,
+  ...rest
+}: T) {
+  return { ...rest, fileKey: toStoredBlobRef(fileUrl, "downloads") };
+}
+
 export async function createDownload(input: CreateDownloadInput) {
   const forbidden = await actionPermissionDenied("downloads:manage");
   if (forbidden) return forbidden;
 
-  await prisma.download.create({ data: input });
+  await prisma.download.create({ data: toDownloadFileData(input) });
 
   revalidateDownloadPaths();
   return { success: true as const };
@@ -63,13 +73,13 @@ export async function deleteDownload(id: string) {
 
   const download = await prisma.download.findUnique({
     where: { id },
-    select: { fileUrl: true },
+    select: { fileKey: true },
   });
   if (!download) {
     return { error: "Download nicht gefunden." };
   }
 
-  await deleteBlobs([download.fileUrl]);
+  await deleteBlobs([download.fileKey]);
   await prisma.download.delete({ where: { id } });
 
   revalidateDownloadPaths();
@@ -99,7 +109,7 @@ export async function replaceDownloadFile(
 
   const existing = await prisma.download.findUnique({
     where: { id },
-    select: { fileUrl: true },
+    select: { fileKey: true },
   });
   if (!existing) {
     return { error: "Download nicht gefunden." };
@@ -107,9 +117,9 @@ export async function replaceDownloadFile(
 
   await prisma.download.update({
     where: { id },
-    data: { ...input, fileUpdatedAt: new Date() },
+    data: { ...toDownloadFileData(input), fileUpdatedAt: new Date() },
   });
-  await deleteBlobs([existing.fileUrl]);
+  await deleteBlobs([existing.fileKey]);
 
   revalidateDownloadPaths();
   return { success: true as const };

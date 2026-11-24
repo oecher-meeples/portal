@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prismaMock } from "@/lib/__mocks__/prisma";
 
-vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("@/lib/auth/server", () => ({ getCurrentUser: vi.fn() }));
 
 vi.mock("@/lib/auth/action-guards", async () =>
@@ -10,30 +8,38 @@ vi.mock("@/lib/auth/action-guards", async () =>
   ),
 );
 
+const confirmMock = vi.fn();
+const reportMock = vi.fn();
+vi.mock("@/lib/ludothek/game-copy-checks", () => ({
+  confirmGameCopyCheck: (...args: unknown[]) => confirmMock(...args),
+  reportGameCopyDefect: (...args: unknown[]) => reportMock(...args),
+}));
+
 const requirePermissionMock = vi.fn();
 
-const { clearGameDefect, confirmGameCondition, reportGameDefect } =
+const { confirmGameCondition, reportGameDefect } =
   await import("./inventory-actions");
 
 class ForbiddenError extends Error {}
 
 beforeEach(() => {
-  requirePermissionMock.mockResolvedValue({ id: "admin-user" });
+  vi.clearAllMocks();
+  requirePermissionMock.mockResolvedValue({ id: "warden-meeple" });
+  confirmMock.mockResolvedValue({ success: true });
+  reportMock.mockResolvedValue({ success: true });
 });
 
 describe("confirmGameCondition", () => {
-  it("sets lastCheckedAt and clears the completeness-check flag", async () => {
+  it("records the check as the acting Meeple (#599)", async () => {
     const result = await confirmGameCondition("game-1", "Neuwertig");
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
-      where: { id: "game-1" },
-      data: {
-        condition: "Neuwertig",
-        lastCheckedAt: expect.any(Date),
-        needsCompletenessCheck: false,
-      },
-    });
+    expect(requirePermissionMock).toHaveBeenCalledWith("games:manage");
+    expect(confirmMock).toHaveBeenCalledWith(
+      "game-1",
+      "warden-meeple",
+      "Neuwertig",
+    );
   });
 
   it("rejects without games:manage (#563)", async () => {
@@ -42,46 +48,20 @@ describe("confirmGameCondition", () => {
     await expect(confirmGameCondition("game-1", "ok")).rejects.toThrow(
       ForbiddenError,
     );
-    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
+    expect(confirmMock).not.toHaveBeenCalled();
   });
 });
 
 describe("reportGameDefect", () => {
-  it("sets MAINTENANCE and rejects an empty note", async () => {
-    const result = await reportGameDefect("game-1", "beschaedigt", "   ");
-
-    expect(result).toEqual({ error: "Bitte eine Notiz zum Mangel angeben." });
-    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
-  });
-
-  it("records the defect note prefixed with the issue label and sets MAINTENANCE", async () => {
-    const result = await reportGameDefect(
-      "game-1",
-      "unvollstaendig",
-      "Karte fehlt",
-    );
+  it("records the defect as the acting Meeple (#599)", async () => {
+    const result = await reportGameDefect("game-1", "beschaedigt", "Riss");
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
-      where: { id: "game-1" },
-      data: {
-        condition: "Unvollständig spielbar: Karte fehlt",
-        lastCheckedAt: expect.any(Date),
-        status: "MAINTENANCE",
-      },
-    });
-  });
-
-  it.each([
-    ["nicht_spielbar", "Nicht spielbar"],
-    ["beschaedigt", "Beschädigt"],
-  ] as const)("prefixes the %s label correctly (#273)", async (kind, label) => {
-    await reportGameDefect("game-1", kind, "Notiz");
-
-    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ condition: `${label}: Notiz` }),
-      }),
+    expect(reportMock).toHaveBeenCalledWith(
+      "game-1",
+      "warden-meeple",
+      "beschaedigt",
+      "Riss",
     );
   });
 
@@ -91,25 +71,6 @@ describe("reportGameDefect", () => {
     await expect(
       reportGameDefect("game-1", "beschaedigt", "Mangel"),
     ).rejects.toThrow(ForbiddenError);
-    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
-  });
-});
-
-describe("clearGameDefect", () => {
-  it("rejects without games:manage", async () => {
-    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
-
-    await expect(clearGameDefect("game-1")).rejects.toThrow(ForbiddenError);
-    expect(prismaMock.gameCopy.update).not.toHaveBeenCalled();
-  });
-
-  it("resets the status to ACTIVE", async () => {
-    const result = await clearGameDefect("game-1");
-
-    expect(result).toEqual({ success: true });
-    expect(prismaMock.gameCopy.update).toHaveBeenCalledWith({
-      where: { id: "game-1" },
-      data: { status: "ACTIVE" },
-    });
+    expect(reportMock).not.toHaveBeenCalled();
   });
 });

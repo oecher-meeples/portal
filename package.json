@@ -22,6 +22,7 @@
     "verify": "npm run format:check && npm run typecheck && npm run lint && npm run test",
     "prepare": "husky",
     "db:seed": "cross-env DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config prisma/seed.ts",
+    "db:seed:release": "cross-env SEED_PROFILE=release DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config prisma/seed.ts",
     "migrate:posts": "cross-env DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/migrate-mock-posts.ts",
     "postinstall": "prisma generate"
   },
@@ -59,6 +60,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@aws-sdk/s3-request-presigner": "^3.1175.0",
     "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^8.0.0",

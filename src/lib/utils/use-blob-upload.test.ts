@@ -10,7 +10,7 @@ function token(name: string) {
   return {
     url: "https://files.example/meeples",
     fields: { key: `market-listings/${name}`, Policy: "policy" },
-    publicUrl: `https://files.example/meeples/market-listings/${name}`,
+    viewUrl: `https://files.example/meeples/market-listings/${name}`,
   };
 }
 

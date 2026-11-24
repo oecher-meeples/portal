@@ -2,8 +2,6 @@ import {
   BoardGameKind,
   type BoardGameTrait,
   type LanguageDependence,
-  type Prisma,
-  type PrismaClient,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
@@ -20,7 +18,9 @@ import {
 } from "@/lib/ludothek/taxonomy/tags";
 import type { VersionInput } from "@/lib/ludothek/taxonomy/versions";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /**
  * Reine Titel-Lookup-/Anlage-Logik, bewusst ohne Import aus

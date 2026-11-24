@@ -53,6 +53,9 @@ export type CreateBoardGameInput = BoardGameTitleInput & {
   /** Inventarnummer (#270, ganzzahlig seit #543) — beim Massenimport direkt
    * mitgegeben statt nur vorbelegt, siehe `bulkImportBoardGames()` (#289). */
   inventoryNumber?: number | null;
+  /** Wert und „Erhalten am" der ersten Kopie (#615). */
+  valueCents?: number | null;
+  acquiredOn?: Date | null;
 };
 
 /** Duplicate EANs are allowed by design (ADR 0001) — surfaced only as a hint. */
@@ -167,6 +170,8 @@ export async function createBoardGame(input: CreateBoardGameInput) {
         actorId: actor.id,
         placement,
         inventoryNumber: input.inventoryNumber,
+        valueCents: input.valueCents,
+        acquiredOn: input.acquiredOn,
       });
       return { copy, boardGameId: title.id, boardGameSlug: title.slug };
     },

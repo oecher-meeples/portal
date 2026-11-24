@@ -9,6 +9,12 @@ import {
 import { verifyLinkedEventOrUnpublish as verifyLinkedEventOrUnpublishImpl } from "@/lib/content/termin-posts";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getSessionTier } from "@/lib/auth/session";
+import { findActionActor } from "@/lib/auth/action-guards";
+import {
+  calendarSubscribeUrl,
+  generateMemberCalendarToken,
+} from "@/lib/members/calendar-token";
+import { revalidateMemberProfile } from "@/lib/members/revalidate-profile";
 
 /**
  * Lädt die nächste Seite DB-Posts nach (#470) — Sichtbarkeit wird hier
@@ -34,6 +40,29 @@ export async function loadMoreNews(cursor: string) {
     items: filterVisibleNews(items, visibility),
     hasMore,
     nextCursor,
+  };
+}
+
+/**
+ * Self-Service-Abo für den internen Kalender (#439): erzeugt den Token für
+ * das *eigene* Mitglied (nie eine fremde `memberId` vom Client) und gibt die
+ * Abo-URL einmalig zurück — in der DB liegt nur der Hash (#438). Ein
+ * bestehender Token wird dabei ersetzt; der Client fragt vorher nach.
+ */
+export async function subscribeOwnInternalCalendar() {
+  const actor = await findActionActor("news:internal:view");
+  if (!actor) return { error: "Keine Berechtigung." } as const;
+  if (!actor.member) {
+    return {
+      error: "Für dein Konto ist keine Mitgliedschaft hinterlegt.",
+    } as const;
+  }
+
+  const token = await generateMemberCalendarToken(actor.member.id);
+  await revalidateMemberProfile({ memberId: actor.member.id });
+  return {
+    success: true as const,
+    subscribeUrl: calendarSubscribeUrl(token),
   };
 }
 

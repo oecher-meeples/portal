@@ -59,6 +59,9 @@ src/lib/
 │               │                      `tag-admin-actions.ts`/`tag-admin-queries.ts` für `/admin/tags`;
 │               │                      Versionen (`BoardGameVersion`): `versions.ts` (`upsertBoardGameVersion`, dedupliziert per BGG-Version-ID bzw. Name+Sprachen+Verlage),
 │               │                      `version-actions.ts` (gespeicherte Versionen eines Titels + noch nicht gespeicherte BGG-Versionen), `version-label.ts` (Anzeigetext)
+│               ├── browse.ts          Lese-Pipeline der Ludothek-Übersicht (#461): Kontext (Rechte, Filter, Event) → Bestand filtern (im Speicher) →
+│               │                      `toLudothekGamesPage` (Seite à 48 Titel per `paginateByTitle`, Gast-Strip, Beschreibung gekürzt);
+│               │                      geteilt von `app/ludothek/page.tsx` und `loadMoreLudothekGames` (`feature/ludothek/actions.ts`)
 │               ├── board-game-versions.ts BGG-Versionen auswerten: deutsche bevorzugen, Verlag/Product-Code auflösen, BGG-Version → `VersionInput`
 │               ├── edition-language.ts BGG-Sprachname → Flaggen-Ländercode (Anzeige über `entities/edition-flag.tsx`)
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
@@ -77,7 +80,10 @@ src/lib/
 │               ├── scan-log.ts         Scan-Logs der Scanner-Seite (#574): Kürzen (25/50), Ablauf (24 h/3 Monate), Duplikat nach oben — rein, ohne Storage
 │               ├── scanner-actions.ts  Server Actions der Scanner-Serien: `scanReceiveGame`, `scanTransferGame`, `scanValidateTarget`, `scanPickCopy`
 │               ├── board-games.ts      Titel-CRUD: anlegen (+ erstes Exemplar), bearbeiten, BGG-Vorschau, Erweiterungs-Zuordnung (GameCollection)
-│               ├── game-issue.ts / game-defects.ts  Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format (rein), Statusübergang `ACTIVE↔MAINTENANCE` (`reportGameCopyDefect`/`clearGameCopyDefect`, ohne `"use server"` — Guard liegt in `feature/scan/inventory-actions.ts`)
+│               ├── game-issue.ts       Prüfbogen-Mangel (#528): Arten + Labels + `condition`-Format, Kontroll-Ergebnis-Labels `GAME_COPY_CHECK_RESULT_LABELS` (rein, client-tauglich)
+│               ├── game-copy-checks.ts Kontrolle = Datensatz (#599): `applyCheck` (eine Transaktion für „Vollständig bestätigen" und „Mangel melden"), Status-Regel `statusAfterCheck` (nur „Nicht spielbar" → `MAINTENANCE`), ohne `"use server"` — Guard + Actor in `feature/scan/inventory-actions.ts`
+│               ├── game-copy-checks-read.ts  Kontroll-Historie je Exemplar (`loadCheckHistories`, nur `games:manage`)
+│               ├── copy-history.ts     Historien fürs Exemplar-Akkordeon (`loadCopyHistories`): Aufenthalte pro Exemplar `take: 16` (15 gezeigt + „ältere"-Flag) + Kontrollen
 │               ├── game-copies.ts      Exemplar-CRUD: weiteres Exemplar anlegen, bearbeiten, deinventarisieren, Vollständigkeitsprüfung anfordern (einzeln oder `markUnitForCompletenessCheck` für die direkten Inhalte einer Einheit, #563)
 │               ├── browser.ts          Ludothek-Filter, Suche, öffentliche/interne Spielform (inkl. `kind`/Erweiterungs-Referenzen)
 │               ├── query.ts            Bulk-Query für die Ludothek-Browser/Detailseite (ein Eintrag pro Exemplar, Titel-Felder aus `boardGame`-Relation, kein N+1)
@@ -88,15 +94,21 @@ src/lib/
 ├── short-id/   QR-Short-IDs (Epic #542, `https://short.oecher-meeples.org/id/<präfix>-<id>`): Präfix-Registry, `buildShortIdUrl`/
 │               `parseShortId` (ignoriert alles vor `/id/`), Einheiten-Code-Mapping `box-0001` ↔ `OM-BOX-0001` (`short-id.ts`, rein,
 │               client-sicher); Router-Ziel je Präfix und Recht (`resolve.ts`, `resolveShortId`)
-├── statistics/ Anonymisierte Verleih-Auswertungen (`loan-stats.ts`) — reine Zählwerte, keine Meeple-Referenzen
+├── statistics/ Anonymisierte Auswertungen — Verleih (`loan-stats.ts`), Bestand (`inventory-stats.ts`), Exemplar-Kontrollen pro Berliner Monat (`check-stats.ts`, #599) — reine Zählwerte, keine Meeple-Referenzen
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
-│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
+│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`),
+│               Einladungsmail (`invite-mail.ts`, #613 — liefert den Fehler zurück statt zu werfen),
+│               eine E-Mail-Adresse pro Person (`member-email.ts`, #614: Konflikt-Check, Login-E-Mail zieht mit)
 ├── instagram/  Cross-Posting
-├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, No-op ohne `SMTP_HOST`), Abonnenten beider Quellen — anonym mit Double-Opt-in
+├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, ohne `SMTP_HOST` → `MailerError`, #612), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → SeaweedFS per Presigned POST), `search-params.ts`,
-                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, Public-URL ↔ Key, `putBlob()`),
+                `require-env.ts` (Pflicht-Env-Var mit klarer Fehlermeldung statt `!`), `s3.ts` (S3-Client für SeaweedFS, `putBlob()` → Key),
+                `blob-url.ts` (Public-URL ↔ Key, Endpoint/Bucket, ohne SDK/`server-only`), `blob-access.ts` (#112: `PUBLIC_BLOB_PREFIXES`, `signedBlobUrl()`
+                (synchrone SigV4-Signatur, 1 h), `toStoredBlobRef()` (Client-Verweis → Key mit Präfixprüfung)); die Prisma-Result-Extension in `prisma.ts`
+                liefert private `…Key`-Spalten unter den alten Feldnamen (`profilePictureUrl`, `fileUrl`, `imageUrls`, `iconUrl`, `LfgAttachment.url`)
+                als signierte URL, `DbClient` ersetzt `PrismaClient | Prisma.TransactionClient`,
                 `blob-upload-token.ts` (Presigned-POST-Upload-Grant mit Größen-/Typ-Policy), `blob-delete.ts` (Blob-Löschung, mehrfach genutzt),
                 `action-result.ts` (`toResult`/`actionErrorMessage`/`UserFacingError` — catch-all für Server Actions mit `unstable_rethrow`),
                 `sorted-unique.ts` (`sortedUniqueLabels` — Kern von `tagLabelsByType`/`contributorNamesByRole`), `escape-html.ts` (`escapeHtml`, auch Anführungszeichen), `site-url.ts` (`siteUrl()`), `cron-auth.ts` (`requireCronAuth(request)` für `app/api/cron/*`)
@@ -123,10 +135,12 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `code-scanner.tsx` + `use-code-scanner.ts` | EAN-/QR-Scanner: Kamera, Status, `onDetected`-Callback — kennt keine Fachdomäne |
 | `use-media-query.ts` | `useMediaQuery(query)` live per `matchMedia`; `useIsMobile()` = unterhalb `md`, SSR-sicher (startet mit Desktop-Variante, #585) |
 | `use-focus-mode.ts` | Fachfreier Fokusmodus-Kanal: setzt `data-focus-mode` am `<html>` (nur `< md`, Reset bei Unmount/Breakpoint-Wechsel); Header, MobileNav und App-Shell reagieren per `focus-mode:`-Variante (`globals.css`), #587 |
-| `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring |
+| `use-infinite-scroll.ts` | Generischer Infinite-Scroll-Hook: `{ items, initialCount, step } → { visibleItems, sentinelRef }`, `IntersectionObserver`-Wiring. Mit `onLoadMore`/`cursor`/`hasMore` echtes Server-Nachladen (News #470, Ludothek #461). Im Test: `stubIntersectionObserver()` aus `lib/__mocks__/intersection-observer.ts` |
 | `card-corner-overlay.tsx` | `CardCornerOverlay` — positioniert Kinder absolut in einer Kartenecke (`top-left`/`top-right`, `z-10`); von `GameCard`, `ContentListRow` genutzt |
 | `stop-row-navigation.tsx` | Stoppt den Klick, bevor er in den umschließenden `Link` einer Zeile/Kachel bubbelt — von Grid-/Listen-/Kompakt-Admin-Overlays geteilt |
 | `bar-row.tsx` | `BarRow` — beschriftete Balkenzeile (Label, Wert, relativer Balken) ohne Chart-Library; von Statistiken und Admin-Seitenaufrufen geteilt |
+| `column-chart.tsx` | `ColumnChart` — Säulendiagramm für Zeitreihen ohne Chart-Library (HTML/CSS, Server-Komponente, `sr-only`-Tabelle), #599 |
+| `history-list.tsx` | `HistoryList` — Überschrift + Liste mit Limit (Default 5), „Alle anzeigen" lokal, optionaler Hinweis; Aufenthalts- und Kontroll-Historie (#599) |
 | `page-heading`, `page-title`, `stat-tile` (inkl. `StatValue`), `status-pill`, `pill-toggle`, `placeholder-media`, `instagram-icon` | Layout-/Anzeige-Primitives |
 | `page-container.tsx` | `PageContainer` — Seiten-Breitendeckel (`variant: "default" \| "wide"`); jede `*-view.tsx` legt ihre eigene Breite fest, statt dass `AppShell` global `max-w-6xl` erzwingt (#398) |
 
@@ -149,7 +163,8 @@ entities/
 ├── game-zustand-pill.tsx       frei / ausgeliehen / Wartung (nicht erfasst rendert bewusst nichts, #121)
 ├── lfg-status-pill.tsx         offen / voll / abgelaufen / geschlossen
 ├── membership-state-pill.tsx   aktiv / gekündigt / ausgetreten / anonymisiert
-└── flea-market-status-pill.tsx Freigabe / Verkauf / reserviert / verkauft
+├── flea-market-status-pill.tsx Freigabe / Verkauf / reserviert / verkauft
+└── game-copy-check-result-pill.tsx Kontroll-Ergebnis: vollständig / unvollständig / beschädigt / nicht spielbar (#599)
 ```
 
 ## `src/components/widgets/` — geteilte Use Cases
@@ -214,8 +229,12 @@ Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `en
 
 `app-shell`, `header`, `sidebar`, `logo`, `theme-provider`, `theme-toggle`, `user-menu`, `brand-watermark`. Reine Struktur/Positionierung; darf als oberste Schicht aus allen anderen importieren.
 
-## `prisma/seed-data/` & `scripts/` — Demo-Daten
+## `prisma/seed-data/` & `scripts/` — Demo- und Release-Daten
 
+`prisma/seed.ts` legt immer den Grundbestand an; `SEED_PROFILE` wählt danach `develop` (Demo-Daten, lokaler Default) oder `release` (Vereinsbestand, Docker-Default, #603).
+
+- `prisma/seed-data/release-inventory.csv` — bereinigter Vereinsbestand ohne Personendaten (inkl. Wert je Exemplar), erzeugt von `scripts/build-release-inventory.ts` aus dem Export der Tabelle „Inventar Spiele"; `bggId`/`bggMatch` per `scripts/enrich-release-inventory-bgg.ts` vorbefüllt (`exact`/`picked`/`fuzzy`, deutsche Edition bevorzugt, siehe `isGermanVersion` in `lib/ludothek/board-game-versions.ts`), von Hand korrigierbar (`manual`); `unsure` = bewusst ohne BGG-Verknüpfung, trägt der Spielewart nach. Regeln (Zustand → Kontroll-Ergebnis, Platz → Standort, Wert → Cent) in `release-inventory.ts`, Anlage in `prisma/seed-release.ts`.
+- `prisma/seed-data/release-board-games.json` — committete BGG-Titeldaten je `bggId` inkl. gewählter deutscher Edition (`release-board-games.ts`); `release-descriptions-de.json` — deutsche Kurzbeschreibungen, gepflegt mit `scripts/release-descriptions-de.ts`, getrennt, damit ein erneuter BGG-Abruf sie nie überschreibt.
 - `prisma/seed-data/demo-games.ts` — Demo-Titel inkl. ihrer BGG-Version (`version`); `demo-editions.ts` legt die Version samt Verlagen an und übernimmt bei bestehender DB ältere Demo-Versionen ohne BGG-Bezug.
 - `scripts/lib/demo-games-seed-file.ts` — Lesen/Schreiben von `demo-games.ts` und Versionswahl (`pickDemoVersion`), geteilt von `refresh-demo-games-seed.ts` (alle Felder) und `backfill-demo-game-versions.ts` (nur die Version).
 

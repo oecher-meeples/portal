@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient, TagType } from "@prisma/client";
+import type { TagType } from "@prisma/client";
 import type { BggGameData } from "@/lib/bgg/client";
 import {
   normalizeTaxonomyName,
@@ -7,7 +7,9 @@ import {
 import { tagLabel } from "@/lib/ludothek/taxonomy/tags-read";
 import { upsertTaxonomyEntry } from "@/lib/ludothek/taxonomy/upsert";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 export type TagInput = {
   type: TagType;

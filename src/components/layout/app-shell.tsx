@@ -31,7 +31,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   // kann daher erst nach dem zweiten Promise.all starten.
   // #537: Ausgetretene sehen den Scanner nicht (Vier-Augen-Prinzip).
   const [notifications, membership] = await Promise.all([
-    listActiveNotificationsForViewer(permissions),
+    listActiveNotificationsForViewer(permissions, meeple?.id ?? null),
     meeple ? getMeepleMembership(meeple) : Promise.resolve(null),
   ]);
   const flags = {

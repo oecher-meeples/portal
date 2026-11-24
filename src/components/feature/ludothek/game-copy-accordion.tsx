@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils/cn";
 import { GameCopyExpandedDetails } from "@/components/feature/ludothek/game-copy-expanded-details";
-import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
+import type { CopyHistory } from "@/lib/ludothek/copy-history";
 
 function ToggleButton({
   open,
@@ -43,7 +43,7 @@ export function GameCopyTableRow({
   children,
 }: {
   gameCopyId: string;
-  history: HoldingHistoryEntry[];
+  history: CopyHistory;
   colSpan: number;
   selected?: boolean;
   children: ReactNode;
@@ -87,7 +87,7 @@ export function GameCopyCard({
   children,
 }: {
   gameCopyId: string;
-  history: HoldingHistoryEntry[];
+  history: CopyHistory;
   actions: ReactNode;
   selected?: boolean;
   children: ReactNode;

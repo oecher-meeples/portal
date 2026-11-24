@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
+/** Upload-URL aus dem Client und der daraus gespeicherte Key (#112). */
+const UPLOAD_URL = `${TEST_S3_PUBLIC_BASE}/lfg-attachments/foo.png`;
+const STORED_KEY = "lfg-attachments/foo.png";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -94,6 +100,16 @@ describe("getLfgAttachmentUploadToken", () => {
     ).rejects.toThrow("Uploads sind erst am oder nach dem geplanten Termin");
   });
 
+  it("refuses a key outside lfg-attachments/ (#112)", async () => {
+    requireMeeplePermissionMock.mockResolvedValue(PARTICIPANT);
+    prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
+
+    await expect(
+      createLfgAttachment("post-1", "downloads/satzung.pdf", "satzung.pdf"),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(prismaMock.lfgAttachment.create).not.toHaveBeenCalled();
+  });
+
   it("rejects a non-participant", async () => {
     requireMeeplePermissionMock.mockResolvedValue(OUTSIDER);
     prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
@@ -111,21 +127,27 @@ describe("createLfgAttachment", () => {
     prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
     prismaMock.lfgAttachment.create.mockResolvedValue({} as never);
 
-    const result = await createLfgAttachment(
-      "post-1",
-      "https://blob/foo.png",
-      "foo.png",
-    );
+    const result = await createLfgAttachment("post-1", UPLOAD_URL, "foo.png");
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.lfgAttachment.create).toHaveBeenCalledWith({
       data: {
         postId: "post-1",
         uploadedByMeepleId: PARTICIPANT.id,
-        url: "https://blob/foo.png",
+        key: STORED_KEY,
         filename: "foo.png",
       },
     });
+  });
+
+  it("refuses a key outside lfg-attachments/ (#112)", async () => {
+    requireMeeplePermissionMock.mockResolvedValue(PARTICIPANT);
+    prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
+
+    await expect(
+      createLfgAttachment("post-1", "downloads/satzung.pdf", "satzung.pdf"),
+    ).rejects.toThrow("Ungültiger Dateiverweis.");
+    expect(prismaMock.lfgAttachment.create).not.toHaveBeenCalled();
   });
 
   it("rejects a non-participant", async () => {
@@ -133,11 +155,7 @@ describe("createLfgAttachment", () => {
     prismaMock.lfgPost.findUnique.mockResolvedValue(post() as never);
     prismaMock.lfgParticipant.findFirst.mockResolvedValue(null);
 
-    const result = await createLfgAttachment(
-      "post-1",
-      "https://blob/foo.png",
-      "foo.png",
-    );
+    const result = await createLfgAttachment("post-1", UPLOAD_URL, "foo.png");
 
     expect(result).toEqual({
       error: "Nur Teilnehmende können darauf zugreifen.",
@@ -150,11 +168,7 @@ describe("createLfgAttachment", () => {
       post({ plannedAt: TOMORROW }) as never,
     );
 
-    const result = await createLfgAttachment(
-      "post-1",
-      "https://blob/foo.png",
-      "foo.png",
-    );
+    const result = await createLfgAttachment("post-1", UPLOAD_URL, "foo.png");
 
     expect(result).toEqual({
       error: "Uploads sind erst am oder nach dem geplanten Termin möglich.",
@@ -167,7 +181,7 @@ describe("deleteLfgAttachment", () => {
   function attachment(overrides: Partial<Record<string, unknown>> = {}) {
     return {
       id: "attachment-1",
-      url: "https://blob/foo.png",
+      key: STORED_KEY,
       uploadedByMeepleId: PARTICIPANT.id,
       post: { id: "post-1", createdByMeepleId: CREATOR.id },
       ...overrides,
@@ -184,7 +198,7 @@ describe("deleteLfgAttachment", () => {
     const result = await deleteLfgAttachment("attachment-1");
 
     expect(result).toEqual({ success: true });
-    expect(deleteBlobsMock).toHaveBeenCalledWith(["https://blob/foo.png"]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith([STORED_KEY]);
     expect(prismaMock.lfgAttachment.delete).toHaveBeenCalledWith({
       where: { id: "attachment-1" },
     });

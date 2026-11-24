@@ -17,11 +17,16 @@ import {
   GameCopyCard,
   GameCopyTableRow,
 } from "@/components/feature/ludothek/game-copy-accordion";
-import type { HoldingHistoryEntry } from "@/components/feature/ludothek/game-detail-view";
+import type { CopyHistory } from "@/lib/ludothek/copy-history";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import type { ContactDialogMeeple } from "@/lib/members/contact";
 import { formatRuleBookLanguages } from "@/lib/ludothek/language-dependence";
 import type { RuleBookLanguage } from "@prisma/client";
+import type { GameCopyAcquisition } from "@/lib/ludothek/game-copy-acquisition-read";
+import {
+  formatAcquiredOn,
+  formatValueCents,
+} from "@/lib/ludothek/game-copy-acquisition";
 
 export type GameCopyRow = {
   /** GameCopy id. */
@@ -48,11 +53,14 @@ export type GameCopyRow = {
   /** Whether the current session holds this copy — gates "Weitergeben" in
    * its actions menu (#128). */
   isMine: boolean;
-  /** This copy's own aufenthalts-history — merged into the accordion below its row (#121/#122). */
-  history: HoldingHistoryEntry[];
+  /** This copy's own aufenthalts-/kontroll-history — merged into the accordion below its row (#121/#122, #599). */
+  history: CopyHistory;
   /** True for a Meeple's privately imported title (#255-Folge) — no echtes
    * `GameCopy` dahinter, daher keine Aktionen (kein `GameActionsMenu`). */
   isPrivate: boolean;
+  /** Wert/„Erhalten am" (#615) — `null`, wenn die Session sie nicht sehen
+   * darf (ohne `games:manage`) oder beim Privatbesitz. */
+  acquisition: GameCopyAcquisition | null;
 };
 
 /** This section already has exactly one copy per row/card, so `GameActionsMenu`
@@ -66,8 +74,27 @@ function actionsMenuCopy(copy: GameCopyRow) {
     ruleBookLanguages: copy.ruleBookLanguages,
     inventoryNumber: copy.inventoryNumber,
     versionId: copy.versionId,
+    ...copy.acquisition,
     isMine: copy.isMine,
   };
+}
+
+function ValueText({ acquisition }: { acquisition: GameCopyAcquisition }) {
+  return (
+    <>
+      {acquisition.valueCents != null
+        ? formatValueCents(acquisition.valueCents)
+        : "—"}
+    </>
+  );
+}
+
+function AcquiredOnText({ acquisition }: { acquisition: GameCopyAcquisition }) {
+  return (
+    <>
+      {acquisition.acquiredOn ? formatAcquiredOn(acquisition.acquiredOn) : "—"}
+    </>
+  );
 }
 
 /** Ein Verlag pro Zeile — bei Co-Publishern stehen alle untereinander. */
@@ -118,6 +145,9 @@ export function GameCopiesSection({
    * aufgeklappt. */
   selectedCopyId?: string;
 }) {
+  // Spalten für Wert/„Erhalten am" nur, wenn die Session sie sehen darf (#615).
+  const showAcquisition = copies.some((copy) => copy.acquisition !== null);
+  const colSpan = showAcquisition ? 9 : 7;
   return (
     <Card>
       <CardHeader>
@@ -149,6 +179,12 @@ export function GameCopiesSection({
               <TableHead>Standort/Kontakt</TableHead>
               <TableHead>Verlag</TableHead>
               <TableHead>Regelheft</TableHead>
+              {showAcquisition && (
+                <>
+                  <TableHead>Wert</TableHead>
+                  <TableHead>Erhalten am</TableHead>
+                </>
+              )}
               <TableHead className="text-right" />
               <TableHead className="text-right" />
             </TableRow>
@@ -159,7 +195,7 @@ export function GameCopiesSection({
                 key={copy.id}
                 gameCopyId={copy.id}
                 history={copy.history}
-                colSpan={7}
+                colSpan={colSpan}
                 selected={copy.id === selectedCopyId}
               >
                 <TableCell className="text-muted-foreground text-sm">
@@ -182,6 +218,20 @@ export function GameCopiesSection({
                 <TableCell className="text-muted-foreground text-sm">
                   {formatRuleBookLanguages(copy.ruleBookLanguages) || "—"}
                 </TableCell>
+                {showAcquisition && (
+                  <>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {copy.acquisition && (
+                        <ValueText acquisition={copy.acquisition} />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {copy.acquisition && (
+                        <AcquiredOnText acquisition={copy.acquisition} />
+                      )}
+                    </TableCell>
+                  </>
+                )}
                 <TableCell className="text-right">
                   {!copy.isPrivate && (
                     <GameActionsMenu
@@ -237,6 +287,16 @@ export function GameCopiesSection({
               <CopyDetail label="Inv.-Nr.">
                 {copy.inventoryNumber || "—"}
               </CopyDetail>
+              {copy.acquisition && (
+                <>
+                  <CopyDetail label="Wert">
+                    <ValueText acquisition={copy.acquisition} />
+                  </CopyDetail>
+                  <CopyDetail label="Erhalten am">
+                    <AcquiredOnText acquisition={copy.acquisition} />
+                  </CopyDetail>
+                </>
+              )}
             </div>
           </GameCopyCard>
         ))

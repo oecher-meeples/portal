@@ -34,13 +34,18 @@ export function optimizedImageOrigins(
   return origins;
 }
 
-/** Ob `src` von einem optimierbaren Origin stammt. */
+/** Ob `src` von einem optimierbaren Origin stammt. Signierte URLs privater
+ * Dateien (#112) nie: die Signatur wechselt bei jedem Rendern, der Optimizer
+ * würde jede Variante neu cachen — und das Ergebnis länger ausliefern, als die
+ * Signatur gilt. */
 export function isOptimizableImageUrl(
   src: string,
   origins: readonly string[],
 ): boolean {
   try {
-    return origins.includes(new URL(src).origin);
+    const url = new URL(src);
+    if (url.searchParams.has("X-Amz-Signature")) return false;
+    return origins.includes(url.origin);
   } catch {
     return false;
   }

@@ -136,3 +136,87 @@ export async function seedDemoLoanHistory(
     `${loanCount} Demo-Ausleihen über ${memberIds.length} Vereinsmitglieder verteilt (${pool.length - poolIndex} unberührte Exemplare übrig).`,
   );
 }
+
+const DEMO_BUSY_COPY_NOTE = "Demo-Vielleiher (Seed)";
+const BUSY_COPY_LOANS = 9;
+
+/**
+ * Ein Exemplar mit 9 abgeschlossenen Ausleihen (= 19 Aufenthalte, #599) —
+ * mehr als die 15, die die Detailseite zeigt, damit der Hinweis „Ältere
+ * Aufenthalte werden nicht angezeigt." im Demo sichtbar ist. Idempotent über
+ * die Notiz-Markierung; nimmt das erste noch unberührte Exemplar.
+ */
+export async function seedDemoBusyCopy(
+  memberIds: string[],
+  recordedByMeepleId: string,
+) {
+  if (memberIds.length === 0) return;
+  const alreadySeeded = await prisma.gameHolding.count({
+    where: { note: DEMO_BUSY_COPY_NOTE },
+  });
+  if (alreadySeeded > 0) return;
+
+  const candidates = await prisma.gameCopy.findMany({
+    orderBy: { slug: "asc" },
+    select: {
+      id: true,
+      holdings: { select: { id: true, unitId: true, endedAt: true } },
+    },
+  });
+  const copy = candidates.find(
+    (c) =>
+      c.holdings.length === 1 &&
+      c.holdings[0].endedAt === null &&
+      c.holdings[0].unitId,
+  );
+  if (!copy) return;
+  const initial = copy.holdings[0];
+  const unitId = initial.unitId!;
+
+  // Rückwärts ab heute: je Zyklus 14 Tage Regal, 14 Tage Ausleihe.
+  const cycle = (n: number) => daysAgo(10 + n * 28);
+  const writes = [
+    prisma.gameHolding.update({
+      where: { id: initial.id },
+      data: {
+        startedAt: daysAgo(10 + BUSY_COPY_LOANS * 28 + 14),
+        endedAt: cycle(BUSY_COPY_LOANS),
+      },
+    }),
+  ];
+  for (let n = BUSY_COPY_LOANS; n >= 1; n -= 1) {
+    const loanStart = cycle(n);
+    const loanEnd = new Date(loanStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const memberId = memberIds[n % memberIds.length];
+    writes.push(
+      prisma.gameHolding.create({
+        data: {
+          gameCopyId: copy.id,
+          vereinsmitgliedId: memberId,
+          origin: HoldingOrigin.LOAN,
+          startedAt: loanStart,
+          endedAt: loanEnd,
+          confirmedAt: loanStart,
+          recordedByMeepleId,
+          note: DEMO_BUSY_COPY_NOTE,
+        },
+      }),
+      prisma.gameHolding.create({
+        data: {
+          gameCopyId: copy.id,
+          unitId,
+          origin: HoldingOrigin.RETURN,
+          startedAt: loanEnd,
+          endedAt: n === 1 ? null : cycle(n - 1),
+          confirmedAt: loanEnd,
+          recordedByMeepleId,
+          note: DEMO_BUSY_COPY_NOTE,
+        },
+      }),
+    );
+  }
+  await prisma.$transaction(writes);
+  console.log(
+    `Demo-Vielleiher: ${BUSY_COPY_LOANS * 2 + 1} Aufenthalte an einem Exemplar.`,
+  );
+}

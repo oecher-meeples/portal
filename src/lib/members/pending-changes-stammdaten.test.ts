@@ -3,9 +3,13 @@ import { PendingChangeKind } from "@prisma/client";
 import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
+const sendEmailChangeAppliedMailMock = vi.fn();
 vi.mock("@/lib/members/pending-change-mail", () => ({
   buildEmailChangeConfirmationLink: () => "",
   sendEmailChangeConfirmationMail: vi.fn(),
+  sendEmailChangeRequestedNoticeMail: vi.fn(),
+  sendEmailChangeAppliedMail: (...args: unknown[]) =>
+    sendEmailChangeAppliedMailMock(...args),
   sendPendingChangeRejectedMail: vi.fn(),
 }));
 vi.mock("@/lib/members/invite-settings", () => ({
@@ -74,7 +78,7 @@ describe("approvePendingChange — MEMBER_STAMMDATEN (#379)", () => {
 
     const result = await approvePendingChange("pc-1", "admin-1");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, mailError: null });
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { id: "member-1" },
       data: { firstName: "Neu", phone: "0123" },

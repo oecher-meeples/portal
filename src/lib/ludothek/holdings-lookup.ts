@@ -4,8 +4,6 @@ import {
   type BoardGame,
   type GameCopy,
   type GameHolding,
-  type Prisma,
-  type PrismaClient,
   type StorageUnit,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
@@ -15,7 +13,9 @@ import { MAX_UNIT_CHAIN_DEPTH } from "@/lib/ludothek/unit-chain";
 
 export { walkUnitChain, type UnitChainNode } from "@/lib/ludothek/unit-chain";
 
-type Tx = PrismaClient | Prisma.TransactionClient;
+import type { DbClient } from "@/lib/utils/prisma";
+
+type Tx = DbClient;
 
 /**
  * "ausgeliehen" hat seit dem Vereinsmitglied/Meeple-Split (#333) zwei

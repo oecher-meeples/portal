@@ -14,6 +14,7 @@ export const MEEPLE_RELATED_MODELS = [
   "ExplainerAttendance",
   "ExplainerGame",
   "FleaMarketItem",
+  "GameCopyCheck",
   "GameHolding",
   "HelperAvailability",
   "Invite",
@@ -112,6 +113,7 @@ export async function collectMeeplePersonalData(
     explainerAttendances,
     explainerGames,
     fleaMarketItems,
+    gameCopyChecks,
     gameHoldings,
     helperAvailabilities,
     invites,
@@ -151,6 +153,13 @@ export async function collectMeeplePersonalData(
         OR: [{ sellerMeepleId: meepleId }, { approvedByMeepleId: meepleId }],
       },
       include: { event: { select: { title: true, startsAt: true } } },
+    }),
+    prisma.gameCopyCheck.findMany({
+      where: { checkedByMeepleId: meepleId },
+      orderBy: { checkedAt: "desc" },
+      include: {
+        gameCopy: { include: { boardGame: { select: { title: true } } } },
+      },
     }),
     prisma.gameHolding.findMany({
       where: {
@@ -241,6 +250,7 @@ export async function collectMeeplePersonalData(
       ExplainerAttendance: explainerAttendances,
       ExplainerGame: explainerGames,
       FleaMarketItem: fleaMarketItems,
+      GameCopyCheck: gameCopyChecks,
       GameHolding: gameHoldings,
       HelperAvailability: helperAvailabilities,
       Invite: invites,

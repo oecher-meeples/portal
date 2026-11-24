@@ -15,27 +15,18 @@ import { buildLudothekGames } from "@/lib/ludothek/query";
 import { buildPrivateLudothekGames } from "@/lib/ludothek/private-collection";
 import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { toContactDialogMeeple, meepleEmail } from "@/lib/members/contact";
-import { memberDisplayName } from "@/lib/members/member-display-name";
-import { anonymisedMeepleDisplayName } from "@/lib/members/anonymised-display-name";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getGuestCopyAvailability } from "@/lib/events/guest-area";
 import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
+import { GameDetailView } from "@/components/feature/ludothek/game-detail-view";
 import {
-  GameDetailView,
-  type HoldingHistoryEntry,
-} from "@/components/feature/ludothek/game-detail-view";
-import { formatDateTime } from "@/lib/utils/format";
+  EMPTY_COPY_HISTORY,
+  loadCopyHistories,
+} from "@/lib/ludothek/copy-history";
 import { GameCopyQuickActions } from "@/components/widgets/game-holding/game-copy-quick-actions";
-
-const ORIGIN_LABELS: Record<string, string> = {
-  INITIAL: "Ersterfassung",
-  LOAN: "Ausleihe",
-  RETURN: "Rückgabe",
-  HANDOVER: "Weitergabe",
-  RELOCATION: "Umlagern",
-};
+import { findGameCopyAcquisitions } from "@/lib/ludothek/game-copy-acquisition-read";
 
 /**
  * Spiele-Detailseite, geteilt von `/ludothek/[slug]` und
@@ -53,9 +44,9 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
   const internal =
     tier !== "gast" &&
     (user ? await hasPermission(user.id, "ludothek:view") : false);
-  // Vorgezogen (statt erst kurz vor dem Render): der Aufenthalts-Verlauf
-  // unten braucht es schon, um anonymisierten Alt-Meeples nur hier den
-  // 6-Hex-Suffix zu zeigen (#364).
+  // Vorgezogen (statt erst kurz vor dem Render): die Historien unten
+  // brauchen es schon — Kontroll-Historie nur für `games:manage` (#599),
+  // 6-Hex-Suffix anonymisierter Alt-Meeples (#364).
   const canManageGames =
     !!user && (await hasPermissionInCurrentView(user.id, "games:manage"));
 
@@ -109,47 +100,11 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
     );
   }
 
-  // Merged Exemplare-Bereich (Plan-Schritt 6): history is fetched for every
-  // copy of the title, not just `game.id`, then grouped per copy below.
-  const holdings = await prisma.gameHolding.findMany({
-    where: { gameCopyId: { in: copies.map((c) => c.id) } },
-    orderBy: { startedAt: "desc" },
-    include: {
-      unit: { select: { label: true, code: true } },
-      vereinsmitglied: {
-        select: {
-          firstName: true,
-          lastName: true,
-          email: true,
-          meeple: { select: { displayName: true } },
-        },
-      },
-      recordedBy: {
-        select: { id: true, displayName: true, anonymizedAt: true },
-      },
-    },
-  });
-
-  const historyByCopyId = new Map<string, HoldingHistoryEntry[]>();
-  for (const holding of holdings) {
-    const entry: HoldingHistoryEntry = {
-      id: holding.id,
-      origin: ORIGIN_LABELS[holding.origin] ?? holding.origin,
-      target: holding.vereinsmitglied
-        ? memberDisplayName(holding.vereinsmitglied)
-        : (holding.unit?.label ?? holding.unit?.code ?? "—"),
-      startedAt: formatDateTime(holding.startedAt),
-      endedAt: holding.endedAt ? formatDateTime(holding.endedAt) : null,
-      confirmedAt: holding.confirmedAt?.toISOString() ?? null,
-      recordedByName: anonymisedMeepleDisplayName(
-        holding.recordedBy,
-        canManageGames,
-      ),
-    };
-    const existing = historyByCopyId.get(holding.gameCopyId) ?? [];
-    existing.push(entry);
-    historyByCopyId.set(holding.gameCopyId, existing);
-  }
+  // Merged Exemplare-Bereich (Plan-Schritt 6): Historien je Exemplar (#599).
+  const historyByCopyId = await loadCopyHistories(
+    copies.map((c) => c.id),
+    canManageGames,
+  );
 
   // Names come straight from `buildLudothekGames()` — only the contact links
   // (mail/telegram) for the responsible person's `ContactDialog` need their
@@ -189,6 +144,13 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
     ]),
   );
   const currentMeeple = await getCurrentMeeple();
+  // Wert/„Erhalten am" nur für `games:manage` (#615) — gar nicht erst laden,
+  // damit sie nie in den Client-Props anderer Sessions landen.
+  const acquisitionByCopyId = canManageGames
+    ? await findGameCopyAcquisitions(
+        copies.filter((copy) => !copy.isPrivate).map((copy) => copy.id),
+      )
+    : new Map();
   const copyRows = copies.map((copy) => ({
     id: copy.id,
     zustand: copy.zustand,
@@ -205,8 +167,9 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
     publisher: copy.publisher,
     isMine:
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
-    history: historyByCopyId.get(copy.id) ?? [],
+    history: historyByCopyId.get(copy.id) ?? EMPTY_COPY_HISTORY,
     isPrivate: copy.isPrivate,
+    acquisition: acquisitionByCopyId.get(copy.id) ?? null,
   }));
 
   // Representative location for each linked base game/expansion (#121) —
@@ -374,6 +337,7 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
               ruleBookLanguages: selected.ruleBookLanguages,
               inventoryNumber: selected.inventoryNumber,
               versionId: selected.versionId ?? null,
+              ...acquisitionByCopyId.get(selected.id),
               isMine:
                 currentMeeple !== null &&
                 selected.responsibleMeepleId === currentMeeple.id,

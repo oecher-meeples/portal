@@ -1,4 +1,13 @@
 import type { NotificationCloseable, NotificationType } from "./types";
+import { EXPLAINER_ATTENDANCE_REMINDER } from "@/lib/explainer/attendance-reminder";
+
+/** Wer gerade schaut — für Notifications, deren Auslöser vom Betrachter
+ * abhängt (#338: nur Erklärbären ohne heutige Anmeldung). `meepleId` ist
+ * `null` für Gäste. */
+export type NotificationViewer = {
+  permissionKeys: readonly string[];
+  meepleId: string | null;
+};
 
 /**
  * Eine im Code hartcodierte automatisierte Notification (#339) — Name, Typ,
@@ -17,16 +26,16 @@ export type AutomatedNotificationDefinition = {
   audiencePermissionKey?: string;
   closeable: NotificationCloseable;
   /** Auslösebedingung — z. B. "DB-Füllstand > X%". */
-  isTriggered: () => Promise<boolean>;
+  isTriggered: (viewer: NotificationViewer) => Promise<boolean>;
   /** Anzeigetext, ggf. dynamisch generiert. */
-  message: () => Promise<string> | string;
+  message: (viewer: NotificationViewer) => Promise<string> | string;
 };
 
 /**
- * Konkrete erste automatisierte Notifications (DB-Füllstand, verdächtige
- * Logins) sind eigene Folge-Issues (siehe #339) — diese Registry ist daher
- * bewusst leer. Die Infrastruktur (Deaktivierungs-Flag, Merge mit manuellen
- * Notifications, CRUD-Anzeige) steht bereits; ein Folge-Issue fügt hier nur
+ * Weitere automatisierte Notifications (DB-Füllstand, verdächtige Logins)
+ * sind eigene Folge-Issues (siehe #339) — ein Folge-Issue fügt hier nur
  * einen weiteren Eintrag hinzu.
  */
-export const AUTOMATED_NOTIFICATIONS: AutomatedNotificationDefinition[] = [];
+export const AUTOMATED_NOTIFICATIONS: AutomatedNotificationDefinition[] = [
+  EXPLAINER_ATTENDANCE_REMINDER,
+];

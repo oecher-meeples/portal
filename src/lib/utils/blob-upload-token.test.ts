@@ -33,7 +33,8 @@ describe("createBlobUploadToken", () => {
     expect(token.url.startsWith(TEST_S3_PUBLIC_ENDPOINT)).toBe(true);
     expect(token.fields.key).toBe("legal/satzung.pdf");
     expect(token.fields["Content-Type"]).toBe("application/pdf");
-    expect(token.publicUrl).toBe(`${TEST_S3_PUBLIC_BASE}/legal/satzung.pdf`);
+    // `legal/` ist öffentlich: dauerhafte URL ohne Signatur (#112).
+    expect(token.viewUrl).toBe(`${TEST_S3_PUBLIC_BASE}/legal/satzung.pdf`);
 
     const { conditions } = decodePolicy(token.fields);
     expect(conditions).toContainEqual(["content-length-range", 0, 1024]);
@@ -53,7 +54,12 @@ describe("createBlobUploadToken", () => {
     });
 
     expect(token.fields.key).toMatch(/^downloads\/flyer-.+\.pdf$/);
-    expect(token.publicUrl).toBe(`${TEST_S3_PUBLIC_BASE}/${token.fields.key}`);
+    // `downloads/` ist privat: signierte URL auf denselben Key (#112).
+    const viewUrl = new URL(token.viewUrl);
+    expect(`${viewUrl.origin}${viewUrl.pathname}`).toBe(
+      `${TEST_S3_PUBLIC_BASE}/${token.fields.key}`,
+    );
+    expect(viewUrl.searchParams.has("X-Amz-Signature")).toBe(true);
   });
 
   it("rejects a content type outside the allowlist", async () => {

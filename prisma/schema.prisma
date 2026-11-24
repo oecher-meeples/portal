@@ -38,6 +38,18 @@ enum GameInventoryStatus {
   DEINVENTARISED
 }
 
+/// Ergebnis einer Exemplar-Kontrolle (#599) — die Mangel-Arten entsprechen
+/// `GAME_ISSUE_LABELS` in `lib/ludothek/game-issue.ts`.
+enum GameCopyCheckResult {
+  COMPLETE
+  /// „Unvollständig spielbar"
+  INCOMPLETE
+  /// „Nicht spielbar" — einziges Ergebnis, das in `MAINTENANCE` führt.
+  UNPLAYABLE
+  /// „Beschädigt"
+  DAMAGED
+}
+
 enum StorageUnitKind {
   BOX
   SHELF
@@ -358,9 +370,10 @@ model Meeple {
   /// selbst (die werden bei jedem Import gelöscht und neu angelegt).
   privateCollectionSyncedAt DateTime?
   doorbellNote              String?
-  /// Profilbild-URL im Blob-Storage (#389) — `null` solange kein Bild
-  /// hochgeladen wurde, unabhängig von `profilePictureVisibility`.
-  profilePictureUrl         String?
+  /// Objekt-Key des Profilbilds im Blob-Storage (#389, Key statt URL seit
+  /// #112) — `null` solange kein Bild hochgeladen wurde, unabhängig von
+  /// `profilePictureVisibility`. Anzeige nur über `signedBlobUrl()`.
+  profilePictureKey         String?
   /// Freigabe-Einstellung für das Profilbild (#389), siehe
   /// `ProfilePictureVisibility`. Default INTERN — bewusst nicht öffentlich,
   /// bis das Meeple aktiv eine weitergehende Freigabe wählt.
@@ -380,6 +393,7 @@ model Meeple {
   recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
   movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
   recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
+  gameCopyChecks           GameCopyCheck[]              @relation("GameCopyCheckChecker")
   lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
   lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
   lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
@@ -568,7 +582,8 @@ model LfgAttachment {
   id                 String   @id @default(cuid())
   postId             String
   uploadedByMeepleId String
-  url                String
+  /// Objekt-Key (`lfg-attachments/…`, #112) — Anzeige über `signedBlobUrl()`.
+  key                String
   filename           String
   createdAt          DateTime @default(now())
 
@@ -1082,6 +1097,13 @@ model GameCopy {
   /// automatisch lückenloses Nummernschema wie `codes.ts` (#270). Im
   /// QR-Short-ID-Slug als `inv-<n>`.
   inventoryNumber        Int?                @unique
+  /// Wert des Exemplars in Cent (#615) — Cent statt Euro, damit 24,99 € nicht
+  /// gerundet wird. `null` = unbekannt. Bleibt beim Deinventarisieren
+  /// erhalten, zählt dann aber nicht zum Bestandswert.
+  valueCents             Int?
+  /// Wann der Verein das Exemplar erhalten hat (#615) — reines Datum,
+  /// `null` = unbekannt. Unabhängig von `createdAt` (Erfassung im Portal).
+  acquiredOn             DateTime?           @db.Date
   status                 GameInventoryStatus @default(ACTIVE)
   archivedAt             DateTime?
   archivedReason         String?
@@ -1091,11 +1113,33 @@ model GameCopy {
   boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
   version   BoardGameVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
   holdings  GameHolding[]
+  checks    GameCopyCheck[]
 
   @@index([boardGameId])
   @@index([versionId])
   @@index([status])
   @@map("game_copies")
+}
+
+/// Eine einzelne Kontrolle eines Exemplars (#599, Prüfbogen). `GameCopy`
+/// trägt den aktuellen Stand (`condition`, `lastCheckedAt`, `status`), die
+/// Historie steht hier.
+model GameCopyCheck {
+  id                String              @id @default(cuid())
+  gameCopyId        String
+  checkedByMeepleId String
+  checkedAt         DateTime            @default(now())
+  result            GameCopyCheckResult
+  /// Zustand/Mangel-Notiz — wird bei Anonymisierung des Urhebers geleert.
+  note              String?
+
+  gameCopy  GameCopy @relation(fields: [gameCopyId], references: [id], onDelete: Cascade)
+  checkedBy Meeple   @relation("GameCopyCheckChecker", fields: [checkedByMeepleId], references: [id], onDelete: Cascade)
+
+  @@index([gameCopyId, checkedAt])
+  @@index([checkedAt])
+  @@index([checkedByMeepleId])
+  @@map("game_copy_checks")
 }
 
 /// A batch of spare parts kept for a game, or "Allgemeines" (`boardGameId: null`)
@@ -1127,7 +1171,9 @@ model MarketListing {
   description    String?
   priceEuros     Int
   condition      String
-  imageUrls      String[]
+  /// Objekt-Keys (`market-listings/…`, #112); Alt-Einträge können fremde
+  /// URLs sein, `signedBlobUrl()` lässt die unverändert.
+  imageKeys      String[]
   /// Optionaler Link zum Inventar-Titel — gesetzt bei Anlage per "BGG for
   /// trade importieren" (#275), erlaubt Anzeige/Rückverweis über den
   /// gemeinsamen `BoardGame`-Datensatz statt einer eigenen bggId (#278).
@@ -1607,7 +1653,8 @@ model Download {
   id            String         @id @default(cuid())
   title         String
   fileName      String
-  fileUrl       String         @unique
+  /// Objekt-Key (`downloads/…`, #112) — auch PUBLIC-Downloads nur signiert.
+  fileKey       String         @unique
   fileType      String
   fileSizeBytes Int
   status        DownloadStatus @default(PUBLIC)
@@ -1653,7 +1700,8 @@ model ImportantLink {
   id        String   @id @default(cuid())
   title     String
   targetUrl String
-  iconUrl   String?
+  /// Objekt-Key (`important-links/…`, #112) — Anzeige über `signedBlobUrl()`.
+  iconKey   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { stubIntersectionObserver } from "@/lib/__mocks__/intersection-observer";
+
+stubIntersectionObserver();
+vi.mock("@/components/feature/ludothek/actions", () => ({
+  loadMoreLudothekGames: vi.fn(),
+}));
 
 // Split out of ludothek-browser.test.tsx (#214-Folge) — the Erstveröffentlichung/
 // Bewertung/Spieler/Dauer slider tests pushed the original file past the

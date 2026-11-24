@@ -35,7 +35,7 @@ Maßgeblich sind immer die Dateien im Repo — bei Abweichungen gilt der Code:
 | `app`          | `Dockerfile` (Repo-Wurzel)   | Next.js-Server; führt bei jedem Start Migrationen und ggf. den Seed aus                             | `3000` (`APP_PORT`)                |
 | `postgres`     | `postgres:16`                | Datenbank, Volume `postgres-data`                                                                   | `5432` (`POSTGRES_PORT`)           |
 | `seaweedfs`    | `docker/seaweedfs/Dockerfile` (Basis `chrislusf/seaweedfs:4.48`) | S3-kompatibler Datei-Speicher (Uploads, erzeugte Bilder), Volume `seaweedfs-data` | `8333` S3-API (`S3_API_PORT`)      |
-| `seaweedfs-init` | `amazon/aws-cli:2.33.0`    | One-Shot: legt Bucket und öffentliche Lese-Policy an, beendet sich danach                           | —                                  |
+| `seaweedfs-init` | `amazon/aws-cli:2.33.0`    | One-Shot: legt Bucket und Lese-Policy (nur öffentliche Präfixe) an, beendet sich danach            | —                                  |
 | `cron-sidecar` | `docker/cron/Dockerfile`     | Ruft die geplanten Hintergrund-Jobs der App auf                                                     | —                                  |
 | `caddy`        | `caddy:2`                    | **Optional** (Profil `with-proxy`): TLS-Reverse-Proxy mit Let's-Encrypt-Zertifikaten                | `80`, `443` (öffentlich)           |
 
@@ -172,7 +172,7 @@ aber in der jeweiligen Situation nötig:
 | ----------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Erster Start auf **leerer** Datenbank    | Der App-Container bricht nach der Migration ab ([7](#7-erster-start-migration-und-seed)). Danach werden sie ignoriert                    |
 | `APP_DOMAIN`, `S3_DOMAIN`                 | Nur mit `--profile with-proxy`           | Caddy kann keine Site konfigurieren und startet nicht. Reine Hostnamen ohne `https://`, passend zu `BETTER_AUTH_URL`/`S3_PUBLIC_ENDPOINT` |
-| `SEED_DEMO_PASSWORD`                      | Nur mit `SEED_DEMO_DATA=true`            | Die Demo-Konten bekommen ein leeres Passwort und sind nicht nutzbar. Mindestens 8 Zeichen                                              |
+| `SEED_DEMO_PASSWORD`                      | Nur mit `SEED_PROFILE=develop`           | Die Demo-Konten bekommen ein leeres Passwort und sind nicht nutzbar. Mindestens 8 Zeichen                                              |
 
 ### Optional (mit funktionierendem Default)
 
@@ -182,12 +182,12 @@ aber in der jeweiligen Situation nötig:
 | `POSTGRES_USER`, `POSTGRES_DB`                    | `meeples`                                          | DB-User und -Name                                                                         |
 | `DATABASE_URL`                                    | aus `POSTGRES_*` gebaut, Host `postgres:5432`      | Nur setzen, um statt des Containers eine **externe** Postgres-Instanz zu nutzen           |
 | `BETTER_AUTH_TRUSTED_ORIGINS`                     | leer                                               | Weitere Origins (kommagetrennt), die `/api/auth` aufrufen dürfen                          |
-| `SEED_DEMO_DATA`                                  | `false`                                            | `true` = Demo-Daten beim ersten Start ([7](#7-erster-start-migration-und-seed))            |
+| `SEED_PROFILE`                                    | `release`                                          | `release` = Vereinsbestand, `develop` = Demo-Daten beim ersten Start ([7](#7-erster-start-migration-und-seed)) |
 | `S3_BUCKET`                                       | `meeples`                                          | Bucket-Name                                                                               |
 | `S3_ENDPOINT`                                     | `http://seaweedfs:8333`                            | Endpoint, über den die **App** SeaweedFS im Compose-Netz erreicht                         |
 | `S3_REGION`                                       | `us-east-1`                                        | Region für das AWS-SDK der App und für `seaweedfs-init`; der Default passt                |
 | `S3_STORAGE_LIMIT_BYTES`                          | 1 GB                                               | Soft-Quota der Füllstandskarte im Admin-Dashboard                                         |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | leer bzw. Port `587`                 | Mailversand, ohne `SMTP_HOST` deaktiviert ([9.3](#93-e-mail-smtp))                        |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | leer bzw. Port `587`                 | Mailversand, ohne `SMTP_HOST` schlägt jede Mail fehl ([9.3](#93-e-mail-smtp))             |
 | `PUBLIC_CALENDAR_ICS_URL`, `ICS_FEED_URL_INTERNAL` | leer                                              | Öffentlicher bzw. interner Kalender-Feed (ICS-URL, kein API-Key)                          |
 | `META_*`, `BGG_BEARER_TOKEN`, `YOUTUBE_API_KEY`, `GITHUB_TOKEN`, `TRANSLATION_CONTACT_EMAIL` | leer (`META_GRAPH_API_VERSION`: `v21.0`) | Externe Dienste, je Feature optional ([10](#10-externe-zugangsdaten-beschaffen)) |
 | `APP_PORT`, `POSTGRES_PORT`, `S3_API_PORT`        | `3000`, `5432`, `8333`                             | Host-Ports (immer nur auf `127.0.0.1`)                                                    |
@@ -277,12 +277,18 @@ Der Entrypoint des App-Containers (`docker/app/entrypoint.sh`) führt bei
    - **Leere DB, beide gesetzt** → Grundbestand: Admin-Konto mit der Rolle
      `sysadmin`, alle Rechte und Rollen, Spieleigenschafts-Texte sowie die
      Rechtliches-Seiten und Downloads.
-   - Zusätzlich mit **`SEED_DEMO_DATA=true`**: Demo-Spiele, -Mitglieder,
-     -Beiträge, Demo-Konten (Passwort `SEED_DEMO_PASSWORD`) usw. Nur für
-     Test-/Vorführinstanzen, nie für eine echte Vereinsdatenbank. Achtung:
-     Der Seed prüft auf den exakten Wert `false` — **jeder andere Wert**
-     (auch `0`, `no`, `FALSE`) aktiviert die Demo-Daten. Nur `true` oder
-     `false` eintragen.
+   - Danach je nach **`SEED_PROFILE`** (#603):
+     - `release` (Default): echter Vereinsbestand aus
+       `prisma/seed-data/release-inventory.csv` — Titel, Exemplare mit
+       Inventarnummer und Wert, Standorte (Regale/Kisten) und je Exemplar die
+       letzte Kontrolle (Kontrolleur: Admin-Konto). Titel mit BGG-Zuordnung
+       bringen ihre Grunddaten, deutsche Beschreibung und deutsche Edition aus
+       `release-board-games.json`/`release-descriptions-de.json` mit — der
+       Seed ruft BGG nie auf. Keine Demo-Konten.
+     - `develop`: Demo-Spiele, -Mitglieder, -Beiträge, Demo-Konten (Passwort
+       `SEED_DEMO_PASSWORD`) usw. Nur für Test-/Vorführinstanzen, nie für eine
+       echte Vereinsdatenbank.
+     - Jeder andere Wert bricht den Seed ab.
 3. **`node server.js`** — der Next.js-Server übernimmt als Hauptprozess.
 
 Ablauf im Log (`docker compose logs app`):
@@ -290,7 +296,7 @@ Ablauf im Log (`docker compose logs app`):
 ```text
 [entrypoint] prisma migrate deploy
 … N migrations found … / No pending migrations to apply.
-[entrypoint] seed (only if database is empty, SEED_DEMO_DATA=false)
+[entrypoint] seed (only if database is empty, SEED_PROFILE=release)
 …
 [entrypoint] starting Next.js on 0.0.0.0:3000
 ```
@@ -425,7 +431,9 @@ nicht das Passwort in der Datenbank, sondern nur das, was die App versucht
 (siehe [14](#14-fehlerbehebung)).
 
 Eine externe Postgres-Instanz (≥ 16) ist möglich: `DATABASE_URL` setzen
-(ggf. mit `?sslmode=require`). Der `postgres`-Container läuft dann trotzdem
+(ggf. mit `?sslmode=verify-full`; `require`, `prefer` und `verify-ca` lösen
+in `pg` eine Deprecation-Warnung aus, weil sie ab `pg` v9 schwächere
+libpq-Semantik bekommen, siehe #502). Der `postgres`-Container läuft dann trotzdem
 mit (`POSTGRES_PASSWORD` bleibt Pflicht), wird aber nicht benutzt.
 
 ### 9.2 Datei-Speicher (`seaweedfs`, `seaweedfs-init`)
@@ -464,9 +472,34 @@ idempotent nach dem SeaweedFS-Healthcheck und
 
 1. legt den Bucket `S3_BUCKET` an (`aws s3 mb`, falls nicht vorhanden),
 2. setzt per `aws s3api put-bucket-policy` eine Bucket-Policy, die anonymes
-   Lesen einzelner Dateien erlaubt (`Principal: "*"`, `Action: s3:GetObject`)
-   — Datei-URLs sind öffentlich abrufbar, wie früher bei Vercel Blob; das
-   Auflisten des Buckets gibt die Policy nicht frei.
+   Lesen (`Principal: "*"`, `Action: s3:GetObject`) **nur für die
+   öffentlichen Präfixe** `instagram-covers/` (News-Cover, Instagram lädt sie
+   selbst) und `legal/` (Rechtstexte) erlaubt. Das Auflisten des Buckets gibt
+   die Policy nicht frei. `put-bucket-policy` ersetzt die Policy vollständig,
+   eine ältere „ganzer Bucket öffentlich"-Policy ist nach dem nächsten `up`
+   also weg.
+
+**Private Dateien (#112, deny by default):** Alle übrigen Präfixe
+(`downloads/`, `market-listings/`, `lfg-attachments/`,
+`meeple-profile-pictures/`, `important-links/` und jedes künftige) antworten
+ohne Signatur mit **403**. In der Datenbank steht nur der Objekt-Key
+(`…Key`-Spalten), die App liefert beim Lesen eine **signierte GET-URL mit 1 h
+Gültigkeit** aus (`src/lib/utils/blob-access.ts`, eingehängt als
+Prisma-Result-Extension in `src/lib/utils/prisma.ts`). Das gilt auch für
+`PUBLIC`-Downloads (dort ohne Login, aber trotzdem signiert). Die Liste der
+öffentlichen Präfixe steht genau einmal in `PUBLIC_BLOB_PREFIXES`; ein Test
+prüft, dass die Policy hier dieselbe Liste freigibt. Statische Dateien unter
+`public/` (z. B. die Demo-Downloads `/downloads/…`) liefert Next.js aus, nicht
+der Bucket, sie bleiben also öffentlich.
+
+> **Migrationshinweis:** Mit dem Policy-Wechsel (erstes `docker compose up`
+> nach dem Update) werden alle bisherigen, dauerhaften URLs privater Dateien
+> **sofort ungültig**: alte Newsletter-Mails, geteilte Links, Lesezeichen und
+> Browser-Caches mit direkten Datei-URLs liefern dann 403. Die Portal-Seiten
+> selbst zeigen die Dateien weiter, weil sie bei jedem Aufruf frisch
+> signieren. Die Migration `20261123140000_private_blob_keys` wandelt die
+> gespeicherten URLs in Keys um; fremde URLs (Alt-URLs von Vercel Blob,
+> BGG-Bilder) bleiben unverändert stehen.
 
 Bewusst kein automatisches Bucket-Anlegen im App-Code: Bucket-Policy braucht
 Admin-Rechte, die die App-Identität nicht hat.
@@ -482,10 +515,12 @@ Env-Var. Wer das einschränken will, ergänzt das Flag in
 `docker/seaweedfs/entrypoint.sh` beim Aufruf von `weed server` und baut
 `seaweedfs` neu (`docker compose up -d --build seaweedfs`).
 
-**`S3_PUBLIC_ENDPOINT` nicht nachträglich ändern:** Gespeicherte Datei-URLs
-enthalten ihn. Ein Wechsel lässt alle bisherigen Bilder/Dateien ins Leere
-zeigen (Reparatur nur per SQL-`replace()` auf den URL-Spalten). Die
-Content-Security-Policy erlaubt den Origin automatisch.
+**`S3_PUBLIC_ENDPOINT` nicht nachträglich ändern:** Die gespeicherten URLs
+öffentlicher Dateien (News-Cover `Post.coverImageUrl`, Rechtstexte
+`LegalDocument.pdfFileUrl`) enthalten ihn. Ein Wechsel lässt diese ins Leere
+zeigen (Reparatur nur per SQL-`replace()` auf diesen Spalten). Private Dateien
+speichern seit #112 nur den Key und werden gegen den jeweils aktuellen
+Endpunkt signiert. Die Content-Security-Policy erlaubt den Origin automatisch.
 
 **Lizenz:** SeaweedFS steht unter Apache-2.0. Der Stack nutzte ursprünglich
 MinIO, dessen Kern unter AGPLv3 steht; mit dem Wechsel enthält der
@@ -509,20 +544,19 @@ Basis von `nodemailer`. **Der Stack bringt bewusst keinen Mailserver mit.**
 
 | Variable    | Zweck                                                                                                            |
 | ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| `SMTP_HOST` | SMTP-Server. **Leer = Versand deaktiviert** (siehe unten)                                                        |
+| `SMTP_HOST` | SMTP-Server. **Leer = jeder Versand schlägt fehl** (siehe unten)                                                 |
 | `SMTP_PORT` | Default `587` (STARTTLS); `465` schaltet auf implizites TLS                                                      |
 | `SMTP_USER` | Leer = ohne Authentifizierung (z. B. interner Relay)                                                             |
 | `SMTP_PASS` | Passwort/App-Token zu `SMTP_USER`                                                                                |
-| `SMTP_FROM` | Absender; leer = `"Oecher Meeples" <newsletter@oecher-meeples.org>`. Muss vom Provider als Absender erlaubt sein — **eigenen Wert setzen** |
+| `SMTP_FROM` | Absender; leer = `"Oecher Meeples" <newsletter@oecher-meeples.org>`. Muss vom Provider als Absender erlaubt sein — **eigenen Wert setzen**, meist eine Adresse des `SMTP_USER`-Postfachs (sonst z. B. bei IONOS `550 Sender address is not allowed`) |
 
-**Ohne `SMTP_HOST`** ist der Versand ein kontrollierter No-op: Die App startet
-und läuft normal, beim ersten Mailversuch erscheint einmalig
-`[mailer] SMTP_HOST ist nicht gesetzt — E-Mail-Versand ist deaktiviert, Mails werden verworfen.`
-im Log, danach pro verworfener Mail
-`[mailer] Nicht versendet (SMTP aus): "<Betreff>"` (ohne Empfänger). Die Aufrufer behandeln die Mail dabei als verschickt —
-Newsletter-Jobs landen z. B. auf `SENT`, und „Passwort vergessen" sowie
-Einladungen von Systemkonten funktionieren nicht. Für den Produktivbetrieb
-SMTP also konfigurieren.
+**Ohne `SMTP_HOST`** startet und läuft die App normal, aber jeder Mailversuch
+schlägt mit `E-Mail-Versand ist nicht konfiguriert (SMTP_HOST fehlt).` fehl
+(#612) — bis dahin war das ein stiller No-op, bei dem die Aufrufer die Mail als
+verschickt behandelten (Newsletter-Jobs auf `SENT`, „Mail verschickt" in der
+UI). Jetzt zeigt die UI den Fehler, Newsletter-Jobs bleiben `QUEUED` bzw.
+landen auf `FAILED`, und Einladungen bleiben trotzdem gültig (Link manuell
+weitergeben). Für den Betrieb — auch lokal — SMTP also konfigurieren.
 
 **Empfehlung:** einen bestehenden Mail-Provider bzw. dessen SMTP-Relay nutzen
 (Hoster-Postfach der Vereinsdomain, Brevo/Mailjet/Postmark/Amazon SES per
@@ -802,9 +836,16 @@ zu löschen). Für einen vollständigen Umzug:
      'aws --endpoint-url http://seaweedfs:8333 s3 cp --recursive /import "s3://$S3_BUCKET"'
    ```
 
-3. Die URL-Spalten per SQL-`replace()` von
+3. Die Verweise per SQL umschreiben: in den öffentlichen URL-Spalten
+   (`posts.coverImageUrl`, `legal_documents.pdfFileUrl`) per `replace()` von
    `https://<store>.public.blob.vercel-storage.com/` auf
-   `<S3_PUBLIC_ENDPOINT>/<S3_BUCKET>/` umschreiben.
+   `<S3_PUBLIC_ENDPOINT>/<S3_BUCKET>/`; in den privaten Key-Spalten
+   (`meeples.profilePictureKey`, `lfg_attachments.key`,
+   `market_listings.imageKeys`, `downloads.fileKey`,
+   `important_links.iconKey`, #112) das Präfix
+   `https://<store>.public.blob.vercel-storage.com/` ganz entfernen, sodass
+   nur der Key übrig bleibt. Solange dort noch eine Vercel-URL steht, zeigt
+   die App sie unverändert an.
 
 Erst danach den Vercel-Blob-Store löschen.
 
@@ -881,7 +922,14 @@ Browser aufgerufen wird (Schema, Host, ohne `/` am Ende). Weitere Origins in
 - `S3_PUBLIC_ENDPOINT` ist im Browser nicht erreichbar → Proxy-Eintrag für
   den Datei-Host prüfen; `https://<S3_DOMAIN>/<S3_BUCKET>/` sollte eine
   XML-Fehlerantwort von SeaweedFS liefern (die Bucket-Policy gibt nur das
-  Lesen einzelner Dateien frei, nicht das Auflisten).
+  Lesen einzelner Dateien unter `instagram-covers/` und `legal/` frei, nicht
+  das Auflisten).
+- Private Bilder/Downloads liefern **403** → erwartet für eine rohe URL ohne
+  Signatur (#112). Kommt die 403 auch über die Portal-Seite, ist die
+  Signatur ungültig: `S3_PUBLIC_ENDPOINT` muss exakt der Host sein, den der
+  Browser aufruft (er geht in die Signatur ein), und `S3_ACCESS_KEY` /
+  `S3_SECRET_KEY` müssen zur App-Identität in `seaweedfs` passen. Eine Seite,
+  die länger als 1 h offen war, einmal neu laden.
 - Upload bricht mit CORS-Fehler ab → SeaweedFS erlaubt standardmäßig alle
   Origins, eine Einschränkung im Datei-Speicher ist also unwahrscheinlich.
   Meist erreicht der Browser `S3_PUBLIC_ENDPOINT` gar nicht richtig (falscher

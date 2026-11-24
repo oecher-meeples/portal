@@ -8,7 +8,8 @@ const requirePermissionMock = vi.fn();
 
 const generateMemberCalendarTokenMock = vi.fn();
 const revokeMemberCalendarTokenMock = vi.fn();
-vi.mock("@/lib/members/calendar-token", () => ({
+vi.mock("@/lib/members/calendar-token", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/members/calendar-token")>()),
   generateMemberCalendarToken: (...args: unknown[]) =>
     generateMemberCalendarTokenMock(...args),
   revokeMemberCalendarToken: (...args: unknown[]) =>

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { stubS3Env, TEST_S3_PUBLIC_BASE } from "@/lib/__mocks__/s3-env";
+
+stubS3Env();
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -36,7 +39,14 @@ const {
 const VALID_INPUT = {
   title: "Vereinssatzung",
   targetUrl: "https://example.org/satzung.pdf",
-  iconUrl: "https://blob.example/important-links/icon.webp",
+  iconUrl: `${TEST_S3_PUBLIC_BASE}/important-links/icon.webp`,
+};
+
+/** Gespeichert wird der Key, nicht die Upload-URL (#112). */
+const STORED_DATA = {
+  title: VALID_INPUT.title,
+  targetUrl: VALID_INPUT.targetUrl,
+  iconKey: "important-links/icon.webp",
 };
 
 describe("createImportantLink", () => {
@@ -67,7 +77,7 @@ describe("createImportantLink", () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.importantLink.create).toHaveBeenCalledWith({
-      data: VALID_INPUT,
+      data: STORED_DATA,
     });
   });
 });
@@ -92,7 +102,7 @@ describe("updateImportantLink", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.importantLink.update).toHaveBeenCalledWith({
       where: { id: "link-1" },
-      data: VALID_INPUT,
+      data: STORED_DATA,
     });
   });
 });
@@ -129,13 +139,13 @@ describe("deleteImportantLink", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.importantLink.findUnique.mockResolvedValue({
-      iconUrl: VALID_INPUT.iconUrl,
+      iconKey: STORED_DATA.iconKey,
     } as never);
 
     const result = await deleteImportantLink("link-1");
 
     expect(result).toEqual({ success: true });
-    expect(deleteBlobsMock).toHaveBeenCalledWith([VALID_INPUT.iconUrl]);
+    expect(deleteBlobsMock).toHaveBeenCalledWith([STORED_DATA.iconKey]);
     expect(prismaMock.importantLink.delete).toHaveBeenCalledWith({
       where: { id: "link-1" },
     });
@@ -145,7 +155,7 @@ describe("deleteImportantLink", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     hasPermissionMock.mockResolvedValue(true);
     prismaMock.importantLink.findUnique.mockResolvedValue({
-      iconUrl: null,
+      iconKey: null,
     } as never);
 
     const result = await deleteImportantLink("link-1");

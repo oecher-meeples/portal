@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/utils/prisma";
 import { requiresEmail } from "@/lib/members/contribution";
+import {
+  findMemberEmailConflict,
+  syncLoginEmail,
+} from "@/lib/members/member-email";
 
 export type UpdateMemberInput = {
   email: string;
@@ -45,28 +49,28 @@ export async function updateMember(
   }
 
   if (email) {
-    const conflict = await prisma.member.findUnique({ where: { email } });
-    if (conflict && conflict.id !== memberId) {
-      return {
-        error: `Für ${email} existiert bereits ein anderes Vereinsmitglied.`,
-      };
-    }
+    const conflict = await findMemberEmailConflict(memberId, email);
+    if (conflict) return { error: conflict };
   }
 
-  await prisma.member.update({
-    where: { id: memberId },
-    data: {
-      email: email || null,
-      firstName: input.firstName?.trim() || null,
-      lastName: input.lastName?.trim() || null,
-      birthDate: input.birthDate ?? null,
-      birthPlace: input.birthPlace?.trim() || null,
-      street: input.street?.trim() || null,
-      postalCode: input.postalCode?.trim() || null,
-      city: input.city?.trim() || null,
-      phone: input.phone?.trim() || null,
-      ...(input.joinedAt ? { joinedAt: input.joinedAt } : {}),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.member.update({
+      where: { id: memberId },
+      data: {
+        email: email || null,
+        firstName: input.firstName?.trim() || null,
+        lastName: input.lastName?.trim() || null,
+        birthDate: input.birthDate ?? null,
+        birthPlace: input.birthPlace?.trim() || null,
+        street: input.street?.trim() || null,
+        postalCode: input.postalCode?.trim() || null,
+        city: input.city?.trim() || null,
+        phone: input.phone?.trim() || null,
+        ...(input.joinedAt ? { joinedAt: input.joinedAt } : {}),
+      },
+    });
+    // #614: eine Adresse pro Person — zieht die Login-E-Mail mit.
+    await syncLoginEmail(tx, memberId, email || null);
   });
 
   return { success: true };

@@ -6,9 +6,9 @@ describe("DEMO_DOWNLOADS", () => {
     expect(DEMO_DOWNLOADS).toHaveLength(4);
   });
 
-  it("has unique fileUrls, used as the upsert key for idempotent seeding", () => {
-    const fileUrls = DEMO_DOWNLOADS.map((d) => d.fileUrl);
-    expect(new Set(fileUrls).size).toBe(fileUrls.length);
+  it("has unique fileKeys, used as the upsert key for idempotent seeding", () => {
+    const fileKeys = DEMO_DOWNLOADS.map((d) => d.fileKey);
+    expect(new Set(fileKeys).size).toBe(fileKeys.length);
   });
 
   it("has a positive file size and a PDF/XLSX fileType for every entry", () => {

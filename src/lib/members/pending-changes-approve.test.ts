@@ -6,9 +6,13 @@ import { encryptSecret } from "@/lib/utils/crypto";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const sendPendingChangeRejectedMailMock = vi.fn();
+const sendEmailChangeAppliedMailMock = vi.fn();
 vi.mock("@/lib/members/pending-change-mail", () => ({
   buildEmailChangeConfirmationLink: () => "",
   sendEmailChangeConfirmationMail: vi.fn(),
+  sendEmailChangeRequestedNoticeMail: vi.fn(),
+  sendEmailChangeAppliedMail: (...args: unknown[]) =>
+    sendEmailChangeAppliedMailMock(...args),
   sendPendingChangeRejectedMail: (...args: unknown[]) =>
     sendPendingChangeRejectedMailMock(...args),
 }));
@@ -78,7 +82,7 @@ describe("approvePendingChange", () => {
 
     const result = await approvePendingChange("pc-1", "admin-1");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, mailError: null });
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { id: "member-1" },
       data: {
@@ -107,10 +111,49 @@ describe("approvePendingChange", () => {
 
     const result = await approvePendingChange("pc-1", "admin-1");
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ success: true, mailError: null });
     expect(prismaMock.member.update).toHaveBeenCalledWith({
       where: { id: "member-1" },
       data: { email: "neu@example.com" },
+    });
+  });
+
+  describe("MEMBER_EMAIL also replaces the login (#614)", () => {
+    beforeEach(() => {
+      prismaMock.pendingChange.findUnique.mockResolvedValue({
+        id: "pc-1",
+        memberId: "member-1",
+        kind: PendingChangeKind.MEMBER_EMAIL,
+        newValue: "neu@example.com",
+        approvedAt: null,
+        rejectedAt: null,
+        confirmedAt: new Date(),
+      } as never);
+      prismaMock.member.findUnique.mockResolvedValue({
+        meeple: { neonAuthUserId: "user-1" },
+      } as never);
+      sendEmailChangeAppliedMailMock.mockReset().mockResolvedValue(undefined);
+    });
+
+    it("moves the login to the new address and mails it", async () => {
+      await approvePendingChange("pc-1", "admin-1");
+
+      expect(prismaMock.authUser.update).toHaveBeenCalledWith({
+        where: { id: "user-1" },
+        data: { email: "neu@example.com" },
+      });
+      expect(sendEmailChangeAppliedMailMock).toHaveBeenCalledWith(
+        "neu@example.com",
+      );
+    });
+
+    it("keeps the approval and reports a failed mail", async () => {
+      sendEmailChangeAppliedMailMock.mockRejectedValue(new Error("kaputt"));
+
+      const result = await approvePendingChange("pc-1", "admin-1");
+
+      expect(result).toEqual({ success: true, mailError: "kaputt" });
+      expect(prismaMock.pendingChange.update).toHaveBeenCalled();
     });
   });
 

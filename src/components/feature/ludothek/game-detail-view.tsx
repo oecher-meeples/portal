@@ -50,16 +50,6 @@ import type { GuestCopyAvailability } from "@/lib/events/guest-area";
 import { formatDateMedium } from "@/lib/utils/format";
 import { buildYoutubeRulesSearchUrl } from "@/lib/utils/youtube";
 
-export type HoldingHistoryEntry = {
-  id: string;
-  origin: string;
-  target: string;
-  startedAt: string;
-  endedAt: string | null;
-  confirmedAt: string | null;
-  recordedByName: string;
-};
-
 export function GameDetailView({
   game,
   bggId,

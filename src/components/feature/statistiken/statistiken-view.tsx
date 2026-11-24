@@ -2,6 +2,8 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageContainer } from "@/components/ui/page-container";
 import { BarRow } from "@/components/ui/bar-row";
+import { ColumnChart } from "@/components/ui/column-chart";
+import type { MonthCount } from "@/lib/statistics/check-stats";
 import type {
   MostBorrowedGame,
   WeekdayCount,
@@ -58,12 +60,15 @@ export function StatistikenView({
   weekdays,
   titleCounts,
   copyCounts,
+  checksPerMonth,
 }: {
   mostBorrowed: MostBorrowedGame[];
   weekdays: WeekdayCount[];
   titleCounts: InventoryCounts;
   copyCounts: InventoryCounts;
+  checksPerMonth: MonthCount[];
 }) {
+  const hasChecks = checksPerMonth.some((month) => month.count > 0);
   const maxWeekdayCount = Math.max(1, ...weekdays.map((d) => d.count));
   const maxBorrowCount = Math.max(1, ...mostBorrowed.map((g) => g.count));
 
@@ -123,6 +128,31 @@ export function StatistikenView({
                 valueLabel={`${day.count}×`}
               />
             ))}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Exemplar-Kontrollen pro Monat</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {hasChecks ? (
+              <ColumnChart
+                caption="Exemplar-Kontrollen pro Monat, letzte 12 Monate"
+                labelHeader="Monat"
+                valueHeader="Kontrollen"
+                items={checksPerMonth.map((month) => ({
+                  key: month.key,
+                  label: month.shortLabel,
+                  srLabel: month.longLabel,
+                  value: month.count,
+                }))}
+              />
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Noch keine Kontrollen erfasst.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

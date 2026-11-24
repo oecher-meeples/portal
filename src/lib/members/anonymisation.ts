@@ -46,17 +46,17 @@ export async function anonymiseMeepleStufe1(
 
   const previousDisplayName = meeple.displayName;
 
-  // Blob URLs stay publicly reachable after the database row is cleared, so the
-  // files go first: if this fails the member is left un-anonymised and the caller
+  // Blob files outlive the cleared database row (and signed links stay valid
+  // for their lifetime, #112), so the files go first: if this fails the member is left un-anonymised and the caller
   // can retry, which is the safer failure than "anonymised, photos still online".
   const listingsWithImages = await prisma.marketListing.findMany({
-    where: { sellerMeepleId: meepleId, imageUrls: { isEmpty: false } },
-    select: { id: true, imageUrls: true },
+    where: { sellerMeepleId: meepleId, imageKeys: { isEmpty: false } },
+    select: { id: true, imageKeys: true },
   });
-  await deleteBlobs(listingsWithImages.flatMap((listing) => listing.imageUrls));
+  await deleteBlobs(listingsWithImages.flatMap((listing) => listing.imageKeys));
 
   await prisma.$transaction(async (tx) => {
-    // #394: `title`/`description` hier zusammen mit `imageUrls` in einem
+    // #394: `title`/`description` hier zusammen mit `imageKeys` in einem
     // Update — weitere selbst verfasste Freitextfelder mit möglichem
     // Personenbezug. Scope-Grenze (Entscheidung 2026-09-03): nur geleert,
     // wenn die zu anonymisierende Person selbst über die jeweilige
@@ -69,7 +69,7 @@ export async function anonymiseMeepleStufe1(
     // Fremd-Erwähnungen zu durchsuchen ist nicht praktikabel.
     await tx.marketListing.updateMany({
       where: { sellerMeepleId: meepleId },
-      data: { imageUrls: [], title: "", description: null },
+      data: { imageKeys: [], title: "", description: null },
     });
 
     // `Post.author` is free text with no relation to Meeple, so the display name
@@ -95,6 +95,11 @@ export async function anonymiseMeepleStufe1(
     await tx.storageUnitMove.updateMany({
       where: { recordedByMeepleId: meepleId },
       data: { locationNote: null },
+    });
+    // #599: Kontroll-Notizen leeren, die Datensätze selbst bleiben (Statistik).
+    await tx.gameCopyCheck.updateMany({
+      where: { checkedByMeepleId: meepleId },
+      data: { note: null },
     });
 
     await tx.meeple.update({
