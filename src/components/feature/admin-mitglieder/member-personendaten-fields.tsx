@@ -9,6 +9,7 @@ import {
   CONTRIBUTION_CATEGORY_LABELS,
   ageInYears,
   determineContribution,
+  requiresEmail,
 } from "@/lib/members/contribution";
 
 /** Demo-Adresse für den Dev-Only-Button neben "Ort" — beliebiger Aachener
@@ -63,12 +64,19 @@ function formContributionCategory(birthDate: string) {
   }).category;
 }
 
-/** MiniMeeple/JungMeeple (< 18) dürfen ohne eigene E-Mail-Adresse angelegt
- * werden — ein:e Erziehungsberechtigte:r handelt für sie. Adresse bleibt
- * davon unberührt immer Pflicht (Nutzerentscheidung). */
-export function emailRequiredFor(birthDate: string): boolean {
-  const category = formContributionCategory(birthDate);
-  return category !== "mini" && category !== "jung";
+/** Formular-Spiegel von `requiresEmail()` — MiniMeeple/JungMeeple (< 18)
+ * und Mitglieder mit verknüpften Erziehungsberechtigten (#611) dürfen ohne
+ * eigene E-Mail-Adresse geführt werden. Adresse bleibt davon unberührt immer
+ * Pflicht (Nutzerentscheidung). */
+export function emailRequiredFor(
+  birthDate: string,
+  hasGuardian = false,
+): boolean {
+  return requiresEmail({
+    birthDate: birthDate ? new Date(birthDate) : null,
+    selbstgewaehlterBeitrag: null,
+    hasGuardian,
+  });
 }
 
 /** Ob das Formular speicherbereit ist — spiegelt die serverseitige Prüfung
@@ -76,13 +84,15 @@ export function emailRequiredFor(birthDate: string): boolean {
  * (Button-`disabled`), ersetzt sie aber nicht: der Server validiert erneut. */
 export function personendatenFormCanSubmit(
   form: MemberPersonendatenForm,
+  hasGuardian = false,
 ): boolean {
   const hasAddress =
     form.street.trim().length > 0 &&
     form.postalCode.trim().length > 0 &&
     form.city.trim().length > 0;
   const hasEmailIfRequired =
-    !emailRequiredFor(form.birthDate) || form.email.trim().length > 0;
+    !emailRequiredFor(form.birthDate, hasGuardian) ||
+    form.email.trim().length > 0;
   return hasAddress && hasEmailIfRequired;
 }
 
@@ -94,6 +104,7 @@ export function MemberPersonendatenFields({
   form,
   onChange,
   isAdmin = false,
+  hasGuardian = false,
 }: {
   idPrefix: string;
   form: MemberPersonendatenForm;
@@ -105,9 +116,11 @@ export function MemberPersonendatenFields({
    * den Demo-Adresse-Button frei (schnelles Testen von MiniMeeple-Anlagen
    * ohne echte Adresse eintippen zu müssen). */
   isAdmin?: boolean;
+  /** Verknüpfte Erziehungsberechtigte (#611) — E-Mail dann keine Pflicht. */
+  hasGuardian?: boolean;
 }) {
   const category = formContributionCategory(form.birthDate);
-  const emailRequired = emailRequiredFor(form.birthDate);
+  const emailRequired = emailRequiredFor(form.birthDate, hasGuardian);
   const showDemoAddressButton =
     isAdmin && process.env.NODE_ENV === "development";
   const age = form.birthDate

@@ -41,6 +41,8 @@ export async function createMember(
     requiresEmail({
       birthDate: input.birthDate ?? null,
       selbstgewaehlterBeitrag: null,
+      // Die Einzelanlage verknüpft Erziehungsberechtigte erst danach (#373).
+      hasGuardian: false,
     })
   ) {
     return { error: "Bitte eine E-Mail-Adresse angeben." };

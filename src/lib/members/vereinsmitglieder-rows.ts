@@ -54,6 +54,9 @@ export type VereinsmitgliedRow = {
    * "Eingeladen"-Hinweis in der Portal-Login-Spalte (Live-Review, #365-Folge).
    * `null` ohne offene Einladung, unabhängig von `hasPortalLogin`. */
   openInviteToken: string | null;
+  /** Mindestens ein verknüpfter Erziehungsberechtigter (#611) — dann ist die
+   * eigene E-Mail keine Pflicht (`requiresEmail()`). */
+  hasGuardian: boolean;
 };
 
 export type VereinsmitgliedSourceRow = {
@@ -82,6 +85,7 @@ export type VereinsmitgliedSourceRow = {
     neonAuthUserId: string | null;
     isSystemAccount: boolean;
   } | null;
+  _count: { guardians: number };
 };
 
 /**
@@ -154,5 +158,6 @@ export function buildVereinsmitgliedRows(
       openInviteToken: member.email
         ? (lookups.openInviteTokenByEmail.get(member.email) ?? null)
         : null,
+      hasGuardian: member._count.guardians > 0,
     }));
 }

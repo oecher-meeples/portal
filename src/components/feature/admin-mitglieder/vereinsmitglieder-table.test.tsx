@@ -73,6 +73,7 @@ function member(
     openUnits: 0,
     stufe3Eligible: false,
     openInviteToken: null,
+    hasGuardian: false,
     ...overrides,
   };
 }

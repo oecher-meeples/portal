@@ -160,7 +160,11 @@ describe("requiresEmail", () => {
   it("is false for a MiniMeeple (< 13)", () => {
     expect(
       requiresEmail(
-        { birthDate: new Date("2014-01-01"), selbstgewaehlterBeitrag: null },
+        {
+          birthDate: new Date("2014-01-01"),
+          selbstgewaehlterBeitrag: null,
+          hasGuardian: false,
+        },
         NOW,
       ),
     ).toBe(false);
@@ -169,7 +173,11 @@ describe("requiresEmail", () => {
   it("is false for a JungMeeple (13–17)", () => {
     expect(
       requiresEmail(
-        { birthDate: new Date("2011-01-01"), selbstgewaehlterBeitrag: null },
+        {
+          birthDate: new Date("2011-01-01"),
+          selbstgewaehlterBeitrag: null,
+          hasGuardian: false,
+        },
         NOW,
       ),
     ).toBe(false);
@@ -178,7 +186,11 @@ describe("requiresEmail", () => {
   it("is true for an adult Meeple (18+)", () => {
     expect(
       requiresEmail(
-        { birthDate: new Date("2000-01-01"), selbstgewaehlterBeitrag: null },
+        {
+          birthDate: new Date("2000-01-01"),
+          selbstgewaehlterBeitrag: null,
+          hasGuardian: false,
+        },
         NOW,
       ),
     ).toBe(true);
@@ -186,14 +198,43 @@ describe("requiresEmail", () => {
 
   it("is true without a birth date (safe default)", () => {
     expect(
-      requiresEmail({ birthDate: null, selbstgewaehlterBeitrag: null }, NOW),
+      requiresEmail(
+        { birthDate: null, selbstgewaehlterBeitrag: null, hasGuardian: false },
+        NOW,
+      ),
     ).toBe(true);
+  });
+
+  it("is false with a linked guardian, even without a birth date (#611)", () => {
+    expect(
+      requiresEmail(
+        { birthDate: null, selbstgewaehlterBeitrag: null, hasGuardian: true },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("is false with a linked guardian, even for an adult age category (#611)", () => {
+    expect(
+      requiresEmail(
+        {
+          birthDate: new Date("2000-01-01"),
+          selbstgewaehlterBeitrag: null,
+          hasGuardian: true,
+        },
+        NOW,
+      ),
+    ).toBe(false);
   });
 
   it("is true once a chosen amount overrides a child's age category", () => {
     expect(
       requiresEmail(
-        { birthDate: new Date("2015-01-01"), selbstgewaehlterBeitrag: 5 },
+        {
+          birthDate: new Date("2015-01-01"),
+          selbstgewaehlterBeitrag: 5,
+          hasGuardian: false,
+        },
         NOW,
       ),
     ).toBe(true);
