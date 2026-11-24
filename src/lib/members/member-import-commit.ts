@@ -75,7 +75,14 @@ async function writePlan(tx: DbClient, plan: ImportPlan): Promise<number> {
  *
  * Fehlermeldungen und Logs nennen nur Zeilennummern, nie Namen/Adressen.
  */
-export async function commitMemberImport(
+export function commitMemberImport(
+  rows: MemberImportRow[],
+  decisions: ImportDecisions,
+): Promise<{ created: number }> {
+  return withImportErrorHandling(() => writeImport(rows, decisions));
+}
+
+async function writeImport(
   rows: MemberImportRow[],
   decisions: ImportDecisions,
 ): Promise<{ created: number }> {
@@ -105,27 +112,35 @@ export async function commitMemberImport(
   }
 
   const plan = buildImportPlan(preview, decisions);
+  const created = await prisma.$transaction((tx) => writePlan(tx, plan), {
+    timeout: TRANSACTION_TIMEOUT_MS,
+  });
+  return { created };
+}
+
+/**
+ * Fehlerbehandlung für beide Import-Actions (#611): fachliche Meldungen
+ * gehen durch, ein Unique-Konflikt wird zu „Bestand geändert", alles andere
+ * zu einer generischen Meldung. Geloggt werden nur Fehlertyp und -code —
+ * Prisma-Meldungen können die Eingabedaten (Namen, Adressen) enthalten.
+ */
+export async function withImportErrorHandling<T>(
+  run: () => Promise<T>,
+): Promise<T> {
   try {
-    const created = await prisma.$transaction((tx) => writePlan(tx, plan), {
-      timeout: TRANSACTION_TIMEOUT_MS,
-    });
-    return { created };
+    return await run();
   } catch (error) {
     if (error instanceof UserFacingError) throw error;
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === UNIQUE_CONSTRAINT_CODE
-    ) {
+    const code =
+      error instanceof Prisma.PrismaClientKnownRequestError
+        ? error.code
+        : undefined;
+    if (code === UNIQUE_CONSTRAINT_CODE) {
       throw new UserFacingError(STALE_PREVIEW_MESSAGE);
     }
-    // Bewusst ohne die Fehlermeldung selbst — Prisma-Meldungen können die
-    // Eingabedaten (Namen, Adressen) enthalten.
     console.error("Mitgliederimport fehlgeschlagen", {
       name: error instanceof Error ? error.name : typeof error,
-      code:
-        error instanceof Prisma.PrismaClientKnownRequestError
-          ? error.code
-          : undefined,
+      code,
     });
     throw new UserFacingError(
       "Der Import ist fehlgeschlagen. Es wurde nichts angelegt.",
