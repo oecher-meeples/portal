@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "members" ALTER COLUMN "joinedAt" DROP NOT NULL,
+ALTER COLUMN "joinedAt" DROP DEFAULT;

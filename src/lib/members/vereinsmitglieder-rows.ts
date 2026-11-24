@@ -40,8 +40,8 @@ export type VereinsmitgliedRow = {
   /** Vereinsbeitritt (`Member.joinedAt`, Live-Review F1) — nicht mit dem
    * Anlagedatum des Portal-Kontos (`Meeple.joinedAt`) verwechseln, die beiden
    * fallen bei Erwachsenen zufällig zusammen, nicht bei Kindern ohne Login
-   * (#373). */
-  joinedAt: string;
+   * (#373). `null` = unbekannt (#611, Mitgliederimport). */
+  joinedAt: string | null;
   resignedAt: string | null;
   membershipEndsAt: string | null;
   membershipState: MembershipState;
@@ -73,7 +73,7 @@ export type VereinsmitgliedSourceRow = {
   selbstgewaehlterBeitrag: Prisma.Decimal | null;
   /** Vereinsbeitritt (Live-Review F1) — direkt auf `Member`, unabhängig vom
    * verknüpften Portal-Konto. */
-  joinedAt: Date;
+  joinedAt: Date | null;
   resignedAt: Date | null;
   membershipEndsAt: Date | null;
   meeple: {
@@ -133,7 +133,7 @@ export function buildVereinsmitgliedRows(
       phone: member.phone,
       meepleId: member.meepleId,
       hasPortalLogin: member.meeple?.neonAuthUserId != null,
-      joinedAt: member.joinedAt.toISOString(),
+      joinedAt: member.joinedAt?.toISOString() ?? null,
       resignedAt: member.resignedAt?.toISOString() ?? null,
       membershipEndsAt: member.membershipEndsAt?.toISOString() ?? null,
       membershipState: getMembershipState(

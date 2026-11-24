@@ -40,7 +40,7 @@ function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
     postalCode: member.postalCode ?? "",
     city: member.city ?? "",
     phone: member.phone ?? "",
-    joinedAt: member.joinedAt.slice(0, 10),
+    joinedAt: member.joinedAt?.slice(0, 10) ?? "",
   };
 }
 

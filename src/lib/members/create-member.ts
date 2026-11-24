@@ -13,7 +13,9 @@ export type CreateMemberInput = {
   postalCode?: string | null;
   city?: string | null;
   phone?: string | null;
-  /** Vereinsbeitritt (Live-Review F1) — ohne Angabe `now()` (Prisma-Default). */
+  /** Vereinsbeitritt (Live-Review F1) — ohne Angabe heute. Die Spalte hat
+   * seit #611 keinen Prisma-Default mehr (`null` = unbekannt, nur für den
+   * Import), deshalb setzt die Einzelanlage den Wert hier ausdrücklich. */
   joinedAt?: Date | null;
 };
 
@@ -85,7 +87,7 @@ export async function createMember(
       postalCode: input.postalCode?.trim() || null,
       city: input.city?.trim() || null,
       phone: input.phone?.trim() || null,
-      ...(input.joinedAt ? { joinedAt: input.joinedAt } : {}),
+      joinedAt: input.joinedAt ?? new Date(),
     },
   });
 

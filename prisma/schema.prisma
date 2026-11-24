@@ -455,7 +455,10 @@ model Member {
   /// `Meeple.joinedAt` (Anlagedatum des Portal-Kontos): fallen bei
   /// Erwachsenen zufällig zusammen, nicht bei Kindern ohne eigenen Login
   /// (#373). Backfill für Bestand: `createdAt` (siehe Migration).
-  joinedAt                DateTime  @default(now())
+  /// `null` = unbekannt (#611, Mitgliederimport ohne Beitrittsdatum) — bewusst
+  /// ohne `@default(now())`, damit der Import wirklich `null` schreibt;
+  /// `createMember()` setzt den Wert ausdrücklich (Standard: heute).
+  joinedAt                DateTime?
   resignedAt              DateTime?
   membershipEndsAt        DateTime?
   meepleId                String?   @unique

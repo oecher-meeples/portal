@@ -103,6 +103,16 @@ describe("buildVereinsmitgliedRows", () => {
     expect(rows[0].joinedAt).toBe("2021-06-15T00:00:00.000Z");
   });
 
+  it("keeps an unknown joinedAt as null (#611, Mitgliederimport)", () => {
+    const rows = buildVereinsmitgliedRows(
+      [member({ joinedAt: null })],
+      EMPTY_LOOKUPS,
+      NOW,
+    );
+
+    expect(rows[0].joinedAt).toBeNull();
+  });
+
   it("derives membershipState via getMembershipState", () => {
     const rows = buildVereinsmitgliedRows(
       [

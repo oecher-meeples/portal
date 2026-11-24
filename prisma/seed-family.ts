@@ -62,6 +62,7 @@ async function ensureFamilyChildMember(person: DemoFamilyChild) {
       street: person.street,
       postalCode: person.postalCode,
       city: person.city,
+      joinedAt: new Date(),
     },
   });
 }
