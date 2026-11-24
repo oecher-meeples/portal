@@ -4,7 +4,8 @@ import { cardVariants } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { RotateCcw, UserPlus } from "lucide-react";
+import { RotateCcw, Upload, UserPlus } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +35,7 @@ import { CreateMemberDialog } from "@/components/feature/admin-mitglieder/create
 import { MemberEditDialog } from "@/components/feature/admin-mitglieder/member-edit-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
+import { InviteAllMissingDialog } from "@/components/feature/admin-mitglieder/invite-all-missing-dialog";
 import {
   CONTRIBUTION_CATEGORY_LABELS,
   type ContributionCategory,
@@ -248,7 +250,14 @@ export function VereinsmitgliederTable({
                 ))}
               </NativeSelect>
               {canManageMembers && (
-                <div className="ml-auto">
+                <div className="ml-auto flex flex-wrap gap-2">
+                  <Link
+                    href="/admin/mitglieder/import"
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    <Upload className="size-4" />
+                    Mitgliederliste importieren
+                  </Link>
                   <CreateMemberDialog isAdmin={isAdmin} />
                 </div>
               )}
@@ -415,6 +424,7 @@ export function VereinsmitgliederTable({
               onPageSizeChange={setPageSize}
               totalItems={filteredMembers.length}
             />
+            {canManageInvites && <InviteAllMissingDialog />}
           </div>
         </AccordionPanel>
       </AccordionItem>

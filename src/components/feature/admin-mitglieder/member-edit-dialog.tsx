@@ -40,7 +40,7 @@ function toForm(member: VereinsmitgliedRow): MemberPersonendatenForm {
     postalCode: member.postalCode ?? "",
     city: member.city ?? "",
     phone: member.phone ?? "",
-    joinedAt: member.joinedAt.slice(0, 10),
+    joinedAt: member.joinedAt?.slice(0, 10) ?? "",
   };
 }
 
@@ -106,11 +106,14 @@ export function MemberEditDialog({
               setForm((prev) => ({ ...prev, [key]: value }))
             }
             isAdmin={isAdmin}
+            hasGuardian={member.hasGuardian}
           />
           {error && <p className="text-destructive text-sm">{error}</p>}
           <Button
             onClick={handleSave}
-            disabled={pending || !personendatenFormCanSubmit(form)}
+            disabled={
+              pending || !personendatenFormCanSubmit(form, member.hasGuardian)
+            }
           >
             {pending ? "Speichere…" : "Speichern"}
           </Button>

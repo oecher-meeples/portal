@@ -80,14 +80,21 @@ export function isMiniMeeple(
  * unter 18) dürfen ohne eigene E-Mail-Adresse angelegt werden, weil ein:e
  * Erziehungsberechtigte:r für sie handelt; ohne bekanntes Geburtsdatum wird
  * sicherheitshalber wie bei einem Erwachsenen verlangt. Die Adresse bleibt
- * davon unberührt immer Pflicht (Nutzerentscheidung). */
+ * davon unberührt immer Pflicht (Nutzerentscheidung).
+ *
+ * Ein Mitglied mit mindestens einem verknüpften Erziehungsberechtigten
+ * (`hasGuardian`) braucht unabhängig von der Alters-Kategorie keine eigene
+ * E-Mail (#611) — sonst wäre ein importiertes Kind ohne Geburtsdatum nicht
+ * mehr speicherbar. */
 export function requiresEmail(
   member: {
     birthDate: Date | null;
     selbstgewaehlterBeitrag: number | Prisma.Decimal | null;
+    hasGuardian: boolean;
   },
   now: Date = new Date(),
 ): boolean {
+  if (member.hasGuardian) return false;
   const category = determineContribution(member, now).category;
   return category !== "mini" && category !== "jung";
 }

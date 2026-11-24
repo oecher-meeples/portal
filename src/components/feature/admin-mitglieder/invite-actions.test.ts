@@ -27,14 +27,24 @@ vi.mock("@/lib/members/invites", async () => {
       findOpenInviteByEmailMock(...args),
   };
 });
+const listMissingInviteCandidatesMock = vi.fn();
+vi.mock("@/lib/members/members-without-login", () => ({
+  listMissingInviteCandidates: () => listMissingInviteCandidatesMock(),
+}));
 vi.mock("@/lib/auth/action-guards", async () =>
   (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
     requirePermissionMock(...args),
   ),
 );
 
-const { createInvite, bulkImportInvites, extendInvite, resendInviteMail } =
-  await import("./invite-actions");
+const {
+  createInvite,
+  bulkImportInvites,
+  extendInvite,
+  resendInviteMail,
+  countMissingInvites,
+  inviteAllMissing,
+} = await import("./invite-actions");
 
 const MEMBER = {
   id: "member-1",
@@ -219,5 +229,59 @@ describe("bulkImportInvites (#265)", () => {
         },
       }),
     );
+  });
+});
+
+describe("inviteAllMissing (#622)", () => {
+  class ForbiddenError extends Error {}
+
+  beforeEach(() => {
+    listMissingInviteCandidatesMock.mockReset().mockResolvedValue([MEMBER]);
+  });
+
+  it("requires invites:manage for count and send", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(countMissingInvites()).rejects.toThrow(ForbiddenError);
+    await expect(inviteAllMissing()).rejects.toThrow(ForbiddenError);
+    expect(requirePermissionMock).toHaveBeenCalledWith("invites:manage");
+    expect(prismaMock.invite.create).not.toHaveBeenCalled();
+  });
+
+  it("counts the server-side candidates", async () => {
+    listMissingInviteCandidatesMock.mockResolvedValue([MEMBER, MEMBER]);
+
+    expect(await countMissingInvites()).toEqual({ count: 2 });
+  });
+
+  it("creates and mails one invite per candidate", async () => {
+    const result = await inviteAllMissing();
+
+    expect(result).toEqual({ created: 1, errors: [] });
+    expect(prismaMock.invite.create).toHaveBeenCalledTimes(1);
+    expect(sendInviteMailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a failed mail per address", async () => {
+    sendInviteMailMock.mockResolvedValue("SMTP_HOST fehlt");
+
+    expect(await inviteAllMissing()).toEqual({
+      created: 1,
+      errors: [
+        {
+          email: MEMBER.email,
+          message: "Einladung angelegt, Mail fehlgeschlagen: SMTP_HOST fehlt",
+        },
+      ],
+    });
+  });
+
+  it("sends nothing on a second click once nobody is missing anymore", async () => {
+    await inviteAllMissing();
+    listMissingInviteCandidatesMock.mockResolvedValue([]);
+    prismaMock.invite.create.mockClear();
+
+    expect(await inviteAllMissing()).toEqual({ created: 0, errors: [] });
+    expect(prismaMock.invite.create).not.toHaveBeenCalled();
   });
 });

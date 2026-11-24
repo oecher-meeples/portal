@@ -52,6 +52,7 @@ const MEMBER: VereinsmitgliedRow = {
   openUnits: 0,
   stufe3Eligible: false,
   openInviteToken: null,
+  hasGuardian: false,
 };
 
 describe("MemberEditDialog — profile page link (#387)", () => {

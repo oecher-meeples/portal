@@ -98,7 +98,12 @@ src/lib/
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
 │               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`),
 │               Einladungsmail (`invite-mail.ts`, #613 — liefert den Fehler zurück statt zu werfen),
-│               eine E-Mail-Adresse pro Person (`member-email.ts`, #614: Konflikt-Check, Login-E-Mail zieht mit)
+│               eine E-Mail-Adresse pro Person (`member-email.ts`, #614: Konflikt-Check, Login-E-Mail zieht mit),
+│               Mitgliederimport (#611): `member-import-csv.ts` (Dekodierung UTF-8 → Windows-1252 + Parser, rein, läuft im Browser),
+│               `member-import-decisions.ts` (Vorschau-Typen und Zuordnungsregeln, rein — live im Client und erneut auf dem Server),
+│               `member-import-preview.ts` (Abgleich mit dem Bestand, `findEmailOwners()` als Batch-Gegenstück zu `findMemberEmailConflict()`),
+│               `member-import-commit.ts` (eine Transaktion, Logs ohne Zeileninhalte);
+│               `listMissingInviteCandidates()` in `members-without-login.ts` (#622, die jüngste Einladung entscheidet)
 ├── instagram/  Cross-Posting
 ├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, ohne `SMTP_HOST` → `MailerError`, #612), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
@@ -213,7 +218,7 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 
 ## `src/components/feature/` — je ein Anwendungsfall
 
-31 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, `bringbuy`, …). Typisches Innenleben:
+38 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, `bringbuy`, …). `admin-mitglieder-import` (#611) ist bewusst ein eigener Slice neben `admin-mitglieder`: eigene Route (`/admin/mitglieder/import`), eigene Actions, kein Import aus `admin-mitglieder`. Typisches Innenleben:
 
 - `<domäne>-view.tsx` — Smart Component, verdrahtet ui/entities/widgets mit State & Actions
 - `actions.ts` — Server Actions dieses Anwendungsfalls

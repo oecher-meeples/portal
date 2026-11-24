@@ -29,13 +29,18 @@ export async function updateMember(
   input: UpdateMemberInput,
 ): Promise<UpdateMemberResult> {
   const email = input.email.trim().toLowerCase();
-  // MiniMeeple/JungMeeple (< 18, aus birthDate) dürfen ohne eigene E-Mail
+  // MiniMeeple/JungMeeple (< 18, aus birthDate) und Mitglieder mit
+  // verknüpften Erziehungsberechtigten (#611) dürfen ohne eigene E-Mail
   // geführt werden — ein:e Erziehungsberechtigte:r handelt für sie.
   if (
     !email &&
     requiresEmail({
       birthDate: input.birthDate ?? null,
       selbstgewaehlterBeitrag: null,
+      hasGuardian:
+        (await prisma.memberGuardian.count({
+          where: { childMemberId: memberId },
+        })) > 0,
     })
   ) {
     return { error: "Bitte eine E-Mail-Adresse angeben." };

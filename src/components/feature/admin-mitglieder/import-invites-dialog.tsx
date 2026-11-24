@@ -23,7 +23,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { parseInviteCsv } from "@/lib/members/invite-csv";
-import { bulkImportInvites } from "@/components/feature/admin-mitglieder/invite-actions";
+import {
+  bulkImportInvites,
+  type BulkInviteResult,
+} from "@/components/feature/admin-mitglieder/invite-actions";
+import { BulkInviteSummary } from "@/components/feature/admin-mitglieder/bulk-invite-summary";
 
 /** CSV-Bulk-Einladung (#265) — Muster analog
  * `ImportFleaMarketItemsDialog`: Upload → Vorschau → Bestätigung →
@@ -36,10 +40,7 @@ export function ImportInvitesDialog() {
   const [preview, setPreview] = useState<ReturnType<
     typeof parseInviteCsv
   > | null>(null);
-  const [summary, setSummary] = useState<{
-    created: number;
-    errors: { email: string; message: string }[];
-  } | null>(null);
+  const [summary, setSummary] = useState<BulkInviteResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function reset() {
@@ -129,20 +130,7 @@ export function ImportInvitesDialog() {
           </div>
         )}
 
-        {summary && (
-          <div className="flex flex-col gap-1">
-            <p className="text-sm">{summary.created} Einladung(en) erstellt.</p>
-            {summary.errors.length > 0 && (
-              <ul className="text-destructive text-sm">
-                {summary.errors.map((error) => (
-                  <li key={error.email}>
-                    {error.email}: {error.message}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+        {summary && <BulkInviteSummary summary={summary} />}
 
         <DialogFooter>
           <Button

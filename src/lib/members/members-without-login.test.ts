@@ -3,7 +3,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { listMembersWithoutLogin } =
+const { listMembersWithoutLogin, listMissingInviteCandidates } =
   await import("@/lib/members/members-without-login");
 
 const BASE_MEMBER = {
@@ -70,5 +70,88 @@ describe("listMembersWithoutLogin", () => {
         }),
       }),
     );
+  });
+});
+
+describe("listMissingInviteCandidates (#622)", () => {
+  const NOW = new Date("2026-11-24T12:00:00Z");
+  const PAST = new Date("2026-11-01T00:00:00Z");
+  const FUTURE = new Date("2026-12-01T00:00:00Z");
+
+  function invite(
+    email: string,
+    fields: Partial<{
+      redeemedAt: Date | null;
+      revokedAt: Date | null;
+      expiresAt: Date;
+    }>,
+  ) {
+    return {
+      email,
+      redeemedAt: null,
+      revokedAt: null,
+      expiresAt: FUTURE,
+      ...fields,
+    };
+  }
+
+  function member(id: string) {
+    return { ...BASE_MEMBER, id, email: `${id}@example.com` };
+  }
+
+  it("only queries members with email, without login and not resigned", async () => {
+    prismaMock.member.findMany.mockResolvedValue([] as never);
+
+    expect(await listMissingInviteCandidates(NOW)).toEqual([]);
+    expect(prismaMock.member.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { meepleId: null, resignedAt: null, email: { not: null } },
+      }),
+    );
+    expect(prismaMock.invite.findMany).not.toHaveBeenCalled();
+  });
+
+  it("includes members without invite or with an expired latest invite", async () => {
+    prismaMock.member.findMany.mockResolvedValue([
+      member("ohne"),
+      member("abgelaufen"),
+      member("offen"),
+      member("widerrufen"),
+      member("eingeloest"),
+    ] as never);
+    // Neueste zuerst, wie die Abfrage sortiert.
+    prismaMock.invite.findMany.mockResolvedValue([
+      invite("abgelaufen@example.com", { expiresAt: PAST }),
+      invite("offen@example.com", {}),
+      invite("widerrufen@example.com", { revokedAt: PAST }),
+      invite("eingeloest@example.com", { redeemedAt: PAST }),
+    ] as never);
+
+    const result = await listMissingInviteCandidates(NOW);
+
+    expect(result.map((candidate) => candidate.id)).toEqual([
+      "ohne",
+      "abgelaufen",
+    ]);
+    expect(prismaMock.invite.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { createdAt: "desc" } }),
+    );
+  });
+
+  it("lets the latest invite decide: an older expired one doesn't lift a newer revocation", async () => {
+    prismaMock.member.findMany.mockResolvedValue([
+      member("widerrufen"),
+      member("erneut"),
+    ] as never);
+    prismaMock.invite.findMany.mockResolvedValue([
+      invite("widerrufen@example.com", { revokedAt: PAST }),
+      invite("erneut@example.com", { expiresAt: PAST }),
+      invite("widerrufen@example.com", { expiresAt: PAST }),
+      invite("erneut@example.com", { revokedAt: PAST }),
+    ] as never);
+
+    const result = await listMissingInviteCandidates(NOW);
+
+    expect(result.map((candidate) => candidate.id)).toEqual(["erneut"]);
   });
 });

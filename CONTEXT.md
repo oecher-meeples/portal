@@ -62,6 +62,14 @@ _Avoid_: Vereinsmitglied-E-Mail ohne Vorstandsfreigabe direkt ändern lassen, Lo
 Rolle mit dem alleinigen Recht, gespeicherte Bankdaten zu entschlüsseln **und** Bankverbindungs-Änderungsanträge freizugeben. Jeder Entschlüsselungs-Zugriff wird protokolliert.
 _Avoid_: Schatzmeister, Finanzadmin
 
+**Mitgliederimport** (#611):
+Einmaliges bzw. wiederholbares Einlesen des Vereinsverwaltungs-Exports (CSV) unter `/admin/mitglieder/import`. Legt nur neue Vereinsmitglieder an (vorhandene Mitgliedsnummer → übersprungen, nie aktualisiert), ohne Einladungen. Ein importiertes Mitglied hat kein Beitrittsdatum (`joinedAt = null`, „unbekannt").
+_Avoid_: Seed für echte Mitgliederdaten, Import als Abgleich/Update des Bestands
+
+**Gruppe (gleiche E-Mail)**:
+Zeilen des Mitgliederimports, die dieselbe E-Mail-Adresse teilen (getrimmt, case-insensitiv) — typischerweise eine Familie unter der Adresse der Eltern. Genau ein:e Erziehungsberechtigte:r behält die Adresse, Kinder werden ohne E-Mail mit allen Erziehungsberechtigten verknüpft. Gehört die Adresse schon einem bestehenden Mitglied, ist dieses der **Anker**.
+_Avoid_: Gruppe über gleichen Nachnamen, Familie als Datenmodell (es gibt nur `MemberGuardian`)
+
 **Einladung** (überarbeitet):
 Immer einmalig einlösbar und E-Mail-gebunden (Doppel-Schlüssel: `email` + `token`, `email` ist eindeutig) — der ungebundene, mehrfach einlösbare Invite-Typ entfällt ersatzlos (Vorstandsentscheidung). Nur noch **eine** Spielart: die **Mitgliedseinladung**, aus einem `Vereinsmitglied` heraus erstellt, legt bei Einlösung automatisch ein neues `Meeple` an und verknüpft es. Systemkonten laufen **nicht** mehr über Einladungen (siehe **Systemkonto** unten). Ändert sich die E-Mail eines Vereinsmitglieds, während eine Einladung offen ist, verfällt sie nicht automatisch — ein Popup fragt, ob sie widerrufen und neu erstellt werden soll.
 Die Gültigkeitsdauer ist eine globale Einstellung (`/admin/einstellungen`, sichtbar nur mit `invites:manage`, Default 7 Tage) — kein individuelles Überschreiben pro Einladung mehr.

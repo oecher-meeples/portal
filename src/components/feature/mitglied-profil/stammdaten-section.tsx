@@ -36,8 +36,8 @@ export type StammdatenMember = {
   phone: string | null;
   tshirtSizeId: string | null;
   /** Vereinsbeitritt (Live-Review F1) — getrennt vom
-   * Portal-Konto-Anlagedatum (`Meeple.joinedAt`). */
-  joinedAt: Date;
+   * Portal-Konto-Anlagedatum (`Meeple.joinedAt`). `null` = unbekannt (#611). */
+  joinedAt: Date | null;
 };
 
 export type TshirtSizeOption = { id: string; label: string };
@@ -57,7 +57,7 @@ function toForm(member: StammdatenMember): StammdatenInput {
     city: member.city,
     phone: member.phone,
     tshirtSizeId: member.tshirtSizeId,
-    joinedAt: member.joinedAt.toISOString().slice(0, 10),
+    joinedAt: member.joinedAt?.toISOString().slice(0, 10) ?? null,
   };
 }
 
@@ -229,17 +229,15 @@ export function StammdatenSection({
                 {STAMMDATEN_FIELD_LABELS[key]}
               </dt>
               <dd>
-                {key === "birthDate"
-                  ? member.birthDate
-                    ? formatDatePlain(member.birthDate)
+                {key === "birthDate" || key === "joinedAt"
+                  ? member[key]
+                    ? formatDatePlain(member[key])
                     : "—"
-                  : key === "joinedAt"
-                    ? formatDatePlain(member.joinedAt)
-                    : key === "tshirtSizeId"
-                      ? (tshirtSizeOptions.find(
-                          (option) => option.id === member.tshirtSizeId,
-                        )?.label ?? "—")
-                      : (member[key] ?? "—")}
+                  : key === "tshirtSizeId"
+                    ? (tshirtSizeOptions.find(
+                        (option) => option.id === member.tshirtSizeId,
+                      )?.label ?? "—")
+                    : (member[key] ?? "—")}
               </dd>
             </div>
           ))}

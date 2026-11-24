@@ -26,6 +26,31 @@ describe("updateMember", () => {
     expect(prismaMock.member.update).not.toHaveBeenCalled();
   });
 
+  it("allows a blank email for a child with a linked guardian, even without a birth date (#611)", async () => {
+    prismaMock.memberGuardian.count.mockResolvedValue(1);
+
+    const result = await updateMember("member-1", { email: "", ...ADDRESS });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.memberGuardian.count).toHaveBeenCalledWith({
+      where: { childMemberId: "member-1" },
+    });
+    expect(prismaMock.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ email: null }),
+      }),
+    );
+  });
+
+  it("still refuses a blank email without a linked guardian (#611)", async () => {
+    prismaMock.memberGuardian.count.mockResolvedValue(0);
+
+    const result = await updateMember("member-1", { email: "", ...ADDRESS });
+
+    expect(result).toEqual({ error: "Bitte eine E-Mail-Adresse angeben." });
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
+  });
+
   it("refuses an incomplete address", async () => {
     const result = await updateMember("member-1", {
       email: "erika@example.com",

@@ -58,6 +58,8 @@ export default async function AdminMitgliederPage() {
             isSystemAccount: true,
           },
         },
+        // #611: verknüpfte Kinder brauchen keine eigene E-Mail.
+        _count: { select: { guardians: true } },
       },
     }),
     prisma.meeple.findMany({

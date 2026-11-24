@@ -40,8 +40,8 @@ function toUpdateData(input: StammdatenInput) {
     city: input.city?.trim() || null,
     phone: input.phone?.trim() || null,
     tshirtSizeId: input.tshirtSizeId || null,
-    // `joinedAt` ist NOT NULL — ein geleertes Feld lässt den bestehenden Wert
-    // unangetastet statt fälschlich `null` zu setzen.
+    // Ein geleertes Feld lässt den bestehenden Wert unangetastet statt ihn
+    // versehentlich auf „unbekannt" (`null`, #611) zurückzusetzen.
     ...(input.joinedAt ? { joinedAt: new Date(input.joinedAt) } : {}),
   };
 }

@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSearchParams } from "next/navigation";
 import { VereinsmitgliederTable } from "@/components/feature/admin-mitglieder/vereinsmitglieder-table";
@@ -37,6 +37,12 @@ vi.mock("@/components/feature/admin-mitglieder/actions", () => ({
 vi.mock("@/components/feature/admin-mitglieder/invite-actions", () => ({
   createInvite: vi.fn(),
 }));
+vi.mock(
+  "@/components/feature/admin-mitglieder/invite-all-missing-dialog",
+  () => ({
+    InviteAllMissingDialog: () => <button>Alle Fehlenden einladen</button>,
+  }),
+);
 
 afterEach(() => {
   cleanup();
@@ -73,6 +79,7 @@ function member(
     openUnits: 0,
     stufe3Eligible: false,
     openInviteToken: null,
+    hasGuardian: false,
     ...overrides,
   };
 }
@@ -317,5 +324,67 @@ describe("VereinsmitgliederTable memberId deep-link (vice versa zu mitglieder-ta
 
     expect(screen.getByDisplayValue("Jonas Jung")).toBeInTheDocument();
     expect(screen.queryByText("Erika Musterfrau")).not.toBeInTheDocument();
+  });
+});
+
+describe("VereinsmitgliederTable Beigetreten column (#611)", () => {
+  function joinedAtCell() {
+    const headers = screen.getAllByRole("columnheader");
+    const index = headers.findIndex(
+      (header) => header.textContent === "Beigetreten",
+    );
+    const row = screen.getByText("Erika Musterfrau").closest("tr");
+    if (!row) throw new Error("row not found");
+    return within(row).getAllByRole("cell")[index];
+  }
+
+  it("shows the formatted date when joinedAt is known", () => {
+    render(
+      <VereinsmitgliederTable
+        members={[member()]}
+        canManageMembers={false}
+        canManageInvites={false}
+      />,
+    );
+
+    expect(joinedAtCell()).toHaveTextContent("1.1.2024");
+  });
+
+  it("shows a dash when joinedAt is unknown (null)", () => {
+    render(
+      <VereinsmitgliederTable
+        members={[member({ joinedAt: null })]}
+        canManageMembers={false}
+        canManageInvites={false}
+      />,
+    );
+
+    expect(joinedAtCell()).toHaveTextContent(/^—$/);
+  });
+});
+
+describe("VereinsmitgliederTable „Alle Fehlenden einladen“ (#622)", () => {
+  it("shows the button only with invites:manage", () => {
+    const { rerender } = render(
+      <VereinsmitgliederTable
+        members={[member()]}
+        canManageMembers={false}
+        canManageInvites={true}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Alle Fehlenden einladen" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <VereinsmitgliederTable
+        members={[member()]}
+        canManageMembers={false}
+        canManageInvites={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Alle Fehlenden einladen" }),
+    ).not.toBeInTheDocument();
   });
 });
