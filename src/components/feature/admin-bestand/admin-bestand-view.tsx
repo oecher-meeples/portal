@@ -33,6 +33,8 @@ import { ScanSearchDialog } from "@/components/ui/scan-search-dialog";
 import { AdminBestandCsvExportDialog } from "@/components/feature/admin-bestand/admin-bestand-csv-export-dialog";
 import { GameCopyQrExportButton } from "@/components/widgets/board-game/game-copy-qr-export-button";
 import type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
+import type { InventoryValueSummary } from "@/lib/ludothek/game-copy-acquisition-read";
+import { formatValueCents } from "@/lib/ludothek/game-copy-acquisition";
 import { PageContainer } from "@/components/ui/page-container";
 
 export type { AdminBoardGameRow } from "@/lib/ludothek/admin-bestand-rows";
@@ -47,6 +49,7 @@ export function AdminBestandView({
   canManageGames,
   activeLoanCount = 0,
   unconfirmedCount = 0,
+  valueSummary,
 }: {
   games: AdminBoardGameRow[];
   showDeinventarised: boolean;
@@ -57,6 +60,8 @@ export function AdminBestandView({
   activeLoanCount?: number;
   /** Offene, unbestätigte Übergaben (#290) — Link zur Antrags-Queue. */
   unconfirmedCount?: number;
+  /** Bestandswert ohne deinventarisierte Exemplare (#615). */
+  valueSummary?: InventoryValueSummary;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -111,7 +116,7 @@ export function AdminBestandView({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatTile
           label="Ausleihen"
           value={activeLoanCount}
@@ -122,6 +127,17 @@ export function AdminBestandView({
           value={unconfirmedCount}
           href="/admin/bestand/unbestaetigt"
         />
+        {valueSummary && (
+          <StatTile
+            label="Bestandswert"
+            value={formatValueCents(valueSummary.totalCents)}
+            hint={
+              valueSummary.withoutValueCount > 0
+                ? `${valueSummary.withoutValueCount} Exemplare ohne Wert`
+                : undefined
+            }
+          />
+        )}
         <QuickActionCard
           href="/admin/bestand/event-ausgabe"
           label="Event-Ausgabe"
@@ -205,6 +221,7 @@ export function AdminBestandView({
               <TableRow className="bg-muted/50">
                 <TableHead>Spiel</TableHead>
                 <TableHead>Inv.-Nr.</TableHead>
+                <TableHead>Wert</TableHead>
                 <TableHead>Standort-Kette</TableHead>
                 <TableHead>Zustand</TableHead>
                 <TableHead>Letzte Prüfung</TableHead>
@@ -247,6 +264,11 @@ export function AdminBestandView({
                     <TableCell className="text-muted-foreground">
                       {game.inventoryNumber || "—"}
                     </TableCell>
+                    <TableCell className="text-muted-foreground whitespace-nowrap">
+                      {game.valueCents != null
+                        ? formatValueCents(game.valueCents)
+                        : "—"}
+                    </TableCell>
                     <TableCell>
                       <LocationChainCell
                         responsibleName={game.responsibleName}
@@ -284,6 +306,8 @@ export function AdminBestandView({
                                 condition: game.condition,
                                 ruleBookLanguages: game.ruleBookLanguages,
                                 inventoryNumber: game.inventoryNumber,
+                                valueCents: game.valueCents,
+                                acquiredOn: game.acquiredOn,
                                 versionId: game.versionId,
                               },
                             ]}
@@ -300,7 +324,7 @@ export function AdminBestandView({
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-muted-foreground py-6 text-center"
                   >
                     Keine Spiele gefunden.

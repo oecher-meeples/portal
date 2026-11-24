@@ -41,6 +41,7 @@ function copy(overrides: Partial<GameCopyRow> = {}): GameCopyRow {
     isMine: false,
     history: { holdings: [], holdingsTruncated: false, checks: null },
     isPrivate: false,
+    acquisition: null,
     ...overrides,
   };
 }

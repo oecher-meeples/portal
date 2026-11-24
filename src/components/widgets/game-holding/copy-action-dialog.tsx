@@ -24,6 +24,10 @@ export type GameActionsCopy = {
   ruleBookLanguages: RuleBookLanguage[];
   /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
   inventoryNumber: number | null;
+  /** Wert in Cent und „Erhalten am" (`JJJJ-MM-TT`), #615 — nur gesetzt, wo
+   * die Session `games:manage` hat. */
+  valueCents?: number | null;
+  acquiredOn?: string | null;
   /** Edition (BGG-Version) des Exemplars - Vorbelegung im Exemplar-Editor. */
   versionId?: string | null;
   /** Whether the current session holds this copy right now — gates
@@ -84,6 +88,8 @@ export function CopyActionDialog({
         condition={copy.condition}
         ruleBookLanguages={copy.ruleBookLanguages}
         inventoryNumber={copy.inventoryNumber}
+        valueCents={copy.valueCents}
+        acquiredOn={copy.acquiredOn}
         boardGameId={boardGameId}
         versionId={copy.versionId}
         triggerLabel={COPY_ACTION_LABELS.condition}

@@ -44,6 +44,8 @@ const FORM: BoardGameFormValues = {
   secondaryTitle: "",
   ean: "",
   condition: "",
+  value: "",
+  acquiredOn: "",
   kind: BoardGameKind.BOARDGAME,
   bggId: "342942",
   minPlayers: "1",

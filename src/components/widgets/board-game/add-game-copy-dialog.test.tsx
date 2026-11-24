@@ -65,6 +65,8 @@ describe("AddGameCopyDialog", () => {
       condition: "Leicht bespielt",
       ruleBookLanguages: ["DE", "EN"],
       inventoryNumber: 1,
+      valueCents: null,
+      acquiredOn: null,
       edition: null,
     });
   });
@@ -83,6 +85,8 @@ describe("AddGameCopyDialog", () => {
       condition: undefined,
       ruleBookLanguages: [],
       inventoryNumber: 1,
+      valueCents: null,
+      acquiredOn: null,
       edition: null,
     });
   });
