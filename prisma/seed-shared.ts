@@ -110,7 +110,7 @@ export type DemoMemberInfo = {
   accountHolder?: string;
   /** Für den Beitritt zurückdatierbar (z. B. Demo-"ausgetretenes" Mitglied,
    * dessen `joinedAt` Jahre vor dem Austritt liegen soll) — weggelassen
-   * bleibt es beim Prisma-Default (`now()`). */
+   * heißt heute (die Spalte hat seit #611 keinen Prisma-Default mehr). */
   joinedAt?: Date;
   /** Zusammen mit `membershipEndsAt` für einen Demo-Austritt (`ausgetreten`/
    * `gekuendigt`-Status, siehe `getMembershipState()`) — beide weggelassen
@@ -178,7 +178,7 @@ export async function ensureDemoMember(meepleId: string, info: DemoMemberInfo) {
       postalCode: info.postalCode,
       city: info.city,
       meepleId,
-      joinedAt: info.joinedAt,
+      joinedAt: info.joinedAt ?? new Date(),
       resignedAt: info.resignedAt,
       membershipEndsAt: info.membershipEndsAt,
       ...ibanFields,

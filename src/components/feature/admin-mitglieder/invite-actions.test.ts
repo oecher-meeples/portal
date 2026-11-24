@@ -11,6 +11,11 @@ vi.mock("@/lib/members/invite-settings", () => ({
   getDefaultInviteDays: () => getDefaultInviteDaysMock(),
 }));
 
+const sendInviteMailMock = vi.fn<(invite: unknown) => Promise<string | null>>();
+vi.mock("@/lib/members/invite-mail", () => ({
+  sendInviteMail: (invite: unknown) => sendInviteMailMock(invite),
+}));
+
 const findOpenInviteByEmailMock = vi.fn();
 vi.mock("@/lib/members/invites", async () => {
   const actual = await vi.importActual<typeof import("@/lib/members/invites")>(
@@ -22,13 +27,24 @@ vi.mock("@/lib/members/invites", async () => {
       findOpenInviteByEmailMock(...args),
   };
 });
+const listMissingInviteCandidatesMock = vi.fn();
+vi.mock("@/lib/members/members-without-login", () => ({
+  listMissingInviteCandidates: () => listMissingInviteCandidatesMock(),
+}));
 vi.mock("@/lib/auth/action-guards", async () =>
   (await import("@/lib/__mocks__/action-guards")).actionGuardsFrom((...args) =>
     requirePermissionMock(...args),
   ),
 );
 
-const { createInvite, bulkImportInvites } = await import("./invite-actions");
+const {
+  createInvite,
+  bulkImportInvites,
+  extendInvite,
+  resendInviteMail,
+  countMissingInvites,
+  inviteAllMissing,
+} = await import("./invite-actions");
 
 const MEMBER = {
   id: "member-1",
@@ -43,8 +59,98 @@ beforeEach(() => {
   prismaMock.member.findUniqueOrThrow.mockResolvedValue(MEMBER as never);
   prismaMock.invite.create.mockResolvedValue({
     token: "abc123",
+    email: MEMBER.email,
     expiresAt: new Date("2026-08-15T00:00:00Z"),
   } as never);
+  sendInviteMailMock.mockReset().mockResolvedValue(null);
+});
+
+const OPEN_INVITE = {
+  id: "invite-1",
+  token: "abc123",
+  email: MEMBER.email,
+  expiresIn: 60,
+  expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+  redeemedAt: null,
+  revokedAt: null,
+};
+
+describe("invite mail (#613)", () => {
+  it("mails the new invite to the member's address", async () => {
+    const result = await createInvite({ memberId: "member-1" });
+
+    expect(sendInviteMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ token: "abc123", email: MEMBER.email }),
+    );
+    expect(result.mailError).toBeNull();
+  });
+
+  it("keeps the invite and reports the mail error instead of throwing", async () => {
+    sendInviteMailMock.mockResolvedValue("SMTP_HOST fehlt");
+
+    const result = await createInvite({ memberId: "member-1" });
+
+    expect(prismaMock.invite.create).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      token: "abc123",
+      mailError: "SMTP_HOST fehlt",
+    });
+  });
+
+  it("reports a failed mail in the CSV import as a row error, still counting the invite", async () => {
+    prismaMock.member.findFirst.mockResolvedValue(MEMBER as never);
+    sendInviteMailMock.mockResolvedValue("kaputt");
+
+    const result = await bulkImportInvites([MEMBER.email]);
+
+    expect(result).toEqual({
+      created: 1,
+      errors: [
+        {
+          email: MEMBER.email,
+          message: "Einladung angelegt, Mail fehlgeschlagen: kaputt",
+        },
+      ],
+    });
+  });
+
+  it("mails the link again when an invite is extended", async () => {
+    prismaMock.invite.findUniqueOrThrow.mockResolvedValue(OPEN_INVITE as never);
+    prismaMock.invite.update.mockResolvedValue(OPEN_INVITE as never);
+
+    await expect(extendInvite("invite-1")).resolves.toEqual({ success: true });
+    expect(sendInviteMailMock).toHaveBeenCalledWith(OPEN_INVITE);
+  });
+
+  it("resends the mail for an open invite", async () => {
+    prismaMock.invite.findUniqueOrThrow.mockResolvedValue(OPEN_INVITE as never);
+
+    await expect(resendInviteMail("invite-1")).resolves.toEqual({
+      success: true,
+    });
+    expect(sendInviteMailMock).toHaveBeenCalledWith(OPEN_INVITE);
+  });
+
+  it("refuses to resend a revoked invite", async () => {
+    prismaMock.invite.findUniqueOrThrow.mockResolvedValue({
+      ...OPEN_INVITE,
+      revokedAt: new Date(),
+    } as never);
+
+    await expect(resendInviteMail("invite-1")).resolves.toEqual({
+      error: "Diese Einladung ist nicht mehr offen.",
+    });
+    expect(sendInviteMailMock).not.toHaveBeenCalled();
+  });
+
+  it("returns the mail error from a resend", async () => {
+    prismaMock.invite.findUniqueOrThrow.mockResolvedValue(OPEN_INVITE as never);
+    sendInviteMailMock.mockResolvedValue("kaputt");
+
+    await expect(resendInviteMail("invite-1")).resolves.toEqual({
+      error: "kaputt",
+    });
+  });
 });
 
 describe("createInvite (#349)", () => {
@@ -123,5 +229,59 @@ describe("bulkImportInvites (#265)", () => {
         },
       }),
     );
+  });
+});
+
+describe("inviteAllMissing (#622)", () => {
+  class ForbiddenError extends Error {}
+
+  beforeEach(() => {
+    listMissingInviteCandidatesMock.mockReset().mockResolvedValue([MEMBER]);
+  });
+
+  it("requires invites:manage for count and send", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(countMissingInvites()).rejects.toThrow(ForbiddenError);
+    await expect(inviteAllMissing()).rejects.toThrow(ForbiddenError);
+    expect(requirePermissionMock).toHaveBeenCalledWith("invites:manage");
+    expect(prismaMock.invite.create).not.toHaveBeenCalled();
+  });
+
+  it("counts the server-side candidates", async () => {
+    listMissingInviteCandidatesMock.mockResolvedValue([MEMBER, MEMBER]);
+
+    expect(await countMissingInvites()).toEqual({ count: 2 });
+  });
+
+  it("creates and mails one invite per candidate", async () => {
+    const result = await inviteAllMissing();
+
+    expect(result).toEqual({ created: 1, errors: [] });
+    expect(prismaMock.invite.create).toHaveBeenCalledTimes(1);
+    expect(sendInviteMailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a failed mail per address", async () => {
+    sendInviteMailMock.mockResolvedValue("SMTP_HOST fehlt");
+
+    expect(await inviteAllMissing()).toEqual({
+      created: 1,
+      errors: [
+        {
+          email: MEMBER.email,
+          message: "Einladung angelegt, Mail fehlgeschlagen: SMTP_HOST fehlt",
+        },
+      ],
+    });
+  });
+
+  it("sends nothing on a second click once nobody is missing anymore", async () => {
+    await inviteAllMissing();
+    listMissingInviteCandidatesMock.mockResolvedValue([]);
+    prismaMock.invite.create.mockClear();
+
+    expect(await inviteAllMissing()).toEqual({ created: 0, errors: [] });
+    expect(prismaMock.invite.create).not.toHaveBeenCalled();
   });
 });

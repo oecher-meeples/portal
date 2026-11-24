@@ -1,886 +1,886 @@
-inventoryNumber,title,bggId,location,lastCheckedOn,result,note,englishRules,deinventarised
-1,Abalone,,Regal A,2025-08-16,COMPLETE,,,
-2,Otto Normalo,,Regal O,2026-06-13,COMPLETE,,,
-3,Card 'n Go,,Kiste 1,2025-08-16,COMPLETE,,,
-4,Das Hochbeet von Schalottenburg,,Kinder,2026-06-13,COMPLETE,,,
-5,Der Hexer von Salem,,Regal H,2025-08-16,UNPLAYABLE,"es fehlt: 1x Anzeigechip ""Geisterkarte"" und ein Artefakt",,
-6,Zicke Zacke Hühnerkacke,,Kinder,2025-08-16,COMPLETE,,,
-7,Schloss Schlotterstein,,,,,,,
-8,Der Goldene Kompass,,Regal G,2025-08-16,COMPLETE,,,
-9,Tea Garden,,Regal T,2025-12-07,COMPLETE,,,
-10,Die Goldene Stadt,,Regal G,2025-08-16,COMPLETE,,,
-11,Buzzin' Picnic,,Regal B,2026-06-13,COMPLETE,,,
-12,Tintenblut,,Regal T,2025-08-16,INCOMPLETE,"es fehlt: 2x Proviantchip, 2x Klugheit, 1x Ehre",,
-13,"Geister, Geister, Schatzsuchmeister!",,Kinder,2026-08-06,INCOMPLETE,es fehlen zwei Geister,,
-14,Calupum,,Regal C,2026-06-13,COMPLETE,,,
-15,Abtei der Rätsel,,Regal A,2025-08-16,COMPLETE,,,
-16,Deutschland - Finden Sie Minden?,,Regal D,2025-08-16,COMPLETE,,,
-17,Targi,,Regal T,2025-08-16,INCOMPLETE,"es fehlen 1 Ehrechip, 2 Klugheitenchips, 2 Provantchips",,
-18,Das Geheimnis der Zauberer,,Kinder,2025-08-16,COMPLETE,,,
-19,Gelb gewinnt!,,Kiste 2,2025-08-16,COMPLETE,,,
-20,Scotland Yard,,Regal S,2025-08-16,INCOMPLETE,es fehlen 2 Taximarker,,
-21,Würfelwurst,,Kiste 2,2025-08-16,COMPLETE,,,
-22,Atlantis,,Regal A,2025-08-16,COMPLETE,,,
-23,Cluedo,,Regal C,2025-08-16,COMPLETE,,,
-24,Uluru,,Regal U,2025-08-16,COMPLETE,,,
-25,Maus & Mystik,,Regal M,,,,,
-26,Mission Combat,,Kiste 1,2025-08-16,COMPLETE,,,
-27,Fluxx,,Kiste 4,2025-08-16,COMPLETE,,,
-28,Sticht oder nicht,,Kiste 2,2025-08-16,COMPLETE,,,
-29,Office 21,,Kiste 1,2025-08-16,COMPLETE,,,
-30,Guildlands,,Regal G,2026-06-13,COMPLETE,incl. Promo,true,
-31,Abluxxen,,Kiste 2,2025-08-16,COMPLETE,,,
-32,Krosmaster Arena,,Regal K,2025-08-16,COMPLETE,,,
-33,Blue Moon Legends,,Regal B,2025-08-16,COMPLETE,,,
-34,Monsterfalle,,Kinder,2025-08-16,COMPLETE,,,
-35,Spinnengift und Krötenschleim,,Kinder,2025-08-16,COMPLETE,,,
-36,Die Legenden von Andor,,Regal A,2025-08-16,INCOMPLETE,ein Helm fehlt,,
-37,Norderwind,,Regal N,2025-08-16,INCOMPLETE,es fehlen zwei Goldmünzen (1),,
-38,Kingsport Festival,,Regal K,2025-08-16,COMPLETE,,,
-39,Castle Combo,,Regal C,2026-08-06,COMPLETE,,,
-40,Ubongo,,Regal U,2025-08-16,INCOMPLETE,es fehlen 4 Ersatzedelsteine,,
-41,Duell im Felsental,,Regal D,2025-08-16,COMPLETE,,,
-42,Carcassonne + 2 Mini-Erweiterungen,,Regal C,2026-07-22,COMPLETE,,,
-43,Therapy,,Regal T,2025-08-16,COMPLETE,,,
-44,Kronen für den König,,Regal K,2025-08-16,COMPLETE,,,
-45,Ich habe fertig,,Regal I,2026-06-13,COMPLETE,,,
-46,Royals,,Regal R,2026-06-13,COMPLETE,,,
-47,Terra,,Regal T,2025-08-16,COMPLETE,,,
-48,Skitter,,Regal S,,,,,
-49,Die Siedler von Catan + 5./6. Spieler,,Regal C,2025-12-07,INCOMPLETE,"es fehlt eine Karte ""Erz""",,
-50,Die Siedler von Catan - Entdecker & Piraten,,Regal C,2025-08-16,COMPLETE,,,
-51,Octocube,,Kinder,2026-06-13,COMPLETE,,,
-52,Qwixx,,Kiste 3,2025-08-16,INCOMPLETE,es fehlt die Anleitung,,
-53,Der 7te Zwerg,,Kiste 3,2026-06-13,COMPLETE,,,
-54,Hanabi,,Kiste 2,2025-08-16,UNPLAYABLE,liegt ohne Nummer,,
-55,Port Royal,,Regal P,2026-08-06,COMPLETE,,,
-56,Pick a Pig Schnapp' die Sau,,Kiste 2,2025-08-16,COMPLETE,,,
-57,Machi Koro,,Regal M,2026-08-06,COMPLETE,,,
-58,Illegal,,Kiste 1,2025-08-16,COMPLETE,,,
-59,Hospital Rush,,Regal H,2025-08-16,COMPLETE,,,
-60,Sankt Petersburg,,Regal S,2025-08-16,INCOMPLETE,es fehlt: 1x 1er Geldschein,,
-61,Co-Mix,,Regal C,2025-08-16,COMPLETE,,,
-62,Die Staufer,,Regal S,2025-08-16,COMPLETE,,,
-63,Thurn und Taxis,,Regal T,2025-08-16,COMPLETE,,,
-64,Black Fleet,,Regal B,2025-08-16,COMPLETE,,,
-65,Colt Express,,Regal C,2026-08-06,COMPLETE,,,
-66,Takoyaki,,Kinder,,,,,
-67,Mit Mist und Tücke,,Kinder,2025-08-16,COMPLETE,,,
-68,PitchCar,,Kinder,2025-08-16,COMPLETE,zwei Spiele 68+69,,
-70,6 nimmt!,,Kiste 4,2026-08-06,COMPLETE,,,
-71,Simsala Hopp,,Kinder,2025-08-16,COMPLETE,,,
-72,Boss Fighter QR,,Regal B,2026-06-13,COMPLETE,,,
-73,Druidenwalzer,,Regal D,2025-08-16,COMPLETE,,,
-74,BAM!,,Regal B,2025-08-16,COMPLETE,,,
-75,Sagaland,,Kinder,2025-08-16,COMPLETE,,,
-76,Tikal,,Regal T,2025-08-16,COMPLETE,,,
-77,Die Siedler von Catan Junior,,Kinder,2025-08-16,INCOMPLETE,es fehlt: 1x Geldsack-Marker,,
-78,Arcanum,,Regal A,2025-08-16,COMPLETE,,,
-79,Ohne Furcht und Adel,,,,,fehlt: 1x Standfuss,,
-80,The Cave,,Regal C,2025-08-16,INCOMPLETE,es fehlt ein Seil und ein Schlauchboot,,
-81,Dungeon Fighter,,Regal D,2026-06-13,COMPLETE,,,
-82,Geistertreppe + Erw. Flaschengeist,,Kinder,2025-08-16,COMPLETE,,,
-83,Heimlich & Co,,Regal H,2025-08-16,COMPLETE,,,
-84,Schwarz Rot Gelb,,Kiste 1,2025-08-16,COMPLETE,,,
-85,Bluff,,Regal B,2026-08-06,COMPLETE,,,
-86,Bomb Busters,,Regal B,2026-08-06,COMPLETE,,,
-87,Der Widerstand,,Kiste 1,2025-08-16,COMPLETE,,,
-88,Nosferatu,,Kiste 4,2025-08-16,COMPLETE,,,
-89,Bullenparty,,Kiste 4,2025-08-16,COMPLETE,,,
-90,Munchkin Loot Letter,,Kiste 4,2025-08-16,COMPLETE,,true,
-91,Was ist was? - Das große Quiz,,Kinder,2025-08-16,COMPLETE,,,
-92,Fun Farm: Ab in den Stall!,,Kinder,2025-08-16,COMPLETE,,,
-93,Paper World,,Kiste 3,2026-06-13,COMPLETE,,,
-94,King of Tokio,,Regal K,2025-12-07,INCOMPLETE,es fehlen drei Counter,,
-95,Neue Ufer,,Regal N,2026-06-13,COMPLETE,,,
-96,"Lauf, Schweinchen, lauf!",,,,,,,
-97,Scrabble,,Regal S,2025-08-16,COMPLETE,,,
-98,Keltis - Der Weg der Steine - incl. Erweiterung,,Regal K,2025-08-16,COMPLETE,,,
-99,Smallworld Underground,,Regal S,2025-08-16,COMPLETE,,,
-100,Avalon,,Regal A,2025-08-16,COMPLETE,,,
-101,Hook!,,Regal H,2025-08-16,COMPLETE,,,
-102,Soqquadro,,Kinder,2025-08-16,COMPLETE,,,true
-103,Bucket King 3D,,Kinder,2025-08-16,COMPLETE,,,true
-104,Munchkin Loot Letter,,Kiste 1,2025-08-16,COMPLETE,,,
-105,Terra Mystica,,Regal T,2026-08-06,COMPLETE,,,
-106,Lost Cities,,Regal L,2025-12-07,COMPLETE,,,
-107,7 Wonders,,Regal W,2026-08-06,COMPLETE,,,
-108,"Hey, danke für den Fisch!",,,2025-08-16,COMPLETE,,,
-109,Mage Wars,,Regal M,2025-08-16,INCOMPLETE,"es fehlen 1 Zustandsplättchen, 8 Schadensmarker, 1 Manamarker",,
-110,Attribute,,Regal A,2025-08-16,COMPLETE,,,
-111,Wazabi,,Kiste 1,2025-08-16,COMPLETE,,,
-112,Niagara + Erweiterung,,Regal N,2025-08-16,INCOMPLETE,bis sechs spielbar – es fehlt schwarzes Doppelkanu aus Erweiterung,,
-113,Star Realms,,Kiste 2,2025-08-16,COMPLETE,,,
-114,Wildwuchs,,Regal W,2026-06-13,INCOMPLETE,spielbar zu viert – es fehlt ein Samen,,
-115,Clickety Clack,,Regal C,2026-06-13,COMPLETE,,,
-116,Indus,,Regal I,2025-08-16,COMPLETE,,,
-117,Die Säulen der Erde,,Regal S,2025-08-16,COMPLETE,,,
-118,Keltis - Das Orakel,,Regal K,2025-12-07,COMPLETE,,,
-119,Bounce Off,,Regal B,2025-08-16,COMPLETE,,,
-120,Drunter & Drüber,,Regal D,2025-08-16,COMPLETE,,,
-121,Don Quixote,,Regal D,2025-08-16,COMPLETE,,,
-122,Assel Schlamassel,,Kiste 4,2025-08-16,COMPLETE,,,
-123,Cash & Guns,,Regal C,2025-08-16,INCOMPLETE,es fehlt ein Pflaster,,
-124,Bömische Dörfer,,Regal B,2025-08-16,COMPLETE,,,
-125,Können Schweine fliegen?,,Kinder,2026-08-06,COMPLETE,,,
-126,Gardens,,Regal G,2026-06-13,COMPLETE,,,
-127,Istanbul,,Regal I,2026-08-06,INCOMPLETE,bis zu viert spielbar – es fehlen zwei Erweiterung Handkarren,,
-128,Topp die Torte,,Kinder,2026-06-13,COMPLETE,,,
-129,Ubongo Junior,,Kinder,2025-08-16,COMPLETE,,,
-130,Jäger + Späher,,Regal J,2025-08-16,COMPLETE,,,
-131,Samurai Sword,,Kiste 1,2025-08-16,COMPLETE,,,
-132,Ghooost!,,Kiste 2,2025-08-16,INCOMPLETE,es fehlen 2x Buh-Marker,,
-133,Pictomania,,Regal P,2025-08-16,INCOMPLETE,bis zu dritt spielbar – es felhlt ein Stift,,
-134,Volle Kanne,,Kiste 3,2026-06-13,COMPLETE,,,
-135,o,,Kiste 3,,,,,
-136,Grog Island,,Regal G,2025-08-16,COMPLETE,,,
-137,Cartagena II - Das Piratennest,,Regal C,2025-08-16,COMPLETE,,,
-138,schneller als Kurz + 2 Erw.,,Regal S,2025-08-16,COMPLETE,,,
-139,Zombie Würfel,,Kiste 1,2026-08-06,COMPLETE,,,
-140,Rampage,,Regal R,2025-08-16,COMPLETE,,,
-141,Zooloretto,,Regal Z,2025-08-16,COMPLETE,,,
-142,Murano,,Regal M,2025-08-16,COMPLETE,,,
-143,Wednesdy - Kreaturen und Ausgestossene,,Kiste 3,,,,,
-144,Skipbo Brettspiel,,Regal S,2025-08-16,COMPLETE,,,
-145,Antike Duellum,,Regal A,2025-08-16,COMPLETE,,,
-146,Onirim,,Kiste 4,2025-08-16,COMPLETE,,,
-147,Wooolf!!,,Regal W,2025-08-16,COMPLETE,,,
-148,Landmarks,,Regal L,2026-06-13,COMPLETE,,,
-149,Munchkin,,Kiste 2,2026-08-06,COMPLETE,,,
-150,Spectaculum,,Regal S,2025-08-16,COMPLETE,,,
-151,Mondo Sapiens,,Regal M,2025-08-16,COMPLETE,,,
-152,The Big Bang Theory,,Regal B,2025-08-16,COMPLETE,,,true
-153,Qwixx,,,,,,,
-154,Villa Paletti,,Regal V,2026-08-06,COMPLETE,,,
-155,Wispwood - Wald der Lichter,,Regal W,2025-12-11,COMPLETE,,,
-156,Auf Achse,,Regal A,2025-08-16,COMPLETE,,,
-157,Risiko,,Regal R,2025-08-16,COMPLETE,,,
-158,Camel Up,,Regal C,2026-08-06,COMPLETE,incl. Erweiterung,,
-159,Café International,,Regal C,2025-08-16,INCOMPLETE,es fehlt ein roter Chip,,
-160,Make 'n' Break,,Regal M,2025-08-16,COMPLETE,,,
-161,BANG! Das wildwest Spiel!,,Regal B,2026-08-06,COMPLETE,,,
-162,Rummikub mini,,Kiste 1,2025-12-07,COMPLETE,,,
-163,Mutant Meeples,,Regal M,2025-08-16,INCOMPLETE,es fehlt: 1x Meeple-Marker rot,,
-164,Im Jahr des Drachen,,Regal J,2025-08-16,COMPLETE,,,
-165,Dominion,,Regal D,2026-08-06,COMPLETE,,,
-166,Lacuna,,Regal L,2026-06-13,COMPLETE,,,
-167,Louis XIVte,,Regal L,2025-08-16,COMPLETE,,,
-168,Happy Mochi,,Kiste 1,,,,,
-169,Pina Coladice,,Regal P,2026-06-13,INCOMPLETE,,,
-170,Dixit,,Regal D,2026-08-06,COMPLETE,,,
-171,Orcs Orcs Orcs,,Regal O,2025-08-16,COMPLETE,,,
-172,Torres,,Regal T,2025-08-16,COMPLETE,,,
-173,Civilization,,Regal C,2025-08-16,COMPLETE,,,
-174,Blue Moon City,,Regal B,2025-08-16,COMPLETE,,,
-175,Tag Team,,Regal T,2026-08-06,COMPLETE,,,
-176,Taco Loco,,Kiste 3,2026-06-13,COMPLETE,,,
-177,Egizia,,Regal E,2025-08-16,COMPLETE,,,
-178,Kune vs. Lakia,,Kiste 1,2025-08-16,COMPLETE,,true,
-179,Hof-Verrat,,Kiste 3,,,,,
-180,Schnitt Wort Menge Spiel,,Kiste 3,2026-06-13,COMPLETE,Finde keine Inhaltsangabe. Es sind 18 Karten,,
-181,VerfliXXt!,,Regal V,2025-08-16,COMPLETE,,,
-182,"…and then, we held hands.",,Kiste 3,2025-08-16,INCOMPLETE,"es fehlt: 1x Cover-Karte, 4x Spielemarker",,
-183,Um Reifenbreite,,Regal R,2025-08-16,COMPLETE,,,
-184,Manhattan,,,,,,,
-185,Im Wandel der Zeit - Das Brettspiel,,Regal W,2025-08-16,COMPLETE,,,
-186,Te Do Ku,,Kiste 3,2025-12-11,COMPLETE,,,
-187,Formula dé - Mini,,Regal F,2025-08-16,COMPLETE,,,
-188,Fertig Ich Habe,,Regal F,2026-06-13,COMPLETE,,,
-189,El Grande Der König und die Intriganten,,Regal E,2025-08-16,COMPLETE,,,
-190,Fantastic Trails,,Regal F,2026-06-13,COMPLETE,,,
-191,Khronos,,Regal K,2025-08-16,INCOMPLETE,"es fehlt: 1x Zivilisationskarte orange, 1x Zivilisationskarte violett",,
-192,Kardinal & König,,Regal K,2025-08-16,COMPLETE,,,
-193,Mississippi Queen,,Regal M,2025-08-16,COMPLETE,,,
-194,Galaxy Trucker + Große Erweiterung,,Regal G,2025-08-16,INCOMPLETE,"es fehlt: 1x Astronaut, , 2x Credits",,
-195,Age of Empires III,,Regal A,2025-08-16,INCOMPLETE,eine Goldmünze fehlt,,
-196,Die Macher,,,,,,,
-197,Pocket Imperium,,Kiste 2,2025-08-16,COMPLETE,,,
-198,Pixies,,Kiste 3,2026-06-13,,Anleitung fehlt,,
-199,Samurai Sword Rising Sun,,Kiste 2,2025-08-16,COMPLETE,,,
-200,Exploding Kittens Das Brettspielt,,Regal E,2026-06-13,COMPLETE,,,
-201,RonDo,,Regal R,2025-08-16,COMPLETE,,,
-202,Russian Railroads,,Regal R,2025-08-16,COMPLETE,,,
-203,Krosmaster Junior,,Kinder,2025-08-16,COMPLETE,,,
-204,Munchkin Jäger des Schatzes,,Kinder,2025-08-16,COMPLETE,,,
-205,Abyss,,Regal A,2026-06-13,COMPLETE,,,
-206,7 Wonders - Duel,,Regal W,2025-12-07,COMPLETE,,,
-207,Loony Quest,,Regal L,2025-08-16,COMPLETE,,,
-208,Broom Service,,Regal B,2025-08-16,COMPLETE,,,
-209,Die Blutige Herberge,,Regal B,2025-08-16,COMPLETE,,,
-210,Crazy Coconuts,,Kinder,2025-08-16,INCOMPLETE,es fehlt eine Kokusnuss und die Ersatznüsse,,
-211,Imperial Settlers,,Regal I,2025-08-16,COMPLETE,,,
-212,Five Tribes,,Regal F,2025-08-16,INCOMPLETE,"es fehlt: 1x blauer Meeple, 1x 1er Geldmünze",,
-213,Space Missions,,Regal S,2026-06-13,COMPLETE,incl. Promo,,
-214,Mysterium,,Regal M,2026-08-06,COMPLETE,,,
-215,Quadropolis,,Regal Q,2025-08-16,COMPLETE,,,
-216,They Who Were 8,,Regal T,2025-08-16,COMPLETE,,,
-217,Isle of Skye,,Regal I,2026-08-06,COMPLETE,,,
-218,Mona Klecksa,,Kiste 2,2025-08-16,COMPLETE,,,
-219,Chariot Race,,Regal C,2025-08-16,COMPLETE,,,
-220,Spaceship Unity Season 1.1,,Regal S,,,,,
-221,Forgotten Waters,,Regal F,2026-06-13,COMPLETE,,,
-222,Dindex - Demokratie steht auf dem Spiel,,Regal D,2026-08-06,COMPLETE,,,
-223,Cortex Challenge,,Kiste 1,2025-08-16,COMPLETE,,,
-224,Cortex Challenge - Kids,,Kinder,2025-08-16,COMPLETE,,,
-225,Cortex Challenge - Geo,,Kiste 1,2025-08-16,COMPLETE,,,
-226,Cabo,,Kiste 2,2025-08-16,COMPLETE,,,
-227,Cabo,,Kiste 2,2025-08-16,INCOMPLETE,es fehlt die Anleitung,,
-228,Dobble Hollywood,,Kiste 2,2025-12-07,COMPLETE,,,
-229,Dobble Star Wars,,Kiste 1,2025-08-16,COMPLETE,,,
-230,Weltausstellung 1893,,Regal W,2025-08-16,COMPLETE,,,
-231,Exit-Das geheime Labor,,Kiste 2,2025-08-16,COMPLETE,,,
-232,Exit- Die verlassene Hütte,,Kiste 2,2025-08-16,COMPLETE,,,
-233,Im Wandel der Zeiten: Das Würfelspiel - Bronzezeit,,Regal W,2025-08-16,INCOMPLETE,"es fehlt der Block ""Wertungsbogen""",,
-234,Codenames Pictures,,Regal C,2025-08-16,COMPLETE,,,
-235,Village,,Regal V,2025-08-16,COMPLETE,,,
-236,Tricky Traders,,Regal T,,,,,
-237,Codenames,,Regal C,2026-08-06,COMPLETE,,,
-238,Rokoko,,Regal R,2025-08-16,COMPLETE,,,
-239,My PAIR fect,,Regal P,2026-06-13,COMPLETE,,,
-240,Race for the Galaxy,,Regal R,2025-12-07,COMPLETE,,,
-241,Die drei kleinen Schweinchen,,Kinder,2025-08-16,INCOMPLETE,es fehlt 1 Würfel,,
-242,Schildkröte & Hase,,Kinder,2025-08-16,COMPLETE,,,
-243,Die Ameise & die Heuschrecke,,Regal A,2025-08-16,COMPLETE,,,
-244,Salamanca,,Regal S,2025-08-16,COMPLETE,,,
-245,Hijacked,,Regal H,,,,,
-246,Splendor,,Regal S,2026-08-06,COMPLETE,,,
-247,Mmm!,,Kinder,2025-08-16,COMPLETE,,,
-248,Hanabi - Fun & Easy,,Regal H,2025-08-16,COMPLETE,,,
-249,Rotkäppchen,,Kinder,2025-08-16,COMPLETE,,,
-250,Lichterfest,,Regal L,2025-08-16,COMPLETE,,,
-251,Drachenhort,,Regal D,2025-08-16,COMPLETE,,,
-252,Concept,,Regal C,2025-08-16,COMPLETE,,,
-253,Sag's Mir! Junior,,Kinder,2026-08-06,COMPLETE,,,true
-254,Die Legende des Wendigo,,Kinder,2025-08-16,COMPLETE,,,
-255,Karibou Camp,,Regal K,2025-08-16,COMPLETE,,,
-256,Cardline Weltenbummler,,Kiste 2,2025-08-16,COMPLETE,,,
-257,Würfel!Was?,,Kinder,2025-08-16,COMPLETE,,,
-258,Capital Lux Generations,,Regal C,2026-06-13,COMPLETE,,,
-259,Zooloretto Würfelspiel,,Regal Z,2025-08-18,COMPLETE,Laminierte Spielblätter / Block liegt extra,,
-260,Träxx,,Regal T,2025-08-16,COMPLETE,,,
-261,Bohnanza,,Kiste 1,2026-08-06,,,,
-262,Cornwall,,Regal C,2025-08-16,COMPLETE,,,
-263,Skyliners,,Regal S,2025-08-16,COMPLETE,,,
-264,Qwirkle,,Regal Q,2026-07-22,INCOMPLETE,"es fehlt: 1x Stein (gelbe Raute), Original Spielregeln",,
-265,Zug um Zug,,Regal Z,2026-07-22,COMPLETE,incl. 1910-Erweiterung,,
-266,Kingdom Builder,,Regal K,2026-08-06,COMPLETE,,,
-267,Stone Age,,Regal S,2025-08-16,COMPLETE,,,
-268,Hase und Igel,,Regal H,2025-08-16,COMPLETE,,,
-269,Brazil Imerial,,Regal B,2026-06-13,COMPLETE,,,
-270,Coud City Die Wolkenstadt,,Regal C,2026-06-13,COMPLETE,,,
-271,Paleolino,,Kinder,2026-11-16,COMPLETE,,,
-272,Wer war's?,,Kinder,2025-08-16,INCOMPLETE,es fehlt ein Ring,,
-273,Gobblet Mampfer XXL,,,,,,,
-274,Potion Explosion,,Regal P,2026-08-06,INCOMPLETE,eine schwarze Murmel fehlt,,
-275,Dobble,,Kiste 1,2025-12-07,COMPLETE,,,
-276,Saltfjord,,Regal S,2026-06-13,COMPLETE,,,
-277,Unlock! 1 - Escape Advenutes,,Regal U,2025-08-16,COMPLETE,,,
-278,Stone Age Junior,,Kinder,2026-08-06,COMPLETE,,,
-279,Monster auf der Flucht,,Kiste 1,2025-08-16,COMPLETE,,,
-280,Die Baumeister - Antike,,Kiste 2,2025-08-16,COMPLETE,,,
-281,Der Eiserne Thron,,Regal E,2025-12-07,COMPLETE,,,
-282,Deus,,Regal D,2025-08-16,COMPLETE,Ersatzmarker,,
-283,Die Siedler von Catan - Das Kartenspiel,,Regal C,2025-08-16,COMPLETE,,,
-284,Pathfinder Abenteuerkartenspiel Das Erwachen der Runenherrscher Grundbox,,Regal P,2026-06-13,,Teileliste fehlt,,
-285,Halt mal kurz,,Kiste 1,2026-08-06,COMPLETE,,,
-286,Caesar & Cleopatra,,Regal C,2026-08-06,COMPLETE,,,
-287,Runewars,,Regal R,2025-08-16,COMPLETE,,,
-288,Glen More,,Regal G,2025-08-16,COMPLETE,,,
-289,Wie verhext!,,,,,,,
-290,"Tempo, kleine Schnecke!",,,,,,,
-291,Die Akte Whitechapel,,Regal W,2025-08-16,COMPLETE,,,
-292,Tzolk'in,,Regal T,2025-08-16,COMPLETE,,,
-293,Die Alchemisten,,Regal A,2025-08-16,COMPLETE,,,
-294,Artengarten,,Regal A,2026-06-13,INCOMPLETE,ein Beutelmarker fehlt,,
-295,Lingua,,,,,"fehlt: 1x Buchstaben-Plättchen, Bögen laminieren",,
-296,Hütchenspiel,,,,,,,
-297,Bandito,,Kiste 1,2026-08-06,COMPLETE,,,
-298,Das Verrückte Labyrinth,,Kinder,2025-08-16,COMPLETE,,,
-299,Gänsespiel,,Kinder,2025-08-16,COMPLETE,,,
-300,Dice Forge,,Regal D,2025-08-16,UNPLAYABLE,eine Wüfelseite fehlt,,
-301,Guildhall,,Kiste 4,2025-08-16,COMPLETE,,,
-302,Der Herr der Ringe - Das Duell,,Regal H,2026-08-06,COMPLETE,,,
-303,voll,,Kiste 3,2026-06-13,INCOMPLETE,1 5er Modifikator fehlt,,
-304,La Boca,,Regal L,2025-08-16,INCOMPLETE,nur zu 5/6 spielbar – es fehlt ein blauer Partnerchip,,
-305,Love Letter - Big Box,,Regal L,2026-08-06,COMPLETE,,,
-306,Why First?,,Kiste 1,2025-08-16,COMPLETE,,,
-307,4 Seasons,,Kiste 1,2025-08-16,COMPLETE,,,
-308,Bücherwurm,,Kiste 2,2025-08-16,COMPLETE,,,
-309,Stadt - Land - Anders,,Kiste 1,2025-08-16,COMPLETE,,,
-310,Dr. Eureka,,Kinder,2025-08-16,COMPLETE,,,
-311,Locus,,Regal L,2026-11-05,COMPLETE,,,
-312,"Spitz, pass auf!",,Regal S,2025-08-16,COMPLETE,,,
-313,Wer ist es?,,Kinder,2025-08-16,COMPLETE,,,
-314,Das kleine Gespenst,,Kinder,2025-08-16,COMPLETE,,,
-315,Moon Colonie Bloodbath,,Regal M,2026-11-05,COMPLETE,,,
-316,Snapshot,,Regal S,2025-08-16,COMPLETE,,,
-317,Hexentanz,,Regal H,2025-08-16,COMPLETE,,,
-318,Sherlook,,Regal S,2025-08-16,COMPLETE,,,
-319,Dr. Microbe,,Kinder,2025-08-16,COMPLETE,,,
-320,Ticket to Ride France + Old West,,Regal Z,2025-08-16,INCOMPLETE,es fehlt: Regeln Old West,true,
-321,Maskenball der Käfer,,Kinder,2025-08-16,COMPLETE,,,
-322,Aladdin & die Wunderlampe,,Kinder,2025-08-16,COMPLETE,,,
-323,Der Rattenfänger von Hameln,,Kiste 3,2025-08-16,COMPLETE,,,
-324,Ethnos,,Regal E,2025-08-16,COMPLETE,,,
-325,New Angeles,,Regal N,2025-08-16,COMPLETE,,,
-326,Flick 'em Up! Winter der Toten,,Regal F,2025-08-16,COMPLETE,,,
-327,Otys,,Regal O,2025-08-16,COMPLETE,,,
-328,Les Poilus,,Kiste 2,2025-08-16,COMPLETE,,,
-329,Contrast,,Kiste 2,2025-08-16,COMPLETE,,,
-330,Codenames Duett,,Regal C,2026-08-06,COMPLETE,,,
-331,Was 'ne frage!,,Regal W,2026-08-06,COMPLETE,,,
-332,When I dream,,Regal W,2026-08-06,COMPLETE,,,
-333,Secrets,,Kiste 1,2025-08-16,COMPLETE,,,
-334,Hellapagos,,Kiste 3,2026-06-13,COMPLETE,,,
-335,Oh Captain!,,Regal O,2025-08-16,COMPLETE,,,
-336,Nomaden,,Regal N,2025-08-16,COMPLETE,,,
-337,Unlock! - Enchanted Adventures,,Regal U,2026-06-13,COMPLETE,,,
-338,Stapelmännchen,,Kinder,2025-08-16,COMPLETE,,,
-339,Icecool,,Kinder,2025-08-16,COMPLETE,,,
-340,Der Verzauberte Turm,,Kinder,2025-08-16,COMPLETE,,,
-341,Spinderella,,Kinder,2026-07-22,COMPLETE,,,
-342,Beppo der Bock,,,2025-08-16,COMPLETE,,,true
-343,Da ist der Wurm drin!,,Kinder,2025-08-16,COMPLETE,,,
-344,Der Schwarze Pirat,,Kinder,2025-08-16,INCOMPLETE,eine Goldmünze fehlt,,
-345,Kayanak,,Kinder,2025-08-16,COMPLETE,,,
-346,Nocturnis,,Regal N,2026-06-13,COMPLETE,,,
-347,Hexx & Hopp,,Kiste 1,2025-08-16,COMPLETE,,,
-348,Agricola,,Regal A,2026-08-06,COMPLETE,,,
-349,Meeple Circus - incl. 2 Erweiterung,,Regal M,2025-08-16,COMPLETE,,,
-350,Uno Colors Rule!,,Kiste 1,2025-08-16,COMPLETE,,,
-351,Bärenpark,,Regal B,2025-08-16,COMPLETE,,,
-352,Festung,,Kiste 2,2025-08-16,COMPLETE,,,
-353,Fertig!,,Kiste 1,2025-08-16,COMPLETE,,,
-354,Flucht,,Kiste 2,2025-08-16,COMPLETE,,,
-355,Furcht,,Kiste 1,2025-08-16,COMPLETE,,,
-356,Elfenland - de luxe Edition,,Regal E,2026-08-06,COMPLETE,,,
-357,NMBR9,,Regal N,2026-06-13,COMPLETE,,,
-358,Blueprints,,Regal B,2025-08-16,COMPLETE,,,
-359,Wettlauf nach El Dorado,,Regal E,2026-08-06,COMPLETE,,,
-360,unlock! Short Adventures - Die rote Maske,,Kiste 4,2026-06-13,COMPLETE,,,
-361,Zauberlehrling gesucht!,,Regal Z,2025-08-16,INCOMPLETE,nur bis 3 Personen spielbar – es fehlt ein gelbes Amulett und acht Münzen,,
-362,Gobblet Mampfer,,Kinder,2025-08-16,COMPLETE,,,
-363,Last Friday,,Regal L,2025-08-16,COMPLETE,,,
-364,Last Friday - Return to Camp Apache,,Regal L,2026-06-13,COMPLETE,,,
-365,Kingdomino,,Regal K,2026-08-06,COMPLETE,,,
-366,Dodelido,,Kiste 4,2026-06-13,COMPLETE,,,
-367,Yamatai,,Regal Y,2025-08-16,COMPLETE,,,
-368,Dragon Castle,,Regal D,2025-08-16,COMPLETE,,,
-369,Game of Quotes,,Kiste 1,2025-08-16,COMPLETE,,,
-370,Can't Stop!,,Regal C,2026-08-06,COMPLETE,,,
-371,Schnurrrlock Holmes,,Regal S,2025-08-16,COMPLETE,,,
-372,Diego Drachenzahn,,Kinder,2025-08-16,INCOMPLETE,es feht ein Drachenzahn,,
-373,Unlock! 2 - Mystery Adventures,,Regal U,2025-08-16,COMPLETE,,,
-374,unlock! Short Adventures - Schrödingers Katze,,Kiste 4,2026-06-13,COMPLETE,,,
-375,Schnappt Hubi!,,Kinder,2025-08-16,INCOMPLETE,1 Chip fehlt,,
-376,Das Magische Labyrinth,,Kinder,2025-08-16,INCOMPLETE,ein Mauerteil fehlt,,
-377,Photosynthese,,Regal P,2025-08-16,COMPLETE,,,
-378,Der Pate - Corleones Imperium,,Regal P,2025-08-16,COMPLETE,,,
-379,Princess Legend,,Regal P,2025-08-16,COMPLETE,,,
-380,Decrypto,,Regal D,2026-07-22,COMPLETE,,,
-381,Orbis,,Regal O,2025-08-16,INCOMPLETE,es fehlt: 2x nicht erfüllt Plättchen,,
-382,Panic Mansion,,Kinder,2025-08-16,COMPLETE,,,
-383,Lorenzo der Prächtige,,Regal L,2025-08-16,COMPLETE,,,
-384,Pinguluu,,Kinder,2025-08-16,COMPLETE,,,
-385,Lucky Lachs - Blue,,Kiste 2,2025-08-16,COMPLETE,,,
-386,Lucky Lachs - Green,,Kiste 4,2026-08-06,COMPLETE,,,
-387,Catan Connect,,Regal C,2026-06-13,COMPLETE,,,
-388,Catan Connect,,Regal C,2026-06-13,COMPLETE,incl. Ersatzfiguren,,
-389,Portobello Market,,Regal P,2025-08-16,COMPLETE,,,
-390,Erster Obstgarten,,Kinder,2025-08-16,COMPLETE,,,
-391,Spiel,,Kinder,2025-08-16,COMPLETE,,,
-392,Blütenreich - Ein Garten voller Schmetterlinge,,Regal B,,,,,
-393,Voltage,,Regal V,2025-08-16,COMPLETE,,,
-394,Make 'n' Break - Architect,,Regal M,2025-08-16,COMPLETE,,,
-395,???,,Kiste 4,2025-08-16,COMPLETE,,,
-396,Hegemoni,,Regal H,,,,,
-397,Der Herr der Ringe,,Regal H,2025-08-16,COMPLETE,,,
-398,Spellbook,,Regal S,2026-08-06,COMPLETE,,,
-399,Fresko - incl. 1 - 3 Erweiterung,,Regal F,2025-08-16,COMPLETE,,,
-400,This War of mine,,Regal W,2025-08-16,COMPLETE,,,
-401,Alhambra - Würfelspiel,,Regal A,2025-08-16,COMPLETE,,,
-402,Revolution!,,Regal R,2025-08-16,COMPLETE,,,
-403,Raxxon,,Regal R,2025-08-16,COMPLETE,,,
-404,Escape Room Das Spiel,,Regal E,2025-08-16,COMPLETE,,,
-405,Loot Island,,Regal L,2025-08-16,COMPLETE,,true,
-406,Star Wars Destiny,,Regal S,2025-08-16,COMPLETE,,,
-407,Legend of the five Rings,,Regal L,2025-08-16,COMPLETE,,,
-408,Die Speicherstadt,,Regal S,2025-08-16,COMPLETE,,,
-409,Blokus,,Kinder,2025-08-16,INCOMPLETE,ein grünes Teil fehlt,,
-410,Vor den Toren von Loyang,,Regal L,2025-08-16,INCOMPLETE,eine 5er Münze fehlt,,
-411,Ubongo,,Kiste 1,2025-08-16,COMPLETE,,,
-412,Unlock! 3 - Secret Adventures,,Regal U,2025-08-16,COMPLETE,,,
-413,Walls of York,,Regal Y,2025-08-16,COMPLETE,,,
-414,City of Rome,,,,,,,
-415,Vikings Gone Wild,,Regal V,2025-08-16,COMPLETE,,,
-416,Alles an Bord?!,,Kinder,2025-08-16,COMPLETE,,,
-417,Steam Time,,Regal S,2025-08-16,INCOMPLETE,es fehlt: 2 Upgrade-Plättchen V,,
-418,Feiner Sand,,Regal F,2025-08-16,COMPLETE,,,
-419,Zooloretto Duell,,Regal Z,2026-06-13,COMPLETE,,,
-420,Colorio,,Regal C,2025-08-16,COMPLETE,,,true
-421,unlock! Short Adventures - Mord in Birmingham,,Kiste 4,2026-06-13,COMPLETE,,,
-422,Schweinebande,,Regal S,2025-08-16,COMPLETE,,,
-423,Riftforce,,Regal R,2026-06-13,COMPLETE,,,
-424,Einfach Genial,,Regal E,2025-08-16,COMPLETE,,,
-425,Holmes,,Regal H,2025-08-16,COMPLETE,,,
-426,HexHex,,Kiste 2,2025-08-16,COMPLETE,,,
-427,Dos,,Kiste 4,2025-08-16,COMPLETE,,,
-428,Kodama,,Regal K,2025-12-07,INCOMPLETE,"zwei Karten fehlen, dafür sind zwei andere zuviel und somit doppelt",,
-429,Jungle Race,,Kiste 2,2025-08-16,COMPLETE,,,
-430,Panic Lab,,Kiste 4,2025-08-16,COMPLETE,,,
-431,Fatal,,Kiste 2,2025-08-16,COMPLETE,,,
-432,Ubongo Exrem,,Kiste 1,2025-08-16,COMPLETE,,,
-433,Magic Rabbit,,Regal M,2026-06-13,COMPLETE,,,
-434,Snow Time,,Regal S,2025-08-16,COMPLETE,,,
-435,Oros,,Regal O,2026-06-13,COMPLETE,,,
-436,Odd Ville,,Regal O,2025-08-16,COMPLETE,,,
-437,Das Fundament der Ewigkeit,,Regal F,2025-08-16,COMPLETE,,,
-438,Tumult Royale,,Regal T,2025-08-16,COMPLETE,,,
-439,Cortex Challenge - Plus,,Regal C,2025-08-16,COMPLETE,,,
-440,Waka Waka,,Regal W,2025-08-16,COMPLETE,,,
-441,Carcassonne Junior,,Kinder,2025-08-16,COMPLETE,,,
-442,Wannabe Football,,Kiste 2,2025-08-16,COMPLETE,,,
-443,Foppen,,Kiste 4,2025-08-16,COMPLETE,,,
-444,Penk,,Kiste 2,2025-08-16,COMPLETE,,,
-445,Lift off,,Regal L,2025-08-16,COMPLETE,,,
-446,Boost!,,Kiste 2,2025-08-16,COMPLETE,,,
-447,You Robot,,Kiste 4,2025-08-16,COMPLETE,,,
-448,Find den Mörder,,Kiste 1,2025-08-16,COMPLETE,,,
-449,Der Rat von Verona,,Kiste 4,2025-08-16,COMPLETE,,,
-450,Te Kuiti,,Kinder,2025-08-16,COMPLETE,,,
-451,Trial by trolley,,Regal T,2026-06-13,COMPLETE,,,
-452,Müllparty,,Kiste 1,2025-08-16,COMPLETE,,,
-453,Divinity Derby,,Regal D,2025-08-16,COMPLETE,,true,
-454,Stone Age Junior - Das Kartenspiel,,Kinder,2025-08-16,COMPLETE,,,
-455,Battlestar Galactica,,Regal B,2026-06-13,UNPLAYABLE,"es fehlen: Brank Marker (4), Shield 1Markers (4), difficult markers (4), use cornlens (22), collision damage (16), würfel (2), 1D Tags (16)",true,
-456,Century - Die Gewürzstraße,,Regal C,2025-08-16,COMPLETE,,,
-457,Citadels,,Regal C,2026-08-06,COMPLETE,,,
-458,Die Mumien des Pharao,,Regal M,2025-08-16,COMPLETE,,,
-459,Moomery,,Kinder,2025-08-16,COMPLETE,,,
-460,Visioo,,Kiste 4,2025-08-16,COMPLETE,,,
-461,Pictomania,,Regal P,2025-08-16,INCOMPLETE,bis fünf spielbar – es fehlt 1 roter 3 Wertungschip,,
-462,Shadows Amsterdam,,Regal S,2025-08-16,COMPLETE,,,
-463,Quacksalber von Quedlinburg,,Regal Q,2026-08-06,COMPLETE,,,
-464,Half-Pint Heroes,,Kiste 1,2025-08-16,COMPLETE,,,
-465,Tajuto,,Regal T,2025-08-16,COMPLETE,,,
-466,Woods of Tarnaris - incl. Erweiterung,,Kinder,2025-08-16,COMPLETE,,,
-467,Bummelbahn,,Kiste 4,2025-08-16,COMPLETE,,,
-468,Life is Life,,Kiste 4,2025-08-16,COMPLETE,,,
-469,Fusion,,Kiste 2,2025-08-16,COMPLETE,,,
-470,Funkelschatz,,Kinder,2025-08-16,INCOMPLETE,es fehlt 1 x grüner Diamant,,
-471,Planet,,Regal P,2025-08-16,COMPLETE,,,
-472,Just One + Erweiterung,,Regal J,2026-08-06,COMPLETE,,,
-473,Coco Papagei,,Regal C,2026-04-02,COMPLETE,,,
-474,Android Mainframe,,Regal M,2025-08-16,COMPLETE,,,
-475,Solenia,,Regal S,2025-08-16,COMPLETE,,,
-476,Gizmos,,Regal G,2025-08-16,COMPLETE,,,
-477,Carta Impera Victoria,,Regal C,2025-08-16,COMPLETE,,,
-478,Imaginarium,,Regal I,2026-08-06,COMPLETE,,,
-479,Adellos - First Edition,,Regal A,2025-08-16,COMPLETE,,,
-480,Dr. Eureka XXL,,Kinder,2025-08-16,COMPLETE,,,
-481,Silicon Valley-Start-Ups,,Kiste 2,2025-08-16,COMPLETE,,,
-482,Noch Mal!,,Kiste 2,2025-08-16,COMPLETE,,,
-483,Ligretto - blau,,Kiste 1,2025-08-16,COMPLETE,,,
-484,The Mind,,Kiste 1,2026-07-22,COMPLETE,,,
-485,Ganz schön clever,,Regal G,2026-08-06,COMPLETE,,,
-486,Villagers,,Regal V,2025-08-16,COMPLETE,,,
-487,Harry Potter - Kampf um Hogwarts,,Regal H,2026-08-06,COMPLETE,,,
-488,Gobblers Family Mix,,Kinder,2025-08-16,COMPLETE,,,true
-489,Imhotep Baumeister Ägyptens,,Regal I,2025-08-16,COMPLETE,,,
-490,Honga,,Regal H,2025-08-16,INCOMPLETE,es fehlt: 1x rotes Mammut,,
-491,Freistilschach,,Regal F,2026-06-13,COMPLETE,,,
-492,Blood on the clocktour,,Regal B,2026-06-07,COMPLETE,,,
-493,Magic the gathering GRUNDSTEIN Einsteigergbox,,Regal M,2026-06-13,COMPLETE,,,
-494,Kingdomino XXL,,Regal K,2025-08-16,COMPLETE,,,
-495,Mystic Vale,,Regal M,2025-08-16,COMPLETE,,,
-496,Panda Royal,,Regal P,2026-11-05,COMPLETE,,,
-497,Monsieur Carrousel,,Kinder,2025-08-16,COMPLETE,,,
-498,Deadline,,Regal D,2025-08-16,COMPLETE,,,
-499,Watson & Holmes,,Regal W,2025-08-16,COMPLETE,,,
-500,Micropolis,,Regal M,2025-08-16,COMPLETE,,,
-501,Azul,,Regal A,2026-08-06,COMPLETE,,,
-502,Hokus Pokus Flipibus,,Kinder,2025-08-16,COMPLETE,,,
-503,Captain Sonar,,Regal S,2026-08-06,COMPLETE,,,
-504,Cities Skylines,,Regal C,2025-08-16,COMPLETE,,,
-505,Tiny Epic Mechs,,Regal E,2025-08-16,COMPLETE,,,
-506,Tiny Epic Zombies - Deluxe Edition,,Regal E,2025-08-16,COMPLETE,,,
-507,Die Crew,,Regal C,2026-07-22,COMPLETE,,,
-508,Big Monster,,Regal B,2025-08-16,COMPLETE,,true,
-509,Way of the Panda,,Regal W,2025-08-16,COMPLETE,,,
-510,Korsaren der Karibik,,Regal K,2025-08-16,COMPLETE,,,
-511,Team3 - grün,,Regal T,2025-08-16,COMPLETE,,,
-512,Team3 - pink,,Regal T,2026-08-06,COMPLETE,,,
-513,Nyctophobia,,Regal N,2025-08-16,COMPLETE,,,
-514,Space Gate Odyssey,,Regal S,2025-08-16,COMPLETE,,,
-515,Fallout,,Regal F,2025-08-16,COMPLETE,,,
-516,Der Herr der Ringe - Reise durch Mittelerde,,Regal H,2026-06-07,COMPLETE,,,
-517,Werwölfe Vollmondnacht,,Kiste 1,2026-07-22,COMPLETE,,,
-518,Exploding Kittens,,Regal E,2026-08-06,COMPLETE,,,
-519,Subtext,,Regal S,2025-08-16,COMPLETE,,,
-520,Gen 7,,Regal G,2025-08-16,COMPLETE,,,
-521,Rapa Nui,,Regal R,2025-08-16,COMPLETE,,,
-522,Haus der Sonne,,Regal H,2025-08-16,COMPLETE,,,
-523,Sherlock Holmes - Criminal Cabinet,,Regal S,2025-08-16,COMPLETE,,,
-524,Altiplano,,Regal A,2025-08-16,COMPLETE,,,
-525,Hadara,,Regal H,2025-08-16,COMPLETE,,,
-526,Arkham Horror - 3. Ausgabe,,Regal A,2025-08-16,COMPLETE,,,
-527,Keyforge - Zeitalter des Aufstiegs,,Regal K,2025-08-16,COMPLETE,,,true
-528,Fruit Ninja,,Regal F,2025-08-16,COMPLETE,,,
-529,Bloodborne,,Regal B,2025-08-16,COMPLETE,,,
-530,Drecksau,,Kiste 4,2026-08-06,COMPLETE,,,
-531,Qwinto,,Kiste 3,2025-12-07,COMPLETE,,,
-532,Knatsch,,Kiste 2,2025-08-16,COMPLETE,,,
-533,Die Säulen der Erde - Duell der Baumeister,,Regal S,2025-08-16,COMPLETE,,,
-534,Hex Roller,,Kiste 1,2025-08-16,COMPLETE,,,
-535,Hopp Hopp Häschen,,Kinder,2025-08-16,COMPLETE,,,
-536,Viva Topo,,Kinder,2025-08-16,UNPLAYABLE,Spielplan fehlt,,
-537,Zombie Kidz Evolution,,Kinder,2025-08-16,COMPLETE,,,
-538,Trains - Die Bahn kommt,,Regal T,2025-08-16,COMPLETE,,,
-539,A Tale of Pirates,,Regal A,2025-08-16,COMPLETE,,,
-540,What Do You Meme?,,Regal W,2025-08-16,COMPLETE,,,
-541,Der Palast von Alhambra,,Regal A,2025-08-16,COMPLETE,,,
-542,Red7,,Kiste 3,2025-08-16,COMPLETE,,,
-543,Fast Food Fear!,,Kiste 1,2025-08-16,COMPLETE,,,
-544,Aachen,,Regal A,2026-06-13,INCOMPLETE,"1 Aktionskarte, 1 wusstes du das? Karte fehlt",,
-545,Wikinger - Die vergessenen Eroberer,,Regal W,2025-08-16,COMPLETE,,,
-546,Der verflixte Zaubertrank,,Kinder,2025-08-16,INCOMPLETE,es fehlt 1/2 gelber Kessel,,
-547,Pirate 21,,Kiste 2,2025-08-16,COMPLETE,,,
-548,Unlock! kids - Irische Sagen,,Kinder,2026-04-02,COMPLETE,,,
-549,Human Punishment,,Kiste 1,2026-08-06,COMPLETE,,,
-550,Wär ich doch der Hahn im Korb,,Kinder,2025-08-16,COMPLETE,,,
-551,Mystic Vale Essential Edition,,Regal M,2026-06-13,,,true,
-552,Gackerei ums Hühnerei,,Kinder,2025-08-16,INCOMPLETE,es fehlt ein gelbes und ein blaues Küken,,
-553,Star Wars X-Wing 2.0,,Regal S,2025-12-07,COMPLETE,,,
-554,Tiefenrausch,,,2026-06-07,COMPLETE,,,
-555,Gobblet Mampfer,,Kinder,2025-08-16,COMPLETE,,,true
-556,Die kleinen Drachenritter,,Kinder,2025-08-16,INCOMPLETE,es fehlt ein blauer Gegenstand,,
-557,Looping Louie,,Kinder,2026-07-22,COMPLETE,,,
-558,Batavia,,Regal B,2025-08-16,COMPLETE,,,
-559,Ladies & Gentlemen,,Regal L,2025-08-16,COMPLETE,,,
-560,Bad Bunnies,,Kiste 4,2025-08-16,COMPLETE,,,
-561,Jolly Roger,,Regal J,2025-08-16,COMPLETE,,,
-562,Zirkus Stapelix,,Kinder,2025-08-16,COMPLETE,,,
-563,Fuchs du hast das Huhn gestohlen,,Kinder,2025-08-16,COMPLETE,,,
-564,Tier auf Tier,,Kinder,2025-08-16,COMPLETE,,,
-565,unlock! Short Adventures - Im Kopf von Sherlock Holmes,,Kiste 4,2026-06-13,COMPLETE,,,
-566,Betrayal At House on the hill 3. Edition,,Regal B,,,,,
-567,Fish 'n' Flips,,Kiste 2,2025-08-16,COMPLETE,,,
-568,Drillers,,Regal D,2026-11-07,COMPLETE,,,
-569,Tal der Wikinger,,Kinder,2026-07-22,COMPLETE,,,
-570,Kobayakawa,,Kiste 2,2025-08-16,COMPLETE,,,
-571,King Size,,Kiste 2,2025-08-16,COMPLETE,,,
-572,Die sieben Siegel,,Kiste 2,2025-08-16,COMPLETE,,,
-573,Flügelschlag,,Regal F,2025-08-16,COMPLETE,,,
-574,Bauchplatscher!,,Kinder,2025-08-16,COMPLETE,,,
-575,Save the Meeples,,Regal S,2025-08-16,INCOMPLETE,"es fehlt 1 Siegpunktmarker, 3 grosse Holzscheiben, 2 kleine Erdölzylinder, 3 große Erdölzylinder",,
-576,unlock! Short Adventures - Im Kopf von Sherlock Holmes,,Kiste 4,2026-04-02,COMPLETE,,,
-577,Tiny Epic Defenders (EN) - Deluxe Edition,,Regal E,2025-08-16,COMPLETE,,,
-578,Schatz-Hatz,,Kiste 4,2025-08-16,COMPLETE,,,
-579,Endevor Die Tiefsee,,Regal E,,,,,
-580,Katamino,,Regal K,2025-08-16,COMPLETE,,,
-581,One Key,,Regal O,2026-08-06,COMPLETE,,,
-582,Rebirth,,Regal R,2026-11-16,COMPLETE,,,
-583,Clouds,,Kiste 4,2025-08-16,COMPLETE,,,
-584,Weimar - Der Kampf um die Demokratie,,Regal W,2026-06-13,COMPLETE,,,
-585,Roll for the Galaxy,,Regal R,2025-08-16,COMPLETE,,,
-586,Mein Traumhaus,,Regal T,2025-08-16,COMPLETE,,,
-587,Die Tavernen im tiefen Thal,,Regal T,2026-08-06,COMPLETE,,,
-588,Spirit Island,,Regal S,2025-12-07,COMPLETE,,,
-589,Dragomino,,Kinder,2025-08-16,COMPLETE,,,
-590,New York Zoo,,Regal N,2025-12-07,COMPLETE,,,
-591,Paleo,,Regal P,2026-08-06,INCOMPLETE,"ein Holzstein ""Stein"" fehlt",,
-592,Baumkronen,,Regal B,2025-08-16,COMPLETE,,,
-593,Ghost Adventures,,Regal G,2025-08-16,COMPLETE,,,
-594,Codenames XXL,,Regal C,2025-08-16,COMPLETE,,,
-595,Coronarr,,Regal C,2025-08-16,COMPLETE,,,true
-596,Robo Race,,Regal R,2025-08-16,COMPLETE,,,
-597,Andor Junior,,Kinder,2025-08-16,COMPLETE,,,
-598,Men at Work,,Regal M,2025-08-16,COMPLETE,,,
-599,Die Baumeister - Mittelalter,,,,,fehlt: 1 Silbermünze; überzählig: 3 Goldmünzen,,
-600,Verhext nochmal!,,Kiste 2,2025-08-16,INCOMPLETE,Anleitung fehlt,,
-601,Sebastian Fitzek Killer Cruise,,Regal F,2025-08-16,COMPLETE,,,
-602,Deep Dive,,Kinder,2025-08-16,COMPLETE,,,
-603,Krieg und Frieden,,Regal K,2025-08-16,COMPLETE,,,
-604,Yukon,,Regal Y,2025-08-16,COMPLETE,,,
-605,Karak,,Kinder,2026-06-13,COMPLETE,,,
-606,Die Abenteuer des Robin Hood,,Regal R,2026-08-06,COMPLETE,,,
-607,Ufo Boom,,Kinder,2026-06-13,COMPLETE,,,true
-608,Ecogon,,Regal E,2025-12-07,COMPLETE,,,
-609,Fotofish,,Kinder,2025-08-16,COMPLETE,,,
-610,Pictures,,Regal P,2026-07-22,COMPLETE,,,
-611,Die verlorenen Ruinen von Arnak,,Regal A,2026-08-06,COMPLETE,,,
-612,Sternen Leuchten,,Kinder,2025-08-16,COMPLETE,,,
-613,Monsterjäger,,Kinder,2025-08-16,COMPLETE,,,
-614,Spukschloss,,Kinder,2025-08-16,COMPLETE,,,
-615,Beez,,Regal B,2025-08-16,COMPLETE,,,
-616,Marvel Champions,,Regal M,2025-12-07,COMPLETE,,,
-617,Meadow Im Reich der Natur,,Regal M,2025-08-16,COMPLETE,,,
-618,Die grosse Ess-kalation!#,,Regal E,2025-08-16,INCOMPLETE,nicht zu viert spielbar – ein Supershake fehlt,,
-619,Redcliff Bay Mysteries,,Regal R,2025-08-16,COMPLETE,,,
-620,Die Insel der Katzen,,Regal I,2026-08-06,COMPLETE,,,
-621,Architekten des Westfrankenreichs,,Regal A,2025-12-07,COMPLETE,,,
-622,Club der Erfinder,,Regal C,2025-08-16,COMPLETE,,,
-623,Dungeon Drop,,Kiste 2,2025-08-16,COMPLETE,Zusatzteile neben der Kiste,,
-624,Unlock! 4 - Exotic Adventures,,Regal U,2025-08-16,COMPLETE,,,
-625,Unlock! 5 - Heroic Adventures,,Regal U,2025-08-16,COMPLETE,,,
-626,Unlock! 6 - Timeless Adventures,,Regal U,2025-08-16,COMPLETE,,,
-627,Unlock! 7 - Epic Adventures,,Regal U,2025-08-16,COMPLETE,,,
-628,Unlock! 8 - Mythic Adventures,,Regal U,2025-08-16,COMPLETE,,,
-629,Unlock! Star Wars,,Regal U,2026-08-06,COMPLETE,,,
-630,Sockenmonster,,Kinder,2025-08-16,COMPLETE,,,
-631,Mia London,,Kinder,2026-08-06,COMPLETE,,,
-632,Dudab Buba,,Regal D,2025-08-16,COMPLETE,,,
-633,Pummelomis Knusperkekse,,Kiste 2,2025-08-16,COMPLETE,,,
-634,Mampf Mampf,,Kinder,2025-08-16,COMPLETE,,,true
-635,Dwar7s *winter*,,Regal D,2025-08-16,COMPLETE,,,
-636,First Contact,,Regal F,2025-08-16,COMPLETE,,,
-637,Alte Dunkle Dinge,,Regal A,2026-08-06,COMPLETE,,,
-638,Speedy Roll,,Kinder,2025-08-16,COMPLETE,,,
-639,micro MACRO – Crime City,,Regal M,2026-07-22,COMPLETE,,,
-640,Außer Rand & Band,,Kinder,2026-06-13,COMPLETE,,,
-641,Go Gecko Go!,,Kinder,2025-08-16,COMPLETE,,,
-642,Axio,,Regal A,2025-08-16,COMPLETE,,,
-643,Wettlauf nach El Dorado – Die goldenen Tempel,,Regal E,2025-08-16,COMPLETE,,,
-644,Pearls,,Kiste 2,2025-08-16,COMPLETE,,,
-645,Ich sehe was! Was siehst du?,,Kiste 4,2025-08-16,COMPLETE,,,
-646,Excavation Earth,,Regal E,2025-08-16,COMPLETE,,,
-647,Flourish,,Regal F,2025-08-16,COMPLETE,,,
-648,Ankh,,Regal A,2025-08-16,COMPLETE,,,
-649,Die kleinen Zauberlehrlinge,,Kinder,2025-08-16,INCOMPLETE,"Anleitung fehlt, eine gelbe Murmel fehlt",,
-650,Mepple Land,,Regal M,2025-08-16,COMPLETE,,,
-651,Yggdrasil Chronicles,,Regal Y,2025-08-16,COMPLETE,,,
-652,"Drunk, Stoned or Stupid",,Kiste 2,2025-08-16,COMPLETE,,,
-653,Dragon´s cave,,,,,,,
-654,Loopit,,Regal L,2025-08-16,COMPLETE,,,
-655,Fabelwelten,,Kinder,2025-08-16,COMPLETE,,,
-656,Dodo,,Kinder,2025-08-16,INCOMPLETE,1 Plättchen fehlt,,
-657,Reef,,Regal R,2025-08-16,COMPLETE,,,
-658,Calico,,Regal C,2026-08-06,COMPLETE,,,
-659,Feed the Kraken,,Regal F,2026-06-13,COMPLETE,,,
-660,Rumms,,Kinder,2025-08-16,COMPLETE,,,
-661,Unlock! 9 - Legendary Adventures,,Regal U,2025-08-16,COMPLETE,,,
-662,Unlock! 10 - Game Adventures,,Regal U,2025-08-16,COMPLETE,,,
-663,Espresso Doppio,,Regal E,2025-08-16,COMPLETE,,,
-664,Cascadia,,Regal C,2026-08-06,INCOMPLETE,ein Elch fehlt,,
-665,Terra Nova,,Regal T,2025-08-16,COMPLETE,,,
-666,Nukular,,Regal N,2026-06-13,INCOMPLETE,Aggrometerwürfel fehlt,,
-667,Nebel über Carcassonne,,Regal C,2025-08-16,COMPLETE,,,
-668,Planet B,,Regal P,2025-08-16,COMPLETE,,,
-669,Zug um Zug Gruselfahrt,,Kinder,2026-06-13,COMPLETE,,,
-670,Arche Nova,,Regal A,2025-08-16,COMPLETE,,,
-671,EXIT Kids 1 - Rätselspaß im Dschungel,,Kinder,2025-08-16,COMPLETE,,,
-672,Precognition,,Regal P,2025-08-16,COMPLETE,,,
-673,Diabolik,,Regal D,2025-08-16,COMPLETE,,,
-674,8 BitBox,,Regal B,2025-08-16,COMPLETE,,,
-675,War of the Ring,,Regal W,2025-08-16,COMPLETE,,,
-676,Dune Imperium,,Regal D,2026-08-06,COMPLETE,,,
-677,Space Base,,Regal S,2026-11-16,COMPLETE,,,
-678,Top Ten,,Regal T,2026-07-22,COMPLETE,,,
-679,Living Forest,,Regal L,2026-08-06,COMPLETE,,,
-680,Zauberberg,,Kinder,2026-08-06,COMPLETE,,,
-681,Indoor Curling,,,,,,,
-682,Emojito,,Kinder,2025-08-16,COMPLETE,,,
-683,Noodle Ninja,,Kinder,2025-08-16,COMPLETE,,,
-684,Stapel & Stopf,,Regal S,2025-08-16,COMPLETE,,,
-685,Nova Luna,,Regal N,2026-08-06,COMPLETE,,,
-686,Burg Kritzelstein,,Kinder,2025-08-16,COMPLETE,,,
-687,Mit Quacks & Co nach Quedlinburg,,Kinder,,,,,
-688,Puerto Rico,,Regal P,2025-08-16,COMPLETE,,,
-689,Terraforming Mars,,Regal T,2025-08-16,COMPLETE,,,
-690,Gaia Projekt,,Regal G,2026-08-06,COMPLETE,,,
-691,Combo Color,,Regal C,2025-08-16,COMPLETE,,,
-692,Zungen raus?,,Kinder,2025-08-16,COMPLETE,,,
-693,Mantis,,Regal M,2026-06-13,COMPLETE,,,
-694,"Taco, Katze Ziege, Käse, Pizza",,Kiste 2,2025-08-16,COMPLETE,,,
-695,Flamecraft,,Regal F,2026-08-06,COMPLETE,,,
-696,Voll auf die 18,,Kiste 1,2025-08-16,COMPLETE,,,
-697,Heat,,Regal H,2025-12-11,INCOMPLETE,spielbar zu fünft – grüne fünf Karte fehlt,,
-698,Black Hole Buccaneers,,Regal B,2025-08-16,COMPLETE,,,
-699,Triqueta,,Regal T,2025-08-16,COMPLETE,,,
-700,Keep the Heroes out!,,Regal K,2025-12-07,COMPLETE,,,
-701,Istanbul - Choose & Write,,Regal I,2025-08-16,COMPLETE,,,
-702,Orichalkum,,Regal O,2025-08-16,INCOMPLETE,ein Einer-Landschaftsplättchen BERG fehlt,,
-703,Dorfromantik,,Regal D,2026-08-06,COMPLETE,,,
-704,Die Crew - Mission Tiefsee,,Regal C,2026-08-06,COMPLETE,,,
-705,Die Tiere vom Ahorntal,,Regal T,2025-08-16,COMPLETE,,,
-706,Scythe,,Regal S,2025-08-16,COMPLETE,,,
-707,Dobble Connect,,Kiste 2,2025-08-16,COMPLETE,,,
-708,Für eine Hand voll Meeple,,Regal H,2025-08-16,COMPLETE,,,
-709,Schrödingers Katzen,,Kiste 1,2025-08-16,COMPLETE,,,
-710,5 Towers,,Kiste 2,2025-08-16,COMPLETE,,,
-711,Next Station London,,Regal N,2026-08-06,COMPLETE,,,
-712,Casting Shadows,,Regal C,2025-08-16,COMPLETE,,,
-713,Revive,,Regal R,2025-08-16,COMPLETE,,,
-714,Ensemble,,Regal E,2026-08-06,COMPLETE,,,
-715,Tipperary,,Regal T,2025-12-07,COMPLETE,,,
-716,Magic Maze Kids,,Kinder,2025-08-16,COMPLETE,,,
-717,Die Wölfe,,Regal W,2026-08-06,COMPLETE,,,
-718,Mysterium Kids,,Kinder,2026-08-06,COMPLETE,,,
-719,Café der Gatto,,Regal C,2025-08-16,COMPLETE,,,
-720,MLEM Die Astrokatzen,,Regal M,2026-06-13,COMPLETE,,,
-721,Mischwald,,Regal M,2026-08-06,COMPLETE,,,
-722,Challengers!,,Regal C,2026-08-06,COMPLETE,,,
-723,Erde,,Regal E,2025-08-16,COMPLETE,,,
-724,Unlock! Short Adventures - Der Engelsflug,,Kiste 4,2026-06-13,COMPLETE,,,
-725,Unlock! Short Adventures - Geheime Familienrezepte,,Kiste 4,2025-08-16,COMPLETE,,,
-726,Unlock! Short Adventures - Das Verlies von Doo-Arann,,Kiste 4,2026-06-13,COMPLETE,,,
-727,Unlock! Short Adventures - Die Suche nach Cabrakan,,Kiste 4,2025-08-16,COMPLETE,,,
-728,Unlock! Short Adventures - Der Schatz des Oktopus,,Kiste 4,2026-06-13,COMPLETE,,,
-729,Unlock! Short Adventures - Die Mumie erwacht,,Kiste 4,2026-06-13,COMPLETE,,,
-730,Tribes of the Wind,,Regal T,2025-08-16,COMPLETE,,,
-731,Die Wandelnden Türme,,Regal W,2025-12-07,COMPLETE,,,
-732,Mycelia,,,2026-08-06,COMPLETE,,,
-733,Unlock! 11 - Extraordinary Adventures,,Regal U,2025-08-16,COMPLETE,,,
-734,Sea Salt & Paper,,Kiste 1,2025-08-16,COMPLETE,,,
-735,Maquis,,Regal M,2025-08-16,COMPLETE,,,
-736,Spiel des Wissens,,Regal S,2025-08-16,COMPLETE,,,
-737,Land in Sicht,,Kinder,2025-08-16,COMPLETE,,,
-738,Dune: Verrat,,Kiste 1,2025-08-16,COMPLETE,,,
-739,Monsterhunger!,,Kinder,2025-08-16,COMPLETE,,,
-740,Wise Guys,,Regal W,2025-08-16,COMPLETE,,,
-741,Dune: Ein Spiel um Macht und Intriegen,,Regal D,2025-08-16,COMPLETE,,,
-742,Carla Caramel,,Regal C,2025-08-16,COMPLETE,,,
-743,La Casa Nostra,,Regal L,2025-08-16,COMPLETE,,,
-744,Garden Guests,,Regal G,2026-06-13,COMPLETE,,,
-745,"Ross, the Boss",,Kinder,2025-08-16,COMPLETE,,,
-746,Aqua,,Regal A,2025-08-16,COMPLETE,,,
-747,Hüter der Jahreszeiten,,Kinder,2025-08-16,COMPLETE,,,
-748,Hitster,,Regal H,2025-08-16,COMPLETE,,,
-749,Powerline,,Regal P,2025-08-16,COMPLETE,,,
-750,Schwingenschlag,,Regal S,2025-08-16,COMPLETE,,,
-751,Dabba-Walla,,Regal D,2025-08-16,COMPLETE,,,
-752,Captain Flip,,Regal C,2025-08-16,COMPLETE,,,
-753,Ritual,,Regal R,2025-12-07,COMPLETE,,,
-754,Kids Express,,Kinder,2025-08-16,COMPLETE,,,
-755,Expeditions ins Wortreich,,Regal E,2025-08-16,COMPLETE,,,
-756,Unlock! Kids 1 - Detektivgeschichten,,,,,,,
-757,Unlock! Kids 2 - Geschichten aus der Vergangenheit,,Kinder,2025-08-16,COMPLETE,,,
-758,Die Gilde der Fahrenden Händler,,Regal G,2025-08-16,COMPLETE,,,
-759,Botanicus,,Regal B,2025-08-16,COMPLETE,,,
-760,Sky Team,,Regal S,2026-08-06,COMPLETE,,,
-761,Dorfromantik Saruka,,Regal D,2025-12-07,COMPLETE,,,
-762,Next Station Tokio,,Regal N,2025-08-16,COMPLETE,,,
-763,Next Station Paris,,Regal N,2025-08-16,COMPLETE,,,
-764,Würfelkönig,,Regal W,2025-08-16,COMPLETE,,,
-765,Faraway,,Regal F,2026-08-06,COMPLETE,,,
-766,EXIT Kids 3 - Gruseliger Rätselspaß,,Kinder,2025-08-16,COMPLETE,,,
-767,Trio,,Kinder,2025-08-16,COMPLETE,,,
-768,Beste Feinde,,Regal B,2026-06-13,COMPLETE,,,
-769,Intarsia,,Regal I,2025-08-16,COMPLETE,,,
-770,AI Space Puzzle,,Regal A,2025-08-16,COMPLETE,,,
-771,Waffelzeit,,Regal W,2025-08-16,COMPLETE,,,
-772,Roaring 20s,,Kiste 1,2026-08-06,COMPLETE,,,
-773,Moorland,,Regal M,2026-04-02,COMPLETE,,,
-774,Black Forest,,Regal B,2025-12-11,COMPLETE,,,
-775,Tres,,Regal T,2025-08-16,COMPLETE,,,
-776,Zwischen Licht & Schatten,,Kiste 2,2025-08-16,COMPLETE,,,
-777,Clou - Roll & Heist,,Kiste 2,2025-08-16,COMPLETE,,,
-778,Karvi,,Regal K,2026-08-06,INCOMPLETE,es fehlt: ein Blockadeplättchen,,
-779,Unlock! Kids 3 - Sagenhafte Geschichten,,Kinder,2025-12-11,COMPLETE,,,
-780,Unlock! 12 - Supernatural Adventures,,Regal U,2025-12-07,COMPLETE,,,
-781,Auf den Wegen von Darwin,,Regal D,2026-08-06,COMPLETE,,,
-782,Zimbbos!,,Kinder,2025-08-16,COMPLETE,,,
-783,Waterfall Park,,Regal W,2025-08-16,COMPLETE,,,
-784,Die Stunde der Maus,,Regal S,2026-08-06,COMPLETE,,,
-785,Harmonies,,Regal H,2026-08-06,COMPLETE,,,
-786,Kitty Bitty,,Kinder,2025-08-16,COMPLETE,,,
-787,Monolyth,,Regal M,2026-06-13,COMPLETE,,,
-788,Time Trouble,,Regal T,2026-06-07,COMPLETE,,,
-789,Flash Back - Zombie Kids,,Kinder,2025-08-16,COMPLETE,,,
-790,Die Magischen Schlüssel,,Kinder,2025-08-16,COMPLETE,,,
-791,Among Cultists,,Regal A,2026-06-13,COMPLETE,,,
-792,Escape Room Das Spiel Erweiterung Secret Agent Operation Zekestan,,Regal E,2025-08-16,COMPLETE,,,
-793,Escape Room Das Spiel Erweiterung The Dentist,,Regal E,2025-08-16,COMPLETE,,,
-794,Escape Room Das Spiel Erweiterung Murder Mystery,,Regal E,2025-08-16,COMPLETE,,,
-795,Escape Room Das Spiel Erweiterung Casino,,Regal E,2025-08-16,COMPLETE,,,
-797,Escape Room Das Spiel Erweiterung Space Station,,Regal E,2025-08-16,COMPLETE,,,
-798,Escape Room Das Spiel Erweiterung Welcome to funland,,Regal E,2025-08-16,COMPLETE,,,
-799,Cartagena I - Flucht aus der Festung,,Regal C,2025-08-16,COMPLETE,,,
-800,Battle Royal,,Regal B,2026-06-13,COMPLETE,,,
-801,Monkey Fun,,Regal M,2025-08-16,COMPLETE,,,
-802,Tower Brix,,Regal T,2025-08-16,COMPLETE,,,
-803,3 Ring Circus,,Regal R,2025-08-16,COMPLETE,,,
-804,Magic Maze Tower,,Regal M,2025-08-16,INCOMPLETE,deutsche Anleitung fehlt,,
-805,Portals,,Regal P,2025-08-16,COMPLETE,,,
-806,Quatschkopf,,Kiste 2,2025-08-16,COMPLETE,,,
-807,Fish & Katz,,Kinder,2025-08-16,COMPLETE,,,
-808,Die Kleinen Alchemisten,,Kinder,2025-08-16,COMPLETE,,,
-809,Jahu Safari,,Kinder,2025-08-16,COMPLETE,,,
-810,Krimi Dinner,,,2025-08-28,COMPLETE,,,
-811,Fipolino,,Kinder,2025-08-16,COMPLETE,,,
-812,Tripolo,,Kinder,2025-08-16,COMPLETE,,,
-813,Grabolo,,Kinder,2025-08-16,COMPLETE,,,
-814,Qubolo,,Kinder,2025-08-16,COMPLETE,,,
-815,Amygdala,,Regal A,2025-08-16,COMPLETE,,,
-816,Rulebenders,,Regal R,2025-08-16,COMPLETE,,,
-817,The Palaces of Carrara,,Regal C,2025-08-16,COMPLETE,,,
-818,Paris,,Regal P,2025-08-16,INCOMPLETE,ein 6 SP-Plätzchen (16/8/4) fehlt,,
-819,Penguin Airlines,,Kinder,2025-08-16,COMPLETE,,,
-820,Dobutsu Shogi (Cath the lion),,Kinder,2025-08-16,COMPLETE,,,
-821,Shogito,,Regal S,2025-08-16,COMPLETE,,,
-822,Galileo Galilei,,Regal G,2025-08-16,COMPLETE,,true,
-823,Zero to Hero,,Regal Z,2025-08-16,COMPLETE,,,
-824,Steam Power,,Regal S,2025-08-16,COMPLETE,,,
-825,Mieze Katze,,Regal M,2026-06-13,COMPLETE,,,
-826,MultiCity,,Kinder,2025-08-16,COMPLETE,,,
-827,What we found,,Kinder,2025-08-16,COMPLETE,,,
-828,Easy Cheesy,,Kinder,2025-08-16,COMPLETE,,,
-829,Spotlight,,Kinder,2025-08-16,COMPLETE,,,
-830,"Kleine Völker, großer Garten",,Regal K,2025-08-16,COMPLETE,,,
-831,Baron von Zom´s Dice of the Undead,,Regal B,2025-08-16,COMPLETE,,,
-832,Lost Cities - R&W,,Regal L,2025-12-11,COMPLETE,,,
-833,Pick a Pen - Schatzkammer,,Regal P,2025-08-16,COMPLETE,,,
-834,Pick a Pen - Gärten,,Regal P,2025-08-16,COMPLETE,,,
-835,Pick a Pen - Riff,,Regal P,2025-08-16,COMPLETE,,,
-836,Pyramidice,,Regal P,2025-08-16,COMPLETE,,true,
-837,Seti,,Regal S,2025-12-11,INCOMPLETE,eine Spielerhilfe fehlt,,
-838,Media Aetas,,Regal M,2025-08-16,COMPLETE,,,
-839,Verräter an Board,,Kiste 1,2026-08-06,COMPLETE,,,
-840,Atlantis Exodus,,Regal A,2025-08-16,COMPLETE,,,
-841,Mega Empires - East,,Regal M,2025-08-16,COMPLETE,,true,
-842,Mega Empires - West,,Regal M,2025-08-16,COMPLETE,,true,
-843,Pfoten Parcours,,Kinder,2025-08-16,COMPLETE,,,
-844,Alles für die Katz,,Kinder,2025-08-16,COMPLETE,,,
-845,Vogelversammlung,,Kinder,2025-08-16,COMPLETE,,,
-846,Genius Star,,Kinder,2025-08-16,COMPLETE,,,
-847,Genius Square,,Kinder,2025-08-16,COMPLETE,,,
-848,IQ Gears,,Kinder,2025-08-16,COMPLETE,,,
-849,Builders of Sylvan Dale,,Regal B,2025-12-07,COMPLETE,,true,
-850,Quacksalber von Quedlinburg - Das Duell,,Regal Q,2026-06-13,COMPLETE,,,
-851,Altay - Dawn of Civilization,,Regal A,2025-12-07,COMPLETE,,true,
-852,Magische Begegnungen,,Kinder,2025-08-16,COMPLETE,,,
-853,Katapult Fehde (incl. Ersatzspiel),,Kinder,2025-08-16,COMPLETE,,,
-854,e-Mission,,Regal E,2025-08-16,COMPLETE,,,
-855,Stacking Games Balonce Blocks,,Kinder,2026-06-13,COMPLETE,,,
-856,Little Town,,Regal L,2025-08-16,INCOMPLETE,ein Coin fehlt,,
-857,Der Herr der Ringe - Das Schicksal der Gemeinschaft,,Regal H,2026-06-13,COMPLETE,,,
-858,Rail Road Ink orange,,Regal R,2025-08-16,COMPLETE,,,
-859,Welcome to the moon,,Regal W,2025-08-16,COMPLETE,,,
-860,Pyramido Die Baumeister des Pharao,,Regal P,2025-08-16,COMPLETE,,,
-861,Sonar Family,,Regal S,2025-08-16,COMPLETE,,,
-862,Sugat Blast,,Kinder,2025-08-16,COMPLETE,,,
-863,Die Schlacht von Rundedar,,Regal R,2025-08-16,UNPLAYABLE,20xGold fehlt,,
-864,Detective Ein Krimi-Brettspiel,,Regal D,2025-08-16,COMPLETE,,,
-865,Masters of the night,,Regal M,2025-08-16,INCOMPLETE,ein Schleieranzeiger fehlt,,
-866,Gumminis,,Kinder,2025-08-16,COMPLETE,,,
-867,Der Hobbit Hin und Zurück,,Regal H,,,,,
-868,Der Herr der Ringe - Duell um Mittelerde,,Regal H,,,,,
-869,Azul Duell,,Regal A,,,,,
-870,Die Insel der Mookies,,Kinder,2026-11-05,COMPLETE,,,
-871,Dito,,Regal D,2026-11-05,COMPLETE,,,
-872,Snails,,Regal S,2026-11-05,COMPLETE,,,
-873,Caribe,,Regal C,2026-11-05,COMPLETE,,,
-874,Stars of ilumeia,,Regal I,2026-11-05,COMPLETE,,,
-875,Mischwald - Smokey mountains,,Regal M,2026-11-05,COMPLETE,,,
-876,Fauch und Fertig,,Regal F,2026-11-05,COMPLETE,,,
-877,Robo Run,,Regal R,2026-11-16,COMPLETE,,,
-878,Raas,,Regal R,2026-11-16,COMPLETE,,,
-879,Mandala,,Regal M,2026-11-16,COMPLETE,,,
-880,Trails of Tucana,,Regal T,2026-11-16,COMPLETE,,,
-881,No shelf control,,Regal S,2026-11-16,COMPLETE,,,
-882,Wolfwalkers,,Regal W,2026-11-16,COMPLETE,,,
-883,Who is Luis,,Kinder,2026-11-16,COMPLETE,,,
-884,Burning Cookies,,Regal B,2026-11-16,COMPLETE,,,
-885,Die Olchies - Schleimeschlamm und Käsefuß,,Kinder,2026-11-16,COMPLETE,,,
-886,Onitama,,Regal O,2026-11-16,COMPLETE,,,
-,Sebastian Fitzek Safe House,,Regal F,2025-08-16,COMPLETE,,,
+inventoryNumber,title,bggId,bggMatch,location,lastCheckedOn,result,note,englishRules,deinventarised,valueCents
+1,Abalone,526,exact,Regal A,2025-08-16,COMPLETE,,,,2999
+2,Otto Normalo,435922,exact,Regal O,2026-06-13,COMPLETE,,,,1500
+3,Card 'n Go,186748,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,1000
+4,Das Hochbeet von Schalottenburg,430727,exact,Kinder,2026-06-13,COMPLETE,,,,
+5,Der Hexer von Salem,38506,exact,Regal H,2025-08-16,UNPLAYABLE,"es fehlt: 1x Anzeigechip ""Geisterkarte"" und ein Artefakt",,,2000
+6,Zicke Zacke Hühnerkacke,3570,exact,Kinder,2025-08-16,COMPLETE,,,,2490
+7,Schloss Schlotterstein,7067,exact,,,,,,,1900
+8,Der Goldene Kompass,30239,exact,Regal G,2025-08-16,COMPLETE,,,,1500
+9,Tea Garden,422042,exact,Regal T,2025-12-07,COMPLETE,,,,
+10,Die Goldene Stadt,40770,exact,Regal G,2025-08-16,COMPLETE,,,,1499
+11,Buzzin' Picnic,440725,exact,Regal B,2026-06-13,COMPLETE,,,,
+12,Tintenblut,41699,exact,Regal T,2025-08-16,INCOMPLETE,"es fehlt: 2x Proviantchip, 2x Klugheit, 1x Ehre",,,2039
+13,"Geister, Geister, Schatzsuchmeister!",146312,exact,Kinder,2026-08-06,INCOMPLETE,es fehlen zwei Geister,,,2000
+14,Calupum,,none,Regal C,2026-06-13,COMPLETE,,,,
+15,Abtei der Rätsel,100758,exact,Regal A,2025-08-16,COMPLETE,,,,1499
+16,Deutschland - Finden Sie Minden?,28436,fuzzy,Regal D,2025-08-16,COMPLETE,,,,2499
+17,Targi,118048,exact,Regal T,2025-08-16,INCOMPLETE,"es fehlen 1 Ehrechip, 2 Klugheitenchips, 2 Provantchips",,,2094
+18,Das Geheimnis der Zauberer,182196,exact,Kinder,2025-08-16,COMPLETE,,,,2300
+19,Gelb gewinnt!,16985,exact,Kiste 2,2025-08-16,COMPLETE,,,,2250
+20,Scotland Yard,438,picked,Regal S,2025-08-16,INCOMPLETE,es fehlen 2 Taximarker,,,2999
+21,Würfelwurst,118215,exact,Kiste 2,2025-08-16,COMPLETE,,,,1500
+22,Atlantis,55253,picked,Regal A,2025-08-16,COMPLETE,,,,
+23,Cluedo,1294,picked,Regal C,2025-08-16,COMPLETE,,,,2499
+24,Uluru,90870,exact,Regal U,2025-08-16,COMPLETE,,,,
+25,Maus & Mystik,,none,Regal M,,,,,,4995
+26,Mission Combat,147852,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,1490
+27,Fluxx,258,picked,Kiste 4,2025-08-16,COMPLETE,,,,999
+28,Sticht oder nicht,64657,exact,Kiste 2,2025-08-16,COMPLETE,,,,320
+29,Office 21,137789,exact,Kiste 1,2025-08-16,COMPLETE,,,,1395
+30,Guildlands,447587,exact,Regal G,2026-06-13,COMPLETE,incl. Promo,true,,
+31,Abluxxen,153065,exact,Kiste 2,2025-08-16,COMPLETE,,,,999
+32,Krosmaster Arena,112138,fuzzy,Regal K,2025-08-16,COMPLETE,,,,2695
+33,Blue Moon Legends,147154,exact,Regal B,2025-08-16,COMPLETE,,,,3995
+34,Monsterfalle,98122,exact,Kinder,2025-08-16,COMPLETE,,,,1449
+35,Spinnengift und Krötenschleim,118051,exact,Kinder,2025-08-16,COMPLETE,,,,1499
+36,Die Legenden von Andor,127398,exact,Regal A,2025-08-16,INCOMPLETE,ein Helm fehlt,,,2303
+37,Norderwind,153425,exact,Regal N,2025-08-16,INCOMPLETE,es fehlen zwei Goldmünzen (1),,,1795
+38,Kingsport Festival,154509,exact,Regal K,2025-08-16,COMPLETE,,,,1499
+39,Castle Combo,416851,exact,Regal C,2026-08-06,COMPLETE,,,,
+40,Ubongo,16986,exact,Regal U,2025-08-16,INCOMPLETE,es fehlen 4 Ersatzedelsteine,,,2499
+41,Duell im Felsental,102237,exact,Regal D,2025-08-16,COMPLETE,,,,2999
+42,Carcassonne + 2 Mini-Erweiterungen,,none,Regal C,2026-07-22,COMPLETE,,,,1799
+43,Therapy,4355,picked,Regal T,2025-08-16,COMPLETE,,,,1499
+44,Kronen für den König,146309,exact,Regal K,2025-08-16,COMPLETE,,,,600
+45,Ich habe fertig,427624,exact,Regal I,2026-06-13,COMPLETE,,,,
+46,Royals,165986,picked,Regal R,2026-06-13,COMPLETE,,,,
+47,Terra,153507,picked,Regal T,2025-08-16,COMPLETE,,,,2499
+48,Skitter,385765,exact,Regal S,,,,,,
+49,Die Siedler von Catan + 5./6. Spieler,,none,Regal C,2025-12-07,INCOMPLETE,"es fehlt eine Karte ""Erz""",,,3798
+50,Die Siedler von Catan - Entdecker & Piraten,135378,fuzzy,Regal C,2025-08-16,COMPLETE,,,,2399
+51,Octocube,424371,exact,Kinder,2026-06-13,COMPLETE,,,,895
+52,Qwixx,131260,exact,Kiste 3,2025-08-16,INCOMPLETE,es fehlt die Anleitung,,,895
+53,Der 7te Zwerg,,none,Kiste 3,2026-06-13,COMPLETE,,,,
+54,Hanabi,98778,exact,Kiste 2,2025-08-16,UNPLAYABLE,liegt ohne Nummer,,,799
+55,Port Royal,156009,picked,Regal P,2026-08-06,COMPLETE,,,,995
+56,Pick a Pig Schnapp' die Sau,,unsure,Kiste 2,2025-08-16,COMPLETE,,,,2900
+57,Machi Koro,143884,exact,Regal M,2026-08-06,COMPLETE,,,,1299
+58,Illegal,151369,picked,Kiste 1,2025-08-16,COMPLETE,,,,1264
+59,Hospital Rush,284217,picked,Regal H,2025-08-16,COMPLETE,,,,2495
+60,Sankt Petersburg,9217,exact,Regal S,2025-08-16,INCOMPLETE,es fehlt: 1x 1er Geldschein,,,3999
+61,Co-Mix,162367,exact,Regal C,2025-08-16,COMPLETE,,,,2646
+62,Die Staufer,166226,exact,Regal S,2025-08-16,COMPLETE,,,,3300
+63,Thurn und Taxis,21790,exact,Regal T,2025-08-16,COMPLETE,,,,3500
+64,Black Fleet,157403,exact,Regal B,2025-08-16,COMPLETE,,,,4000
+65,Colt Express,158899,exact,Regal C,2026-08-06,COMPLETE,,,,3199
+66,Takoyaki,427232,picked,Kinder,,,,,,1199
+67,Mit Mist und Tücke,153501,exact,Kinder,2025-08-16,COMPLETE,,,,2947
+68,PitchCar,150,exact,Kinder,2025-08-16,COMPLETE,zwei Spiele 68+69,,,5099
+70,6 nimmt!,432,exact,Kiste 4,2026-08-06,COMPLETE,,,,
+71,Simsala Hopp,136856,exact,Kinder,2025-08-16,COMPLETE,,,,990
+72,Boss Fighter QR,,none,Regal B,2026-06-13,COMPLETE,,,,999
+73,Druidenwalzer,376,exact,Regal D,2025-08-16,COMPLETE,,,,800
+74,BAM!,301568,fuzzy,Regal B,2025-08-16,COMPLETE,,,,1995
+75,Sagaland,,none,Kinder,2025-08-16,COMPLETE,,,,3099
+76,Tikal,54,exact,Regal T,2025-08-16,COMPLETE,,,,5490
+77,Die Siedler von Catan Junior,27766,fuzzy,Kinder,2025-08-16,INCOMPLETE,es fehlt: 1x Geldsack-Marker,,,1999
+78,Arcanum,99770,picked,Regal A,2025-08-16,COMPLETE,,,,700
+79,Ohne Furcht und Adel,478,exact,,,,fehlt: 1x Standfuss,,,1300
+80,The Cave,129351,picked,Regal C,2025-08-16,INCOMPLETE,es fehlt ein Seil und ein Schlauchboot,,,1499
+81,Dungeon Fighter,102548,exact,Regal D,2026-06-13,COMPLETE,,,,5042
+82,Geistertreppe + Erw. Flaschengeist,,none,Kinder,2025-08-16,COMPLETE,,,,2499
+83,Heimlich & Co,382,fuzzy,Regal H,2025-08-16,COMPLETE,,,,1795
+84,Schwarz Rot Gelb,91430,exact,Kiste 1,2025-08-16,COMPLETE,,,,811
+85,Bluff,,unsure,Regal B,2026-08-06,COMPLETE,,,,3799
+86,Bomb Busters,413246,exact,Regal B,2026-08-06,COMPLETE,,,,699
+87,Der Widerstand,41114,exact,Kiste 1,2025-08-16,COMPLETE,,,,1299
+88,Nosferatu,137290,picked,Kiste 4,2025-08-16,COMPLETE,,,,1499
+89,Bullenparty,117549,exact,Kiste 4,2025-08-16,COMPLETE,,,,1143
+90,Munchkin Loot Letter,129622,exact,Kiste 4,2025-08-16,COMPLETE,,true,,3995
+91,Was ist was? - Das große Quiz,136984,fuzzy,Kinder,2025-08-16,COMPLETE,,,,2599
+92,Fun Farm: Ab in den Stall!,,none,Kinder,2025-08-16,COMPLETE,,,,2995
+93,Paper World,429020,exact,Kiste 3,2026-06-13,COMPLETE,,,,1346
+94,King of Tokio,,none,Regal K,2025-12-07,INCOMPLETE,es fehlen drei Counter,,,3099
+95,Neue Ufer,409581,exact,Regal N,2026-06-13,COMPLETE,,,,399
+96,"Lauf, Schweinchen, lauf!",159053,exact,,,,,,,1401
+97,Scrabble,320,exact,Regal S,2025-08-16,COMPLETE,,,,2562
+98,Keltis - Der Weg der Steine - incl. Erweiterung,,none,Regal K,2025-08-16,COMPLETE,,,,2199
+99,Smallworld Underground,,none,Regal S,2025-08-16,COMPLETE,,,,4395
+100,Avalon,,unsure,Regal A,2025-08-16,COMPLETE,,,,2199
+101,Hook!,147685,exact,Regal H,2025-08-16,COMPLETE,,,,959
+102,Soqquadro,160614,exact,Kinder,2025-08-16,COMPLETE,,,true,1450
+103,Bucket King 3D,159209,exact,Kinder,2025-08-16,COMPLETE,,,true,1995
+104,Munchkin Loot Letter,129622,exact,Kiste 1,2025-08-16,COMPLETE,,,,900
+105,Terra Mystica,120677,exact,Regal T,2026-08-06,COMPLETE,,,,5990
+106,Lost Cities,50,exact,Regal L,2025-12-07,COMPLETE,,,,1499
+107,7 Wonders,68448,exact,Regal W,2026-08-06,COMPLETE,,,,
+108,"Hey, danke für den Fisch!",8203,exact,,2025-08-16,COMPLETE,,,,1295
+109,Mage Wars,101721,fuzzy,Regal M,2025-08-16,INCOMPLETE,"es fehlen 1 Zustandsplättchen, 8 Schadensmarker, 1 Manamarker",,,3995
+110,Attribute,4553,exact,Regal A,2025-08-16,COMPLETE,,,,649
+111,Wazabi,48979,exact,Kiste 1,2025-08-16,COMPLETE,,,,2294
+112,Niagara + Erweiterung,,none,Regal N,2025-08-16,INCOMPLETE,bis sechs spielbar – es fehlt schwarzes Doppelkanu aus Erweiterung,,,2599
+113,Star Realms,147020,picked,Kiste 2,2025-08-16,COMPLETE,,,,1499
+114,Wildwuchs,446878,exact,Regal W,2026-06-13,INCOMPLETE,spielbar zu viert – es fehlt ein Samen,,,970
+115,Clickety Clack,454891,exact,Regal C,2026-06-13,COMPLETE,,,,1495
+116,Indus,9560,exact,Regal I,2025-08-16,COMPLETE,,,,450
+117,Die Säulen der Erde,24480,picked,Regal S,2025-08-16,COMPLETE,,,,3049
+118,Keltis - Das Orakel,66085,fuzzy,Regal K,2025-12-07,COMPLETE,,,,3230
+119,Bounce Off,166633,fuzzy,Regal B,2025-08-16,COMPLETE,,,,1999
+120,Drunter & Drüber,19,exact,Regal D,2025-08-16,COMPLETE,,,,2399
+121,Don Quixote,65990,picked,Regal D,2025-08-16,COMPLETE,,,,1180
+122,Assel Schlamassel,165796,exact,Kiste 4,2025-08-16,COMPLETE,,,,999
+123,Cash & Guns,,none,Regal C,2025-08-16,INCOMPLETE,es fehlt ein Pflaster,,,2695
+124,Bömische Dörfer,,none,Regal B,2025-08-16,COMPLETE,,,,2495
+125,Können Schweine fliegen?,11973,exact,Kinder,2026-08-06,COMPLETE,,,,1499
+126,Gardens,153422,picked,Regal G,2026-06-13,COMPLETE,,,,995
+127,Istanbul,148949,exact,Regal I,2026-08-06,INCOMPLETE,bis zu viert spielbar – es fehlen zwei Erweiterung Handkarren,,,1839
+128,Topp die Torte,423232,fuzzy,Kinder,2026-06-13,COMPLETE,,,,
+129,Ubongo Junior,118568,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1499
+130,Jäger + Späher,161530,fuzzy,Regal J,2025-08-16,COMPLETE,,,,1595
+131,Samurai Sword,128667,exact,Kiste 1,2025-08-16,COMPLETE,,,,1695
+132,Ghooost!,132251,exact,Kiste 2,2025-08-16,INCOMPLETE,es fehlen 2x Buh-Marker,,,1356
+133,Pictomania,98229,exact,Regal P,2025-08-16,INCOMPLETE,bis zu dritt spielbar – es felhlt ein Stift,,,2450
+134,Volle Kanne,438195,fuzzy,Kiste 3,2026-06-13,COMPLETE,,,,2835
+135,o,,none,Kiste 3,,,,,,2275
+136,Grog Island,163931,exact,Regal G,2025-08-16,COMPLETE,,,,2495
+137,Cartagena II - Das Piratennest,,none,Regal C,2025-08-16,COMPLETE,,,,2199
+138,schneller als Kurz + 2 Erw.,,none,Regal S,2025-08-16,COMPLETE,,,,1087
+139,Zombie Würfel,62871,exact,Kiste 1,2026-08-06,COMPLETE,,,,1999
+140,Rampage,97903,exact,Regal R,2025-08-16,COMPLETE,,,,4500
+141,Zooloretto,27588,exact,Regal Z,2025-08-16,COMPLETE,,,,2128
+142,Murano,163413,exact,Regal M,2025-08-16,COMPLETE,,,,3786
+143,Wednesdy - Kreaturen und Ausgestossene,,none,Kiste 3,,,,,,4490
+144,Skipbo Brettspiel,,none,Regal S,2025-08-16,COMPLETE,,,,1938
+145,Antike Duellum,104955,exact,Regal A,2025-08-16,COMPLETE,,,,2359
+146,Onirim,71836,exact,Kiste 4,2025-08-16,COMPLETE,,,,999
+147,Wooolf!!,147104,exact,Regal W,2025-08-16,COMPLETE,,,,1990
+148,Landmarks,421374,picked,Regal L,2026-06-13,COMPLETE,,,,1395
+149,Munchkin,1927,exact,Kiste 2,2026-08-06,COMPLETE,,,,1395
+150,Spectaculum,104573,exact,Regal S,2025-08-16,COMPLETE,,,,799
+151,Mondo Sapiens,118293,exact,Regal M,2025-08-16,COMPLETE,,,,1419
+152,The Big Bang Theory,,none,Regal B,2025-08-16,COMPLETE,,,true,4900
+153,Qwixx,131260,exact,,,,,,,505
+154,Villa Paletti,2596,exact,Regal V,2026-08-06,COMPLETE,,,,2587
+155,Wispwood - Wald der Lichter,445044,fuzzy,Regal W,2025-12-11,COMPLETE,,,,1997
+156,Auf Achse,110,exact,Regal A,2025-08-16,COMPLETE,,,,2999
+157,Risiko,181,picked,Regal R,2025-08-16,COMPLETE,,,,3990
+158,Camel Up,153938,exact,Regal C,2026-08-06,COMPLETE,incl. Erweiterung,,,2495
+159,Café International,214,exact,Regal C,2025-08-16,INCOMPLETE,es fehlt ein roter Chip,,,2190
+160,Make 'n' Break,10206,exact,Regal M,2025-08-16,COMPLETE,,,,1903
+161,BANG! Das wildwest Spiel!,,none,Regal B,2026-08-06,COMPLETE,,,,1999
+162,Rummikub mini,811,fuzzy,Kiste 1,2025-12-07,COMPLETE,,,,1599
+163,Mutant Meeples,109969,exact,Regal M,2025-08-16,INCOMPLETE,es fehlt: 1x Meeple-Marker rot,,,3800
+164,Im Jahr des Drachen,31594,exact,Regal J,2025-08-16,COMPLETE,,,,8090
+165,Dominion,36218,picked,Regal D,2026-08-06,COMPLETE,,,,2000
+166,Lacuna,386937,exact,Regal L,2026-06-13,COMPLETE,,,,2995
+167,Louis XIVte,,none,Regal L,2025-08-16,COMPLETE,,,,3995
+168,Happy Mochi,438481,exact,Kiste 1,,,,,,4990
+169,Pina Coladice,,none,Regal P,2026-06-13,INCOMPLETE,,,,1600
+170,Dixit,39856,exact,Regal D,2026-08-06,COMPLETE,,,,2695
+171,Orcs Orcs Orcs,165477,exact,Regal O,2025-08-16,COMPLETE,,,,2130
+172,Torres,88,exact,Regal T,2025-08-16,COMPLETE,,,,799
+173,Civilization,71,exact,Regal C,2025-08-16,COMPLETE,,,,4495
+174,Blue Moon City,21882,exact,Regal B,2025-08-16,COMPLETE,,,,5495
+175,Tag Team,434906,exact,Regal T,2026-08-06,COMPLETE,,,,7900
+176,Taco Loco,438465,exact,Kiste 3,2026-06-13,COMPLETE,,,,1399
+177,Egizia,58421,exact,Regal E,2025-08-16,COMPLETE,,,,4900
+178,Kune vs. Lakia,,none,Kiste 1,2025-08-16,COMPLETE,,true,,2255
+179,Hof-Verrat,402283,exact,Kiste 3,,,,,,4889
+180,Schnitt Wort Menge Spiel,,none,Kiste 3,2026-06-13,COMPLETE,Finde keine Inhaltsangabe. Es sind 18 Karten,,,1699
+181,VerfliXXt!,17240,exact,Regal V,2025-08-16,COMPLETE,,,,1899
+182,"…and then, we held hands.",153999,fuzzy,Kiste 3,2025-08-16,INCOMPLETE,"es fehlt: 1x Cover-Karte, 4x Spielemarker",,,2500
+183,Um Reifenbreite,442,exact,Regal R,2025-08-16,COMPLETE,,,,1095
+184,Manhattan,199,picked,,,,,,,3199
+185,Im Wandel der Zeit - Das Brettspiel,,none,Regal W,2025-08-16,COMPLETE,,,,5600
+186,Te Do Ku,,none,Kiste 3,2025-12-11,COMPLETE,,,,2799
+187,Formula dé - Mini,6539,fuzzy,Regal F,2025-08-16,COMPLETE,,,,3862
+188,Fertig Ich Habe,449916,exact,Regal F,2026-06-13,COMPLETE,,,,1698
+189,El Grande Der König und die Intriganten,,none,Regal E,2025-08-16,COMPLETE,,,,4150
+190,Fantastic Trails,454899,exact,Regal F,2026-06-13,COMPLETE,,,,4549
+191,Khronos,25674,exact,Regal K,2025-08-16,INCOMPLETE,"es fehlt: 1x Zivilisationskarte orange, 1x Zivilisationskarte violett",,,4495
+192,Kardinal & König,491,exact,Regal K,2025-08-16,COMPLETE,,,,2995
+193,Mississippi Queen,256,picked,Regal M,2025-08-16,COMPLETE,,,,1000
+194,Galaxy Trucker + Große Erweiterung,,none,Regal G,2025-08-16,INCOMPLETE,"es fehlt: 1x Astronaut, , 2x Credits",,,3499
+195,Age of Empires III,,none,Regal A,2025-08-16,INCOMPLETE,eine Goldmünze fehlt,,,9900
+196,Die Macher,1,exact,,,,,,,6690
+197,Pocket Imperium,147299,exact,Kiste 2,2025-08-16,COMPLETE,,,,2670
+198,Pixies,411875,exact,Kiste 3,2026-06-13,,Anleitung fehlt,,,2399
+199,Samurai Sword Rising Sun,156042,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,1695
+200,Exploding Kittens Das Brettspielt,,none,Regal E,2026-06-13,COMPLETE,,,,1799
+201,RonDo,129614,picked,Regal R,2025-08-16,COMPLETE,,,,1298
+202,Russian Railroads,144733,exact,Regal R,2025-08-16,COMPLETE,,,,3804
+203,Krosmaster Junior,155822,exact,Kinder,2025-08-16,COMPLETE,,,,1795
+204,Munchkin Jäger des Schatzes,166026,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1999
+205,Abyss,155987,picked,Regal A,2026-06-13,COMPLETE,,,,1600
+206,7 Wonders - Duel,173346,fuzzy,Regal W,2025-12-07,COMPLETE,,,,2499
+207,Loony Quest,136991,exact,Regal L,2025-08-16,COMPLETE,,,,2495
+208,Broom Service,172308,exact,Regal B,2025-08-16,COMPLETE,,,,2655
+209,Die Blutige Herberge,180593,exact,Regal B,2025-08-16,COMPLETE,,,,2668
+210,Crazy Coconuts,145639,exact,Kinder,2025-08-16,INCOMPLETE,es fehlt eine Kokusnuss und die Ersatznüsse,,,1999
+211,Imperial Settlers,154203,exact,Regal I,2025-08-16,COMPLETE,,,,3146
+212,Five Tribes,,none,Regal F,2025-08-16,INCOMPLETE,"es fehlt: 1x blauer Meeple, 1x 1er Geldmünze",,,4595
+213,Space Missions,408590,exact,Regal S,2026-06-13,COMPLETE,incl. Promo,,,2095
+214,Mysterium,181304,picked,Regal M,2026-08-06,COMPLETE,,,,3499
+215,Quadropolis,176396,exact,Regal Q,2025-08-16,COMPLETE,,,,4095
+216,They Who Were 8,138201,exact,Regal T,2025-08-16,COMPLETE,,,,2999
+217,Isle of Skye,,none,Regal I,2026-08-06,COMPLETE,,,,2398
+218,Mona Klecksa,192701,exact,Kiste 2,2025-08-16,COMPLETE,,,,1962
+219,Chariot Race,193212,exact,Regal C,2025-08-16,COMPLETE,,,,1799
+220,Spaceship Unity Season 1.1,367361,fuzzy,Regal S,,,,,,1499
+221,Forgotten Waters,302723,exact,Regal F,2026-06-13,COMPLETE,,,,1499
+222,Dindex - Demokratie steht auf dem Spiel,,none,Regal D,2026-08-06,COMPLETE,,,,1499
+223,Cortex Challenge,206175,exact,Kiste 1,2025-08-16,COMPLETE,,,,1495
+224,Cortex Challenge - Kids,203265,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1495
+225,Cortex Challenge - Geo,203266,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,1495
+226,Cabo,73664,exact,Kiste 2,2025-08-16,COMPLETE,,,,800
+227,Cabo,73664,exact,Kiste 2,2025-08-16,INCOMPLETE,es fehlt die Anleitung,,,800
+228,Dobble Hollywood,63268,exact,Kiste 2,2025-12-07,COMPLETE,,,,1299
+229,Dobble Star Wars,63268,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,1595
+230,Weltausstellung 1893,178336,exact,Regal W,2025-08-16,COMPLETE,,,,3200
+231,Exit-Das geheime Labor,,none,Kiste 2,2025-08-16,COMPLETE,,,,1295
+232,Exit- Die verlassene Hütte,,none,Kiste 2,2025-08-16,COMPLETE,,,,1295
+233,Im Wandel der Zeiten: Das Würfelspiel - Bronzezeit,37380,fuzzy,Regal W,2025-08-16,INCOMPLETE,"es fehlt der Block ""Wertungsbogen""",,,6995
+234,Codenames Pictures,198773,fuzzy,Regal C,2025-08-16,COMPLETE,,,,1795
+235,Village,104006,exact,Regal V,2025-08-16,COMPLETE,,,,2819
+236,Tricky Traders,449978,exact,Regal T,,,,,,2399
+237,Codenames,178900,exact,Regal C,2026-08-06,COMPLETE,,,,1795
+238,Rokoko,144344,exact,Regal R,2025-08-16,COMPLETE,,,,4090
+239,My PAIR fect,,none,Regal P,2026-06-13,COMPLETE,,,,2392
+240,Race for the Galaxy,28143,exact,Regal R,2025-12-07,COMPLETE,,,,1499
+241,Die drei kleinen Schweinchen,109732,exact,Kinder,2025-08-16,INCOMPLETE,es fehlt 1 Würfel,,,1999
+242,Schildkröte & Hase,,none,Kinder,2025-08-16,COMPLETE,,,,1999
+243,Die Ameise & die Heuschrecke,,none,Regal A,2025-08-16,COMPLETE,,,,1999
+244,Salamanca,25409,picked,Regal S,2025-08-16,COMPLETE,,,,1590
+245,Hijacked,330964,picked,Regal H,,,,,,3999
+246,Splendor,148228,exact,Regal S,2026-08-06,COMPLETE,,,,1795
+247,Mmm!,172507,exact,Kinder,2025-08-16,COMPLETE,,,,1699
+248,Hanabi - Fun & Easy,,none,Regal H,2025-08-16,COMPLETE,,,,1527
+249,Rotkäppchen,173074,picked,Kinder,2025-08-16,COMPLETE,,,,1999
+250,Lichterfest,160851,exact,Regal L,2025-08-16,COMPLETE,,,,1299
+251,Drachenhort,472,picked,Regal D,2025-08-16,COMPLETE,,,,1499
+252,Concept,147151,exact,Regal C,2025-08-16,COMPLETE,,,,2795
+253,Sag's Mir! Junior,174219,exact,Kinder,2026-08-06,COMPLETE,,,true,1699
+254,Die Legende des Wendigo,213491,exact,Kinder,2025-08-16,COMPLETE,,,,1499
+255,Karibou Camp,192233,exact,Regal K,2025-08-16,COMPLETE,,,,1546
+256,Cardline Weltenbummler,145014,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,789
+257,Würfel!Was?,,none,Kinder,2025-08-16,COMPLETE,,,,
+258,Capital Lux Generations,299607,fuzzy,Regal C,2026-06-13,COMPLETE,,,,795
+259,Zooloretto Würfelspiel,117942,exact,Regal Z,2025-08-18,COMPLETE,Laminierte Spielblätter / Block liegt extra,,,1295
+260,Träxx,173092,exact,Regal T,2025-08-16,COMPLETE,,,,1295
+261,Bohnanza,11,exact,Kiste 1,2026-08-06,,,,,2499
+262,Cornwall,181328,exact,Regal C,2025-08-16,COMPLETE,,,,1290
+263,Skyliners,182605,exact,Regal S,2025-08-16,COMPLETE,,,,1690
+264,Qwirkle,25669,exact,Regal Q,2026-07-22,INCOMPLETE,"es fehlt: 1x Stein (gelbe Raute), Original Spielregeln",,,1799
+265,Zug um Zug,9209,picked,Regal Z,2026-07-22,COMPLETE,incl. 1910-Erweiterung,,,
+266,Kingdom Builder,107529,exact,Regal K,2026-08-06,COMPLETE,,,,1925
+267,Stone Age,34635,exact,Regal S,2025-08-16,COMPLETE,,,,2995
+268,Hase und Igel,361,exact,Regal H,2025-08-16,COMPLETE,,,,2000
+269,Brazil Imerial,,none,Regal B,2026-06-13,COMPLETE,,,,1099
+270,Coud City Die Wolkenstadt,,none,Regal C,2026-06-13,COMPLETE,,,,1100
+271,Paleolino,464279,exact,Kinder,2026-11-16,COMPLETE,,,,1499
+272,Wer war's?,,unsure,Kinder,2025-08-16,INCOMPLETE,es fehlt ein Ring,,,3364
+273,Gobblet Mampfer XXL,,none,,,,,,,1639
+274,Potion Explosion,180974,exact,Regal P,2026-08-06,INCOMPLETE,eine schwarze Murmel fehlt,,,3230
+275,Dobble,63268,exact,Kiste 1,2025-12-07,COMPLETE,,,,1150
+276,Saltfjord,422674,exact,Regal S,2026-06-13,COMPLETE,,,,1190
+277,Unlock! 1 - Escape Advenutes,,none,Regal U,2025-08-16,COMPLETE,,,,2599
+278,Stone Age Junior,191004,exact,Kinder,2026-08-06,COMPLETE,,,,1499
+279,Monster auf der Flucht,86587,exact,Kiste 1,2025-08-16,COMPLETE,,,,500
+280,Die Baumeister - Antike,161226,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,1395
+281,Der Eiserne Thron,6472,exact,Regal E,2025-12-07,COMPLETE,,,,3995
+282,Deus,162082,exact,Regal D,2025-08-16,COMPLETE,Ersatzmarker,,,2739
+283,Die Siedler von Catan - Das Kartenspiel,278,fuzzy,Regal C,2025-08-16,COMPLETE,,,,2000
+284,Pathfinder Abenteuerkartenspiel Das Erwachen der Runenherrscher Grundbox,133038,fuzzy,Regal P,2026-06-13,,Teileliste fehlt,,,1499
+285,Halt mal kurz,,none,Kiste 1,2026-08-06,COMPLETE,,,,573
+286,Caesar & Cleopatra,132,exact,Regal C,2026-08-06,COMPLETE,,,,1399
+287,Runewars,59294,exact,Regal R,2025-08-16,COMPLETE,,,,7299
+288,Glen More,66362,exact,Regal G,2025-08-16,COMPLETE,,,,3990
+289,Wie verhext!,34084,exact,,,,,,,1595
+290,"Tempo, kleine Schnecke!",2767,exact,,,,,,,1599
+291,Die Akte Whitechapel,59959,exact,Regal W,2025-08-16,COMPLETE,,,,3495
+292,Tzolk'in,,none,Regal T,2025-08-16,COMPLETE,,,,3393
+293,Die Alchemisten,161970,exact,Regal A,2025-08-16,COMPLETE,,,,3541
+294,Artengarten,441696,exact,Regal A,2026-06-13,INCOMPLETE,ein Beutelmarker fehlt,,,1819
+295,Lingua,5174,exact,,,,"fehlt: 1x Buchstaben-Plättchen, Bögen laminieren",,,1470
+296,Hütchenspiel,16232,fuzzy,,,,,,,999
+297,Bandito,17205,picked,Kiste 1,2026-08-06,COMPLETE,,,,1000
+298,Das Verrückte Labyrinth,1219,exact,Kinder,2025-08-16,COMPLETE,,,,1796
+299,Gänsespiel,2785,fuzzy,Kinder,2025-08-16,COMPLETE,,,,2999
+300,Dice Forge,194594,exact,Regal D,2025-08-16,UNPLAYABLE,eine Wüfelseite fehlt,,,3380
+301,Guildhall,132372,exact,Kiste 4,2025-08-16,COMPLETE,,,,1399
+302,Der Herr der Ringe - Das Duell,4610,fuzzy,Regal H,2026-08-06,COMPLETE,,,,1400
+303,voll,,none,Kiste 3,2026-06-13,INCOMPLETE,1 5er Modifikator fehlt,,,3490
+304,La Boca,136280,exact,Regal L,2025-08-16,INCOMPLETE,nur zu 5/6 spielbar – es fehlt ein blauer Partnerchip,,,4190
+305,Love Letter - Big Box,196326,fuzzy,Regal L,2026-08-06,COMPLETE,,,,1595
+306,Why First?,171672,picked,Kiste 1,2025-08-16,COMPLETE,,,,799
+307,4 Seasons,73312,picked,Kiste 1,2025-08-16,COMPLETE,,,,799
+308,Bücherwurm,193272,exact,Kiste 2,2025-08-16,COMPLETE,,,,895
+309,Stadt - Land - Anders,193271,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,699
+310,Dr. Eureka,181345,exact,Kinder,2025-08-16,COMPLETE,,,,1599
+311,Locus,428322,picked,Regal L,2026-11-05,COMPLETE,,,,999
+312,"Spitz, pass auf!",3727,fuzzy,Regal S,2025-08-16,COMPLETE,,,,1147
+313,Wer ist es?,4143,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1988
+314,Das kleine Gespenst,16369,exact,Kinder,2025-08-16,COMPLETE,,,,1223
+315,Moon Colonie Bloodbath,,none,Regal M,2026-11-05,COMPLETE,,,,3500
+316,Snapshot,66116,picked,Regal S,2025-08-16,COMPLETE,,,,3300
+317,Hexentanz,2087,exact,Regal H,2025-08-16,COMPLETE,,,,1699
+318,Sherlook,217619,exact,Regal S,2025-08-16,COMPLETE,,,,1895
+319,Dr. Microbe,217554,exact,Kinder,2025-08-16,COMPLETE,,,,1599
+320,Ticket to Ride France + Old West,,none,Regal Z,2025-08-16,INCOMPLETE,es fehlt: Regeln Old West,true,,3570
+321,Maskenball der Käfer,4522,exact,Kinder,2025-08-16,COMPLETE,,,,1499
+322,Aladdin & die Wunderlampe,,none,Kinder,2025-08-16,COMPLETE,,,,1999
+323,Der Rattenfänger von Hameln,13015,exact,Kiste 3,2025-08-16,COMPLETE,,,,1999
+324,Ethnos,206718,exact,Regal E,2025-08-16,COMPLETE,,,,3570
+325,New Angeles,205716,exact,Regal N,2025-08-16,COMPLETE,,,,4999
+326,Flick 'em Up! Winter der Toten,207016,fuzzy,Regal F,2025-08-16,COMPLETE,,,,6489
+327,Otys,222542,exact,Regal O,2025-08-16,COMPLETE,,,,3160
+328,Les Poilus,171668,exact,Kiste 2,2025-08-16,COMPLETE,,,,2086
+329,Contrast,218465,exact,Kiste 2,2025-08-16,COMPLETE,,,,1495
+330,Codenames Duett,224037,fuzzy,Regal C,2026-08-06,COMPLETE,,,,1795
+331,Was 'ne frage!,226322,exact,Regal W,2026-08-06,COMPLETE,,,,1595
+332,When I dream,198454,exact,Regal W,2026-08-06,COMPLETE,,,,2599
+333,Secrets,200847,exact,Kiste 1,2025-08-16,COMPLETE,,,,2236
+334,Hellapagos,224272,exact,Kiste 3,2026-06-13,COMPLETE,,,,1895
+335,Oh Captain!,215918,exact,Regal O,2025-08-16,COMPLETE,,,,2495
+336,Nomaden,216985,picked,Regal N,2025-08-16,COMPLETE,,,,2495
+337,Unlock! - Enchanted Adventures,455101,fuzzy,Regal U,2026-06-13,COMPLETE,,,,2999
+338,Stapelmännchen,9912,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1295
+339,Icecool,177524,exact,Kinder,2025-08-16,COMPLETE,,,,1639
+340,Der Verzauberte Turm,130792,picked,Kinder,2025-08-16,COMPLETE,,,,2299
+341,Spinderella,171129,exact,Kinder,2026-07-22,COMPLETE,,,,1885
+342,Beppo der Bock,27948,exact,,2025-08-16,COMPLETE,,,true,2295
+343,Da ist der Wurm drin!,91671,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1699
+344,Der Schwarze Pirat,23890,exact,Kinder,2025-08-16,INCOMPLETE,eine Goldmünze fehlt,,,2500
+345,Kayanak,4493,exact,Kinder,2025-08-16,COMPLETE,,,,1999
+346,Nocturnis,447485,exact,Regal N,2026-06-13,COMPLETE,,,,2285
+347,Hexx & Hopp,174696,exact,Kiste 1,2025-08-16,COMPLETE,,,,1295
+348,Agricola,31260,exact,Regal A,2026-08-06,COMPLETE,,,,
+349,Meeple Circus - incl. 2 Erweiterung,,none,Regal M,2025-08-16,COMPLETE,,,,3943
+350,Uno Colors Rule!,261076,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,1599
+351,Bärenpark,219513,exact,Regal B,2025-08-16,COMPLETE,,,,2499
+352,Festung,25988,exact,Kiste 2,2025-08-16,COMPLETE,,,,1441
+353,Fertig!,231999,exact,Kiste 1,2025-08-16,COMPLETE,,,,1400
+354,Flucht,,none,Kiste 2,2025-08-16,COMPLETE,,,,1441
+355,Furcht,,none,Kiste 1,2025-08-16,COMPLETE,,,,1488
+356,Elfenland - de luxe Edition,,none,Regal E,2026-08-06,COMPLETE,,,,2599
+357,NMBR9,217449,exact,Regal N,2026-06-13,COMPLETE,,,,1698
+358,Blueprints,140933,exact,Regal B,2025-08-16,COMPLETE,,,,1090
+359,Wettlauf nach El Dorado,217372,exact,Regal E,2026-08-06,COMPLETE,,,,1499
+360,unlock! Short Adventures - Die rote Maske,391995,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,2428
+361,Zauberlehrling gesucht!,217531,fuzzy,Regal Z,2025-08-16,INCOMPLETE,nur bis 3 Personen spielbar – es fehlt ein gelbes Amulett und acht Münzen,,,2668
+362,Gobblet Mampfer,13230,exact,Kinder,2025-08-16,COMPLETE,,,,1639
+363,Last Friday,192927,exact,Regal L,2025-08-16,COMPLETE,,,,
+364,Last Friday - Return to Camp Apache,231946,fuzzy,Regal L,2026-06-13,COMPLETE,,,,2849
+365,Kingdomino,204583,exact,Regal K,2026-08-06,COMPLETE,,,,1298
+366,Dodelido,206939,exact,Kiste 4,2026-06-13,COMPLETE,,,,750
+367,Yamatai,,none,Regal Y,2025-08-16,COMPLETE,,,,4700
+368,Dragon Castle,232219,exact,Regal D,2025-08-16,COMPLETE,,,,4280
+369,Game of Quotes,,none,Kiste 1,2025-08-16,COMPLETE,,,,1065
+370,Can't Stop!,14102,exact,Regal C,2026-08-06,COMPLETE,,,,1969
+371,Schnurrrlock Holmes,,none,Regal S,2025-08-16,COMPLETE,,,,2650
+372,Diego Drachenzahn,59223,exact,Kinder,2025-08-16,INCOMPLETE,es feht ein Drachenzahn,,,1995
+373,Unlock! 2 - Mystery Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,2599
+374,unlock! Short Adventures - Schrödingers Katze,392193,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,1889
+375,Schnappt Hubi!,92644,picked,Kinder,2025-08-16,INCOMPLETE,1 Chip fehlt,,,3099
+376,Das Magische Labyrinth,41916,picked,Kinder,2025-08-16,INCOMPLETE,ein Mauerteil fehlt,,,1699
+377,Photosynthese,218603,exact,Regal P,2025-08-16,COMPLETE,,,,2295
+378,Der Pate - Corleones Imperium,195539,fuzzy,Regal P,2025-08-16,COMPLETE,,,,7680
+379,Princess Legend,186475,exact,Regal P,2025-08-16,COMPLETE,,,,1499
+380,Decrypto,225694,picked,Regal D,2026-07-22,COMPLETE,,,,1550
+381,Orbis,255507,exact,Regal O,2025-08-16,INCOMPLETE,es fehlt: 2x nicht erfüllt Plättchen,,,2300
+382,Panic Mansion,232045,exact,Kinder,2025-08-16,COMPLETE,,,,1750
+383,Lorenzo der Prächtige,203993,exact,Regal L,2025-08-16,COMPLETE,,,,2800
+384,Pinguluu,34819,exact,Kinder,2025-08-16,COMPLETE,,,,1450
+385,Lucky Lachs - Blue,194626,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,1200
+386,Lucky Lachs - Green,,none,Kiste 4,2026-08-06,COMPLETE,,,,1200
+387,Catan Connect,451387,exact,Regal C,2026-06-13,COMPLETE,,,,3000
+388,Catan Connect,451387,exact,Regal C,2026-06-13,COMPLETE,incl. Ersatzfiguren,,,3000
+389,Portobello Market,27356,exact,Regal P,2025-08-16,COMPLETE,,,,1000
+390,Erster Obstgarten,41302,exact,Kinder,2025-08-16,COMPLETE,,,,2000
+391,Spiel,,none,Kinder,2025-08-16,COMPLETE,,,,3000
+392,Blütenreich - Ein Garten voller Schmetterlinge,,none,Regal B,,,,,,1300
+393,Voltage,24082,exact,Regal V,2025-08-16,COMPLETE,,,,1300
+394,Make 'n' Break - Architect,193136,fuzzy,Regal M,2025-08-16,COMPLETE,,,,1700
+395,???,,none,Kiste 4,2025-08-16,COMPLETE,,,,800
+396,Hegemoni,,none,Regal H,,,,,,2800
+397,Der Herr der Ringe,823,exact,Regal H,2025-08-16,COMPLETE,,,,
+398,Spellbook,391834,picked,Regal S,2026-08-06,COMPLETE,,,,4000
+399,Fresko - incl. 1 - 3 Erweiterung,,none,Regal F,2025-08-16,COMPLETE,,,,3300
+400,This War of mine,,none,Regal W,2025-08-16,COMPLETE,,,,6000
+401,Alhambra - Würfelspiel,,none,Regal A,2025-08-16,COMPLETE,,,,2500
+402,Revolution!,34887,exact,Regal R,2025-08-16,COMPLETE,,,,1500
+403,Raxxon,231197,exact,Regal R,2025-08-16,COMPLETE,,,,2760
+404,Escape Room Das Spiel,204836,fuzzy,Regal E,2025-08-16,COMPLETE,,,,4000
+405,Loot Island,235512,exact,Regal L,2025-08-16,COMPLETE,,true,,2300
+406,Star Wars Destiny,205359,fuzzy,Regal S,2025-08-16,COMPLETE,,,,1800
+407,Legend of the five Rings,1887,exact,Regal L,2025-08-16,COMPLETE,,,,2700
+408,Die Speicherstadt,66505,exact,Regal S,2025-08-16,COMPLETE,,,,2000
+409,Blokus,2453,exact,Kinder,2025-08-16,INCOMPLETE,ein grünes Teil fehlt,,,2400
+410,Vor den Toren von Loyang,39683,exact,Regal L,2025-08-16,INCOMPLETE,eine 5er Münze fehlt,,,4500
+411,Ubongo,16986,exact,Kiste 1,2025-08-16,COMPLETE,,,,
+412,Unlock! 3 - Secret Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,2599
+413,Walls of York,247980,exact,Regal Y,2025-08-16,COMPLETE,,,,3400
+414,City of Rome,258466,fuzzy,,,,,,,2000
+415,Vikings Gone Wild,187377,picked,Regal V,2025-08-16,COMPLETE,,,,3000
+416,Alles an Bord?!,245704,exact,Kinder,2025-08-16,COMPLETE,,,,2300
+417,Steam Time,180592,exact,Regal S,2025-08-16,INCOMPLETE,es fehlt: 2 Upgrade-Plättchen V,,,1000
+418,Feiner Sand,257733,exact,Regal F,2025-08-16,COMPLETE,,,,2500
+419,Zooloretto Duell,232481,exact,Regal Z,2026-06-13,COMPLETE,,,,1500
+420,Colorio,53557,exact,Regal C,2025-08-16,COMPLETE,,,true,1500
+421,unlock! Short Adventures - Mord in Birmingham,392192,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,5000
+422,Schweinebande,64675,exact,Regal S,2025-08-16,COMPLETE,,,,1000
+423,Riftforce,291859,exact,Regal R,2026-06-13,COMPLETE,,,,2900
+424,Einfach Genial,9674,picked,Regal E,2025-08-16,COMPLETE,,,,3000
+425,Holmes,227071,exact,Regal H,2025-08-16,COMPLETE,,,,1600
+426,HexHex,,none,Kiste 2,2025-08-16,COMPLETE,,,,2000
+427,Dos,246701,exact,Kiste 4,2025-08-16,COMPLETE,,,,800
+428,Kodama,,none,Regal K,2025-12-07,INCOMPLETE,"zwei Karten fehlen, dafür sind zwei andere zuviel und somit doppelt",,,1239
+429,Jungle Race,8657,picked,Kiste 2,2025-08-16,COMPLETE,,,,
+430,Panic Lab,121073,exact,Kiste 4,2025-08-16,COMPLETE,,,,1300
+431,Fatal,36380,exact,Kiste 2,2025-08-16,COMPLETE,,,,1600
+432,Ubongo Exrem,,none,Kiste 1,2025-08-16,COMPLETE,,,,
+433,Magic Rabbit,303669,exact,Regal M,2026-06-13,COMPLETE,,,,1500
+434,Snow Time,256438,exact,Regal S,2025-08-16,COMPLETE,,,,1800
+435,Oros,313807,exact,Regal O,2026-06-13,COMPLETE,,,,1500
+436,Odd Ville,,none,Regal O,2025-08-16,COMPLETE,,,,2000
+437,Das Fundament der Ewigkeit,217949,exact,Regal F,2025-08-16,COMPLETE,,,,4000
+438,Tumult Royale,180591,exact,Regal T,2025-08-16,COMPLETE,,,,1600
+439,Cortex Challenge - Plus,,none,Regal C,2025-08-16,COMPLETE,,,,1680
+440,Waka Waka,118025,exact,Regal W,2025-08-16,COMPLETE,,,,2000
+441,Carcassonne Junior,41010,exact,Kinder,2025-08-16,COMPLETE,,,,2200
+442,Wannabe Football,261168,exact,Kiste 2,2025-08-16,COMPLETE,,,,1600
+443,Foppen,256802,picked,Kiste 4,2025-08-16,COMPLETE,,,,1000
+444,Penk,255697,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,
+445,Lift off,260757,picked,Regal L,2025-08-16,COMPLETE,,,,1499
+446,Boost!,172064,exact,Kiste 2,2025-08-16,COMPLETE,,,,1100
+447,You Robot,41054,exact,Kiste 4,2025-08-16,COMPLETE,,,,950
+448,Find den Mörder,164172,fuzzy,Kiste 1,2025-08-16,COMPLETE,,,,600
+449,Der Rat von Verona,165469,exact,Kiste 4,2025-08-16,COMPLETE,,,,
+450,Te Kuiti,149885,exact,Kinder,2025-08-16,COMPLETE,,,,900
+451,Trial by trolley,282171,exact,Regal T,2026-06-13,COMPLETE,,,,500
+452,Müllparty,,none,Kiste 1,2025-08-16,COMPLETE,,,,
+453,Divinity Derby,218580,exact,Regal D,2025-08-16,COMPLETE,,true,,3400
+454,Stone Age Junior - Das Kartenspiel,234511,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1900
+455,Battlestar Galactica,,unsure,Regal B,2026-06-13,UNPLAYABLE,"es fehlen: Brank Marker (4), Shield 1Markers (4), difficult markers (4), use cornlens (22), collision damage (16), würfel (2), 1D Tags (16)",true,,6300
+456,Century - Die Gewürzstraße,209685,fuzzy,Regal C,2025-08-16,COMPLETE,,,,3500
+457,Citadels,478,picked,Regal C,2026-08-06,COMPLETE,,,,3300
+458,Die Mumien des Pharao,236485,exact,Regal M,2025-08-16,COMPLETE,,,,1600
+459,Moomery,258729,exact,Kinder,2025-08-16,COMPLETE,,,,1000
+460,Visioo,267978,exact,Kiste 4,2025-08-16,COMPLETE,,,,960
+461,Pictomania,98229,exact,Regal P,2025-08-16,INCOMPLETE,bis fünf spielbar – es fehlt 1 roter 3 Wertungschip,,,1500
+462,Shadows Amsterdam,246297,fuzzy,Regal S,2025-08-16,COMPLETE,,,,1700
+463,Quacksalber von Quedlinburg,244521,fuzzy,Regal Q,2026-08-06,COMPLETE,,,,2500
+464,Half-Pint Heroes,216578,exact,Kiste 1,2025-08-16,COMPLETE,,,,2000
+465,Tajuto,286830,exact,Regal T,2025-08-16,COMPLETE,,,,4000
+466,Woods of Tarnaris - incl. Erweiterung,,none,Kinder,2025-08-16,COMPLETE,,,,2000
+467,Bummelbahn,,unsure,Kiste 4,2025-08-16,COMPLETE,,,,1000
+468,Life is Life,192635,exact,Kiste 4,2025-08-16,COMPLETE,,,,800
+469,Fusion,103236,exact,Kiste 2,2025-08-16,COMPLETE,,,,800
+470,Funkelschatz,235655,exact,Kinder,2025-08-16,INCOMPLETE,es fehlt 1 x grüner Diamant,,,1500
+471,Planet,252929,exact,Regal P,2025-08-16,COMPLETE,,,,2050
+472,Just One + Erweiterung,,none,Regal J,2026-08-06,COMPLETE,,,,2000
+473,Coco Papagei,193328,exact,Regal C,2026-04-02,COMPLETE,,,,2280
+474,Android Mainframe,193557,fuzzy,Regal M,2025-08-16,COMPLETE,,,,3000
+475,Solenia,254018,exact,Regal S,2025-08-16,COMPLETE,,,,2900
+476,Gizmos,246192,exact,Regal G,2025-08-16,COMPLETE,,,,2400
+477,Carta Impera Victoria,,none,Regal C,2025-08-16,COMPLETE,,,,1560
+478,Imaginarium,218804,exact,Regal I,2026-08-06,COMPLETE,,,,4000
+479,Adellos - First Edition,,none,Regal A,2025-08-16,COMPLETE,,,,3000
+480,Dr. Eureka XXL,,none,Kinder,2025-08-16,COMPLETE,,,,5000
+481,Silicon Valley-Start-Ups,267884,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,1500
+482,Noch Mal!,206931,exact,Kiste 2,2025-08-16,COMPLETE,,,,800
+483,Ligretto - blau,,none,Kiste 1,2025-08-16,COMPLETE,,,,700
+484,The Mind,244992,exact,Kiste 1,2026-07-22,COMPLETE,,,,700
+485,Ganz schön clever,244522,exact,Regal G,2026-08-06,COMPLETE,,,,800
+486,Villagers,241724,exact,Regal V,2025-08-16,COMPLETE,,,,1900
+487,Harry Potter - Kampf um Hogwarts,199042,fuzzy,Regal H,2026-08-06,COMPLETE,,,,3600
+488,Gobblers Family Mix,286828,exact,Kinder,2025-08-16,COMPLETE,,,true,4000
+489,Imhotep Baumeister Ägyptens,,none,Regal I,2025-08-16,COMPLETE,,,,3200
+490,Honga,255805,exact,Regal H,2025-08-16,INCOMPLETE,es fehlt: 1x rotes Mammut,,,2899
+491,Freistilschach,,none,Regal F,2026-06-13,COMPLETE,,,,800
+492,Blood on the clocktour,,none,Regal B,2026-06-07,COMPLETE,,,,800
+493,Magic the gathering GRUNDSTEIN Einsteigergbox,,none,Regal M,2026-06-13,COMPLETE,,,,2700
+494,Kingdomino XXL,204583,exact,Regal K,2025-08-16,COMPLETE,,,,5000
+495,Mystic Vale,194607,exact,Regal M,2025-08-16,COMPLETE,,,,1800
+496,Panda Royal,,none,Regal P,2026-11-05,COMPLETE,,,,2000
+497,Monsieur Carrousel,264318,exact,Kinder,2025-08-16,COMPLETE,,,,2600
+498,Deadline,145601,picked,Regal D,2025-08-16,COMPLETE,,,,3000
+499,Watson & Holmes,182694,exact,Regal W,2025-08-16,COMPLETE,,,,4250
+500,Micropolis,239840,picked,Regal M,2025-08-16,COMPLETE,,,,2600
+501,Azul,230802,exact,Regal A,2026-08-06,COMPLETE,,,,3200
+502,Hokus Pokus Flipibus,287131,exact,Kinder,2025-08-16,COMPLETE,,,,1000
+503,Captain Sonar,171131,exact,Regal S,2026-08-06,COMPLETE,,,,3300
+504,Cities Skylines,,none,Regal C,2025-08-16,COMPLETE,,,,3200
+505,Tiny Epic Mechs,257283,exact,Regal E,2025-08-16,COMPLETE,,,,2500
+506,Tiny Epic Zombies - Deluxe Edition,266219,fuzzy,Regal E,2025-08-16,COMPLETE,,,,2500
+507,Die Crew,,none,Regal C,2026-07-22,COMPLETE,,,,1050
+508,Big Monster,246567,exact,Regal B,2025-08-16,COMPLETE,,true,,3000
+509,Way of the Panda,204575,exact,Regal W,2025-08-16,COMPLETE,,,,4560
+510,Korsaren der Karibik,25292,exact,Regal K,2025-08-16,COMPLETE,,,,6000
+511,Team3 - grün,275870,fuzzy,Regal T,2025-08-16,COMPLETE,,,,1800
+512,Team3 - pink,247694,fuzzy,Regal T,2026-08-06,COMPLETE,,,,1800
+513,Nyctophobia,249505,exact,Regal N,2025-08-16,COMPLETE,,,,2700
+514,Space Gate Odyssey,266179,exact,Regal S,2025-08-16,COMPLETE,,,,1499
+515,Fallout,232918,exact,Regal F,2025-08-16,COMPLETE,,,,4200
+516,Der Herr der Ringe - Reise durch Mittelerde,269385,fuzzy,Regal H,2026-06-07,COMPLETE,,,,6800
+517,Werwölfe Vollmondnacht,147949,fuzzy,Kiste 1,2026-07-22,COMPLETE,,,,900
+518,Exploding Kittens,172225,exact,Regal E,2026-08-06,COMPLETE,,,,1350
+519,Subtext,265684,exact,Regal S,2025-08-16,COMPLETE,,,,2300
+520,Gen 7,,none,Regal G,2025-08-16,COMPLETE,,,,4600
+521,Rapa Nui,103132,picked,Regal R,2025-08-16,COMPLETE,,,,2500
+522,Haus der Sonne,177727,exact,Regal H,2025-08-16,COMPLETE,,,,3000
+523,Sherlock Holmes - Criminal Cabinet,2511,fuzzy,Regal S,2025-08-16,COMPLETE,,,,2000
+524,Altiplano,234487,exact,Regal A,2025-08-16,COMPLETE,,,,3500
+525,Hadara,269144,exact,Regal H,2025-08-16,COMPLETE,,,,3100
+526,Arkham Horror - 3. Ausgabe,,none,Regal A,2025-08-16,COMPLETE,,,,4800
+527,Keyforge - Zeitalter des Aufstiegs,,none,Regal K,2025-08-16,COMPLETE,,,true,2050
+528,Fruit Ninja,,none,Regal F,2025-08-16,COMPLETE,,,,1600
+529,Bloodborne,,none,Regal B,2025-08-16,COMPLETE,,,,2650
+530,Drecksau,118410,exact,Kiste 4,2026-08-06,COMPLETE,,,,800
+531,Qwinto,183006,exact,Kiste 3,2025-12-07,COMPLETE,,,,800
+532,Knatsch,1263,exact,Kiste 2,2025-08-16,COMPLETE,,,,800
+533,Die Säulen der Erde - Duell der Baumeister,40831,fuzzy,Regal S,2025-08-16,COMPLETE,,,,2500
+534,Hex Roller,267568,exact,Kiste 1,2025-08-16,COMPLETE,,,,1000
+535,Hopp Hopp Häschen,13436,exact,Kinder,2025-08-16,COMPLETE,,,,1700
+536,Viva Topo,8195,fuzzy,Kinder,2025-08-16,UNPLAYABLE,Spielplan fehlt,,,2000
+537,Zombie Kidz Evolution,256952,exact,Kinder,2025-08-16,COMPLETE,,,,1440
+538,Trains - Die Bahn kommt,,none,Regal T,2025-08-16,COMPLETE,,,,2500
+539,A Tale of Pirates,173096,exact,Regal A,2025-08-16,COMPLETE,,,,3800
+540,What Do You Meme?,226610,picked,Regal W,2025-08-16,COMPLETE,,,,2600
+541,Der Palast von Alhambra,6249,exact,Regal A,2025-08-16,COMPLETE,,,,3000
+542,Red7,161417,exact,Kiste 3,2025-08-16,COMPLETE,,,,1500
+543,Fast Food Fear!,223538,exact,Kiste 1,2025-08-16,COMPLETE,,,,1200
+544,Aachen,5828,exact,Regal A,2026-06-13,INCOMPLETE,"1 Aktionskarte, 1 wusstes du das? Karte fehlt",,,
+545,Wikinger - Die vergessenen Eroberer,12495,fuzzy,Regal W,2025-08-16,COMPLETE,,,,3000
+546,Der verflixte Zaubertrank,95231,exact,Kinder,2025-08-16,INCOMPLETE,es fehlt 1/2 gelber Kessel,,,1500
+547,Pirate 21,225000,exact,Kiste 2,2025-08-16,COMPLETE,,,,1100
+548,Unlock! kids - Irische Sagen,427106,fuzzy,Kinder,2026-04-02,COMPLETE,,,,1000
+549,Human Punishment,,none,Kiste 1,2026-08-06,COMPLETE,,,,2500
+550,Wär ich doch der Hahn im Korb,181343,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1080
+551,Mystic Vale Essential Edition,308762,fuzzy,Regal M,2026-06-13,,,true,,2600
+552,Gackerei ums Hühnerei,72181,exact,Kinder,2025-08-16,INCOMPLETE,es fehlt ein gelbes und ein blaues Küken,,,1000
+553,Star Wars X-Wing 2.0,252328,fuzzy,Regal S,2025-12-07,COMPLETE,,,,3100
+554,Tiefenrausch,351332,fuzzy,,2026-06-07,COMPLETE,,,,1000
+555,Gobblet Mampfer,13230,exact,Kinder,2025-08-16,COMPLETE,,,true,1500
+556,Die kleinen Drachenritter,124378,exact,Kinder,2025-08-16,INCOMPLETE,es fehlt ein blauer Gegenstand,,,2300
+557,Looping Louie,327,exact,Kinder,2026-07-22,COMPLETE,,,,2500
+558,Batavia,35248,picked,Regal B,2025-08-16,COMPLETE,,,,2800
+559,Ladies & Gentlemen,124380,exact,Regal L,2025-08-16,COMPLETE,,,,
+560,Bad Bunnies,171447,exact,Kiste 4,2025-08-16,COMPLETE,,,,1100
+561,Jolly Roger,,unsure,Regal J,2025-08-16,COMPLETE,,,,1300
+562,Zirkus Stapelix,93442,exact,Kinder,2025-08-16,COMPLETE,,,,1000
+563,Fuchs du hast das Huhn gestohlen,228141,exact,Kinder,2025-08-16,COMPLETE,,,,2200
+564,Tier auf Tier,17329,exact,Kinder,2025-08-16,COMPLETE,,,,1499
+565,unlock! Short Adventures - Im Kopf von Sherlock Holmes,429816,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,3600
+566,Betrayal At House on the hill 3. Edition,,none,Regal B,,,,,,2000
+567,Fish 'n' Flips,288533,exact,Kiste 2,2025-08-16,COMPLETE,,,,
+568,Drillers,465669,exact,Regal D,2026-11-07,COMPLETE,,,,1300
+569,Tal der Wikinger,269526,exact,Kinder,2026-07-22,COMPLETE,,,,1369
+570,Kobayakawa,142325,exact,Kiste 2,2025-08-16,COMPLETE,,,,700
+571,King Size,140830,exact,Kiste 2,2025-08-16,COMPLETE,,,,1490
+572,Die sieben Siegel,8129,exact,Kiste 2,2025-08-16,COMPLETE,,,,2500
+573,Flügelschlag,266192,exact,Regal F,2025-08-16,COMPLETE,,,,3800
+574,Bauchplatscher!,1383,fuzzy,Kinder,2025-08-16,COMPLETE,,,,1500
+575,Save the Meeples,275800,exact,Regal S,2025-08-16,INCOMPLETE,"es fehlt 1 Siegpunktmarker, 3 grosse Holzscheiben, 2 kleine Erdölzylinder, 3 große Erdölzylinder",,,4000
+576,unlock! Short Adventures - Im Kopf von Sherlock Holmes,429816,fuzzy,Kiste 4,2026-04-02,COMPLETE,,,,1500
+577,Tiny Epic Defenders (EN) - Deluxe Edition,,none,Regal E,2025-08-16,COMPLETE,,,,2500
+578,Schatz-Hatz,185374,exact,Kiste 4,2025-08-16,COMPLETE,,,,960
+579,Endevor Die Tiefsee,,none,Regal E,,,,,,2300
+580,Katamino,6931,exact,Regal K,2025-08-16,COMPLETE,,,,3500
+581,One Key,263155,exact,Regal O,2026-08-06,COMPLETE,,,,2000
+582,Rebirth,417197,exact,Regal R,2026-11-16,COMPLETE,,,,1300
+583,Clouds,243606,exact,Kiste 4,2025-08-16,COMPLETE,,,,750
+584,Weimar - Der Kampf um die Demokratie,265537,fuzzy,Regal W,2026-06-13,COMPLETE,,,,1500
+585,Roll for the Galaxy,132531,exact,Regal R,2025-08-16,COMPLETE,,,,3900
+586,Mein Traumhaus,194880,exact,Regal T,2025-08-16,COMPLETE,,,,2000
+587,Die Tavernen im tiefen Thal,269207,exact,Regal T,2026-08-06,COMPLETE,,,,2600
+588,Spirit Island,162886,exact,Regal S,2025-12-07,COMPLETE,,,,4900
+589,Dragomino,300010,exact,Kinder,2025-08-16,COMPLETE,,,,1499
+590,New York Zoo,300877,exact,Regal N,2025-12-07,COMPLETE,,,,
+591,Paleo,300531,picked,Regal P,2026-08-06,INCOMPLETE,"ein Holzstein ""Stein"" fehlt",,,
+592,Baumkronen,295607,exact,Regal B,2025-08-16,COMPLETE,,,,
+593,Ghost Adventures,,none,Regal G,2025-08-16,COMPLETE,,,,
+594,Codenames XXL,178900,exact,Regal C,2025-08-16,COMPLETE,,,,
+595,Coronarr,463925,exact,Regal C,2025-08-16,COMPLETE,,,true,
+596,Robo Race,,none,Regal R,2025-08-16,COMPLETE,,,,
+597,Andor Junior,295488,exact,Kinder,2025-08-16,COMPLETE,,,,1499
+598,Men at Work,261114,exact,Regal M,2025-08-16,COMPLETE,,,,
+599,Die Baumeister - Mittelalter,144553,fuzzy,,,,fehlt: 1 Silbermünze; überzählig: 3 Goldmünzen,,,1000
+600,Verhext nochmal!,68032,exact,Kiste 2,2025-08-16,INCOMPLETE,Anleitung fehlt,,,
+601,Sebastian Fitzek Killer Cruise,,none,Regal F,2025-08-16,COMPLETE,,,,
+602,Deep Dive,329828,picked,Kinder,2025-08-16,COMPLETE,,,,
+603,Krieg und Frieden,,unsure,Regal K,2025-08-16,COMPLETE,,,,
+604,Yukon,,unsure,Regal Y,2025-08-16,COMPLETE,,,,
+605,Karak,241477,exact,Kinder,2026-06-13,COMPLETE,,,,1499
+606,Die Abenteuer des Robin Hood,326494,exact,Regal R,2026-08-06,COMPLETE,,,,
+607,Ufo Boom,329831,exact,Kinder,2026-06-13,COMPLETE,,,true,
+608,Ecogon,211453,exact,Regal E,2025-12-07,COMPLETE,,,,
+609,Fotofish,,none,Kinder,2025-08-16,COMPLETE,,,,
+610,Pictures,284108,picked,Regal P,2026-07-22,COMPLETE,,,,
+611,Die verlorenen Ruinen von Arnak,312484,exact,Regal A,2026-08-06,COMPLETE,,,,
+612,Sternen Leuchten,,none,Kinder,2025-08-16,COMPLETE,,,,
+613,Monsterjäger,1744,exact,Kinder,2025-08-16,COMPLETE,,,,
+614,Spukschloss,1613,exact,Kinder,2025-08-16,COMPLETE,,,,
+615,Beez,299592,exact,Regal B,2025-08-16,COMPLETE,,,,
+616,Marvel Champions,,none,Regal M,2025-12-07,COMPLETE,,,,
+617,Meadow Im Reich der Natur,314491,exact,Regal M,2025-08-16,COMPLETE,,,,
+618,Die grosse Ess-kalation!#,,none,Regal E,2025-08-16,INCOMPLETE,nicht zu viert spielbar – ein Supershake fehlt,,,
+619,Redcliff Bay Mysteries,349194,exact,Regal R,2025-08-16,COMPLETE,,,,
+620,Die Insel der Katzen,281259,exact,Regal I,2026-08-06,COMPLETE,,,,
+621,Architekten des Westfrankenreichs,236457,exact,Regal A,2025-12-07,COMPLETE,,,,
+622,Club der Erfinder,200785,exact,Regal C,2025-08-16,COMPLETE,,,,1499
+623,Dungeon Drop,262208,exact,Kiste 2,2025-08-16,COMPLETE,Zusatzteile neben der Kiste,,,
+624,Unlock! 4 - Exotic Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+625,Unlock! 5 - Heroic Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+626,Unlock! 6 - Timeless Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+627,Unlock! 7 - Epic Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+628,Unlock! 8 - Mythic Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+629,Unlock! Star Wars,312267,fuzzy,Regal U,2026-08-06,COMPLETE,,,,
+630,Sockenmonster,304987,picked,Kinder,2025-08-16,COMPLETE,,,,
+631,Mia London,,none,Kinder,2026-08-06,COMPLETE,,,,
+632,Dudab Buba,257595,exact,Regal D,2025-08-16,COMPLETE,,,,
+633,Pummelomis Knusperkekse,330953,exact,Kiste 2,2025-08-16,COMPLETE,,,,
+634,Mampf Mampf,,none,Kinder,2025-08-16,COMPLETE,,,true,
+635,Dwar7s *winter*,241334,fuzzy,Regal D,2025-08-16,COMPLETE,,,,
+636,First Contact,258309,exact,Regal F,2025-08-16,COMPLETE,,,,
+637,Alte Dunkle Dinge,137031,exact,Regal A,2026-08-06,COMPLETE,,,,
+638,Speedy Roll,259830,exact,Kinder,2025-08-16,COMPLETE,,,,
+639,micro MACRO – Crime City,,none,Regal M,2026-07-22,COMPLETE,,,,
+640,Außer Rand & Band,,none,Kinder,2026-06-13,COMPLETE,,,,
+641,Go Gecko Go!,270140,exact,Kinder,2025-08-16,COMPLETE,,,,
+642,Axio,219475,exact,Regal A,2025-08-16,COMPLETE,,,,
+643,Wettlauf nach El Dorado – Die goldenen Tempel,271615,fuzzy,Regal E,2025-08-16,COMPLETE,,,,1499
+644,Pearls,269069,exact,Kiste 2,2025-08-16,COMPLETE,,,,
+645,Ich sehe was! Was siehst du?,349902,exact,Kiste 4,2025-08-16,COMPLETE,,,,
+646,Excavation Earth,292126,exact,Regal E,2025-08-16,COMPLETE,,,,1499
+647,Flourish,312618,exact,Regal F,2025-08-16,COMPLETE,,,,
+648,Ankh,203421,exact,Regal A,2025-08-16,COMPLETE,,,,
+649,Die kleinen Zauberlehrlinge,85245,exact,Kinder,2025-08-16,INCOMPLETE,"Anleitung fehlt, eine gelbe Murmel fehlt",,,
+650,Mepple Land,,none,Regal M,2025-08-16,COMPLETE,,,,
+651,Yggdrasil Chronicles,284333,exact,Regal Y,2025-08-16,COMPLETE,,,,
+652,"Drunk, Stoned or Stupid",,none,Kiste 2,2025-08-16,COMPLETE,,,,
+653,Dragon´s cave,272636,fuzzy,,,,,,,
+654,Loopit,34009,exact,Regal L,2025-08-16,COMPLETE,,,,
+655,Fabelwelten,287591,exact,Kinder,2025-08-16,COMPLETE,,,,
+656,Dodo,295490,picked,Kinder,2025-08-16,INCOMPLETE,1 Plättchen fehlt,,,
+657,Reef,244228,exact,Regal R,2025-08-16,COMPLETE,,,,
+658,Calico,283155,exact,Regal C,2026-08-06,COMPLETE,,,,
+659,Feed the Kraken,271601,exact,Regal F,2026-06-13,COMPLETE,,,,
+660,Rumms,137330,exact,Kinder,2025-08-16,COMPLETE,,,,
+661,Unlock! 9 - Legendary Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+662,Unlock! 10 - Game Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+663,Espresso Doppio,343898,exact,Regal E,2025-08-16,COMPLETE,,,,
+664,Cascadia,295947,exact,Regal C,2026-08-06,INCOMPLETE,ein Elch fehlt,,,
+665,Terra Nova,364186,picked,Regal T,2025-08-16,COMPLETE,,,,
+666,Nukular,,none,Regal N,2026-06-13,INCOMPLETE,Aggrometerwürfel fehlt,,,
+667,Nebel über Carcassonne,358124,exact,Regal C,2025-08-16,COMPLETE,,,,
+668,Planet B,367351,exact,Regal P,2025-08-16,COMPLETE,,,,1499
+669,Zug um Zug Gruselfahrt,366488,fuzzy,Kinder,2026-06-13,COMPLETE,,,,
+670,Arche Nova,342942,exact,Regal A,2025-08-16,COMPLETE,,,,
+671,EXIT Kids 1 - Rätselspaß im Dschungel,,none,Kinder,2025-08-16,COMPLETE,,,,
+672,Precognition,364556,exact,Regal P,2025-08-16,COMPLETE,,,,
+673,Diabolik,,none,Regal D,2025-08-16,COMPLETE,,,,
+674,8 BitBox,,none,Regal B,2025-08-16,COMPLETE,,,,
+675,War of the Ring,9609,picked,Regal W,2025-08-16,COMPLETE,,,,
+676,Dune Imperium,316554,fuzzy,Regal D,2026-08-06,COMPLETE,,,,
+677,Space Base,242302,picked,Regal S,2026-11-16,COMPLETE,,,,
+678,Top Ten,300905,exact,Regal T,2026-07-22,COMPLETE,,,,
+679,Living Forest,328479,exact,Regal L,2026-08-06,COMPLETE,,,,
+680,Zauberberg,341919,picked,Kinder,2026-08-06,COMPLETE,,,,
+681,Indoor Curling,134150,exact,,,,,,,
+682,Emojito,192283,fuzzy,Kinder,2025-08-16,COMPLETE,,,,
+683,Noodle Ninja,258247,exact,Kinder,2025-08-16,COMPLETE,,,,
+684,Stapel & Stopf,362693,exact,Regal S,2025-08-16,COMPLETE,,,,
+685,Nova Luna,284435,exact,Regal N,2026-08-06,COMPLETE,,,,
+686,Burg Kritzelstein,244333,exact,Kinder,2025-08-16,COMPLETE,,,,
+687,Mit Quacks & Co nach Quedlinburg,354886,fuzzy,Kinder,,,,,,
+688,Puerto Rico,3076,picked,Regal P,2025-08-16,COMPLETE,,,,
+689,Terraforming Mars,167791,exact,Regal T,2025-08-16,COMPLETE,,,,
+690,Gaia Projekt,220308,exact,Regal G,2026-08-06,COMPLETE,,,,
+691,Combo Color,289601,exact,Regal C,2025-08-16,COMPLETE,,,,
+692,Zungen raus?,363357,fuzzy,Kinder,2025-08-16,COMPLETE,,,,
+693,Mantis,358690,exact,Regal M,2026-06-13,COMPLETE,,,,
+694,"Taco, Katze Ziege, Käse, Pizza",253664,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,
+695,Flamecraft,336986,exact,Regal F,2026-08-06,COMPLETE,,,,
+696,Voll auf die 18,365103,exact,Kiste 1,2025-08-16,COMPLETE,,,,
+697,Heat,157815,exact,Regal H,2025-12-11,INCOMPLETE,spielbar zu fünft – grüne fünf Karte fehlt,,,
+698,Black Hole Buccaneers,378565,exact,Regal B,2025-08-16,COMPLETE,,,,
+699,Triqueta,378200,exact,Regal T,2025-08-16,COMPLETE,,,,
+700,Keep the Heroes out!,333255,exact,Regal K,2025-12-07,COMPLETE,,,,
+701,Istanbul - Choose & Write,379037,fuzzy,Regal I,2025-08-16,COMPLETE,,,,
+702,Orichalkum,355888,exact,Regal O,2025-08-16,INCOMPLETE,ein Einer-Landschaftsplättchen BERG fehlt,,,
+703,Dorfromantik,,none,Regal D,2026-08-06,COMPLETE,,,,
+704,Die Crew - Mission Tiefsee,324856,fuzzy,Regal C,2026-08-06,COMPLETE,,,,
+705,Die Tiere vom Ahorntal,304051,exact,Regal T,2025-08-16,COMPLETE,,,,
+706,Scythe,169786,exact,Regal S,2025-08-16,COMPLETE,,,,
+707,Dobble Connect,381429,exact,Kiste 2,2025-08-16,COMPLETE,,,,
+708,Für eine Hand voll Meeple,,none,Regal H,2025-08-16,COMPLETE,,,,
+709,Schrödingers Katzen,172235,exact,Kiste 1,2025-08-16,COMPLETE,,,,
+710,5 Towers,400205,exact,Kiste 2,2025-08-16,COMPLETE,,,,
+711,Next Station London,353545,fuzzy,Regal N,2026-08-06,COMPLETE,,,,
+712,Casting Shadows,359502,exact,Regal C,2025-08-16,COMPLETE,,,,
+713,Revive,332772,exact,Regal R,2025-08-16,COMPLETE,,,,
+714,Ensemble,293665,exact,Regal E,2026-08-06,COMPLETE,,,,
+715,Tipperary,378983,exact,Regal T,2025-12-07,COMPLETE,,,,
+716,Magic Maze Kids,242740,exact,Kinder,2025-08-16,COMPLETE,,,,
+717,Die Wölfe,368058,exact,Regal W,2026-08-06,COMPLETE,,,,
+718,Mysterium Kids,,none,Kinder,2026-08-06,COMPLETE,,,,
+719,Café der Gatto,,none,Regal C,2025-08-16,COMPLETE,,,,
+720,MLEM Die Astrokatzen,387378,fuzzy,Regal M,2026-06-13,COMPLETE,,,,
+721,Mischwald,391163,exact,Regal M,2026-08-06,COMPLETE,,,,
+722,Challengers!,359970,exact,Regal C,2026-08-06,COMPLETE,,,,
+723,Erde,350184,exact,Regal E,2025-08-16,COMPLETE,,,,
+724,Unlock! Short Adventures - Der Engelsflug,368036,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,
+725,Unlock! Short Adventures - Geheime Familienrezepte,368039,fuzzy,Kiste 4,2025-08-16,COMPLETE,,,,
+726,Unlock! Short Adventures - Das Verlies von Doo-Arann,229598,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,
+727,Unlock! Short Adventures - Die Suche nach Cabrakan,257707,fuzzy,Kiste 4,2025-08-16,COMPLETE,,,,
+728,Unlock! Short Adventures - Der Schatz des Oktopus,368035,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,
+729,Unlock! Short Adventures - Die Mumie erwacht,368037,fuzzy,Kiste 4,2026-06-13,COMPLETE,,,,
+730,Tribes of the Wind,362986,exact,Regal T,2025-08-16,COMPLETE,,,,
+731,Die Wandelnden Türme,355483,exact,Regal W,2025-12-07,COMPLETE,,,,
+732,Mycelia,392023,picked,,2026-08-06,COMPLETE,,,,
+733,Unlock! 11 - Extraordinary Adventures,,none,Regal U,2025-08-16,COMPLETE,,,,
+734,Sea Salt & Paper,367220,exact,Kiste 1,2025-08-16,COMPLETE,,,,
+735,Maquis,148729,exact,Regal M,2025-08-16,COMPLETE,,,,
+736,Spiel des Wissens,,none,Regal S,2025-08-16,COMPLETE,,,,
+737,Land in Sicht,40619,fuzzy,Kinder,2025-08-16,COMPLETE,,,,
+738,Dune: Verrat,343696,exact,Kiste 1,2025-08-16,COMPLETE,,,,
+739,Monsterhunger!,401500,exact,Kinder,2025-08-16,COMPLETE,,,,
+740,Wise Guys,351616,picked,Regal W,2025-08-16,COMPLETE,,,,
+741,Dune: Ein Spiel um Macht und Intriegen,,none,Regal D,2025-08-16,COMPLETE,,,,
+742,Carla Caramel,351937,exact,Regal C,2025-08-16,COMPLETE,,,,
+743,La Casa Nostra,,none,Regal L,2025-08-16,COMPLETE,,,,
+744,Garden Guests,392825,exact,Regal G,2026-06-13,COMPLETE,,,,
+745,"Ross, the Boss",410826,fuzzy,Kinder,2025-08-16,COMPLETE,,,,
+746,Aqua,61710,picked,Regal A,2025-08-16,COMPLETE,,,,
+747,Hüter der Jahreszeiten,381527,exact,Kinder,2025-08-16,COMPLETE,,,,
+748,Hitster,318243,exact,Regal H,2025-08-16,COMPLETE,,,,
+749,Powerline,367295,exact,Regal P,2025-08-16,COMPLETE,,,,
+750,Schwingenschlag,410201,exact,Regal S,2025-08-16,COMPLETE,,,,
+751,Dabba-Walla,417505,fuzzy,Regal D,2025-08-16,COMPLETE,,,,
+752,Captain Flip,393325,exact,Regal C,2025-08-16,COMPLETE,,,,
+753,Ritual,219437,picked,Regal R,2025-12-07,COMPLETE,,,,
+754,Kids Express,404447,exact,Kinder,2025-08-16,COMPLETE,,,,
+755,Expeditions ins Wortreich,,none,Regal E,2025-08-16,COMPLETE,,,,
+756,Unlock! Kids 1 - Detektivgeschichten,,none,,,,,,,
+757,Unlock! Kids 2 - Geschichten aus der Vergangenheit,,none,Kinder,2025-08-16,COMPLETE,,,,
+758,Die Gilde der Fahrenden Händler,350933,exact,Regal G,2025-08-16,COMPLETE,,,,
+759,Botanicus,413260,exact,Regal B,2025-08-16,COMPLETE,,,,
+760,Sky Team,373106,exact,Regal S,2026-08-06,COMPLETE,,,,
+761,Dorfromantik Saruka,,none,Regal D,2025-12-07,COMPLETE,,,,
+762,Next Station Tokio,,none,Regal N,2025-08-16,COMPLETE,,,,
+763,Next Station Paris,403116,fuzzy,Regal N,2025-08-16,COMPLETE,,,,
+764,Würfelkönig,235922,exact,Regal W,2025-08-16,COMPLETE,,,,
+765,Faraway,385761,picked,Regal F,2026-08-06,COMPLETE,,,,
+766,EXIT Kids 3 - Gruseliger Rätselspaß,,none,Kinder,2025-08-16,COMPLETE,,,,
+767,Trio,,unsure,Kinder,2025-08-16,COMPLETE,,,,
+768,Beste Feinde,394134,exact,Regal B,2026-06-13,COMPLETE,,,,
+769,Intarsia,422126,picked,Regal I,2025-08-16,COMPLETE,,,,
+770,AI Space Puzzle,383064,exact,Regal A,2025-08-16,COMPLETE,,,,
+771,Waffelzeit,383758,exact,Regal W,2025-08-16,COMPLETE,,,,
+772,Roaring 20s,427278,exact,Kiste 1,2026-08-06,COMPLETE,,,,
+773,Moorland,397431,exact,Regal M,2026-04-02,COMPLETE,,,,
+774,Black Forest,420805,picked,Regal B,2025-12-11,COMPLETE,,,,
+775,Tres,12084,picked,Regal T,2025-08-16,COMPLETE,,,,
+776,Zwischen Licht & Schatten,,none,Kiste 2,2025-08-16,COMPLETE,,,,
+777,Clou - Roll & Heist,306577,fuzzy,Kiste 2,2025-08-16,COMPLETE,,,,
+778,Karvi,399806,exact,Regal K,2026-08-06,INCOMPLETE,es fehlt: ein Blockadeplättchen,,,
+779,Unlock! Kids 3 - Sagenhafte Geschichten,,none,Kinder,2025-12-11,COMPLETE,,,,
+780,Unlock! 12 - Supernatural Adventures,,none,Regal U,2025-12-07,COMPLETE,,,,
+781,Auf den Wegen von Darwin,376683,exact,Regal D,2026-08-06,COMPLETE,,,,3399
+782,Zimbbos!,18498,exact,Kinder,2025-08-16,COMPLETE,,,,
+783,Waterfall Park,396618,exact,Regal W,2025-08-16,COMPLETE,,,,
+784,Die Stunde der Maus,367490,exact,Regal S,2026-08-06,COMPLETE,,,,
+785,Harmonies,414317,exact,Regal H,2026-08-06,COMPLETE,,,,
+786,Kitty Bitty,28238,exact,Kinder,2025-08-16,COMPLETE,,,,
+787,Monolyth,373759,exact,Regal M,2026-06-13,COMPLETE,,,,
+788,Time Trouble,427006,exact,Regal T,2026-06-07,COMPLETE,,,,
+789,Flash Back - Zombie Kids,,none,Kinder,2025-08-16,COMPLETE,,,,
+790,Die Magischen Schlüssel,368899,exact,Kinder,2025-08-16,COMPLETE,,,,
+791,Among Cultists,,none,Regal A,2026-06-13,COMPLETE,,,,
+792,Escape Room Das Spiel Erweiterung Secret Agent Operation Zekestan,,none,Regal E,2025-08-16,COMPLETE,,,,
+793,Escape Room Das Spiel Erweiterung The Dentist,,none,Regal E,2025-08-16,COMPLETE,,,,
+794,Escape Room Das Spiel Erweiterung Murder Mystery,,none,Regal E,2025-08-16,COMPLETE,,,,
+795,Escape Room Das Spiel Erweiterung Casino,,none,Regal E,2025-08-16,COMPLETE,,,,
+797,Escape Room Das Spiel Erweiterung Space Station,,none,Regal E,2025-08-16,COMPLETE,,,,
+798,Escape Room Das Spiel Erweiterung Welcome to funland,,none,Regal E,2025-08-16,COMPLETE,,,,
+799,Cartagena I - Flucht aus der Festung,,none,Regal C,2025-08-16,COMPLETE,,,,
+800,Battle Royal,32061,picked,Regal B,2026-06-13,COMPLETE,,,,
+801,Monkey Fun,419290,exact,Regal M,2025-08-16,COMPLETE,,,,
+802,Tower Brix,,none,Regal T,2025-08-16,COMPLETE,,,,
+803,3 Ring Circus,371947,exact,Regal R,2025-08-16,COMPLETE,,,,
+804,Magic Maze Tower,396749,exact,Regal M,2025-08-16,INCOMPLETE,deutsche Anleitung fehlt,,,
+805,Portals,394160,picked,Regal P,2025-08-16,COMPLETE,,,,1499
+806,Quatschkopf,,none,Kiste 2,2025-08-16,COMPLETE,,,,
+807,Fish & Katz,328536,exact,Kinder,2025-08-16,COMPLETE,,,,
+808,Die Kleinen Alchemisten,418812,exact,Kinder,2025-08-16,COMPLETE,,,,
+809,Jahu Safari,,none,Kinder,2025-08-16,COMPLETE,,,,
+810,Krimi Dinner,,none,,2025-08-28,COMPLETE,,,,
+811,Fipolino,330937,exact,Kinder,2025-08-16,COMPLETE,,,,
+812,Tripolo,100278,exact,Kinder,2025-08-16,COMPLETE,,,,
+813,Grabolo,142517,exact,Kinder,2025-08-16,COMPLETE,,,,
+814,Qubolo,262708,exact,Kinder,2025-08-16,COMPLETE,,,,
+815,Amygdala,360879,exact,Regal A,2025-08-16,COMPLETE,,,,
+816,Rulebenders,275061,exact,Regal R,2025-08-16,COMPLETE,,,,1499
+817,The Palaces of Carrara,129948,exact,Regal C,2025-08-16,COMPLETE,,,,
+818,Paris,282954,picked,Regal P,2025-08-16,INCOMPLETE,ein 6 SP-Plätzchen (16/8/4) fehlt,,,
+819,Penguin Airlines,369388,exact,Kinder,2025-08-16,COMPLETE,,,,
+820,Dobutsu Shogi (Cath the lion),,none,Kinder,2025-08-16,COMPLETE,,,,
+821,Shogito,2065,exact,Regal S,2025-08-16,COMPLETE,,,,
+822,Galileo Galilei,393333,exact,Regal G,2025-08-16,COMPLETE,,true,,1499
+823,Zero to Hero,423307,exact,Regal Z,2025-08-16,COMPLETE,,,,
+824,Steam Power,391752,exact,Regal S,2025-08-16,COMPLETE,,,,
+825,Mieze Katze,424442,exact,Regal M,2026-06-13,COMPLETE,,,,
+826,MultiCity,201399,exact,Kinder,2025-08-16,COMPLETE,,,,
+827,What we found,,none,Kinder,2025-08-16,COMPLETE,,,,
+828,Easy Cheesy,29203,exact,Kinder,2025-08-16,COMPLETE,,,,
+829,Spotlight,420876,picked,Kinder,2025-08-16,COMPLETE,,,,
+830,"Kleine Völker, großer Garten",341245,exact,Regal K,2025-08-16,COMPLETE,,,,
+831,Baron von Zom´s Dice of the Undead,391154,fuzzy,Regal B,2025-08-16,COMPLETE,,,,
+832,Lost Cities - R&W,,none,Regal L,2025-12-11,COMPLETE,,,,
+833,Pick a Pen - Schatzkammer,,none,Regal P,2025-08-16,COMPLETE,,,,
+834,Pick a Pen - Gärten,381827,fuzzy,Regal P,2025-08-16,COMPLETE,,,,
+835,Pick a Pen - Riff,,none,Regal P,2025-08-16,COMPLETE,,,,
+836,Pyramidice,378951,picked,Regal P,2025-08-16,COMPLETE,,true,,
+837,Seti,17785,exact,Regal S,2025-12-11,INCOMPLETE,eine Spielerhilfe fehlt,,,
+838,Media Aetas,403754,exact,Regal M,2025-08-16,COMPLETE,,,,
+839,Verräter an Board,,none,Kiste 1,2026-08-06,COMPLETE,,,,
+840,Atlantis Exodus,424679,exact,Regal A,2025-08-16,COMPLETE,,,,
+841,Mega Empires - East,,none,Regal M,2025-08-16,COMPLETE,,true,,
+842,Mega Empires - West,,none,Regal M,2025-08-16,COMPLETE,,true,,
+843,Pfoten Parcours,,none,Kinder,2025-08-16,COMPLETE,,,,
+844,Alles für die Katz,556,exact,Kinder,2025-08-16,COMPLETE,,,,
+845,Vogelversammlung,,none,Kinder,2025-08-16,COMPLETE,,,,
+846,Genius Star,329812,exact,Kinder,2025-08-16,COMPLETE,,,,
+847,Genius Square,273065,exact,Kinder,2025-08-16,COMPLETE,,,,
+848,IQ Gears,,none,Kinder,2025-08-16,COMPLETE,,,,
+849,Builders of Sylvan Dale,413548,exact,Regal B,2025-12-07,COMPLETE,,true,,
+850,Quacksalber von Quedlinburg - Das Duell,409496,fuzzy,Regal Q,2026-06-13,COMPLETE,,,,
+851,Altay - Dawn of Civilization,334537,fuzzy,Regal A,2025-12-07,COMPLETE,,true,,1499
+852,Magische Begegnungen,,none,Kinder,2025-08-16,COMPLETE,,,,
+853,Katapult Fehde (incl. Ersatzspiel),,none,Kinder,2025-08-16,COMPLETE,,,,
+854,e-Mission,334986,exact,Regal E,2025-08-16,COMPLETE,,,,
+855,Stacking Games Balonce Blocks,,none,Kinder,2026-06-13,COMPLETE,,,,
+856,Little Town,241266,exact,Regal L,2025-08-16,INCOMPLETE,ein Coin fehlt,,,
+857,Der Herr der Ringe - Das Schicksal der Gemeinschaft,436217,fuzzy,Regal H,2026-06-13,COMPLETE,,,,1499
+858,Rail Road Ink orange,,none,Regal R,2025-08-16,COMPLETE,,,,
+859,Welcome to the moon,339789,exact,Regal W,2025-08-16,COMPLETE,,,,
+860,Pyramido Die Baumeister des Pharao,,none,Regal P,2025-08-16,COMPLETE,,,,
+861,Sonar Family,259809,exact,Regal S,2025-08-16,COMPLETE,,,,
+862,Sugat Blast,,none,Kinder,2025-08-16,COMPLETE,,,,
+863,Die Schlacht von Rundedar,,none,Regal R,2025-08-16,UNPLAYABLE,20xGold fehlt,,,1499
+864,Detective Ein Krimi-Brettspiel,223321,fuzzy,Regal D,2025-08-16,COMPLETE,,,,
+865,Masters of the night,288385,exact,Regal M,2025-08-16,INCOMPLETE,ein Schleieranzeiger fehlt,,,
+866,Gumminis,365601,exact,Kinder,2025-08-16,COMPLETE,,,,
+867,Der Hobbit Hin und Zurück,436215,fuzzy,Regal H,,,,,,
+868,Der Herr der Ringe - Duell um Mittelerde,421006,fuzzy,Regal H,,,,,,
+869,Azul Duell,,none,Regal A,,,,,,
+870,Die Insel der Mookies,435346,exact,Kinder,2026-11-05,COMPLETE,,,,
+871,Dito,22045,exact,Regal D,2026-11-05,COMPLETE,,,,
+872,Snails,400203,exact,Regal S,2026-11-05,COMPLETE,,,,
+873,Caribe,475390,exact,Regal C,2026-11-05,COMPLETE,,,,
+874,Stars of ilumeia,,none,Regal I,2026-11-05,COMPLETE,,,,
+875,Mischwald - Smokey mountains,,none,Regal M,2026-11-05,COMPLETE,,,,
+876,Fauch und Fertig,,none,Regal F,2026-11-05,COMPLETE,,,,
+877,Robo Run,471437,exact,Regal R,2026-11-16,COMPLETE,,,,
+878,Raas,358912,fuzzy,Regal R,2026-11-16,COMPLETE,,,,
+879,Mandala,264241,picked,Regal M,2026-11-16,COMPLETE,,,,
+880,Trails of Tucana,283864,exact,Regal T,2026-11-16,COMPLETE,,,,
+881,No shelf control,464353,exact,Regal S,2026-11-16,COMPLETE,,,,
+882,Wolfwalkers,,none,Regal W,2026-11-16,COMPLETE,,,,
+883,Who is Luis,435341,fuzzy,Kinder,2026-11-16,COMPLETE,,,,
+884,Burning Cookies,432359,exact,Regal B,2026-11-16,COMPLETE,,,,
+885,Die Olchies - Schleimeschlamm und Käsefuß,,none,Kinder,2026-11-16,COMPLETE,,,,
+886,Onitama,160477,exact,Regal O,2026-11-16,COMPLETE,,,,
+,Sebastian Fitzek Safe House,,none,Regal F,2025-08-16,COMPLETE,,,,

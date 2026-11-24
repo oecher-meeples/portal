@@ -95,6 +95,7 @@ async function ensureAnonymerMeeple() {
       slug: slugify(ANONYMER_MEEPLE_NAME),
       email: "anonymer-meeple@oecher-meeples.invalid",
       meepleId: meeple.id,
+      joinedAt: new Date(),
     },
   });
 

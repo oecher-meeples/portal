@@ -53,6 +53,7 @@ describe("fetchBggGame", () => {
       playTimeMinutes: 150,
       weight: 3.7,
       averageRating: 8.5,
+      usersRated: 12345,
       imageUrl: "https://cf.geekdo-images.com/full.jpg",
       description: 'Build a modern "zoo".\nManage conservation projects.',
       mechanics: ["Card Play", "Income"],
@@ -89,6 +90,7 @@ describe("fetchBggGame", () => {
       playTimeMinutes: null,
       weight: null,
       averageRating: null,
+      usersRated: null,
       imageUrl: null,
       description: null,
       mechanics: [],
@@ -192,6 +194,24 @@ describe("fetchBggGame", () => {
     expect(result.yearPublished).toBe(
       Math.min(...result.versions.map((v) => v.yearPublished ?? Infinity)),
     );
+  });
+
+  it("treats BGG's year 0 as unknown instead of the oldest year (#603)", async () => {
+    // BGG meldet ein unbekanntes Jahr als `0` — das darf weder die Edition
+    // noch (als Minimum) das Erscheinungsjahr des Titels verfälschen.
+    mockFetchOnce(
+      true,
+      200,
+      loadFixture("success-with-versions.xml").replace(
+        '<yearpublished value="2022" />',
+        '<yearpublished value="0" />',
+      ),
+    );
+
+    const result = await fetchBggGame(342942);
+
+    expect(result.versions[1].yearPublished).toBeNull();
+    expect(result.yearPublished).toBe(2021);
   });
 
   it("requests the versions block from the bgg api (#205)", async () => {

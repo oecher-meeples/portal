@@ -96,9 +96,16 @@ src/lib/
 │               client-sicher); Router-Ziel je Präfix und Recht (`resolve.ts`, `resolveShortId`)
 ├── statistics/ Anonymisierte Auswertungen — Verleih (`loan-stats.ts`), Bestand (`inventory-stats.ts`), Exemplar-Kontrollen pro Berliner Monat (`check-stats.ts`, #599) — reine Zählwerte, keine Meeple-Referenzen
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
-│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
+│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`),
+│               Einladungsmail (`invite-mail.ts`, #613 — liefert den Fehler zurück statt zu werfen),
+│               eine E-Mail-Adresse pro Person (`member-email.ts`, #614: Konflikt-Check, Login-E-Mail zieht mit),
+│               Mitgliederimport (#611): `member-import-csv.ts` (Dekodierung UTF-8 → Windows-1252 + Parser, rein, läuft im Browser),
+│               `member-import-decisions.ts` (Vorschau-Typen und Zuordnungsregeln, rein — live im Client und erneut auf dem Server),
+│               `member-import-preview.ts` (Abgleich mit dem Bestand, `findEmailOwners()` als Batch-Gegenstück zu `findMemberEmailConflict()`),
+│               `member-import-commit.ts` (eine Transaktion, Logs ohne Zeileninhalte);
+│               `listMissingInviteCandidates()` in `members-without-login.ts` (#622, die jüngste Einladung entscheidet)
 ├── instagram/  Cross-Posting
-├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, No-op ohne `SMTP_HOST`), Abonnenten beider Quellen — anonym mit Double-Opt-in
+├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, ohne `SMTP_HOST` → `MailerError`, #612), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue
 │               analog zur Instagram-Queue (`dispatch.ts`), deutsche Kategorie-Labels (`labels.ts`)
 └── utils/      Fachfrei: cn(), Datums-Formatter, nav-config, prisma-Client, `use-blob-upload.ts` (geteilter Blob-Upload-Hook, Browser → SeaweedFS per Presigned POST), `search-params.ts`,
@@ -211,7 +218,7 @@ Alle `board-game/*-dialog.tsx` werden von mindestens zwei Features eingebunden (
 
 ## `src/components/feature/` — je ein Anwendungsfall
 
-31 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, `bringbuy`, …). Typisches Innenleben:
+38 flache Fachdomänen-Ordner (`admin-bestand`, `admin-events`, `lfg`, `scan`, `profil`, `bringbuy`, …). `admin-mitglieder-import` (#611) ist bewusst ein eigener Slice neben `admin-mitglieder`: eigene Route (`/admin/mitglieder/import`), eigene Actions, kein Import aus `admin-mitglieder`. Typisches Innenleben:
 
 - `<domäne>-view.tsx` — Smart Component, verdrahtet ui/entities/widgets mit State & Actions
 - `actions.ts` — Server Actions dieses Anwendungsfalls
@@ -231,7 +238,8 @@ Kein Ordner importiert aus einem anderen. Geteiltes wandert nach `widgets/`, `en
 
 `prisma/seed.ts` legt immer den Grundbestand an; `SEED_PROFILE` wählt danach `develop` (Demo-Daten, lokaler Default) oder `release` (Vereinsbestand, Docker-Default, #603).
 
-- `prisma/seed-data/release-inventory.csv` — bereinigter Vereinsbestand ohne Personendaten, erzeugt von `scripts/build-release-inventory.ts` aus dem Export der Tabelle „Inventar Spiele"; `bggId` per `scripts/match-release-inventory-bgg.ts` vorbefüllt und von Hand korrigiert. Regeln (Zustand → Kontroll-Ergebnis, Platz → Standort) in `release-inventory.ts`, Anlage in `prisma/seed-release.ts`.
+- `prisma/seed-data/release-inventory.csv` — bereinigter Vereinsbestand ohne Personendaten (inkl. Wert je Exemplar), erzeugt von `scripts/build-release-inventory.ts` aus dem Export der Tabelle „Inventar Spiele"; `bggId`/`bggMatch` per `scripts/enrich-release-inventory-bgg.ts` vorbefüllt (`exact`/`picked`/`fuzzy`, deutsche Edition bevorzugt, siehe `isGermanVersion` in `lib/ludothek/board-game-versions.ts`), von Hand korrigierbar (`manual`); `unsure` = bewusst ohne BGG-Verknüpfung, trägt der Spielewart nach. Regeln (Zustand → Kontroll-Ergebnis, Platz → Standort, Wert → Cent) in `release-inventory.ts`, Anlage in `prisma/seed-release.ts`.
+- `prisma/seed-data/release-board-games.json` — committete BGG-Titeldaten je `bggId` inkl. gewählter deutscher Edition (`release-board-games.ts`); `release-descriptions-de.json` — deutsche Kurzbeschreibungen, gepflegt mit `scripts/release-descriptions-de.ts`, getrennt, damit ein erneuter BGG-Abruf sie nie überschreibt.
 - `prisma/seed-data/demo-games.ts` — Demo-Titel inkl. ihrer BGG-Version (`version`); `demo-editions.ts` legt die Version samt Verlagen an und übernimmt bei bestehender DB ältere Demo-Versionen ohne BGG-Bezug.
 - `scripts/lib/demo-games-seed-file.ts` — Lesen/Schreiben von `demo-games.ts` und Versionswahl (`pickDemoVersion`), geteilt von `refresh-demo-games-seed.ts` (alle Felder) und `backfill-demo-game-versions.ts` (nur die Version).
 

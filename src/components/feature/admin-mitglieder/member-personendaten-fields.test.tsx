@@ -34,6 +34,10 @@ describe("emailRequiredFor", () => {
   it("is true without a birth date (safe default)", () => {
     expect(emailRequiredFor("")).toBe(true);
   });
+
+  it("is false with a linked guardian, even without a birth date (#611)", () => {
+    expect(emailRequiredFor("", true)).toBe(false);
+  });
 });
 
 describe("personendatenFormCanSubmit", () => {
@@ -62,6 +66,15 @@ describe("personendatenFormCanSubmit", () => {
         birthDate: "2019-01-01",
         ...ADDRESS,
       }),
+    ).toBe(true);
+  });
+
+  it("is true without birth date and email when a guardian is linked (#611)", () => {
+    expect(
+      personendatenFormCanSubmit(
+        { ...EMPTY_MEMBER_PERSONENDATEN_FORM, ...ADDRESS },
+        true,
+      ),
     ).toBe(true);
   });
 

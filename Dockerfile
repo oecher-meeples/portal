@@ -96,6 +96,8 @@ COPY --from=build /app/prisma/migrations ./db/prisma/migrations
 COPY --from=build /app/db-tools/seed.cjs ./db/seed.cjs
 # Release-Seed (#603) liest den Vereinsbestand relativ zum cwd /app/db.
 COPY --from=build /app/prisma/seed-data/release-inventory.csv ./db/prisma/seed-data/release-inventory.csv
+COPY --from=build /app/prisma/seed-data/release-board-games.json ./db/prisma/seed-data/release-board-games.json
+COPY --from=build /app/prisma/seed-data/release-descriptions-de.json ./db/prisma/seed-data/release-descriptions-de.json
 COPY docker/app/entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod 0755 /usr/local/bin/entrypoint
 

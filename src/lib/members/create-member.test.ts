@@ -77,11 +77,29 @@ describe("createMember", () => {
         postalCode: "52062",
         city: "Aachen",
         phone: null,
+        joinedAt: expect.any(Date),
       },
     });
   });
 
-  it("stores an explicit joinedAt (Live-Review F1), otherwise the Prisma default applies", async () => {
+  it("defaults joinedAt to today without an explicit value (#611, no Prisma default anymore)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-11-24T10:00:00Z") });
+    try {
+      await createMember({ email: "erika@example.com", ...ADDRESS });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(prismaMock.member.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          joinedAt: new Date("2026-11-24T10:00:00Z"),
+        }),
+      }),
+    );
+  });
+
+  it("stores an explicit joinedAt (Live-Review F1)", async () => {
     await createMember({
       email: "erika@example.com",
       joinedAt: new Date("2021-06-15"),

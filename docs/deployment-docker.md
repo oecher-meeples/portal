@@ -187,7 +187,7 @@ aber in der jeweiligen Situation nötig:
 | `S3_ENDPOINT`                                     | `http://seaweedfs:8333`                            | Endpoint, über den die **App** SeaweedFS im Compose-Netz erreicht                         |
 | `S3_REGION`                                       | `us-east-1`                                        | Region für das AWS-SDK der App und für `seaweedfs-init`; der Default passt                |
 | `S3_STORAGE_LIMIT_BYTES`                          | 1 GB                                               | Soft-Quota der Füllstandskarte im Admin-Dashboard                                         |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | leer bzw. Port `587`                 | Mailversand, ohne `SMTP_HOST` deaktiviert ([9.3](#93-e-mail-smtp))                        |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | leer bzw. Port `587`                 | Mailversand, ohne `SMTP_HOST` schlägt jede Mail fehl ([9.3](#93-e-mail-smtp))             |
 | `PUBLIC_CALENDAR_ICS_URL`, `ICS_FEED_URL_INTERNAL` | leer                                              | Öffentlicher bzw. interner Kalender-Feed (ICS-URL, kein API-Key)                          |
 | `META_*`, `BGG_BEARER_TOKEN`, `YOUTUBE_API_KEY`, `GITHUB_TOKEN`, `TRANSLATION_CONTACT_EMAIL` | leer (`META_GRAPH_API_VERSION`: `v21.0`) | Externe Dienste, je Feature optional ([10](#10-externe-zugangsdaten-beschaffen)) |
 | `APP_PORT`, `POSTGRES_PORT`, `S3_API_PORT`        | `3000`, `5432`, `8333`                             | Host-Ports (immer nur auf `127.0.0.1`)                                                    |
@@ -280,8 +280,11 @@ Der Entrypoint des App-Containers (`docker/app/entrypoint.sh`) führt bei
    - Danach je nach **`SEED_PROFILE`** (#603):
      - `release` (Default): echter Vereinsbestand aus
        `prisma/seed-data/release-inventory.csv` — Titel, Exemplare mit
-       Inventarnummer, Standorte (Regale/Kisten) und je Exemplar die letzte
-       Kontrolle (Kontrolleur: Admin-Konto). Keine Demo-Konten.
+       Inventarnummer und Wert, Standorte (Regale/Kisten) und je Exemplar die
+       letzte Kontrolle (Kontrolleur: Admin-Konto). Titel mit BGG-Zuordnung
+       bringen ihre Grunddaten, deutsche Beschreibung und deutsche Edition aus
+       `release-board-games.json`/`release-descriptions-de.json` mit — der
+       Seed ruft BGG nie auf. Keine Demo-Konten.
      - `develop`: Demo-Spiele, -Mitglieder, -Beiträge, Demo-Konten (Passwort
        `SEED_DEMO_PASSWORD`) usw. Nur für Test-/Vorführinstanzen, nie für eine
        echte Vereinsdatenbank.
@@ -541,20 +544,19 @@ Basis von `nodemailer`. **Der Stack bringt bewusst keinen Mailserver mit.**
 
 | Variable    | Zweck                                                                                                            |
 | ----------- | ---------------------------------------------------------------------------------------------------------------- |
-| `SMTP_HOST` | SMTP-Server. **Leer = Versand deaktiviert** (siehe unten)                                                        |
+| `SMTP_HOST` | SMTP-Server. **Leer = jeder Versand schlägt fehl** (siehe unten)                                                 |
 | `SMTP_PORT` | Default `587` (STARTTLS); `465` schaltet auf implizites TLS                                                      |
 | `SMTP_USER` | Leer = ohne Authentifizierung (z. B. interner Relay)                                                             |
 | `SMTP_PASS` | Passwort/App-Token zu `SMTP_USER`                                                                                |
-| `SMTP_FROM` | Absender; leer = `"Oecher Meeples" <newsletter@oecher-meeples.org>`. Muss vom Provider als Absender erlaubt sein — **eigenen Wert setzen** |
+| `SMTP_FROM` | Absender; leer = `"Oecher Meeples" <newsletter@oecher-meeples.org>`. Muss vom Provider als Absender erlaubt sein — **eigenen Wert setzen**, meist eine Adresse des `SMTP_USER`-Postfachs (sonst z. B. bei IONOS `550 Sender address is not allowed`) |
 
-**Ohne `SMTP_HOST`** ist der Versand ein kontrollierter No-op: Die App startet
-und läuft normal, beim ersten Mailversuch erscheint einmalig
-`[mailer] SMTP_HOST ist nicht gesetzt — E-Mail-Versand ist deaktiviert, Mails werden verworfen.`
-im Log, danach pro verworfener Mail
-`[mailer] Nicht versendet (SMTP aus): "<Betreff>"` (ohne Empfänger). Die Aufrufer behandeln die Mail dabei als verschickt —
-Newsletter-Jobs landen z. B. auf `SENT`, und „Passwort vergessen" sowie
-Einladungen von Systemkonten funktionieren nicht. Für den Produktivbetrieb
-SMTP also konfigurieren.
+**Ohne `SMTP_HOST`** startet und läuft die App normal, aber jeder Mailversuch
+schlägt mit `E-Mail-Versand ist nicht konfiguriert (SMTP_HOST fehlt).` fehl
+(#612) — bis dahin war das ein stiller No-op, bei dem die Aufrufer die Mail als
+verschickt behandelten (Newsletter-Jobs auf `SENT`, „Mail verschickt" in der
+UI). Jetzt zeigt die UI den Fehler, Newsletter-Jobs bleiben `QUEUED` bzw.
+landen auf `FAILED`, und Einladungen bleiben trotzdem gültig (Link manuell
+weitergeben). Für den Betrieb — auch lokal — SMTP also konfigurieren.
 
 **Empfehlung:** einen bestehenden Mail-Provider bzw. dessen SMTP-Relay nutzen
 (Hoster-Postfach der Vereinsdomain, Brevo/Mailjet/Postmark/Amazon SES per

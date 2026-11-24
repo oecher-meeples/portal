@@ -15,8 +15,8 @@ import { useControlledComboboxInput } from "@/components/ui/use-controlled-combo
 import { Field } from "@/components/ui/field";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
 import {
+  buildInviteMailtoHref,
   buildRegistrationLink,
-  formatInviteMessage,
 } from "@/lib/members/invite-format";
 import type { MemberWithoutLoginRow } from "@/lib/members/members-without-login";
 
@@ -50,6 +50,7 @@ export function InviteForm({
     email: string;
     expiresAt: string;
     extended: boolean;
+    mailError: string | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,11 +88,11 @@ export function InviteForm({
 
   const mailtoHref =
     inviteLink && result
-      ? `mailto:${result.email}?subject=${encodeURIComponent(
-          "Einladung zu Oecher Meeples",
-        )}&body=${encodeURIComponent(
-          formatInviteMessage(inviteLink, new Date(result.expiresAt)),
-        )}`
+      ? buildInviteMailtoHref(
+          result.email,
+          inviteLink,
+          new Date(result.expiresAt),
+        )
       : null;
 
   return (
@@ -161,9 +162,19 @@ export function InviteForm({
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 
-      {inviteLink && mailtoHref && (
+      {inviteLink && mailtoHref && result && (
         <div className="flex flex-col gap-2">
-          {result?.extended ? (
+          {result.mailError ? (
+            <p className="text-destructive text-sm">
+              Einladung angelegt, Mail an {result.email} fehlgeschlagen:{" "}
+              {result.mailError} — bitte den Link unten manuell weitergeben.
+            </p>
+          ) : (
+            <p className="text-sm">
+              Die Einladung wurde per Mail an {result.email} verschickt.
+            </p>
+          )}
+          {result.extended ? (
             <p className="text-sm">
               Für dieses Mitglied lag bereits eine offene Einladung vor, die
               Gültigkeitsdauer wurde verlängert.
@@ -183,7 +194,7 @@ export function InviteForm({
             rel="noopener noreferrer"
             className="text-primary text-sm hover:underline"
           >
-            Per E-Mail versenden
+            Im Mailprogramm öffnen
           </a>
         </div>
       )}

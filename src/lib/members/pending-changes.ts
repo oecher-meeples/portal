@@ -13,9 +13,16 @@ import {
 import { isValidEmail } from "@/lib/utils/validate-email";
 import {
   buildEmailChangeConfirmationLink,
+  sendEmailChangeAppliedMail,
   sendEmailChangeConfirmationMail,
+  sendEmailChangeRequestedNoticeMail,
   sendPendingChangeRejectedMail,
 } from "@/lib/members/pending-change-mail";
+import {
+  findMemberEmailConflict,
+  syncLoginEmail,
+} from "@/lib/members/member-email";
+import { checkFixedCooldown } from "@/lib/utils/rate-limit";
 import {
   computeExpiresAt,
   daysToMinutes,
@@ -27,10 +34,14 @@ import { siteUrl } from "@/lib/utils/site-url";
 /**
  * Änderungsanträge an sensiblen `Member`-Feldern (#330) — IBAN braucht nur
  * Kassenwart-Freigabe, die Vereinsmitglied-E-Mail zusätzlich einen
- * Bestätigungslink (Erreichbarkeit) vor der Vorstandsfreigabe. Die
- * Login-E-Mail (`Meeple`/Neon Auth) läuft **nicht** hierüber — die ändert
- * sich direkt mit Bestätigungslink, ohne Board-Freigabe.
+ * Bestätigungslink (Erreichbarkeit) vor der Vorstandsfreigabe. Mit der
+ * Freigabe wird auch die Login-E-Mail ersetzt (#614, eine Adresse pro Person,
+ * `member-email.ts`).
  */
+
+/** Spam-Schutz für Bestätigungsmails (#614): höchstens eine pro Minute und
+ * Mitglied. */
+const EMAIL_CHANGE_COOLDOWN_SECONDS = 60;
 
 async function replaceOpenPendingChange(
   memberId: string,
@@ -78,11 +89,25 @@ export async function requestEmailChange(memberId: string, newEmail: string) {
     return { error: "Ungültige E-Mail-Adresse." };
   }
 
-  const conflict = await prisma.member.findUnique({
-    where: { email: normalised },
+  const current = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { email: true },
   });
-  if (conflict && conflict.id !== memberId) {
+  if (current?.email === normalised) {
+    return { error: "Das ist bereits deine E-Mail-Adresse." };
+  }
+  const conflict = await findMemberEmailConflict(memberId, normalised);
+  if (conflict) {
     return { error: "Diese E-Mail-Adresse wird bereits verwendet." };
+  }
+  const cooldown = await checkFixedCooldown(
+    `member-email-change:${memberId}`,
+    EMAIL_CHANGE_COOLDOWN_SECONDS,
+  );
+  if (!cooldown.allowed) {
+    return {
+      error: `Bitte warte noch ${cooldown.retryAfterSeconds} Sekunden, bevor du einen neuen Link anforderst.`,
+    };
   }
 
   await replaceOpenPendingChange(memberId, PendingChangeKind.MEMBER_EMAIL);
@@ -100,6 +125,17 @@ export async function requestEmailChange(memberId: string, newEmail: string) {
     change.confirmToken!,
   );
   await sendEmailChangeConfirmationMail(normalised, confirmLink);
+
+  // Warnung an die bisherige Adresse (#614). Best effort: Antrag und
+  // Bestätigungslink stehen bereits — ein Fehler hier soll den Antrag nicht
+  // als gescheitert melden.
+  if (current?.email) {
+    try {
+      await sendEmailChangeRequestedNoticeMail(current.email, normalised);
+    } catch (error) {
+      console.error("[pending-changes] Warnmail an alte Adresse:", error);
+    }
+  }
 
   return { success: true as const };
 }
@@ -248,6 +284,8 @@ export async function approvePendingChange(
         where: { id: change.memberId },
         data: { email: change.newValue },
       });
+      // #614: ersetzt auch die Login-E-Mail des verknüpften Meeples.
+      await syncLoginEmail(tx, change.memberId, change.newValue);
 
       if (defaultInviteDays !== null && previousMember?.email) {
         const openInvite = await tx.invite.findFirst({
@@ -283,7 +321,19 @@ export async function approvePendingChange(
     });
   });
 
-  return { success: true as const };
+  // Nach dem Commit: ein Mail-Fehler darf die wirksame Änderung nicht
+  // zurückrollen, nur gemeldet werden.
+  let mailError: string | null = null;
+  if (change.kind === PendingChangeKind.MEMBER_EMAIL) {
+    try {
+      await sendEmailChangeAppliedMail(change.newValue);
+    } catch (error) {
+      mailError =
+        error instanceof Error ? error.message : "Versand fehlgeschlagen.";
+    }
+  }
+
+  return { success: true as const, mailError };
 }
 
 export async function rejectPendingChange(

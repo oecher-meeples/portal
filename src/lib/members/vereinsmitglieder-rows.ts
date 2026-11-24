@@ -40,8 +40,8 @@ export type VereinsmitgliedRow = {
   /** Vereinsbeitritt (`Member.joinedAt`, Live-Review F1) — nicht mit dem
    * Anlagedatum des Portal-Kontos (`Meeple.joinedAt`) verwechseln, die beiden
    * fallen bei Erwachsenen zufällig zusammen, nicht bei Kindern ohne Login
-   * (#373). */
-  joinedAt: string;
+   * (#373). `null` = unbekannt (#611, Mitgliederimport). */
+  joinedAt: string | null;
   resignedAt: string | null;
   membershipEndsAt: string | null;
   membershipState: MembershipState;
@@ -54,6 +54,9 @@ export type VereinsmitgliedRow = {
    * "Eingeladen"-Hinweis in der Portal-Login-Spalte (Live-Review, #365-Folge).
    * `null` ohne offene Einladung, unabhängig von `hasPortalLogin`. */
   openInviteToken: string | null;
+  /** Mindestens ein verknüpfter Erziehungsberechtigter (#611) — dann ist die
+   * eigene E-Mail keine Pflicht (`requiresEmail()`). */
+  hasGuardian: boolean;
 };
 
 export type VereinsmitgliedSourceRow = {
@@ -73,7 +76,7 @@ export type VereinsmitgliedSourceRow = {
   selbstgewaehlterBeitrag: Prisma.Decimal | null;
   /** Vereinsbeitritt (Live-Review F1) — direkt auf `Member`, unabhängig vom
    * verknüpften Portal-Konto. */
-  joinedAt: Date;
+  joinedAt: Date | null;
   resignedAt: Date | null;
   membershipEndsAt: Date | null;
   meeple: {
@@ -82,6 +85,7 @@ export type VereinsmitgliedSourceRow = {
     neonAuthUserId: string | null;
     isSystemAccount: boolean;
   } | null;
+  _count: { guardians: number };
 };
 
 /**
@@ -133,7 +137,7 @@ export function buildVereinsmitgliedRows(
       phone: member.phone,
       meepleId: member.meepleId,
       hasPortalLogin: member.meeple?.neonAuthUserId != null,
-      joinedAt: member.joinedAt.toISOString(),
+      joinedAt: member.joinedAt?.toISOString() ?? null,
       resignedAt: member.resignedAt?.toISOString() ?? null,
       membershipEndsAt: member.membershipEndsAt?.toISOString() ?? null,
       membershipState: getMembershipState(
@@ -154,5 +158,6 @@ export function buildVereinsmitgliedRows(
       openInviteToken: member.email
         ? (lookups.openInviteTokenByEmail.get(member.email) ?? null)
         : null,
+      hasGuardian: member._count.guardians > 0,
     }));
 }

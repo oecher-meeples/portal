@@ -22,7 +22,38 @@ export async function sendEmailChangeConfirmationMail(
       "<p>Hallo,</p>",
       "<p>bitte bestätige, dass diese E-Mail-Adresse erreichbar ist, indem du auf den folgenden Link klickst:</p>",
       `<p><a href="${escapeHtml(confirmLink)}">${escapeHtml(confirmLink)}</a></p>`,
-      "<p>Die Änderung wird danach zusätzlich vom Vorstand freigegeben, bevor sie wirksam wird.</p>",
+      "<p>Danach geht dein Änderungsantrag an den Vorstand. Sobald er freigegeben ist, bekommst du eine weitere Mail an diese Adresse — erst dann gilt sie für Login und Vereinskontakt.</p>",
+    ].join("\n"),
+  });
+}
+
+/** Warnung an die bisherige Adresse beim Antrag (#614) — fällt ein fremder
+ * Antrag auf, bleibt bis zur Vorstandsfreigabe Zeit zu reagieren. */
+export async function sendEmailChangeRequestedNoticeMail(
+  currentEmail: string,
+  newEmail: string,
+) {
+  await sendTransactionalEmail({
+    to: currentEmail,
+    subject: "Änderung deiner E-Mail-Adresse beantragt",
+    html: [
+      "<p>Hallo,</p>",
+      `<p>für dein Konto im Oecher-Meeples-Portal wurde eine Änderung der E-Mail-Adresse auf <strong>${escapeHtml(newEmail)}</strong> beantragt. Sie wird erst wirksam, wenn der Bestätigungslink an die neue Adresse geklickt und die Änderung vom Vorstand freigegeben wurde.</p>`,
+      "<p>Falls du das nicht warst, ändere bitte dein Passwort und wende dich an den Vorstand.</p>",
+    ].join("\n"),
+  });
+}
+
+/** Nach der Vorstandsfreigabe (#614) — an die neue Adresse, die ab jetzt
+ * Login- und Vereinsmitglied-E-Mail zugleich ist. */
+export async function sendEmailChangeAppliedMail(newEmail: string) {
+  await sendTransactionalEmail({
+    to: newEmail,
+    subject: "Deine neue E-Mail-Adresse ist jetzt aktiv",
+    html: [
+      "<p>Hallo,</p>",
+      "<p>der Vorstand hat deine Änderung freigegeben: Diese E-Mail-Adresse ist ab sofort deine Adresse im Oecher-Meeples-Portal — für den Login und für alle Vereinsmitteilungen.</p>",
+      "<p>Deine bisherige Adresse ist damit ungültig. Melde dich bitte ab jetzt mit dieser Adresse an.</p>",
     ].join("\n"),
   });
 }

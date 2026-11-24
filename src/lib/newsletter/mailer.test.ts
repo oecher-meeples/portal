@@ -18,8 +18,7 @@ const MAIL = {
 };
 
 async function loadMailer() {
-  // Fresh module per test: the transporter cache and the one-time
-  // "SMTP off" warning are module-level state.
+  // Fresh module per test: the transporter cache is module-level state.
   vi.resetModules();
   return import("./mailer");
 }
@@ -27,8 +26,6 @@ async function loadMailer() {
 beforeEach(() => {
   sendMailMock.mockReset().mockResolvedValue({ messageId: "x" });
   createTransportMock.mockClear();
-  vi.spyOn(console, "warn").mockImplementation(() => {});
-  vi.spyOn(console, "info").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -37,32 +34,16 @@ afterEach(() => {
 });
 
 describe("sendTransactionalEmail — SMTP not configured", () => {
-  it("resolves without sending and warns only once", async () => {
+  it("rejects with a MailerError instead of pretending to send", async () => {
     vi.stubEnv("SMTP_HOST", "");
-    const { sendTransactionalEmail } = await loadMailer();
+    const { sendTransactionalEmail, MailerError } = await loadMailer();
 
-    await expect(sendTransactionalEmail(MAIL)).resolves.toBeUndefined();
-    await expect(sendTransactionalEmail(MAIL)).resolves.toBeUndefined();
+    const result = sendTransactionalEmail(MAIL);
 
+    await expect(result).rejects.toBeInstanceOf(MailerError);
+    await expect(result).rejects.toThrow("SMTP_HOST fehlt");
     expect(createTransportMock).not.toHaveBeenCalled();
     expect(sendMailMock).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledTimes(1);
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("SMTP_HOST"),
-    );
-  });
-
-  it("does not log the recipient address", async () => {
-    vi.stubEnv("SMTP_HOST", "");
-    const { sendTransactionalEmail } = await loadMailer();
-
-    await sendTransactionalEmail(MAIL);
-
-    const logged = [
-      ...vi.mocked(console.warn).mock.calls,
-      ...vi.mocked(console.info).mock.calls,
-    ].flat();
-    expect(logged.join(" ")).not.toContain(MAIL.to);
   });
 });
 

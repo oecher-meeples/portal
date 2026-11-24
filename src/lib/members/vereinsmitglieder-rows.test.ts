@@ -33,6 +33,7 @@ function member(
       neonAuthUserId: "user-1",
       isSystemAccount: false,
     },
+    _count: { guardians: 0 },
     ...overrides,
   };
 }
@@ -101,6 +102,29 @@ describe("buildVereinsmitgliedRows", () => {
     );
 
     expect(rows[0].joinedAt).toBe("2021-06-15T00:00:00.000Z");
+  });
+
+  it("flags members with at least one linked guardian (#611)", () => {
+    const rows = buildVereinsmitgliedRows(
+      [
+        member({ id: "child", _count: { guardians: 2 } }),
+        member({ id: "adult", _count: { guardians: 0 } }),
+      ],
+      EMPTY_LOOKUPS,
+      NOW,
+    );
+
+    expect(rows.map((row) => row.hasGuardian)).toEqual([true, false]);
+  });
+
+  it("keeps an unknown joinedAt as null (#611, Mitgliederimport)", () => {
+    const rows = buildVereinsmitgliedRows(
+      [member({ joinedAt: null })],
+      EMPTY_LOOKUPS,
+      NOW,
+    );
+
+    expect(rows[0].joinedAt).toBeNull();
   });
 
   it("derives membershipState via getMembershipState", () => {

@@ -70,6 +70,10 @@ export interface BggGameData {
    * z. B. `0` bei einem Titel ohne Bewertungen — das Hexagon wird dann nicht
    * angezeigt, siehe `lib/bgg/rating-scale.ts`. */
   averageRating: number | null;
+  /** Zahl der BGG-Bewertungen (`statistics.ratings.usersrated`) — Maß für
+   * die Bekanntheit, z. B. um unter gleichnamigen Titeln den gemeinten zu
+   * finden (#603). `null` ohne Statistik-Block. */
+  usersRated: number | null;
   imageUrl: string | null;
   description: string | null;
   mechanics: string[];
@@ -192,6 +196,7 @@ export interface BggItem {
     ratings?: {
       averageweight?: { value?: string };
       average?: { value?: string };
+      usersrated?: { value?: string };
     };
   };
   videos?: {
@@ -294,7 +299,7 @@ function parseVersions(versions: BggItem["versions"]): BggVersion[] {
     return {
       bggVersionId: parseNumber(version.id),
       name: toArray(version.name)[0]?.value ?? null,
-      yearPublished: parseNumber(version.yearpublished?.value),
+      yearPublished: parseYear(version.yearpublished?.value),
       publisher: links
         .filter((link) => link.type === "boardgamepublisher")
         .map((link) => link.value),
@@ -318,7 +323,14 @@ function resolveYearPublished(
     .map((v) => v.yearPublished)
     .filter((year): year is number => year !== null);
   if (versionYears.length > 0) return Math.min(...versionYears);
-  return parseNumber(item.yearpublished?.value);
+  return parseYear(item.yearpublished?.value);
+}
+
+/** BGG meldet ein unbekanntes Erscheinungsjahr als `0` — sonst würde es als
+ * „ältestes Jahr" jede echte Jahreszahl verdrängen. */
+function parseYear(value: string | undefined): number | null {
+  const year = parseNumber(value);
+  return year ? year : null;
 }
 
 function mapItem(item: BggItem): BggGameData {
@@ -351,6 +363,7 @@ function mapItem(item: BggItem): BggGameData {
     weight: rawWeight === null ? null : Math.round(rawWeight * 10) / 10,
     averageRating:
       rawAverageRating === null ? null : Math.round(rawAverageRating * 10) / 10,
+    usersRated: parseNumber(item.statistics?.ratings?.usersrated?.value),
     imageUrl: item.image ?? null,
     description:
       item.description === undefined
@@ -473,7 +486,7 @@ async function searchBggGamesInternal(
       return {
         bggId,
         title: primaryName.value,
-        yearPublished: parseNumber(item.yearpublished?.value),
+        yearPublished: parseYear(item.yearpublished?.value),
       };
     })
     .filter((result): result is BggSearchResult => result !== null);

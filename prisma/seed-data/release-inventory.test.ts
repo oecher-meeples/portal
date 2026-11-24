@@ -109,14 +109,32 @@ describe("normalizeSheetRow", () => {
       inventoryNumber: 70,
       title: "6 nimmt!",
       bggId: null,
+      bggMatch: null,
       location: "Kiste 4",
       lastCheckedOn: "2026-08-06",
       result: "COMPLETE",
       note: null,
       englishRules: false,
       deinventarised: false,
+      valueCents: 1200,
     });
     expect(JSON.stringify(row)).not.toContain("Mustermann");
+  });
+
+  it("reads the value and drops unreadable or shifted entries (#615)", () => {
+    const value = (cell: string) =>
+      normalizeSheetRow(sheetRow("1", "X", "", "", "", "A", "", "", "", cell))
+        ?.valueCents;
+    expect(value("1.234,50 €")).toBe(123450);
+    expect(value("- €")).toBeNull();
+    expect(value("29.07.2026")).toBeNull();
+    expect(value("")).toBeNull();
+    // Verrutschte Zeile: Wert eine Spalte zu früh, Datum unter „Wert".
+    expect(
+      normalizeSheetRow(
+        sheetRow("781", "X", "", "", "", "A", "", "", "33,99 €", "29.07.2026"),
+      )?.valueCents,
+    ).toBe(3399);
   });
 
   it("returns null for rows without a number", () => {
@@ -202,6 +220,8 @@ describe("release-inventory.csv round trip", () => {
         ...normalizeSheetRow(sheetRow("797", "Safe House", "", "", "", "F"))!,
         inventoryNumber: null,
         bggId: 123,
+        bggMatch: "picked" as const,
+        valueCents: 2499,
       },
     ];
     expect(parseReleaseInventory(serializeReleaseInventory(rows))).toEqual(
@@ -211,7 +231,7 @@ describe("release-inventory.csv round trip", () => {
 
   it("rejects a result without a date", () => {
     const csv =
-      "inventoryNumber,title,bggId,location,lastCheckedOn,result,note,englishRules,deinventarised\n1,X,,,,COMPLETE,,,\n";
+      "inventoryNumber,title,bggId,bggMatch,location,lastCheckedOn,result,note,englishRules,deinventarised,valueCents\n1,X,,,,,COMPLETE,,,,\n";
     expect(() => parseReleaseInventory(csv)).toThrow(/ohne Datum/);
   });
 

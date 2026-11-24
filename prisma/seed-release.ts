@@ -11,6 +11,7 @@ import { prisma } from "../src/lib/utils/prisma";
 import { slugify } from "../src/lib/utils/slug";
 import { nextUnitCode } from "../src/lib/inventory/codes";
 import { findOrCreateBoardGameTitle } from "../src/lib/ludothek/board-game-title-lookup";
+import { upsertBoardGameVersion } from "../src/lib/ludothek/taxonomy/versions";
 import { statusAfterCheck } from "../src/lib/ludothek/game-copy-checks";
 import {
   formatDefectCondition,
@@ -23,6 +24,16 @@ import {
   type ReleaseCheckResult,
   type ReleaseInventoryRow,
 } from "./seed-data/release-inventory";
+import {
+  readReleaseBoardGames,
+  readReleaseDescriptionsDe,
+  RELEASE_DESCRIPTIONS_DE_FILE,
+  RELEASE_BOARD_GAMES_FILE,
+  releaseTitleInput,
+  type ReleaseBoardGame,
+  type ReleaseBoardGames,
+  type ReleaseDescriptionsDe,
+} from "./seed-data/release-board-games";
 import { ensureUnsortiertUnit } from "./seed-shared";
 
 export const SEED_PROFILES = ["develop", "release"] as const;
@@ -109,6 +120,69 @@ async function ensureLocationUnits(labels: string[], keeperMeepleId: string) {
 }
 
 /**
+ * Titel zu einer Bestandszeile: mit abgerufenen BGG-Daten (Spielerzahl,
+ * Dauer, Bild, Beschreibung, Autoren, Tags, Alternativnamen) und deutscher
+ * Edition, sonst nur mit Titel (und ggf. `bggId`). Ohne `bggId` wird ein
+ * gleichnamiger Titel ohne BGG-Bezug wiederverwendet.
+ */
+async function findOrCreateReleaseBoardGame(
+  row: ReleaseInventoryRow,
+  games: ReleaseBoardGames,
+  descriptionsDe: ReleaseDescriptionsDe,
+): Promise<{ boardGameId: string; versionId: string | null }> {
+  const game = row.bggId ? games[row.bggId] : undefined;
+  const boardGameId = await findOrCreateReleaseTitle(
+    row,
+    game,
+    row.bggId ? descriptionsDe[row.bggId] : undefined,
+  );
+  const version = game?.version
+    ? await upsertBoardGameVersion(prisma, boardGameId, game.version)
+    : null;
+  return { boardGameId, versionId: version?.id ?? null };
+}
+
+async function findOrCreateReleaseTitle(
+  row: ReleaseInventoryRow,
+  game: ReleaseBoardGame | undefined,
+  descriptionDe: string | undefined,
+) {
+  if (!game) {
+    const existing = row.bggId
+      ? null
+      : await prisma.boardGame.findFirst({
+          where: { title: row.title, bggId: null },
+          select: { id: true },
+        });
+    if (existing) return existing.id;
+    const created = await findOrCreateBoardGameTitle({
+      title: row.title,
+      bggId: row.bggId ?? undefined,
+    });
+    return created.id;
+  }
+
+  const alreadyThere = await prisma.boardGame.findUnique({
+    where: { bggId: game.input.bggId },
+    select: { id: true },
+  });
+  if (alreadyThere) return alreadyThere.id;
+
+  const input = releaseTitleInput(row.title, game, descriptionDe);
+  const created = await findOrCreateBoardGameTitle(input);
+  const names = game.alternateNames.filter(
+    (name) => name !== input.title && name !== input.secondaryTitle,
+  );
+  if (names.length > 0) {
+    await prisma.boardGameAlternateName.createMany({
+      data: names.map((name) => ({ boardGameId: created.id, name })),
+      skipDuplicates: true,
+    });
+  }
+  return created.id;
+}
+
+/**
  * Release-Seed (#603): legt den echten Vereinsbestand aus
  * `release-inventory.csv` an — Titel, Exemplar, Standort und pro Exemplar
  * genau eine Kontrolle (letzte Zählung), Status über die Regel aus #599.
@@ -130,27 +204,29 @@ export async function seedReleaseInventory(adminMeepleId: string) {
     adminMeepleId,
   );
 
-  const boardGameIdByKey = new Map<string, string>();
-  async function boardGameIdFor(row: ReleaseInventoryRow) {
+  const games = readReleaseBoardGames(
+    path.resolve(
+      process.env.RELEASE_BOARD_GAMES_JSON ?? RELEASE_BOARD_GAMES_FILE,
+    ),
+  );
+  const descriptionsDe = readReleaseDescriptionsDe(
+    path.resolve(RELEASE_DESCRIPTIONS_DE_FILE),
+  );
+  const titleByKey = new Map<
+    string,
+    Awaited<ReturnType<typeof findOrCreateReleaseBoardGame>>
+  >();
+  async function titleFor(row: ReleaseInventoryRow) {
     const key = row.bggId ? `bgg:${row.bggId}` : `title:${row.title}`;
-    const cached = boardGameIdByKey.get(key);
+    const cached = titleByKey.get(key);
     if (cached) return cached;
-    const existing = row.bggId
-      ? null
-      : await prisma.boardGame.findFirst({
-          where: { title: row.title, bggId: null },
-          select: { id: true },
-        });
-    const id =
-      existing?.id ??
-      (
-        await findOrCreateBoardGameTitle({
-          title: row.title,
-          bggId: row.bggId ?? undefined,
-        })
-      ).id;
-    boardGameIdByKey.set(key, id);
-    return id;
+    const title = await findOrCreateReleaseBoardGame(
+      row,
+      games,
+      descriptionsDe,
+    );
+    titleByKey.set(key, title);
+    return title;
   }
 
   let created = 0;
@@ -159,7 +235,7 @@ export async function seedReleaseInventory(adminMeepleId: string) {
     const slug = releaseCopySlug(row);
     if (await prisma.gameCopy.findUnique({ where: { slug } })) continue;
 
-    const boardGameId = await boardGameIdFor(row);
+    const { boardGameId, versionId } = await titleFor(row);
     const checkedAt = row.lastCheckedOn
       ? checkedAtFor(row.lastCheckedOn)
       : null;
@@ -176,7 +252,9 @@ export async function seedReleaseInventory(adminMeepleId: string) {
         data: {
           slug,
           boardGameId,
+          versionId,
           inventoryNumber: row.inventoryNumber,
+          valueCents: row.valueCents,
           condition,
           ruleBookLanguages: row.englishRules ? [RuleBookLanguage.EN] : [],
           lastCheckedAt: result ? checkedAt : null,
@@ -217,6 +295,6 @@ export async function seedReleaseInventory(adminMeepleId: string) {
   }
 
   console.log(
-    `Release-Bestand: ${created} Exemplare angelegt (${checks} Kontrollen, ${boardGameIdByKey.size} Titel), ${rows.length - created} bereits vorhanden übersprungen.`,
+    `Release-Bestand: ${created} Exemplare angelegt (${checks} Kontrollen, ${titleByKey.size} Titel), ${rows.length - created} bereits vorhanden übersprungen.`,
   );
 }

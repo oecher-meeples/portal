@@ -56,3 +56,17 @@ export function buildRegistrationLink(
 export function formatInviteMessage(link: string, expiresAt: Date): string {
   return `Hallo!\n\nDu bist eingeladen, dem Oecher-Meeples-Portal beizutreten. Registriere dich über diesen Link:\n${link}\n\nDer Link ist gültig bis ${formatDateTime(expiresAt)}.`;
 }
+
+export const INVITE_MAIL_SUBJECT = "Einladung zu Oecher Meeples";
+
+/** `mailto:` fallback of the invite mail ("Im Mailprogramm öffnen") — shared
+ * by the invite form and the invite list. */
+export function buildInviteMailtoHref(
+  email: string,
+  link: string,
+  expiresAt: Date,
+): string {
+  return `mailto:${email}?subject=${encodeURIComponent(
+    INVITE_MAIL_SUBJECT,
+  )}&body=${encodeURIComponent(formatInviteMessage(link, expiresAt))}`;
+}

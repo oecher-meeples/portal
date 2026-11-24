@@ -13,11 +13,39 @@ const ADDRESS = {
 
 beforeEach(() => {
   prismaMock.member.findUnique.mockResolvedValue(null);
+  prismaMock.$transaction.mockImplementation((arg) =>
+    typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
+  );
 });
 
 describe("updateMember", () => {
   it("refuses a blank email for an adult (no birth date, safe default)", async () => {
     const result = await updateMember("member-1", { email: "  ", ...ADDRESS });
+
+    expect(result).toEqual({ error: "Bitte eine E-Mail-Adresse angeben." });
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
+  });
+
+  it("allows a blank email for a child with a linked guardian, even without a birth date (#611)", async () => {
+    prismaMock.memberGuardian.count.mockResolvedValue(1);
+
+    const result = await updateMember("member-1", { email: "", ...ADDRESS });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.memberGuardian.count).toHaveBeenCalledWith({
+      where: { childMemberId: "member-1" },
+    });
+    expect(prismaMock.member.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ email: null }),
+      }),
+    );
+  });
+
+  it("still refuses a blank email without a linked guardian (#611)", async () => {
+    prismaMock.memberGuardian.count.mockResolvedValue(0);
+
+    const result = await updateMember("member-1", { email: "", ...ADDRESS });
 
     expect(result).toEqual({ error: "Bitte eine E-Mail-Adresse angeben." });
     expect(prismaMock.member.update).not.toHaveBeenCalled();
@@ -64,6 +92,36 @@ describe("updateMember", () => {
 
     expect(result).toEqual({ success: true });
     expect(prismaMock.member.update).toHaveBeenCalled();
+  });
+
+  it("refuses an email another login already uses (#614)", async () => {
+    prismaMock.authUser.findUnique.mockResolvedValue({ id: "user-2" } as never);
+
+    const result = await updateMember("member-1", {
+      email: "login@example.com",
+      ...ADDRESS,
+    });
+
+    expect(result).toEqual({
+      error: "login@example.com wird bereits für ein anderes Login verwendet.",
+    });
+    expect(prismaMock.member.update).not.toHaveBeenCalled();
+  });
+
+  it("moves the member's login to the new email (#614)", async () => {
+    prismaMock.member.findUnique.mockImplementation(((args: {
+      where: { id?: string };
+    }) =>
+      Promise.resolve(
+        args.where.id ? { meeple: { neonAuthUserId: "user-1" } } : null,
+      )) as never);
+
+    await updateMember("member-1", { email: "neu@example.com", ...ADDRESS });
+
+    expect(prismaMock.authUser.update).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { email: "neu@example.com" },
+    });
   });
 
   it("updates the personal data fields", async () => {
