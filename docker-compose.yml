@@ -55,7 +55,7 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set}
       S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set}
       S3_STORAGE_LIMIT_BYTES: ${S3_STORAGE_LIMIT_BYTES:-}
-      # --- E-Mail (optional; without SMTP_HOST mails are logged, not sent) ---
+      # --- E-Mail (without SMTP_HOST every mail fails with an error, #612) ---
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

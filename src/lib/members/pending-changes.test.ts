@@ -6,11 +6,14 @@ import { decryptSecret } from "@/lib/utils/crypto";
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const sendEmailChangeConfirmationMailMock = vi.fn();
+const sendEmailChangeRequestedNoticeMailMock = vi.fn();
 vi.mock("@/lib/members/pending-change-mail", () => ({
   buildEmailChangeConfirmationLink: (origin: string, token: string) =>
     `${origin}/profil/e-mail-bestaetigen?token=${token}`,
   sendEmailChangeConfirmationMail: (...args: unknown[]) =>
     sendEmailChangeConfirmationMailMock(...args),
+  sendEmailChangeRequestedNoticeMail: (...args: unknown[]) =>
+    sendEmailChangeRequestedNoticeMailMock(...args),
   sendPendingChangeRejectedMail: vi.fn(),
 }));
 
@@ -112,6 +115,41 @@ describe("requestEmailChange", () => {
     });
   });
 
+  it("rejects the member's current address (#614)", async () => {
+    prismaMock.member.findUnique.mockResolvedValue({
+      id: "member-1",
+      email: "alt@example.com",
+    } as never);
+
+    const result = await requestEmailChange("member-1", "Alt@Example.com");
+
+    expect(result).toEqual({ error: "Das ist bereits deine E-Mail-Adresse." });
+  });
+
+  it("rejects an address another login already uses (#614)", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+    prismaMock.authUser.findUnique.mockResolvedValue({ id: "user-2" } as never);
+
+    const result = await requestEmailChange("member-1", "login@example.com");
+
+    expect(result).toEqual({
+      error: "Diese E-Mail-Adresse wird bereits verwendet.",
+    });
+  });
+
+  it("enforces a cooldown between two confirmation mails (#614)", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+    prismaMock.rateLimitAttempt.findUnique.mockResolvedValue({
+      lastFailedAt: new Date(),
+    } as never);
+
+    const result = await requestEmailChange("member-1", "neu@example.com");
+
+    expect(result.error).toMatch(/^Bitte warte noch \d+ Sekunden/);
+    expect(prismaMock.pendingChange.create).not.toHaveBeenCalled();
+    expect(sendEmailChangeConfirmationMailMock).not.toHaveBeenCalled();
+  });
+
   it("creates the request and sends the confirmation mail", async () => {
     prismaMock.member.findUnique.mockResolvedValue(null);
     prismaMock.pendingChange.create.mockResolvedValue({
@@ -125,6 +163,53 @@ describe("requestEmailChange", () => {
       "neu@example.com",
       expect.stringContaining("token=tok-123"),
     );
+  });
+
+  describe("warning to the current address (#614)", () => {
+    beforeEach(() => {
+      prismaMock.member.findUnique.mockImplementation(((args: {
+        where: { id?: string };
+      }) =>
+        Promise.resolve(
+          args.where.id ? { id: "member-1", email: "alt@example.com" } : null,
+        )) as never);
+      prismaMock.pendingChange.create.mockResolvedValue({
+        confirmToken: "tok-123",
+      } as never);
+      sendEmailChangeRequestedNoticeMailMock.mockReset();
+    });
+
+    it("warns the current address about the request", async () => {
+      await requestEmailChange("member-1", "neu@example.com");
+
+      expect(sendEmailChangeRequestedNoticeMailMock).toHaveBeenCalledWith(
+        "alt@example.com",
+        "neu@example.com",
+      );
+    });
+
+    it("still reports success when only the warning fails", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      sendEmailChangeRequestedNoticeMailMock.mockRejectedValue(
+        new Error("kaputt"),
+      );
+
+      await expect(
+        requestEmailChange("member-1", "neu@example.com"),
+      ).resolves.toEqual({ success: true });
+    });
+  });
+
+  it("sends no warning when there is no current address", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(null);
+    prismaMock.pendingChange.create.mockResolvedValue({
+      confirmToken: "tok-123",
+    } as never);
+    sendEmailChangeRequestedNoticeMailMock.mockReset();
+
+    await requestEmailChange("member-1", "neu@example.com");
+
+    expect(sendEmailChangeRequestedNoticeMailMock).not.toHaveBeenCalled();
   });
 });
 

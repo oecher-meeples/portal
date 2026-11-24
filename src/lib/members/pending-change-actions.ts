@@ -34,6 +34,11 @@ export async function approvePendingChange(
   revalidatePath("/admin/bank");
   revalidatePath("/admin/mitglieder");
   await revalidateMemberProfile({ memberId: change.memberId });
+  if (result.mailError) {
+    return {
+      error: `Freigegeben, aber die Mail an die neue Adresse ist fehlgeschlagen: ${result.mailError}`,
+    };
+  }
   return { success: true as const };
 }
 
