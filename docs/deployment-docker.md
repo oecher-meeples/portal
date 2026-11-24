@@ -280,8 +280,11 @@ Der Entrypoint des App-Containers (`docker/app/entrypoint.sh`) führt bei
    - Danach je nach **`SEED_PROFILE`** (#603):
      - `release` (Default): echter Vereinsbestand aus
        `prisma/seed-data/release-inventory.csv` — Titel, Exemplare mit
-       Inventarnummer, Standorte (Regale/Kisten) und je Exemplar die letzte
-       Kontrolle (Kontrolleur: Admin-Konto). Keine Demo-Konten.
+       Inventarnummer und Wert, Standorte (Regale/Kisten) und je Exemplar die
+       letzte Kontrolle (Kontrolleur: Admin-Konto). Titel mit BGG-Zuordnung
+       bringen ihre Grunddaten, deutsche Beschreibung und deutsche Edition aus
+       `release-board-games.json`/`release-descriptions-de.json` mit — der
+       Seed ruft BGG nie auf. Keine Demo-Konten.
      - `develop`: Demo-Spiele, -Mitglieder, -Beiträge, Demo-Konten (Passwort
        `SEED_DEMO_PASSWORD`) usw. Nur für Test-/Vorführinstanzen, nie für eine
        echte Vereinsdatenbank.

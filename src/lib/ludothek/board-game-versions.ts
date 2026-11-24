@@ -5,15 +5,71 @@ import { bggTagInputs } from "@/lib/ludothek/taxonomy/tags";
 
 const GERMAN_LANGUAGE_PATTERN = /german|deutsch/i;
 
+/** Deutschsprachige Verlage — erkennt eine deutsche Edition auch dort, wo
+ * BGG der Version keinen `language`-Link gibt (#603). Teilwort-Treffer auf
+ * BGGs Verlagsnamen, z. B. "Feuerland Spiele", "Pegasus Spiele". */
+const GERMAN_PUBLISHER_PATTERN = new RegExp(
+  `\\b(?:${[
+    "feuerland",
+    "pegasus spiele",
+    "skellig",
+    "dlp games",
+    "deep print",
+    "kosmos",
+    "ravensburger",
+    "schmidt spiele",
+    "hans im gl[üu]ck",
+    "amigo",
+    "huch!",
+    "zoch",
+    "haba",
+    "queen games",
+    "lookout",
+    "asmodee (germany|deutschland)",
+    "heidelberger",
+    "heidelb[äa]r",
+    "frosted games",
+    "board game circus",
+    "spiel direkt",
+    "abacusspiele",
+    "game ?factory",
+    "kobold",
+    "strohmann",
+    "corax",
+    "drei magier",
+    "n[üu]rnberger[- ]spielkarten",
+    "2f-spiele",
+    "alea",
+    "schwerkraft",
+    "spielworxx",
+    "piatnik",
+    "noris",
+    "m[üu]cke spiele",
+    "argentum",
+    "moses",
+    "truant",
+    "edition spielwiese",
+    "hutter",
+  ].join("|")})(?![a-zäöü])`,
+  "i",
+);
+
+/** Deutsche Edition: Sprache Deutsch laut BGG oder ein deutscher Verlag. */
+export function isGermanVersion(version: BggVersion): boolean {
+  return (
+    version.languages.some((lang) => GERMAN_LANGUAGE_PATTERN.test(lang)) ||
+    version.publisher.some((name) => GERMAN_PUBLISHER_PATTERN.test(name))
+  );
+}
+
 /** Deutsche Editionen, falls vorhanden — sonst alle Versionen (#205). BGGs
  * `language`-Links pro Version sind die Grundlage für die Erkennung, siehe
- * Issue-Klärung ("meist ist die deutsche Edition relevant"). Eingeengt auf
- * die deutschen Editionen erhöht die Chance auf einen eindeutigen
- * Verlag/Product-Code, ohne den Admin fragen zu müssen. */
+ * Issue-Klärung ("meist ist die deutsche Edition relevant"), ergänzt um
+ * deutsche Verlage (#603). Eingeengt auf die deutschen Editionen erhöht die
+ * Chance auf einen eindeutigen Verlag/Product-Code, ohne den Admin fragen
+ * zu müssen. */
 export function selectRelevantVersions(versions: BggVersion[]): BggVersion[] {
-  const german = versions.filter((v) =>
-    v.languages.some((lang) => GERMAN_LANGUAGE_PATTERN.test(lang)),
-  );
+  const german = versions.filter(isGermanVersion);
   return german.length > 0 ? german : versions;
 }
 

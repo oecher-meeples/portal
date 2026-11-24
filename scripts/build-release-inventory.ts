@@ -4,7 +4,7 @@
  * Personendaten (ausgeliehen an/am) und kommt nie ins Repo — nur das
  * Ergebnis dieses Skripts.
  *
- * Bereits eingetragene `bggId`s (von `match-release-inventory-bgg.ts` oder
+ * Bereits eingetragene `bggId`s (von `enrich-release-inventory-bgg.ts` oder
  * von Hand) bleiben beim Neuaufbau erhalten.
  *
  * Aufruf:
@@ -67,6 +67,12 @@ sheetRows.forEach((cells, index) => {
   if (row.title.length <= 1 || !/\p{L}/u.test(row.title)) {
     review.push(`Nr. ${number}: verdächtiger Titel "${row.title}"`);
   }
+  const rawValue = (cells[9] ?? "").trim();
+  if (rawValue && row.valueCents === null) {
+    review.push(
+      `Nr. ${number} "${row.title}": Wert "${rawValue}" unlesbar → leer`,
+    );
+  }
   if (!row.location) {
     review.push(
       `Nr. ${number} "${row.title}": Platz "${cells[5] ?? ""}" → Unsortiert`,
@@ -75,14 +81,22 @@ sheetRows.forEach((cells, index) => {
   rows.push(row);
 });
 
-const previousBggIds = new Map<string, number>();
+const previousBgg = new Map<
+  string,
+  Pick<ReleaseInventoryRow, "bggId" | "bggMatch">
+>();
 if (fs.existsSync(OUTPUT)) {
   for (const row of parseReleaseInventory(fs.readFileSync(OUTPUT, "utf-8"))) {
-    if (row.bggId) previousBggIds.set(releaseRowKey(row), row.bggId);
+    if (row.bggId || row.bggMatch) {
+      previousBgg.set(releaseRowKey(row), {
+        bggId: row.bggId,
+        bggMatch: row.bggMatch,
+      });
+    }
   }
 }
 for (const row of rows) {
-  row.bggId = previousBggIds.get(releaseRowKey(row)) ?? null;
+  Object.assign(row, previousBgg.get(releaseRowKey(row)) ?? {});
 }
 
 rows.sort(
