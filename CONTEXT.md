@@ -77,6 +77,10 @@ _Avoid_: Exemplar (das ist die physische Ebene, siehe unten), Kopie
 Ein einzelnes physisches Spiel im Vereinsbesitz — Zustand, Inventarstatus und Standort (über `GameHolding`). Ein Titel kann mehrere Exemplare haben, unterscheidbar über Standort und Zustand, nicht über die EAN (die ist Produkt-, nicht Exemplar-Eigenschaft). Löst den Teil von ADR 0001 ab, der eine Titel-/Exemplar-Trennung noch verwarf, solange kein Titel mehr als ein Exemplar hatte.
 _Avoid_: Spiel als Synonym für Exemplar (Spiel meint den Titel), Kopie, GameCopy im Fließtext
 
+**Wert / Erhalten am** (`GameCopy.valueCents`, `GameCopy.acquiredOn`, #615):
+Was ein Exemplar wert ist (in Cent) und wann der Verein es erhalten hat — beides optional, `null` heißt unbekannt. Nur die Ludothek-Verwaltung (`games:manage`) sieht und pflegt sie. Der **Bestandswert** ist die Summe der bekannten Werte aller nicht deinventarisierten Exemplare; ein deinventarisiertes Exemplar behält seinen Wert, zählt aber nicht mehr mit. „Erhalten am" ist unabhängig vom Erfassungsdatum im Portal (`createdAt`).
+_Avoid_: Preis (das ist der Marktplatz), Euro-Beträge als Gleitkommazahl speichern
+
 **EAN**:
 Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt** (den Titel), nicht das einzelne Exemplar — mehrere Exemplare desselben Titels tragen dieselbe EAN, ein Scan kann daher mehrere Treffer liefern.
 _Avoid_: Barcode als Exemplar-Schlüssel, Inventarnummer

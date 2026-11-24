@@ -1097,6 +1097,13 @@ model GameCopy {
   /// automatisch lückenloses Nummernschema wie `codes.ts` (#270). Im
   /// QR-Short-ID-Slug als `inv-<n>`.
   inventoryNumber        Int?                @unique
+  /// Wert des Exemplars in Cent (#615) — Cent statt Euro, damit 24,99 € nicht
+  /// gerundet wird. `null` = unbekannt. Bleibt beim Deinventarisieren
+  /// erhalten, zählt dann aber nicht zum Bestandswert.
+  valueCents             Int?
+  /// Wann der Verein das Exemplar erhalten hat (#615) — reines Datum,
+  /// `null` = unbekannt. Unabhängig von `createdAt` (Erfassung im Portal).
+  acquiredOn             DateTime?           @db.Date
   status                 GameInventoryStatus @default(ACTIVE)
   archivedAt             DateTime?
   archivedReason         String?

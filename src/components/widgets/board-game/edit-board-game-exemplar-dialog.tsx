@@ -7,6 +7,7 @@ import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { InventoryNumberField } from "@/components/widgets/board-game/inventory-number-field";
 import { updateGameCopy } from "@/lib/ludothek/game-copies";
+import { valueCentsToInput } from "@/lib/ludothek/game-copy-acquisition";
 import { EditBoardGameExemplar } from "@/components/widgets/board-game/edit-board-game-exemplar";
 import {
   EMPTY_BOARD_GAME_FORM,
@@ -26,6 +27,8 @@ export function EditBoardGameExemplarDialog({
   condition,
   ruleBookLanguages,
   inventoryNumber,
+  valueCents,
+  acquiredOn,
   boardGameId,
   versionId,
   triggerLabel = "Bearbeiten",
@@ -37,6 +40,9 @@ export function EditBoardGameExemplarDialog({
   ruleBookLanguages: RuleBookLanguage[];
   /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543). */
   inventoryNumber?: number | null;
+  /** Wert in Cent und „Erhalten am" (`JJJJ-MM-TT`), #615. */
+  valueCents?: number | null;
+  acquiredOn?: string | null;
   /** Titel des Exemplars — liefert die zur Auswahl stehenden Editionen. */
   boardGameId?: string;
   /** Aktuelle Edition des Exemplars. */
@@ -49,6 +55,8 @@ export function EditBoardGameExemplarDialog({
     ...EMPTY_BOARD_GAME_FORM,
     condition: condition ?? "",
     ruleBookLanguages,
+    value: valueCentsToInput(valueCents),
+    acquiredOn: acquiredOn ?? "",
     editionMode: versionId ? "existing" : "none",
     editionVersionId: versionId ?? "",
   });

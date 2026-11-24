@@ -17,6 +17,10 @@ import type {
 } from "@/lib/ludothek/board-games";
 import type { GameCopyInput } from "@/lib/ludothek/game-copies";
 import { parseInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
+import {
+  parseAcquiredOn,
+  parseEuroToCents,
+} from "@/lib/ludothek/game-copy-acquisition";
 import type { BggLink } from "@/lib/bgg/client";
 import type {
   EditionSelection,
@@ -64,6 +68,10 @@ export type BoardGameFormValues = {
   languageDependence: LanguageDependence | null;
   /** Regelheft-Sprache(n) dieses Exemplars, Mehrfachauswahl (#188). */
   ruleBookLanguages: RuleBookLanguage[];
+  /** Wert des Exemplars in Euro als Formulartext, z. B. `24,99` (#615). */
+  value: string;
+  /** „Erhalten am" als `JJJJ-MM-TT` (#615). */
+  acquiredOn: string;
   /** Edition des Exemplars (BGG-Version) — Verlag(e), Sprache(n) und die
    * Wahl zwischen keiner/vorhandener/neuer Edition. */
   editionMode: EditionMode;
@@ -106,6 +114,8 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   explainerVideoUrl: "",
   languageDependence: null,
   ruleBookLanguages: [],
+  value: "",
+  acquiredOn: "",
   editionMode: "none",
   editionVersionId: "",
   bggVersion: null,
@@ -167,6 +177,8 @@ export function boardGameToFormValues(
     explainerVideoUrl: game.explainerVideoUrl ?? "",
     languageDependence: game.languageDependence,
     ruleBookLanguages: game.ruleBookLanguages,
+    value: "",
+    acquiredOn: "",
     editionMode: "none",
     editionVersionId: "",
     bggVersion: null,
@@ -249,6 +261,15 @@ export function editionSelectionFromForm(
   return version ? { version } : null;
 }
 
+/** Wert und „Erhalten am" (#615) — leer wird `null`, Unlesbares lehnt der
+ * Server mit sprechender Meldung ab (`validateAcquisition`). */
+function exemplarAcquisitionFromForm(form: BoardGameFormValues) {
+  return {
+    valueCents: parseEuroToCents(form.value),
+    acquiredOn: parseAcquiredOn(form.acquiredOn),
+  };
+}
+
 /** Exemplar-Felder für `createGameCopy`/`updateGameCopy` — von den beiden
  * Exemplar-Dialogen geteilt. */
 export function exemplarFormToCopyInput(
@@ -261,6 +282,7 @@ export function exemplarFormToCopyInput(
     // Ungültiger Text wird zu `NaN` und serverseitig mit sprechender
     // Meldung abgelehnt (`validateInventoryNumber`, #543).
     inventoryNumber: parseInventoryNumber(inventoryNumber),
+    ...exemplarAcquisitionFromForm(form),
     edition: editionSelectionFromForm(form),
   };
 }
@@ -306,5 +328,6 @@ export function boardGameFormToInput(
     ...boardGameFormToTitleInput(form),
     condition: form.condition || undefined,
     ruleBookLanguages: form.ruleBookLanguages,
+    ...exemplarAcquisitionFromForm(form),
   };
 }

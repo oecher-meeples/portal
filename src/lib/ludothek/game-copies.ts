@@ -18,6 +18,10 @@ import {
   type CopyPlacementInput,
 } from "@/lib/ludothek/game-copy-placement";
 import { validateInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
+import {
+  validateAcquiredOn,
+  validateValueCents,
+} from "@/lib/ludothek/game-copy-acquisition";
 
 import type { DbClient } from "@/lib/utils/prisma";
 
@@ -36,7 +40,22 @@ export type GameCopyInput = {
   /** Inventarnummer (#270, ganzzahlig seit #543) — vorbelegt per
    * `getSuggestedInventoryNumber()`. `null` entfernt sie beim Bearbeiten. */
   inventoryNumber?: number | null;
+  /** Wert in Cent (#615) — `undefined` lässt ihn beim Bearbeiten
+   * unverändert, `null` entfernt ihn. */
+  valueCents?: number | null;
+  /** „Erhalten am" (#615) — `undefined` unverändert, `null` entfernt. */
+  acquiredOn?: Date | null;
 };
+
+/** Sprechende Fehlermeldung für ungültigen Wert/„Erhalten am" (#615). */
+function validateAcquisition(input: {
+  valueCents?: number | null;
+  acquiredOn?: Date | null;
+}): string | null {
+  return (
+    validateValueCents(input.valueCents) ?? validateAcquiredOn(input.acquiredOn)
+  );
+}
 
 /** Vorschlag fürs Inventarnummer-Feld beim Anlegen (#270): höchste vergebene
  * Nummer + 1. Bewusst kein Lücken-Auffüllen wie `nextUnitCode()` — die
@@ -72,6 +91,8 @@ export async function createGameCopyTx(
     condition,
     ruleBookLanguages,
     inventoryNumber,
+    valueCents,
+    acquiredOn,
     actorId,
     placement,
   }: {
@@ -81,6 +102,8 @@ export async function createGameCopyTx(
     condition?: string | null;
     ruleBookLanguages?: RuleBookLanguage[];
     inventoryNumber?: number | null;
+    valueCents?: number | null;
+    acquiredOn?: Date | null;
     actorId: string;
     placement?: { unitId?: string; vereinsmitgliedId?: string };
   },
@@ -89,6 +112,8 @@ export async function createGameCopyTx(
     const error = await validateInventoryNumber(tx, inventoryNumber);
     if (error) throw new Error(error);
   }
+  const acquisitionError = validateAcquisition({ valueCents, acquiredOn });
+  if (acquisitionError) throw new Error(acquisitionError);
   const slug = await uniqueGameCopySlug(tx, boardGameTitle);
   const created = await tx.gameCopy.create({
     data: {
@@ -98,6 +123,8 @@ export async function createGameCopyTx(
       condition: condition || null,
       ruleBookLanguages: ruleBookLanguages ?? [],
       inventoryNumber: inventoryNumber ?? null,
+      valueCents: valueCents ?? null,
+      acquiredOn: acquiredOn ?? null,
     },
   });
 
@@ -159,6 +186,8 @@ export async function createGameCopy(
         condition: input.condition,
         ruleBookLanguages: input.ruleBookLanguages,
         inventoryNumber: input.inventoryNumber,
+        valueCents: input.valueCents,
+        acquiredOn: input.acquiredOn,
         actorId: actor.id,
         placement,
       }),
@@ -188,6 +217,8 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
     );
     if (error) return { error };
   }
+  const acquisitionError = validateAcquisition(input);
+  if (acquisitionError) return { error: acquisitionError };
 
   const existing = await prisma.gameCopy.findUnique({
     where: { id },
@@ -213,6 +244,12 @@ export async function updateGameCopy(id: string, input: GameCopyInput) {
             : {}),
           ...(input.inventoryNumber !== undefined
             ? { inventoryNumber: input.inventoryNumber }
+            : {}),
+          ...(input.valueCents !== undefined
+            ? { valueCents: input.valueCents }
+            : {}),
+          ...(input.acquiredOn !== undefined
+            ? { acquiredOn: input.acquiredOn }
             : {}),
         },
         include: { boardGame: { select: { slug: true } } },

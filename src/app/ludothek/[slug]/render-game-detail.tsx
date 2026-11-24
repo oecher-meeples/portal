@@ -26,6 +26,7 @@ import {
   loadCopyHistories,
 } from "@/lib/ludothek/copy-history";
 import { GameCopyQuickActions } from "@/components/widgets/game-holding/game-copy-quick-actions";
+import { findGameCopyAcquisitions } from "@/lib/ludothek/game-copy-acquisition-read";
 
 /**
  * Spiele-Detailseite, geteilt von `/ludothek/[slug]` und
@@ -143,6 +144,13 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
     ]),
   );
   const currentMeeple = await getCurrentMeeple();
+  // Wert/„Erhalten am" nur für `games:manage` (#615) — gar nicht erst laden,
+  // damit sie nie in den Client-Props anderer Sessions landen.
+  const acquisitionByCopyId = canManageGames
+    ? await findGameCopyAcquisitions(
+        copies.filter((copy) => !copy.isPrivate).map((copy) => copy.id),
+      )
+    : new Map();
   const copyRows = copies.map((copy) => ({
     id: copy.id,
     zustand: copy.zustand,
@@ -161,6 +169,7 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
       currentMeeple !== null && copy.responsibleMeepleId === currentMeeple.id,
     history: historyByCopyId.get(copy.id) ?? EMPTY_COPY_HISTORY,
     isPrivate: copy.isPrivate,
+    acquisition: acquisitionByCopyId.get(copy.id) ?? null,
   }));
 
   // Representative location for each linked base game/expansion (#121) —
@@ -328,6 +337,7 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
               ruleBookLanguages: selected.ruleBookLanguages,
               inventoryNumber: selected.inventoryNumber,
               versionId: selected.versionId ?? null,
+              ...acquisitionByCopyId.get(selected.id),
               isMine:
                 currentMeeple !== null &&
                 selected.responsibleMeepleId === currentMeeple.id,

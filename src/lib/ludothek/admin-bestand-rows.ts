@@ -27,6 +27,10 @@ import {
   type AdminBestandFilter,
 } from "@/lib/ludothek/admin-bestand-filters";
 import { formatDatePlain } from "@/lib/utils/format";
+import {
+  toGameCopyAcquisition,
+  type GameCopyAcquisition,
+} from "@/lib/ludothek/game-copy-acquisition-read";
 import { memberDisplayName } from "@/lib/members/member-display-name";
 import {
   meepleEmail,
@@ -35,7 +39,7 @@ import {
 } from "@/lib/members/contact";
 
 /** One row per physical `GameCopy` for `/admin/bestand` (#121/#198). */
-export type AdminBoardGameRow = {
+export type AdminBoardGameRow = GameCopyAcquisition & {
   /** GameCopy id. */
   id: string;
   /** BoardGame (title) id. */
@@ -257,6 +261,7 @@ export async function buildAdminBoardGameRows({
           Boolean(holding?.vereinsmitgliedId) && !holding?.confirmedAt,
         condition: copy.condition,
         inventoryNumber: copy.inventoryNumber,
+        ...toGameCopyAcquisition(copy),
         versionId: copy.versionId,
         ...versionDisplay(copy.version),
         ruleBookLanguages: copy.ruleBookLanguages,
