@@ -35,6 +35,7 @@ import { CreateMemberDialog } from "@/components/feature/admin-mitglieder/create
 import { MemberEditDialog } from "@/components/feature/admin-mitglieder/member-edit-dialog";
 import { revokeResignation } from "@/components/feature/admin-mitglieder/actions";
 import { createInvite } from "@/components/feature/admin-mitglieder/invite-actions";
+import { InviteAllMissingDialog } from "@/components/feature/admin-mitglieder/invite-all-missing-dialog";
 import {
   CONTRIBUTION_CATEGORY_LABELS,
   type ContributionCategory,
@@ -423,6 +424,7 @@ export function VereinsmitgliederTable({
               onPageSizeChange={setPageSize}
               totalItems={filteredMembers.length}
             />
+            {canManageInvites && <InviteAllMissingDialog />}
           </div>
         </AccordionPanel>
       </AccordionItem>

@@ -37,6 +37,12 @@ vi.mock("@/components/feature/admin-mitglieder/actions", () => ({
 vi.mock("@/components/feature/admin-mitglieder/invite-actions", () => ({
   createInvite: vi.fn(),
 }));
+vi.mock(
+  "@/components/feature/admin-mitglieder/invite-all-missing-dialog",
+  () => ({
+    InviteAllMissingDialog: () => <button>Alle Fehlenden einladen</button>,
+  }),
+);
 
 afterEach(() => {
   cleanup();
@@ -354,5 +360,31 @@ describe("VereinsmitgliederTable Beigetreten column (#611)", () => {
     );
 
     expect(joinedAtCell()).toHaveTextContent(/^—$/);
+  });
+});
+
+describe("VereinsmitgliederTable „Alle Fehlenden einladen“ (#622)", () => {
+  it("shows the button only with invites:manage", () => {
+    const { rerender } = render(
+      <VereinsmitgliederTable
+        members={[member()]}
+        canManageMembers={false}
+        canManageInvites={true}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Alle Fehlenden einladen" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <VereinsmitgliederTable
+        members={[member()]}
+        canManageMembers={false}
+        canManageInvites={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Alle Fehlenden einladen" }),
+    ).not.toBeInTheDocument();
   });
 });
