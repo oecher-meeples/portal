@@ -115,7 +115,12 @@ function normalizeEmail(value: string): string | null {
   return email.length > 0 ? email : null;
 }
 
-function linkableLogin(preview: MemberImportPreview, row: ImportPreviewRow) {
+/** Das Login hinter der Zeilen-E-Mail, sofern es sich verknüpfen lässt (hat
+ * ein Meeple, aber noch kein Mitglied). */
+export function linkableLogin(
+  preview: MemberImportPreview,
+  row: ImportPreviewRow,
+) {
   const login = row.email ? preview.emailOwners[row.email]?.login : null;
   return login?.meepleId && !login.hasMember ? login : null;
 }
