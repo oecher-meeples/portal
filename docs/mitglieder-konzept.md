@@ -103,10 +103,12 @@ Der Kassenwart kann einen Antrag auch **ablehnen** (Pflichtgrund als Freitext) �
 
 ### 3.3 E-Mail-Änderungen
 
-Ein Meeple hat bis zu drei verschiedene E-Mail-Adressen, jede änderbar, aber mit unterschiedlichem Ablauf:
+**Eine Adresse pro Person (#614):** Die **Vereinsmitglied-E-Mail** (`Vereinsmitglied.email`, siehe [1.1](#11-vereinsmitglied)) ist zugleich die **Login-E-Mail** (`AuthUser`, siehe [1.3](#13-benutzerkonto-login)). Eine eigene Profil-Kontakt-E-Mail `Meeple.email` gibt es nicht mehr. Getrennte Adressen hatten dazu geführt, dass eine geänderte Adresse am Login hängen blieb und für eine neue Registrierung blockiert war.
 
-- **Login-E-Mail** (`AuthUser`, siehe [1.3](#13-benutzerkonto-login)) und **Profil-Kontakt-E-Mail** (`Meeple.email`, siehe [1.2](#12-meeple)): direkt vom Meeple änderbar, keine Freigabe nötig. Die Änderung greift erst nach Klick auf einen Bestätigungslink, der an die **neue** Adresse geschickt wird (Verifizierung, dass diese Adresse wirklich der Person gehört und erreichbar ist).
-- **Vereinsmitglied-E-Mail** (`Vereinsmitglied.email`, siehe [1.1](#11-vereinsmitglied)): läuft wie die IBAN als **Änderungsantrag** (siehe [3.2](#32-bankverbindung)) — der Bestätigungslink verifiziert nur, dass die neue Adresse erreichbar ist, ersetzt aber nicht die Freigabe durch den Vorstand. Erst wenn beides vorliegt (Link geklickt **und** Vorstand freigegeben), wird die aktive `Vereinsmitglied.email` ersetzt. Ein neuer Antrag ersetzt automatisch einen noch offenen, analog zur IBAN — inklusive **Ablehnen** mit Pflichtgrund und automatischer Mail an das Meeple.
+- **Änderung durch das Meeple:** im eigenen Profil (Karte „E-Mail-Adresse") als **Änderungsantrag** wie die IBAN (siehe [3.2](#32-bankverbindung)). Die bisherige Adresse bekommt beim Antrag eine Warnung („falls du das nicht warst, wende dich an den Vorstand“). Der Bestätigungslink an die neue Adresse verifiziert nur, dass sie erreichbar ist, und ersetzt nicht die Freigabe durch den Vorstand. Erst wenn beides vorliegt (Link geklickt **und** Vorstand freigegeben), werden Vereinsmitglied- **und** Login-E-Mail ersetzt, und an die neue Adresse geht eine Mail, dass die alte ab jetzt ungültig ist. Ein neuer Antrag ersetzt automatisch einen noch offenen, analog zur IBAN — inklusive **Ablehnen** mit Pflichtgrund und automatischer Mail an das Meeple.
+- **Änderung durch den Vorstand** (Bearbeiten in `/admin/mitglieder`): wirkt sofort und zieht die Login-E-Mail ebenfalls mit.
+
+Technisch: `src/lib/members/member-email.ts` (`findMemberEmailConflict`, `syncLoginEmail`).
 
 ### 3.4 Kündigen
 

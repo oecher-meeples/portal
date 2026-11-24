@@ -21,8 +21,10 @@ export default async function EmailBestaetigenPage({
         <p className="text-destructive text-sm">{result.error}</p>
       ) : (
         <p className="text-sm">
-          Danke — die neue Adresse ist bestätigt. Sie wird wirksam, sobald der
-          Vorstand die Änderung zusätzlich freigegeben hat.
+          Danke — die neue Adresse ist bestätigt, dein Änderungsantrag liegt
+          jetzt beim Vorstand. Sobald er freigegeben ist, bekommst du eine Mail
+          an die neue Adresse; ab dann gilt sie für Login und Vereinskontakt,
+          und die bisherige Adresse ist ungültig.
         </p>
       )}
     </div>

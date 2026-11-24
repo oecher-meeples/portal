@@ -42,6 +42,7 @@ import {
 } from "@/lib/utils/crypto";
 import { StammdatenSection } from "@/components/feature/mitglied-profil/stammdaten-section";
 import { BankverbindungSection } from "@/components/feature/mitglied-profil/bankverbindung-section";
+import { EmailAddressSection } from "@/components/feature/mitglied-profil/email-address-section";
 import { KalenderTokenSection } from "@/components/feature/mitglied-profil/kalender-token-section";
 import { VereinsspieleSection } from "@/components/feature/mitglied-profil/vereinsspiele-section";
 import {
@@ -144,6 +145,14 @@ export async function MitgliedProfilView({
             member.meeple.id,
           ),
           openHoldings: await countOpenHoldings(member.meeple.id),
+          // #614: eigener, noch offener E-Mail-Änderungsantrag.
+          openEmailChange:
+            (
+              await listOpenPendingChangesForMember(
+                member.id,
+                PendingChangeKind.MEMBER_EMAIL,
+              )
+            )[0] ?? null,
           deletionRequestedAt:
             (await findOpenDeletionRequest(member.meeple.id))?.requestedAt ??
             null,
@@ -324,6 +333,19 @@ export async function MitgliedProfilView({
 
         {selfServiceData && (
           <>
+            <EmailAddressSection
+              email={member.email}
+              openChange={
+                selfServiceData.openEmailChange && {
+                  newEmail: selfServiceData.openEmailChange.newValue,
+                  requestedAt:
+                    selfServiceData.openEmailChange.requestedAt.toISOString(),
+                  confirmed:
+                    selfServiceData.openEmailChange.confirmedAt !== null,
+                }
+              }
+            />
+
             {member.email && (
               <Card className="gap-4">
                 <CardTitle>Newsletter</CardTitle>
