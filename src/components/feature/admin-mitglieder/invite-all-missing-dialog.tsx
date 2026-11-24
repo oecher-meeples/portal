@@ -9,6 +9,7 @@ import {
   inviteAllMissing,
   type BulkInviteResult,
 } from "@/components/feature/admin-mitglieder/invite-actions";
+import { BulkInviteSummary } from "@/components/feature/admin-mitglieder/bulk-invite-summary";
 
 /**
  * „Alle Fehlenden einladen" (#622) unter der Vereinsmitglieder-Tabelle —
@@ -52,20 +53,7 @@ export function InviteAllMissingDialog() {
         </p>
       </ActionDialog>
 
-      {summary && (
-        <div className="flex flex-col gap-1 text-sm">
-          <p>{summary.created} Einladung(en) erstellt.</p>
-          {summary.errors.length > 0 && (
-            <ul className="text-destructive">
-              {summary.errors.map((error) => (
-                <li key={error.email}>
-                  {error.email}: {error.message}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+      {summary && <BulkInviteSummary summary={summary} />}
     </div>
   );
 }
