@@ -8,12 +8,14 @@ import type { MemberImportRow } from "@/lib/members/member-import-csv";
 import { buildImportPreview } from "@/lib/members/member-import-preview";
 import {
   buildImportPlan,
-  CREATABLE_STATUSES,
   decisionEmails,
   validateImportDecisions,
-  type ImportDecisions,
   type ImportPlan,
 } from "@/lib/members/member-import-decisions";
+import {
+  CREATABLE_STATUSES,
+  type ImportDecisions,
+} from "@/lib/members/member-import-types";
 
 const UNIQUE_CONSTRAINT_CODE = "P2002";
 /** Viele Einzel-Inserts in einer interaktiven Transaktion — der
@@ -118,11 +120,50 @@ async function writeImport(
   return { created };
 }
 
+/** Programmierfehler der Laufzeit — deren Meldung beschreibt den Code, nie
+ * die Eingabe („Cannot read properties of undefined …"). */
+const RUNTIME_ERRORS = [TypeError, RangeError, ReferenceError, SyntaxError];
+
+/** Welche Abfrage und welches Argument Prisma beanstandet — nur die
+ * Kopfzeile („Invalid `tx.member.create()` invocation") und die
+ * Argument-Zeilen, nie die mit ausgegebenen Eingabewerte. */
+function validationLocation(message: string): string[] {
+  const lines = message.split("\n").map((line) => line.trim());
+  const invocation = lines.find((line) =>
+    /^Invalid `.*` invocation/.test(line),
+  );
+  const problems = lines.filter((line) =>
+    /^(Unknown )?[Aa]rgument `[\w.]+`/.test(line),
+  );
+  return [invocation, ...problems.slice(0, 3)].filter((part): part is string =>
+    Boolean(part),
+  );
+}
+
+/** Technischer Hinweis für Admin und Log, ohne Zeileninhalte: Fehlertyp,
+ * Prisma-Code und bei Laufzeitfehlern Meldung samt erstem Stack-Frame.
+ * Meldungen von Prisma und Datenbank bleiben draußen, sie können Namen und
+ * Adressen enthalten. */
+function failureHint(error: unknown, code: string | undefined): string {
+  if (!(error instanceof Error)) return typeof error;
+  const parts = [error.name];
+  if (code) parts.push(code);
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    parts.push(...validationLocation(error.message));
+  } else if (RUNTIME_ERRORS.some((type) => error instanceof type)) {
+    parts.push(error.message);
+    const frame = error.stack?.split("\n").find((line) => /^\s+at /.test(line));
+    if (frame) parts.push(frame.trim());
+  }
+  return parts.join(": ");
+}
+
 /**
  * Fehlerbehandlung für beide Import-Actions (#611): fachliche Meldungen
  * gehen durch, ein Unique-Konflikt wird zu „Bestand geändert", alles andere
- * zu einer generischen Meldung. Geloggt werden nur Fehlertyp und -code —
- * Prisma-Meldungen können die Eingabedaten (Namen, Adressen) enthalten.
+ * zu einer generischen Meldung samt technischem Hinweis (`failureHint`).
+ * Geloggt werden nur Fehlertyp und -code — Prisma-Meldungen können die
+ * Eingabedaten (Namen, Adressen) enthalten.
  */
 export async function withImportErrorHandling<T>(
   run: () => Promise<T>,
@@ -138,12 +179,11 @@ export async function withImportErrorHandling<T>(
     if (code === UNIQUE_CONSTRAINT_CODE) {
       throw new UserFacingError(STALE_PREVIEW_MESSAGE);
     }
-    console.error("Mitgliederimport fehlgeschlagen", {
-      name: error instanceof Error ? error.name : typeof error,
-      code,
-    });
+    const hint = failureHint(error, code);
+    // Als String, nicht als Objekt: der Dev-Logger gibt Objekte als `{}` aus.
+    console.error(`Mitgliederimport fehlgeschlagen (${hint})`);
     throw new UserFacingError(
-      "Der Import ist fehlgeschlagen. Es wurde nichts angelegt.",
+      `Der Import ist fehlgeschlagen. Es wurde nichts angelegt. (${hint})`,
     );
   }
 }

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { toResult, UserFacingError } from "@/lib/utils/action-result";
 import type { MemberImportRow } from "@/lib/members/member-import-csv";
-import type { ImportDecisions } from "@/lib/members/member-import-decisions";
+import type { ImportDecisions } from "@/lib/members/member-import-types";
 import { buildImportPreview } from "@/lib/members/member-import-preview";
 import {
   commitMemberImport as commitMemberImportRecord,
@@ -36,10 +36,14 @@ const decisionsSchema = z.record(
   z.object({
     role: z.enum(["adult", "child"]).nullable(),
     email: z.string().max(MAX_TEXT_LENGTH),
+    noEmail: z.boolean(),
+    keepsSharedEmail: z.boolean(),
     linkMeeple: z.boolean(),
-    guardians: z
-      .array(z.string().regex(/^(row:\d+|member:[\w-]+)$/))
-      .max(MAX_IMPORT_ROWS),
+    skip: z.boolean(),
+    family: z
+      .string()
+      .regex(/^(row:\d+|member:[\w-]+)$/)
+      .nullable(),
   }),
 );
 

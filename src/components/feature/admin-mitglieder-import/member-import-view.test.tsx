@@ -6,9 +6,10 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { MemberImportPreview } from "@/lib/members/member-import-decisions";
+import type { MemberImportPreview } from "@/lib/members/member-import-types";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -101,17 +102,17 @@ describe("MemberImportView (#611)", () => {
     const submit = screen.getByRole("button", { name: "2 Mitglieder anlegen" });
     expect(submit).toBeDisabled();
 
-    await user.selectOptions(
-      screen.getByLabelText("Rolle für Zeile 2"),
-      "adult",
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Gemeinsame Adresse behalten" }),
-    );
-    await user.selectOptions(
-      screen.getByLabelText("Rolle für Zeile 3"),
-      "child",
-    );
+    const [mutterToGuardians] = screen.getAllByRole("button", {
+      name: "Erziehungsberechtigt",
+    });
+    await user.click(mutterToGuardians);
+    // Einzige:r Erziehungsberechtigte:r behält die Adresse ohne Rückfrage.
+    expect(
+      within(
+        screen.getByRole("region", { name: "Erziehungsberechtigte" }),
+      ).getByText("Behält fam@example.com"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Kind" }));
 
     expect(submit).toBeEnabled();
     await user.click(submit);
@@ -122,10 +123,69 @@ describe("MemberImportView (#611)", () => {
     expect(commitMemberImportMock).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        2: expect.objectContaining({ role: "adult", email: "fam@example.com" }),
+        2: expect.objectContaining({ role: "adult" }),
         3: expect.objectContaining({ role: "child" }),
       }),
     );
+  });
+
+  it("pre-selects the guardian whose first name is in the address", async () => {
+    previewMemberImportMock.mockResolvedValue({
+      success: true,
+      value: {
+        ...PREVIEW,
+        rows: PREVIEW.rows.map((row) => ({
+          ...row,
+          email: "mutter.muster@example.com",
+        })),
+        groups: [
+          { email: "mutter.muster@example.com", lines: [2, 3], anchor: null },
+        ],
+      },
+    });
+    render(<MemberImportView />);
+
+    upload();
+
+    const guardians = await screen.findByRole("region", {
+      name: "Erziehungsberechtigte",
+    });
+    expect(within(guardians).getByText("Mutter Muster")).toBeInTheDocument();
+    expect(
+      within(guardians).getByText("Vorschlag aus E-Mail"),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("region", { name: "Nicht zugewiesen" }),
+      ).getByText("Kind Muster"),
+    ).toBeInTheDocument();
+  });
+
+  it("excludes a person from the import and can bring them back", async () => {
+    const user = userEvent.setup();
+    render(<MemberImportView />);
+
+    upload();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Kind Muster nicht importieren",
+      }),
+    );
+    const skipped = screen.getByRole("region", {
+      name: "Nicht importieren (1)",
+    });
+    expect(within(skipped).getByText("Kind Muster")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "1 Mitglieder anlegen" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(skipped).getByRole("button", { name: /Doch importieren/ }),
+    );
+    expect(
+      screen.getByRole("button", { name: "2 Mitglieder anlegen" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the server error and no preview", async () => {

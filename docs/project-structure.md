@@ -100,7 +100,9 @@ src/lib/
 │               Einladungsmail (`invite-mail.ts`, #613 — liefert den Fehler zurück statt zu werfen),
 │               eine E-Mail-Adresse pro Person (`member-email.ts`, #614: Konflikt-Check, Login-E-Mail zieht mit),
 │               Mitgliederimport (#611): `member-import-csv.ts` (Dekodierung UTF-8 → Windows-1252 + Parser, rein, läuft im Browser),
-│               `member-import-decisions.ts` (Vorschau-Typen und Zuordnungsregeln, rein — live im Client und erneut auf dem Server),
+│               `member-import-types.ts` (Vorschau- und Entscheidungstypen),
+│               `member-import-families.ts` (Familien aus E-Mail-Gruppen + Verschiebungen, Namensvorschlag, rein),
+│               `member-import-decisions.ts` (Zuordnungsregeln, rein — live im Client und erneut auf dem Server),
 │               `member-import-preview.ts` (Abgleich mit dem Bestand, `findEmailOwners()` als Batch-Gegenstück zu `findMemberEmailConflict()`),
 │               `member-import-commit.ts` (eine Transaktion, Logs ohne Zeileninhalte);
 │               `listMissingInviteCandidates()` in `members-without-login.ts` (#622, die jüngste Einladung entscheidet)
