@@ -209,7 +209,23 @@ export async function MitgliedProfilView({
       <div className="grid grid-cols-1 gap-6 md:grid-flow-dense md:grid-cols-2 md:items-start lg:grid-cols-3">
         <div className="md:col-span-2">
           <StammdatenSection
-            member={member}
+            // Nur die Felder der Client-Komponente — das volle `Member`
+            // trägt das verschachtelte Prisma-Meeple (Proxy der
+            // Result-Extension, #112) und ein `Decimal`, beides kann React
+            // nicht an Client-Komponenten serialisieren.
+            member={{
+              id: member.id,
+              firstName: member.firstName,
+              lastName: member.lastName,
+              birthDate: member.birthDate,
+              birthPlace: member.birthPlace,
+              street: member.street,
+              postalCode: member.postalCode,
+              city: member.city,
+              phone: member.phone,
+              tshirtSizeId: member.tshirtSizeId,
+              joinedAt: member.joinedAt,
+            }}
             canManage={viewer.canManageMembers}
             canRequestChange={canRequestChange}
             isAdmin={viewer.isAdmin}
@@ -295,7 +311,16 @@ export async function MitgliedProfilView({
         {member.meeple && (
           <div className="md:col-span-2">
             <MeepleDatenSection
-              meeple={member.meeple}
+              // Kopie statt des Prisma-Objekts: die Result-Extension
+              // (signierte URLs, #112) liefert einen Proxy mit
+              // `nodejs.util.inspect.custom`-Symbol, den React nicht an
+              // Client-Komponenten serialisieren kann. Ein Spread kopiert das
+              // Symbol mit — `Object.entries` nimmt nur String-Keys.
+              meeple={
+                Object.fromEntries(
+                  Object.entries(member.meeple),
+                ) as typeof member.meeple
+              }
               canEdit={isSelf || viewer.canManageMembers}
               showAddress={
                 member.meeple.shareAddress || isSelf || viewer.canManageMembers
