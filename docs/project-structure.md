@@ -96,7 +96,8 @@ src/lib/
 │               client-sicher); Router-Ziel je Präfix und Recht (`resolve.ts`, `resolveShortId`)
 ├── statistics/ Anonymisierte Auswertungen — Verleih (`loan-stats.ts`), Bestand (`inventory-stats.ts`), Exemplar-Kontrollen pro Berliner Monat (`check-stats.ts`, #599) — reine Zählwerte, keine Meeple-Referenzen
 ├── members/    Mitglieder, Mitgliedsstatus, Direktkontakt-Links (`contact.ts`), `memberFullName()` (`member-display-name.ts`),
-│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`)
+│               `revalidateMemberProfile()` (`revalidate-profile.ts`), IBAN-Reveal-Actions (`iban-reveal-actions.ts`),
+│               Einladungsmail (`invite-mail.ts`, #613 — liefert den Fehler zurück statt zu werfen)
 ├── instagram/  Cross-Posting
 ├── newsletter/ SMTP-Mailer (`mailer.ts`, nodemailer, ohne `SMTP_HOST` → `MailerError`, #612), Abonnenten beider Quellen — anonym mit Double-Opt-in
 │               und Meeple-Profil-Toggle ohne Double-Opt-in (`subscribers.ts`) —, Versand-Queue

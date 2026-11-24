@@ -9,6 +9,7 @@ import {
   Mail,
   RotateCcw,
   Search,
+  Send,
 } from "lucide-react";
 import { StatTile } from "@/components/ui/stat-tile";
 import { Input } from "@/components/ui/input";
@@ -36,10 +37,12 @@ import { InviteForm } from "@/components/feature/admin-mitglieder/invite-form";
 import { ImportInvitesDialog } from "@/components/feature/admin-mitglieder/import-invites-dialog";
 import {
   extendInvite,
+  resendInviteMail,
   revokeInvite,
 } from "@/components/feature/admin-mitglieder/invite-actions";
 import { formatDatePlain } from "@/lib/utils/format";
 import {
+  buildInviteMailtoHref,
   buildRegistrationLink,
   formatInviteMessage,
   type InviteStatus,
@@ -206,9 +209,11 @@ export function InvitesSection({
                       link,
                       new Date(invite.expiresAt),
                     );
-                    const mailtoHref = `mailto:${invite.email}?subject=${encodeURIComponent(
-                      "Einladung zu Oecher Meeples",
-                    )}&body=${encodeURIComponent(message)}`;
+                    const mailtoHref = buildInviteMailtoHref(
+                      invite.email,
+                      link,
+                      new Date(invite.expiresAt),
+                    );
 
                     return (
                       <Fragment key={invite.id}>
@@ -284,8 +289,20 @@ export function InvitesSection({
                                       }
                                     >
                                       <Mail />
-                                      Per Mail versenden
+                                      Im Mailprogramm öffnen
                                     </Button>
+                                    <ActionButton
+                                      variant="outline"
+                                      size="sm"
+                                      action={resendInviteMail.bind(
+                                        null,
+                                        invite.id,
+                                      )}
+                                      pendingLabel="Sende…"
+                                    >
+                                      <Send />
+                                      Erneut per Mail senden
+                                    </ActionButton>
                                     <ActionButton
                                       variant="destructive"
                                       size="sm"

@@ -69,7 +69,7 @@ Einladungen werden nicht mehr manuell/ungebunden erstellt (der bisherige, mehrfa
 
 ### 2.1 Mitgliedseinladung
 
-Wird aus einem `Vereinsmitglied`-Datensatz heraus erstellt ("Einladung erstellen/verlängern"-Button in der Vereinsmitglieder-Tabelle, erfordert `invites:manage`). Die Einladung übernimmt die E-Mail des Vereinsmitglieds als Versandziel. Bei Einlösung entsteht automatisch ein neues, leeres `Meeple` (Displayname vorbefüllt aus Vor-/Nachname), das sofort mit dem Vereinsmitglied verknüpft wird — analog zum bisherigen Verhalten ("Meeple entsteht beim ersten Login").
+Wird aus einem `Vereinsmitglied`-Datensatz heraus erstellt ("Einladung erstellen/verlängern"-Button in der Vereinsmitglieder-Tabelle, erfordert `invites:manage`). Die Einladung übernimmt die E-Mail des Vereinsmitglieds als Versandziel: Beim Erstellen, Verlängern und CSV-Import geht der Registrierungslink automatisch per Mail dorthin, „Erneut per Mail senden" verschickt ihn bei offenen Einladungen noch einmal (#613). Schlägt der Versand fehl, bleibt die Einladung gültig — der Link lässt sich weiterhin kopieren. Bei Einlösung entsteht automatisch ein neues, leeres `Meeple` (Displayname vorbefüllt aus Vor-/Nachname), das sofort mit dem Vereinsmitglied verknüpft wird — analog zum bisherigen Verhalten ("Meeple entsteht beim ersten Login").
 
 ### 2.2 Systemkonto anlegen
 
