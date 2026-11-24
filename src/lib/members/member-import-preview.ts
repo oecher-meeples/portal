@@ -12,7 +12,7 @@ import {
   type ImportGroup,
   type ImportPreviewRow,
   type MemberImportPreview,
-} from "@/lib/members/member-import-decisions";
+} from "@/lib/members/member-import-types";
 
 /**
  * Wem gehören diese (lowercased) E-Mail-Adressen schon — Batch-Gegenstück zu

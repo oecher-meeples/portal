@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   buildImportPlan,
   decisionEmails,
-  guardianOptions,
   initialImportDecisions,
   validateImportDecisions,
-  type ImportDecisions,
-  type ImportPreviewRow,
-  type MemberImportPreview,
-  type RowDecision,
 } from "./member-import-decisions";
+import { emptyDecision } from "./member-import-families";
+import type {
+  ImportDecisions,
+  ImportPreviewRow,
+  MemberImportPreview,
+  RowDecision,
+} from "./member-import-types";
 
 function row(
   line: number,
@@ -40,13 +42,15 @@ function preview(
   };
 }
 
-function adult(email: string, extra: Partial<RowDecision> = {}): RowDecision {
-  return { role: "adult", email, linkMeeple: false, guardians: [], ...extra };
+function adult(email = "", extra: Partial<RowDecision> = {}): RowDecision {
+  return emptyDecision({ role: "adult", email, ...extra });
 }
 
-function child(guardians: string[] = []): RowDecision {
-  return { role: "child", email: "", linkMeeple: false, guardians };
+function child(extra: Partial<RowDecision> = {}): RowDecision {
+  return emptyDecision({ role: "child", ...extra });
 }
+
+const OPEN = emptyDecision();
 
 const FAMILY = preview({
   rows: [
@@ -74,17 +78,37 @@ describe("initialImportDecisions", () => {
 
     expect(decisions).toEqual({
       2: adult("a@example.com"),
-      3: { role: null, email: "", linkMeeple: false, guardians: [] },
-      4: { role: null, email: "", linkMeeple: false, guardians: [] },
-      5: adult(""),
+      3: OPEN,
+      // Gleicher Nachname wie die eine „ready“-Zeile → Familienvorschlag.
+      4: emptyDecision({ family: "row:2" }),
+      5: adult(),
     });
+  });
+
+  it("pre-selects the guardian whose first name is in the shared address", () => {
+    const decisions = initialImportDecisions(
+      preview({
+        rows: [
+          row(2, "group", "eva.denysiuk@yahoo.de", "Ansgar"),
+          row(3, "group", "eva.denysiuk@yahoo.de", "Eva"),
+          row(4, "group", "eva.denysiuk@yahoo.de", "Johann"),
+        ],
+        groups: [
+          { email: "eva.denysiuk@yahoo.de", lines: [2, 3, 4], anchor: null },
+        ],
+      }),
+    );
+
+    expect(decisions[2].role).toBeNull();
+    expect(decisions[3].role).toBe("adult");
+    expect(decisions[4].role).toBeNull();
   });
 });
 
-describe("validateImportDecisions — groups", () => {
+describe("validateImportDecisions — families", () => {
   it("accepts two guardians (one keeps the address) and a child linked to both", () => {
     const decisions: ImportDecisions = {
-      2: adult("fam@example.com"),
+      2: adult("", { keepsSharedEmail: true }),
       3: adult("vater@example.com"),
       4: child(),
     };
@@ -102,16 +126,31 @@ describe("validateImportDecisions — groups", () => {
     ]);
   });
 
-  it("blocks a second guardian without an own email", () => {
-    const issues = validateImportDecisions(FAMILY, {
-      2: adult("fam@example.com"),
-      3: adult(""),
-      4: child(),
-    });
+  it("lets a single guardian keep the address without choosing", () => {
+    const decisions = { 2: adult(), 3: child(), 4: child() };
 
-    expect(issues).toEqual([
-      { line: 3, message: "Eigene E-Mail-Adresse fehlt." },
+    expect(validateImportDecisions(FAMILY, decisions)).toEqual([]);
+    expect(buildImportPlan(FAMILY, decisions).members[0].email).toBe(
+      "fam@example.com",
+    );
+  });
+
+  it("asks a second guardian for an email or an explicit „leave empty“", () => {
+    const decisions = {
+      2: adult("", { keepsSharedEmail: true }),
+      3: adult(),
+      4: child(),
+    };
+
+    expect(validateImportDecisions(FAMILY, decisions)).toEqual([
+      {
+        line: 3,
+        message: "E-Mail-Adresse eingeben oder „Erstmal leer lassen“ wählen.",
+      },
     ]);
+    const deferred = { ...decisions, 3: adult("", { noEmail: true }) };
+    expect(validateImportDecisions(FAMILY, deferred)).toEqual([]);
+    expect(buildImportPlan(FAMILY, deferred).members[1].email).toBeNull();
   });
 
   it("blocks when nobody keeps the shared address", () => {
@@ -122,32 +161,48 @@ describe("validateImportDecisions — groups", () => {
     });
 
     expect(issues).toEqual([
-      {
-        line: 2,
+      expect.objectContaining({
+        familyKey: "email:fam@example.com",
         message:
-          "Ein:e Erziehungsberechtigte:r der Gruppe muss die gemeinsame Adresse behalten.",
-      },
+          "Ein:e Erziehungsberechtigte:r muss die gemeinsame Adresse behalten.",
+      }),
     ]);
   });
 
-  it("blocks two guardians keeping the same address", () => {
+  it("blocks two keepers and a typed copy of the shared address", () => {
+    expect(
+      validateImportDecisions(FAMILY, {
+        2: adult("", { keepsSharedEmail: true }),
+        3: adult("", { keepsSharedEmail: true }),
+        4: child(),
+      }),
+    ).toContainEqual(
+      expect.objectContaining({
+        message: "Nur eine Person kann die gemeinsame Adresse behalten.",
+      }),
+    );
     const issues = validateImportDecisions(FAMILY, {
-      2: adult("fam@example.com"),
+      2: adult("", { keepsSharedEmail: true }),
       3: adult("FAM@example.com"),
       4: child(),
     });
-
     expect(issues.map((issue) => issue.line)).toEqual([2, 3]);
   });
 
-  it("blocks an open role", () => {
-    const issues = validateImportDecisions(FAMILY, {
-      2: adult("fam@example.com"),
-      3: { role: null, email: "", linkMeeple: false, guardians: [] },
+  it("blocks an open role and children without any guardian", () => {
+    expect(
+      validateImportDecisions(FAMILY, { 2: adult(), 3: OPEN, 4: child() }),
+    ).toEqual([{ line: 3, message: "Erziehungsberechtigt oder Kind wählen." }]);
+    const noGuardian = validateImportDecisions(FAMILY, {
+      2: child(),
+      3: child(),
       4: child(),
     });
 
-    expect(issues).toEqual([{ line: 3, message: "Rolle wählen." }]);
+    expect(noGuardian.map((issue) => issue.message)).toEqual([
+      "Die Familie braucht mindestens eine:n Erziehungsberechtigte:n.",
+      "Ein:e Erziehungsberechtigte:r muss die gemeinsame Adresse behalten.",
+    ]);
   });
 
   it("links a new child to an existing anchor member, which keeps the address", () => {
@@ -185,92 +240,128 @@ describe("validateImportDecisions — groups", () => {
   });
 });
 
-describe("validateImportDecisions — rows without email", () => {
-  const SOLO = preview({ rows: [row(2, "needsRole", null)] });
+describe("validateImportDecisions — not importing", () => {
+  it("creates neither the row nor guardian links to it, and needs no decision", () => {
+    const decisions = {
+      2: adult("", { skip: true }),
+      3: OPEN,
+      4: child(),
+    };
+    expect(
+      validateImportDecisions(FAMILY, decisions).map((issue) => issue.message),
+    ).toEqual([
+      "Erziehungsberechtigt oder Kind wählen.",
+      "Die Familie braucht mindestens eine:n Erziehungsberechtigte:n.",
+      "Ein:e Erziehungsberechtigte:r muss die gemeinsame Adresse behalten.",
+    ]);
 
-  it("requires at least one guardian for a child", () => {
-    expect(validateImportDecisions(SOLO, { 2: child() })).toEqual([
-      { line: 2, message: "Mindestens ein:e Erziehungsberechtigte:r fehlt." },
+    const decided = { ...decisions, 3: adult() };
+    expect(validateImportDecisions(FAMILY, decided)).toEqual([]);
+    const plan = buildImportPlan(FAMILY, decided);
+    expect(plan.members.map((m) => [m.line, m.email])).toEqual([
+      [3, "fam@example.com"],
+      [4, null],
+    ]);
+    expect(plan.guardianLinks).toEqual([{ childLine: 4, guardian: "row:3" }]);
+  });
+});
+
+describe("validateImportDecisions — moving to another family", () => {
+  const MIXED = preview({
+    rows: [
+      row(2, "needsRole", null, "Kind"),
+      row(3, "ready", "bea@example.com", "Bea"),
+    ],
+  });
+
+  it("requires a family for a child and an open row to be decided", () => {
+    expect(
+      validateImportDecisions(MIXED, {
+        2: child(),
+        3: adult("bea@example.com"),
+      }),
+    ).toEqual([
+      { line: 2, message: "Ein Kind muss einer Familie zugewiesen sein." },
     ]);
     expect(
-      validateImportDecisions(SOLO, { 2: child(["member:anna"]) }),
-    ).toEqual([]);
-  });
-
-  it("allows an adult without email", () => {
-    expect(validateImportDecisions(SOLO, { 2: adult("") })).toEqual([]);
-    expect(buildImportPlan(SOLO, { 2: adult("") }).members[0].email).toBeNull();
-  });
-
-  it("rejects an unknown existing member as guardian", () => {
-    expect(
-      validateImportDecisions(SOLO, { 2: child(["member:fremd"]) }),
+      validateImportDecisions(MIXED, { 2: OPEN, 3: adult("bea@example.com") }),
     ).toEqual([
       {
         line: 2,
-        message:
-          "Gewählte:r Erziehungsberechtigte:r ist kein gültiges Mitglied.",
+        message: "Als Erwachsene:r anlegen oder einer Familie zuweisen.",
       },
     ]);
   });
 
-  it("cascades: a guardian row that is not created makes the child an issue", () => {
-    const withError = preview({
-      rows: [row(2, "needsRole", null), row(3, "error", "x@example.com")],
-    });
-
-    expect(validateImportDecisions(withError, { 2: child(["row:3"]) })).toEqual(
-      [
-        {
-          line: 2,
-          message:
-            "Erziehungsberechtigte:r aus Zeile 3 wird nicht als Erwachsene:r angelegt.",
-        },
-      ],
-    );
+  it("allows an adult without email outside a family", () => {
+    const decisions = { 2: adult(), 3: adult("bea@example.com") };
+    expect(validateImportDecisions(MIXED, decisions)).toEqual([]);
+    expect(buildImportPlan(MIXED, decisions).members[0].email).toBeNull();
   });
 
-  it("offers file adults and existing members as guardians, not the row itself", () => {
-    const mixed = preview({
-      rows: [
-        row(2, "needsRole", null),
-        row(3, "ready", "b@example.com", "Bea"),
-      ],
+  it("links a child moved to a file adult's family", () => {
+    const decisions = {
+      2: child({ family: "row:3" }),
+      3: adult("bea@example.com"),
+    };
+
+    expect(validateImportDecisions(MIXED, decisions)).toEqual([]);
+    expect(buildImportPlan(MIXED, decisions).guardianLinks).toEqual([
+      { childLine: 2, guardian: "row:3" },
+    ]);
+  });
+
+  it("links a child moved to an existing member's family", () => {
+    const decisions = {
+      2: child({ family: "member:anna" }),
+      3: adult("bea@example.com"),
+    };
+
+    expect(validateImportDecisions(MIXED, decisions)).toEqual([]);
+    expect(buildImportPlan(MIXED, decisions).guardianLinks).toEqual([
+      { childLine: 2, guardian: "member:anna" },
+    ]);
+  });
+
+  it("rejects unknown targets", () => {
+    const issues = validateImportDecisions(MIXED, {
+      2: child({ family: "member:fremd" }),
+      3: adult("bea@example.com"),
     });
 
-    expect(
-      guardianOptions(mixed, { 2: child(), 3: adult("b@example.com") }, 2),
-    ).toEqual([
-      { id: "row:3", label: "Bea Muster (neu, Zeile 3)" },
-      { id: "member:anna", label: "Anna (Nr. 1)" },
+    expect(issues.map((issue) => issue.message)).toEqual([
+      "Gewählte Familie ist ungültig.",
+      "Ein Kind muss einer Familie zugewiesen sein.",
     ]);
   });
 });
 
 describe("validateImportDecisions — login conflicts", () => {
-  const CONFLICT = preview({
-    rows: [row(2, "loginConflict", "admin@example.com")],
-    emailOwners: {
-      "admin@example.com": {
-        member: null,
-        login: {
-          meepleId: "meeple-admin",
-          displayName: "Admin",
-          hasMember: false,
-        },
-      },
-      "vergeben@example.com": {
-        member: { id: "m", isChild: false },
-        login: null,
+  const LOGIN = {
+    "admin@example.com": {
+      member: null,
+      login: {
+        meepleId: "meeple-admin",
+        displayName: "Admin",
+        hasMember: false,
       },
     },
+    "vergeben@example.com": {
+      member: { id: "m", isChild: false },
+      login: null,
+    },
+  };
+  const CONFLICT = preview({
+    rows: [row(2, "loginConflict", "admin@example.com")],
+    emailOwners: LOGIN,
   });
 
   it("creates with email null when not linked and no other email is given", () => {
-    expect(validateImportDecisions(CONFLICT, { 2: adult("") })).toEqual([]);
-    expect(
-      buildImportPlan(CONFLICT, { 2: adult("") }).members[0],
-    ).toMatchObject({ email: null, meepleId: null });
+    expect(validateImportDecisions(CONFLICT, { 2: adult() })).toEqual([]);
+    expect(buildImportPlan(CONFLICT, { 2: adult() }).members[0]).toMatchObject({
+      email: null,
+      meepleId: null,
+    });
   });
 
   it("links the member to the login's meeple when checked", () => {
@@ -305,26 +396,46 @@ describe("validateImportDecisions — login conflicts", () => {
     ]);
   });
 
-  it("refuses linking a row without a linkable login", () => {
+  it("ignores a link switch without a linkable login", () => {
     const solo = preview({ rows: [row(2, "ready", "a@example.com")] });
+    const decisions = { 2: adult("a@example.com", { linkMeeple: true }) };
+
+    expect(validateImportDecisions(solo, decisions)).toEqual([]);
+    expect(buildImportPlan(solo, decisions).members[0].meepleId).toBeNull();
+  });
+
+  it("lets only the keeper of a login's shared address link it", () => {
+    const shared = preview({
+      rows: [
+        row(2, "group", "admin@example.com", "Mutter"),
+        row(3, "group", "admin@example.com", "Kind"),
+      ],
+      groups: [{ email: "admin@example.com", lines: [2, 3], anchor: null }],
+      emailOwners: LOGIN,
+    });
 
     expect(
-      validateImportDecisions(solo, {
-        2: adult("a@example.com", { linkMeeple: true }),
-      }),
-    ).toEqual([
-      {
-        line: 2,
-        message: "Diese Zeile lässt sich mit keinem Konto verknüpfen.",
-      },
-    ]);
+      validateImportDecisions(shared, { 2: adult(), 3: child() }),
+    ).toHaveLength(1);
+    const linked = { 2: adult("", { linkMeeple: true }), 3: child() };
+    expect(validateImportDecisions(shared, linked)).toEqual([]);
+    expect(buildImportPlan(shared, linked).members[0]).toMatchObject({
+      email: "admin@example.com",
+      meepleId: "meeple-admin",
+    });
   });
 });
 
 describe("decisionEmails", () => {
-  it("returns the normalised non-empty emails", () => {
+  it("returns the normalised non-empty emails, skipping „leave empty“ and skipped rows", () => {
     expect(
-      decisionEmails({ 2: adult(" A@Example.com"), 3: adult(""), 4: child() }),
+      decisionEmails({
+        2: adult(" A@Example.com"),
+        3: adult(""),
+        4: child(),
+        5: adult("x@example.com", { noEmail: true }),
+        6: adult("y@example.com", { skip: true }),
+      }),
     ).toEqual(["a@example.com"]);
   });
 });

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { FileField } from "@/components/ui/file-field";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -21,25 +21,35 @@ import {
   type MemberImportRow,
 } from "@/lib/members/member-import-csv";
 import {
-  CREATABLE_STATUSES,
   initialImportDecisions,
   validateImportDecisions,
+} from "@/lib/members/member-import-decisions";
+import {
+  familyOfLine,
+  importRowName,
+  resolveFamilies,
+} from "@/lib/members/member-import-families";
+import {
+  CREATABLE_STATUSES,
+  isImportedRow,
   type ImportDecisions,
   type ImportIssue,
   type ImportPreviewRow,
   type MemberImportPreview,
   type RowDecision,
-} from "@/lib/members/member-import-decisions";
+} from "@/lib/members/member-import-types";
 import {
   commitMemberImport,
   previewMemberImport,
 } from "@/components/feature/admin-mitglieder-import/member-import-actions";
 import {
-  GroupCard,
-  RowEditor,
-  rowName,
-  type RowEditorContext,
+  SkipButton,
+  SkippedRows,
+  SoloRowsCard,
+  type ImportEditorContext,
 } from "@/components/feature/admin-mitglieder-import/member-import-rows";
+import { FamilyCard } from "@/components/feature/admin-mitglieder-import/member-import-family-card";
+import { ImportDndProvider } from "@/components/feature/admin-mitglieder-import/member-import-dnd";
 
 type Loaded = {
   rows: MemberImportRow[];
@@ -47,16 +57,28 @@ type Loaded = {
   preview: MemberImportPreview;
 };
 
-function RowList({ rows }: { rows: ImportPreviewRow[] }) {
+function RowList({
+  rows,
+  action,
+}: {
+  rows: ImportPreviewRow[];
+  action?: (row: ImportPreviewRow) => ReactNode;
+}) {
   return (
     <ul className="flex flex-col gap-1">
       {rows.map((row) => (
-        <li key={row.line}>
-          {rowName(row)}{" "}
-          <span className="text-muted-foreground">
-            Nr. {row.memberNumber}
-            {row.email ? ` · ${row.email}` : ""}
+        <li
+          key={row.line}
+          className="flex flex-wrap items-center justify-between gap-2"
+        >
+          <span>
+            {importRowName(row)}{" "}
+            <span className="text-muted-foreground">
+              Nr. {row.memberNumber}
+              {row.email ? ` · ${row.email}` : ""}
+            </span>
           </span>
+          {action?.(row)}
         </li>
       ))}
     </ul>
@@ -103,30 +125,44 @@ export function MemberImportView() {
     () => (loaded ? validateImportDecisions(loaded.preview, decisions) : []),
     [loaded, decisions],
   );
+  const families = useMemo(
+    () => (loaded ? resolveFamilies(loaded.preview, decisions) : []),
+    [loaded, decisions],
+  );
   const issuesByLine = useMemo(() => {
     const byLine = new Map<number, ImportIssue[]>();
     for (const issue of issues) {
+      if (issue.familyKey) continue;
       byLine.set(issue.line, [...(byLine.get(issue.line) ?? []), issue]);
     }
     return byLine;
   }, [issues]);
 
   const rows = loaded?.preview.rows ?? [];
+  const solo = (row: ImportPreviewRow) => !familyOfLine(families, row.line);
   const byStatus = (status: ImportPreviewRow["status"]) =>
     rows.filter((row) => row.status === status);
+  const imported = (row: ImportPreviewRow) => isImportedRow(row, decisions);
   const openRows = rows.filter(
-    (row) => row.status === "loginConflict" || row.status === "needsRole",
+    (row) => imported(row) && row.status !== "ready" && solo(row),
+  );
+  const loginRows = openRows.filter((row) => row.status === "loginConflict");
+  const noEmailRows = openRows.filter((row) => row.status !== "loginConflict");
+  const readyRows = byStatus("ready").filter(
+    (row) => imported(row) && solo(row),
+  );
+  const skippedRows = rows.filter(
+    (row) => CREATABLE_STATUSES.has(row.status) && !imported(row),
   );
   const errorCount =
     (loaded?.parseErrors.length ?? 0) + byStatus("error").length;
-  const createCount = rows.filter((row) =>
-    CREATABLE_STATUSES.has(row.status),
-  ).length;
+  const createCount = rows.filter(imported).length;
 
-  const context: RowEditorContext | null = loaded
+  const context: ImportEditorContext | null = loaded
     ? {
         preview: loaded.preview,
         decisions,
+        families,
         issuesByLine,
         onChange: (line, patch: Partial<RowDecision>) =>
           setDecisions((prev) => ({
@@ -179,26 +215,49 @@ export function MemberImportView() {
 
       {loaded && context && (
         <>
-          {(loaded.preview.groups.length > 0 || openRows.length > 0) && (
+          {(families.length > 0 ||
+            openRows.length > 0 ||
+            skippedRows.length > 0) && (
             <section className="flex flex-col gap-3">
               <h2 className="font-serif text-lg font-semibold">
                 Offene Entscheidungen
               </h2>
-              {loaded.preview.groups.map((group) => (
-                <GroupCard key={group.email} context={context} group={group} />
-              ))}
-              {openRows.length > 0 && (
-                <Card className="gap-3">
-                  <CardHeader>
-                    <CardTitle className="text-base">
-                      Ohne eindeutige E-Mail
-                    </CardTitle>
-                  </CardHeader>
-                  {openRows.map((row) => (
-                    <RowEditor key={row.line} context={context} row={row} />
-                  ))}
-                </Card>
-              )}
+              <p className="text-muted-foreground text-sm">
+                Personen am Griff in die passende Spalte ziehen – auch in eine
+                andere Familie – oder die Buttons nutzen.
+              </p>
+              <ImportDndProvider
+                preview={context.preview}
+                decisions={decisions}
+                families={families}
+                onChange={context.onChange}
+              >
+                {families.map((family) => (
+                  <FamilyCard
+                    key={family.key}
+                    context={context}
+                    family={family}
+                    issues={issues.filter(
+                      (issue) => issue.familyKey === family.key,
+                    )}
+                  />
+                ))}
+                {noEmailRows.length > 0 && (
+                  <SoloRowsCard
+                    context={context}
+                    title="Ohne E-Mail"
+                    rows={noEmailRows}
+                  />
+                )}
+                {loginRows.length > 0 && (
+                  <SoloRowsCard
+                    context={context}
+                    title="E-Mail gehört einem bestehenden Konto"
+                    rows={loginRows}
+                  />
+                )}
+                <SkippedRows rows={skippedRows} onChange={context.onChange} />
+              </ImportDndProvider>
             </section>
           )}
 
@@ -214,7 +273,7 @@ export function MemberImportView() {
                   ))}
                   {byStatus("error").map((row) => (
                     <li key={row.line}>
-                      Zeile {row.line} ({rowName(row)}): {row.message}
+                      Zeile {row.line} ({importRowName(row)}): {row.message}
                     </li>
                   ))}
                 </ul>
@@ -226,10 +285,15 @@ export function MemberImportView() {
             <Accordion>
               <AccordionItem value="ready">
                 <AccordionTrigger>
-                  Wird angelegt ohne Rückfrage ({byStatus("ready").length})
+                  Wird angelegt ohne Rückfrage ({readyRows.length})
                 </AccordionTrigger>
                 <AccordionPanel>
-                  <RowList rows={byStatus("ready")} />
+                  <RowList
+                    rows={readyRows}
+                    action={(row) => (
+                      <SkipButton row={row} onChange={context.onChange} />
+                    )}
+                  />
                 </AccordionPanel>
               </AccordionItem>
               <AccordionItem value="skipped">
