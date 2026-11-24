@@ -1,3 +1,7 @@
+import {
+  isValidValueCents,
+  parseEuroToCents,
+} from "../../src/lib/ludothek/game-copy-acquisition";
 import { escapeCsvField, parseCsvRows } from "../../src/lib/utils/csv";
 
 /**
@@ -5,21 +9,37 @@ import { escapeCsvField, parseCsvRows } from "../../src/lib/utils/csv";
  * „Inventar Spiele" in eine bereinigte Bestandszeile übersetzt wird, plus
  * Lesen/Schreiben der bereinigten CSV `release-inventory.csv`.
  *
- * Aus der Tabelle werden nur Nr., Titel, letzte Zählung, Zustand, Bemerkung
- * und Platz gelesen. „ausgeliehen an/am", „Letzte Rückgabe", „I" und „Wert"
- * werden verworfen — Personendaten landen nie im Repo, und für den Wert gibt
- * es kein Feld.
+ * Aus der Tabelle werden nur Nr., Titel, letzte Zählung, Zustand, Bemerkung,
+ * Platz und Wert gelesen. „ausgeliehen an/am", „Letzte Rückgabe" und „I"
+ * werden verworfen — Personendaten landen nie im Repo.
  */
 
 export type ReleaseCheckResult = "COMPLETE" | "INCOMPLETE" | "UNPLAYABLE";
+export type BggMatch =
+  "exact" | "picked" | "fuzzy" | "manual" | "none" | "unsure";
+const BGG_MATCHES = new Set<string>([
+  "exact",
+  "picked",
+  "fuzzy",
+  "manual",
+  "none",
+  "unsure",
+]);
 
 export interface ReleaseInventoryRow {
   /** `null` nur für die zweite Zeile einer doppelt vergebenen Nr. */
   inventoryNumber: number | null;
   title: string;
-  /** Wird von `scripts/match-release-inventory-bgg.ts` vorbefüllt und von
+  /** Wird von `scripts/enrich-release-inventory-bgg.ts` vorbefüllt und von
    * Hand korrigiert — leer = Titel ohne BGG-Verknüpfung anlegen. */
   bggId: number | null;
+  /** Herkunft der `bggId`, zur Durchsicht: `exact` = eindeutiger exakter
+   * Treffer, `picked` = aus mehreren Treffern gewählt (prüfen!), `fuzzy` =
+   * per unscharfer Suche mit gleichem normalisiertem Namen (prüfen!), `manual` =
+   * von Hand, `none` = gesucht, kein Treffer, `unsure` = Treffer verworfen,
+   * weil unsicher — trägt der Spielewart im Portal nach, kein Skript sucht
+   * erneut. Leer = noch nicht gesucht. */
+  bggMatch: BggMatch | null;
   /** Standort-Label (`Regal A`, `Kiste 1`, `Kinder`) — `null` = Unsortiert. */
   location: string | null;
   /** Tag der letzten Zählung als `YYYY-MM-DD` — `null` = keine Kontrolle. */
@@ -31,6 +51,9 @@ export interface ReleaseInventoryRow {
   /** Regelheft ausdrücklich englisch („(EN)"/„(engl.)" im Titel). */
   englishRules: boolean;
   deinventarised: boolean;
+  /** Wert in Cent (`GameCopy.valueCents`, #615) — `null` = leer oder
+   * unlesbar (z. B. verrutschte Ausleih-Einträge oder „- €"). */
+  valueCents: number | null;
 }
 
 /** Spalten der Vereins-Tabelle, die überhaupt gelesen werden. */
@@ -41,6 +64,9 @@ const SHEET = {
   state: 3,
   remark: 4,
   place: 5,
+  /** „I" — in verrutschten Zeilen steht der Wert hier statt unter „Wert". */
+  shiftedValue: 8,
+  value: 9,
 } as const;
 
 const GERMAN_DATE = /^(\d{2})\.(\d{2})\.(\d{4})$/;
@@ -70,6 +96,13 @@ export function normalizeLocation(value: string): string | null {
   if (box) return `Kiste ${box[1]}`;
   if (/^kinder$/i.test(text)) return "Kinder";
   return null;
+}
+
+/** „Wert" (`14,99 €`) → Cent; leer oder unlesbar → `null` — der Wert ist
+ * optional, eine verrutschte Zelle soll den Import nicht abbrechen. */
+export function parseSheetValue(value: string): number | null {
+  const cents = parseEuroToCents(value);
+  return cents !== null && isValidValueCents(cents) ? cents : null;
 }
 
 /** Kisten sind `BOX`, Regalfächer und das Kinderregal `SHELF`. */
@@ -152,6 +185,7 @@ export function normalizeSheetRow(cells: string[]): ReleaseInventoryRow | null {
     inventoryNumber: Number(rawNumber),
     title: rawTitle.replace(ENGLISH_SUFFIX, "").trim(),
     bggId: null,
+    bggMatch: null,
     location: normalizeLocation(cell(SHEET.place)),
     lastCheckedOn,
     // Ohne Datum keine Kontrolle — die Notiz bleibt als Zustand erhalten.
@@ -159,6 +193,9 @@ export function normalizeSheetRow(cells: string[]): ReleaseInventoryRow | null {
     note: classified.note,
     englishRules,
     deinventarised: DEINVENTARISED.test(remarkText),
+    valueCents:
+      parseSheetValue(cell(SHEET.value)) ??
+      parseSheetValue(cell(SHEET.shiftedValue)),
   };
 }
 
@@ -174,12 +211,14 @@ const COLUMNS = [
   "inventoryNumber",
   "title",
   "bggId",
+  "bggMatch",
   "location",
   "lastCheckedOn",
   "result",
   "note",
   "englishRules",
   "deinventarised",
+  "valueCents",
 ] as const;
 
 const RESULTS = new Set<string>(["COMPLETE", "INCOMPLETE", "UNPLAYABLE"]);
@@ -190,12 +229,14 @@ export function serializeReleaseInventory(rows: ReleaseInventoryRow[]) {
       row.inventoryNumber ?? "",
       row.title,
       row.bggId ?? "",
+      row.bggMatch ?? "",
       row.location ?? "",
       row.lastCheckedOn ?? "",
       row.result ?? "",
       row.note ?? "",
       row.englishRules ? "true" : "",
       row.deinventarised ? "true" : "",
+      row.valueCents ?? "",
     ]
       .map((value) => escapeCsvField(value, ","))
       .join(","),
@@ -232,18 +273,24 @@ export function parseReleaseInventory(text: string): ReleaseInventoryRow[] {
     if (result && !lastCheckedOn) {
       throw new Error(`Zeile ${line}: Ergebnis ohne Datum`);
     }
+    const bggMatch = get("bggMatch");
+    if (bggMatch && !BGG_MATCHES.has(bggMatch)) {
+      throw new Error(`Zeile ${line}: unbekannter bggMatch "${bggMatch}"`);
+    }
     const title = get("title");
     if (!title) throw new Error(`Zeile ${line}: Titel fehlt`);
     return {
       inventoryNumber: optionalInt(get("inventoryNumber"), `Zeile ${line}`),
       title,
       bggId: optionalInt(get("bggId"), `Zeile ${line}`),
+      bggMatch: (bggMatch || null) as BggMatch | null,
       location: get("location") || null,
       lastCheckedOn: lastCheckedOn || null,
       result: (result || null) as ReleaseCheckResult | null,
       note: get("note") || null,
       englishRules: get("englishRules") === "true",
       deinventarised: get("deinventarised") === "true",
+      valueCents: optionalInt(get("valueCents"), `Zeile ${line}`),
     };
   });
 }
