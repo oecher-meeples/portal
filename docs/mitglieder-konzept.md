@@ -47,6 +47,10 @@ Sobald `resignedAt` gesetzt ist, entscheidet nur noch das Datum zwischen Gekünd
 
 **Warum Anonymisiert ein eigener, fünfter Zustand bleibt** statt in "Unregistriert" aufzugehen (Stufe-2-Anonymisierung trennt `Vereinsmitglied.meepleId`, siehe [4](#4-datenschutz-anonymisierung-loeschung)): erstens für Statistiken (Unregistriert = "braucht noch eine Einladung", Anonymisiert = "war mal Mitglied, jetzt Historie" — fachlich verschiedene Dinge, die dieselbe Zahl verfälschen würden). Zweitens bleibt `Vereinsmitglied.email` bis zur Stufe-3-Löschung (12 Monate nach `membershipEndsAt`) erhalten, auch wenn das Meeple-Profil bereits anonymisiert/getrennt ist — Kontaktaufnahme (z. B. für Feedback) bleibt darüber möglich, obwohl kein Portal-Profil mehr existiert.
 
+**Beitrittsdatum** (`Member.joinedAt`) ist seit #611 `nullable`: `null` heißt „unbekannt" und erscheint in Tabelle, Profil und Bearbeiten-Dialog als „—". Nur der Mitgliederimport schreibt `null`; die Einzelanlage setzt weiterhin ausdrücklich heute (kein Prisma-Default mehr).
+
+**Kinder ohne eigene E-Mail:** Eine E-Mail ist keine Pflicht für MiniMeeple/JungMeeple (aus dem Geburtsdatum) **und** für jedes Mitglied mit mindestens einem verknüpften Erziehungsberechtigten (`requiresEmail()`, #611) — sonst wäre ein importiertes Kind ohne Geburtsdatum nicht speicherbar. Die Adresse bleibt beim Bearbeiten Pflicht.
+
 ### 1.2 Meeple
 
 Registrierte Vereinsmitglieder referenzieren zwingend genau ein Meeple. Meeple bleibt das interne Profil für optionale Selbstdarstellungs- und Interaktionsdaten (Kontaktmöglichkeiten, Spielesammlung, LFG, Marktplatz) — alles darin darf das Meeple selbst bearbeiten und löschen.
@@ -63,13 +67,23 @@ Die IBAN wandert vollständig von Meeple zu Vereinsmitglied (siehe [3.2](#32-ban
 
 Unverändert. Login bleibt an Meeple gekoppelt. Wichtig für den Rest dieses Dokuments: das Login (`AuthUser`, bis ADR 0015 Neon Auth) führt eine eigene `email`-Spalte, unabhängig von `Meeple.email` — ein Meeple ohne eigenes `email`-Feld kann trotzdem ein funktionierendes Login haben.
 
+### 1.4 Mitgliederimport (#611)
+
+Der Bestand kommt nicht per Seed (Repo und Image sind öffentlich), sondern über `/admin/mitglieder/import` (`members:manage`) aus dem CSV-Export der Vereinsverwaltung (`mitglied_email;mitglied_name;mitglied_vorname;mitglied_nr`, Windows-1252).
+
+- Die Datei wird **nur im Browser** gelesen und geparst; der Server bekommt nur die Zeilen, speichert die Datei nirgends und loggt keine Zeileninhalte.
+- **Idempotent:** Eine vorhandene Mitgliedsnummer wird übersprungen, nichts wird aktualisiert — danach ist die Plattform die Quelle der Wahrheit.
+- **Gruppe** = mehrere Zeilen mit identischer E-Mail (nie über den Namen). Pro Zeile Rolle „Erziehungsberechtigt" oder „Kind": genau ein Erziehungsberechtigter behält die gemeinsame Adresse, jeder weitere braucht eine eigene; Kinder werden ohne E-Mail mit allen Erziehungsberechtigten der Gruppe verknüpft. Gehört die Adresse schon einem bestehenden Mitglied, ist es der feste **Anker** und bleibt unverändert.
+- E-Mail eines **Logins ohne Mitglied** (z. B. Admin-Funktionskonto): „mit Konto verknüpfen" (Standard aus) oder eine andere bzw. gar keine E-Mail.
+- Angelegt wird atomar in einer Transaktion, ohne Geburts-/Beitrittsdatum und ohne Adresse; es werden **keine Einladungen** verschickt — dafür gibt es „Alle Fehlenden einladen" ([2.1](#21-mitgliedseinladung)).
+
 ## 2. Einladungen & Kontoerstellung
 
 Einladungen werden nicht mehr manuell/ungebunden erstellt (der bisherige, mehrfach einlösbare Invite ohne E-Mail-Bindung entfällt ersatzlos — auf ausdrücklichen Vorstandswunsch). Jede verbleibende Einladung ist E-Mail-gebunden und genau einmal einlösbar; E-Mail + Token bilden zusammen den Schlüssel beim Einlösen. Systemkonten laufen seit der Korrektur unten **gar nicht mehr** über den Invite-Mechanismus — nur Mitgliedseinladungen tun das noch.
 
 ### 2.1 Mitgliedseinladung
 
-Wird aus einem `Vereinsmitglied`-Datensatz heraus erstellt ("Einladung erstellen/verlängern"-Button in der Vereinsmitglieder-Tabelle, erfordert `invites:manage`). Die Einladung übernimmt die E-Mail des Vereinsmitglieds als Versandziel: Beim Erstellen, Verlängern und CSV-Import geht der Registrierungslink automatisch per Mail dorthin, „Erneut per Mail senden" verschickt ihn bei offenen Einladungen noch einmal (#613). Schlägt der Versand fehl, bleibt die Einladung gültig — der Link lässt sich weiterhin kopieren. Bei Einlösung entsteht automatisch ein neues, leeres `Meeple` (Displayname vorbefüllt aus Vor-/Nachname), das sofort mit dem Vereinsmitglied verknüpft wird — analog zum bisherigen Verhalten ("Meeple entsteht beim ersten Login").
+Wird aus einem `Vereinsmitglied`-Datensatz heraus erstellt ("Einladung erstellen/verlängern"-Button in der Vereinsmitglieder-Tabelle, erfordert `invites:manage`). Die Einladung übernimmt die E-Mail des Vereinsmitglieds als Versandziel: Beim Erstellen, Verlängern und CSV-Import geht der Registrierungslink automatisch per Mail dorthin, „Erneut per Mail senden" verschickt ihn bei offenen Einladungen noch einmal (#613). Schlägt der Versand fehl, bleibt die Einladung gültig — der Link lässt sich weiterhin kopieren. „Alle Fehlenden einladen" unter der Vereinsmitglieder-Tabelle (#622) lädt nach Bestätigung mit Anzahl alle Mitglieder mit E-Mail, ohne Login und ohne Kündigung ein, deren **jüngste** Einladung fehlt oder abgelaufen ist; offene Einladungen werden nicht verdoppelt, widerrufene nicht stillschweigend aufgehoben. Bei Einlösung entsteht automatisch ein neues, leeres `Meeple` (Displayname vorbefüllt aus Vor-/Nachname), das sofort mit dem Vereinsmitglied verknüpft wird — analog zum bisherigen Verhalten ("Meeple entsteht beim ersten Login").
 
 ### 2.2 Systemkonto anlegen
 
@@ -175,7 +189,7 @@ Die Infocard "Aktive Mitglieder" gliedert zusätzlich nach Beitragsart-Kategorie
 
 **Einladungen** (default zu, sichtbar nur mit `invites:manage`): Ansicht zum Verlängern/Widerrufen bleibt erhalten. Die separate Ansicht "Neues Mitglied einladen" entfällt ersatzlos — Einladen passiert jetzt ausschließlich aus der Vereinsmitglieder-Tabelle heraus.
 
-**Vereinsmitglieder** (default auf): Mitgliedsnummer, voller Name, Beitrittsdatum, Austrittsdatum, Zustand, **Beitragsart**, Link zum Meeple-Profil *oder* Einladen/Verlängern-Button (erfordert `invites:manage`), Button "Kündigung vermerken"/"Kündigung widerrufen", Button "Anonymisieren". Button "Vereinsmitglied erstellen" (#342, erfordert `members:manage`) legt eine neue Zeile mit eigener Mitgliedsnummer an. Pro Zeile ein Edit-Dialog (#343) für die vollen Personendaten sowie den Button "Selbstauskunft senden" (aus der Meeple-Tabelle hierher verschoben — nur verfügbar, solange ein Portal-Konto verknüpft ist).
+**Vereinsmitglieder** (default auf): Mitgliedsnummer, voller Name, Beitrittsdatum, Austrittsdatum, Zustand, **Beitragsart**, Link zum Meeple-Profil *oder* Einladen/Verlängern-Button (erfordert `invites:manage`), Button "Kündigung vermerken"/"Kündigung widerrufen", Button "Anonymisieren". Button "Vereinsmitglied erstellen" (#342, erfordert `members:manage`) legt eine neue Zeile mit eigener Mitgliedsnummer an, "Mitgliederliste importieren" (#611, ebenfalls `members:manage`) führt zum CSV-Import ([1.4](#14-mitgliederimport-611)). Unter der Tabelle "Alle Fehlenden einladen" (#622, `invites:manage`). Pro Zeile ein Edit-Dialog (#343) für die vollen Personendaten sowie den Button "Selbstauskunft senden" (aus der Meeple-Tabelle hierher verschoben — nur verfügbar, solange ein Portal-Konto verknüpft ist).
 
 **Meeple-Tabelle** (default zu): Displayname, Rollen (Badges), Status (Aktives Mitglied, Gekündigt, Anonymisiert), Beigetreten am, Button "Kündigung vermerken". Im Panel: "Systemkonto anlegen"-Button (`admin:access`, siehe [2.2](#22-systemkonto-anlegen)).
 
