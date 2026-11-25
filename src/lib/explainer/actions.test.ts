@@ -13,7 +13,20 @@ vi.mock("@/lib/members/meeples", async () => {
   return { ...actual, requireMeeple: requireMeepleMock };
 });
 
+const requireActionPermissionMock = vi.fn();
+vi.mock("@/lib/auth/action-guards", () => ({
+  requireActionPermission: requireActionPermissionMock,
+}));
+
+const searchBoardGamesMock = vi.fn();
+vi.mock("@/lib/explainer/game-list-queries", () => ({
+  searchBoardGames: searchBoardGamesMock,
+}));
+
 const {
+  addExplainerGameFromSearch,
+  searchBoardGamesAction,
+  setExplainerWanted,
   addExplainerGame,
   updateExplainerGameLevel,
   removeExplainerGame,
@@ -141,6 +154,91 @@ describe("removeAllExplainerGames", () => {
     expect(result).toEqual({ success: true });
     expect(prismaMock.explainerGame.deleteMany).toHaveBeenCalledWith({
       where: { meepleId: "meeple-1" },
+    });
+  });
+});
+
+describe("addExplainerGameFromSearch", () => {
+  it("creates with WITH_MANUAL but never overwrites an existing level", async () => {
+    prismaMock.explainerGame.upsert.mockResolvedValue({} as never);
+
+    const result = await addExplainerGameFromSearch("game-1");
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.explainerGame.upsert).toHaveBeenCalledWith({
+      where: {
+        meepleId_boardGameId: { meepleId: "meeple-1", boardGameId: "game-1" },
+      },
+      update: {},
+      create: {
+        meepleId: "meeple-1",
+        boardGameId: "game-1",
+        level: "WITH_MANUAL",
+      },
+    });
+  });
+
+  it("rejects an empty game id", async () => {
+    expect(await addExplainerGameFromSearch("")).toEqual({
+      error: "Bitte ein Spiel auswählen.",
+    });
+    expect(prismaMock.explainerGame.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("searchBoardGamesAction", () => {
+  it("delegates to the server-side search with a limit", async () => {
+    searchBoardGamesMock.mockResolvedValue([{ id: "g", title: "Azul" }]);
+
+    expect(await searchBoardGamesAction("azu", ["x"])).toEqual([
+      { id: "g", title: "Azul" },
+    ]);
+    expect(searchBoardGamesMock).toHaveBeenCalledWith("azu", 10, ["x"]);
+  });
+});
+
+describe("setExplainerWanted (#660)", () => {
+  it("sets the flag for events:manage", async () => {
+    requireActionPermissionMock.mockResolvedValue({});
+    prismaMock.boardGame.updateMany.mockResolvedValue({ count: 1 } as never);
+
+    expect(await setExplainerWanted("game-1", true)).toEqual({
+      success: true,
+    });
+    expect(requireActionPermissionMock).toHaveBeenCalledWith("events:manage");
+    expect(prismaMock.boardGame.updateMany).toHaveBeenCalledWith({
+      where: { id: "game-1" },
+      data: { explainerWanted: true },
+    });
+  });
+
+  it("removes the flag", async () => {
+    requireActionPermissionMock.mockResolvedValue({});
+    prismaMock.boardGame.updateMany.mockResolvedValue({ count: 1 } as never);
+
+    await setExplainerWanted("game-1", false);
+
+    expect(prismaMock.boardGame.updateMany).toHaveBeenCalledWith({
+      where: { id: "game-1" },
+      data: { explainerWanted: false },
+    });
+  });
+
+  it("changes nothing without the permission", async () => {
+    requireActionPermissionMock.mockRejectedValue(new RedirectError("/403"));
+
+    await expect(setExplainerWanted("game-1", true)).rejects.toThrow(
+      RedirectError,
+    );
+    expect(prismaMock.boardGame.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("reports an unknown game", async () => {
+    requireActionPermissionMock.mockResolvedValue({});
+    prismaMock.boardGame.updateMany.mockResolvedValue({ count: 0 } as never);
+
+    expect(await setExplainerWanted("nope", true)).toEqual({
+      error: "Spiel nicht gefunden.",
     });
   });
 });
