@@ -15,6 +15,7 @@ import {
   GameContributorList,
   GameIllustratorsCard,
 } from "@/components/entities/game-contributor-list";
+import { BggLinkButton } from "@/components/entities/bgg-link-button";
 import { EditionFlag } from "@/components/entities/edition-flag";
 import {
   groupGameContributorsByName,
@@ -153,18 +154,7 @@ export function GameDetailView({
       icon: <ExternalLink />,
       href: bggUrl,
       external: true,
-      node: (
-        <Button
-          variant="outline"
-          className="gap-1.5 px-2.5"
-          aria-label="Auf BoardGameGeek ansehen"
-          render={<a href={bggUrl} target="_blank" rel="noopener noreferrer" />}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
-          <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
-          <ExternalLink className="size-4" />
-        </Button>
-      ),
+      node: <BggLinkButton href={bggUrl} />,
     },
   ].filter((action): action is GameTitleAction => Boolean(action));
 

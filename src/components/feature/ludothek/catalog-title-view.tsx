@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageTitle } from "@/components/ui/page-title";
 import { CardCornerOverlay } from "@/components/ui/card-corner-overlay";
+import { BggLinkButton } from "@/components/entities/bgg-link-button";
 import { BggRatingBadge } from "@/components/entities/bgg-rating-badge";
 import { GameCoverMedia } from "@/components/entities/game-cover-media";
 import { SharedCollectionMeeplesCard } from "@/components/feature/ludothek/shared-collection-meeples-card";
@@ -49,16 +48,7 @@ export function CatalogTitleView({
         </div>
         {bggUrl && (
           <div>
-            <Button
-              variant="outline"
-              className="gap-1.5"
-              render={
-                <a href={bggUrl} target="_blank" rel="noopener noreferrer" />
-              }
-            >
-              Auf BoardGameGeek ansehen
-              <ExternalLink className="size-4" />
-            </Button>
+            <BggLinkButton href={bggUrl} />
           </div>
         )}
         <SharedCollectionMeeplesCard

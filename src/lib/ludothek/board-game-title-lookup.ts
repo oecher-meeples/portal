@@ -174,12 +174,30 @@ export async function findOrCreateBoardGameTitle(
       // Ein Stub (#637) wird aufgewertet, sobald der Aufrufer vollständige
       // Daten liefert; ein bereits vollständiger Titel bleibt unverändert.
       const upgrade = isCatalogStub(existing) && !isCatalogStub(input);
+      // Ein vollständiger Titel bekommt nur fehlende Anzeigefelder ergänzt
+      // (z. B. das Bild, das ein früherer Fallback-Import nicht kannte).
+      const gaps = {
+        ...(!existing.imageUrl && input.imageUrl
+          ? { imageUrl: input.imageUrl }
+          : {}),
+        ...(existing.yearPublished == null && input.yearPublished != null
+          ? { yearPublished: input.yearPublished }
+          : {}),
+        ...(existing.averageRating == null && input.averageRating != null
+          ? { averageRating: input.averageRating }
+          : {}),
+      };
       const title = upgrade
         ? await tx.boardGame.update({
             where: { id: existing.id },
             data: { title: input.title, ...toBoardGameTitleData(input) },
           })
-        : existing;
+        : Object.keys(gaps).length > 0
+          ? await tx.boardGame.update({
+              where: { id: existing.id },
+              data: gaps,
+            })
+          : existing;
       if (upgrade) {
         await linkTitleRelations(tx, existing.id, input);
       } else {

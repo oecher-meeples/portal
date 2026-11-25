@@ -99,6 +99,28 @@ describe("findOrCreateBoardGameTitle – Stub-Aufwertung (#637)", () => {
     expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
   });
 
+  it("ergänzt bei einem vollständigen Titel nur ein fehlendes Bild", async () => {
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      ...STUB,
+      description: "Vollständig",
+      imageUrl: null,
+      yearPublished: 2024,
+    } as never);
+    prismaMock.boardGame.update.mockResolvedValue({ id: "stub-1" } as never);
+
+    await findOrCreateBoardGameTitle({
+      ...VALID_INPUT,
+      bggId: 342942,
+      imageUrl: "https://img/cover.jpg",
+      yearPublished: 1999,
+    });
+
+    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+      where: { id: "stub-1" },
+      data: { imageUrl: "https://img/cover.jpg" },
+    });
+  });
+
   it("überschreibt einen vollständigen Titel nicht", async () => {
     prismaMock.boardGame.findUnique.mockResolvedValue({
       ...STUB,
