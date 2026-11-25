@@ -105,6 +105,33 @@ async function fetchCollectionItems(
 }
 
 /**
+ * BGG liefert eine Collection-Zeile pro **Exemplar**, nicht pro Spiel: Wer
+ * dasselbe Spiel zweimal oder in zwei Editionen besitzt, hat zwei Items mit
+ * gleicher `objectid`. Der private Bestand führt aber nur einen Eintrag pro
+ * Titel (Unique `meepleId + boardGameId`), daher hier zusammenführen: die
+ * erste Zeile mit gewählter Version gewinnt, `rating` kommt aus der ersten
+ * bewerteten Zeile, `forTrade` gilt, sobald ein Exemplar tauschbar ist.
+ */
+function mergeByBggId(entries: BggCollectionEntry[]): BggCollectionEntry[] {
+  const merged = new Map<number, BggCollectionEntry>();
+  for (const entry of entries) {
+    const existing = merged.get(entry.bggId);
+    if (!existing) {
+      merged.set(entry.bggId, entry);
+      continue;
+    }
+    merged.set(entry.bggId, {
+      ...existing,
+      rating: existing.rating ?? entry.rating,
+      forTrade: existing.forTrade || entry.forTrade,
+      imageUrl: existing.imageUrl ?? entry.imageUrl,
+      version: existing.version ?? entry.version,
+    });
+  }
+  return [...merged.values()];
+}
+
+/**
  * Öffentliche BGG-Collection eines Benutzernamens (#255) — nur besessene
  * Titel (`own=1`), keine Wunschlisten/geliehenen Einträge; zusätzlich
  * client-seitig auf `status.own === "1"` gefiltert, da `own=1` nur ein
@@ -121,18 +148,20 @@ export async function fetchBggCollection(
     trimmed,
     "own=1&stats=1&version=1&excludesubtype=boardgameexpansion",
   );
-  return items
-    .filter((item) => item.status?.own === "1")
-    .map((item) => ({
-      bggId: item.bggId,
-      title: item.title,
-      rating: parseNumber(item.stats?.rating?.value),
-      forTrade: item.status?.fortrade === "1",
-      imageUrl: item.image ?? item.thumbnail ?? null,
-      version:
-        parseVersions(item.version).find((v) => v.bggVersionId !== null) ??
-        null,
-    }));
+  return mergeByBggId(
+    items
+      .filter((item) => item.status?.own === "1")
+      .map((item) => ({
+        bggId: item.bggId,
+        title: item.title,
+        rating: parseNumber(item.stats?.rating?.value),
+        forTrade: item.status?.fortrade === "1",
+        imageUrl: item.image ?? item.thumbnail ?? null,
+        version:
+          parseVersions(item.version).find((v) => v.bggVersionId !== null) ??
+          null,
+      })),
+  );
 }
 
 /**
