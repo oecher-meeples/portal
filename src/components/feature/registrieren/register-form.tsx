@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-input";
 import { redeemInvite } from "@/components/feature/registrieren/actions";
 import { validatePassword } from "@/lib/auth/password";
 
@@ -85,24 +86,20 @@ export function RegisterForm({
           required
         />
       </Field>
-      <Field label="Passwort festlegen" htmlFor="reg-password">
-        <Input
-          id="reg-password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-      </Field>
-      <Field label="Passwort wiederholen" htmlFor="reg-password-confirm">
-        <Input
-          id="reg-password-confirm"
-          type="password"
-          value={passwordConfirm}
-          onChange={(event) => setPasswordConfirm(event.target.value)}
-          required
-        />
-      </Field>
+      <PasswordField
+        id="reg-password"
+        label="Passwort festlegen"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        required
+      />
+      <PasswordField
+        id="reg-password-confirm"
+        label="Passwort wiederholen"
+        value={passwordConfirm}
+        onChange={(event) => setPasswordConfirm(event.target.value)}
+        required
+      />
       {error && <p className="text-destructive text-sm">{error}</p>}
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Konto wird aktiviert…" : "Konto aktivieren"}

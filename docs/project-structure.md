@@ -100,7 +100,9 @@ src/lib/
 │               Einladungsmail (`invite-mail.ts`, #613 — liefert den Fehler zurück statt zu werfen),
 │               eine E-Mail-Adresse pro Person (`member-email.ts`, #614: Konflikt-Check, Login-E-Mail zieht mit),
 │               Mitgliederimport (#611): `member-import-csv.ts` (Dekodierung UTF-8 → Windows-1252 + Parser, rein, läuft im Browser),
-│               `member-import-decisions.ts` (Vorschau-Typen und Zuordnungsregeln, rein — live im Client und erneut auf dem Server),
+│               `member-import-types.ts` (Vorschau- und Entscheidungstypen),
+│               `member-import-families.ts` (Familien aus E-Mail-Gruppen + Verschiebungen, Namensvorschlag, rein),
+│               `member-import-decisions.ts` (Zuordnungsregeln, rein — live im Client und erneut auf dem Server),
 │               `member-import-preview.ts` (Abgleich mit dem Bestand, `findEmailOwners()` als Batch-Gegenstück zu `findMemberEmailConflict()`),
 │               `member-import-commit.ts` (eine Transaktion, Logs ohne Zeileninhalte);
 │               `listMissingInviteCandidates()` in `members-without-login.ts` (#622, die jüngste Einladung entscheidet)
@@ -132,6 +134,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | `button`, `input`, `label`, `textarea`, `dialog`, `table`, `tabs`, `badge`, `avatar`, `tooltip`, `separator`, `dropdown-menu` | Primitives |
 | `card.tsx` | **Einzige Card-Hülle des Portals** (#580): `Card` im Portalstil (`rounded-lg`, `border`, `p-5`), `size="sm"` (`p-4`) / `"flush"` (ohne Padding, für `divide-y`-Listen, Tabellen, Accordions), `variant="destructive"`, `layout="tile"` (zentrierte Icon-Kachel). `CardHeader` + `CardAction` stellen Aktionen per Container-Query unter Titel/Beschreibung, wenn der Kopf schmaler als `@md` ist. `CardTitle` rendert `<h2>` (`as="h3"` möglich). Für Hüllen, die kein `div` sind (`Link`, `form`, `li`, Accordion-Root), liefert `cardVariants({ … })` dieselben Klassen. Bewusst eigene Bausteine bleiben: `game-list-row` (randlose Listenzeile) und Innen-/Overlay-Flächen. |
 | `field.tsx` | `Field` / `TextField` / `TextAreaField` — Label-über-Control-Zeile (ersetzt ~60 handkopierte Wrapper) |
+| `password-input.tsx` | `PasswordInput` / `PasswordField` — Passwortfeld mit Augen-Button (Tap = dauerhaft sichtbar, Longpress = solange gedrückt) (#633) |
 | `native-select.tsx` | `NativeSelect` — natives `<select>` im `Input`-Stil für Filter, Sortierung, Vorschlagslisten |
 | `use-action.ts` | Hook: Server Action ausführen → pending/error; `router.refresh()` nur mit `refresh: true` (#525: Default aus, `revalidatePath` der Action rendert bereits neu) |
 | `id-combobox.tsx` | Durchsuchbare Auswahl über `{ id, label }` — Basis von `MeepleCombobox`/`MemberCombobox` und dem Mitwirkenden-Zusammenführen (#520) |

@@ -3,6 +3,11 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
+const hasPermissionMock = vi.fn();
+vi.mock("@/lib/auth/permissions", () => ({
+  hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
+}));
+
 const generateTokenMock = vi.fn();
 vi.mock("@/lib/utils/generate-token", () => ({
   generateToken: (...args: unknown[]) => generateTokenMock(...args),
@@ -86,17 +91,87 @@ describe("revokeMemberCalendarToken (#438)", () => {
   });
 });
 
+function activeMember(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "member-1",
+    meepleId: "meeple-1",
+    resignedAt: null,
+    membershipEndsAt: null,
+    meeple: { neonAuthUserId: "auth-1", anonymizedAt: null },
+    ...overrides,
+  } as never;
+}
+
 describe("resolveMemberByCalendarToken (#438)", () => {
   it("looks up the member by the token's hash, not the raw value", async () => {
-    prismaMock.member.findUnique.mockResolvedValue({ id: "member-1" } as never);
+    prismaMock.member.findUnique.mockResolvedValue(activeMember());
+    hasPermissionMock.mockResolvedValue(true);
 
     const result = await resolveMemberByCalendarToken("raw-token-value");
 
-    expect(prismaMock.member.findUnique).toHaveBeenCalledWith({
-      where: { calendarTokenHash: hashCalendarToken("raw-token-value") },
-      select: { id: true },
-    });
+    expect(prismaMock.member.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { calendarTokenHash: hashCalendarToken("raw-token-value") },
+      }),
+    );
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      "auth-1",
+      "news:internal:view",
+    );
     expect(result).toEqual({ id: "member-1" });
+  });
+
+  it("returns null when the member lost news:internal:view", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(activeMember());
+    hasPermissionMock.mockResolvedValue(false);
+
+    expect(await resolveMemberByCalendarToken("raw")).toBeNull();
+  });
+
+  it("returns null for a resigned (ausgetreten) member", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(
+      activeMember({
+        resignedAt: new Date("2020-01-01"),
+        membershipEndsAt: new Date("2021-01-01"),
+      }),
+    );
+    hasPermissionMock.mockResolvedValue(true);
+
+    expect(await resolveMemberByCalendarToken("raw")).toBeNull();
+  });
+
+  it("returns null for an anonymised member", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(
+      activeMember({
+        meeple: { neonAuthUserId: "auth-1", anonymizedAt: new Date() },
+      }),
+    );
+    hasPermissionMock.mockResolvedValue(true);
+
+    expect(await resolveMemberByCalendarToken("raw")).toBeNull();
+  });
+
+  it("still serves a member who has given notice but is not yet gone (gekuendigt)", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(
+      activeMember({
+        resignedAt: new Date(),
+        membershipEndsAt: new Date(Date.now() + 86_400_000),
+      }),
+    );
+    hasPermissionMock.mockResolvedValue(true);
+
+    expect(await resolveMemberByCalendarToken("raw")).toEqual({
+      id: "member-1",
+    });
+  });
+
+  it("returns null for a member without a portal login", async () => {
+    prismaMock.member.findUnique.mockResolvedValue(
+      activeMember({ meeple: null }),
+    );
+
+    expect(await resolveMemberByCalendarToken("raw")).toBeNull();
+    expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
   it("returns null for an unknown token", async () => {

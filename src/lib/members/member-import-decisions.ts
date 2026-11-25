@@ -1,111 +1,63 @@
 import { isValidEmail } from "@/lib/utils/validate-email";
-import { memberFullName } from "@/lib/members/member-display-name";
-import type { MemberImportRow } from "@/lib/members/member-import-csv";
+import {
+  emptyDecision,
+  familyGuardians,
+  familyOfLine,
+  hasSharedEmail,
+  isValidFamilyTarget,
+  resolveFamilies,
+  sharedEmailKeeper,
+  suggestGuardianLine,
+  suggestNameFamilies,
+  type ImportFamily,
+} from "@/lib/members/member-import-families";
+import {
+  CREATABLE_STATUSES,
+  isImportedRow,
+  type ImportDecisions,
+  type ImportIssue,
+  type ImportPreviewRow,
+  type MemberImportPreview,
+  type PersonRef,
+} from "@/lib/members/member-import-types";
 
 /**
- * Vorschau-Typen und Zuordnungsregeln des Mitgliederimports (#611) — rein,
- * damit dieselben Regeln live im Browser (Button-Sperre) und noch einmal
- * serverseitig vor dem Schreiben laufen (`commitMemberImport`). Den Abgleich
- * mit dem Bestand baut `member-import-preview.ts`.
+ * Zuordnungsregeln des Mitgliederimports (#611) — rein, damit dieselben
+ * Regeln live im Browser (Button-Sperre) und noch einmal serverseitig vor dem
+ * Schreiben laufen (`commitMemberImport`). Familien kommen aus
+ * `member-import-families.ts`, den Abgleich mit dem Bestand baut
+ * `member-import-preview.ts`.
  */
 
-/** - `skipped`: Mitgliedsnummer existiert schon, wird nicht angefasst.
- * - `error`: harter Fehler, wird nicht importiert (`message`).
- * - `ready`: eigene, freie E-Mail — wird ohne Rückfrage angelegt.
- * - `group`: teilt die E-Mail mit anderen Zeilen und/oder einem bestehenden
- *   Mitglied (Anker) — Rolle wählen.
- * - `loginConflict`: E-Mail gehört einem Login ohne Mitglied — verknüpfen
- *   oder andere/keine E-Mail.
- * - `needsRole`: ohne E-Mail und ohne Gruppe — Kind oder erwachsen. */
-export type ImportRowStatus =
-  "skipped" | "error" | "ready" | "group" | "loginConflict" | "needsRole";
-
-export type ImportPreviewRow = MemberImportRow & {
-  status: ImportRowStatus;
-  message: string | null;
-};
-
-export type ImportGroup = {
-  email: string;
-  lines: number[];
-  /** Bestehendes (Nicht-Kind-)Mitglied mit dieser Adresse — behält sie fest
-   * und wird nicht verändert. */
-  anchor: { memberId: string; name: string } | null;
-};
-
-/** Wem eine E-Mail im Bestand schon gehört. `login.meepleId` ist `null`, wenn
- * das Login (noch) kein Meeple hat — dann ist keine Verknüpfung möglich. */
-export type ImportEmailOwner = {
-  member: { id: string; isChild: boolean } | null;
-  login: {
-    meepleId: string | null;
-    displayName: string;
-    hasMember: boolean;
-  } | null;
-};
-
-export type MemberImportPreview = {
-  rows: ImportPreviewRow[];
-  groups: ImportGroup[];
-  /** Lowercased E-Mail → Besitzer, nur für tatsächlich vergebene Adressen. */
-  emailOwners: Record<string, ImportEmailOwner>;
-  /** Bestehende Nicht-Kind-Mitglieder als Erziehungsberechtigten-Kandidaten
-   * (`id` = `member:<memberId>`). */
-  existingGuardianOptions: { id: string; label: string }[];
-};
-
-/** `row:<line>` (Erwachsener aus der Datei) oder `member:<id>` (Bestand) —
- * als String, damit er direkt als `IdCombobox`-Option taugt. */
-export type GuardianRef = string;
-
-export type RowDecision = {
-  role: "adult" | "child" | null;
-  /** Eigene bzw. andere E-Mail eines Erwachsenen; leer = keine. Bei einem
-   * Kind ignoriert (Kinder werden ohne E-Mail angelegt). */
-  email: string;
-  /** Mit dem Login der Zeilen-E-Mail verknüpfen (nur `loginConflict` bzw.
-   * Gruppen-Adresse eines Logins). */
-  linkMeeple: boolean;
-  /** Zusätzliche Erziehungsberechtigte eines Kindes — Gruppenmitglieder und
-   * der Anker kommen automatisch dazu. */
-  guardians: GuardianRef[];
-};
-
-/** Schlüssel = Zeilennummer. Nur angelegt werdende Zeilen haben einen Eintrag. */
-export type ImportDecisions = Record<number, RowDecision>;
-
-export type ImportIssue = { line: number; message: string };
-
-export const CREATABLE_STATUSES: ReadonlySet<ImportRowStatus> = new Set([
-  "ready",
-  "group",
-  "loginConflict",
-  "needsRole",
-]);
-
-export function rowRef(line: number): GuardianRef {
-  return `row:${line}`;
-}
-
-export function memberRef(memberId: string): GuardianRef {
-  return `member:${memberId}`;
-}
-
+/** Startzustand: `ready` und Login-Konflikte sind erwachsen; in einer
+ * E-Mail-Gruppe ohne Anker ist die Person vorausgewählt, deren Vorname in
+ * der Adresse steckt (`suggestGuardianLine`). Zeilen ohne E-Mail sind über
+ * den Nachnamen einer Familie vorgeschlagen (`suggestNameFamilies`). */
 export function initialImportDecisions(
   preview: MemberImportPreview,
 ): ImportDecisions {
+  const suggested = new Set<number>();
+  for (const group of preview.groups) {
+    if (group.anchor) continue;
+    const rows = preview.rows.filter((row) => group.lines.includes(row.line));
+    const line = suggestGuardianLine(group.email, rows);
+    if (line !== null) suggested.add(line);
+  }
+
+  const nameFamilies = suggestNameFamilies(preview);
   const decisions: ImportDecisions = {};
   for (const row of preview.rows) {
     if (!CREATABLE_STATUSES.has(row.status)) continue;
-    decisions[row.line] = {
+    decisions[row.line] = emptyDecision({
       role:
-        row.status === "ready" || row.status === "loginConflict"
+        row.status === "ready" ||
+        row.status === "loginConflict" ||
+        suggested.has(row.line)
           ? "adult"
           : null,
       email: row.status === "ready" ? (row.email ?? "") : "",
-      linkMeeple: false,
-      guardians: [],
-    };
+      family: nameFamilies.get(row.line) ?? null,
+    });
   }
   return decisions;
 }
@@ -115,91 +67,87 @@ function normalizeEmail(value: string): string | null {
   return email.length > 0 ? email : null;
 }
 
-/** Das Login hinter der Zeilen-E-Mail, sofern es sich verknüpfen lässt (hat
- * ein Meeple, aber noch kein Mitglied). */
+function linkableLoginFor(preview: MemberImportPreview, email: string | null) {
+  const login = email ? preview.emailOwners[email]?.login : null;
+  return login?.meepleId && !login.hasMember ? login : null;
+}
+
+/** Die Adresse, mit der sich eine Zeile verknüpfen ließe: in einer Familie
+ * mit gemeinsamer Adresse nur für deren Hüter, sonst die eigene. */
+function linkEmail(
+  row: ImportPreviewRow,
+  family: ImportFamily | null,
+  decisions: ImportDecisions,
+): string | null {
+  if (!hasSharedEmail(family)) return row.email;
+  return sharedEmailKeeper(family, decisions) === row.line
+    ? family.email
+    : null;
+}
+
+/** Das Login, mit dem sich die Zeile verknüpfen lässt (hat ein Meeple, aber
+ * noch kein Mitglied) — `null`, wenn keins. */
 export function linkableLogin(
   preview: MemberImportPreview,
+  family: ImportFamily | null,
+  decisions: ImportDecisions,
   row: ImportPreviewRow,
 ) {
-  const login = row.email ? preview.emailOwners[row.email]?.login : null;
-  return login?.meepleId && !login.hasMember ? login : null;
+  return linkableLoginFor(preview, linkEmail(row, family, decisions));
+}
+
+/** Verknüpfung nur, wenn gewählt **und** gerade möglich — ein veralteter
+ * Schalter (z. B. nach Wechsel des Hüters) bleibt wirkungslos, statt eine
+ * unsichtbare Fehlermeldung zu erzeugen. */
+function linksMeeple(
+  preview: MemberImportPreview,
+  family: ImportFamily | null,
+  decisions: ImportDecisions,
+  row: ImportPreviewRow,
+): boolean {
+  return (
+    decisions[row.line]?.linkMeeple === true &&
+    linkableLogin(preview, family, decisions, row) !== null
+  );
 }
 
 /** Die E-Mail, mit der eine Zeile angelegt wird — `null` für Kinder und
  * Erwachsene ohne Adresse. */
 export function finalEmail(
+  preview: MemberImportPreview,
   row: ImportPreviewRow,
-  decision: RowDecision,
+  family: ImportFamily | null,
+  decisions: ImportDecisions,
 ): string | null {
-  if (decision.role !== "adult") return null;
-  if (decision.linkMeeple) return row.email;
-  return normalizeEmail(decision.email);
-}
-
-function groupOf(preview: MemberImportPreview, row: ImportPreviewRow) {
-  return row.status === "group"
-    ? (preview.groups.find((group) => group.lines.includes(row.line)) ?? null)
-    : null;
-}
-
-/** Alle Erziehungsberechtigten eines Kindes: Erwachsene seiner Gruppe, der
- * Anker und die zusätzlich gewählten — ohne Dubletten. */
-export function resolveGuardians(
-  preview: MemberImportPreview,
-  decisions: ImportDecisions,
-  row: ImportPreviewRow,
-): GuardianRef[] {
-  const refs = new Set<GuardianRef>(decisions[row.line]?.guardians ?? []);
-  const group = groupOf(preview, row);
-  if (group) {
-    for (const line of group.lines) {
-      if (line !== row.line && decisions[line]?.role === "adult") {
-        refs.add(rowRef(line));
-      }
-    }
-    if (group.anchor) refs.add(memberRef(group.anchor.memberId));
+  const decision = decisions[row.line];
+  if (decision?.role !== "adult") return null;
+  if (
+    hasSharedEmail(family) &&
+    sharedEmailKeeper(family, decisions) === row.line
+  ) {
+    return family.email;
   }
-  return [...refs];
-}
-
-function rowLabel(row: MemberImportRow): string {
-  return memberFullName(row) || `Mitglied Nr. ${row.memberNumber}`;
-}
-
-/** Auswahl für den Erziehungsberechtigten-Picker einer Zeile: Erwachsene der
- * Datei (außer der Zeile selbst) und bestehende Nicht-Kind-Mitglieder. */
-export function guardianOptions(
-  preview: MemberImportPreview,
-  decisions: ImportDecisions,
-  forLine: number,
-): { id: string; label: string }[] {
-  const fileAdults = preview.rows
-    .filter(
-      (row) => row.line !== forLine && decisions[row.line]?.role === "adult",
-    )
-    .map((row) => ({
-      id: rowRef(row.line),
-      label: `${rowLabel(row)} (neu, Zeile ${row.line})`,
-    }));
-  return [...fileAdults, ...preview.existingGuardianOptions];
+  if (linksMeeple(preview, family, decisions, row)) {
+    return linkEmail(row, family, decisions);
+  }
+  if (decision.noEmail) return null;
+  return normalizeEmail(decision.email);
 }
 
 function validateAdultEmail(
   preview: MemberImportPreview,
+  context: { family: ImportFamily | null; decisions: ImportDecisions },
   row: ImportPreviewRow,
-  decision: RowDecision,
   email: string | null,
   issues: ImportIssue[],
 ) {
+  const { family, decisions } = context;
+  const decision = decisions[row.line];
   const add = (message: string) => issues.push({ line: row.line, message });
-  if (decision.linkMeeple && !linkableLogin(preview, row)) {
-    add("Diese Zeile lässt sich mit keinem Konto verknüpfen.");
-    return;
-  }
   if (!email) {
-    // Ausnahme laut #611: Login-Konflikt und Erwachsene ohne Datei-E-Mail
-    // dürfen ohne Adresse angelegt werden; in einer Gruppe ist sie Pflicht.
-    if (row.status === "group" || row.status === "ready") {
+    if (family && !decision.noEmail) {
+      add("E-Mail-Adresse eingeben oder „Erstmal leer lassen“ wählen.");
+    } else if (!family && row.status === "ready") {
       add("Eigene E-Mail-Adresse fehlt.");
     }
     return;
@@ -211,55 +159,42 @@ function validateAdultEmail(
   const owner = preview.emailOwners[email];
   if (owner?.member) {
     add("E-Mail-Adresse gehört bereits einem Vereinsmitglied.");
-  } else if (owner?.login && !decision.linkMeeple) {
+  } else if (owner?.login && !linksMeeple(preview, family, decisions, row)) {
     add(
       `E-Mail-Adresse gehört dem Konto „${owner.login.displayName}“ — verknüpfen oder eine andere angeben.`,
     );
   }
 }
 
-function validateChild(
-  preview: MemberImportPreview,
+function validateFamily(
+  family: ImportFamily,
   decisions: ImportDecisions,
-  row: ImportPreviewRow,
   issues: ImportIssue[],
 ) {
-  const refs = resolveGuardians(preview, decisions, row);
-  if (refs.length === 0) {
-    issues.push({
-      line: row.line,
-      message: "Mindestens ein:e Erziehungsberechtigte:r fehlt.",
-    });
-  }
-  const allowedMembers = new Set(
-    preview.existingGuardianOptions.map((option) => option.id),
+  const add = (message: string) =>
+    issues.push({ line: family.lines[0], message, familyKey: family.key });
+  const hasChild = family.lines.some(
+    (line) => decisions[line]?.role === "child",
   );
-  const anchor = groupOf(preview, row)?.anchor;
-  if (anchor) allowedMembers.add(memberRef(anchor.memberId));
-  for (const ref of refs) {
-    if (ref.startsWith("member:")) {
-      if (!allowedMembers.has(ref)) {
-        issues.push({
-          line: row.line,
-          message:
-            "Gewählte:r Erziehungsberechtigte:r ist kein gültiges Mitglied.",
-        });
-      }
-      continue;
-    }
-    const guardianLine = Number(ref.slice("row:".length));
-    const guardianRow = preview.rows.find((r) => r.line === guardianLine);
-    if (
-      !guardianRow ||
-      !CREATABLE_STATUSES.has(guardianRow.status) ||
-      decisions[guardianLine]?.role !== "adult"
-    ) {
-      issues.push({
-        line: row.line,
-        message: `Erziehungsberechtigte:r aus Zeile ${guardianLine} wird nicht als Erwachsene:r angelegt.`,
-      });
-    }
+  if (hasChild && familyGuardians(family, decisions).length === 0) {
+    add("Die Familie braucht mindestens eine:n Erziehungsberechtigte:n.");
   }
+  if (!hasSharedEmail(family)) return;
+  const keepers = family.lines.filter(
+    (line) =>
+      decisions[line]?.role === "adult" && decisions[line]?.keepsSharedEmail,
+  );
+  if (keepers.length > 1) {
+    add("Nur eine Person kann die gemeinsame Adresse behalten.");
+  } else if (sharedEmailKeeper(family, decisions) === null) {
+    add("Ein:e Erziehungsberechtigte:r muss die gemeinsame Adresse behalten.");
+  }
+}
+
+function roleMessage(family: ImportFamily | null): string {
+  return family
+    ? "Erziehungsberechtigt oder Kind wählen."
+    : "Als Erwachsene:r anlegen oder einer Familie zuweisen.";
 }
 
 /** Offene Punkte, die das Anlegen sperren — leer heißt absendbar. */
@@ -268,23 +203,37 @@ export function validateImportDecisions(
   decisions: ImportDecisions,
 ): ImportIssue[] {
   const issues: ImportIssue[] = [];
-  const creatable = preview.rows.filter((row) =>
-    CREATABLE_STATUSES.has(row.status),
-  );
+  const families = resolveFamilies(preview, decisions);
+  const creatable = preview.rows.filter((row) => isImportedRow(row, decisions));
 
   const emailLines = new Map<string, number[]>();
   for (const row of creatable) {
     const decision = decisions[row.line];
+    const family = familyOfLine(families, row.line);
+    if (
+      decision?.family &&
+      !isValidFamilyTarget(preview, decisions, row.line, decision.family)
+    ) {
+      issues.push({
+        line: row.line,
+        message: "Gewählte Familie ist ungültig.",
+      });
+    }
     if (!decision?.role) {
-      issues.push({ line: row.line, message: "Rolle wählen." });
+      issues.push({ line: row.line, message: roleMessage(family) });
       continue;
     }
     if (decision.role === "child") {
-      validateChild(preview, decisions, row, issues);
+      if (!family) {
+        issues.push({
+          line: row.line,
+          message: "Ein Kind muss einer Familie zugewiesen sein.",
+        });
+      }
       continue;
     }
-    const email = finalEmail(row, decision);
-    validateAdultEmail(preview, row, decision, email, issues);
+    const email = finalEmail(preview, row, family, decisions);
+    validateAdultEmail(preview, { family, decisions }, row, email, issues);
     if (email)
       emailLines.set(email, [...(emailLines.get(email) ?? []), row.line]);
   }
@@ -299,19 +248,7 @@ export function validateImportDecisions(
     }
   }
 
-  for (const group of preview.groups) {
-    if (group.anchor) continue;
-    const keeps = (emailLines.get(group.email) ?? []).some((line) =>
-      group.lines.includes(line),
-    );
-    if (!keeps) {
-      issues.push({
-        line: group.lines[0],
-        message:
-          "Ein:e Erziehungsberechtigte:r der Gruppe muss die gemeinsame Adresse behalten.",
-      });
-    }
-  }
+  for (const family of families) validateFamily(family, decisions, issues);
 
   return issues.sort((a, b) => a.line - b.line);
 }
@@ -328,32 +265,36 @@ export type ImportPlanMember = {
 export type ImportPlan = {
   members: ImportPlanMember[];
   /** Kind-Zeile → Erziehungsberechtigte (Datei-Zeile oder Bestand). */
-  guardianLinks: { childLine: number; guardian: GuardianRef }[];
+  guardianLinks: { childLine: number; guardian: PersonRef }[];
 };
 
 /** Was geschrieben wird — nur nach einer leeren `validateImportDecisions`
- * sinnvoll. */
+ * sinnvoll. Kinder werden mit allen Erziehungsberechtigten ihrer Familie
+ * verknüpft. */
 export function buildImportPlan(
   preview: MemberImportPreview,
   decisions: ImportDecisions,
 ): ImportPlan {
   const plan: ImportPlan = { members: [], guardianLinks: [] };
+  const families = resolveFamilies(preview, decisions);
   for (const row of preview.rows) {
     const decision = decisions[row.line];
-    if (!CREATABLE_STATUSES.has(row.status) || !decision?.role) continue;
+    if (!isImportedRow(row, decisions) || !decision?.role) continue;
+    const family = familyOfLine(families, row.line);
     plan.members.push({
       line: row.line,
       memberNumber: row.memberNumber,
       firstName: row.firstName,
       lastName: row.lastName,
-      email: finalEmail(row, decision),
+      email: finalEmail(preview, row, family, decisions),
       meepleId:
-        decision.role === "adult" && decision.linkMeeple
-          ? (linkableLogin(preview, row)?.meepleId ?? null)
+        decision.role === "adult" &&
+        linksMeeple(preview, family, decisions, row)
+          ? (linkableLogin(preview, family, decisions, row)?.meepleId ?? null)
           : null,
     });
-    if (decision.role === "child") {
-      for (const guardian of resolveGuardians(preview, decisions, row)) {
+    if (decision.role === "child" && family) {
+      for (const guardian of familyGuardians(family, decisions)) {
         plan.guardianLinks.push({ childLine: row.line, guardian });
       }
     }
@@ -365,6 +306,7 @@ export function buildImportPlan(
  * prüft sie vor dem Schreiben gegen den Bestand. */
 export function decisionEmails(decisions: ImportDecisions): string[] {
   return Object.values(decisions)
+    .filter((decision) => !decision.noEmail && !decision.skip)
     .map((decision) => normalizeEmail(decision.email))
     .filter((email): email is string => email !== null);
 }
