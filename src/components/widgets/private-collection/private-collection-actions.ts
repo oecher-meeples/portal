@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireMeeple } from "@/lib/members/meeples";
 import { prisma } from "@/lib/utils/prisma";
+import { setWantToPlayMark } from "@/lib/ludothek/want-to-play-list";
 import {
   offerPrivateGameForEvent,
   withdrawPrivateGameOffer,
@@ -33,19 +34,20 @@ export async function setPrivateCollectionVisibleAction(visible: boolean) {
   return updateOwnShareFlag({ privateCollectionVisible: visible });
 }
 
-/** Zusätzliche Freigaben der eigenen Collection (#632-Folge): „Want to Play"
- * bzw. „For Trade" für andere Meeple zeigen. Whitelist statt freiem Feldnamen
- * — der Client darf nur diese beiden Flags umschalten. */
+/** Weitere Schalter der eigenen Collection: „Want to Play" beim BGG-Import
+ * mit übernehmen (#637) bzw. „For Trade" für andere Meeple zeigen (#632-Folge).
+ * Whitelist statt freiem Feldnamen — der Client darf nur diese beiden Flags
+ * umschalten. */
 export async function setPrivateCollectionShareAction(
-  flag: "shareWantToPlay" | "shareForTrade",
+  flag: "importWantToPlay" | "shareForTrade",
   value: boolean,
 ) {
-  if (flag !== "shareWantToPlay" && flag !== "shareForTrade") {
+  if (flag !== "importWantToPlay" && flag !== "shareForTrade") {
     return { error: "Ungültige Freigabe." };
   }
   return updateOwnShareFlag(
-    flag === "shareWantToPlay"
-      ? { shareWantToPlay: value }
+    flag === "importWantToPlay"
+      ? { importWantToPlay: value }
       : { shareForTrade: value },
   );
 }
@@ -53,7 +55,7 @@ export async function setPrivateCollectionShareAction(
 async function updateOwnShareFlag(
   data:
     | { privateCollectionVisible: boolean }
-    | { shareWantToPlay: boolean }
+    | { importWantToPlay: boolean }
     | { shareForTrade: boolean },
 ) {
   const meeple = await requireMeeple();
@@ -93,8 +95,9 @@ export async function removePrivateCollectionEntryAction(entryId: string) {
 }
 
 /** „For Trade"/„Want to Play" eines eigenen Eintrags setzen oder entfernen.
- * Whitelist statt freiem Feldnamen. Wie das Entfernen gilt die Änderung bis
- * zum nächsten BGG-Import, der die Flags wieder von BGG übernimmt. */
+ * Whitelist statt freiem Feldnamen. „For Trade" hängt am Eintrag und gilt bis
+ * zum nächsten BGG-Import; „Want to Play" liegt in `game_want_to_play` (#637)
+ * und bleibt über Importe hinweg bestehen. */
 export async function setPrivateCollectionEntryFlagAction(
   entryId: string,
   flag: "forTrade" | "wantToPlay",
@@ -104,10 +107,19 @@ export async function setPrivateCollectionEntryFlagAction(
     return { error: "Ungültige Markierung." };
   }
   const meeple = await requireMeeple();
-  await prisma.privateGameCollectionEntry.updateMany({
-    where: { id: entryId, meepleId: meeple.id },
-    data: flag === "forTrade" ? { forTrade: value } : { wantToPlay: value },
-  });
+  if (flag === "forTrade") {
+    await prisma.privateGameCollectionEntry.updateMany({
+      where: { id: entryId, meepleId: meeple.id },
+      data: { forTrade: value },
+    });
+  } else {
+    const entry = await prisma.privateGameCollectionEntry.findFirst({
+      where: { id: entryId, meepleId: meeple.id },
+      select: { boardGameId: true },
+    });
+    if (!entry) return { error: "Eintrag nicht gefunden." };
+    await setWantToPlayMark(meeple.id, entry.boardGameId, value);
+  }
   revalidatePath("/profil");
   revalidatePath("/ludothek");
   return { success: true as const };

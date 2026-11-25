@@ -3,7 +3,7 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { findSharedCollectionMeeples, hasWantToPlayMark } =
+const { findSharedCollectionMeeples } =
   await import("./shared-collection-meeples");
 
 function row(id: string, displayName: string) {
@@ -23,23 +23,34 @@ beforeEach(() => {
   prismaMock.gameWantToPlay.findMany.mockResolvedValue([]);
 });
 
-describe("findSharedCollectionMeeples (#632-Folge)", () => {
-  it("only asks for want-to-play entries of opted-in, non-anonymised meeples", async () => {
-    await findSharedCollectionMeeples("game-1", "wantToPlay");
+describe("findSharedCollectionMeeples (#637)", () => {
+  it("liest Want to Play nur aus game_want_to_play, ohne Freigabe-Filter", async () => {
+    prismaMock.gameWantToPlay.findMany.mockResolvedValue([
+      row("m2", "Zoe"),
+      row("m1", "Anna"),
+    ] as never);
 
-    expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(
+    const result = await findSharedCollectionMeeples("game-1", "wantToPlay");
+
+    expect(prismaMock.gameWantToPlay.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          boardGameId: "game-1",
-          wantToPlay: true,
-          meeple: { shareWantToPlay: true, anonymizedAt: null },
-        },
+        where: { boardGameId: "game-1", meeple: { anonymizedAt: null } },
       }),
     );
+    expect(
+      prismaMock.privateGameCollectionEntry.findMany,
+    ).not.toHaveBeenCalled();
+    expect(result.map((m) => m.name)).toEqual(["Anna", "Zoe"]);
+    expect(result[0]).toMatchObject({ meepleId: "m1" });
   });
 
-  it("asks for the for-trade flag and opt-in when requested, without manual marks", async () => {
-    await findSharedCollectionMeeples("game-1", "forTrade");
+  it("fragt For Trade mit Freigabe an", async () => {
+    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([
+      row("m2", "Zoe"),
+      row("m1", "Anna"),
+    ] as never);
+
+    const result = await findSharedCollectionMeeples("game-1", "forTrade");
 
     expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -51,48 +62,24 @@ describe("findSharedCollectionMeeples (#632-Folge)", () => {
       }),
     );
     expect(prismaMock.gameWantToPlay.findMany).not.toHaveBeenCalled();
-  });
-
-  it("maps and sorts by name", async () => {
-    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([
-      row("m2", "Zoe"),
-      row("m1", "Anna"),
-    ] as never);
-
-    const result = await findSharedCollectionMeeples("game-1", "forTrade");
-
     expect(result.map((m) => m.name)).toEqual(["Anna", "Zoe"]);
-    expect(result[0]).toMatchObject({ meepleId: "m1" });
-  });
-
-  it("adds manual want-to-play marks and lists a meeple only once", async () => {
-    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([
-      row("m1", "Anna"),
-    ] as never);
-    prismaMock.gameWantToPlay.findMany.mockResolvedValue([
-      row("m1", "Anna"),
-      row("m3", "Ben"),
-    ] as never);
-
-    const result = await findSharedCollectionMeeples("game-1", "wantToPlay");
-
-    expect(result.map((m) => m.name)).toEqual(["Anna", "Ben"]);
-    expect(prismaMock.gameWantToPlay.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { boardGameId: "game-1", meeple: { anonymizedAt: null } },
-      }),
-    );
   });
 });
 
-describe("hasWantToPlayMark", () => {
-  it("is true when a mark exists", async () => {
-    prismaMock.gameWantToPlay.count.mockResolvedValue(1);
-    expect(await hasWantToPlayMark("m1", "game-1")).toBe(true);
-  });
+describe("findWantToPlayCatalogTitle (#637)", () => {
+  it("sucht nur Titel mit Want-to-Play-Eintrag eines nicht anonymisierten Meeples", async () => {
+    const { findWantToPlayCatalogTitle } =
+      await import("./shared-collection-meeples");
+    prismaMock.boardGame.findFirst.mockResolvedValue(null);
 
-  it("is false without a mark", async () => {
-    prismaMock.gameWantToPlay.count.mockResolvedValue(0);
-    expect(await hasWantToPlayMark("m1", "game-1")).toBe(false);
+    expect(await findWantToPlayCatalogTitle("wunschspiel")).toBeNull();
+    expect(prismaMock.boardGame.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          slug: "wunschspiel",
+          wantToPlayMarks: { some: { meeple: { anonymizedAt: null } } },
+        },
+      }),
+    );
   });
 });

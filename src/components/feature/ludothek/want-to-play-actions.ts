@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireMeeple } from "@/lib/members/meeples";
-import { prisma } from "@/lib/utils/prisma";
+import { setWantToPlayMark } from "@/lib/ludothek/want-to-play-list";
 
 /** „Ich will das auch spielen" auf der Spieledetailseite (#632-Folge): setzt
  * bzw. entfernt die manuelle Markierung der eigenen Session — nie für eine
@@ -12,19 +12,7 @@ export async function setWantToPlayMarkAction(
   marked: boolean,
 ) {
   const meeple = await requireMeeple();
-  if (marked) {
-    await prisma.gameWantToPlay.upsert({
-      where: {
-        meepleId_boardGameId: { meepleId: meeple.id, boardGameId },
-      },
-      create: { meepleId: meeple.id, boardGameId },
-      update: {},
-    });
-  } else {
-    await prisma.gameWantToPlay.deleteMany({
-      where: { meepleId: meeple.id, boardGameId },
-    });
-  }
+  await setWantToPlayMark(meeple.id, boardGameId, marked);
   revalidatePath("/ludothek", "layout");
   return { success: true as const };
 }

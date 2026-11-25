@@ -3,6 +3,7 @@ import { prisma } from "@/lib/utils/prisma";
 import {
   BggCollectionUnavailableError,
   fetchBggCollection,
+  fetchBggWantToPlay,
 } from "@/lib/bgg/collection";
 import {
   BGG_REQUEST_THROTTLE_MS,
@@ -16,26 +17,10 @@ import {
 } from "@/lib/ludothek/board-game-versions";
 import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
-import { toBoardGameTitleData } from "@/lib/ludothek/board-game-title-lookup";
-import { replaceBggContributors } from "@/lib/ludothek/taxonomy/contributors";
-import { replaceBggTags } from "@/lib/ludothek/taxonomy/tags";
+import { isCatalogStub } from "@/lib/ludothek/board-game-stub";
 import { translateBggGameData } from "@/lib/ludothek/board-games-bgg-import";
 import { sleep } from "@/lib/utils/sleep";
-import type { BoardGame } from "@prisma/client";
 import type { BggCollectionEntry } from "@/lib/bgg/collection";
-
-/** Ein früherer Import ist am `fetchBggGame()`-Aufruf gescheitert und hat nur
- * Titel + `bggId` hinterlassen (Fallback unten) — an den fehlenden
- * Kernfeldern zuverlässig erkennbar, unabhängig davon, wie „leer" ein
- * wirklich spärlicher BGG-Eintrag sonst sein könnte. */
-function isIncompleteStub(boardGame: BoardGame) {
-  return (
-    !boardGame.imageUrl &&
-    !boardGame.description &&
-    boardGame.minPlayers === null &&
-    boardGame.maxPlayers === null
-  );
-}
 
 /**
  * Ein wirklich neuer Titel (kein bereits katalogisierter `bggId`) bekommt
@@ -52,7 +37,7 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
   const existing = await prisma.boardGame.findUnique({
     where: { bggId: entry.bggId },
   });
-  if (existing && !isIncompleteStub(existing)) return existing;
+  if (existing && !isCatalogStub(existing)) return existing;
 
   try {
     const rawData = await fetchBggGame(entry.bggId);
@@ -60,17 +45,6 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
     const input = bggDataToTitleInput(entry.bggId, data);
     await sleep(BGG_REQUEST_THROTTLE_MS);
 
-    if (existing) {
-      return await prisma.$transaction(async (tx) => {
-        const updated = await tx.boardGame.update({
-          where: { id: existing.id },
-          data: { title: input.title, ...toBoardGameTitleData(input) },
-        });
-        await replaceBggContributors(tx, existing.id, input.contributors ?? []);
-        await replaceBggTags(tx, existing.id, input.tags);
-        return updated;
-      });
-    }
     return await findOrCreateBoardGameTitle(input);
   } catch (error) {
     if (existing) return existing;
@@ -100,62 +74,128 @@ async function resolvePrivateVersionId(
   return version.id;
 }
 
+export type WantToPlayImportResult = { count: number } | { error: string };
+
+const BGG_UNAVAILABLE_MESSAGE =
+  "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.";
+
+/** BGG-Fehler beim Abruf der Collection in eine Meldung für den Job
+ * übersetzen; unbekannte Fehler laufen weiter nach oben. */
+function collectionErrorMessage(error: unknown): string {
+  if (error instanceof BggCollectionUnavailableError) return error.message;
+  if (error instanceof BggApiError) return BGG_UNAVAILABLE_MESSAGE;
+  throw error;
+}
+
 /**
- * Kern des privaten BGG-Collection-Imports (#255, #632) — läuft im
- * Queue-Worker (`private-collection-import-queue.ts`), nie direkt in einer
- * Server Action. Schreibt nur `PrivateGameCollectionEntry`, nie `GameCopy`.
- * Jeder Titel wird per BGG-ID gegen den Katalog abgeglichen
- * (`resolvePrivateTitle()`); ein neuer Titel bekommt volle BGG-Metadaten, die
- * gewählte Version samt Verlagen landet ebenfalls im Katalog. Bestehende
- * Einträge werden vor dem Import gelöscht statt gemergt — Titel, die nicht
- * mehr `owned=true` sind, sollen verschwinden. Cooldown und Berechtigung
- * prüfen die einreihenden Actions (`private-collection-sync.ts`).
+ * Want-to-Play-Phase (#637): Die Titel der BGG-Liste landen als Katalog-Stub
+ * (Titel, Bild, Jahr, Bewertung) in `game_want_to_play` — ohne Einzelabruf
+ * pro Titel. Nur hinzufügend: nichts wird entfernt, auch nicht bei
+ * ausgeschaltetem Schalter.
  */
-export async function runBggCollectionImport(meeple: {
-  id: string;
-  bggUsername: string;
-}): Promise<{ error: string } | { success: true; imported: number }> {
+async function runWantToPlayImport(
+  meepleId: string,
+  bggUsername: string,
+): Promise<WantToPlayImportResult> {
   let entries;
   try {
-    entries = await fetchBggCollection(meeple.bggUsername);
+    entries = await fetchBggWantToPlay(bggUsername);
   } catch (error) {
-    if (error instanceof BggCollectionUnavailableError) {
-      return { error: error.message };
-    }
-    if (error instanceof BggApiError) {
-      return {
-        error:
-          "BoardGameGeek ist aktuell nicht erreichbar. Bitte später erneut versuchen.",
-      };
-    }
-    throw error;
+    return { error: collectionErrorMessage(error) };
+  }
+
+  const boardGameIds: string[] = [];
+  for (const entry of entries) {
+    const title = await findOrCreateBoardGameTitle({
+      title: entry.title,
+      bggId: entry.bggId,
+      imageUrl: entry.imageUrl,
+      yearPublished: entry.yearPublished,
+      averageRating: entry.averageRating,
+    });
+    boardGameIds.push(title.id);
+  }
+  await prisma.gameWantToPlay.createMany({
+    data: boardGameIds.map((boardGameId) => ({ meepleId, boardGameId })),
+    skipDuplicates: true,
+  });
+  return { count: entries.length };
+}
+
+/**
+ * Besitz-Phase des privaten BGG-Collection-Imports (#255, #632). Schreibt nur
+ * `PrivateGameCollectionEntry`, nie `GameCopy`. Jeder Titel wird per BGG-ID
+ * gegen den Katalog abgeglichen (`resolvePrivateTitle()`); ein neuer Titel
+ * bekommt volle BGG-Metadaten, die gewählte Version samt Verlagen landet
+ * ebenfalls im Katalog. Bestehende Einträge werden vor dem Import gelöscht
+ * statt gemergt — Titel, die nicht mehr `owned=true` sind, sollen
+ * verschwinden.
+ */
+async function runOwnedImport(
+  meepleId: string,
+  bggUsername: string,
+): Promise<{ error: string } | { imported: number }> {
+  let entries;
+  try {
+    entries = await fetchBggCollection(bggUsername);
+  } catch (error) {
+    return { error: collectionErrorMessage(error) };
   }
 
   const syncedAt = new Date();
-  await prisma.privateGameCollectionEntry.deleteMany({
-    where: { meepleId: meeple.id },
-  });
+  await prisma.privateGameCollectionEntry.deleteMany({ where: { meepleId } });
   for (const entry of entries) {
     const title = await resolvePrivateTitle(entry);
     const versionId = await resolvePrivateVersionId(title.id, entry);
     await prisma.privateGameCollectionEntry.create({
       data: {
-        meepleId: meeple.id,
+        meepleId,
         boardGameId: title.id,
         versionId,
         syncedAt,
         rating: entry.rating,
         forTrade: entry.forTrade,
-        wantToPlay: entry.wantToPlay,
       },
     });
   }
   await prisma.meeple.update({
-    where: { id: meeple.id },
+    where: { id: meepleId },
     data: { privateCollectionSyncedAt: syncedAt },
   });
+  return { imported: entries.length };
+}
+
+/**
+ * Kern des privaten BGG-Imports — läuft im Queue-Worker
+ * (`private-collection-import-queue.ts`), nie direkt in einer Server Action.
+ * Zwei Phasen: Besitz (überschreibend), danach optional Want to Play
+ * (`importWantToPlay`, nur hinzufügend). Scheitert nur die zweite Phase,
+ * bleibt der Besitz-Import gültig und der Fehler steht in `wantToPlay`.
+ * Cooldown und Berechtigung prüfen die einreihenden Actions
+ * (`private-collection-sync.ts`).
+ */
+export async function runBggCollectionImport(meeple: {
+  id: string;
+  bggUsername: string;
+  importWantToPlay?: boolean;
+}): Promise<
+  | { error: string }
+  | { success: true; imported: number; wantToPlay?: WantToPlayImportResult }
+> {
+  const owned = await runOwnedImport(meeple.id, meeple.bggUsername);
+  if ("error" in owned) return { error: owned.error };
+
+  let wantToPlay: WantToPlayImportResult | undefined;
+  if (meeple.importWantToPlay) {
+    try {
+      wantToPlay = await runWantToPlayImport(meeple.id, meeple.bggUsername);
+    } catch (error) {
+      console.error("[want-to-play-import]", error);
+      wantToPlay = { error: "Want-to-Play-Import fehlgeschlagen." };
+    }
+  }
 
   revalidatePath("/profil", "layout");
   revalidatePath("/ludothek");
-  return { success: true, imported: entries.length };
+  return { success: true, imported: owned.imported, wantToPlay };
 }

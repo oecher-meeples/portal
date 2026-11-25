@@ -21,6 +21,7 @@ import { listOwnPrivateLoanOffers } from "@/lib/ludothek/private-event-loans";
 import { findUpcomingEventsVisibleToMembers } from "@/lib/events/upcoming";
 import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import { PrivateSpieleSection } from "@/components/feature/mitglied-profil/private-spiele-section";
+import { WantToPlaySection } from "@/components/feature/mitglied-profil/want-to-play-section";
 import { AdminBggImportCard } from "@/components/feature/mitglied-profil/admin-bgg-import-card";
 import { findMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
@@ -68,7 +69,7 @@ export async function MitgliedProfilView({
           displayName: string;
           neonAuthUserId: string | null;
           privateCollectionVisible: boolean;
-          shareWantToPlay: boolean;
+          importWantToPlay: boolean;
           shareForTrade: boolean;
           privateCollectionSyncedAt: Date | null;
         })
@@ -356,7 +357,7 @@ export async function MitgliedProfilView({
             cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
             canForceImport={ownPrivateCollection.canForceImport}
             visibleToOthers={member.meeple.privateCollectionVisible}
-            shareWantToPlay={member.meeple.shareWantToPlay}
+            importWantToPlay={member.meeple.importWantToPlay}
             shareForTrade={member.meeple.shareForTrade}
             nextEvent={ownPrivateCollection.nextEvent}
             ownOffers={ownPrivateCollection.ownOffers}
@@ -378,6 +379,9 @@ export async function MitgliedProfilView({
               <PrivateSpieleSection meepleId={member.meeple.id} />
             </div>
           )}
+        {member.meeple && (
+          <WantToPlaySection meepleId={member.meeple.id} isOwner={isSelf} />
+        )}
         {!isSelf && viewer.canManageMembers && member.meeple?.bggUsername && (
           <AdminBggImportCard
             meepleId={member.meeple.id}

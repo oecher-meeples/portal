@@ -79,6 +79,15 @@ describe("buildPrivateLudothekGames (#255-Folge)", () => {
     });
   });
 
+  it("geht von Privatbesitz-Einträgen aus, ein Want-to-Play-Stub erscheint nie (#637)", async () => {
+    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.findMany.mockClear();
+
+    expect(await buildPrivateLudothekGames()).toEqual([]);
+    expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalled();
+    expect(prismaMock.boardGame.findMany).not.toHaveBeenCalled();
+  });
+
   it("only queries entries whose meeple has released visibility", async () => {
     prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([]);
 
@@ -117,7 +126,6 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
         id: "entry-1",
         rating: null,
         forTrade: false,
-        wantToPlay: false,
         boardGame: { id: "bg-1", slug: "ark-nova", title: "Ark Nova" },
         version: {
           name: "German edition",
@@ -130,6 +138,8 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
         },
       },
     ] as never);
+
+    prismaMock.gameWantToPlay.findMany.mockResolvedValue([] as never);
 
     const [entry] = await getOwnPrivateCollection("meeple-1");
 
@@ -147,7 +157,6 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
         id: "entry-1",
         rating: 8.5,
         forTrade: true,
-        wantToPlay: false,
         boardGame: {
           id: "bg-1",
           slug: "ark-nova",
@@ -158,14 +167,22 @@ describe("getOwnPrivateCollection (#255-Folge, #310)", () => {
       },
     ] as never);
 
+    prismaMock.gameWantToPlay.findMany.mockResolvedValue([
+      { boardGameId: "bg-1" },
+    ] as never);
+
     const result = await getOwnPrivateCollection("meeple-1");
 
+    expect(prismaMock.gameWantToPlay.findMany).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
+      select: { boardGameId: true },
+    });
     expect(result).toEqual([
       {
         id: "entry-1",
         rating: 8.5,
         forTrade: true,
-        wantToPlay: false,
+        wantToPlay: true,
         boardGame: {
           id: "bg-1",
           slug: "ark-nova",

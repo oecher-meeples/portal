@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   BggCollectionUnavailableError,
   fetchBggCollection,
+  fetchBggWantToPlay,
 } from "./collection";
+
+vi.mock("@/lib/utils/sleep", () => ({ sleep: () => Promise.resolve() }));
 
 function loadFixture(name: string): string {
   return fs.readFileSync(
@@ -57,7 +60,6 @@ describe("fetchBggCollection (#255)", () => {
         title: "Ark Nova",
         rating: 8.5,
         forTrade: true,
-        wantToPlay: false,
         imageUrl: "https://cf.geekdo-images.com/ark-nova.jpg",
         version: null,
       },
@@ -66,7 +68,6 @@ describe("fetchBggCollection (#255)", () => {
         title: "Catan",
         rating: null,
         forTrade: false,
-        wantToPlay: true,
         imageUrl: null,
         version: null,
       },
@@ -169,5 +170,122 @@ describe("fetchBggCollection (#255)", () => {
     await expect(fetchBggCollection("does-not-exist")).rejects.toThrow(
       BggCollectionUnavailableError,
     );
+  });
+});
+
+describe("fetchBggWantToPlay (#637)", () => {
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("fragt ohne own-Filter ab und liefert Titel, Bild, Jahr und Bewertung", async () => {
+    const fetchMock = mockFetchOnce(
+      true,
+      200,
+      `<?xml version="1.0" encoding="utf-8"?>
+      <items totalitems="2">
+        <item objecttype="thing" objectid="99" subtype="boardgame" collid="1">
+          <name sortindex="1">Wunschspiel</name>
+          <yearpublished>2020</yearpublished>
+          <image>https://img/99.jpg</image>
+          <status own="0" fortrade="0" wanttoplay="1" />
+          <stats><rating value="N/A"><average value="7.4" /></rating></stats>
+        </item>
+        <item objecttype="thing" objectid="5" subtype="boardgame" collid="2">
+          <name sortindex="1">Nur Wunschliste</name>
+          <status own="0" fortrade="0" wanttoplay="0" wishlist="1" />
+        </item>
+      </items>`,
+    );
+
+    const result = await fetchBggWantToPlay(" some-user ");
+
+    expect(result).toEqual([
+      {
+        bggId: 99,
+        title: "Wunschspiel",
+        imageUrl: "https://img/99.jpg",
+        yearPublished: 2020,
+        averageRating: 7.4,
+      },
+    ]);
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("username=some-user");
+    expect(url).toContain("wanttoplay=1");
+    expect(url).not.toContain("own=1");
+  });
+
+  it("liefert für einen leeren Benutzernamen ohne Anfrage eine leere Liste", async () => {
+    const fetchMock = mockFetchOnce(true, 200, "");
+    expect(await fetchBggWantToPlay("  ")).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("wirft BggCollectionUnavailableError bei unbekanntem Benutzer", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      '<?xml version="1.0"?><errors><error><message>Invalid username</message></error></errors>',
+    );
+    await expect(fetchBggWantToPlay("x")).rejects.toThrow(/nicht abrufbar/);
+  });
+});
+
+describe("BGG stellt die Collection noch zusammen (202)", () => {
+  const QUEUED =
+    '<?xml version="1.0" encoding="utf-8"?><message>Your request for this collection has been accepted and will be processed.</message>';
+  const READY = `<?xml version="1.0" encoding="utf-8"?>
+    <items totalitems="1">
+      <item objecttype="thing" objectid="99" subtype="boardgame" collid="1">
+        <name sortindex="1">Wunschspiel</name>
+        <status own="0" wanttoplay="1" />
+      </item>
+    </items>`;
+
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("wartet und fragt erneut, statt eine leere Liste zu liefern", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        text: async () => QUEUED,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => READY,
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchBggWantToPlay("some-user");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.map((e) => e.bggId)).toEqual([99]);
+  });
+
+  it("meldet nach mehreren Versuchen, dass BGG noch arbeitet", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 202, text: async () => QUEUED });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchBggWantToPlay("some-user")).rejects.toThrow(
+      /nicht abrufbar/,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 });

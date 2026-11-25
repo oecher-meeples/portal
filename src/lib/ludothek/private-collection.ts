@@ -49,7 +49,6 @@ export async function getOwnPrivateCollection(
       id: true,
       rating: true,
       forTrade: true,
-      wantToPlay: true,
       boardGame: {
         select: { id: true, slug: true, title: true, imageUrl: true },
       },
@@ -62,7 +61,17 @@ export async function getOwnPrivateCollection(
       },
     },
   });
-  return entries.map(({ version, ...entry }) => {
+  // „Want to Play" liegt seit #637 in `game_want_to_play`, nicht am Eintrag.
+  const wanted = new Set(
+    (
+      await prisma.gameWantToPlay.findMany({
+        where: { meepleId },
+        select: { boardGameId: true },
+      })
+    ).map((mark) => mark.boardGameId),
+  );
+  return entries.map(({ version, ...rest }) => {
+    const entry = { ...rest, wantToPlay: wanted.has(rest.boardGame.id) };
     if (!version) return { ...entry, version: null };
     const { publisher, editionLanguages } = versionDisplay(version);
     return {

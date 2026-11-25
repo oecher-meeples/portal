@@ -55,12 +55,14 @@ const FIND_MANY_MOCKS = [
   "explainerGame",
   "fleaMarketItem",
   "gameCopyCheck",
+  "gameWantToPlay",
   "gameHolding",
   "helperAvailability",
   "invite",
   "lfgParticipant",
   "lfgPost",
   "marketListing",
+  "privateCollectionImportJob",
   "privateGameCollectionEntry",
   "shiftBooking",
   "sparePartListing",
@@ -160,6 +162,24 @@ describe("collectMeeplePersonalData", () => {
         },
       }),
     );
+  });
+
+  it("exportiert Want-to-Play-Liste und Import-Jobs (#637)", async () => {
+    prismaMock.gameWantToPlay.findMany.mockResolvedValue([
+      { id: "w1", boardGameId: "g1" },
+    ] as never);
+    prismaMock.privateCollectionImportJob.findMany.mockResolvedValue([
+      { id: "j1", wantToPlayCount: 4 },
+    ] as never);
+
+    const result = await collectMeeplePersonalData("meeple-1");
+
+    expect(result!.daten.GameWantToPlay).toEqual([
+      { id: "w1", boardGameId: "g1" },
+    ]);
+    expect(result!.daten.PrivateCollectionImportJob).toEqual([
+      { id: "j1", wantToPlayCount: 4 },
+    ]);
   });
 
   it("includes the copy checks the meeple carried out (#599)", async () => {

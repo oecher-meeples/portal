@@ -1,5 +1,6 @@
 import { requireAdminPermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { listInventoryTitleOptions } from "@/lib/ludothek/inventory-titles";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
   getLfgStatus,
@@ -31,10 +32,7 @@ export default async function LfgPage({
         participants: { select: { meepleId: true } },
       },
     }),
-    prisma.boardGame.findMany({
-      select: { id: true, title: true },
-      orderBy: { title: "asc" },
-    }),
+    listInventoryTitleOptions(),
   ]);
 
   const now = new Date();

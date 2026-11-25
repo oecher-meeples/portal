@@ -16,14 +16,16 @@ import {
 export function CountAccordionCard({
   count,
   label,
+  className,
   children,
 }: {
   count: number;
   label: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <Card>
+    <Card className={className}>
       <Accordion>
         <AccordionItem value="content" className="border-b-0">
           <AccordionTrigger className="font-serif text-lg">

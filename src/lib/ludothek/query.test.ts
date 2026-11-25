@@ -10,6 +10,7 @@ vi.mock("@/lib/content/lfg", () => ({
   getBoardGameIdsWithOpenLfgPosts: vi.fn().mockResolvedValue(new Set()),
 }));
 
+import { IN_INVENTORY_WHERE } from "./board-game-stub";
 import {
   buildLudothekGames,
   countBoardGameTitles,
@@ -172,6 +173,19 @@ describe("buildLudothekGames", () => {
   });
 });
 
+describe("buildLudothekGames – Stubs (#637)", () => {
+  it("geht von Exemplaren aus und fragt nie Titel direkt ab, ein Want-to-Play-Stub erscheint nie", async () => {
+    prismaMock.gameCopy.findMany.mockResolvedValue([]);
+    prismaMock.storageUnit.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.findMany.mockClear();
+
+    await buildLudothekGames();
+
+    expect(prismaMock.gameCopy.findMany).toHaveBeenCalled();
+    expect(prismaMock.boardGame.findMany).not.toHaveBeenCalled();
+  });
+});
+
 describe("countBoardGameTitles", () => {
   it("counts only base-game titles", async () => {
     prismaMock.boardGame.count.mockResolvedValue(642);
@@ -180,7 +194,7 @@ describe("countBoardGameTitles", () => {
 
     expect(count).toBe(642);
     expect(prismaMock.boardGame.count).toHaveBeenCalledWith({
-      where: { kind: BoardGameKind.BOARDGAME },
+      where: { kind: BoardGameKind.BOARDGAME, ...IN_INVENTORY_WHERE },
     });
   });
 });
