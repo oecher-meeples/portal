@@ -3,66 +3,32 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("@/lib/utils/sleep", () => ({ sleep: () => Promise.resolve() }));
+
+const afterMock = vi.fn();
+vi.mock("next/server", () => ({
+  after: (callback: () => unknown) => afterMock(callback),
+}));
 
 const getCurrentMeepleMock = vi.fn();
 vi.mock("@/lib/members/meeples", () => ({
   getCurrentMeeple: () => getCurrentMeepleMock(),
 }));
 
-const fetchBggCollectionMock = vi.fn();
-vi.mock("@/lib/bgg/collection", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/bgg/collection")>(
-    "@/lib/bgg/collection",
-  );
-  return {
-    ...actual,
-    fetchBggCollection: (...args: unknown[]) => fetchBggCollectionMock(...args),
-  };
-});
-
-const fetchBggGameMock = vi.fn();
-vi.mock("@/lib/bgg/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/lib/bgg/client")>(
-      "@/lib/bgg/client",
-    );
-  return {
-    ...actual,
-    fetchBggGame: (...args: unknown[]) => fetchBggGameMock(...args),
-  };
-});
-
-const findOrCreateBoardGameTitleMock = vi.fn();
-vi.mock("@/lib/ludothek/board-games", () => ({
-  findOrCreateBoardGameTitle: (...args: unknown[]) =>
-    findOrCreateBoardGameTitleMock(...args),
+const actionPermissionDeniedMock = vi.fn();
+vi.mock("@/lib/auth/action-guards", () => ({
+  actionPermissionDenied: (...args: unknown[]) =>
+    actionPermissionDeniedMock(...args),
 }));
 
-vi.mock("@/lib/ludothek/board-game-versions", () => ({
-  bggDataToTitleInput: (bggId: number, data: unknown) => ({
-    bggId,
-    ...(data as object),
-  }),
-  toBoardGameTitleData: (input: unknown) => input,
-  versionInputFromBgg: (version: unknown) => ({ fromBgg: version }),
+const enqueueMock = vi.fn();
+const processQueueMock = vi.fn();
+vi.mock("@/lib/ludothek/private-collection-import-queue", () => ({
+  enqueuePrivateCollectionImport: (...args: unknown[]) => enqueueMock(...args),
+  processPrivateCollectionImportQueue: () => processQueueMock(),
 }));
 
-const upsertBoardGameVersionMock = vi.fn();
-vi.mock("@/lib/ludothek/taxonomy/versions", () => ({
-  upsertBoardGameVersion: (...args: unknown[]) =>
-    upsertBoardGameVersionMock(...args),
-}));
-
-const translateBggGameDataMock = vi.fn();
-vi.mock("@/lib/ludothek/board-games-bgg-import", () => ({
-  translateBggGameData: (...args: unknown[]) =>
-    translateBggGameDataMock(...args),
-}));
-
-const { syncPrivateBggCollection } = await import("./private-collection-sync");
-const { BggCollectionUnavailableError } = await import("@/lib/bgg/collection");
-const { BggNotFoundError } = await import("@/lib/bgg/client");
+const { syncPrivateBggCollection, adminSyncPrivateBggCollection } =
+  await import("./private-collection-sync");
 
 const MEEPLE = {
   id: "meeple-1",
@@ -70,98 +36,95 @@ const MEEPLE = {
   neonAuthUserId: "user-1",
   privateCollectionSyncedAt: null,
 };
+const TEN_MINUTES_AGO = new Date(Date.now() - 10 * 60 * 1000);
+const QUEUED = { success: true, queued: true };
 
 beforeEach(() => {
-  prismaMock.$transaction.mockImplementation(((
-    fn: (tx: typeof prismaMock) => unknown,
-  ) => fn(prismaMock)) as never);
   vi.clearAllMocks();
   getCurrentMeepleMock.mockResolvedValue(MEEPLE);
+  actionPermissionDeniedMock.mockResolvedValue(null);
+  enqueueMock.mockResolvedValue({ created: true, jobId: "job-1" });
   prismaMock.role.count.mockResolvedValue(0);
-  // Default: title not yet in the catalog — most tests exercise the "new
-  // title" path unless they explicitly configure an existing one.
-  prismaMock.boardGame.findUnique.mockResolvedValue(null);
-  // Default: pass the raw fetched data through untranslated — individual
-  // tests only care that it's forwarded, not about the translation itself.
-  translateBggGameDataMock.mockImplementation((data: unknown) =>
-    Promise.resolve({ data, descriptionTranslationFailed: false }),
-  );
 });
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("syncPrivateBggCollection (#255)", () => {
+describe("syncPrivateBggCollection (#255, #632)", () => {
   it("rejects when not logged in", async () => {
     getCurrentMeepleMock.mockResolvedValue(null);
 
-    const result = await syncPrivateBggCollection();
-
-    expect(result).toEqual({ error: "Keine Berechtigung." });
-    expect(fetchBggCollectionMock).not.toHaveBeenCalled();
+    expect(await syncPrivateBggCollection()).toEqual({
+      error: "Keine Berechtigung.",
+    });
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
   it("rejects when no bggUsername is set", async () => {
     getCurrentMeepleMock.mockResolvedValue({ ...MEEPLE, bggUsername: null });
 
-    const result = await syncPrivateBggCollection();
-
-    expect(result).toEqual({
+    expect(await syncPrivateBggCollection()).toEqual({
       error: "Bitte zuerst einen BGG-Benutzernamen im Profil hinterlegen.",
     });
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it("queues the import and starts the worker after the response", async () => {
+    const result = await syncPrivateBggCollection();
+
+    expect(result).toEqual(QUEUED);
+    expect(enqueueMock).toHaveBeenCalledWith("meeple-1");
+    expect(afterMock).toHaveBeenCalledTimes(1);
+
+    await afterMock.mock.calls[0][0]();
+    expect(processQueueMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects within the 1h cooldown window", async () => {
     getCurrentMeepleMock.mockResolvedValue({
       ...MEEPLE,
-      privateCollectionSyncedAt: new Date(Date.now() - 10 * 60 * 1000),
+      privateCollectionSyncedAt: TEN_MINUTES_AGO,
     });
 
     const result = await syncPrivateBggCollection();
 
-    expect(result.error).toContain("Cooldown");
-    expect(fetchBggCollectionMock).not.toHaveBeenCalled();
+    expect("error" in result && result.error).toContain("Cooldown");
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
   it("exempts sysadmin from the cooldown", async () => {
     getCurrentMeepleMock.mockResolvedValue({
       ...MEEPLE,
-      privateCollectionSyncedAt: new Date(Date.now() - 10 * 60 * 1000),
+      privateCollectionSyncedAt: TEN_MINUTES_AGO,
     });
     prismaMock.role.count.mockResolvedValue(1);
-    fetchBggCollectionMock.mockResolvedValue([]);
 
-    const result = await syncPrivateBggCollection();
-
-    expect(result).toEqual({ success: true, imported: 0 });
+    expect(await syncPrivateBggCollection()).toEqual(QUEUED);
   });
 
   it("ignores ignoreCooldown=true for someone not allowed to force it (production, no sysadmin)", async () => {
     vi.stubEnv("NODE_ENV", "production");
     getCurrentMeepleMock.mockResolvedValue({
       ...MEEPLE,
-      privateCollectionSyncedAt: new Date(Date.now() - 10 * 60 * 1000),
+      privateCollectionSyncedAt: TEN_MINUTES_AGO,
     });
 
     const result = await syncPrivateBggCollection(true);
 
-    expect(result.error).toContain("Cooldown");
-    expect(fetchBggCollectionMock).not.toHaveBeenCalled();
+    expect("error" in result && result.error).toContain("Cooldown");
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
   it("honors ignoreCooldown=true for a sysadmin in production", async () => {
     vi.stubEnv("NODE_ENV", "production");
     getCurrentMeepleMock.mockResolvedValue({
       ...MEEPLE,
-      privateCollectionSyncedAt: new Date(Date.now() - 10 * 60 * 1000),
+      privateCollectionSyncedAt: TEN_MINUTES_AGO,
     });
     prismaMock.role.count.mockResolvedValue(1);
-    fetchBggCollectionMock.mockResolvedValue([]);
 
-    const result = await syncPrivateBggCollection(true);
-
-    expect(result).toEqual({ success: true, imported: 0 });
+    expect(await syncPrivateBggCollection(true)).toEqual(QUEUED);
   });
 
   it("allows importing again once the cooldown has passed", async () => {
@@ -169,257 +132,42 @@ describe("syncPrivateBggCollection (#255)", () => {
       ...MEEPLE,
       privateCollectionSyncedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     });
-    fetchBggCollectionMock.mockResolvedValue([]);
 
-    const result = await syncPrivateBggCollection();
-
-    expect(result).toEqual({ success: true, imported: 0 });
+    expect(await syncPrivateBggCollection()).toEqual(QUEUED);
   });
+});
 
-  it("surfaces a friendly error when the collection is unavailable", async () => {
-    fetchBggCollectionMock.mockRejectedValue(
-      new BggCollectionUnavailableError("lea_bgg"),
-    );
-
-    const result = await syncPrivateBggCollection();
-
-    expect(result).toEqual({
-      error: expect.stringContaining("lea_bgg"),
+describe("adminSyncPrivateBggCollection (#632)", () => {
+  it("rejects without members:manage", async () => {
+    actionPermissionDeniedMock.mockResolvedValue({
+      error: "Keine Berechtigung.",
     });
+
+    expect(await adminSyncPrivateBggCollection("meeple-2")).toEqual({
+      error: "Keine Berechtigung.",
+    });
+    expect(actionPermissionDeniedMock).toHaveBeenCalledWith("members:manage");
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("reuses an already-catalogued title without an extra BGG fetch", async () => {
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 13,
-        title: "Catan",
-        rating: 8,
-        forTrade: true,
-        wantToPlay: false,
-      },
-    ]);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "game-1",
+  it("rejects when the target has no bggUsername", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      bggUsername: null,
     } as never);
 
-    const result = await syncPrivateBggCollection();
-
-    expect(fetchBggGameMock).not.toHaveBeenCalled();
-    expect(findOrCreateBoardGameTitleMock).not.toHaveBeenCalled();
-    expect(
-      prismaMock.privateGameCollectionEntry.deleteMany,
-    ).toHaveBeenCalledWith({ where: { meepleId: "meeple-1" } });
-    expect(prismaMock.privateGameCollectionEntry.create).toHaveBeenCalledWith({
-      data: {
-        meepleId: "meeple-1",
-        boardGameId: "game-1",
-        versionId: null,
-        syncedAt: expect.any(Date),
-        rating: 8,
-        forTrade: true,
-        wantToPlay: false,
-      },
+    expect(await adminSyncPrivateBggCollection("meeple-2")).toEqual({
+      error: "Für dieses Mitglied ist kein BGG-Benutzername hinterlegt.",
     });
-    expect(result).toEqual({ success: true, imported: 1 });
+    expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("fetches full BGG metadata for a genuinely new title, same as a club import", async () => {
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 316554,
-        title: "Ark Nova",
-        rating: null,
-        forTrade: false,
-        wantToPlay: true,
-      },
-    ]);
-    fetchBggGameMock.mockResolvedValue({
-      title: "Ark Nova",
-      minPlayers: 1,
-      maxPlayers: 4,
-      mechanics: ["Engine Building"],
-    });
-    findOrCreateBoardGameTitleMock.mockResolvedValue({ id: "game-2" });
-
-    const result = await syncPrivateBggCollection();
-
-    expect(fetchBggGameMock).toHaveBeenCalledWith(316554);
-    expect(findOrCreateBoardGameTitleMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        bggId: 316554,
-        title: "Ark Nova",
-        mechanics: ["Engine Building"],
-      }),
-    );
-    expect(prismaMock.privateGameCollectionEntry.create).toHaveBeenCalledWith({
-      data: {
-        meepleId: "meeple-1",
-        boardGameId: "game-2",
-        versionId: null,
-        syncedAt: expect.any(Date),
-        rating: null,
-        forTrade: false,
-        wantToPlay: true,
-      },
-    });
-    expect(result).toEqual({ success: true, imported: 1 });
-  });
-
-  it("falls back to title + bggId when the single-item BGG fetch fails, without aborting the import", async () => {
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 13,
-        title: "Catan",
-        rating: null,
-        forTrade: false,
-        wantToPlay: false,
-      },
-    ]);
-    fetchBggGameMock.mockRejectedValue(new BggNotFoundError(13));
-    findOrCreateBoardGameTitleMock.mockResolvedValue({ id: "game-1" });
-
-    const result = await syncPrivateBggCollection();
-
-    expect(findOrCreateBoardGameTitleMock).toHaveBeenCalledWith({
-      title: "Catan",
-      bggId: 13,
-    });
-    expect(result).toEqual({ success: true, imported: 1 });
-  });
-
-  it("repairs a previously incomplete stub (failed earlier import) instead of leaving it empty (#278)", async () => {
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 420805,
-        title: "Black Forest",
-        rating: null,
-        forTrade: false,
-        wantToPlay: false,
-      },
-    ]);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "game-3",
-      title: "Black Forest",
-      imageUrl: null,
-      description: null,
-      minPlayers: null,
-      maxPlayers: null,
-    } as never);
-    fetchBggGameMock.mockResolvedValue({
-      title: "Black Forest",
-      minPlayers: 1,
-      maxPlayers: 4,
-      mechanics: ["Worker Placement"],
-    });
-    prismaMock.boardGame.update.mockResolvedValue({ id: "game-3" } as never);
-
-    const result = await syncPrivateBggCollection();
-
-    expect(fetchBggGameMock).toHaveBeenCalledWith(420805);
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "game-3" },
-        data: expect.objectContaining({
-          title: "Black Forest",
-          minPlayers: 1,
-          maxPlayers: 4,
-        }),
-      }),
-    );
-    expect(findOrCreateBoardGameTitleMock).not.toHaveBeenCalled();
-    expect(result).toEqual({ success: true, imported: 1 });
-  });
-
-  it("keeps the existing stub when the repair fetch fails again", async () => {
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 420805,
-        title: "Black Forest",
-        rating: null,
-        forTrade: false,
-        wantToPlay: false,
-      },
-    ]);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "game-3",
-      title: "Black Forest",
-      imageUrl: null,
-      description: null,
-      minPlayers: null,
-      maxPlayers: null,
-    } as never);
-    fetchBggGameMock.mockRejectedValue(new BggNotFoundError(420805));
-
-    const result = await syncPrivateBggCollection();
-
-    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
-    expect(prismaMock.privateGameCollectionEntry.create).toHaveBeenCalledWith({
-      data: {
-        meepleId: "meeple-1",
-        boardGameId: "game-3",
-        versionId: null,
-        syncedAt: expect.any(Date),
-        rating: null,
-        forTrade: false,
-        wantToPlay: false,
-      },
-    });
-    expect(result).toEqual({ success: true, imported: 1 });
-  });
-
-  it("stores the version chosen on BGG with its publishers and links the entry to it", async () => {
-    const version = {
-      bggVersionId: 278264,
-      name: "English first edition",
-      yearPublished: 2017,
-      publisher: ["Serious Poulp"],
-      publisherLinks: [{ bggId: 17654, name: "Serious Poulp" }],
-      productCode: null,
-      languages: ["English"],
-    };
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 180263,
-        title: "The 7th Continent",
-        rating: null,
-        forTrade: false,
-        wantToPlay: false,
-        version,
-      },
-    ]);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "game-1",
-    } as never);
-    upsertBoardGameVersionMock.mockResolvedValue({ id: "version-1" });
-
-    await syncPrivateBggCollection();
-
-    expect(upsertBoardGameVersionMock).toHaveBeenCalledWith(
-      prismaMock,
-      "game-1",
-      { fromBgg: version },
-    );
-    expect(prismaMock.privateGameCollectionEntry.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ versionId: "version-1" }),
-    });
-  });
-
-  it("does not create a GameCopy for imported titles", async () => {
-    fetchBggCollectionMock.mockResolvedValue([
-      {
-        bggId: 13,
-        title: "Catan",
-        rating: null,
-        forTrade: false,
-        wantToPlay: false,
-      },
-    ]);
-    prismaMock.boardGame.findUnique.mockResolvedValue({
-      id: "game-1",
+  it("queues an import for the target meeple, ignoring the cooldown", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue({
+      bggUsername: "andre_bgg",
     } as never);
 
-    await syncPrivateBggCollection();
-
-    expect(prismaMock.gameCopy.create).not.toHaveBeenCalled();
+    expect(await adminSyncPrivateBggCollection("meeple-2")).toEqual(QUEUED);
+    expect(enqueueMock).toHaveBeenCalledWith("meeple-2");
+    expect(afterMock).toHaveBeenCalledTimes(1);
   });
 });
