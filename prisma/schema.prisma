@@ -357,9 +357,10 @@ model Meeple {
    * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
    */
   privateCollectionVisible  Boolean                  @default(false)
-  /// Opt-in (#632-Folge): „Want to Play"-Markierungen der BGG-Collection
-  /// anderen Meeple zeigen. Nur das Flag — die Anzeige folgt separat.
-  shareWantToPlay           Boolean                  @default(false)
+  /// Opt-in (#637): beim manuellen BGG-Import zusätzlich die „Want to Play"-
+  /// Liste nach `game_want_to_play` übernehmen (nur hinzufügend). Die Einträge
+  /// sind danach für eingeloggte Meeple sichtbar.
+  importWantToPlay          Boolean                  @default(false)
   /// Opt-in (#632-Folge): „For Trade"-Markierungen anderen Meeple zeigen.
   shareForTrade             Boolean                  @default(false)
   /**
@@ -809,14 +810,18 @@ enum PrivateCollectionImportStatus {
 /// sofort zurück. Abgearbeitet per `after()` direkt nach dem Klick, als
 /// Fallback (Neustart, Absturz) minütlich vom Cron `private-collection-import`.
 model PrivateCollectionImportJob {
-  id            String                        @id @default(cuid())
-  meepleId      String
-  status        PrivateCollectionImportStatus @default(PENDING)
-  importedCount Int?
-  error         String?
-  requestedAt   DateTime                      @default(now())
-  startedAt     DateTime?
-  finishedAt    DateTime?
+  id              String                        @id @default(cuid())
+  meepleId        String
+  status          PrivateCollectionImportStatus @default(PENDING)
+  importedCount   Int?
+  error           String?
+  /// Want-to-Play-Teil (#637): Anzahl übernommener Titel bzw. Fehler, wenn nur
+  /// dieser Teil scheiterte (Job bleibt dann `DONE`).
+  wantToPlayCount Int?
+  wantToPlayError String?
+  requestedAt     DateTime                      @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
 
   meeple Meeple @relation(fields: [meepleId], references: [id], onDelete: Cascade)
 
@@ -830,8 +835,8 @@ model PrivateCollectionImportJob {
 /// `PrivateGameCollectionEntry`: das sind besessene BGG-Importe, die bei jedem
 /// Import gelöscht und neu angelegt werden und in der Ludothek als
 /// Privatbesitz erscheinen — eine Wunschmarkierung ist weder das eine noch das
-/// andere. Die Markierung ist eine bewusste, öffentliche Handlung und braucht
-/// kein `shareWantToPlay`.
+/// andere. Einträge sind für eingeloggte Meeple sichtbar, ohne weitere Freigabe
+/// (manuell gesetzt oder per BGG-Import mit `importWantToPlay`).
 model GameWantToPlay {
   id          String   @id @default(cuid())
   meepleId    String
@@ -1265,7 +1270,6 @@ model PrivateGameCollectionEntry {
   /// BGG-Collection-Status-Flags dieses Titels (nur die zwei, die die
   /// Übersicht anzeigt — andere Stati werden beim Sync ignoriert).
   forTrade    Boolean  @default(false)
-  wantToPlay  Boolean  @default(false)
 
   meeple    Meeple            @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
   boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
