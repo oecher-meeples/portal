@@ -41,7 +41,7 @@ function InternalCalendarSubscribe({ hasToken }: { hasToken: boolean }) {
         description={
           hasToken
             ? "Du hast schon einen Abo-Link. Ein neuer Link ersetzt ihn – ein bestehendes Abo in deiner Kalender-App bekommt danach keine Termine mehr."
-            : "Wir erzeugen einen persönlichen Abo-Link für dich. Bitte nicht weitergeben – er zeigt alle internen Vereinstermine."
+            : "Wir erzeugen einen persönlichen Abo-Link für dich. Bitte nicht weitergeben – er zeigt alle internen Vereinstermine. Der Kalender wird abonniert, nicht importiert: Neue und geänderte Termine erscheinen automatisch (je nach Kalender-App mit Verzögerung von bis zu einem Tag)."
         }
         submitLabel={hasToken ? "Neuen Link erzeugen" : "Link erzeugen"}
         pendingLabel="Erzeuge…"
@@ -51,7 +51,10 @@ function InternalCalendarSubscribe({ hasToken }: { hasToken: boolean }) {
       {subscribeUrl && (
         <div className="bg-muted mt-2 flex flex-col gap-2 rounded-md p-3 text-xs">
           <span>
-            Öffnet sich keine Kalender-App, diesen Link dort als Abo hinzufügen:
+            Öffnet sich keine Kalender-App, den Link dort per „Kalender per URL
+            abonnieren“ hinzufügen (Google: Weitere Kalender → Per URL; Apple:
+            Ablage → Neues Kalenderabonnement). Nicht als Datei herunterladen –
+            das wäre ein einmaliger Import ohne Updates.
           </span>
           <span className="font-mono break-all">{subscribeUrl}</span>
           <CopyButton value={subscribeUrl} label="Kopieren" icon={Copy} />
