@@ -68,6 +68,8 @@ export async function MitgliedProfilView({
           displayName: string;
           neonAuthUserId: string | null;
           privateCollectionVisible: boolean;
+          shareWantToPlay: boolean;
+          shareForTrade: boolean;
           privateCollectionSyncedAt: Date | null;
         })
       | null;
@@ -354,6 +356,8 @@ export async function MitgliedProfilView({
             cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
             canForceImport={ownPrivateCollection.canForceImport}
             visibleToOthers={member.meeple.privateCollectionVisible}
+            shareWantToPlay={member.meeple.shareWantToPlay}
+            shareForTrade={member.meeple.shareForTrade}
             nextEvent={ownPrivateCollection.nextEvent}
             ownOffers={ownPrivateCollection.ownOffers}
             latestImportJob={latestImportJob}
