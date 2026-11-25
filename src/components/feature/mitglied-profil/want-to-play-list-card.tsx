@@ -116,7 +116,7 @@ export function WantToPlayListCard({
           Import wieder, solange der Import aktiv ist.
         </p>
       )}
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7">
         {items.map((item) => (
           <li key={item.id} className="relative">
             <Link
@@ -127,9 +127,10 @@ export function WantToPlayListCard({
               <CoverMedia
                 imageUrl={item.imageUrl}
                 alt={item.title}
-                aspect="aspect-[3/4]"
+                aspect="aspect-square"
+                fit="contain"
               />
-              <span className="line-clamp-2 text-sm font-medium">
+              <span className="line-clamp-2 text-xs font-medium">
                 {item.title}
               </span>
             </Link>
