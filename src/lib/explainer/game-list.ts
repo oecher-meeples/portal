@@ -79,6 +79,8 @@ export function parseExplainerGameFilter(
 export type BoardGameSearchHit = {
   id: string;
   title: string;
+  secondaryTitle: string | null;
+  imageUrl: string | null;
 };
 
 export type ExplainerDirectoryFilter = "all" | "wanted";

@@ -11,7 +11,9 @@ vi.mock("next/navigation", () => ({
 const setExplainerWanted = vi.fn().mockResolvedValue({ success: true });
 const searchBoardGamesAction = vi
   .fn()
-  .mockResolvedValue([{ id: "g-9", title: "Brass" }]);
+  .mockResolvedValue([
+    { id: "g-9", title: "Brass", secondaryTitle: null, imageUrl: null },
+  ]);
 vi.mock("@/lib/explainer/actions", () => ({
   setExplainerWanted: (...a: unknown[]) => setExplainerWanted(...a),
   searchBoardGamesAction: (...a: unknown[]) => searchBoardGamesAction(...a),
@@ -185,7 +187,7 @@ describe("DirectoryTab — Filter Gesucht (#662)", () => {
       "bra",
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Brass" }, { timeout: 2000 }),
+      await screen.findByRole("button", { name: /Brass/ }, { timeout: 2000 }),
     );
     expect(searchBoardGamesAction).toHaveBeenCalledWith("bra", ["g1"]);
 

@@ -124,19 +124,22 @@ describe("searchBoardGames", () => {
     expect(prismaMock.boardGame.findMany).not.toHaveBeenCalled();
   });
 
-  it("searches all games server-side, limited and excluding ids", async () => {
+  it("searches title and secondary title of all games, limited and excluding ids", async () => {
     prismaMock.boardGame.findMany.mockResolvedValue([] as never);
 
     await searchBoardGames(" azu ", 5, ["x"]);
 
     expect(prismaMock.boardGame.findMany).toHaveBeenCalledWith({
       where: {
-        title: { contains: "azu", mode: "insensitive" },
+        OR: [
+          { title: { contains: "azu", mode: "insensitive" } },
+          { secondaryTitle: { contains: "azu", mode: "insensitive" } },
+        ],
         id: { notIn: ["x"] },
       },
       orderBy: { title: "asc" },
       take: 5,
-      select: { id: true, title: true },
+      select: { id: true, title: true, secondaryTitle: true, imageUrl: true },
     });
   });
 
@@ -147,7 +150,10 @@ describe("searchBoardGames", () => {
 
     const call = prismaMock.boardGame.findMany.mock.calls[0][0];
     expect(call?.where).toEqual({
-      title: { contains: "azu", mode: "insensitive" },
+      OR: [
+        { title: { contains: "azu", mode: "insensitive" } },
+        { secondaryTitle: { contains: "azu", mode: "insensitive" } },
+      ],
     });
     expect(call?.take).toBe(10);
   });

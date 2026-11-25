@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CoverMedia } from "@/components/ui/cover-media";
 import { SearchInput } from "@/components/ui/search-input";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { searchBoardGamesAction } from "@/lib/explainer/actions";
@@ -68,14 +69,28 @@ export function BoardGameSearch({
                 <button
                   type="button"
                   disabled={disabled}
-                  className="hover:bg-muted w-full px-3 py-2 text-left text-sm disabled:opacity-60"
+                  className="hover:bg-muted flex w-full items-center gap-3 px-3 py-2 text-left text-sm disabled:opacity-60"
                   onClick={() => {
                     onSelect(hit);
                     setQuery("");
                     setHits([]);
                   }}
                 >
-                  {hit.title}
+                  <CoverMedia
+                    imageUrl={hit.imageUrl}
+                    alt=""
+                    aspect="aspect-square"
+                    className="w-10 shrink-0"
+                    sizes="40px"
+                  />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">{hit.title}</span>
+                    {hit.secondaryTitle && (
+                      <span className="text-muted-foreground truncate text-xs">
+                        {hit.secondaryTitle}
+                      </span>
+                    )}
+                  </span>
                 </button>
               </li>
             ))}

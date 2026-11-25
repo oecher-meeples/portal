@@ -15,9 +15,14 @@ vi.mock("next/navigation", () => ({
 const addExplainerGame = vi.fn().mockResolvedValue({ success: true });
 const removeExplainerGame = vi.fn().mockResolvedValue({ success: true });
 const addExplainerGameFromSearch = vi.fn().mockResolvedValue({ success: true });
-const searchBoardGamesAction = vi
-  .fn()
-  .mockResolvedValue([{ id: "g-9", title: "Azul" }]);
+const searchBoardGamesAction = vi.fn().mockResolvedValue([
+  {
+    id: "g-9",
+    title: "Azul",
+    secondaryTitle: "Azul – Die Fliesen",
+    imageUrl: null,
+  },
+]);
 vi.mock("@/lib/explainer/actions", () => ({
   addExplainerGame: (...a: unknown[]) => addExplainerGame(...a),
   removeExplainerGame: (...a: unknown[]) => removeExplainerGame(...a),
@@ -126,7 +131,11 @@ describe("MyGamesTab (#663)", () => {
 
     await userEvent.type(screen.getByPlaceholderText(/Spiel suchen/), "azu");
     await userEvent.click(
-      await screen.findByRole("button", { name: "Azul" }, { timeout: 2000 }),
+      await screen.findByRole(
+        "button",
+        { name: /Azul.*Die Fliesen/ },
+        { timeout: 2000 },
+      ),
     );
 
     await waitFor(() =>

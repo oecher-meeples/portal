@@ -66,7 +66,8 @@ export async function getMyExplainerGames(
   return groupExpansionsUnderBase(games.map(toRow));
 }
 
-/** Serverseitige Titelsuche über **alle** Spiele — kein Vorladen aller Titel. */
+/** Serverseitige Suche über Titel und Zweittitel **aller** Spiele — kein
+ * Vorladen aller Titel. */
 export async function searchBoardGames(
   query: string,
   limit = 10,
@@ -76,12 +77,15 @@ export async function searchBoardGames(
   if (!term) return [];
   return prisma.boardGame.findMany({
     where: {
-      title: { contains: term, mode: "insensitive" },
+      OR: [
+        { title: { contains: term, mode: "insensitive" } },
+        { secondaryTitle: { contains: term, mode: "insensitive" } },
+      ],
       ...(excludeIds.length > 0 && { id: { notIn: excludeIds } }),
     },
     orderBy: { title: "asc" },
     take: limit,
-    select: { id: true, title: true },
+    select: { id: true, title: true, secondaryTitle: true, imageUrl: true },
   });
 }
 
