@@ -37,49 +37,49 @@ function toSharedMeeples(meeples: MeepleRow[]): SharedCollectionMeeple[] {
 }
 
 /**
- * Meeple, die diesen Titel in ihrer BGG-Collection als „Want to Play" bzw.
- * „For Trade" markiert **und** die zugehörige Freigabe (`shareWantToPlay`/
- * `shareForTrade`) gesetzt haben (#632-Folge). Für „Want to Play" kommen die
- * manuell gesetzten „Ich will das auch spielen"-Markierungen
- * (`GameWantToPlay`) dazu — eine Person erscheint nur einmal. Anonymisierte
- * Meeple bleiben außen vor. Nur für eingeloggte Meeple aufrufen — die
- * Freigabe gilt ausdrücklich nur gegenüber anderen Meeple.
+ * Meeple, die diesen Titel als „Want to Play" (`GameWantToPlay`, manuell oder
+ * per BGG-Import, #637) bzw. „For Trade" (BGG-Collection mit Freigabe
+ * `shareForTrade`) markiert haben. Want to Play braucht keine weitere
+ * Freigabe. Anonymisierte Meeple bleiben außen vor. Nur für eingeloggte
+ * Meeple aufrufen.
  */
 export async function findSharedCollectionMeeples(
   boardGameId: string,
   flag: SharedCollectionFlag,
 ): Promise<SharedCollectionMeeple[]> {
-  const entries = await prisma.privateGameCollectionEntry.findMany({
-    where: {
-      boardGameId,
-      [flag]: true,
-      meeple: {
-        ...(flag === "wantToPlay"
-          ? { shareWantToPlay: true }
-          : { shareForTrade: true }),
-        anonymizedAt: null,
-      },
-    },
-    select: { meeple: { select: MEEPLE_SELECT } },
-  });
-  const marks =
+  const rows =
     flag === "wantToPlay"
       ? await prisma.gameWantToPlay.findMany({
           where: { boardGameId, meeple: { anonymizedAt: null } },
           select: { meeple: { select: MEEPLE_SELECT } },
         })
-      : [];
-  return toSharedMeeples([...entries, ...marks].map(({ meeple }) => meeple));
+      : await prisma.privateGameCollectionEntry.findMany({
+          where: {
+            boardGameId,
+            forTrade: true,
+            meeple: { shareForTrade: true, anonymizedAt: null },
+          },
+          select: { meeple: { select: MEEPLE_SELECT } },
+        });
+  return toSharedMeeples(rows.map(({ meeple }) => meeple));
 }
 
-/** Hat dieses Meeple den Titel manuell als „Ich will das auch spielen"
- * markiert? */
-export async function hasWantToPlayMark(
-  meepleId: string,
-  boardGameId: string,
-): Promise<boolean> {
-  const count = await prisma.gameWantToPlay.count({
-    where: { meepleId, boardGameId },
+/** Titel ohne Vereins-/Privatexemplar, aber mit mindestens einem
+ * Want-to-Play-Eintrag (#637) — Grundlage der abgespeckten Katalogseite.
+ * `null`, wenn niemand den Titel (noch) auf der Liste hat. */
+export function findWantToPlayCatalogTitle(slug: string) {
+  return prisma.boardGame.findFirst({
+    where: {
+      slug,
+      wantToPlayMarks: { some: { meeple: { anonymizedAt: null } } },
+    },
+    select: {
+      id: true,
+      title: true,
+      imageUrl: true,
+      yearPublished: true,
+      averageRating: true,
+      bggId: true,
+    },
   });
-  return count > 0;
 }

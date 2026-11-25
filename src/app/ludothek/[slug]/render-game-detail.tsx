@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
+import { renderCatalogTitle } from "./render-catalog-title";
 import { Plus, Tag } from "lucide-react";
 import { prisma } from "@/lib/utils/prisma";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,7 @@ import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { toContactDialogMeeple, meepleEmail } from "@/lib/members/contact";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
-import {
-  findSharedCollectionMeeples,
-  hasWantToPlayMark,
-} from "@/lib/ludothek/shared-collection-meeples";
+import { findSharedCollectionMeeples } from "@/lib/ludothek/shared-collection-meeples";
 import { WantToPlayButton } from "@/components/feature/ludothek/want-to-play-button";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getGuestCopyAvailability } from "@/lib/events/guest-area";
@@ -72,7 +69,7 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
   }
 
   const game = copies[0];
-  if (!game) notFound();
+  if (!game) return renderCatalogTitle(slug, internal);
 
   const traitTexts = await loadBoardGameTraitTextsByTrait();
   const selected = selectedCopyId
@@ -203,19 +200,14 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
       findSharedCollectionMeeples(game.boardGameId, "wantToPlay"),
       findSharedCollectionMeeples(game.boardGameId, "forTrade"),
     ]);
-  // „Ich will das auch spielen": nur anbieten, wenn man nicht ohnehin schon
-  // über den BGG-Import in der Liste steht; eine eigene Markierung lässt sich
-  // wieder entfernen.
-  const ownMark = currentMeeple
-    ? await hasWantToPlayMark(currentMeeple.id, game.boardGameId)
-    : false;
-  const alreadyListed = wantToPlay.some(
+  // Wer in der Liste steht (manuell oder per BGG-Import), kann sich wieder
+  // austragen; alle anderen können sich eintragen.
+  const ownMark = wantToPlay.some(
     (meeple) => meeple.meepleId === currentMeeple?.id,
   );
-  const wantToPlayAction =
-    currentMeeple && (ownMark || !alreadyListed) ? (
-      <WantToPlayButton boardGameId={game.boardGameId} marked={ownMark} />
-    ) : undefined;
+  const wantToPlayAction = currentMeeple ? (
+    <WantToPlayButton boardGameId={game.boardGameId} marked={ownMark} />
+  ) : undefined;
   const myLevel =
     explainerEntries.find((entry) => entry.meepleId === currentMeeple?.id)
       ?.level ?? null;
