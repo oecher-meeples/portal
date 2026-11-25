@@ -5,7 +5,28 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
+    // Zwei Projekte statt global jsdom: jsdom pro Testdatei zu erzeugen
+    // machte ~99 % der Laufzeit aus. Reine Logik-Tests (.test.ts) laufen in
+    // Node; nur Komponenten-Tests (.test.tsx) bekommen jsdom. Ein .test.ts,
+    // das DOM-APIs braucht, setzt `// @vitest-environment jsdom`.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          environment: "jsdom",
+          include: ["src/**/*.test.tsx"],
+        },
+      },
+    ],
     // *.live.test.ts hits real third-party APIs and needs credentials — it is
     // not part of the deterministic suite. Run it explicitly: `npm run test:live`
     // (sets VITEST_LIVE=1, which lifts this exclusion below).

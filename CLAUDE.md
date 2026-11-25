@@ -95,9 +95,12 @@ Ab der **zweiten** Kopie extrahieren, nicht auf Vorrat abstrahieren. `pnpm run d
 
 Wenn du die Struktur änderst (Schicht, Ordner, geteilter Baustein), **docs/project-structure.md mit anpassen** — sonst driftet die Doku.
 
-## Branch-Schutz
+## Branch-Schutz & Release
 
-`develop` ist per Ruleset geschützt (`.github/ruleset-protect-develop.json`, aktiv seit #36). Direkte Pushes sind blockiert. Verbindlicher Workflow: **Feature-Branch → PR → grüne CI (`verify`-Check) → Merge.** Self-Merge ist erlaubt (`required_approving_review_count: 0`, Ein-Personen-Projekt-Entscheidung). Der `release`-Branch ist bewusst ungeschützt.
+- `develop` ist per Ruleset geschützt (`.github/ruleset-protect-develop.json`). Direkte Pushes sind blockiert. Workflow: **Feature-Branch → PR → grüne CI (`verify`) → Merge Queue.** Die Queue baut das Merge-Ergebnis und prüft es erneut — der PR-Branch muss **nicht** auf `develop` nachgezogen werden. Merge-Methode: regulärer Merge-Commit, **kein Squash**. Self-Merge erlaubt (Ein-Personen-Projekt).
+- CI (`ci.yml`) läuft nur auf `pull_request` und `merge_group`, nicht auf `push`. Bei reinen Änderungen an `.claude/`, `docs/`, `.github/`, `.husky/` oder `*.md` bleibt `verify` grün, überspringt aber Typecheck/Lint/Tests/Build. `pnpm audit` und `dup` laufen nachts (`nightly.yml`).
+- `release` wird **nicht geprüft**, nur deployt: `release.yml` (manuell, Input `bump`) fast-forwardet einen grünen `develop`-Commit nach `release`, setzt den Tag `vX.Y.Z` und legt ein GitHub Release an. Der Push startet Docker-Build + Production-Deploy. Kein Release-PR, kein Sync-PR. Direkte Pushes auf `release` sind per Ruleset blockiert (Bypass: nur Admin-Token des Workflows).
+- Tests: `.test.ts` laufen in Node, `.test.tsx` in jsdom (`vitest.config.ts`, zwei Projekte). Braucht ein `.test.ts` DOM-APIs, in die erste Zeile `// @vitest-environment jsdom`.
 
 ## Lizenz-Audit
 

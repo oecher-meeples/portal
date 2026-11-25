@@ -1,0 +1,105 @@
+name: Release
+
+# Befördert einen bereits geprüften develop-Commit nach `release`, setzt einen
+# SemVer-Tag und legt ein GitHub Release an. Keine eigenen Tests: der Commit
+# wurde als PR und in der Merge Queue geprüft; hier wird nur verifiziert, dass
+# sein `verify`-Check grün war. Der Push auf `release` startet Docker-Build und
+# Production-Deploy (docker-build.yml).
+#
+# `release` wird nur per Fast-Forward bewegt, daher ist es immer ein Vorfahre
+# von `develop` — kein Release-PR, kein Sync-PR.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Versionssprung (SemVer)"
+        required: true
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      sha:
+        description: "develop-Commit (leer = aktueller develop-HEAD)"
+        required: false
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # PAT: Pushes mit GITHUB_TOKEN lösen docker-build.yml nicht aus und
+          # dürfen das Release-Ruleset nicht umgehen.
+          token: ${{ secrets.SYNC_PR_TOKEN }}
+
+      - name: Commit bestimmen und prüfen
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PR_TOKEN }}
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          git fetch origin develop release --tags
+          SHA=$(git rev-parse "${INPUT_SHA:-origin/develop}")
+          if ! git merge-base --is-ancestor "$SHA" origin/develop; then
+            echo "::error::$SHA ist nicht in develop enthalten."; exit 1
+          fi
+          if ! git merge-base --is-ancestor origin/release "$SHA"; then
+            echo "::error::release ist kein Vorfahre von $SHA (kein Fast-Forward)."; exit 1
+          fi
+          if [ "$SHA" = "$(git rev-parse origin/release)" ]; then
+            echo "::error::release steht bereits auf $SHA."; exit 1
+          fi
+          CONCLUSION=$(gh api "repos/${{ github.repository }}/commits/$SHA/check-runs" \
+            --jq '[.check_runs[] | select(.name=="verify")] | sort_by(.completed_at) | last | .conclusion')
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "::error::verify auf $SHA ist '$CONCLUSION', nicht 'success'."; exit 1
+          fi
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Nächste Version berechnen
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          LAST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n 1)
+          LAST=${LAST:-v0.0.0}
+          IFS=. read -r MAJOR MINOR PATCH <<< "${LAST#v}"
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+            *)     PATCH=$((PATCH+1)) ;;
+          esac
+          echo "tag=v$MAJOR.$MINOR.$PATCH" >> "$GITHUB_OUTPUT"
+          echo "previous=$LAST" >> "$GITHUB_OUTPUT"
+
+      # Tag zuerst, dann Branch: docker-build.yml liest den Tag beim Push auf
+      # `release` aus und taggt das Image damit.
+      - name: Tag setzen und release fast-forwarden
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" "${{ steps.target.outputs.sha }}" \
+            -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.target.outputs.sha }}:refs/heads/release"
+
+      - name: GitHub Release anlegen
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PR_TOKEN }}
+        run: |
+          NOTES_ARGS=()
+          if [ "${{ steps.version.outputs.previous }}" != "v0.0.0" ]; then
+            NOTES_ARGS=(--notes-start-tag "${{ steps.version.outputs.previous }}")
+          fi
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --generate-notes "${NOTES_ARGS[@]}"
