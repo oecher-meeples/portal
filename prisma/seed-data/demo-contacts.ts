@@ -36,7 +36,10 @@ export type DemoContactFields = {
 /** `key` ist typischerweise die E-Mail des Meeples; der Teil vor dem `@`
  * liefert den Handle-Stamm (`vater.musterfamilie`). */
 export function randomDemoContactFields(key: string): DemoContactFields {
-  const stem = key.split("@")[0].toLowerCase().replace(/[^a-z0-9.]/g, "");
+  const stem = key
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9.]/g, "");
   const underscored = stem.replaceAll(".", "_");
   const pick = <T>(salt: string, value: T) =>
     stableInclude(key, salt) ? value : null;
