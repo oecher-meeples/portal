@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
@@ -15,6 +16,7 @@ import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/expla
 import { BoardGameSearch } from "@/components/feature/erklaerbaeren/board-game-search";
 import { GameTitleLink } from "@/components/feature/erklaerbaeren/game-title-link";
 import { erklaerbaerenHref } from "@/components/feature/erklaerbaeren/erklaerbaeren-url";
+import { cn } from "@/lib/utils/cn";
 import { setExplainerWanted } from "@/lib/explainer/actions";
 import {
   EXPLAINER_DIRECTORY_FILTER_LABELS,
@@ -77,81 +79,96 @@ export function DirectoryTab({
         placeholder="Spieltitel suchen …"
       />
 
-      {isWantedFilter && (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium">Erklärergesuch hinzufügen</p>
-          <p className="text-muted-foreground text-sm">
-            Such ein Spiel und wähle es aus: Es wird sofort als „Erklärer
-            gesucht“ markiert. Alle Mitglieder sehen es dann im Filter „Gesucht“
-            und als Hinweis im Dashboard.
-          </p>
-          <BoardGameSearch
-            placeholder="Spiel suchen, für das Erklärer gesucht werden …"
-            excludeIds={entries.map((e) => e.boardGameId)}
-            disabled={addWanted.pending}
-            onSelect={(hit) =>
-              addWanted.run(() => setExplainerWanted(hit.id, true))
-            }
-          />
-          {addWanted.error && (
-            <p className="text-destructive text-sm">{addWanted.error}</p>
+      <div
+        className={cn("grid gap-6", isWantedFilter && "lg:grid-cols-[2fr_1fr]")}
+      >
+        {isWantedFilter && (
+          <Card className="gap-3 self-start lg:sticky lg:top-24 lg:order-last">
+            <CardTitle>Erklärergesuch hinzufügen</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Such ein Spiel und wähle es aus: Es wird sofort als „Erklärer
+              gesucht“ markiert. Alle Mitglieder sehen es dann im Filter
+              „Gesucht“ und als Hinweis im Dashboard.
+            </p>
+            <BoardGameSearch
+              placeholder="Spiel suchen …"
+              excludeIds={entries.map((e) => e.boardGameId)}
+              disabled={addWanted.pending}
+              onSelect={(hit) =>
+                addWanted.run(() => setExplainerWanted(hit.id, true))
+              }
+            />
+            {addWanted.error && (
+              <p className="text-destructive text-sm">{addWanted.error}</p>
+            )}
+          </Card>
+        )}
+        <div>
+          {entries.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              {filter === "wanted"
+                ? "Für kein Spiel werden Erklärer gesucht."
+                : "Kein Spiel mit Erklärbär gefunden."}
+            </p>
+          ) : (
+            <ul
+              className={cn(
+                "grid grid-cols-1 gap-3 sm:grid-cols-2",
+                isWantedFilter ? "xl:grid-cols-2" : "lg:grid-cols-3",
+              )}
+            >
+              {entries.map((entry) => (
+                <li
+                  key={entry.boardGameId}
+                  className="bg-card flex items-center gap-3 rounded-lg border p-3"
+                >
+                  <CoverMedia
+                    imageUrl={entry.imageUrl}
+                    alt=""
+                    aspect="aspect-square"
+                    className="w-14 shrink-0"
+                    sizes="56px"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <GameTitleLink
+                      title={entry.boardGameTitle}
+                      slug={entry.slug}
+                    />
+                  </div>
+                  <ExplainerListDialogTrigger
+                    display="count"
+                    boardGameTitle={entry.boardGameTitle}
+                    explainers={entry.explainers}
+                  />
+                  {isWantedFilter && (
+                    <StopRowNavigation>
+                      <ActionDialog
+                        trigger={
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            aria-label={`Erklärergesuch für ${entry.boardGameTitle} entfernen`}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        }
+                        title="Erklärergesuch entfernen"
+                        description={`„${entry.boardGameTitle}“ wird nicht mehr als „Erklärer gesucht“ markiert.`}
+                        submitLabel="Entfernen"
+                        submitVariant="destructive"
+                        action={() =>
+                          setExplainerWanted(entry.boardGameId, false)
+                        }
+                      />
+                    </StopRowNavigation>
+                  )}
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-      )}
-
-      {entries.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          {filter === "wanted"
-            ? "Für kein Spiel werden Erklärer gesucht."
-            : "Kein Spiel mit Erklärbär gefunden."}
-        </p>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry) => (
-            <li
-              key={entry.boardGameId}
-              className="bg-card flex items-center gap-3 rounded-lg border p-3"
-            >
-              <CoverMedia
-                imageUrl={entry.imageUrl}
-                alt=""
-                aspect="aspect-square"
-                className="w-14 shrink-0"
-                sizes="56px"
-              />
-              <div className="min-w-0 flex-1">
-                <GameTitleLink title={entry.boardGameTitle} slug={entry.slug} />
-              </div>
-              <ExplainerListDialogTrigger
-                display="count"
-                boardGameTitle={entry.boardGameTitle}
-                explainers={entry.explainers}
-              />
-              {isWantedFilter && (
-                <StopRowNavigation>
-                  <ActionDialog
-                    trigger={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={`Erklärergesuch für ${entry.boardGameTitle} entfernen`}
-                      >
-                        <X className="size-4" />
-                      </Button>
-                    }
-                    title="Erklärergesuch entfernen"
-                    description={`„${entry.boardGameTitle}“ wird nicht mehr als „Erklärer gesucht“ markiert.`}
-                    submitLabel="Entfernen"
-                    submitVariant="destructive"
-                    action={() => setExplainerWanted(entry.boardGameId, false)}
-                  />
-                </StopRowNavigation>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      </div>
     </div>
   );
 }

@@ -182,10 +182,7 @@ describe("DirectoryTab — Filter Gesucht (#662)", () => {
       />,
     );
 
-    await userEvent.type(
-      screen.getByPlaceholderText(/Erklärer gesucht werden/),
-      "bra",
-    );
+    await userEvent.type(screen.getByPlaceholderText("Spiel suchen …"), "bra");
     await userEvent.click(
       await screen.findByRole("button", { name: /Brass/ }, { timeout: 2000 }),
     );
