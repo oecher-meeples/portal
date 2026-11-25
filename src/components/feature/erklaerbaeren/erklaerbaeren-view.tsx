@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageContainer } from "@/components/ui/page-container";
 import {
   erklaerbaerenHref,
   parseErklaerbaerenTab,
@@ -26,27 +25,25 @@ export function ErklaerbaerenView({
   const router = useRouter();
 
   if (!showDirectory) {
-    return <PageContainer>{children}</PageContainer>;
+    return children;
   }
 
   return (
-    <PageContainer>
-      <Tabs
-        value={tab}
-        onValueChange={(value) =>
-          router.push(
-            erklaerbaerenHref({ tab: parseErklaerbaerenTab(String(value)) }),
-          )
-        }
-      >
-        <TabsList>
-          <TabsTrigger value="meine">Meine Spiele</TabsTrigger>
-          <TabsTrigger value="verzeichnis">Erklärbär-Verzeichnis</TabsTrigger>
-        </TabsList>
-        <TabsContent value={tab} className="pt-2">
-          {children}
-        </TabsContent>
-      </Tabs>
-    </PageContainer>
+    <Tabs
+      value={tab}
+      onValueChange={(value) =>
+        router.push(
+          erklaerbaerenHref({ tab: parseErklaerbaerenTab(String(value)) }),
+        )
+      }
+    >
+      <TabsList>
+        <TabsTrigger value="meine">Meine Spiele</TabsTrigger>
+        <TabsTrigger value="verzeichnis">Erklärbär-Verzeichnis</TabsTrigger>
+      </TabsList>
+      <TabsContent value={tab} className="pt-2">
+        {children}
+      </TabsContent>
+    </Tabs>
   );
 }

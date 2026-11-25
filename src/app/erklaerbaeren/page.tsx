@@ -1,4 +1,5 @@
 import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
+import { PageContainer } from "@/components/ui/page-container";
 import { PageHeading } from "@/components/ui/page-heading";
 import { ErklaerbaerenView } from "@/components/feature/erklaerbaeren/erklaerbaeren-view";
 import { MyGamesTab } from "@/components/feature/erklaerbaeren/my-games-tab";
@@ -23,9 +24,11 @@ export default async function ErklaerbaerenPage({
   const canManage = await hasPermissionInCurrentView(user.id, "events:manage");
   // Verzeichnis-Daten nur mit Berechtigung — ohne sie fällt der Tab auf Tab 1.
   const tab = canManage ? parseErklaerbaerenTab(params.tab) : "meine";
+  const directoryFilter = parseDirectoryFilter(params.filter);
+  const gameFilter = parseExplainerGameFilter(params.filter);
 
   return (
-    <div className="flex flex-col gap-6">
+    <PageContainer>
       <PageHeading
         eyebrow="Mitgliederbereich"
         title="Erklärbären"
@@ -34,23 +37,20 @@ export default async function ErklaerbaerenPage({
       <ErklaerbaerenView tab={tab} showDirectory={canManage}>
         {tab === "verzeichnis" ? (
           <DirectoryTab
-            filter={parseDirectoryFilter(params.filter)}
+            filter={directoryFilter}
             query={params.q ?? ""}
             entries={await getExplainerDirectory({
-              filter: parseDirectoryFilter(params.filter),
+              filter: directoryFilter,
               query: params.q,
             })}
           />
         ) : (
           <MyGamesTab
-            filter={parseExplainerGameFilter(params.filter)}
-            games={await getMyExplainerGames(
-              meeple.id,
-              parseExplainerGameFilter(params.filter),
-            )}
+            filter={gameFilter}
+            games={await getMyExplainerGames(meeple.id, gameFilter)}
           />
         )}
       </ErklaerbaerenView>
-    </div>
+    </PageContainer>
   );
 }
