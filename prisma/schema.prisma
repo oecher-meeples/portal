@@ -387,30 +387,31 @@ model Meeple {
   createdAt                 DateTime                 @default(now())
   updatedAt                 DateTime                 @updatedAt
 
-  bankDataAccessesMade     BankDataAccessLog[]          @relation("BankDataAccessActor")
-  bankDataAccessesReceived BankDataAccessLog[]          @relation("BankDataAccessSubject")
-  keptUnits                StorageUnit[]                @relation("StorageUnitKeeper")
-  recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
-  movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
-  recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
-  gameCopyChecks           GameCopyCheck[]              @relation("GameCopyCheckChecker")
-  lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
-  lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
-  lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
-  lfgAttachments           LfgAttachment[]              @relation("LfgAttachmentUploadedBy")
-  shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
-  helperAvailabilities     HelperAvailability[]         @relation("HelperAvailabilityMeeple")
-  explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
-  explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
-  fleaMarketItems          FleaMarketItem[]             @relation("FleaMarketItemSeller")
-  sparePartListingsKept    SparePartListing[]           @relation("SparePartListingKeeper")
-  marketListings           MarketListing[]              @relation("MarketListingSeller")
-  privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
-  deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
-  privateEventLoansOffered PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
-  privateEventLoansIssued  PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
-  newsletterSubscription   NewsletterSubscriber?
-  member                   Member?
+  bankDataAccessesMade        BankDataAccessLog[]          @relation("BankDataAccessActor")
+  bankDataAccessesReceived    BankDataAccessLog[]          @relation("BankDataAccessSubject")
+  keptUnits                   StorageUnit[]                @relation("StorageUnitKeeper")
+  recordedUnitMoves           StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
+  movedUnitsAsKeeper          StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
+  recordedHoldings            GameHolding[]                @relation("GameHoldingRecorder")
+  gameCopyChecks              GameCopyCheck[]              @relation("GameCopyCheckChecker")
+  lfgPosts                    LfgPost[]                    @relation("LfgPostCreator")
+  lfgParticipations           LfgParticipant[]             @relation("LfgParticipantMeeple")
+  lfgGuestsAdded              LfgParticipant[]             @relation("LfgParticipantAddedBy")
+  lfgAttachments              LfgAttachment[]              @relation("LfgAttachmentUploadedBy")
+  shiftBookings               ShiftBooking[]               @relation("ShiftBookingMeeple")
+  helperAvailabilities        HelperAvailability[]         @relation("HelperAvailabilityMeeple")
+  explainerGames              ExplainerGame[]              @relation("ExplainerGameMeeple")
+  explainerAttendances        ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
+  fleaMarketItems             FleaMarketItem[]             @relation("FleaMarketItemSeller")
+  sparePartListingsKept       SparePartListing[]           @relation("SparePartListingKeeper")
+  marketListings              MarketListing[]              @relation("MarketListingSeller")
+  privateGameCollection       PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
+  privateCollectionImportJobs PrivateCollectionImportJob[]
+  deletionRequests            DeletionRequest[]            @relation("DeletionRequestMeeple")
+  privateEventLoansOffered    PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
+  privateEventLoansIssued     PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
+  newsletterSubscription      NewsletterSubscriber?
+  member                      Member?
 
   @@map("meeples")
 }
@@ -788,6 +789,34 @@ model NewsletterDispatchJob {
 
   @@unique([postId, subscriberId])
   @@map("newsletter_dispatch_jobs")
+}
+
+enum PrivateCollectionImportStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+/// Queue für den privaten BGG-Collection-Import (#632) — der Import dauert
+/// pro Spiel eine BGG-Drosselzeit, die Server Action reiht nur ein und kehrt
+/// sofort zurück. Abgearbeitet per `after()` direkt nach dem Klick, als
+/// Fallback (Neustart, Absturz) minütlich vom Cron `private-collection-import`.
+model PrivateCollectionImportJob {
+  id            String                        @id @default(cuid())
+  meepleId      String
+  status        PrivateCollectionImportStatus @default(PENDING)
+  importedCount Int?
+  error         String?
+  requestedAt   DateTime                      @default(now())
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  meeple Meeple @relation(fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@index([status, requestedAt])
+  @@index([meepleId, requestedAt])
+  @@map("private_collection_import_jobs")
 }
 
 model Invite {
