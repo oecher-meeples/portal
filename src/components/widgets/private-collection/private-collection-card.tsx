@@ -16,6 +16,11 @@ import type { OwnPrivateCollectionEntry } from "@/lib/ludothek/private-collectio
 import type { OwnPrivateLoanOffer } from "@/lib/ludothek/private-event-loans";
 import { setPrivateCollectionVisibleAction } from "@/components/widgets/private-collection/private-collection-actions";
 import { PrivateCollectionDialog } from "@/components/widgets/private-collection/private-collection-dialog";
+import {
+  ImportJobStatus,
+  isImportActive,
+  type ImportJobSummary,
+} from "@/components/widgets/private-collection/import-job-status";
 
 /**
  * Übersichts-Karte "Meine privaten Spiele" im Profil (#255-Folge). Löst zwei
@@ -36,6 +41,7 @@ export function PrivateCollectionCard({
   visibleToOthers,
   nextEvent = null,
   ownOffers = [],
+  latestImportJob = null,
 }: {
   bggUsername: string | null;
   entries: OwnPrivateCollectionEntry[];
@@ -52,19 +58,12 @@ export function PrivateCollectionCard({
   nextEvent?: { id: string; title: string } | null;
   /** Eigene Freigaben für `nextEvent`, sofern vorhanden. */
   ownOffers?: OwnPrivateLoanOffer[];
+  /** (#632) Jüngster Import-Job — der Import läuft serverseitig in einer
+   * Queue, die Karte zeigt nur den Zustand. */
+  latestImportJob?: ImportJobSummary | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-
-  async function runImport(ignoreCooldown: boolean) {
-    const result = await syncPrivateBggCollection(ignoreCooldown);
-    if ("success" in result) {
-      setImportMessage(
-        `${result.imported} ${result.imported === 1 ? "Spiel" : "Spiele"} importiert.`,
-      );
-    }
-    return result;
-  }
+  const importActive = isImportActive(latestImportJob);
 
   const clickable = entries.length > 0;
 
@@ -100,19 +99,20 @@ export function PrivateCollectionCard({
           <StopRowNavigation className="flex items-center gap-1.5">
             <ActionButton
               refresh
-              action={() => runImport(false)}
+              action={() => syncPrivateBggCollection(false)}
               variant="outline"
               size="sm"
               className="w-fit"
               pendingLabel="Importiere…"
-              disabled={Boolean(cooldownEndsAt)}
+              disabled={Boolean(cooldownEndsAt) || importActive}
             >
               BGG-Collection importieren
             </ActionButton>
             {canForceImport && (
               <ActionButton
                 refresh
-                action={() => runImport(true)}
+                action={() => syncPrivateBggCollection(true)}
+                disabled={importActive}
                 variant="outline"
                 size="icon-sm"
                 pendingLabel="…"
@@ -129,9 +129,7 @@ export function PrivateCollectionCard({
               Importen).
             </p>
           )}
-          {importMessage && (
-            <p className="text-sm text-emerald-600">{importMessage}</p>
-          )}
+          <ImportJobStatus job={latestImportJob} />
         </div>
       )}
 
