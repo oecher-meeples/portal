@@ -57,6 +57,21 @@ describe("listWantToPlay (#637)", () => {
     expect((await listWantToPlay("m1", { take: 2 })).nextCursor).toBeNull();
   });
 
+  it("sucht nur im Titel, ohne Groß-/Kleinschreibung", async () => {
+    prismaMock.gameWantToPlay.findMany.mockResolvedValue([] as never);
+
+    await listWantToPlay("m1", { query: "  arche " });
+
+    expect(prismaMock.gameWantToPlay.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          meepleId: "m1",
+          boardGame: { title: { contains: "arche", mode: "insensitive" } },
+        },
+      }),
+    );
+  });
+
   it("setzt hinter dem Cursor (Titel, Id) fort", async () => {
     prismaMock.gameWantToPlay.findMany.mockResolvedValue([] as never);
 

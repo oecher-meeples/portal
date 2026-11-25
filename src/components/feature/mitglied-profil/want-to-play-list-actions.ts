@@ -10,17 +10,18 @@ import {
   type WantToPlayCursor,
 } from "@/lib/ludothek/want-to-play-list";
 
-/** Nächste Seite einer Want-to-Play-Liste (#637). Für jede fremde Liste
+/** Seite einer Want-to-Play-Liste (#637): Nachladen hinter einem Cursor oder
+ * — ohne Cursor — die erste Seite einer Titelsuche. Für jede fremde Liste
  * erlaubt, sofern der Betrachter intern ist — die Liste ist intern sichtbar. */
 export async function loadMoreWantToPlayAction(
   meepleId: string,
-  cursor: WantToPlayCursor,
+  { cursor, query }: { cursor?: WantToPlayCursor; query?: string },
 ) {
   const denied = await actionPermissionDenied("ludothek:view");
   if (denied) return denied;
   return {
     success: true as const,
-    ...(await listWantToPlay(meepleId, { after: cursor })),
+    ...(await listWantToPlay(meepleId, { after: cursor, query })),
   };
 }
 

@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({
@@ -49,8 +55,9 @@ const item = (n: number) => ({
   imageUrl: null,
 });
 
+/** Rendert die Karte und klappt das Akkordeon auf. */
 function setup(overrides: Partial<Parameters<typeof WantToPlayListCard>[0]>) {
-  return render(
+  const view = render(
     <WantToPlayListCard
       meepleId="m1"
       initialItems={[item(1), item(2)]}
@@ -60,9 +67,28 @@ function setup(overrides: Partial<Parameters<typeof WantToPlayListCard>[0]>) {
       {...overrides}
     />,
   );
+  fireEvent.click(
+    screen.getByRole("button", { name: /Das möchte ich spielen/ }),
+  );
+  return view;
 }
 
 describe("WantToPlayListCard (#637)", () => {
+  it("ist zugeklappt und zeigt nur Titel und Zähler, bis man es aufklappt", () => {
+    render(
+      <WantToPlayListCard
+        meepleId="m1"
+        initialItems={[item(1)]}
+        initialCursor={null}
+        total={1}
+        isOwner={false}
+      />,
+    );
+
+    expect(screen.getByText("Das möchte ich spielen")).toBeInTheDocument();
+    expect(screen.queryByText("Spiel 1")).not.toBeInTheDocument();
+  });
+
   it("zeigt anderen Einträge und Zähler, aber keine Entfernen-Bedienelemente", () => {
     setup({});
 
@@ -132,8 +158,47 @@ describe("WantToPlayListCard (#637)", () => {
       expect(screen.getByText("Spiel 3")).toBeInTheDocument(),
     );
     expect(loadMoreMock).toHaveBeenCalledWith("m1", {
-      title: "Spiel 2",
-      id: "e2",
+      cursor: { title: "Spiel 2", id: "e2" },
+      query: "",
     });
+  });
+
+  it("sucht nach Titel und ersetzt die Liste durch die Treffer", async () => {
+    loadMoreMock.mockResolvedValue({
+      success: true,
+      items: [item(7)],
+      nextCursor: null,
+    });
+    const user = userEvent.setup();
+    setup({});
+
+    await user.type(screen.getByPlaceholderText("Titel suchen"), "sieben");
+
+    await waitFor(() =>
+      expect(screen.getByText("Spiel 7")).toBeInTheDocument(),
+    );
+    expect(loadMoreMock).toHaveBeenCalledWith("m1", { query: "sieben" });
+    expect(screen.queryByText("Spiel 1")).not.toBeInTheDocument();
+  });
+
+  it("zeigt ohne Treffer einen Hinweis", async () => {
+    loadMoreMock.mockResolvedValue({
+      success: true,
+      items: [],
+      nextCursor: null,
+    });
+    const user = userEvent.setup();
+    setup({});
+
+    await user.type(screen.getByPlaceholderText("Titel suchen"), "xyz");
+
+    await waitFor(() =>
+      expect(screen.getByText("Keine Treffer.")).toBeInTheDocument(),
+    );
+  });
+
+  it("blendet die Suche bei einer leeren Liste aus", () => {
+    setup({ initialItems: [], total: 0, isOwner: true });
+    expect(screen.queryByPlaceholderText("Titel suchen")).toBeNull();
   });
 });

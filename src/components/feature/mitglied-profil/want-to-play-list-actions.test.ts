@@ -35,7 +35,9 @@ describe("Want-to-Play-Listen-Actions (#637)", () => {
     deniedMock.mockResolvedValue({ error: "Keine Berechtigung." });
 
     expect(
-      await loadMoreWantToPlayAction("other", { title: "A", id: "1" }),
+      await loadMoreWantToPlayAction("other", {
+        cursor: { title: "A", id: "1" },
+      }),
     ).toEqual({ error: "Keine Berechtigung." });
     expect(listMock).not.toHaveBeenCalled();
   });
@@ -44,12 +46,13 @@ describe("Want-to-Play-Listen-Actions (#637)", () => {
     listMock.mockResolvedValue({ items: [], nextCursor: null });
 
     const result = await loadMoreWantToPlayAction("other", {
-      title: "A",
-      id: "1",
+      cursor: { title: "A", id: "1" },
+      query: "arche",
     });
 
     expect(listMock).toHaveBeenCalledWith("other", {
       after: { title: "A", id: "1" },
+      query: "arche",
     });
     expect(result).toEqual({ success: true, items: [], nextCursor: null });
   });

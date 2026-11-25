@@ -26,11 +26,21 @@ export async function listWantToPlay(
   {
     after,
     take = WANT_TO_PLAY_PAGE_SIZE,
-  }: { after?: WantToPlayCursor | null; take?: number } = {},
+    query,
+  }: {
+    after?: WantToPlayCursor | null;
+    take?: number;
+    /** Sucht nur im Titel (Teilstring, ohne Groß-/Kleinschreibung). */
+    query?: string;
+  } = {},
 ): Promise<WantToPlayPage> {
+  const search = query?.trim();
   const rows = await prisma.gameWantToPlay.findMany({
     where: {
       meepleId,
+      ...(search && {
+        boardGame: { title: { contains: search, mode: "insensitive" } },
+      }),
       ...(after && {
         OR: [
           { boardGame: { title: { gt: after.title } } },
