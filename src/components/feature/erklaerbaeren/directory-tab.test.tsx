@@ -8,9 +8,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, refresh: vi.fn() }),
 }));
 
+const setExplainerWanted = vi.fn().mockResolvedValue({ success: true });
+const searchBoardGamesAction = vi
+  .fn()
+  .mockResolvedValue([{ id: "g-9", title: "Brass" }]);
 vi.mock("@/lib/explainer/actions", () => ({
-  setExplainerWanted: vi.fn(),
-  searchBoardGamesAction: vi.fn().mockResolvedValue([]),
+  setExplainerWanted: (...a: unknown[]) => setExplainerWanted(...a),
+  searchBoardGamesAction: (...a: unknown[]) => searchBoardGamesAction(...a),
 }));
 vi.mock("@/lib/members/contact-dialog", () => ({
   fetchContactDialogMeeple: vi.fn(),
@@ -129,5 +133,65 @@ describe("DirectoryTab (#664)", () => {
     expect(
       screen.queryByRole("button", { name: /Erklärergesuch/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("DirectoryTab — Filter Gesucht (#662)", () => {
+  it("shows flagged games with badge 0", () => {
+    render(
+      <DirectoryTab
+        filter="wanted"
+        query=""
+        entries={[entry("g1", "Azul", [])]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "0 Erklärbären für Azul ansehen" }),
+    ).toHaveTextContent("0");
+  });
+
+  it("removes the flag after confirming the X", async () => {
+    render(
+      <DirectoryTab
+        filter="wanted"
+        query=""
+        entries={[entry("g1", "Azul", [])]}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Erklärergesuch für Azul entfernen" }),
+    );
+    expect(setExplainerWanted).not.toHaveBeenCalled();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Entfernen" }),
+    );
+
+    expect(setExplainerWanted).toHaveBeenCalledWith("g1", false);
+  });
+
+  it("adds a searched game after confirmation, excluding flagged ones", async () => {
+    render(
+      <DirectoryTab
+        filter="wanted"
+        query=""
+        entries={[entry("g1", "Azul", [])]}
+      />,
+    );
+
+    await userEvent.type(
+      screen.getByPlaceholderText(/Erklärer gesucht werden/),
+      "bra",
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Brass" }, { timeout: 2000 }),
+    );
+    expect(searchBoardGamesAction).toHaveBeenCalledWith("bra", ["g1"]);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Erklärergesuch hinzufügen" }),
+    );
+
+    expect(setExplainerWanted).toHaveBeenCalledWith("g-9", true);
   });
 });

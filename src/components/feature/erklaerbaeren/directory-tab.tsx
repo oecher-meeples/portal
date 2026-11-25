@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { Button } from "@/components/ui/button";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { FilterPill } from "@/components/ui/filter-pill";
+import { StopRowNavigation } from "@/components/ui/stop-row-navigation";
 import { SearchInput } from "@/components/ui/search-input";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { ExplainerListDialogTrigger } from "@/components/widgets/explainer/explainer-list-dialog-trigger";
+import { BoardGameSearch } from "@/components/feature/erklaerbaeren/board-game-search";
 import { GameTitleLink } from "@/components/feature/erklaerbaeren/game-title-link";
 import { erklaerbaerenHref } from "@/components/feature/erklaerbaeren/erklaerbaeren-url";
+import { setExplainerWanted } from "@/lib/explainer/actions";
+import type { BoardGameSearchHit } from "@/lib/explainer/game-list-queries";
 import {
   EXPLAINER_DIRECTORY_FILTER_LABELS,
   EXPLAINER_DIRECTORY_FILTER_SLUGS,
@@ -32,7 +39,9 @@ export function DirectoryTab({
   const router = useRouter();
   const [search, setSearch] = useState(query);
   const debounced = useDebouncedValue(search.trim(), 300);
+  const [picked, setPicked] = useState<BoardGameSearchHit | null>(null);
   const filterSlug = EXPLAINER_DIRECTORY_FILTER_SLUGS[filter];
+  const isWantedFilter = filter === "wanted";
 
   useEffect(() => {
     if (debounced === query) return;
@@ -68,6 +77,26 @@ export function DirectoryTab({
         placeholder="Spieltitel suchen …"
       />
 
+      {isWantedFilter && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Erklärergesuch hinzufügen</p>
+          <BoardGameSearch
+            placeholder="Spiel suchen, für das Erklärer gesucht werden …"
+            excludeIds={entries.map((e) => e.boardGameId)}
+            onSelect={setPicked}
+          />
+        </div>
+      )}
+      <ActionDialog
+        open={picked !== null}
+        onOpenChange={(open) => !open && setPicked(null)}
+        title="Erklärergesuch hinzufügen"
+        description={`Für „${picked?.title ?? ""}“ werden Erklärer gesucht. Alle Mitglieder sehen das Spiel dann im Filter „Gesucht“.`}
+        submitLabel="Erklärergesuch hinzufügen"
+        action={() => setExplainerWanted(picked?.id ?? "", true)}
+        onReset={() => setPicked(null)}
+      />
+
       {entries.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           {filter === "wanted"
@@ -99,6 +128,27 @@ export function DirectoryTab({
                 boardGameTitle={entry.boardGameTitle}
                 explainers={entry.explainers}
               />
+              {isWantedFilter && (
+                <StopRowNavigation>
+                  <ActionDialog
+                    trigger={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={`Erklärergesuch für ${entry.boardGameTitle} entfernen`}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    }
+                    title="Erklärergesuch entfernen"
+                    description={`„${entry.boardGameTitle}“ wird nicht mehr als „Erklärer gesucht“ markiert.`}
+                    submitLabel="Entfernen"
+                    submitVariant="destructive"
+                    action={() => setExplainerWanted(entry.boardGameId, false)}
+                  />
+                </StopRowNavigation>
+              )}
             </li>
           ))}
         </ul>
