@@ -43,7 +43,7 @@ export function PrivateCollectionCard({
   cooldownEndsAt,
   canForceImport,
   visibleToOthers,
-  shareWantToPlay = false,
+  importWantToPlay = false,
   shareForTrade = false,
   nextEvent = null,
   ownOffers = [],
@@ -59,8 +59,9 @@ export function PrivateCollectionCard({
    * in der Ludothek ("Auch Privatbesitz anzeigen"), wenn dieses Flag an ist
    * (#255-Folge); umschaltbar direkt auf der Karte. */
   visibleToOthers: boolean;
-  /** Opt-in: „Want to Play"/„For Trade" anderen Meeple zeigen (#632-Folge). */
-  shareWantToPlay?: boolean;
+  /** Opt-in: „Want to Play" beim BGG-Import mit übernehmen (#637). */
+  importWantToPlay?: boolean;
+  /** Opt-in: „For Trade" anderen Meeple zeigen (#632-Folge). */
   shareForTrade?: boolean;
   /** (#122) Nächstes kommendes Event — einziger Freigabe-Kontext, `null`/
    * fehlend ohne kommendes Event (dann keine Freigabe-Steuerung). */
@@ -117,10 +118,11 @@ export function PrivateCollectionCard({
       <PrivateCollectionVisibleSwitch initialVisible={visibleToOthers} />
       <PrivateCollectionShareSwitch
         id="private-collection-want-to-play"
-        label="Meine „Want to Play“ zeigen"
-        initial={shareWantToPlay}
+        label="Want-to-play von BGG importieren und für alle Mitglieder sichtbar machen"
+        note="Gilt ab dem nächsten Import. Ausschalten stoppt nur künftige Importe. Bereits importierte Spiele bleiben sichtbar, bis du sie auf der Karte „Das möchte ich spielen“ entfernst."
+        initial={importWantToPlay}
         save={(next) =>
-          setPrivateCollectionShareAction("shareWantToPlay", next)
+          setPrivateCollectionShareAction("importWantToPlay", next)
         }
       />
       <PrivateCollectionShareSwitch
@@ -200,11 +202,14 @@ function PrivateCollectionShareSwitch({
   id,
   label,
   hint,
+  note,
   initial,
   save,
 }: {
   id: string;
   label: string;
+  /** Erklärung, die unabhängig vom Schalterstand immer sichtbar ist. */
+  note?: string;
   /** Erklärung, solange der Schalter aus ist. */
   hint?: string;
   initial: boolean;
@@ -230,6 +235,7 @@ function PrivateCollectionShareSwitch({
         />
         <Label htmlFor={id}>{label}</Label>
       </div>
+      {note && <p className="text-muted-foreground text-xs">{note}</p>}
       {!checked && hint && (
         <p className="text-muted-foreground text-xs">{hint}</p>
       )}

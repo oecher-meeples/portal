@@ -180,6 +180,12 @@ export function PrivateCollectionDialog({
                 Bearbeiten
               </Button>
             </div>
+            {editing && (
+              <p className="text-muted-foreground text-xs">
+                Löschen und For-Trade-Änderungen gelten bis zum nächsten
+                BGG-Import (die Sammlung wird überschrieben).
+              </p>
+            )}
             <div className="flex flex-wrap gap-1.5">
               <Badge
                 variant={statusFilters.has("forTrade") ? "default" : "outline"}

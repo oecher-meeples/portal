@@ -75,3 +75,20 @@ export async function removeWantToPlay(meepleId: string, boardGameId: string) {
 export async function clearWantToPlay(meepleId: string) {
   await prisma.gameWantToPlay.deleteMany({ where: { meepleId } });
 }
+
+/** Eigene „Want to Play"-Markierung setzen (idempotent) oder entfernen. */
+export async function setWantToPlayMark(
+  meepleId: string,
+  boardGameId: string,
+  marked: boolean,
+) {
+  if (marked) {
+    await prisma.gameWantToPlay.upsert({
+      where: { meepleId_boardGameId: { meepleId, boardGameId } },
+      create: { meepleId, boardGameId },
+      update: {},
+    });
+  } else {
+    await removeWantToPlay(meepleId, boardGameId);
+  }
+}

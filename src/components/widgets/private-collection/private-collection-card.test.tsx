@@ -167,18 +167,21 @@ describe("PrivateCollectionCard (#308)", () => {
     );
 
     const wantToPlay = screen.getByRole("switch", {
-      name: "Meine „Want to Play“ zeigen",
+      name: /Want-to-play von BGG importieren/,
     });
     const forTrade = screen.getByRole("switch", {
       name: "Meine „For Trade“ zeigen",
     });
     expect(wantToPlay).not.toBeChecked();
     expect(forTrade).toBeChecked();
+    expect(
+      screen.getByText(/Ausschalten stoppt nur künftige Importe/),
+    ).toBeInTheDocument();
 
     await user.click(wantToPlay);
     await user.click(forTrade);
 
-    expect(setShareMock).toHaveBeenCalledWith("shareWantToPlay", true);
+    expect(setShareMock).toHaveBeenCalledWith("importWantToPlay", true);
     expect(setShareMock).toHaveBeenCalledWith("shareForTrade", false);
   });
 

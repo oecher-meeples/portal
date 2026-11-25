@@ -7,6 +7,10 @@ import type { PrivateCollectionImportStatus } from "@prisma/client";
 export type ImportJobSummary = {
   status: PrivateCollectionImportStatus;
   importedCount: number | null;
+  /** Want-to-Play-Teil (#637): Anzahl bzw. Teilfehler, `null` wenn der
+   * Schalter aus war. */
+  wantToPlayCount?: number | null;
+  wantToPlayError?: string | null;
   error: string | null;
 };
 
@@ -46,8 +50,17 @@ export function ImportJobStatus({ job }: { job: ImportJobSummary | null }) {
   }
   const count = job.importedCount ?? 0;
   return (
-    <p className="text-sm text-emerald-600">
-      Letzter Import: {count} {count === 1 ? "Spiel" : "Spiele"} importiert.
-    </p>
+    <>
+      <p className="text-sm text-emerald-600">
+        Letzter Import: {count} {count === 1 ? "Spiel" : "Spiele"} importiert
+        {job.wantToPlayCount != null && `, ${job.wantToPlayCount} Want to Play`}
+        .
+      </p>
+      {job.wantToPlayError && (
+        <p className="text-destructive text-sm">
+          Want to Play nicht importiert: {job.wantToPlayError}
+        </p>
+      )}
+    </>
   );
 }

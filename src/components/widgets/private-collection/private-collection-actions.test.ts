@@ -41,15 +41,52 @@ describe("setPrivateCollectionEntryFlagAction", () => {
     });
   });
 
-  it("clears wantToPlay on an own entry", async () => {
-    await setPrivateCollectionEntryFlagAction("entry-1", "wantToPlay", false);
+  it("setzt wantToPlay in game_want_to_play über die boardGameId des eigenen Eintrags", async () => {
+    prismaMock.privateGameCollectionEntry.findFirst.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
+
+    await setPrivateCollectionEntryFlagAction("entry-1", "wantToPlay", true);
 
     expect(
-      prismaMock.privateGameCollectionEntry.updateMany,
+      prismaMock.privateGameCollectionEntry.findFirst,
     ).toHaveBeenCalledWith({
       where: { id: "entry-1", meepleId: "meeple-1" },
-      data: { wantToPlay: false },
+      select: { boardGameId: true },
     });
+    expect(prismaMock.gameWantToPlay.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: { meepleId: "meeple-1", boardGameId: "game-1" },
+      }),
+    );
+    expect(
+      prismaMock.privateGameCollectionEntry.updateMany,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("entfernt wantToPlay aus game_want_to_play", async () => {
+    prismaMock.privateGameCollectionEntry.findFirst.mockResolvedValue({
+      boardGameId: "game-1",
+    } as never);
+
+    await setPrivateCollectionEntryFlagAction("entry-1", "wantToPlay", false);
+
+    expect(prismaMock.gameWantToPlay.deleteMany).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1", boardGameId: "game-1" },
+    });
+  });
+
+  it("lehnt wantToPlay für einen fremden Eintrag ab", async () => {
+    prismaMock.privateGameCollectionEntry.findFirst.mockResolvedValue(null);
+
+    const result = await setPrivateCollectionEntryFlagAction(
+      "foreign",
+      "wantToPlay",
+      true,
+    );
+
+    expect(result).toEqual({ error: "Eintrag nicht gefunden." });
+    expect(prismaMock.gameWantToPlay.upsert).not.toHaveBeenCalled();
   });
 
   it("rejects an unknown flag name", async () => {
