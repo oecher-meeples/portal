@@ -47,7 +47,11 @@ export default async function AdminMitgliederPage() {
     canManageSystemAccounts,
   ] = await Promise.all([
     prisma.member.findMany({
-      orderBy: { memberNumber: "asc" },
+      orderBy: [
+        { lastName: "asc" },
+        { firstName: "asc" },
+        { memberNumber: "asc" },
+      ],
       include: {
         meeple: {
           select: {
