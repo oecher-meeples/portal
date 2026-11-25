@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/utils/prisma";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getMembershipState } from "@/lib/members/membership-state";
 import { generateToken } from "@/lib/utils/generate-token";
 import { siteUrl } from "@/lib/utils/site-url";
 
@@ -65,10 +67,36 @@ export async function revokeMemberCalendarToken(memberId: string) {
 
 /** Löst einen Roh-Token aus der Abo-URL gegen ein Mitglied auf — `null` bei
  * unbekanntem oder bereits widerrufenem Token. Kein Login-Cookie im Spiel:
- * der Abruf kommt von der Kalender-App selbst im Hintergrund. */
+ * der Abruf kommt von der Kalender-App selbst im Hintergrund.
+ *
+ * Der Token allein reicht nicht: wie bei den Action-Guards (#522) muss das
+ * Mitglied aktiv sein (nicht ausgetreten/anonymisiert) und `news:internal:view`
+ * noch besitzen. Sonst behielte ein gesperrtes Mitglied dauerhaft Zugriff auf
+ * den internen Kalender, obwohl der Admin ihm die Berechtigung entzogen hat. */
 export async function resolveMemberByCalendarToken(token: string) {
-  return prisma.member.findUnique({
+  const member = await prisma.member.findUnique({
     where: { calendarTokenHash: hashCalendarToken(token) },
-    select: { id: true },
+    select: {
+      id: true,
+      meepleId: true,
+      resignedAt: true,
+      membershipEndsAt: true,
+      meeple: { select: { neonAuthUserId: true, anonymizedAt: true } },
+    },
   });
+  if (!member?.meeple?.neonAuthUserId) return null;
+
+  const state = getMembershipState({
+    meepleId: member.meepleId,
+    resignedAt: member.resignedAt,
+    membershipEndsAt: member.membershipEndsAt,
+    anonymizedAt: member.meeple.anonymizedAt,
+  });
+  if (state !== "registriert" && state !== "gekuendigt") return null;
+
+  const allowed = await hasPermission(
+    member.meeple.neonAuthUserId,
+    "news:internal:view",
+  );
+  return allowed ? { id: member.id } : null;
 }
