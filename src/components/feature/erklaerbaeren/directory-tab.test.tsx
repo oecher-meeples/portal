@@ -171,7 +171,7 @@ describe("DirectoryTab — Filter Gesucht (#662)", () => {
     expect(setExplainerWanted).toHaveBeenCalledWith("g1", false);
   });
 
-  it("adds a searched game after confirmation, excluding flagged ones", async () => {
+  it("adds a searched game directly on selection, excluding flagged ones", async () => {
     render(
       <DirectoryTab
         filter="wanted"
@@ -188,9 +188,6 @@ describe("DirectoryTab — Filter Gesucht (#662)", () => {
       await screen.findByRole("button", { name: "Brass" }, { timeout: 2000 }),
     );
     expect(searchBoardGamesAction).toHaveBeenCalledWith("bra", ["g1"]);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Erklärergesuch hinzufügen" }),
-    );
 
     expect(setExplainerWanted).toHaveBeenCalledWith("g-9", true);
   });
