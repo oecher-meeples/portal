@@ -17,6 +17,11 @@ import { findExpansionAssignmentOptions } from "@/lib/ludothek/board-games";
 import { toContactDialogMeeple, meepleEmail } from "@/lib/members/contact";
 import { getExplainersForGame } from "@/lib/explainer/queries";
 import { getOpenLfgPostsForBoardGame } from "@/lib/content/lfg";
+import {
+  findSharedCollectionMeeples,
+  hasWantToPlayMark,
+} from "@/lib/ludothek/shared-collection-meeples";
+import { WantToPlayButton } from "@/components/feature/ludothek/want-to-play-button";
 import { findCurrentEvent } from "@/lib/events/upcoming";
 import { getGuestCopyAvailability } from "@/lib/events/guest-area";
 import { loadBoardGameTraitTextsByTrait } from "@/lib/ludothek/board-game-trait-texts";
@@ -191,10 +196,26 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
     ]),
   );
 
-  const [explainerEntries, openLfgPosts] = await Promise.all([
-    getExplainersForGame(game.boardGameId),
-    getOpenLfgPostsForBoardGame(game.boardGameId),
-  ]);
+  const [explainerEntries, openLfgPosts, wantToPlay, forTrade] =
+    await Promise.all([
+      getExplainersForGame(game.boardGameId),
+      getOpenLfgPostsForBoardGame(game.boardGameId),
+      findSharedCollectionMeeples(game.boardGameId, "wantToPlay"),
+      findSharedCollectionMeeples(game.boardGameId, "forTrade"),
+    ]);
+  // „Ich will das auch spielen": nur anbieten, wenn man nicht ohnehin schon
+  // über den BGG-Import in der Liste steht; eine eigene Markierung lässt sich
+  // wieder entfernen.
+  const ownMark = currentMeeple
+    ? await hasWantToPlayMark(currentMeeple.id, game.boardGameId)
+    : false;
+  const alreadyListed = wantToPlay.some(
+    (meeple) => meeple.meepleId === currentMeeple?.id,
+  );
+  const wantToPlayAction =
+    currentMeeple && (ownMark || !alreadyListed) ? (
+      <WantToPlayButton boardGameId={game.boardGameId} marked={ownMark} />
+    ) : undefined;
   const myLevel =
     explainerEntries.find((entry) => entry.meepleId === currentMeeple?.id)
       ?.level ?? null;
@@ -321,6 +342,9 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
       copies={copyRows}
       canManageGames={canManageGames}
       openLfgPosts={openLfgPosts}
+      wantToPlay={wantToPlay}
+      wantToPlayAction={wantToPlayAction}
+      forTrade={forTrade}
       createLfgAction={createLfgAction}
       marketListingAction={marketListingAction}
       traitTexts={traitTexts}

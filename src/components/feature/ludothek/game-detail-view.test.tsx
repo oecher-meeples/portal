@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { BoardGameKind } from "@prisma/client";
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 
@@ -9,6 +10,9 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/components/widgets/game-holding/game-holding-panel", () => ({
   GameHoldingPanel: () => null,
+}));
+vi.mock("@/components/feature/ludothek/shared-collection-meeples-card", () => ({
+  SharedCollectionMeeplesCard: () => null,
 }));
 vi.mock("@/components/feature/ludothek/explainer-game-panel", () => ({
   ExplainerGamePanel: () => null,
@@ -81,7 +85,8 @@ function game(overrides: Partial<PublicLudothekGame> = {}): PublicLudothekGame {
 }
 
 describe("GameDetailView — offene Gesuche (#34)", () => {
-  it("shows the section with the correct fields when open posts exist", () => {
+  it("shows the section with the correct fields when open posts exist", async () => {
+    const user = userEvent.setup();
     render(
       <GameDetailView
         game={game()}
@@ -99,7 +104,10 @@ describe("GameDetailView — offene Gesuche (#34)", () => {
       />,
     );
 
-    expect(screen.getByText("Offene Gesuche")).toBeInTheDocument();
+    expect(screen.getByText("Offenes Spielergesuch")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /Offenes Spielergesuch/ }),
+    );
     expect(
       screen.getByText("Wer hat Lust auf Arche Nova?"),
     ).toBeInTheDocument();
@@ -111,13 +119,17 @@ describe("GameDetailView — offene Gesuche (#34)", () => {
   it("omits the section entirely when there are no open posts", () => {
     render(<GameDetailView game={game()} openLfgPosts={[]} />);
 
-    expect(screen.queryByText("Offene Gesuche")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Offene[s]? Spielergesuch/),
+    ).not.toBeInTheDocument();
   });
 
   it("omits the section when openLfgPosts is not passed (guests)", () => {
     render(<GameDetailView game={game()} />);
 
-    expect(screen.queryByText("Offene Gesuche")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Offene[s]? Spielergesuch/),
+    ).not.toBeInTheDocument();
   });
 });
 

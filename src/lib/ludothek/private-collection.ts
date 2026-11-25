@@ -77,6 +77,11 @@ export async function getOwnPrivateCollection(
   });
 }
 
+/** Anzahl importierter Einträge eines Meeples (für fremde Profile, #632). */
+export function countPrivateCollectionEntries(meepleId: string) {
+  return prisma.privateGameCollectionEntry.count({ where: { meepleId } });
+}
+
 const IMPORT_COOLDOWN_MS = 60 * 60 * 1000;
 
 async function hasSysadminRole(

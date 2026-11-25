@@ -11,6 +11,7 @@ import {
   parseMarketListingSearchParams,
   toMarketListingView,
 } from "@/lib/markt/market-listings";
+import { findForTradeOffers } from "@/lib/markt/for-trade-offers";
 import { MarktBrowser } from "@/components/feature/markt/markt-browser";
 import { MarketNewsletterToggle } from "@/components/widgets/market-newsletter-toggle";
 
@@ -27,7 +28,7 @@ export default async function MarktPage({
     "games:manage",
   );
 
-  const [marketListings, sparePartListings] = await Promise.all([
+  const [marketListings, sparePartListings, tradeGames] = await Promise.all([
     prisma.marketListing.findMany({
       include: {
         seller: {
@@ -45,6 +46,7 @@ export default async function MarktPage({
       },
       orderBy: { createdAt: "desc" },
     }),
+    findForTradeOffers(filters.search),
   ]);
 
   const listings = filterMarketListings(
@@ -78,6 +80,7 @@ export default async function MarktPage({
       <MarktBrowser
         listings={listings}
         spareParts={spareParts}
+        tradeGames={tradeGames}
         ownMeepleId={meeple.id}
         canManageSpareParts={canManageSpareParts}
         bggUsername={meeple.bggUsername}
