@@ -11,6 +11,8 @@ export type ExplainerGameRow = {
   imageUrl: string | null;
   /** Für den Link zur Spieldetailseite `/ludothek/[slug]`. */
   slug: string;
+  /** Zweittitel (z. B. deutscher Name), `null` wenn keiner gesetzt ist. */
+  secondaryTitle: string | null;
   /** Erweiterung — steht direkt unter ihrem Basisspiel. */
   isExpansion: boolean;
   /** „Erklärer gesucht“ (#660). */
@@ -56,6 +58,17 @@ export const EXPLAINER_GAME_FILTER_LABELS: Record<ExplainerGameFilter, string> =
     known: "Bekannte",
   };
 
+/** Kurze Erklärung unter dem aktiven Filter. */
+export const EXPLAINER_GAME_FILTER_HINTS: Record<ExplainerGameFilter, string> =
+  {
+    relevant:
+      "Alles, was dich betrifft: deine BGG-Spiele, gesuchte Spiele und Spiele, für die du ein Niveau eingetragen hast.",
+    mine: "Deine importierten BGG-Spiele, auch ohne eingetragenes Niveau.",
+    wanted:
+      "Spiele, für die der Verein Erklärer sucht. Trag ein Niveau ein, wenn du eines erklären kannst.",
+    known: "Spiele, für die du schon ein Niveau eingetragen hast.",
+  };
+
 /** URL-Werte (`?filter=gesucht`, #666) je Filter. */
 export const EXPLAINER_GAME_FILTER_SLUGS: Record<ExplainerGameFilter, string> =
   {
@@ -90,6 +103,15 @@ export const EXPLAINER_DIRECTORY_FILTER_LABELS: Record<
   string
 > = { all: "Alle", wanted: "Gesucht" };
 
+export const EXPLAINER_DIRECTORY_FILTER_HINTS: Record<
+  ExplainerDirectoryFilter,
+  string
+> = {
+  all: "Alle Spiele, für die mindestens ein Erklärbär eingetragen ist.",
+  wanted:
+    "Spiele, für die Erklärer gesucht werden, auch ohne bisherigen Erklärbär. Mit dem Papierkorb nimmst du ein Gesuch zurück.",
+};
+
 /** URL-Werte (`?filter=gesucht`) je Filter. */
 export const EXPLAINER_DIRECTORY_FILTER_SLUGS: Record<
   ExplainerDirectoryFilter,
@@ -108,6 +130,8 @@ export type ExplainerDirectoryEntry = {
   imageUrl: string | null;
   /** Für den Link zur Spieldetailseite `/ludothek/[slug]`. */
   slug: string;
+  /** Zweittitel (z. B. deutscher Name), `null` wenn keiner gesetzt ist. */
+  secondaryTitle: string | null;
   wanted: boolean;
   explainers: ExplainerEntry[];
 };

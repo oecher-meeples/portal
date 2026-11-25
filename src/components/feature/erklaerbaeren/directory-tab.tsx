@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { erklaerbaerenHref } from "@/components/feature/erklaerbaeren/erklaerbae
 import { cn } from "@/lib/utils/cn";
 import { setExplainerWanted } from "@/lib/explainer/actions";
 import {
+  EXPLAINER_DIRECTORY_FILTER_HINTS,
   EXPLAINER_DIRECTORY_FILTER_LABELS,
   EXPLAINER_DIRECTORY_FILTER_SLUGS,
   type ExplainerDirectoryEntry,
@@ -72,6 +73,9 @@ export function DirectoryTab({
           />
         ))}
       </nav>
+      <p className="text-muted-foreground -mt-2 text-sm">
+        {EXPLAINER_DIRECTORY_FILTER_HINTS[filter]}
+      </p>
 
       <SearchInput
         value={search}
@@ -132,6 +136,7 @@ export function DirectoryTab({
                   <div className="min-w-0 flex-1">
                     <GameTitleLink
                       title={entry.boardGameTitle}
+                      secondaryTitle={entry.secondaryTitle}
                       slug={entry.slug}
                     />
                   </div>
@@ -146,11 +151,11 @@ export function DirectoryTab({
                         trigger={
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="destructive"
                             size="icon-sm"
                             aria-label={`Erklärergesuch für ${entry.boardGameTitle} entfernen`}
                           >
-                            <X className="size-4" />
+                            <Trash2 className="size-4" />
                           </Button>
                         }
                         title="Erklärergesuch entfernen"

@@ -39,6 +39,7 @@ const GAMES = [
     boardGameTitle: "Wingspan",
     imageUrl: null,
     slug: "wingspan",
+    secondaryTitle: null,
     isExpansion: false,
     wanted: true,
     level: null,
@@ -48,6 +49,7 @@ const GAMES = [
     boardGameTitle: "Ahnen",
     imageUrl: null,
     slug: "ahnen",
+    secondaryTitle: null,
     isExpansion: true,
     wanted: false,
     level: "BY_HEART" as const,
@@ -142,6 +144,16 @@ describe("MyGamesTab (#663)", () => {
       expect(addExplainerGameFromSearch).toHaveBeenCalledWith("g-9"),
     );
     expect(searchBoardGamesAction).toHaveBeenCalledWith("azu", []);
+  });
+
+  it("explains the active filter below the filter pills", () => {
+    render(<MyGamesTab games={[]} filter="mine" />);
+
+    expect(
+      screen.getByText(
+        "Deine importierten BGG-Spiele, auch ohne eingetragenes Niveau.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows a filter-specific empty state", () => {

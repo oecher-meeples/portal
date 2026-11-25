@@ -31,6 +31,7 @@ export async function getExplainerDirectory({
       title: true,
       imageUrl: true,
       slug: true,
+      secondaryTitle: true,
       explainerWanted: true,
       explainerGames: {
         orderBy: { meeple: { displayName: "asc" } },
@@ -54,6 +55,7 @@ export async function getExplainerDirectory({
     boardGameTitle: game.title,
     imageUrl: game.imageUrl,
     slug: game.slug,
+    secondaryTitle: game.secondaryTitle,
     wanted: game.explainerWanted,
     explainers: game.explainerGames.map((entry) => ({
       meepleId: entry.meeple.id,

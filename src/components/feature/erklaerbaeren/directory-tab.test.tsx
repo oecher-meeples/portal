@@ -29,12 +29,18 @@ afterEach(() => {
 
 const { DirectoryTab } = await import("./directory-tab");
 
-function entry(id: string, title: string, explainerNames: string[]) {
+function entry(
+  id: string,
+  title: string,
+  explainerNames: string[],
+  secondaryTitle: string | null = null,
+) {
   return {
     boardGameId: id,
     boardGameTitle: title,
     imageUrl: null,
     slug: id,
+    secondaryTitle,
     wanted: false,
     explainers: explainerNames.map((displayName, i) => ({
       meepleId: `m-${id}-${i}`,
@@ -115,6 +121,16 @@ describe("DirectoryTab (#664)", () => {
     );
   });
 
+  it("explains the active filter", () => {
+    render(<DirectoryTab filter="all" query="" entries={[]} />);
+
+    expect(
+      screen.getByText(
+        "Alle Spiele, für die mindestens ein Erklärbär eingetragen ist.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty state", () => {
     render(<DirectoryTab filter="all" query="" entries={[]} />);
 
@@ -135,6 +151,24 @@ describe("DirectoryTab (#664)", () => {
     expect(
       screen.queryByRole("button", { name: /Erklärergesuch/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("DirectoryTab — Kachel", () => {
+  it("shows primary and secondary title, linking to the detail page", () => {
+    render(
+      <DirectoryTab
+        filter="all"
+        query=""
+        entries={[entry("ark", "Ark Nova", ["Anna"], "Arche Nova")]}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Ark Nova/ })).toHaveAttribute(
+      "href",
+      "/ludothek/ark",
+    );
+    expect(screen.getByText("Arche Nova")).toBeInTheDocument();
   });
 });
 
@@ -162,9 +196,11 @@ describe("DirectoryTab — Filter Gesucht (#662)", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Erklärergesuch für Azul entfernen" }),
-    );
+    const remove = screen.getByRole("button", {
+      name: "Erklärergesuch für Azul entfernen",
+    });
+    expect(remove).toHaveClass("text-destructive");
+    await userEvent.click(remove);
     expect(setExplainerWanted).not.toHaveBeenCalled();
     await userEvent.click(
       await screen.findByRole("button", { name: "Entfernen" }),

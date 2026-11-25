@@ -48,9 +48,7 @@ export function ExplainerListDialogTrigger({
               className={cn("group rounded-4xl", className)}
               aria-label={`${explainers.length} Erklärbären für ${boardGameTitle} ansehen`}
             >
-              <Badge variant={explainers.length === 0 ? "outline" : "default"}>
-                {explainers.length}
-              </Badge>
+              <Badge>{explainers.length}</Badge>
             </button>
           }
         />

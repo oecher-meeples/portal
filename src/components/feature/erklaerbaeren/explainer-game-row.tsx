@@ -32,7 +32,11 @@ export function ExplainerGameRow({ game }: { game: Row }) {
           sizes="48px"
         />
         <div className="flex min-w-0 flex-col gap-1">
-          <GameTitleLink title={game.boardGameTitle} slug={game.slug} />
+          <GameTitleLink
+            title={game.boardGameTitle}
+            slug={game.slug}
+            secondaryTitle={game.secondaryTitle}
+          />
           <div className="flex flex-wrap gap-1.5">
             {game.isExpansion && <Badge variant="outline">Erweiterung</Badge>}
             {game.wanted && <Badge variant="warning">Erklärer gesucht</Badge>}

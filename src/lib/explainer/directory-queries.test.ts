@@ -50,6 +50,7 @@ describe("getExplainerDirectory", () => {
         title: "Azul",
         imageUrl: "u",
         slug: "azul",
+        secondaryTitle: "Azul DE",
         explainerWanted: true,
         explainerGames: [
           {
@@ -68,6 +69,7 @@ describe("getExplainerDirectory", () => {
         title: "Brass",
         imageUrl: null,
         slug: "brass",
+        secondaryTitle: null,
         explainerWanted: true,
         explainerGames: [],
       },
@@ -80,6 +82,7 @@ describe("getExplainerDirectory", () => {
       boardGameTitle: "Azul",
       imageUrl: "u",
       slug: "azul",
+      secondaryTitle: "Azul DE",
       wanted: true,
       explainers: [
         {

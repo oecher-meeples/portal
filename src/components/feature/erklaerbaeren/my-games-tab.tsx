@@ -9,6 +9,7 @@ import { addExplainerGameFromSearch } from "@/lib/explainer/actions";
 import type { ExplainerGameRow as Row } from "@/lib/explainer/game-list";
 import {
   EXPLAINER_GAME_FILTERS,
+  EXPLAINER_GAME_FILTER_HINTS,
   EXPLAINER_GAME_FILTER_LABELS,
   EXPLAINER_GAME_FILTER_SLUGS,
   type ExplainerGameFilter,
@@ -50,6 +51,9 @@ export function MyGamesTab({
           />
         ))}
       </nav>
+      <p className="text-muted-foreground -mt-2 text-sm">
+        {EXPLAINER_GAME_FILTER_HINTS[filter]}
+      </p>
 
       <BoardGameSearch
         placeholder="Spiel suchen und hinzufügen …"

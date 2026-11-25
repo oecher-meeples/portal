@@ -25,6 +25,7 @@ function game(
     title,
     imageUrl: null,
     slug: id,
+    secondaryTitle: null,
     kind: extra.kind ?? "BOARDGAME",
     explainerWanted: extra.wanted ?? false,
     expansionCollections: (extra.bases ?? []).map((baseGameId) => ({
