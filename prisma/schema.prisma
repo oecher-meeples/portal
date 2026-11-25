@@ -357,6 +357,11 @@ model Meeple {
    * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
    */
   privateCollectionVisible  Boolean                  @default(false)
+  /// Opt-in (#632-Folge): „Want to Play"-Markierungen der BGG-Collection
+  /// anderen Meeple zeigen. Nur das Flag — die Anzeige folgt separat.
+  shareWantToPlay           Boolean                  @default(false)
+  /// Opt-in (#632-Folge): „For Trade"-Markierungen anderen Meeple zeigen.
+  shareForTrade             Boolean                  @default(false)
   /**
    * Opt-in: täglicher Digest-Newsletter über neue Marktplatz-Angebote
    * (`MarketListing`, #254). Bewusst ein eigenes Flag statt einer Kategorie
@@ -407,6 +412,7 @@ model Meeple {
   marketListings              MarketListing[]              @relation("MarketListingSeller")
   privateGameCollection       PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
   privateCollectionImportJobs PrivateCollectionImportJob[]
+  wantToPlayMarks             GameWantToPlay[]
   deletionRequests            DeletionRequest[]            @relation("DeletionRequestMeeple")
   privateEventLoansOffered    PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
   privateEventLoansIssued     PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
@@ -819,6 +825,27 @@ model PrivateCollectionImportJob {
   @@map("private_collection_import_jobs")
 }
 
+/// Manuell gesetzte „Ich will das auch spielen"-Markierung auf der
+/// Spieledetailseite (#632-Folge). Bewusst getrennt von
+/// `PrivateGameCollectionEntry`: das sind besessene BGG-Importe, die bei jedem
+/// Import gelöscht und neu angelegt werden und in der Ludothek als
+/// Privatbesitz erscheinen — eine Wunschmarkierung ist weder das eine noch das
+/// andere. Die Markierung ist eine bewusste, öffentliche Handlung und braucht
+/// kein `shareWantToPlay`.
+model GameWantToPlay {
+  id          String   @id @default(cuid())
+  meepleId    String
+  boardGameId String
+  createdAt   DateTime @default(now())
+
+  meeple    Meeple    @relation(fields: [meepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@unique([meepleId, boardGameId])
+  @@index([boardGameId])
+  @@map("game_want_to_play")
+}
+
 model Invite {
   id              String    @id @default(cuid())
   token           String    @unique
@@ -946,6 +973,7 @@ model BoardGame {
   expansionCollections     GameCollection[]             @relation("ExpansionCollections")
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
+  wantToPlayMarks          GameWantToPlay[]
   lfgPosts                 LfgPost[]
   marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")

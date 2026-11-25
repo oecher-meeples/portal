@@ -106,6 +106,8 @@ const MEMBER_PROFILE_INCLUDE = {
       doorbellNote: true,
       neonAuthUserId: true,
       privateCollectionVisible: true,
+      shareWantToPlay: true,
+      shareForTrade: true,
       privateCollectionSyncedAt: true,
       profilePictureUrl: true,
       profilePictureVisibility: true,
