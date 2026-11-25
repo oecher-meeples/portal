@@ -32,7 +32,7 @@ function entry(id: string, title: string, explainerNames: string[]) {
     boardGameId: id,
     boardGameTitle: title,
     imageUrl: null,
-    bggId: null,
+    slug: id,
     wanted: false,
     explainers: explainerNames.map((displayName, i) => ({
       meepleId: `m-${id}-${i}`,

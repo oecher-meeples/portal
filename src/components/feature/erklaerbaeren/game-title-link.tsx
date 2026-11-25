@@ -1,26 +1,21 @@
+import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import { bggGameUrl } from "@/lib/bgg/url";
 
-/** Spieltitel, mit Link zur BGG-Seite (externer Tab), sofern das Spiel eine
- * BGG-ID hat. */
+/** Spieltitel mit Link zur Spieldetailseite der Ludothek. */
 export function GameTitleLink({
   title,
-  bggId,
+  slug,
 }: {
   title: string;
-  bggId: number | null;
+  slug: string;
 }) {
-  const href = bggGameUrl(bggId);
-  if (!href) return <span className="font-medium">{title}</span>;
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+    <Link
+      href={`/ludothek/${slug}`}
       className="inline-flex items-center gap-1 font-medium hover:underline"
     >
       {title}
       <ExternalLink className="text-muted-foreground size-3 shrink-0" />
-    </a>
+    </Link>
   );
 }

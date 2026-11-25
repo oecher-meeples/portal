@@ -33,7 +33,7 @@ const GAMES = [
     boardGameId: "g-1",
     boardGameTitle: "Wingspan",
     imageUrl: null,
-    bggId: 266192,
+    slug: "wingspan",
     isExpansion: false,
     wanted: true,
     level: null,
@@ -42,7 +42,7 @@ const GAMES = [
     boardGameId: "g-2",
     boardGameTitle: "Ahnen",
     imageUrl: null,
-    bggId: null,
+    slug: "ahnen",
     isExpansion: true,
     wanted: false,
     level: "BY_HEART" as const,
@@ -71,26 +71,39 @@ describe("MyGamesTab (#663)", () => {
     );
   });
 
-  it("shows title links, expansion and wanted badges", () => {
+  it("links titles to the game detail page, shows expansion and wanted badges", () => {
     render(<MyGamesTab games={GAMES} filter="relevant" />);
 
     expect(screen.getByRole("link", { name: /Wingspan/ })).toHaveAttribute(
       "href",
-      "https://boardgamegeek.com/boardgame/266192",
+      "/ludothek/wingspan",
     );
     expect(screen.getByText("Erweiterung")).toBeInTheDocument();
     expect(screen.getByText("Erklärer gesucht")).toBeInTheDocument();
   });
 
-  it("sets a level on a game without one", async () => {
+  it("dims the slider for a game without a level; first pick creates it", async () => {
     render(<MyGamesTab games={GAMES} filter="wanted" />);
 
-    const [firstToggle] = screen.getAllByRole("group", {
-      name: "Erfahrungsstufe",
+    expect(
+      screen.getByText("Noch kein Niveau eingetragen"),
+    ).toBeInTheDocument();
+    const [ohneAnleitung] = screen.getAllByRole("button", {
+      name: "Ohne Anleitung",
     });
-    await userEvent.click(firstToggle.querySelectorAll("button")[1]);
+    await userEvent.click(ohneAnleitung);
 
     expect(addExplainerGame).toHaveBeenCalledWith("g-1", "WITHOUT_MANUAL");
+  });
+
+  it("changes an existing level via the slider", async () => {
+    render(<MyGamesTab games={GAMES} filter="known" />);
+
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Mit Anleitung" })[1],
+    );
+
+    expect(addExplainerGame).toHaveBeenCalledWith("g-2", "WITH_MANUAL");
   });
 
   it("removes only my level via the trash button; disabled without a level", async () => {

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CoverMedia } from "@/components/ui/cover-media";
 import { useAction } from "@/components/ui/use-action";
-import { ExplainerLevelToggle } from "@/components/entities/explainer-level-toggle";
+import { ExplainerLevelSlider } from "@/components/entities/explainer-level-slider";
 import { GameTitleLink } from "@/components/feature/erklaerbaeren/game-title-link";
 import { addExplainerGame, removeExplainerGame } from "@/lib/explainer/actions";
 import type { ExplainerGameRow as Row } from "@/lib/explainer/game-list";
@@ -32,24 +32,38 @@ export function ExplainerGameRow({ game }: { game: Row }) {
           sizes="48px"
         />
         <div className="flex min-w-0 flex-col gap-1">
-          <GameTitleLink title={game.boardGameTitle} bggId={game.bggId} />
+          <GameTitleLink title={game.boardGameTitle} slug={game.slug} />
           <div className="flex flex-wrap gap-1.5">
             {game.isExpansion && <Badge variant="outline">Erweiterung</Badge>}
             {game.wanted && <Badge variant="warning">Erklärer gesucht</Badge>}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <ExplainerLevelToggle
-          value={game.level}
-          disabled={pending}
-          onChange={(level) =>
-            run(() => addExplainerGame(game.boardGameId, level))
-          }
-        />
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            "flex w-full flex-col gap-0.5 sm:w-72",
+            game.level === null && "opacity-50 hover:opacity-100",
+          )}
+        >
+          <ExplainerLevelSlider
+            // Ohne Niveau steht der Slider abgedimmt auf der ersten Stufe —
+            // die erste Auswahl (Klick oder Ziehen) legt den Eintrag an.
+            value={game.level ?? "WITH_MANUAL"}
+            disabled={pending}
+            onChange={(level) =>
+              run(() => addExplainerGame(game.boardGameId, level))
+            }
+          />
+          {game.level === null && (
+            <span className="text-muted-foreground text-xs">
+              Noch kein Niveau eingetragen
+            </span>
+          )}
+        </div>
         <Button
           type="button"
-          variant="outline"
+          variant="destructive"
           size="icon-sm"
           aria-label={`${game.boardGameTitle}: mein Niveau entfernen`}
           disabled={pending || game.level === null}

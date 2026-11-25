@@ -118,10 +118,7 @@ export function DirectoryTab({
                 sizes="56px"
               />
               <div className="min-w-0 flex-1">
-                <GameTitleLink
-                  title={entry.boardGameTitle}
-                  bggId={entry.bggId}
-                />
+                <GameTitleLink title={entry.boardGameTitle} slug={entry.slug} />
               </div>
               <ExplainerListDialogTrigger
                 display="count"

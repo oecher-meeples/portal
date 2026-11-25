@@ -9,7 +9,8 @@ export type ExplainerGameRow = {
   boardGameId: string;
   boardGameTitle: string;
   imageUrl: string | null;
-  bggId: number | null;
+  /** Für den Link zur Spieldetailseite `/ludothek/[slug]`. */
+  slug: string;
   /** Erweiterung — steht direkt unter ihrem Basisspiel. */
   isExpansion: boolean;
   /** „Erklärer gesucht“ (#660). */
@@ -103,7 +104,8 @@ export type ExplainerDirectoryEntry = {
   boardGameId: string;
   boardGameTitle: string;
   imageUrl: string | null;
-  bggId: number | null;
+  /** Für den Link zur Spieldetailseite `/ludothek/[slug]`. */
+  slug: string;
   wanted: boolean;
   explainers: ExplainerEntry[];
 };
