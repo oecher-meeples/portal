@@ -6,6 +6,7 @@ import {
 import { prisma } from "@/lib/utils/prisma";
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { uniqueSlug } from "@/lib/utils/slug";
+import { isCatalogStub } from "@/lib/ludothek/board-game-stub";
 import {
   type ContributorInput,
   linkContributors,
@@ -135,6 +136,31 @@ export async function uniqueBoardGameSlug(tx: Tx, title: string) {
   );
 }
 
+/** Mitwirkende und Tags eines frisch angelegten bzw. aufgewerteten Titels:
+ * BGG-IDs haben Vorrang, sonst die reinen Namenslisten. */
+async function linkTitleRelations(
+  tx: Tx,
+  boardGameId: string,
+  input: BoardGameTitleInput,
+) {
+  if (input.contributors?.length) {
+    await linkContributors(tx, boardGameId, input.contributors);
+  } else {
+    await replaceAuthorIllustratorLinksByName(tx, boardGameId, {
+      author: input.author ?? [],
+      illustrator: input.illustrator ?? [],
+    });
+  }
+  if (input.tags?.length) {
+    await linkTags(tx, boardGameId, input.tags);
+  } else {
+    await replaceTitleTagsByLabel(tx, boardGameId, {
+      mechanics: input.mechanics ?? [],
+      categories: input.categories ?? [],
+    });
+  }
+}
+
 /** Finds the title by `bggId` (the one reliable product identity) or creates it. */
 export async function findOrCreateBoardGameTitle(
   input: BoardGameTitleInput,
@@ -145,9 +171,22 @@ export async function findOrCreateBoardGameTitle(
       where: { bggId: input.bggId },
     });
     if (existing) {
-      await linkContributors(tx, existing.id, input.contributors ?? []);
-      await linkTags(tx, existing.id, input.tags ?? []);
-      return existing;
+      // Ein Stub (#637) wird aufgewertet, sobald der Aufrufer vollständige
+      // Daten liefert; ein bereits vollständiger Titel bleibt unverändert.
+      const upgrade = isCatalogStub(existing) && !isCatalogStub(input);
+      const title = upgrade
+        ? await tx.boardGame.update({
+            where: { id: existing.id },
+            data: { title: input.title, ...toBoardGameTitleData(input) },
+          })
+        : existing;
+      if (upgrade) {
+        await linkTitleRelations(tx, existing.id, input);
+      } else {
+        await linkContributors(tx, existing.id, input.contributors ?? []);
+        await linkTags(tx, existing.id, input.tags ?? []);
+      }
+      return title;
     }
   }
 
@@ -155,21 +194,6 @@ export async function findOrCreateBoardGameTitle(
   const created = await tx.boardGame.create({
     data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
-  if (input.contributors?.length) {
-    await linkContributors(tx, created.id, input.contributors);
-  } else {
-    await replaceAuthorIllustratorLinksByName(tx, created.id, {
-      author: input.author ?? [],
-      illustrator: input.illustrator ?? [],
-    });
-  }
-  if (input.tags?.length) {
-    await linkTags(tx, created.id, input.tags);
-  } else {
-    await replaceTitleTagsByLabel(tx, created.id, {
-      mechanics: input.mechanics ?? [],
-      categories: input.categories ?? [],
-    });
-  }
+  await linkTitleRelations(tx, created.id, input);
   return created;
 }

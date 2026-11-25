@@ -16,26 +16,10 @@ import {
 } from "@/lib/ludothek/board-game-versions";
 import { upsertBoardGameVersion } from "@/lib/ludothek/taxonomy/versions";
 import { findOrCreateBoardGameTitle } from "@/lib/ludothek/board-games";
-import { toBoardGameTitleData } from "@/lib/ludothek/board-game-title-lookup";
-import { replaceBggContributors } from "@/lib/ludothek/taxonomy/contributors";
-import { replaceBggTags } from "@/lib/ludothek/taxonomy/tags";
+import { isCatalogStub } from "@/lib/ludothek/board-game-stub";
 import { translateBggGameData } from "@/lib/ludothek/board-games-bgg-import";
 import { sleep } from "@/lib/utils/sleep";
-import type { BoardGame } from "@prisma/client";
 import type { BggCollectionEntry } from "@/lib/bgg/collection";
-
-/** Ein früherer Import ist am `fetchBggGame()`-Aufruf gescheitert und hat nur
- * Titel + `bggId` hinterlassen (Fallback unten) — an den fehlenden
- * Kernfeldern zuverlässig erkennbar, unabhängig davon, wie „leer" ein
- * wirklich spärlicher BGG-Eintrag sonst sein könnte. */
-function isIncompleteStub(boardGame: BoardGame) {
-  return (
-    !boardGame.imageUrl &&
-    !boardGame.description &&
-    boardGame.minPlayers === null &&
-    boardGame.maxPlayers === null
-  );
-}
 
 /**
  * Ein wirklich neuer Titel (kein bereits katalogisierter `bggId`) bekommt
@@ -52,7 +36,7 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
   const existing = await prisma.boardGame.findUnique({
     where: { bggId: entry.bggId },
   });
-  if (existing && !isIncompleteStub(existing)) return existing;
+  if (existing && !isCatalogStub(existing)) return existing;
 
   try {
     const rawData = await fetchBggGame(entry.bggId);
@@ -60,17 +44,6 @@ async function resolvePrivateTitle(entry: BggCollectionEntry) {
     const input = bggDataToTitleInput(entry.bggId, data);
     await sleep(BGG_REQUEST_THROTTLE_MS);
 
-    if (existing) {
-      return await prisma.$transaction(async (tx) => {
-        const updated = await tx.boardGame.update({
-          where: { id: existing.id },
-          data: { title: input.title, ...toBoardGameTitleData(input) },
-        });
-        await replaceBggContributors(tx, existing.id, input.contributors ?? []);
-        await replaceBggTags(tx, existing.id, input.tags);
-        return updated;
-      });
-    }
     return await findOrCreateBoardGameTitle(input);
   } catch (error) {
     if (existing) return existing;

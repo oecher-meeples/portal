@@ -111,6 +111,9 @@ describe("runBggCollectionImport (#255, #632)", () => {
     ]);
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
+      description: "Siedeln",
+      minPlayers: 3,
+      maxPlayers: 4,
     } as never);
 
     const result = await runBggCollectionImport(MEEPLE);
@@ -222,22 +225,15 @@ describe("runBggCollectionImport (#255, #632)", () => {
       maxPlayers: 4,
       mechanics: ["Worker Placement"],
     });
-    prismaMock.boardGame.update.mockResolvedValue({ id: "game-3" } as never);
+    findOrCreateBoardGameTitleMock.mockResolvedValue({ id: "game-3" });
 
     const result = await runBggCollectionImport(MEEPLE);
 
     expect(fetchBggGameMock).toHaveBeenCalledWith(420805);
-    expect(prismaMock.boardGame.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "game-3" },
-        data: expect.objectContaining({
-          title: "Black Forest",
-          minPlayers: 1,
-          maxPlayers: 4,
-        }),
-      }),
+    // Die Aufwertung des Stubs übernimmt `findOrCreateBoardGameTitle`.
+    expect(findOrCreateBoardGameTitleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ minPlayers: 1, maxPlayers: 4 }),
     );
-    expect(findOrCreateBoardGameTitleMock).not.toHaveBeenCalled();
     expect(result).toEqual({ success: true, imported: 1 });
   });
 
