@@ -12,13 +12,17 @@ import { listOpenPendingChangesForMember } from "@/lib/members/pending-changes";
 import { getActiveHoldingsForMember } from "@/lib/ludothek/holdings-by-meeple";
 import {
   canForceImport,
+  countPrivateCollectionEntries,
   getImportCooldownEndsAt,
   getOwnPrivateCollection,
 } from "@/lib/ludothek/private-collection";
+import { getLatestPrivateCollectionImportJob } from "@/lib/ludothek/private-collection-import-queue";
 import { listOwnPrivateLoanOffers } from "@/lib/ludothek/private-event-loans";
 import { findUpcomingEventsVisibleToMembers } from "@/lib/events/upcoming";
 import { PrivateCollectionCard } from "@/components/widgets/private-collection/private-collection-card";
 import { PrivateSpieleSection } from "@/components/feature/mitglied-profil/private-spiele-section";
+import { WantToPlaySection } from "@/components/feature/mitglied-profil/want-to-play-section";
+import { AdminBggImportCard } from "@/components/feature/mitglied-profil/admin-bgg-import-card";
 import { findMeepleNewsletterPreference } from "@/lib/newsletter/subscribers";
 import { countOpenHoldings } from "@/lib/members/open-holdings";
 import { findOpenDeletionRequest } from "@/lib/members/deletion-requests";
@@ -65,6 +69,8 @@ export async function MitgliedProfilView({
           displayName: string;
           neonAuthUserId: string | null;
           privateCollectionVisible: boolean;
+          importWantToPlay: boolean;
+          shareForTrade: boolean;
           privateCollectionSyncedAt: Date | null;
         })
       | null;
@@ -123,6 +129,19 @@ export async function MitgliedProfilView({
             ? await listOwnPrivateLoanOffers(member.meeple.id, nextEvent.id)
             : [],
         }
+      : null;
+
+  // #632: fremde Profile zeigen die „Private Spiele"-Karte nur mit Einträgen;
+  // Admins sehen die Zahl zusätzlich an der Import-Karte.
+  const otherPrivateCount =
+    !isSelf && member.meeple
+      ? await countPrivateCollectionEntries(member.meeple.id)
+      : 0;
+
+  // #632: Zustand des Queue-Imports — für die eigene Karte und die Admin-Karte.
+  const latestImportJob =
+    member.meeple && (isSelf || viewer.canManageMembers)
+      ? await getLatestPrivateCollectionImportJob(member.meeple.id)
       : null;
 
   // #376: strikt auf das eigene Profil begrenzt — niemals auf einer fremden
@@ -338,8 +357,11 @@ export async function MitgliedProfilView({
             cooldownEndsAt={ownPrivateCollection.cooldownEndsAt}
             canForceImport={ownPrivateCollection.canForceImport}
             visibleToOthers={member.meeple.privateCollectionVisible}
+            importWantToPlay={member.meeple.importWantToPlay}
+            shareForTrade={member.meeple.shareForTrade}
             nextEvent={ownPrivateCollection.nextEvent}
             ownOffers={ownPrivateCollection.ownOffers}
+            latestImportJob={latestImportJob}
           />
         )}
         {/* Bewusst kein starrer `col-span-*` — nur Titel, ein Satz Text und
@@ -350,10 +372,23 @@ export async function MitgliedProfilView({
          * füllt deshalb die sonst leere Nachbarspalte, wenn sie allein in
          * der letzten Zeile landet (s. Datenschutz-Karte oben, gleiches
          * Prinzip). */}
-        {!isSelf && member.meeple?.privateCollectionVisible && (
-          <div className="md:last:col-span-full">
-            <PrivateSpieleSection meepleId={member.meeple.id} />
-          </div>
+        {!isSelf &&
+          member.meeple?.privateCollectionVisible &&
+          otherPrivateCount > 0 && (
+            <div className="md:last:col-span-full">
+              <PrivateSpieleSection meepleId={member.meeple.id} />
+            </div>
+          )}
+        {member.meeple && (
+          <WantToPlaySection meepleId={member.meeple.id} isOwner={isSelf} />
+        )}
+        {!isSelf && viewer.canManageMembers && member.meeple?.bggUsername && (
+          <AdminBggImportCard
+            meepleId={member.meeple.id}
+            bggUsername={member.meeple.bggUsername}
+            importedCount={otherPrivateCount}
+            latestImportJob={latestImportJob}
+          />
         )}
 
         {selfServiceData && (

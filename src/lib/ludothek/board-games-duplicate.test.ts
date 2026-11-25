@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
+import { NOT_CATALOG_STUB_WHERE } from "@/lib/ludothek/board-game-stub";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -65,7 +66,93 @@ describe("findOrCreateBoardGameTitle", () => {
   });
 });
 
+describe("findOrCreateBoardGameTitle – Stub-Aufwertung (#637)", () => {
+  const STUB = {
+    id: "stub-1",
+    description: null,
+    minPlayers: null,
+    maxPlayers: null,
+  };
+
+  it("wertet einen Stub mit vollständigen Daten auf", async () => {
+    prismaMock.boardGame.findUnique.mockResolvedValue(STUB as never);
+    prismaMock.boardGame.update.mockResolvedValue({ id: "stub-1" } as never);
+
+    await findOrCreateBoardGameTitle({
+      ...VALID_INPUT,
+      bggId: 342942,
+      minPlayers: 1,
+      maxPlayers: 4,
+    });
+
+    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+      where: { id: "stub-1" },
+      data: expect.objectContaining({ minPlayers: 1, maxPlayers: 4 }),
+    });
+  });
+
+  it("lässt einen Stub unverändert, wenn der Aufrufer selbst nur Stub-Daten liefert", async () => {
+    prismaMock.boardGame.findUnique.mockResolvedValue(STUB as never);
+
+    await findOrCreateBoardGameTitle({ ...VALID_INPUT, bggId: 342942 });
+
+    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
+  });
+
+  it("ergänzt bei einem vollständigen Titel nur ein fehlendes Bild", async () => {
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      ...STUB,
+      description: "Vollständig",
+      imageUrl: null,
+      yearPublished: 2024,
+    } as never);
+    prismaMock.boardGame.update.mockResolvedValue({ id: "stub-1" } as never);
+
+    await findOrCreateBoardGameTitle({
+      ...VALID_INPUT,
+      bggId: 342942,
+      imageUrl: "https://img/cover.jpg",
+      yearPublished: 1999,
+    });
+
+    expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
+      where: { id: "stub-1" },
+      data: { imageUrl: "https://img/cover.jpg" },
+    });
+  });
+
+  it("überschreibt einen vollständigen Titel nicht", async () => {
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      ...STUB,
+      description: "Vollständig",
+    } as never);
+
+    await findOrCreateBoardGameTitle({
+      ...VALID_INPUT,
+      bggId: 342942,
+      minPlayers: 1,
+    });
+
+    expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
+  });
+});
+
 describe("findDuplicateBoardGame", () => {
+  it("ignoriert einen Stub als Duplikat (#637)", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.findUnique.mockResolvedValue({
+      id: "stub-1",
+      title: "Ark Nova",
+      description: null,
+      minPlayers: null,
+      maxPlayers: null,
+    } as never);
+    prismaMock.boardGame.findFirst.mockResolvedValue(null);
+
+    expect(await findDuplicateBoardGame("Ark Nova", 342942)).toBeNull();
+  });
+
   it("returns null when the user lacks the games:manage permission", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     mockPermissionKeys([]);
@@ -82,6 +169,9 @@ describe("findDuplicateBoardGame", () => {
     prismaMock.boardGame.findUnique.mockResolvedValue({
       id: "game-1",
       title: "Ark Nova",
+      description: "Zoo",
+      minPlayers: 1,
+      maxPlayers: 4,
     } as never);
 
     const result = await findDuplicateBoardGame("Ark Nova", 342942);
@@ -89,7 +179,13 @@ describe("findDuplicateBoardGame", () => {
     expect(result).toEqual({ id: "game-1", title: "Ark Nova" });
     expect(prismaMock.boardGame.findUnique).toHaveBeenCalledWith({
       where: { bggId: 342942 },
-      select: { id: true, title: true },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        minPlayers: true,
+        maxPlayers: true,
+      },
     });
     expect(prismaMock.boardGame.findFirst).not.toHaveBeenCalled();
   });
@@ -107,7 +203,10 @@ describe("findDuplicateBoardGame", () => {
 
     expect(result).toEqual({ id: "game-1", title: "Arche Nova" });
     expect(prismaMock.boardGame.findFirst).toHaveBeenCalledWith({
-      where: { title: { equals: "arche nova", mode: "insensitive" } },
+      where: {
+        title: { equals: "arche nova", mode: "insensitive" },
+        ...NOT_CATALOG_STUB_WHERE,
+      },
       select: { id: true, title: true },
     });
   });

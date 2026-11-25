@@ -3,3 +3,6 @@
 0 5 * * *   /usr/local/bin/run-cron-job instagram-queue
 0 17 * * *  /usr/local/bin/run-cron-job market-digest
 0 2 2 1 *   /usr/local/bin/run-cron-job year-turn
+# Fallback worker for the private BGG import queue (#632); the normal path is
+# after() right after the click.
+* * * * *   /usr/local/bin/run-cron-job private-collection-import

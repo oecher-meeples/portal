@@ -7,6 +7,7 @@ import {
   boardGameDisplayFields,
 } from "@/lib/ludothek/board-game-display";
 import { prisma } from "@/lib/utils/prisma";
+import { IN_INVENTORY_WHERE } from "@/lib/ludothek/board-game-stub";
 import {
   BoardGameKind,
   GameInventoryStatus,
@@ -214,7 +215,7 @@ export async function buildLudothekGames({
 /** Live count of base-game titles, for the homepage subtitle (#97). */
 export async function countBoardGameTitles(): Promise<number> {
   return prisma.boardGame.count({
-    where: { kind: BoardGameKind.BOARDGAME },
+    where: { kind: BoardGameKind.BOARDGAME, ...IN_INVENTORY_WHERE },
   });
 }
 

@@ -28,8 +28,25 @@ vi.mock(
     withdrawPrivateGameOfferAction: vi.fn(),
     setPrivateCollectionVisibleAction: (visible: boolean) =>
       setVisibleMock(visible),
+    setPrivateCollectionShareAction: (flag: string, value: boolean) =>
+      setShareMock(flag, value),
+    removePrivateCollectionEntryAction: (id: string) => removeMock(id),
+    setPrivateCollectionEntryFlagAction: (
+      id: string,
+      flag: string,
+      value: boolean,
+    ) => entryFlagMock(id, flag, value),
   }),
 );
+const removeMock = vi.fn<(id: string) => Promise<{ success: true }>>(
+  async () => ({ success: true }),
+);
+const entryFlagMock = vi.fn<
+  (id: string, flag: string, value: boolean) => Promise<{ success: true }>
+>(async () => ({ success: true }));
+const setShareMock = vi.fn<
+  (flag: string, value: boolean) => Promise<{ success: true }>
+>(async () => ({ success: true }));
 const setVisibleMock = vi.fn<(visible: boolean) => Promise<{ success: true }>>(
   async () => ({ success: true }),
 );
@@ -134,6 +151,74 @@ describe("PrivateCollectionCard (#308)", () => {
     expect(
       screen.queryByRole("heading", { name: /Meine privaten Spiele \(/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("saves the Want-to-Play and For-Trade opt-ins separately (#632)", async () => {
+    const user = userEvent.setup();
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry()]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+        shareForTrade={true}
+      />,
+    );
+
+    const wantToPlay = screen.getByRole("switch", {
+      name: /Want-to-play von BGG importieren/,
+    });
+    const forTrade = screen.getByRole("switch", {
+      name: "Meine „For Trade“ zeigen",
+    });
+    expect(wantToPlay).not.toBeChecked();
+    expect(forTrade).toBeChecked();
+    expect(
+      screen.getByText(/Ausschalten stoppt nur künftige Importe/),
+    ).toBeInTheDocument();
+
+    await user.click(wantToPlay);
+    await user.click(forTrade);
+
+    expect(setShareMock).toHaveBeenCalledWith("importWantToPlay", true);
+    expect(setShareMock).toHaveBeenCalledWith("shareForTrade", false);
+  });
+
+  it("edit mode adds a remove button and (+)/(x) flag toggles per row", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <PrivateCollectionCard
+        bggUsername={null}
+        entries={[entry({ wantToPlay: true })]}
+        cooldownEndsAt={null}
+        canForceImport={false}
+        visibleToOthers={true}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Aus BGG importiert/ }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Ark Nova entfernen" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Bearbeiten" }));
+
+    await user.click(screen.getByTitle("For Trade hinzufügen"));
+    expect(entryFlagMock).toHaveBeenCalledWith("entry-1", "forTrade", true);
+
+    await user.click(screen.getByTitle("Want to Play entfernen"));
+    expect(entryFlagMock).toHaveBeenCalledWith("entry-1", "wantToPlay", false);
+
+    await user.click(
+      screen.getByRole("button", { name: "Ark Nova entfernen" }),
+    );
+    expect(removeMock).toHaveBeenCalledWith("entry-1");
+    expect(
+      screen.getByText("Noch keine Spiele importiert."),
+    ).toBeInTheDocument();
   });
 
   it("opens the dialog when clicking anywhere on the card (#Live-Review F9)", async () => {

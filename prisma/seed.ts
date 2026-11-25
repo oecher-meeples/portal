@@ -36,6 +36,7 @@ import { seedDemoChecks } from "./seed-checks";
 import { seedBoardGameTraitTexts } from "./seed-board-game-traits";
 import { seedTagDisplayNames } from "./seed-tags";
 import { seedDemoLfgPosts } from "./seed-lfg";
+import { seedDemoWantToPlay } from "./seed-want-to-play";
 import { seedDemoMarketListings } from "./seed-marketplace";
 import {
   upsertAuthUser,
@@ -283,6 +284,15 @@ async function seedDemoMeeples() {
   await seedPrivateGameCollection(
     tobias.meepleId,
     DEMO_PRIVATE_COLLECTION_POOL.slice(30, 60),
+  );
+
+  await seedDemoWantToPlay(
+    lea.meepleId,
+    DEMO_PRIVATE_COLLECTION_POOL.slice(30, 34),
+  );
+  await seedDemoWantToPlay(
+    tobias.meepleId,
+    DEMO_PRIVATE_COLLECTION_POOL.slice(0, 4),
   );
 
   return {

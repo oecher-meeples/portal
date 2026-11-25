@@ -9,6 +9,7 @@ import { PageHeading } from "@/components/ui/page-heading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 import { translateAuthError } from "@/lib/auth/password";
 import {
@@ -93,16 +94,14 @@ export function LoginForm() {
             required
           />
         </Field>
-        <Field label="Passwort" htmlFor="password">
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </Field>
+        <PasswordField
+          id="password"
+          label="Passwort"
+          placeholder="••••••••"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
         {error && <p className="text-destructive text-sm">{error}</p>}
         {cooldownSeconds > 0 && (
           <p className="text-muted-foreground text-sm">

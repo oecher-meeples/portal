@@ -14,5 +14,13 @@ export default async function ProfilSlugPage({
   const data = await loadMemberProfileData(session, { slug });
   if (!data) notFound();
 
-  return <MitgliedProfilView member={data.member} viewer={data.viewer} />;
+  // key: sonst überleben useState-Werte der Client-Sektionen (Formulare,
+  // Bearbeiten-Modus) die Navigation zu einem anderen Profil.
+  return (
+    <MitgliedProfilView
+      key={data.member.id}
+      member={data.member}
+      viewer={data.viewer}
+    />
+  );
 }

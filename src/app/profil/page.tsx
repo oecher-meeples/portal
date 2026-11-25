@@ -25,5 +25,11 @@ export default async function ProfilPage() {
     );
   }
 
-  return <MitgliedProfilView member={data.member} viewer={data.viewer} />;
+  return (
+    <MitgliedProfilView
+      key={data.member.id}
+      member={data.member}
+      viewer={data.viewer}
+    />
+  );
 }

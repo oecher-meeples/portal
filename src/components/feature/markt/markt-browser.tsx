@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { PillToggle } from "@/components/ui/pill-toggle";
 import { Input } from "@/components/ui/input";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { buildHref } from "@/lib/utils/query-string";
 import type { MarketListingView } from "@/lib/markt/market-listings";
+import type { ForTradeGame } from "@/lib/markt/for-trade-offers";
 import type { SparePartListingView } from "@/lib/inventory/spare-parts";
 import { SparePartListingCard } from "@/components/feature/markt/spare-part-listing-view";
+import { ForTradeOfferCard } from "@/components/feature/markt/for-trade-offer-card";
 import { MarketListingCard } from "@/components/feature/markt/market-listing-card";
 import { CreateMarketListingDialog } from "@/components/feature/markt/create-market-listing-dialog";
 import { CreateSparePartListingDialog } from "@/components/feature/markt/create-spare-part-listing-dialog";
@@ -29,6 +32,7 @@ const LISTING_GRID_CLASS =
 export function MarktBrowser({
   listings,
   spareParts,
+  tradeGames,
   ownMeepleId,
   canManageSpareParts,
   bggUsername,
@@ -38,6 +42,9 @@ export function MarktBrowser({
 }: {
   listings: MarketListingView[];
   spareParts: SparePartListingView[];
+  /** „For Trade“-Markierungen aus BGG-Collections, nur mit Freigabe
+   * `shareForTrade` (#632-Folge). */
+  tradeGames: ForTradeGame[];
   ownMeepleId: string;
   canManageSpareParts: boolean;
   bggUsername: string | null;
@@ -107,20 +114,39 @@ export function MarktBrowser({
       </div>
 
       {tab === "kleinanzeigen" ? (
-        <div className={LISTING_GRID_CLASS}>
-          {listings.map((listing) => (
-            <MarketListingCard
-              key={listing.id}
-              listing={listing}
-              isOwn={listing.sellerMeepleId === ownMeepleId}
-            />
-          ))}
-          {listings.length === 0 && (
-            <p className="text-muted-foreground text-sm">
-              Aktuell keine Kleinanzeigen.
-            </p>
+        <>
+          <div className={LISTING_GRID_CLASS}>
+            {listings.map((listing) => (
+              <MarketListingCard
+                key={listing.id}
+                listing={listing}
+                isOwn={listing.sellerMeepleId === ownMeepleId}
+              />
+            ))}
+            {listings.length === 0 && (
+              <p className="text-muted-foreground text-sm">
+                Aktuell keine Kleinanzeigen.
+              </p>
+            )}
+          </div>
+          {tradeGames.length > 0 && (
+            <section className="flex flex-col gap-3">
+              <h2 className="flex items-center gap-2 font-serif text-xl">
+                <Badge>{tradeGames.length}</Badge>
+                Zum Tausch angeboten
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Spiele, die Meeple in ihrer BGG-Collection als „For Trade“
+                markiert und für andere freigegeben haben.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {tradeGames.map((game) => (
+                  <ForTradeOfferCard key={game.boardGameSlug} game={game} />
+                ))}
+              </div>
+            </section>
           )}
-        </div>
+        </>
       ) : (
         <div className={LISTING_GRID_CLASS}>
           {spareParts.map((part) => (

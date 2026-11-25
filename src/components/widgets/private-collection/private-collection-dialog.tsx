@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, Dices, ExternalLink } from "lucide-react";
+import { ArrowRightLeft, Dices, ExternalLink, Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,12 @@ import { ActionButton } from "@/components/ui/action-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CoverMedia } from "@/components/ui/cover-media";
+import {
+  EntryFlagToggle,
+  EntryRemoveButton,
+  type EntryFlag,
+} from "@/components/widgets/private-collection/private-collection-entry-edit";
 import { StatusPill } from "@/components/ui/status-pill";
 import { EditionFlag } from "@/components/entities/edition-flag";
 import { describeVersion } from "@/lib/ludothek/taxonomy/version-label";
@@ -40,13 +46,22 @@ export function PrivateCollectionDialog({
   entries,
   nextEvent,
   ownOffers,
+  onChanged,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   entries: OwnPrivateCollectionEntry[];
   nextEvent: { id: string; title: string } | null;
   ownOffers: OwnPrivateLoanOffer[];
+  /** Nach jeder Bearbeitung (Löschen, Markierung) — der Aufrufer lädt die
+   * Serverdaten erst beim Schließen neu. */
+  onChanged?: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const [flagOverrides, setFlagOverrides] = useState<
+    Record<string, Partial<Record<EntryFlag, boolean>>>
+  >({});
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("alphabetical");
   const [statusFilters, setStatusFilters] = useState<Set<StatusFilter>>(
@@ -75,9 +90,31 @@ export function PrivateCollectionDialog({
     });
   }
 
+  // Lokal nachgeführt statt über router.refresh() (siehe oben).
+  const liveEntries = useMemo(
+    () =>
+      entries
+        .filter((entry) => !removedIds.has(entry.id))
+        .map((entry) => ({ ...entry, ...flagOverrides[entry.id] })),
+    [entries, removedIds, flagOverrides],
+  );
+
+  function handleFlagChanged(entryId: string, flag: EntryFlag, value: boolean) {
+    setFlagOverrides((current) => ({
+      ...current,
+      [entryId]: { ...current[entryId], [flag]: value },
+    }));
+    onChanged?.();
+  }
+
+  function handleRemoved(entryId: string) {
+    setRemovedIds((current) => new Set(current).add(entryId));
+    onChanged?.();
+  }
+
   const visibleEntries = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const filtered = entries
+    const filtered = liveEntries
       .filter(
         (entry) => !term || entry.boardGame.title.toLowerCase().includes(term),
       )
@@ -93,13 +130,15 @@ export function PrivateCollectionDialog({
         ? (b.rating ?? -1) - (a.rating ?? -1)
         : a.boardGame.title.localeCompare(b.boardGame.title, "de"),
     );
-  }, [entries, search, sortMode, statusFilters]);
+  }, [liveEntries, search, sortMode, statusFilters]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="ring-border shadow-2xl ring-2 sm:max-w-md">
+      <DialogContent className="ring-border shadow-2xl ring-2 sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Meine privaten Spiele ({entries.length})</DialogTitle>
+          <DialogTitle>
+            Meine privaten Spiele ({liveEntries.length})
+          </DialogTitle>
           <DialogDescription>
             Aus deiner BGG-Collection importierte Titel (nur besessene Spiele,
             keine Exemplar-Verwaltung).
@@ -130,7 +169,23 @@ export function PrivateCollectionDialog({
               >
                 Bewertung
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={editing ? "default" : "outline"}
+                aria-pressed={editing}
+                onClick={() => setEditing((current) => !current)}
+              >
+                <Pencil />
+                Bearbeiten
+              </Button>
             </div>
+            {editing && (
+              <p className="text-muted-foreground text-xs">
+                Löschen und For-Trade-Änderungen gelten bis zum nächsten
+                BGG-Import (die Sammlung wird überschrieben).
+              </p>
+            )}
             <div className="flex flex-wrap gap-1.5">
               <Badge
                 variant={statusFilters.has("forTrade") ? "default" : "outline"}
@@ -166,66 +221,105 @@ export function PrivateCollectionDialog({
 
         {visibleEntries.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            {entries.length === 0
+            {liveEntries.length === 0
               ? "Noch keine Spiele importiert."
               : "Kein Treffer für diese Suche/Filter."}
           </p>
         ) : (
-          <ul className="flex max-h-80 flex-col gap-1.5 overflow-y-auto text-sm">
+          <ul className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto text-sm">
             {visibleEntries.map((entry) => (
               <li
                 key={entry.id}
-                className="flex flex-col gap-1.5 rounded-md border p-2"
+                className="flex items-start gap-3 rounded-md border p-2"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-baseline gap-1.5">
-                    <Link
-                      href={`/ludothek/${entry.boardGame.slug}`}
-                      className="hover:text-primary flex min-w-0 items-center gap-1 truncate underline-offset-2 hover:underline"
-                    >
-                      <span className="truncate">{entry.boardGame.title}</span>
-                      <ExternalLink className="size-3.5 shrink-0" />
-                    </Link>
-                    {entry.version && (
-                      <EditionFlag
-                        languages={entry.version.languages}
-                        className="shrink-0"
-                      />
-                    )}
-                    {entry.rating !== null && (
-                      <span className="text-muted-foreground shrink-0 text-xs">
-                        ★ {entry.rating.toFixed(1)}
+                <CoverMedia
+                  imageUrl={entry.boardGame.imageUrl}
+                  alt=""
+                  aspect="aspect-square"
+                  sizes="64px"
+                  className="size-16 shrink-0 rounded-md"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-baseline gap-1.5">
+                      <Link
+                        href={`/ludothek/${entry.boardGame.slug}`}
+                        className="hover:text-primary flex min-w-0 items-center gap-1 truncate underline-offset-2 hover:underline"
+                      >
+                        <span className="truncate">
+                          {entry.boardGame.title}
+                        </span>
+                        <ExternalLink className="size-3.5 shrink-0" />
+                      </Link>
+                      {entry.version && (
+                        <EditionFlag
+                          languages={entry.version.languages}
+                          className="shrink-0"
+                        />
+                      )}
+                      {entry.rating !== null && (
+                        <span className="text-muted-foreground shrink-0 text-xs">
+                          ★ {entry.rating.toFixed(1)}
+                        </span>
+                      )}
+                    </span>
+                    {editing ? (
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <EntryFlagToggle
+                          entryId={entry.id}
+                          flag="forTrade"
+                          label="For Trade"
+                          active={entry.forTrade}
+                          onChanged={(flag, value) =>
+                            handleFlagChanged(entry.id, flag, value)
+                          }
+                        />
+                        <EntryFlagToggle
+                          entryId={entry.id}
+                          flag="wantToPlay"
+                          label="Want to Play"
+                          active={entry.wantToPlay}
+                          onChanged={(flag, value) =>
+                            handleFlagChanged(entry.id, flag, value)
+                          }
+                        />
+                        <EntryRemoveButton
+                          entryId={entry.id}
+                          title={entry.boardGame.title}
+                          onRemoved={() => handleRemoved(entry.id)}
+                        />
+                      </span>
+                    ) : (
+                      <span className="flex shrink-0 gap-1.5">
+                        {entry.forTrade && (
+                          <StatusPill label="For Trade" tone="info" />
+                        )}
+                        {entry.wantToPlay && (
+                          <StatusPill label="Want to Play" tone="neutral" />
+                        )}
                       </span>
                     )}
-                  </span>
-                  <span className="flex shrink-0 gap-1.5">
-                    {entry.forTrade && (
-                      <StatusPill label="For Trade" tone="info" />
-                    )}
-                    {entry.wantToPlay && (
-                      <StatusPill label="Want to Play" tone="neutral" />
-                    )}
-                  </span>
+                  </div>
+                  {entry.version && (
+                    <p className="text-muted-foreground text-xs">
+                      Version: {describeVersion(entry.version)}
+                    </p>
+                  )}
+                  {nextEvent && (
+                    <PrivateEventLoanToggle
+                      eventId={nextEvent.id}
+                      eventTitle={nextEvent.title}
+                      boardGameId={entry.boardGame.id}
+                      status={offerStatuses[entry.boardGame.id] ?? null}
+                      onToggled={(nextStatus) =>
+                        setOfferStatuses((current) => ({
+                          ...current,
+                          [entry.boardGame.id]: nextStatus,
+                        }))
+                      }
+                    />
+                  )}
                 </div>
-                {entry.version && (
-                  <p className="text-muted-foreground text-xs">
-                    Version: {describeVersion(entry.version)}
-                  </p>
-                )}
-                {nextEvent && (
-                  <PrivateEventLoanToggle
-                    eventId={nextEvent.id}
-                    eventTitle={nextEvent.title}
-                    boardGameId={entry.boardGame.id}
-                    status={offerStatuses[entry.boardGame.id] ?? null}
-                    onToggled={(nextStatus) =>
-                      setOfferStatuses((current) => ({
-                        ...current,
-                        [entry.boardGame.id]: nextStatus,
-                      }))
-                    }
-                  />
-                )}
               </li>
             ))}
           </ul>

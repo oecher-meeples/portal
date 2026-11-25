@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 import { validatePassword } from "@/lib/auth/password";
 
@@ -71,18 +71,16 @@ export function PasswortEinloesenForm({ token }: { token: string | null }) {
 
   return (
     <form onSubmit={handleSubmit} className={cn(cardVariants(), "gap-4")}>
-      <TextField
+      <PasswordField
         id="einloesen-password"
         label="Neues Passwort"
-        type="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         required
       />
-      <TextField
+      <PasswordField
         id="einloesen-password-confirm"
         label="Neues Passwort wiederholen"
-        type="password"
         value={passwordConfirm}
         onChange={(event) => setPasswordConfirm(event.target.value)}
         required

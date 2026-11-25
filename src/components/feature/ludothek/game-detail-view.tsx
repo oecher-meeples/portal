@@ -1,5 +1,5 @@
 import { Card, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
+import { OpenLfgPostsCard } from "@/components/feature/ludothek/open-lfg-posts-card";
 import type { ReactNode } from "react";
 import { ExternalLink, Pencil } from "lucide-react";
 import type { BoardGameTrait, ExplainerExperienceLevel } from "@prisma/client";
@@ -15,6 +15,7 @@ import {
   GameContributorList,
   GameIllustratorsCard,
 } from "@/components/entities/game-contributor-list";
+import { BggLinkButton } from "@/components/entities/bgg-link-button";
 import { EditionFlag } from "@/components/entities/edition-flag";
 import {
   groupGameContributorsByName,
@@ -46,8 +47,9 @@ import {
 import type { PublicLudothekGame } from "@/lib/ludothek/browser";
 import type { ExplainerEntry } from "@/lib/explainer/queries";
 import type { OpenLfgPostForBoardGame } from "@/lib/content/lfg";
+import type { SharedCollectionMeeple } from "@/lib/ludothek/shared-collection-meeples";
+import { SharedCollectionMeeplesCard } from "@/components/feature/ludothek/shared-collection-meeples-card";
 import type { GuestCopyAvailability } from "@/lib/events/guest-area";
-import { formatDateMedium } from "@/lib/utils/format";
 import { buildYoutubeRulesSearchUrl } from "@/lib/utils/youtube";
 
 export function GameDetailView({
@@ -62,6 +64,9 @@ export function GameDetailView({
   relatedLocationChains,
   availability,
   openLfgPosts,
+  wantToPlay,
+  wantToPlayAction,
+  forTrade,
   createLfgAction,
   marketListingAction,
   traitTexts,
@@ -97,6 +102,12 @@ export function GameDetailView({
   availability?: GuestCopyAvailability;
   /** Only set for members (LFG is a members-only feature) — omitted entirely when empty (#34). */
   openLfgPosts?: OpenLfgPostForBoardGame[];
+  /** Only set for logged-in Meeple (#632-Folge) — wer den Titel spielen möchte. */
+  wantToPlay?: SharedCollectionMeeple[];
+  /** Button „Ich will das auch spielen", vom Aufrufer komponiert. */
+  wantToPlayAction?: ReactNode;
+  /** Dito für „For Trade" — wer den Titel zum Handel anbietet. */
+  forTrade?: SharedCollectionMeeple[];
   /** Fully rendered "Spielergesuch eröffnen" dialog+trigger plus its „⋯"-menu
    * entry (#586), composed by the page — only passed for logged-in Meeples.
    * Kept as a prop instead of an import so this feature stays isolated from
@@ -143,18 +154,7 @@ export function GameDetailView({
       icon: <ExternalLink />,
       href: bggUrl,
       external: true,
-      node: (
-        <Button
-          variant="outline"
-          className="gap-1.5 px-2.5"
-          aria-label="Auf BoardGameGeek ansehen"
-          render={<a href={bggUrl} target="_blank" rel="noopener noreferrer" />}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- statisches Logo aus public/, keine Optimierung nötig */}
-          <img src="/bgg-logo.svg" alt="" className="h-4 w-auto" />
-          <ExternalLink className="size-4" />
-        </Button>
-      ),
+      node: <BggLinkButton href={bggUrl} />,
     },
   ].filter((action): action is GameTitleAction => Boolean(action));
 
@@ -373,30 +373,23 @@ export function GameDetailView({
           </div>
         </Card>
 
-        {openLfgPosts && openLfgPosts.length > 0 && (
-          <Card>
-            <CardTitle>Offene Gesuche</CardTitle>
-            <ul className="flex flex-col divide-y">
-              {openLfgPosts.map((post) => (
-                <li key={post.id} className="flex flex-col gap-0.5 py-2.5">
-                  <Link
-                    href={`/lfg/${post.id}`}
-                    className="hover:text-primary font-medium"
-                  >
-                    {post.title}
-                  </Link>
-                  <span className="text-muted-foreground text-xs">
-                    {post.dateNote ??
-                      (post.plannedAt
-                        ? formatDateMedium(post.plannedAt)
-                        : "Termin offen")}
-                    {post.location ? ` · ${post.location}` : ""} ·{" "}
-                    {post.participantCount}/{post.maxParticipants}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
+        {openLfgPosts && <OpenLfgPostsCard posts={openLfgPosts} />}
+
+        {wantToPlay && (
+          <SharedCollectionMeeplesCard
+            meeples={wantToPlay}
+            action={wantToPlayAction}
+            showWhenEmpty
+            singularLabel="Meeple möchte das spielen"
+            pluralLabel="Meeple möchten das spielen"
+          />
+        )}
+        {forTrade && (
+          <SharedCollectionMeeplesCard
+            meeples={forTrade}
+            singularLabel="Meeple bietet dieses Spiel zum Handel an"
+            pluralLabel="Meeple bieten dieses Spiel zum Handel an"
+          />
         )}
 
         {explainer && (

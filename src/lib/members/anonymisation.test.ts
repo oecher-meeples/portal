@@ -89,12 +89,28 @@ describe("anonymiseMeepleStufe1", () => {
         address: null,
         shareAddress: false,
         doorbellNote: null,
+        privateCollectionVisible: false,
+        importWantToPlay: false,
       },
     });
     expect(prismaMock.post.updateMany).toHaveBeenCalledWith({
       where: { author: "Lea Beispiel" },
       data: { author: null },
     });
+  });
+
+  it("löscht die Want-to-Play-Liste und blendet die private Sammlung aus, ohne sie zu löschen (#637)", async () => {
+    prismaMock.meeple.findUnique.mockResolvedValue(RESIGNED_AND_GONE as never);
+    prismaMock.marketListing.findMany.mockResolvedValue([] as never);
+
+    await anonymiseMeepleStufe1("meeple-1");
+
+    expect(prismaMock.gameWantToPlay.deleteMany).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1" },
+    });
+    expect(
+      prismaMock.privateGameCollectionEntry.deleteMany,
+    ).not.toHaveBeenCalled();
   });
 
   it("deletes uploaded images before touching the database", async () => {
@@ -245,6 +261,17 @@ describe("anonymiseMeepleStufe2", () => {
       where: { id: "meeple-1" },
       data: { neonAuthUserId: null, anonymizedAt: NOW },
     });
+  });
+
+  it("löscht in Stufe 2 die private Sammlung hart, das Meeple bleibt (#637)", async () => {
+    givenAnonymisableMeeple();
+
+    await anonymiseMeepleStufe2("meeple-1", NOW);
+
+    expect(
+      prismaMock.privateGameCollectionEntry.deleteMany,
+    ).toHaveBeenCalledWith({ where: { meepleId: "meeple-1" } });
+    expect(prismaMock.meeple.delete).not.toHaveBeenCalled();
   });
 
   it("closes an open deletion request in the same transaction", async () => {

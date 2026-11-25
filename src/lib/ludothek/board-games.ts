@@ -5,6 +5,11 @@ import { BoardGameKind, type RuleBookLanguage } from "@prisma/client";
 import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { normaliseEan } from "@/lib/inventory/ean";
+import {
+  IN_INVENTORY_WHERE,
+  isCatalogStub,
+  NOT_CATALOG_STUB_WHERE,
+} from "@/lib/ludothek/board-game-stub";
 import { ensureMeeple } from "@/lib/members/meeples";
 import { createGameCopyTx } from "@/lib/ludothek/game-copies";
 import {
@@ -285,7 +290,10 @@ async function findTitleOnlyMatch(
   if (!trimmedTitle) return null;
 
   return prisma.boardGame.findFirst({
-    where: { title: { equals: trimmedTitle, mode: "insensitive" } },
+    where: {
+      title: { equals: trimmedTitle, mode: "insensitive" },
+      ...NOT_CATALOG_STUB_WHERE,
+    },
     select: { id: true, title: true },
   });
 }
@@ -305,9 +313,17 @@ export async function findDuplicateBoardGame(
   if (bggId) {
     const byBggId = await prisma.boardGame.findUnique({
       where: { bggId },
-      select: { id: true, title: true },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        minPlayers: true,
+        maxPlayers: true,
+      },
     });
-    if (byBggId) return byBggId;
+    if (byBggId && !isCatalogStub(byBggId)) {
+      return { id: byBggId.id, title: byBggId.title };
+    }
   }
 
   return findTitleOnlyMatch(title);
@@ -358,6 +374,7 @@ export async function findExpansionAssignmentOptions(
   return prisma.boardGame.findMany({
     where: {
       id: { notIn: excludeIds },
+      ...IN_INVENTORY_WHERE,
       ...(isExpansion ? { kind: BoardGameKind.BOARDGAME } : {}),
     },
     select: { id: true, title: true },

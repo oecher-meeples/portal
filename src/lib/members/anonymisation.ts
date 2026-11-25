@@ -16,11 +16,17 @@ export type AnonymisationResult = { error: string } | { success: true };
  *
  * - **Stufe 1** ({@link anonymiseMeepleStufe1}): optionale `Meeple`-Felder,
  *   `Post.author`, Marktplatzbilder — jederzeit selbst auslösbar, keine
- *   Kündigungs-Vorbedingung, `anonymizedAt` bleibt unberührt.
+ *   Kündigungs-Vorbedingung, `anonymizedAt` bleibt unberührt. Die private
+ *   Sammlung wird für andere ausgeblendet (`privateCollectionVisible: false`,
+ *   die Einträge selbst bleiben), der Want-to-Play-Import abgeschaltet und
+ *   die Want-to-Play-Liste gelöscht (#637) — sie hat keinen eigenen
+ *   Sichtbarkeitsschalter mehr.
  * - **Stufe 2** ({@link anonymiseMeepleStufe2}): baut auf Stufe 1 auf (ruft
  *   sie idempotent mit auf) und löscht zusätzlich hart das Login (`AuthUser`),
  *   trennt `Member.meepleId`, setzt `Meeple.anonymizedAt`. Braucht
- *   "ausgetreten" + keine offenen Ausleihen.
+ *   "ausgetreten" + keine offenen Ausleihen. Löscht zusätzlich die private
+ *   Sammlung (`PrivateGameCollectionEntry`) hart: Stufe 3 findet das Meeple
+ *   nach der Trennung von `Member.meepleId` nicht mehr (#637).
  * - **Stufe 3** ({@link anonymiseMemberStufe3}): löscht die `Member`-Zeile
  *   komplett, frühestens 12 Monate nach `membershipEndsAt`, wieder ohne
  *   offene Ausleihen. `GameHolding.vereinsmitgliedId` fällt dabei per
@@ -102,9 +108,15 @@ export async function anonymiseMeepleStufe1(
       data: { note: null },
     });
 
+    // #637: Die Want-to-Play-Liste hat keinen Sichtbarkeitsschalter — sie wird
+    // gelöscht, die private Sammlung bleibt (ausgeblendet, siehe unten).
+    await tx.gameWantToPlay.deleteMany({ where: { meepleId } });
+
     await tx.meeple.update({
       where: { id: meepleId },
       data: {
+        privateCollectionVisible: false,
+        importWantToPlay: false,
         // Gleicher Basisname wie das Sammelkonto "Anonymer Meeple" (#364) —
         // für alle außer `games:manage` ununterscheidbar, siehe
         // `anonymisedMeepleDisplayName()`.
@@ -184,6 +196,11 @@ export async function anonymiseMeepleStufe2(
         data: { meepleId: null },
       });
     }
+
+    // #637: nach Stufe 2 erreicht kein Pfad das Meeple mehr (Stufe 3 löscht
+    // nur die Member-Zeile) — die private Sammlung muss jetzt weg. Die
+    // Want-to-Play-Liste hat bereits Stufe 1 gelöscht.
+    await tx.privateGameCollectionEntry.deleteMany({ where: { meepleId } });
 
     // Anonymising *is* how a deletion request gets fulfilled, so closing it here
     // keeps the Art.-12-Abs.-3 queue honest without a second admin click.

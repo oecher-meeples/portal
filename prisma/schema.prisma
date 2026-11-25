@@ -357,6 +357,12 @@ model Meeple {
    * Flag bleibt die Collection unsichtbar, auch wenn Einträge existieren.
    */
   privateCollectionVisible  Boolean                  @default(false)
+  /// Opt-in (#637): beim manuellen BGG-Import zusätzlich die „Want to Play"-
+  /// Liste nach `game_want_to_play` übernehmen (nur hinzufügend). Die Einträge
+  /// sind danach für eingeloggte Meeple sichtbar.
+  importWantToPlay          Boolean                  @default(false)
+  /// Opt-in (#632-Folge): „For Trade"-Markierungen anderen Meeple zeigen.
+  shareForTrade             Boolean                  @default(false)
   /**
    * Opt-in: täglicher Digest-Newsletter über neue Marktplatz-Angebote
    * (`MarketListing`, #254). Bewusst ein eigenes Flag statt einer Kategorie
@@ -387,30 +393,32 @@ model Meeple {
   createdAt                 DateTime                 @default(now())
   updatedAt                 DateTime                 @updatedAt
 
-  bankDataAccessesMade     BankDataAccessLog[]          @relation("BankDataAccessActor")
-  bankDataAccessesReceived BankDataAccessLog[]          @relation("BankDataAccessSubject")
-  keptUnits                StorageUnit[]                @relation("StorageUnitKeeper")
-  recordedUnitMoves        StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
-  movedUnitsAsKeeper       StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
-  recordedHoldings         GameHolding[]                @relation("GameHoldingRecorder")
-  gameCopyChecks           GameCopyCheck[]              @relation("GameCopyCheckChecker")
-  lfgPosts                 LfgPost[]                    @relation("LfgPostCreator")
-  lfgParticipations        LfgParticipant[]             @relation("LfgParticipantMeeple")
-  lfgGuestsAdded           LfgParticipant[]             @relation("LfgParticipantAddedBy")
-  lfgAttachments           LfgAttachment[]              @relation("LfgAttachmentUploadedBy")
-  shiftBookings            ShiftBooking[]               @relation("ShiftBookingMeeple")
-  helperAvailabilities     HelperAvailability[]         @relation("HelperAvailabilityMeeple")
-  explainerGames           ExplainerGame[]              @relation("ExplainerGameMeeple")
-  explainerAttendances     ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
-  fleaMarketItems          FleaMarketItem[]             @relation("FleaMarketItemSeller")
-  sparePartListingsKept    SparePartListing[]           @relation("SparePartListingKeeper")
-  marketListings           MarketListing[]              @relation("MarketListingSeller")
-  privateGameCollection    PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
-  deletionRequests         DeletionRequest[]            @relation("DeletionRequestMeeple")
-  privateEventLoansOffered PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
-  privateEventLoansIssued  PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
-  newsletterSubscription   NewsletterSubscriber?
-  member                   Member?
+  bankDataAccessesMade        BankDataAccessLog[]          @relation("BankDataAccessActor")
+  bankDataAccessesReceived    BankDataAccessLog[]          @relation("BankDataAccessSubject")
+  keptUnits                   StorageUnit[]                @relation("StorageUnitKeeper")
+  recordedUnitMoves           StorageUnitMove[]            @relation("StorageUnitMoveRecorder")
+  movedUnitsAsKeeper          StorageUnitMove[]            @relation("StorageUnitMoveKeeper")
+  recordedHoldings            GameHolding[]                @relation("GameHoldingRecorder")
+  gameCopyChecks              GameCopyCheck[]              @relation("GameCopyCheckChecker")
+  lfgPosts                    LfgPost[]                    @relation("LfgPostCreator")
+  lfgParticipations           LfgParticipant[]             @relation("LfgParticipantMeeple")
+  lfgGuestsAdded              LfgParticipant[]             @relation("LfgParticipantAddedBy")
+  lfgAttachments              LfgAttachment[]              @relation("LfgAttachmentUploadedBy")
+  shiftBookings               ShiftBooking[]               @relation("ShiftBookingMeeple")
+  helperAvailabilities        HelperAvailability[]         @relation("HelperAvailabilityMeeple")
+  explainerGames              ExplainerGame[]              @relation("ExplainerGameMeeple")
+  explainerAttendances        ExplainerAttendance[]        @relation("ExplainerAttendanceMeeple")
+  fleaMarketItems             FleaMarketItem[]             @relation("FleaMarketItemSeller")
+  sparePartListingsKept       SparePartListing[]           @relation("SparePartListingKeeper")
+  marketListings              MarketListing[]              @relation("MarketListingSeller")
+  privateGameCollection       PrivateGameCollectionEntry[] @relation("PrivateGameCollectionEntryMeeple")
+  privateCollectionImportJobs PrivateCollectionImportJob[]
+  wantToPlayMarks             GameWantToPlay[]
+  deletionRequests            DeletionRequest[]            @relation("DeletionRequestMeeple")
+  privateEventLoansOffered    PrivateEventLoan[]           @relation("PrivateEventLoanOwner")
+  privateEventLoansIssued     PrivateEventLoan[]           @relation("PrivateEventLoanIssuedBy")
+  newsletterSubscription      NewsletterSubscriber?
+  member                      Member?
 
   @@map("meeples")
 }
@@ -790,6 +798,59 @@ model NewsletterDispatchJob {
   @@map("newsletter_dispatch_jobs")
 }
 
+enum PrivateCollectionImportStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+/// Queue für den privaten BGG-Collection-Import (#632) — der Import dauert
+/// pro Spiel eine BGG-Drosselzeit, die Server Action reiht nur ein und kehrt
+/// sofort zurück. Abgearbeitet per `after()` direkt nach dem Klick, als
+/// Fallback (Neustart, Absturz) minütlich vom Cron `private-collection-import`.
+model PrivateCollectionImportJob {
+  id              String                        @id @default(cuid())
+  meepleId        String
+  status          PrivateCollectionImportStatus @default(PENDING)
+  importedCount   Int?
+  error           String?
+  /// Want-to-Play-Teil (#637): Anzahl übernommener Titel bzw. Fehler, wenn nur
+  /// dieser Teil scheiterte (Job bleibt dann `DONE`).
+  wantToPlayCount Int?
+  wantToPlayError String?
+  requestedAt     DateTime                      @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+
+  meeple Meeple @relation(fields: [meepleId], references: [id], onDelete: Cascade)
+
+  @@index([status, requestedAt])
+  @@index([meepleId, requestedAt])
+  @@map("private_collection_import_jobs")
+}
+
+/// Manuell gesetzte „Ich will das auch spielen"-Markierung auf der
+/// Spieledetailseite (#632-Folge). Bewusst getrennt von
+/// `PrivateGameCollectionEntry`: das sind besessene BGG-Importe, die bei jedem
+/// Import gelöscht und neu angelegt werden und in der Ludothek als
+/// Privatbesitz erscheinen — eine Wunschmarkierung ist weder das eine noch das
+/// andere. Einträge sind für eingeloggte Meeple sichtbar, ohne weitere Freigabe
+/// (manuell gesetzt oder per BGG-Import mit `importWantToPlay`).
+model GameWantToPlay {
+  id          String   @id @default(cuid())
+  meepleId    String
+  boardGameId String
+  createdAt   DateTime @default(now())
+
+  meeple    Meeple    @relation(fields: [meepleId], references: [id], onDelete: Cascade)
+  boardGame BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@unique([meepleId, boardGameId])
+  @@index([boardGameId])
+  @@map("game_want_to_play")
+}
+
 model Invite {
   id              String    @id @default(cuid())
   token           String    @unique
@@ -917,6 +978,7 @@ model BoardGame {
   expansionCollections     GameCollection[]             @relation("ExpansionCollections")
   sparePartListings        SparePartListing[]
   privateCollectionEntries PrivateGameCollectionEntry[]
+  wantToPlayMarks          GameWantToPlay[]
   lfgPosts                 LfgPost[]
   marketListings           MarketListing[]
   alternateNames           BoardGameAlternateName[]     @relation("BoardGameAlternateNames")
@@ -1208,7 +1270,6 @@ model PrivateGameCollectionEntry {
   /// BGG-Collection-Status-Flags dieses Titels (nur die zwei, die die
   /// Übersicht anzeigt — andere Stati werden beim Sync ignoriert).
   forTrade    Boolean  @default(false)
-  wantToPlay  Boolean  @default(false)
 
   meeple    Meeple            @relation("PrivateGameCollectionEntryMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
   boardGame BoardGame         @relation(fields: [boardGameId], references: [id], onDelete: Restrict)
