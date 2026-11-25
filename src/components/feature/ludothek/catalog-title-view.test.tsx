@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { CatalogTitleView } from "@/components/feature/ludothek/catalog-title-view";
 
 vi.mock("@/components/widgets/contact/meeple-contact-dialog", () => ({
@@ -28,7 +29,8 @@ const BASE = {
 };
 
 describe("CatalogTitleView (#637)", () => {
-  it("zeigt Titel, Jahr, BGG-Link, Interessenten und die Aktion", () => {
+  it("zeigt Titel, Jahr, BGG-Link, Interessenten und die Aktion", async () => {
+    const user = userEvent.setup();
     render(
       <CatalogTitleView
         {...BASE}
@@ -45,7 +47,10 @@ describe("CatalogTitleView (#637)", () => {
     expect(
       screen.getByRole("button", { name: /BoardGameGeek/ }),
     ).toHaveAttribute("href", "https://boardgamegeek.com/boardgame/99");
-    expect(screen.getByText("Anna")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: /Meeple möchte das spielen/ }),
+    );
+    expect(screen.getByRole("button", { name: "Anna" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Ich will das auch spielen" }),
     ).toBeInTheDocument();
