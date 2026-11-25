@@ -8,6 +8,7 @@ import {
   summariseMemberHoldings,
 } from "@/lib/members/dashboard";
 import { findOpenHelperRequestEvent } from "@/lib/events/upcoming";
+import { countWantedGamesWithoutMyLevel } from "@/lib/explainer/game-list-queries";
 import { DashboardView } from "@/components/feature/dashboard/dashboard-view";
 import { formatDatePlain } from "@/lib/utils/format";
 
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
     activeMarketListingCount,
     importantLinks,
     openHelperRequestEvent,
+    wantedExplainerGamesCount,
   ] = await Promise.all([
     prisma.member.findUnique({
       where: { meepleId: meeple.id },
@@ -51,6 +53,7 @@ export default async function DashboardPage() {
     prisma.marketListing.count(),
     listImportantLinks(),
     findOpenHelperRequestEvent(),
+    countWantedGamesWithoutMyLevel(meeple.id),
   ]);
 
   const canManageLinks = await hasPermissionInCurrentView(
@@ -109,6 +112,7 @@ export default async function DashboardPage() {
       resignationNotice={resignationNoticeView}
       isAusgetreten={membershipState === "ausgetreten"}
       openHelperRequestEvent={openHelperRequestEvent}
+      wantedExplainerGamesCount={wantedExplainerGamesCount}
     />
   );
 }

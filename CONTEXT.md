@@ -212,6 +212,10 @@ _Avoid_: Event-Standort, Event als Aufbewahrungseinheit
 Ein Meeple mit einem dauerhaften Profil aus Spielen (Bezug auf echte `BoardGame`-Einträge) und je Spiel einer Erfahrungsstufe. Getrennt davon meldet er sich pro Event einfach als anwesend an; erst die Kombination aus Profil und Event-Anwesenheit ergibt „heute hier erklärbar".
 _Avoid_: Schicht, Spielelehrer, Erklärbär als reine Event-Anmeldung ohne Profil
 
+**Erklärer gesucht**:
+Ein globales Flag am Spiel (`BoardGame.explainerWanted`), das `events:manage` setzt, wenn für dieses Spiel Erklärbären fehlen. Gilt unabhängig von Events und davon, ob schon jemand das Spiel erklärt (auch mit Erklärern möglich). Erklärbären sehen die gesuchten Spiele auf `/erklaerbaeren` (Filter „Gesucht“) und als Info-Card im Dashboard, die nur gesuchte Spiele ohne eigenes Niveau zählt. Es gibt bewusst keine gezielte Benachrichtigung. Den Eintrag des eigenen Niveaus zu entfernen lässt das Flag unberührt.
+_Avoid_: Erklärer-Bedarf pro Event, Erinnerung/Push an Erklärbären
+
 **Schicht**:
 Der Bedarf an einer bestimmten Helferrolle (z. B. Küche, Ausleihe, Flohmarkt) an einem Tag eines Events: Anzahl paralleler Stellen plus admin-definierter Ziel-Zeitraum, den diese Stellen lückenlos abdecken sollen (unabhängig vom Event-Start/-Ende, wegen Auf-/Abbau außerhalb der eigentlichen Veranstaltungszeit). Mitglieder melden pro Tag Verfügbarkeit + gewünschte Rollen; Admins weisen im Schichtplan-Editor jeder Zusage einen eigenen, individuell verschiebbaren Zeitblock zu (`ShiftBooking`). Wer gerade in einem solchen Zeitblock steckt, erhält für dessen Dauer die Rechte, die seine Rolle hinterlegt hat (z. B. Flohmarkt-Kasse), unabhängig von einer sonst vergebenen Permission — siehe [ADR-0012](adr/0012-helferrolle-generalisiert-schicht-buchung-rechte.md).
 _Avoid_: Erklärbär als Schicht, festes Schicht-Typ-Enum, ein geteiltes Zeitfenster für alle Zuweisungen einer Rolle

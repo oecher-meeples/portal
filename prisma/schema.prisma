@@ -969,6 +969,9 @@ model BoardGame {
   /// Freier Admin-Hinweis je Titel (z. B. "App zwingend nötig") — nicht aus
   /// BGG automatisch befüllt, Titel-Ebene (nicht `GameCopy`).
   notes              String?
+  /// „Erklärer gesucht" (#660): globales Flag, vom Vorstand (`events:manage`)
+  /// gesetzt, ohne Event-Bezug. Steuert den Filter „Gesucht" der Erklärbären-Seite.
+  explainerWanted    Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 

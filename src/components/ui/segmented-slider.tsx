@@ -109,7 +109,6 @@ export function SegmentedSlider<T extends string>({
       >
         <SliderPrimitive.Control className="flex w-full items-center py-1">
           <SliderPrimitive.Track className="bg-muted relative h-1.5 w-full rounded-full">
-            <SliderPrimitive.Indicator className="bg-primary absolute h-full rounded-full" />
             <SliderPrimitive.Thumb className="border-primary bg-background focus-visible:ring-ring/50 block size-4 rounded-full border-2 shadow-sm outline-none focus-visible:ring-3" />
           </SliderPrimitive.Track>
         </SliderPrimitive.Control>
