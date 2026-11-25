@@ -1,63 +1,22 @@
 /**
- * Zufällige, aber deterministische Kontakt-Zusatzfelder für Demo-Meeples
+ * Deterministische Kontakt-Zusatzfelder für Demo-Meeples
  * (`telegramHandle`/`signalHandle`/`discordHandle`/`doorbellNote`, siehe
  * `getContactLinks()` in `src/lib/members/contact.ts`) — nicht jedes Meeple
  * bekommt jedes Feld, damit die UI (leere vs. befüllte Kontaktmöglichkeiten)
  * realistisch aussieht statt für jeden Demo-Account identisch komplett.
+ *
+ * Handles werden aus dem Namen des Accounts selbst abgeleitet (nicht aus einem
+ * gemeinsamen Pool), damit auf einem Profil nie der Handle eines *anderen*
+ * Demo-Accounts steht und wie ein Mapping-Fehler aussieht.
  */
 
 import { stableIndex } from "./stable-random";
-
-const TELEGRAM_HANDLES = [
-  "lea_meeple",
-  "tobi_boardgames",
-  "om_vorstand",
-  "kassenwart_aachen",
-  "spielewart_om",
-  "redakteur_om",
-  "admin_om",
-  "vater_musterfamilie",
-  "mutter_musterfamilie",
-];
-
-const SIGNAL_HANDLES = [
-  "lea.42",
-  "tobi.meeple",
-  "vorstand.om",
-  "kassenwart.aachen",
-  "spielewart.om",
-  "redakteur.om",
-  "admin.portal",
-  "vater.musterfamilie",
-  "mutter.musterfamilie",
-];
-
-const DISCORD_HANDLES = [
-  "leademo",
-  "tobi_demo",
-  "vorstand_om",
-  "kassenwart83",
-  "spielewart.om",
-  "redakteur_om",
-  "admin_om",
-  "vater.musterfamilie",
-  "mutter.musterfamilie",
-];
 
 const DOORBELL_NOTES = [
   "Klingel: 2. OG rechts",
   "Klingel oben, bitte zweimal klingeln",
   "Klingel beschriftet mit Nachnamen",
   "Hintereingang, Klingel neben der Garage",
-];
-
-const BGG_USERNAMES = [
-  "leaplays",
-  "tobiboard",
-  "vorstandom",
-  "kassenwartom",
-  "spielewart",
-  "redakteurom",
 ];
 
 /** `true` für ~jedes zweite Feld, abhängig von `key` und `fieldSalt` —
@@ -74,23 +33,21 @@ export type DemoContactFields = {
   bggUsername: string | null;
 };
 
-/** `key` ist typischerweise die E-Mail oder der Displayname des Meeples. */
+/** `key` ist typischerweise die E-Mail des Meeples; der Teil vor dem `@`
+ * liefert den Handle-Stamm (`vater.musterfamilie`). */
 export function randomDemoContactFields(key: string): DemoContactFields {
+  const stem = key.split("@")[0].toLowerCase().replace(/[^a-z0-9.]/g, "");
+  const underscored = stem.replaceAll(".", "_");
+  const pick = <T>(salt: string, value: T) =>
+    stableInclude(key, salt) ? value : null;
   return {
-    telegramHandle: stableInclude(key, "telegram")
-      ? TELEGRAM_HANDLES[stableIndex(key, TELEGRAM_HANDLES.length)]
-      : null,
-    signalHandle: stableInclude(key, "signal")
-      ? SIGNAL_HANDLES[stableIndex(key, SIGNAL_HANDLES.length)]
-      : null,
-    discordHandle: stableInclude(key, "discord")
-      ? DISCORD_HANDLES[stableIndex(key, DISCORD_HANDLES.length)]
-      : null,
-    doorbellNote: stableInclude(key, "doorbell")
-      ? DOORBELL_NOTES[stableIndex(key, DOORBELL_NOTES.length)]
-      : null,
-    bggUsername: stableInclude(key, "bgg")
-      ? BGG_USERNAMES[stableIndex(key, BGG_USERNAMES.length)]
-      : null,
+    telegramHandle: pick("telegram", underscored),
+    signalHandle: pick("signal", stem),
+    discordHandle: pick("discord", stem),
+    doorbellNote: pick(
+      "doorbell",
+      DOORBELL_NOTES[stableIndex(key, DOORBELL_NOTES.length)],
+    ),
+    bggUsername: pick("bgg", underscored),
   };
 }
