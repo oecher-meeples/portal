@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 import { prismaMock } from "@/lib/__mocks__/prisma";
+import { emptyDecision } from "./member-import-families";
 import type {
   ImportDecisions,
   ImportPreviewRow,
   MemberImportPreview,
   RowDecision,
-} from "./member-import-decisions";
+} from "./member-import-types";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
@@ -45,15 +46,10 @@ function preview(overrides: Partial<MemberImportPreview>): MemberImportPreview {
 }
 
 function adult(email: string, extra: Partial<RowDecision> = {}): RowDecision {
-  return { role: "adult", email, linkMeeple: false, guardians: [], ...extra };
+  return emptyDecision({ role: "adult", email, ...extra });
 }
 
-const CHILD: RowDecision = {
-  role: "child",
-  email: "",
-  linkMeeple: false,
-  guardians: [],
-};
+const CHILD: RowDecision = emptyDecision({ role: "child" });
 
 const FAMILY = preview({
   rows: [
@@ -64,7 +60,7 @@ const FAMILY = preview({
   groups: [{ email: "fam@example.com", lines: [2, 3, 4], anchor: null }],
 });
 const FAMILY_DECISIONS: ImportDecisions = {
-  2: adult("fam@example.com"),
+  2: adult("", { keepsSharedEmail: true }),
   3: adult("vater@example.com"),
   4: CHILD,
 };
@@ -119,7 +115,6 @@ describe("commitMemberImport", () => {
     await commitMemberImport(FAMILY.rows, FAMILY_DECISIONS);
 
     expect(buildImportPreviewMock).toHaveBeenCalledWith(FAMILY.rows, [
-      "fam@example.com",
       "vater@example.com",
     ]);
   });
@@ -148,7 +143,9 @@ describe("commitMemberImport", () => {
 
     await expect(
       commitMemberImport(FAMILY.rows, { ...FAMILY_DECISIONS, 3: adult("") }),
-    ).rejects.toThrow("Zeile 3: Eigene E-Mail-Adresse fehlt.");
+    ).rejects.toThrow(
+      "Zeile 3: E-Mail-Adresse eingeben oder „Erstmal leer lassen“ wählen.",
+    );
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
   });
 
@@ -182,9 +179,23 @@ describe("commitMemberImport", () => {
     await expect(
       commitMemberImport([], { 2: adult("geheim@example.com") }),
     ).rejects.toThrow(
-      "Der Import ist fehlgeschlagen. Es wurde nichts angelegt.",
+      "Der Import ist fehlgeschlagen. Es wurde nichts angelegt. (Error)",
     );
     expect(JSON.stringify(consoleError.mock.calls)).not.toMatch(/geheim/i);
+    consoleError.mockRestore();
+  });
+
+  it("names the failing code for runtime bugs, but never a database message", async () => {
+    buildImportPreviewMock.mockImplementation(() => {
+      throw new TypeError("Cannot read properties of undefined (reading 'x')");
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    await expect(commitMemberImport([], {})).rejects.toThrow(
+      /nichts angelegt\. \(TypeError: Cannot read properties of undefined \(reading 'x'\): at /,
+    );
     consoleError.mockRestore();
   });
 

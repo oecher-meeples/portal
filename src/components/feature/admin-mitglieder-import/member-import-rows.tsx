@@ -1,262 +1,316 @@
 "use client";
 
-import { X } from "lucide-react";
+import { useState } from "react";
+import { Undo2, UserX, Users } from "lucide-react";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Field, TextField } from "@/components/ui/field";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { TextField } from "@/components/ui/field";
 import { IdCombobox } from "@/components/ui/id-combobox";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
-import { memberFullName } from "@/lib/members/member-display-name";
+import { linkableLogin } from "@/lib/members/member-import-decisions";
 import {
-  guardianOptions,
-  linkableLogin,
-  type ImportDecisions,
-  type ImportGroup,
-  type ImportIssue,
-  type ImportPreviewRow,
-  type MemberImportPreview,
-  type RowDecision,
-} from "@/lib/members/member-import-decisions";
+  familyOfLine,
+  familyTargetOptions,
+  hasSharedEmail,
+  importRowName,
+  sharedEmailKeeper,
+  type ImportFamily,
+} from "@/lib/members/member-import-families";
+import {
+  DragHandle,
+  DropColumn,
+} from "@/components/feature/admin-mitglieder-import/member-import-dnd";
+import type {
+  ImportDecisions,
+  ImportIssue,
+  ImportPreviewRow,
+  MemberImportPreview,
+  RowDecision,
+} from "@/lib/members/member-import-types";
 
-export type RowEditorContext = {
+export type ImportEditorContext = {
   preview: MemberImportPreview;
   decisions: ImportDecisions;
+  families: ImportFamily[];
+  /** Zeilenbezogene Punkte (ohne `familyKey`). */
   issuesByLine: Map<number, ImportIssue[]>;
   onChange: (line: number, patch: Partial<RowDecision>) => void;
 };
 
-export function rowName(row: ImportPreviewRow): string {
-  return memberFullName(row) || "(ohne Namen)";
-}
-
-/** Die eine Komponente für „eigene/andere E-Mail" (#611) — Gruppen-
- * Erziehungsberechtigte, Login-Konflikt und Erwachsene ohne E-Mail. Mit
- * `sharedEmail` bietet sie an, die gemeinsame Adresse zu behalten. */
-function ImportEmailField({
-  id,
-  label,
-  value,
-  onChange,
-  sharedEmail,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  sharedEmail?: string;
-}) {
-  const keepsShared =
-    sharedEmail !== undefined && value.trim().toLowerCase() === sharedEmail;
+export function IssueList({ issues }: { issues: ImportIssue[] }) {
+  if (issues.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5">
-      <TextField
-        id={id}
-        label={label}
-        type="email"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {sharedEmail && !keepsShared && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-fit"
-          onClick={() => onChange(sharedEmail)}
-        >
-          Gemeinsame Adresse behalten
-        </Button>
-      )}
-    </div>
+    <ul className="text-destructive text-sm">
+      {issues.map((issue) => (
+        <li key={issue.message}>{issue.message}</li>
+      ))}
+    </ul>
   );
 }
 
-/** Zusätzliche Erziehungsberechtigte eines Kindes: gewählte Liste mit
- * Entfernen-Button plus `IdCombobox` zum Hinzufügen (n:m). */
-function GuardianPicker({
+const CHECK_CLASS = "accent-primary size-4 shrink-0";
+
+/** E-Mail eines Erwachsenen (#611): Hüter der gemeinsamen Adresse wählen,
+ * sonst eigene Adresse oder „Erstmal leer lassen", dazu ggf. die
+ * Verknüpfung mit einem bestehenden Login. */
+export function AdultEmailEditor({
   context,
   row,
 }: {
-  context: RowEditorContext;
+  context: ImportEditorContext;
   row: ImportPreviewRow;
 }) {
-  const { preview, decisions, onChange } = context;
-  const chosen = decisions[row.line]?.guardians ?? [];
-  const options = guardianOptions(preview, decisions, row.line);
-  const labelOf = (id: string) =>
-    options.find((option) => option.id === id)?.label ?? id;
-
-  return (
-    <Field label="Erziehungsberechtigte" htmlFor={`guardians-${row.line}`}>
-      {chosen.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {chosen.map((ref) => (
-            <li key={ref} className="flex items-center gap-2 text-sm">
-              <span className="min-w-0 flex-1 truncate">{labelOf(ref)}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-xs"
-                aria-label={`${labelOf(ref)} entfernen`}
-                onClick={() =>
-                  onChange(row.line, {
-                    guardians: chosen.filter((other) => other !== ref),
-                  })
-                }
-              >
-                <X />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <IdCombobox
-        options={options.filter((option) => !chosen.includes(option.id))}
-        value={null}
-        onValueChange={(id) => {
-          if (id) onChange(row.line, { guardians: [...chosen, id] });
-        }}
-        placeholder="Erziehungsberechtigte:n hinzufügen …"
-      />
-    </Field>
-  );
-}
-
-/** Eine Zeile mit offener Entscheidung — Rolle, E-Mail, Verknüpfung,
- * Erziehungsberechtigte, je nach Status. */
-export function RowEditor({
-  context,
-  row,
-  group,
-}: {
-  context: RowEditorContext;
-  row: ImportPreviewRow;
-  group?: ImportGroup;
-}) {
-  const { preview, decisions, issuesByLine, onChange } = context;
+  const { preview, decisions, families, onChange } = context;
   const decision = decisions[row.line];
-  if (!decision) return null;
-  const login = linkableLogin(preview, row);
-  const issues = issuesByLine.get(row.line) ?? [];
-  const canLink = login !== null && (!group || !group.anchor);
+  const family = familyOfLine(families, row.line);
+  const keeper = family ? sharedEmailKeeper(family, decisions) : null;
+  const isKeeper = keeper === row.line;
+  const login = linkableLogin(preview, family, decisions, row);
+  const adultCount =
+    family?.lines.filter((line) => decisions[line]?.role === "adult").length ??
+    1;
+
+  function chooseKeeper() {
+    if (!family) return;
+    for (const line of family.lines) {
+      onChange(line, { keepsSharedEmail: line === row.line });
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-3 first:border-t-0 first:pt-0">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm font-medium">
-          {rowName(row)}{" "}
-          <span className="text-muted-foreground font-normal">
-            Nr. {row.memberNumber} · Zeile {row.line}
-          </span>
-        </p>
-        {row.status !== "loginConflict" && (
-          <NativeSelect
-            aria-label={`Rolle für Zeile ${row.line}`}
-            value={decision.role ?? ""}
-            onChange={(event) =>
-              onChange(row.line, {
-                role: (event.target.value || null) as RowDecision["role"],
-              })
+    <div className="flex flex-col gap-2">
+      {hasSharedEmail(family) &&
+        (adultCount > 1 ? (
+          <Label className="font-normal">
+            <input
+              type="radio"
+              name={`keeper-${family.key}`}
+              className={CHECK_CLASS}
+              checked={isKeeper}
+              onChange={chooseKeeper}
+            />
+            Behält {family.email}
+          </Label>
+        ) : (
+          <p className="text-muted-foreground text-sm">Behält {family.email}</p>
+        ))}
+      {login && (
+        <Label className="flex items-center justify-between gap-2 font-normal">
+          Mit Konto „{login.displayName}“ verknüpfen
+          <Switch
+            checked={decision.linkMeeple}
+            onCheckedChange={(checked) =>
+              onChange(row.line, { linkMeeple: checked })
             }
-            size="compact"
-          >
-            <option value="">— Rolle wählen —</option>
-            <option value="adult">
-              {group || row.status === "needsRole"
-                ? "Erziehungsberechtigt / erwachsen"
-                : "Erwachsen"}
-            </option>
-            <option value="child">Kind</option>
-          </NativeSelect>
-        )}
-      </div>
-
-      {decision.role === "adult" && (
+          />
+        </Label>
+      )}
+      {!isKeeper && !(login && decision.linkMeeple) && (
         <>
-          {canLink && (
-            <Label className="flex items-center justify-between gap-2 font-normal">
-              Mit Konto „{login.displayName}“ verknüpfen
-              <Switch
-                checked={decision.linkMeeple}
-                onCheckedChange={(checked) =>
-                  onChange(row.line, { linkMeeple: checked })
+          <TextField
+            id={`import-email-${row.line}`}
+            label={family ? "Neue E-Mail-Adresse" : "E-Mail (optional)"}
+            type="email"
+            value={decision.email}
+            disabled={decision.noEmail}
+            onChange={(event) =>
+              onChange(row.line, { email: event.target.value })
+            }
+          />
+          {family && (
+            <Label className="font-normal">
+              <input
+                type="checkbox"
+                className={CHECK_CLASS}
+                checked={decision.noEmail}
+                onChange={(event) =>
+                  onChange(row.line, { noEmail: event.target.checked })
                 }
               />
+              Erstmal leer lassen
             </Label>
           )}
-          {!decision.linkMeeple && (
-            <ImportEmailField
-              id={`import-email-${row.line}`}
-              label={
-                group
-                  ? "Eigene E-Mail (Pflicht)"
-                  : row.status === "loginConflict"
-                    ? "Andere E-Mail (optional, leer = ohne E-Mail)"
-                    : "E-Mail (optional)"
-              }
-              value={decision.email}
-              onChange={(email) => onChange(row.line, { email })}
-              sharedEmail={group && !group.anchor ? group.email : undefined}
-            />
-          )}
         </>
-      )}
-
-      {decision.role === "child" && (
-        <>
-          {group && (
-            <p className="text-muted-foreground text-sm">
-              Wird ohne E-Mail angelegt und mit allen Erziehungsberechtigten der
-              Gruppe verknüpft
-              {group.anchor ? `, auch mit ${group.anchor.name}` : ""}.
-            </p>
-          )}
-          <GuardianPicker context={context} row={row} />
-        </>
-      )}
-
-      {issues.length > 0 && (
-        <ul className="text-destructive text-sm">
-          {issues.map((issue) => (
-            <li key={issue.message}>{issue.message}</li>
-          ))}
-        </ul>
       )}
     </div>
   );
 }
 
-/** Karte einer Gruppe mit gleicher E-Mail (#611). */
-export function GroupCard({
-  context,
-  group,
+/** „Nicht importieren": die Zeile wird bewusst nicht angelegt und fällt aus
+ * ihrer Familie heraus; unter „Nicht importieren" rückgängig zu machen. */
+export function SkipButton({
+  row,
+  onChange,
 }: {
-  context: RowEditorContext;
-  group: ImportGroup;
+  row: ImportPreviewRow;
+  onChange: ImportEditorContext["onChange"];
 }) {
-  const rows = context.preview.rows.filter((row) =>
-    group.lines.includes(row.line),
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-label={`${importRowName(row)} nicht importieren`}
+      onClick={() => onChange(row.line, { skip: true })}
+    >
+      <UserX />
+      Nicht importieren
+    </Button>
   );
+}
+
+/** Ablage der ausgeschlossenen Zeilen — Ziel für Drag & Drop, mit
+ * „Doch importieren" je Zeile. */
+export function SkippedRows({
+  rows,
+  onChange,
+}: {
+  rows: ImportPreviewRow[];
+  onChange: ImportEditorContext["onChange"];
+}) {
+  return (
+    <DropColumn
+      target={{ skip: true }}
+      title={`Nicht importieren (${rows.length})`}
+      emptyHint="Personen hierher ziehen, die nicht angelegt werden sollen."
+    >
+      {rows.map((row) => (
+        <div
+          key={row.line}
+          className="bg-card flex flex-wrap items-center justify-between gap-2 rounded-md border p-3"
+        >
+          <p className="text-sm">
+            <span className="font-medium">{importRowName(row)}</span>{" "}
+            <span className="text-muted-foreground text-xs">
+              Nr. {row.memberNumber} · Zeile {row.line}
+            </span>
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onChange(row.line, { skip: false })}
+          >
+            <Undo2 />
+            Doch importieren
+          </Button>
+        </div>
+      ))}
+    </DropColumn>
+  );
+}
+
+/** „Einer anderen Familie zuweisen": wählt eine Person (Datei oder
+ * Bestand), die Zeile wandert in deren Familie — ggf. entsteht dabei eine
+ * neue. Landet dort in „Nicht zugewiesen". */
+export function MoveToFamilyButton({
+  context,
+  row,
+  label,
+}: {
+  context: ImportEditorContext;
+  row: ImportPreviewRow;
+  label: string;
+}) {
+  const [target, setTarget] = useState<string | null>(null);
+  const options = familyTargetOptions(
+    context.preview,
+    context.decisions,
+    context.families,
+    row.line,
+  );
+  return (
+    <ActionDialog
+      trigger={
+        <Button type="button" variant="outline" size="sm">
+          <Users />
+          {label}
+        </Button>
+      }
+      title={`${importRowName(row)} einer Familie zuweisen`}
+      description="Person wählen, zu deren Familie sie gehört. Dort landet sie unter „Nicht zugewiesen“."
+      submitLabel="Zuweisen"
+      canSubmit={target !== null}
+      onReset={() => setTarget(null)}
+      action={async () => {
+        context.onChange(row.line, {
+          family: target,
+          role: null,
+          keepsSharedEmail: false,
+        });
+      }}
+    >
+      <IdCombobox
+        options={options}
+        value={target}
+        onValueChange={setTarget}
+        placeholder="Person suchen …"
+      />
+    </ActionDialog>
+  );
+}
+
+/** Zeilen ohne Familie, die eine Entscheidung brauchen (keine E-Mail oder
+ * E-Mail eines Logins ohne Mitglied). */
+export function SoloRowsCard({
+  context,
+  title,
+  rows,
+}: {
+  context: ImportEditorContext;
+  title: string;
+  rows: ImportPreviewRow[];
+}) {
+  const { decisions, issuesByLine, onChange } = context;
   return (
     <Card className="gap-3">
       <CardHeader>
-        <CardTitle className="text-base break-all">{group.email}</CardTitle>
-        <CardDescription>
-          {group.anchor
-            ? `Gehört bereits ${group.anchor.name} und bleibt dort. Neue Zeilen werden Kind (verknüpft) oder brauchen eine eigene Adresse.`
-            : "Genau ein:e Erziehungsberechtigte:r behält die gemeinsame Adresse, alle weiteren brauchen eine eigene. Kinder werden ohne E-Mail mit allen Erziehungsberechtigten verknüpft."}
-        </CardDescription>
+        <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
-      {rows.map((row) => (
-        <RowEditor key={row.line} context={context} row={row} group={group} />
-      ))}
+      {rows.map((row) => {
+        const decision = decisions[row.line];
+        if (!decision) return null;
+        return (
+          <div
+            key={row.line}
+            className="flex flex-col gap-3 border-t pt-3 first:border-t-0 first:pt-0"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <DragHandle row={row} />
+                {importRowName(row)}{" "}
+                <span className="text-muted-foreground font-normal">
+                  Nr. {row.memberNumber} · Zeile {row.line}
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {decision.role !== "adult" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onChange(row.line, { role: "adult" })}
+                  >
+                    Als Erwachsene:r anlegen
+                  </Button>
+                )}
+                <MoveToFamilyButton
+                  context={context}
+                  row={row}
+                  label="Einer Familie zuweisen"
+                />
+                <SkipButton row={row} onChange={onChange} />
+              </div>
+            </div>
+            {decision.role === "adult" && (
+              <AdultEmailEditor context={context} row={row} />
+            )}
+            <IssueList issues={issuesByLine.get(row.line) ?? []} />
+          </div>
+        );
+      })}
     </Card>
   );
 }

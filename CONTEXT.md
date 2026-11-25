@@ -70,6 +70,10 @@ _Avoid_: Seed für echte Mitgliederdaten, Import als Abgleich/Update des Bestand
 Zeilen des Mitgliederimports, die dieselbe E-Mail-Adresse teilen (getrimmt, case-insensitiv) — typischerweise eine Familie unter der Adresse der Eltern. Genau ein:e Erziehungsberechtigte:r behält die Adresse, Kinder werden ohne E-Mail mit allen Erziehungsberechtigten verknüpft. Gehört die Adresse schon einem bestehenden Mitglied, ist dieses der **Anker**.
 _Avoid_: Gruppe über gleichen Nachnamen, Familie als Datenmodell (es gibt nur `MemberGuardian`)
 
+**Familie (Import)**:
+Arbeitsbegriff nur der Import-Vorschau: eine Gruppe plus die Zeilen, die der Admin per „Einer anderen Familie zuweisen" hinzugefügt hat (auch um eine einzelne Zeile oder ein bestehendes Mitglied herum). Wird beim Anlegen zu `MemberGuardian`-Verknüpfungen — Kind × alle Erziehungsberechtigten der Familie — und nirgends gespeichert.
+_Avoid_: Familie als persistiertes Datenmodell
+
 **Einladung** (überarbeitet):
 Immer einmalig einlösbar und E-Mail-gebunden (Doppel-Schlüssel: `email` + `token`, `email` ist eindeutig) — der ungebundene, mehrfach einlösbare Invite-Typ entfällt ersatzlos (Vorstandsentscheidung). Nur noch **eine** Spielart: die **Mitgliedseinladung**, aus einem `Vereinsmitglied` heraus erstellt, legt bei Einlösung automatisch ein neues `Meeple` an und verknüpft es. Systemkonten laufen **nicht** mehr über Einladungen (siehe **Systemkonto** unten). Ändert sich die E-Mail eines Vereinsmitglieds, während eine Einladung offen ist, verfällt sie nicht automatisch — ein Popup fragt, ob sie widerrufen und neu erstellt werden soll.
 Die Gültigkeitsdauer ist eine globale Einstellung (`/admin/einstellungen`, sichtbar nur mit `invites:manage`, Default 7 Tage) — kein individuelles Überschreiben pro Einladung mehr.
