@@ -47,6 +47,7 @@ import {
 import { StammdatenSection } from "@/components/feature/mitglied-profil/stammdaten-section";
 import { BankverbindungSection } from "@/components/feature/mitglied-profil/bankverbindung-section";
 import { EmailAddressSection } from "@/components/feature/mitglied-profil/email-address-section";
+import { PasswordChangeSection } from "@/components/feature/mitglied-profil/password-change-section";
 import { KalenderTokenSection } from "@/components/feature/mitglied-profil/kalender-token-section";
 import { VereinsspieleSection } from "@/components/feature/mitglied-profil/vereinsspiele-section";
 import {
@@ -405,6 +406,8 @@ export async function MitgliedProfilView({
                 }
               }
             />
+
+            <PasswordChangeSection />
 
             {member.email && (
               <Card className="gap-4">

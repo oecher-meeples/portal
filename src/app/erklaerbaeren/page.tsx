@@ -1,5 +1,6 @@
 import { requireMember, hasPermissionInCurrentView } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { getOwnPrivateGamesWithExplainerLevel } from "@/lib/explainer/queries";
 import { PageHeading } from "@/components/ui/page-heading";
 import { ErklaerbaerenView } from "@/components/feature/erklaerbaeren/erklaerbaeren-view";
 import type { ExplainerDirectoryEntry } from "@/components/feature/erklaerbaeren/explainer-directory";
@@ -9,7 +10,7 @@ export default async function ErklaerbaerenPage() {
   const { user, meeple } = await requireMember();
   const isAdmin = await hasPermissionInCurrentView(user.id, "admin:access");
 
-  const [explainerGames, availableGames] = await Promise.all([
+  const [explainerGames, availableGames, privateGames] = await Promise.all([
     prisma.explainerGame.findMany({
       orderBy: { boardGame: { title: "asc" } },
       include: {
@@ -29,6 +30,7 @@ export default async function ErklaerbaerenPage() {
       orderBy: { title: "asc" },
       select: { id: true, title: true },
     }),
+    getOwnPrivateGamesWithExplainerLevel(meeple.id),
   ]);
 
   const directoryByGame = new Map<string, ExplainerDirectoryEntry>();
@@ -81,6 +83,7 @@ export default async function ErklaerbaerenPage() {
         directory={[...directoryByGame.values()]}
         myGames={myGames}
         availableGames={availableGames}
+        privateGames={privateGames}
         isAdmin={isAdmin}
       />
     </div>

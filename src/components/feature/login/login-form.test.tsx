@@ -85,71 +85,23 @@ describe("LoginForm (#425, client-seitige Cooldown-Näherung)", () => {
   });
 });
 
-describe('LoginForm — "Passwort vergessen?"-Link (#324, Live-Review-Ergänzung)', () => {
-  it("hides the link before any failed attempt", () => {
+describe('LoginForm — "Passwort vergessen?"-Link', () => {
+  it("shows the link right away, without any failed attempt", () => {
     render(<LoginForm />);
-
-    expect(
-      screen.queryByRole("link", { name: "Passwort vergessen?" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the link, prefilled with the entered email, after one failed attempt", async () => {
-    const user = userEvent.setup();
-    signInEmailMock.mockResolvedValue({
-      error: { message: "INVALID_EMAIL_OR_PASSWORD" },
-    });
-    render(<LoginForm />);
-
-    await user.type(screen.getByLabelText("E-Mail"), "me@example.com");
-    await user.type(screen.getByLabelText("Passwort"), "wrong");
-    await user.click(screen.getByRole("button", { name: "Anmelden" }));
-
-    const link = screen.getByRole("link", { name: "Passwort vergessen?" });
-    expect(link).toHaveAttribute(
-      "href",
-      "/passwort-vergessen?email=me%40example.com",
-    );
-  });
-
-  it("shows the link even when signIn throws instead of returning { error } (#324-Folgefehler)", async () => {
-    // Der echte authClient wirft bei falschen Zugangsdaten in der Praxis
-    // tatsächlich, statt { error } zurückzugeben — der Mock in den obigen
-    // Tests bildet nur den einen (falschen) angenommenen Weg ab.
-    const user = userEvent.setup();
-    signInEmailMock.mockRejectedValue(new Error("INVALID_EMAIL_OR_PASSWORD"));
-    render(<LoginForm />);
-
-    await user.type(screen.getByLabelText("E-Mail"), "me@example.com");
-    await user.type(screen.getByLabelText("Passwort"), "wrong");
-    await user.click(screen.getByRole("button", { name: "Anmelden" }));
-
-    expect(
-      screen.getByText(
-        "Das hat leider nicht funktioniert. Bitte versuche es erneut.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Passwort vergessen?" }),
-    ).toBeInTheDocument();
-  });
-
-  it("keeps the link visible even once the error is cleared by a later attempt", async () => {
-    const user = userEvent.setup();
-    signInEmailMock.mockResolvedValueOnce({
-      error: { message: "INVALID_EMAIL_OR_PASSWORD" },
-    });
-    render(<LoginForm />);
-
-    await user.type(screen.getByLabelText("E-Mail"), "me@example.com");
-    await user.type(screen.getByLabelText("Passwort"), "wrong");
-    await user.click(screen.getByRole("button", { name: "Anmelden" }));
-
-    signInEmailMock.mockResolvedValueOnce({ error: null });
-    await user.click(screen.getByRole("button", { name: "Anmelden" }));
 
     expect(
       screen.getByRole("link", { name: "Passwort vergessen?" }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("href", "/passwort-vergessen");
+  });
+
+  it("prefills the entered email in the link", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText("E-Mail"), "me@example.com");
+
+    expect(
+      screen.getByRole("link", { name: "Passwort vergessen?" }),
+    ).toHaveAttribute("href", "/passwort-vergessen?email=me%40example.com");
   });
 });
