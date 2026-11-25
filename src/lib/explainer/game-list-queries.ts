@@ -1,45 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import {
+  type BoardGameSearchHit,
   groupExpansionsUnderBase,
+  type ExplainerGameFilter,
   type ExplainerGameRow,
 } from "@/lib/explainer/game-list";
-
-/** Exklusive Filter von Tab 1 (#663): `relevant` = Vereinigung der übrigen. */
-export const EXPLAINER_GAME_FILTERS = [
-  "relevant",
-  "mine",
-  "wanted",
-  "known",
-] as const;
-export type ExplainerGameFilter = (typeof EXPLAINER_GAME_FILTERS)[number];
-
-export const EXPLAINER_GAME_FILTER_LABELS: Record<ExplainerGameFilter, string> =
-  {
-    relevant: "Relevante",
-    mine: "Meine",
-    wanted: "Gesucht",
-    known: "Bekannte",
-  };
-
-/** URL-Werte (`?filter=gesucht`, #666) je Filter. */
-export const EXPLAINER_GAME_FILTER_SLUGS: Record<ExplainerGameFilter, string> =
-  {
-    relevant: "relevante",
-    mine: "meine",
-    wanted: "gesucht",
-    known: "bekannte",
-  };
-
-export function parseExplainerGameFilter(
-  value: string | undefined,
-): ExplainerGameFilter {
-  return (
-    EXPLAINER_GAME_FILTERS.find(
-      (f) => EXPLAINER_GAME_FILTER_SLUGS[f] === value,
-    ) ?? "relevant"
-  );
-}
 
 function whereForFilter(
   meepleId: string,
@@ -99,12 +65,6 @@ export async function getMyExplainerGames(
   });
   return groupExpansionsUnderBase(games.map(toRow));
 }
-
-/** Eine Zeile für ein einzelnes Spiel, z. B. nach dem Hinzufügen per Suche. */
-export type BoardGameSearchHit = {
-  id: string;
-  title: string;
-};
 
 /** Serverseitige Titelsuche über **alle** Spiele — kein Vorladen aller Titel. */
 export async function searchBoardGames(

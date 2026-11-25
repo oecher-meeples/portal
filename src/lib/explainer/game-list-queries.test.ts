@@ -7,8 +7,8 @@ const {
   getMyExplainerGames,
   searchBoardGames,
   countWantedGamesWithoutMyLevel,
-  parseExplainerGameFilter,
 } = await import("@/lib/explainer/game-list-queries");
+const { parseExplainerGameFilter } = await import("@/lib/explainer/game-list");
 
 function game(
   id: string,

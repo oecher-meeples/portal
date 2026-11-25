@@ -1,33 +1,8 @@
 import { prisma } from "@/lib/utils/prisma";
-import type { ExplainerEntry } from "@/lib/explainer/queries";
-
-export type ExplainerDirectoryFilter = "all" | "wanted";
-
-export const EXPLAINER_DIRECTORY_FILTER_LABELS: Record<
+import type {
+  ExplainerDirectoryEntry,
   ExplainerDirectoryFilter,
-  string
-> = { all: "Alle", wanted: "Gesucht" };
-
-/** URL-Werte (`?filter=gesucht`) je Filter. */
-export const EXPLAINER_DIRECTORY_FILTER_SLUGS: Record<
-  ExplainerDirectoryFilter,
-  string
-> = { all: "alle", wanted: "gesucht" };
-
-export function parseDirectoryFilter(
-  value: string | undefined,
-): ExplainerDirectoryFilter {
-  return value === EXPLAINER_DIRECTORY_FILTER_SLUGS.wanted ? "wanted" : "all";
-}
-
-export type ExplainerDirectoryEntry = {
-  boardGameId: string;
-  boardGameTitle: string;
-  imageUrl: string | null;
-  bggId: number | null;
-  wanted: boolean;
-  explainers: ExplainerEntry[];
-};
+} from "@/lib/explainer/game-list";
 
 /**
  * Erklärbär-Verzeichnis (Tab 2, #664/#662): `all` = Spiele mit mind. einem

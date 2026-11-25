@@ -4,14 +4,12 @@ import { ErklaerbaerenView } from "@/components/feature/erklaerbaeren/erklaerbae
 import { MyGamesTab } from "@/components/feature/erklaerbaeren/my-games-tab";
 import { DirectoryTab } from "@/components/feature/erklaerbaeren/directory-tab";
 import { parseErklaerbaerenTab } from "@/components/feature/erklaerbaeren/erklaerbaeren-url";
+import { getMyExplainerGames } from "@/lib/explainer/game-list-queries";
+import { getExplainerDirectory } from "@/lib/explainer/directory-queries";
 import {
-  getMyExplainerGames,
-  parseExplainerGameFilter,
-} from "@/lib/explainer/game-list-queries";
-import {
-  getExplainerDirectory,
   parseDirectoryFilter,
-} from "@/lib/explainer/directory-queries";
+  parseExplainerGameFilter,
+} from "@/lib/explainer/game-list";
 
 type SearchParams = Promise<{ tab?: string; filter?: string; q?: string }>;
 

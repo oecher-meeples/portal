@@ -3,8 +3,9 @@ import { prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
-const { getExplainerDirectory, parseDirectoryFilter } =
+const { getExplainerDirectory } =
   await import("@/lib/explainer/directory-queries");
+const { parseDirectoryFilter } = await import("@/lib/explainer/game-list");
 
 describe("parseDirectoryFilter", () => {
   it("defaults to all", () => {

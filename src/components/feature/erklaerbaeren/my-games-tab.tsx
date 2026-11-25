@@ -12,7 +12,7 @@ import {
   EXPLAINER_GAME_FILTER_LABELS,
   EXPLAINER_GAME_FILTER_SLUGS,
   type ExplainerGameFilter,
-} from "@/lib/explainer/game-list-queries";
+} from "@/lib/explainer/game-list";
 
 const EMPTY_TEXT: Record<ExplainerGameFilter, string> = {
   relevant:

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { SearchInput } from "@/components/ui/search-input";
 import { useDebouncedValue } from "@/components/ui/use-debounced-value";
 import { searchBoardGamesAction } from "@/lib/explainer/actions";
-import type { BoardGameSearchHit } from "@/lib/explainer/game-list-queries";
+import type { BoardGameSearchHit } from "@/lib/explainer/game-list";
 
 const SEARCH_DELAY_MS = 300;
 

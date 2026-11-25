@@ -15,13 +15,13 @@ import { BoardGameSearch } from "@/components/feature/erklaerbaeren/board-game-s
 import { GameTitleLink } from "@/components/feature/erklaerbaeren/game-title-link";
 import { erklaerbaerenHref } from "@/components/feature/erklaerbaeren/erklaerbaeren-url";
 import { setExplainerWanted } from "@/lib/explainer/actions";
-import type { BoardGameSearchHit } from "@/lib/explainer/game-list-queries";
+import type { BoardGameSearchHit } from "@/lib/explainer/game-list";
 import {
   EXPLAINER_DIRECTORY_FILTER_LABELS,
   EXPLAINER_DIRECTORY_FILTER_SLUGS,
   type ExplainerDirectoryEntry,
   type ExplainerDirectoryFilter,
-} from "@/lib/explainer/directory-queries";
+} from "@/lib/explainer/game-list";
 
 const FILTERS: ExplainerDirectoryFilter[] = ["all", "wanted"];
 
