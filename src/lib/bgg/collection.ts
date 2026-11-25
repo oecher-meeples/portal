@@ -3,9 +3,9 @@ import {
   parser,
   parseNumber,
   parseVersions,
-  SEARCH_REVALIDATE_SECONDS,
   toArray,
 } from "@/lib/bgg/client";
+import { sleep } from "@/lib/utils/sleep";
 import type { BggItem, BggVersion } from "@/lib/bgg/client";
 
 export class BggCollectionUnavailableError extends Error {
@@ -61,7 +61,14 @@ interface BggCollectionResponse {
    * erkennbaren Unterschied zu einer leeren, aber öffentlichen Collection —
    * beides landet für den Aufrufer im selben "leere Liste"-Fall. */
   errors?: { error?: { message?: string } };
+  /** BGG antwortet mit HTTP 202 und nur diesem Hinweis, solange es die
+   * Collection erst zusammenstellt — ohne `items`. */
+  message?: string;
 }
+
+/** Wartezeit und Versuche, bis BGG eine zusammengestellte Collection liefert. */
+const QUEUED_RETRY_DELAY_MS = 3000;
+const QUEUED_MAX_ATTEMPTS = 6;
 
 /** Eine Collection-Abfrage samt Fehlerbehandlung; liefert die rohen Items
  * mit gültiger BGG-ID und Titel. */
@@ -69,11 +76,22 @@ async function fetchCollectionItems(
   username: string,
   query: string,
 ): Promise<(BggCollectionItem & { bggId: number; title: string })[]> {
-  const xml = await fetchBggXml(
-    `/collection?username=${encodeURIComponent(username)}&${query}`,
-    SEARCH_REVALIDATE_SECONDS,
-  );
-  const parsed = parser.parse(xml) as BggCollectionResponse;
+  // Nie cachen: Eine „wird zusammengestellt"-Antwort (202, leer) würde sonst
+  // eine Stunde lang als leere Collection ausgeliefert — der Import meldete
+  // dann 0 Titel (#637).
+  let parsed: BggCollectionResponse = {};
+  for (let attempt = 1; attempt <= QUEUED_MAX_ATTEMPTS; attempt++) {
+    const xml = await fetchBggXml(
+      `/collection?username=${encodeURIComponent(username)}&${query}`,
+      0,
+    );
+    parsed = parser.parse(xml) as BggCollectionResponse;
+    if (parsed.items || parsed.errors || !parsed.message) break;
+    if (attempt === QUEUED_MAX_ATTEMPTS) {
+      throw new BggCollectionUnavailableError(username);
+    }
+    await sleep(QUEUED_RETRY_DELAY_MS);
+  }
 
   if (parsed.errors) {
     throw new BggCollectionUnavailableError(username);

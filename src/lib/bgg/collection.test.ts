@@ -7,6 +7,8 @@ import {
   fetchBggWantToPlay,
 } from "./collection";
 
+vi.mock("@/lib/utils/sleep", () => ({ sleep: () => Promise.resolve() }));
+
 function loadFixture(name: string): string {
   return fs.readFileSync(
     path.join(__dirname, "..", "__fixtures__", "bgg", name),
@@ -231,5 +233,59 @@ describe("fetchBggWantToPlay (#637)", () => {
       '<?xml version="1.0"?><errors><error><message>Invalid username</message></error></errors>',
     );
     await expect(fetchBggWantToPlay("x")).rejects.toThrow(/nicht abrufbar/);
+  });
+});
+
+describe("BGG stellt die Collection noch zusammen (202)", () => {
+  const QUEUED =
+    '<?xml version="1.0" encoding="utf-8"?><message>Your request for this collection has been accepted and will be processed.</message>';
+  const READY = `<?xml version="1.0" encoding="utf-8"?>
+    <items totalitems="1">
+      <item objecttype="thing" objectid="99" subtype="boardgame" collid="1">
+        <name sortindex="1">Wunschspiel</name>
+        <status own="0" wanttoplay="1" />
+      </item>
+    </items>`;
+
+  beforeEach(() => {
+    vi.stubEnv("BGG_BEARER_TOKEN", "test-token");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("wartet und fragt erneut, statt eine leere Liste zu liefern", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        text: async () => QUEUED,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => READY,
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchBggWantToPlay("some-user");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.map((e) => e.bggId)).toEqual([99]);
+  });
+
+  it("meldet nach mehreren Versuchen, dass BGG noch arbeitet", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 202, text: async () => QUEUED });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchBggWantToPlay("some-user")).rejects.toThrow(
+      /nicht abrufbar/,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 });
