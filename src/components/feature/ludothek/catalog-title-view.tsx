@@ -40,17 +40,15 @@ export function CatalogTitleView({
         </CardCornerOverlay>
       </div>
       <div className="flex flex-col gap-6">
-        <div>
-          <PageTitle size="md">{title}</PageTitle>
-          {yearPublished && (
-            <p className="text-muted-foreground mt-1">{yearPublished}</p>
-          )}
-        </div>
-        {bggUrl && (
-          <div>
-            <BggLinkButton href={bggUrl} />
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <PageTitle size="md">{title}</PageTitle>
+            {yearPublished && (
+              <p className="text-muted-foreground mt-1">{yearPublished}</p>
+            )}
           </div>
-        )}
+          {bggUrl && <BggLinkButton href={bggUrl} />}
+        </div>
         <SharedCollectionMeeplesCard
           meeples={wantToPlay}
           action={wantToPlayAction}
