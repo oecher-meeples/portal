@@ -1,0 +1,41 @@
+name: Release-PR öffnen (develop → release)
+
+# Manuell auslösbar (Actions → "Release-PR öffnen" → Run workflow).
+# Öffnet einen PR von `develop` nach `release`. Mergen (regulärer
+# Merge-Commit, kein Squash) bleibt manuell.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # PAT nötig, damit der Check "verify" auf dem PR anläuft:
+          # PRs von GITHUB_TOKEN lösen keine Workflows aus.
+          token: ${{ secrets.SYNC_PR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: PR develop → release öffnen
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PR_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch origin develop release
+          if git merge-base --is-ancestor origin/develop origin/release; then
+            echo "release enthält develop bereits — nichts zu releasen."
+            exit 0
+          fi
+          existing=$(gh pr list --base release --head develop --state open --json url --jq '.[0].url')
+          if [ -n "$existing" ]; then
+            echo "Release-PR ist bereits offen: $existing"
+            exit 0
+          fi
+          gh pr create --base release --head develop \
+            --title "release: $(date -u +%Y-%m-%d)" \
+            --body "Automatisch geöffnet: \`develop\` → \`release\`. Regulärer Merge-Commit, kein Squash."

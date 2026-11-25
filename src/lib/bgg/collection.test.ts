@@ -74,6 +74,43 @@ describe("fetchBggCollection (#255)", () => {
     ]);
   });
 
+  it("merges several copies of the same game into one entry", async () => {
+    mockFetchOnce(
+      true,
+      200,
+      `<?xml version="1.0" encoding="utf-8"?>
+      <items totalitems="3">
+        <item objecttype="thing" objectid="394" subtype="boardgame" collid="1">
+          <name sortindex="1">Kahuna</name>
+          <status own="1" fortrade="0" wanttoplay="0" />
+        </item>
+        <item objecttype="thing" objectid="394" subtype="boardgame" collid="2">
+          <name sortindex="1">Kahuna</name>
+          <stats><rating value="7" /></stats>
+          <status own="1" fortrade="1" wanttoplay="0" />
+          <version>
+            <item type="boardgameversion" id="310213">
+              <name type="primary" sortindex="1" value="Neuauflage" />
+            </item>
+          </version>
+        </item>
+        <item objecttype="thing" objectid="13" subtype="boardgame" collid="3">
+          <name sortindex="1">Catan</name>
+          <status own="1" fortrade="0" wanttoplay="0" />
+        </item>
+      </items>`,
+    );
+
+    const result = await fetchBggCollection("some-user");
+
+    expect(result.map((e) => e.bggId)).toEqual([394, 13]);
+    expect(result[0]).toMatchObject({
+      rating: 7,
+      forTrade: true,
+      version: { bggVersionId: 310213 },
+    });
+  });
+
   it("parses the version the meeple chose on BGG", async () => {
     mockFetchOnce(
       true,
