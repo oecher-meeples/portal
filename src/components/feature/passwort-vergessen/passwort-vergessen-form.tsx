@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
+import { PasswordField } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth/client";
 import { validatePassword } from "@/lib/auth/password";
 
@@ -113,18 +114,16 @@ export function PasswortVergessenForm({
         className="font-mono text-sm"
         required
       />
-      <TextField
+      <PasswordField
         id="forgot-password"
         label="Neues Passwort"
-        type="password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         required
       />
-      <TextField
+      <PasswordField
         id="forgot-password-confirm"
         label="Neues Passwort wiederholen"
-        type="password"
         value={passwordConfirm}
         onChange={(event) => setPasswordConfirm(event.target.value)}
         required
