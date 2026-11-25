@@ -27,3 +27,10 @@ export const NOT_CATALOG_STUB_WHERE: Prisma.BoardGameWhereInput = {
     { maxPlayers: { not: null } },
   ],
 };
+
+/** Titel, die zum Bestand gehören: mindestens ein Vereinsexemplar oder ein
+ * Privatbesitz-Eintrag. Reine Want-to-Play-Stubs (#637) erfüllen das nicht und
+ * gehören in keine Auswahl und keine Statistik des Vereinsbestands. */
+export const IN_INVENTORY_WHERE: Prisma.BoardGameWhereInput = {
+  OR: [{ copies: { some: {} } }, { privateCollectionEntries: { some: {} } }],
+};

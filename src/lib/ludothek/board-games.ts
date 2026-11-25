@@ -6,6 +6,7 @@ import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { normaliseEan } from "@/lib/inventory/ean";
 import {
+  IN_INVENTORY_WHERE,
   isCatalogStub,
   NOT_CATALOG_STUB_WHERE,
 } from "@/lib/ludothek/board-game-stub";
@@ -373,6 +374,7 @@ export async function findExpansionAssignmentOptions(
   return prisma.boardGame.findMany({
     where: {
       id: { notIn: excludeIds },
+      ...IN_INVENTORY_WHERE,
       ...(isExpansion ? { kind: BoardGameKind.BOARDGAME } : {}),
     },
     select: { id: true, title: true },

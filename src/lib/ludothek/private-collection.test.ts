@@ -79,6 +79,15 @@ describe("buildPrivateLudothekGames (#255-Folge)", () => {
     });
   });
 
+  it("geht von Privatbesitz-Einträgen aus, ein Want-to-Play-Stub erscheint nie (#637)", async () => {
+    prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([]);
+    prismaMock.boardGame.findMany.mockClear();
+
+    expect(await buildPrivateLudothekGames()).toEqual([]);
+    expect(prismaMock.privateGameCollectionEntry.findMany).toHaveBeenCalled();
+    expect(prismaMock.boardGame.findMany).not.toHaveBeenCalled();
+  });
+
   it("only queries entries whose meeple has released visibility", async () => {
     prismaMock.privateGameCollectionEntry.findMany.mockResolvedValue([]);
 

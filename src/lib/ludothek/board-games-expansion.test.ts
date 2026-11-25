@@ -16,6 +16,8 @@ const {
   findExpansionAssignmentOptions,
 } = await import("./board-games");
 
+import { IN_INVENTORY_WHERE } from "@/lib/ludothek/board-game-stub";
+
 beforeEach(() => {
   prismaMock.boardGame.findMany.mockResolvedValue([]);
 });
@@ -115,7 +117,11 @@ describe("findExpansionAssignmentOptions", () => {
     await findExpansionAssignmentOptions("BOARDGAME_EXPANSION", ["id-1"]);
 
     expect(prismaMock.boardGame.findMany).toHaveBeenCalledWith({
-      where: { id: { notIn: ["id-1"] }, kind: "BOARDGAME" },
+      where: {
+        id: { notIn: ["id-1"] },
+        ...IN_INVENTORY_WHERE,
+        kind: "BOARDGAME",
+      },
       select: { id: true, title: true },
       orderBy: { title: "asc" },
     });
@@ -127,7 +133,7 @@ describe("findExpansionAssignmentOptions", () => {
     await findExpansionAssignmentOptions("BOARDGAME", ["id-1"]);
 
     expect(prismaMock.boardGame.findMany).toHaveBeenCalledWith({
-      where: { id: { notIn: ["id-1"] } },
+      where: { id: { notIn: ["id-1"] }, ...IN_INVENTORY_WHERE },
       select: { id: true, title: true },
       orderBy: { title: "asc" },
     });
