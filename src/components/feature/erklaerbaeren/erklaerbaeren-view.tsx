@@ -1,45 +1,52 @@
-import {
-  ExplainerDirectory,
-  type ExplainerDirectoryEntry,
-} from "@/components/feature/erklaerbaeren/explainer-directory";
-import {
-  MyExplainerGames,
-  type MyExplainerGame,
-  type SelectableGame,
-} from "@/components/feature/erklaerbaeren/my-explainer-games";
-import { MyPrivateGamesAccordion } from "@/components/feature/erklaerbaeren/my-private-games-accordion";
-import type { OwnPrivateGameExplainerEntry } from "@/lib/explainer/queries";
+"use client";
+
+import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageContainer } from "@/components/ui/page-container";
+import {
+  erklaerbaerenHref,
+  parseErklaerbaerenTab,
+  type ErklaerbaerenTab,
+} from "@/components/feature/erklaerbaeren/erklaerbaeren-url";
 
+/** Rahmen der Erklärbären-Seite (#663): Tab „Meine Spiele“ für alle, Tab
+ * „Erklärbär-Verzeichnis“ nur mit `events:manage` — ohne Verzeichnis entfällt
+ * die Tab-Leiste. `children` ist der Inhalt des aktiven Tabs; die Seite lädt
+ * so nur dessen Daten (und die des Verzeichnisses nur bei Berechtigung). */
 export function ErklaerbaerenView({
-  directory,
-  myGames,
-  availableGames,
-  privateGames = [],
-  isAdmin,
+  tab,
+  showDirectory,
+  children,
 }: {
-  directory: ExplainerDirectoryEntry[];
-  myGames: MyExplainerGame[];
-  availableGames: SelectableGame[];
-  /** Eigene BGG-Importe mit Erklärbär-Niveau (#654). */
-  privateGames?: OwnPrivateGameExplainerEntry[];
-  /** Full directory (alle Spiele × alle Erklärbären) ist admin-only (#210) —
-   * Meeple sehen nur ihre eigenen Einträge unten. */
-  isAdmin: boolean;
+  tab: ErklaerbaerenTab;
+  showDirectory: boolean;
+  children: ReactNode;
 }) {
+  const router = useRouter();
+
+  if (!showDirectory) {
+    return <PageContainer>{children}</PageContainer>;
+  }
+
   return (
-    <PageContainer className="gap-8">
-      {isAdmin && (
-        <section className="flex flex-col gap-3">
-          <ExplainerDirectory entries={directory} />
-        </section>
-      )}
-
-      <section className="flex flex-col gap-3">
-        <MyExplainerGames myGames={myGames} availableGames={availableGames} />
-      </section>
-
-      <MyPrivateGamesAccordion games={privateGames} />
+    <PageContainer>
+      <Tabs
+        value={tab}
+        onValueChange={(value) =>
+          router.push(
+            erklaerbaerenHref({ tab: parseErklaerbaerenTab(String(value)) }),
+          )
+        }
+      >
+        <TabsList>
+          <TabsTrigger value="meine">Meine Spiele</TabsTrigger>
+          <TabsTrigger value="verzeichnis">Erklärbär-Verzeichnis</TabsTrigger>
+        </TabsList>
+        <TabsContent value={tab} className="pt-2">
+          {children}
+        </TabsContent>
+      </Tabs>
     </PageContainer>
   );
 }

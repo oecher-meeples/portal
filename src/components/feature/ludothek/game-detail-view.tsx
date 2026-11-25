@@ -1,3 +1,4 @@
+import { bggGameUrl } from "@/lib/bgg/url";
 import { Card, CardTitle } from "@/components/ui/card";
 import { OpenLfgPostsCard } from "@/components/feature/ludothek/open-lfg-posts-card";
 import type { ReactNode } from "react";
@@ -130,7 +131,7 @@ export function GameDetailView({
 }) {
   const { inline: inlineContributors, illustrators } =
     splitContributorsForDetail(groupGameContributorsByName(game));
-  const bggUrl = bggId ? `https://boardgamegeek.com/boardgame/${bggId}` : null;
+  const bggUrl = bggGameUrl(bggId);
   const titleActions: GameTitleAction[] = [
     // #503: „Titel bearbeiten" im Header neben dem Titel (Revert #399), bei
     // schmalem Titelblock wie alle anderen im „⋯"-Menü (#586).

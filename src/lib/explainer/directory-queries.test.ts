@@ -9,7 +9,7 @@ const { getExplainerDirectory, parseDirectoryFilter } =
 describe("parseDirectoryFilter", () => {
   it("defaults to all", () => {
     expect(parseDirectoryFilter(undefined)).toBe("all");
-    expect(parseDirectoryFilter("wanted")).toBe("wanted");
+    expect(parseDirectoryFilter("gesucht")).toBe("wanted");
   });
 });
 

@@ -97,10 +97,7 @@ export async function searchBoardGamesAction(
 }
 
 /** „Erklärer gesucht“ (#660) setzen/entfernen — nur `events:manage`. */
-export async function setExplainerWanted(
-  boardGameId: string,
-  wanted: boolean,
-) {
+export async function setExplainerWanted(boardGameId: string, wanted: boolean) {
   await requireActionPermission("events:manage");
 
   const updated = await prisma.boardGame.updateMany({

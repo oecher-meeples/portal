@@ -38,7 +38,8 @@ describe("parseExplainerGameFilter", () => {
   it("falls back to relevant", () => {
     expect(parseExplainerGameFilter(undefined)).toBe("relevant");
     expect(parseExplainerGameFilter("quatsch")).toBe("relevant");
-    expect(parseExplainerGameFilter("wanted")).toBe("wanted");
+    expect(parseExplainerGameFilter("gesucht")).toBe("wanted");
+    expect(parseExplainerGameFilter("bekannte")).toBe("known");
   });
 });
 

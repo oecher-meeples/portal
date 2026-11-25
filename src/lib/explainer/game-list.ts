@@ -21,17 +21,15 @@ export type ExplainerGameRow = {
  */
 export function groupExpansionsUnderBase<
   T extends { boardGameId: string; isExpansion: boolean },
->(games: (T & { baseIds: string[] })[]): T[] {
-  const ids = new Set(games.map((g) => g.boardGameId));
-  const baseOf = (g: { isExpansion: boolean; baseIds: string[] }) =>
-    g.isExpansion ? g.baseIds.find((id) => ids.has(id)) : undefined;
-  const strip = ({ baseIds: _baseIds, ...rest }: T & { baseIds: string[] }) =>
-    rest as unknown as T;
+>(games: { row: T; baseIds: string[] }[]): T[] {
+  const ids = new Set(games.map((g) => g.row.boardGameId));
+  const baseOf = (g: { row: T; baseIds: string[] }) =>
+    g.row.isExpansion ? g.baseIds.find((id) => ids.has(id)) : undefined;
 
   return games
     .filter((g) => baseOf(g) === undefined)
     .flatMap((g) => [
-      strip(g),
-      ...games.filter((e) => baseOf(e) === g.boardGameId).map(strip),
+      g.row,
+      ...games.filter((e) => baseOf(e) === g.row.boardGameId).map((e) => e.row),
     ]);
 }

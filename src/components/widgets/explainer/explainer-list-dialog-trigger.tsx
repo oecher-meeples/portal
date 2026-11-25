@@ -24,6 +24,7 @@ export function ExplainerListDialogTrigger({
   boardGameTitle,
   explainers,
   badgeCount,
+  display = "icon",
   className,
 }: {
   boardGameTitle: string;
@@ -32,29 +33,48 @@ export function ExplainerListDialogTrigger({
    * (Ludothek-Detailseite). Omit when the caller already shows the count
    * elsewhere (Admin-Verzeichnis, #210). */
   badgeCount?: number;
+  /** "count": der Trigger ist selbst die Badge mit der Erklärer-Anzahl
+   * (Verzeichnis-Grid, #664) statt eines Such-Icons. */
+  display?: "icon" | "count";
   className?: string;
 }) {
   return (
     <Dialog>
-      <Tooltip content="Alle Erklärbären ansehen">
+      {display === "count" ? (
         <DialogTrigger
           render={
-            <Button
-              variant="outline"
-              size="icon-sm"
-              className={cn("relative", className)}
-              aria-label="Alle Erklärbären ansehen"
+            <button
+              type="button"
+              className={cn("group rounded-4xl", className)}
+              aria-label={`${explainers.length} Erklärbären für ${boardGameTitle} ansehen`}
             >
-              <Search className="size-4" />
-              {Boolean(badgeCount) && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center px-1 text-[11px]">
-                  {badgeCount}
-                </Badge>
-              )}
-            </Button>
+              <Badge variant={explainers.length === 0 ? "outline" : "default"}>
+                {explainers.length}
+              </Badge>
+            </button>
           }
         />
-      </Tooltip>
+      ) : (
+        <Tooltip content="Alle Erklärbären ansehen">
+          <DialogTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className={cn("relative", className)}
+                aria-label="Alle Erklärbären ansehen"
+              >
+                <Search className="size-4" />
+                {Boolean(badgeCount) && (
+                  <Badge className="absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center px-1 text-[11px]">
+                    {badgeCount}
+                  </Badge>
+                )}
+              </Button>
+            }
+          />
+        </Tooltip>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Erklärbären für {boardGameTitle}</DialogTitle>

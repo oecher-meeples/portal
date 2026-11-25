@@ -22,10 +22,23 @@ export const EXPLAINER_GAME_FILTER_LABELS: Record<ExplainerGameFilter, string> =
     known: "Bekannte",
   };
 
+/** URL-Werte (`?filter=gesucht`, #666) je Filter. */
+export const EXPLAINER_GAME_FILTER_SLUGS: Record<ExplainerGameFilter, string> =
+  {
+    relevant: "relevante",
+    mine: "meine",
+    wanted: "gesucht",
+    known: "bekannte",
+  };
+
 export function parseExplainerGameFilter(
   value: string | undefined,
 ): ExplainerGameFilter {
-  return EXPLAINER_GAME_FILTERS.find((f) => f === value) ?? "relevant";
+  return (
+    EXPLAINER_GAME_FILTERS.find(
+      (f) => EXPLAINER_GAME_FILTER_SLUGS[f] === value,
+    ) ?? "relevant"
+  );
 }
 
 function whereForFilter(
@@ -58,7 +71,7 @@ type RowSource = Prisma.BoardGameGetPayload<{
 }>;
 
 function toRow(game: RowSource) {
-  return {
+  const row: ExplainerGameRow = {
     boardGameId: game.id,
     boardGameTitle: game.title,
     imageUrl: game.imageUrl,
@@ -66,8 +79,8 @@ function toRow(game: RowSource) {
     isExpansion: game.kind === "BOARDGAME_EXPANSION",
     wanted: game.explainerWanted,
     level: game.explainerGames[0]?.level ?? null,
-    baseIds: game.expansionCollections.map((c) => c.baseGameId),
   };
+  return { row, baseIds: game.expansionCollections.map((c) => c.baseGameId) };
 }
 
 /**

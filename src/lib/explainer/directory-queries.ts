@@ -3,10 +3,21 @@ import type { ExplainerEntry } from "@/lib/explainer/queries";
 
 export type ExplainerDirectoryFilter = "all" | "wanted";
 
+export const EXPLAINER_DIRECTORY_FILTER_LABELS: Record<
+  ExplainerDirectoryFilter,
+  string
+> = { all: "Alle", wanted: "Gesucht" };
+
+/** URL-Werte (`?filter=gesucht`) je Filter. */
+export const EXPLAINER_DIRECTORY_FILTER_SLUGS: Record<
+  ExplainerDirectoryFilter,
+  string
+> = { all: "alle", wanted: "gesucht" };
+
 export function parseDirectoryFilter(
   value: string | undefined,
 ): ExplainerDirectoryFilter {
-  return value === "wanted" ? "wanted" : "all";
+  return value === EXPLAINER_DIRECTORY_FILTER_SLUGS.wanted ? "wanted" : "all";
 }
 
 export type ExplainerDirectoryEntry = {
