@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 /**
  * Ein Katalog-Stub ist ein Titel, der nur aus einem Want-to-Play-Import (#637)
  * oder einem fehlgeschlagenen Einzelabruf stammt: Titel, Bild, Jahr und
@@ -18,10 +20,10 @@ export function isCatalogStub(boardGame: {
 }
 
 /** Prisma-Gegenstück zu `!isCatalogStub()`: nur Titel mit echten Katalogdaten. */
-export const NOT_CATALOG_STUB_WHERE = {
+export const NOT_CATALOG_STUB_WHERE: Prisma.BoardGameWhereInput = {
   OR: [
     { description: { not: null } },
     { minPlayers: { not: null } },
     { maxPlayers: { not: null } },
   ],
-} as const;
+};

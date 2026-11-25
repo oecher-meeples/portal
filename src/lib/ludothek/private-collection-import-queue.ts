@@ -1,6 +1,9 @@
 import { PrivateCollectionImportStatus } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { runBggCollectionImport } from "@/lib/ludothek/private-collection-import";
+import {
+  runBggCollectionImport,
+  type WantToPlayImportResult,
+} from "@/lib/ludothek/private-collection-import";
 
 /** Ein `RUNNING`-Job ohne Abschluss nach dieser Zeit gilt als abgestürzt
  * (Neustart mitten im Import) und wird erneut eingereiht. */
@@ -36,6 +39,8 @@ export function getLatestPrivateCollectionImportJob(meepleId: string) {
     select: {
       status: true,
       importedCount: true,
+      wantToPlayCount: true,
+      wantToPlayError: true,
       error: true,
       requestedAt: true,
       finishedAt: true,
@@ -58,12 +63,21 @@ async function requeueStaleJobs() {
  * Job doppelt bearbeiten. */
 async function claimNextJob(): Promise<{
   id: string;
-  meeple: { id: string; bggUsername: string | null };
+  meeple: {
+    id: string;
+    bggUsername: string | null;
+    importWantToPlay: boolean;
+  };
 } | null> {
   const candidate = await prisma.privateCollectionImportJob.findFirst({
     where: { status: PrivateCollectionImportStatus.PENDING },
     orderBy: { requestedAt: "asc" },
-    select: { id: true, meeple: { select: { id: true, bggUsername: true } } },
+    select: {
+      id: true,
+      meeple: {
+        select: { id: true, bggUsername: true, importWantToPlay: true },
+      },
+    },
   });
   if (!candidate) return null;
   const { count } = await prisma.privateCollectionImportJob.updateMany({
@@ -78,7 +92,12 @@ async function claimNextJob(): Promise<{
 
 async function finishJob(
   id: string,
-  outcome: { importedCount: number } | { error: string },
+  outcome:
+    | {
+        importedCount: number;
+        wantToPlay?: WantToPlayImportResult;
+      }
+    | { error: string },
 ) {
   await prisma.privateCollectionImportJob.update({
     where: { id },
@@ -89,6 +108,14 @@ async function finishJob(
         : {
             status: PrivateCollectionImportStatus.DONE,
             importedCount: outcome.importedCount,
+            wantToPlayCount:
+              outcome.wantToPlay && "count" in outcome.wantToPlay
+                ? outcome.wantToPlay.count
+                : null,
+            wantToPlayError:
+              outcome.wantToPlay && "error" in outcome.wantToPlay
+                ? outcome.wantToPlay.error
+                : null,
             error: null,
           }),
     },
@@ -113,12 +140,16 @@ export async function processPrivateCollectionImportQueue() {
       const result = await runBggCollectionImport({
         id: job.meeple.id,
         bggUsername: job.meeple.bggUsername,
+        importWantToPlay: job.meeple.importWantToPlay,
       });
       await finishJob(
         job.id,
         "error" in result
           ? { error: result.error }
-          : { importedCount: result.imported },
+          : {
+              importedCount: result.imported,
+              wantToPlay: result.wantToPlay,
+            },
       );
     } catch (error) {
       console.error("[private-collection-import]", error);

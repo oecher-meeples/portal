@@ -22,9 +22,8 @@ export interface BggCollectionEntry {
   title: string;
   /** Persönliche Bewertung dieses Meeples, `null` unbewertet (nur mit `stats=1` verfügbar). */
   rating: number | null;
-  /** Nur die zwei Stati, die die Übersicht anzeigt — andere werden ignoriert. */
+  /** Nur der Status, den die Übersicht anzeigt — andere werden ignoriert. */
   forTrade: boolean;
-  wantToPlay: boolean;
   /** BGG liefert hier bereits die kleinere Vorschau-Variante des Covers. */
   imageUrl: string | null;
   /** Die auf BGG hinterlegte Version dieses Exemplars (`version=1`), `null`
@@ -32,11 +31,23 @@ export interface BggCollectionEntry {
   version: BggVersion | null;
 }
 
+/** Titel einer „Want to Play"-Abfrage (#637) — bewusst nur Stub-Daten, ohne
+ * Besitz-Felder wie Version oder persönliche Bewertung. */
+export interface BggWantToPlayEntry {
+  bggId: number;
+  title: string;
+  imageUrl: string | null;
+  yearPublished: number | null;
+  /** BGGs Community-Durchschnittsbewertung (`stats.rating.average`). */
+  averageRating: number | null;
+}
+
 interface BggCollectionItem {
   objectid?: string;
   name?: { "#text"?: string } | { "#text"?: string }[];
+  yearpublished?: string | number;
   status?: { own?: string; fortrade?: string; wanttoplay?: string };
-  stats?: { rating?: { value?: string } };
+  stats?: { rating?: { value?: string; average?: { value?: string } } };
   image?: string;
   thumbnail?: string;
   /** Gleiche Struktur wie `versions` bei `thing?versions=1`, höchstens ein Item. */
@@ -52,6 +63,29 @@ interface BggCollectionResponse {
   errors?: { error?: { message?: string } };
 }
 
+/** Eine Collection-Abfrage samt Fehlerbehandlung; liefert die rohen Items
+ * mit gültiger BGG-ID und Titel. */
+async function fetchCollectionItems(
+  username: string,
+  query: string,
+): Promise<(BggCollectionItem & { bggId: number; title: string })[]> {
+  const xml = await fetchBggXml(
+    `/collection?username=${encodeURIComponent(username)}&${query}`,
+    SEARCH_REVALIDATE_SECONDS,
+  );
+  const parsed = parser.parse(xml) as BggCollectionResponse;
+
+  if (parsed.errors) {
+    throw new BggCollectionUnavailableError(username);
+  }
+
+  return toArray(parsed.items?.item).flatMap((item) => {
+    const bggId = parseNumber(item.objectid);
+    const title = toArray(item.name)[0]?.["#text"];
+    return bggId === null || !title ? [] : [{ ...item, bggId, title }];
+  });
+}
+
 /**
  * Öffentliche BGG-Collection eines Benutzernamens (#255) — nur besessene
  * Titel (`own=1`), keine Wunschlisten/geliehenen Einträge; zusätzlich
@@ -65,33 +99,50 @@ export async function fetchBggCollection(
   const trimmed = username.trim();
   if (!trimmed) return [];
 
-  const xml = await fetchBggXml(
-    `/collection?username=${encodeURIComponent(trimmed)}&own=1&stats=1&version=1&excludesubtype=boardgameexpansion`,
-    SEARCH_REVALIDATE_SECONDS,
+  const items = await fetchCollectionItems(
+    trimmed,
+    "own=1&stats=1&version=1&excludesubtype=boardgameexpansion",
   );
-  const parsed = parser.parse(xml) as BggCollectionResponse;
+  return items
+    .filter((item) => item.status?.own === "1")
+    .map((item) => ({
+      bggId: item.bggId,
+      title: item.title,
+      rating: parseNumber(item.stats?.rating?.value),
+      forTrade: item.status?.fortrade === "1",
+      imageUrl: item.image ?? item.thumbnail ?? null,
+      version:
+        parseVersions(item.version).find((v) => v.bggVersionId !== null) ??
+        null,
+    }));
+}
 
-  if (parsed.errors) {
-    throw new BggCollectionUnavailableError(trimmed);
-  }
+/**
+ * „Want to Play"-Liste eines Benutzernamens (#637), **ohne** `own`-Filter —
+ * auch Titel ohne Besitz. `wishlist`/`want to buy` bleiben außen vor; wie bei
+ * `own=1` filtert zusätzlich der Client auf `status.wanttoplay === "1"`.
+ */
+export async function fetchBggWantToPlay(
+  username: string,
+): Promise<BggWantToPlayEntry[]> {
+  const trimmed = username.trim();
+  if (!trimmed) return [];
 
-  return toArray(parsed.items?.item)
-    .map((item) => {
-      const bggId = parseNumber(item.objectid);
-      const title = toArray(item.name)[0]?.["#text"];
-      if (bggId === null || !title) return null;
-      if (item.status?.own !== "1") return null;
-      return {
-        bggId,
-        title,
-        rating: parseNumber(item.stats?.rating?.value),
-        forTrade: item.status?.fortrade === "1",
-        wantToPlay: item.status?.wanttoplay === "1",
-        imageUrl: item.image ?? item.thumbnail ?? null,
-        version:
-          parseVersions(item.version).find((v) => v.bggVersionId !== null) ??
-          null,
-      };
-    })
-    .filter((entry): entry is BggCollectionEntry => entry !== null);
+  const items = await fetchCollectionItems(
+    trimmed,
+    "wanttoplay=1&stats=1&excludesubtype=boardgameexpansion",
+  );
+  return items
+    .filter((item) => item.status?.wanttoplay === "1")
+    .map((item) => ({
+      bggId: item.bggId,
+      title: item.title,
+      imageUrl: item.image ?? item.thumbnail ?? null,
+      yearPublished: parseNumber(
+        item.yearpublished === undefined
+          ? undefined
+          : String(item.yearpublished),
+      ),
+      averageRating: parseNumber(item.stats?.rating?.average?.value),
+    }));
 }

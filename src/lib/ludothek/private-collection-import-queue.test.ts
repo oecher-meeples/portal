@@ -13,7 +13,7 @@ const { enqueuePrivateCollectionImport, processPrivateCollectionImportQueue } =
 
 const JOB = {
   id: "job-1",
-  meeple: { id: "meeple-1", bggUsername: "lea_bgg" },
+  meeple: { id: "meeple-1", bggUsername: "lea_bgg", importWantToPlay: true },
 };
 const jobs = prismaMock.privateCollectionImportJob;
 
@@ -68,11 +68,45 @@ describe("processPrivateCollectionImportQueue (#632)", () => {
     expect(runImportMock).toHaveBeenCalledWith({
       id: "meeple-1",
       bggUsername: "lea_bgg",
+      importWantToPlay: true,
     });
     expect(jobs.update).toHaveBeenCalledWith({
       where: { id: "job-1" },
-      data: expect.objectContaining({ status: "DONE", importedCount: 7 }),
+      data: expect.objectContaining({
+        status: "DONE",
+        importedCount: 7,
+        wantToPlayCount: null,
+        wantToPlayError: null,
+      }),
     });
+  });
+
+  it("schreibt Anzahl bzw. Fehler des Want-to-Play-Teils an den Job, Status bleibt DONE", async () => {
+    for (const [wantToPlay, expected] of [
+      [{ count: 4 }, { wantToPlayCount: 4, wantToPlayError: null }],
+      [
+        { error: "BGG down" },
+        { wantToPlayCount: null, wantToPlayError: "BGG down" },
+      ],
+    ] as const) {
+      jobs.update.mockClear();
+      jobs.findFirst.mockResolvedValueOnce(JOB as never);
+      jobs.updateMany
+        .mockResolvedValueOnce({ count: 0 })
+        .mockResolvedValueOnce({ count: 1 });
+      runImportMock.mockResolvedValue({
+        success: true,
+        imported: 7,
+        wantToPlay,
+      });
+
+      await processPrivateCollectionImportQueue();
+
+      expect(jobs.update).toHaveBeenCalledWith({
+        where: { id: "job-1" },
+        data: expect.objectContaining({ status: "DONE", ...expected }),
+      });
+    }
   });
 
   it("skips a job another worker claimed first", async () => {

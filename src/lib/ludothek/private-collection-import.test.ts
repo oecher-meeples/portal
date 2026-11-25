@@ -6,6 +6,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/utils/sleep", () => ({ sleep: () => Promise.resolve() }));
 
 const fetchBggCollectionMock = vi.fn();
+const fetchBggWantToPlayMock = vi.fn();
 vi.mock("@/lib/bgg/collection", async () => {
   const actual = await vi.importActual<typeof import("@/lib/bgg/collection")>(
     "@/lib/bgg/collection",
@@ -13,6 +14,7 @@ vi.mock("@/lib/bgg/collection", async () => {
   return {
     ...actual,
     fetchBggCollection: (...args: unknown[]) => fetchBggCollectionMock(...args),
+    fetchBggWantToPlay: (...args: unknown[]) => fetchBggWantToPlayMock(...args),
   };
 });
 
@@ -106,7 +108,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "Catan",
         rating: 8,
         forTrade: true,
-        wantToPlay: false,
       },
     ]);
     prismaMock.boardGame.findUnique.mockResolvedValue({
@@ -131,7 +132,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         syncedAt: expect.any(Date),
         rating: 8,
         forTrade: true,
-        wantToPlay: false,
       },
     });
     expect(result).toEqual({ success: true, imported: 1 });
@@ -144,7 +144,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "Ark Nova",
         rating: null,
         forTrade: false,
-        wantToPlay: true,
       },
     ]);
     fetchBggGameMock.mockResolvedValue({
@@ -173,7 +172,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         syncedAt: expect.any(Date),
         rating: null,
         forTrade: false,
-        wantToPlay: true,
       },
     });
     expect(result).toEqual({ success: true, imported: 1 });
@@ -186,7 +184,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "Catan",
         rating: null,
         forTrade: false,
-        wantToPlay: false,
       },
     ]);
     fetchBggGameMock.mockRejectedValue(new BggNotFoundError(13));
@@ -208,7 +205,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "Black Forest",
         rating: null,
         forTrade: false,
-        wantToPlay: false,
       },
     ]);
     prismaMock.boardGame.findUnique.mockResolvedValue({
@@ -244,7 +240,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "Black Forest",
         rating: null,
         forTrade: false,
-        wantToPlay: false,
       },
     ]);
     prismaMock.boardGame.findUnique.mockResolvedValue({
@@ -268,7 +263,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         syncedAt: expect.any(Date),
         rating: null,
         forTrade: false,
-        wantToPlay: false,
       },
     });
     expect(result).toEqual({ success: true, imported: 1 });
@@ -290,7 +284,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "The 7th Continent",
         rating: null,
         forTrade: false,
-        wantToPlay: false,
         version,
       },
     ]);
@@ -318,7 +311,6 @@ describe("runBggCollectionImport (#255, #632)", () => {
         title: "Catan",
         rating: null,
         forTrade: false,
-        wantToPlay: false,
       },
     ]);
     prismaMock.boardGame.findUnique.mockResolvedValue({
@@ -328,5 +320,74 @@ describe("runBggCollectionImport (#255, #632)", () => {
     await runBggCollectionImport(MEEPLE);
 
     expect(prismaMock.gameCopy.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("runBggCollectionImport – Want to Play (#637)", () => {
+  const WTP = {
+    bggId: 99,
+    title: "Wunschspiel",
+    imageUrl: "https://img/99.jpg",
+    yearPublished: 2020,
+    averageRating: 7.4,
+  };
+
+  beforeEach(() => {
+    fetchBggCollectionMock.mockResolvedValue([]);
+    findOrCreateBoardGameTitleMock.mockResolvedValue({ id: "game-99" });
+    prismaMock.gameWantToPlay.createMany.mockResolvedValue({ count: 1 });
+  });
+
+  it("holt die Want-to-Play-Liste nicht, wenn der Schalter aus ist", async () => {
+    const result = await runBggCollectionImport(MEEPLE);
+
+    expect(fetchBggWantToPlayMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true, imported: 0 });
+  });
+
+  it("legt Stubs ohne Einzelabruf an und fügt sie nur hinzu", async () => {
+    fetchBggWantToPlayMock.mockResolvedValue([WTP]);
+
+    const result = await runBggCollectionImport({
+      ...MEEPLE,
+      importWantToPlay: true,
+    });
+
+    expect(fetchBggGameMock).not.toHaveBeenCalled();
+    expect(findOrCreateBoardGameTitleMock).toHaveBeenCalledWith({
+      title: "Wunschspiel",
+      bggId: 99,
+      imageUrl: "https://img/99.jpg",
+      yearPublished: 2020,
+      averageRating: 7.4,
+    });
+    expect(prismaMock.gameWantToPlay.createMany).toHaveBeenCalledWith({
+      data: [{ meepleId: "meeple-1", boardGameId: "game-99" }],
+      skipDuplicates: true,
+    });
+    expect(prismaMock.gameWantToPlay.deleteMany).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      success: true,
+      imported: 0,
+      wantToPlay: { count: 1 },
+    });
+  });
+
+  it("meldet einen Fehler nur im Want-to-Play-Teil, der Besitz-Import bleibt gültig", async () => {
+    fetchBggWantToPlayMock.mockRejectedValue(
+      new BggCollectionUnavailableError("lea_bgg"),
+    );
+
+    const result = await runBggCollectionImport({
+      ...MEEPLE,
+      importWantToPlay: true,
+    });
+
+    expect(result).toEqual({
+      success: true,
+      imported: 0,
+      wantToPlay: { error: expect.stringContaining("lea_bgg") },
+    });
+    expect(prismaMock.gameWantToPlay.createMany).not.toHaveBeenCalled();
   });
 });
