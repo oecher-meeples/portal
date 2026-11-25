@@ -77,12 +77,6 @@ export function DirectoryTab({
         {EXPLAINER_DIRECTORY_FILTER_HINTS[filter]}
       </p>
 
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Spieltitel suchen …"
-      />
-
       <div
         className={cn("grid gap-6", isWantedFilter && "lg:grid-cols-[2fr_1fr]")}
       >
@@ -107,7 +101,12 @@ export function DirectoryTab({
             )}
           </Card>
         )}
-        <div>
+        <div className="flex flex-col gap-4">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Spieltitel suchen …"
+          />
           {entries.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               {filter === "wanted"
