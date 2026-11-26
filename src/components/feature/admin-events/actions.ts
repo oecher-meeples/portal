@@ -13,7 +13,6 @@ export type EventInput = {
   startsAt: Date;
   endsAt?: Date | null;
   location?: string | null;
-  helperPhase?: HelperPhase;
   visibility?: EventVisibility;
 };
 
@@ -73,7 +72,9 @@ export async function createEvent(input: EventInput) {
       startsAt: input.startsAt,
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
-      helperPhase: input.helperPhase ?? "PLANNING",
+      // Neue Events starten in der Planungsphase (#680); später ändert nur
+      // setEventHelperPhase die Helfersichtbarkeit.
+      helperPhase: "PLANNING",
       visibility: input.visibility ?? "DRAFT",
     },
   });
@@ -102,9 +103,6 @@ export async function updateEvent(id: string, input: EventInput) {
       startsAt: input.startsAt,
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
-      // Nur setzen, wenn mitgegeben — sonst bliebe die Phase beim Bearbeiten
-      // anderer Felder nicht erhalten (#676).
-      ...(input.helperPhase ? { helperPhase: input.helperPhase } : {}),
       visibility: input.visibility ?? "DRAFT",
     },
   });

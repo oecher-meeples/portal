@@ -8,7 +8,7 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { EventDialog } from "@/components/feature/admin-events/event-dialog";
+import { EventMasterDataForm } from "@/components/feature/admin-events/event-master-data-form";
 import type { HelperRoleOption } from "@/components/feature/admin-events/shift-dialog";
 import {
   ShiftTableSection,
@@ -75,19 +75,6 @@ export function EventDetailView({
         eyebrow="Event-Betrieb"
         title={eventTitle}
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
-        action={
-          <EventDialog
-            event={{
-              id: eventId,
-              title: eventTitle,
-              startsAt: eventStartsAt,
-              endsAt: eventEndsAt,
-              location: eventLocation,
-              helperPhase: eventHelperPhase,
-              visibility: eventVisibility,
-            }}
-          />
-        }
       />
 
       {/* #459: `multiple` fehlte — ohne dieses Prop fällt base-ui nach der
@@ -107,11 +94,27 @@ export function EventDetailView({
             Stammdaten
           </AccordionTrigger>
           <AccordionPanel>
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
-              {days.map((day) => (
-                <EventDayTimeForm key={day.id} day={day} />
-              ))}
+            <div className="grid gap-6 pb-2 md:grid-cols-2">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
+                {days.map((day) => (
+                  <EventDayTimeForm key={day.id} day={day} />
+                ))}
+              </div>
+              {/* key: nach dem Speichern + Refresh den Formularstand neu
+                  aus den frisch geladenen Stammdaten aufbauen. */}
+              <EventMasterDataForm
+                key={`${eventTitle}|${eventStartsAt}|${eventEndsAt}|${eventLocation}|${eventVisibility}|${eventHelperPhase}`}
+                event={{
+                  id: eventId,
+                  title: eventTitle,
+                  startsAt: eventStartsAt,
+                  endsAt: eventEndsAt,
+                  location: eventLocation,
+                  helperPhase: eventHelperPhase,
+                  visibility: eventVisibility,
+                }}
+              />
             </div>
           </AccordionPanel>
         </AccordionItem>

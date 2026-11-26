@@ -153,20 +153,6 @@ describe("createEvent", () => {
     });
   });
 
-  it("stores helperPhase when set (#155)", async () => {
-    prismaMock.event.findUnique.mockResolvedValue(null);
-    prismaMock.event.create.mockResolvedValue({
-      id: "event-1",
-      slug: "spieletag-herbst",
-    } as never);
-
-    await createEvent({ ...VALID_INPUT, helperPhase: "SEEKING" });
-
-    expect(prismaMock.event.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ helperPhase: "SEEKING" }),
-    });
-  });
-
   it("defaults visibility to DRAFT when omitted", async () => {
     prismaMock.event.findUnique.mockResolvedValue(null);
     prismaMock.event.create.mockResolvedValue({
@@ -323,5 +309,34 @@ describe("setEventHelperPhase (#676)", () => {
 
     expect(result).toEqual({ error: "Ungültige Helfersichtbarkeit." });
     expect(prismaMock.event.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("event helper phase defaults (#680)", () => {
+  it("createEvent starts as Entwurf and Planungsphase", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.create.mockResolvedValue({
+      id: "event-1",
+      slug: "spieletag-herbst",
+    } as never);
+
+    await createEvent(VALID_INPUT);
+
+    expect(prismaMock.event.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        visibility: "DRAFT",
+        helperPhase: "PLANNING",
+      }),
+    });
+  });
+
+  it("updateEvent leaves the helper phase to setEventHelperPhase", async () => {
+    prismaMock.event.findUnique.mockResolvedValue(null);
+    prismaMock.event.update.mockResolvedValue({} as never);
+
+    await updateEvent("event-1", VALID_INPUT);
+
+    const call = prismaMock.event.update.mock.calls[0][0];
+    expect(call.data).not.toHaveProperty("helperPhase");
   });
 });

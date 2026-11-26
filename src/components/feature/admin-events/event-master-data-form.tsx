@@ -1,0 +1,99 @@
+"use client";
+
+import { useState } from "react";
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAction } from "@/components/ui/use-action";
+import {
+  setEventHelperPhase,
+  updateEvent,
+} from "@/components/feature/admin-events/actions";
+import {
+  EventFormFields,
+  eventFormValues,
+  type EditableEvent,
+} from "@/components/feature/admin-events/event-form-fields";
+
+/** Stammdaten-Spalte der Event-Detailseite (#680): readonly, bis "Bearbeiten"
+ * die Felder freischaltet; "Speichern" persistiert und aktualisiert die Seite
+ * (angepasste Öffnungszeiten je Tag). Die Helfersichtbarkeit läuft über
+ * dieselbe Action wie der Schalter "Schichten anfragen" (#676). */
+export function EventMasterDataForm({ event }: { event: EditableEvent }) {
+  const [editing, setEditing] = useState(false);
+  const [values, setValues] = useState(eventFormValues(event));
+  const { run, pending, error } = useAction({
+    refresh: true,
+    onSuccess: () => setEditing(false),
+  });
+
+  function cancel() {
+    setValues(eventFormValues(event));
+    setEditing(false);
+  }
+
+  function save() {
+    run(async () => {
+      const result = await updateEvent(event.id, {
+        title: values.title,
+        startsAt: new Date(values.startsAt),
+        endsAt: values.endsAt ? new Date(values.endsAt) : null,
+        location: values.location || null,
+        visibility: values.visibility,
+      });
+      if ("error" in result) return result;
+      if (values.helperPhase !== event.helperPhase) {
+        return setEventHelperPhase(event.id, values.helperPhase);
+      }
+      return result;
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Event-Daten</h3>
+        {!editing && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setEditing(true)}
+          >
+            <Pencil className="size-4" />
+            Bearbeiten
+          </Button>
+        )}
+      </div>
+      <EventFormFields
+        idPrefix={`event-${event.id}`}
+        values={values}
+        onChange={(patch) => setValues((current) => ({ ...current, ...patch }))}
+        showDetails
+        disabled={!editing || pending}
+      />
+      {editing && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={save}
+            disabled={pending || !values.title.trim() || !values.startsAt}
+          >
+            {pending ? "Speichere…" : "Speichern"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={cancel}
+            disabled={pending}
+          >
+            Abbrechen
+          </Button>
+        </div>
+      )}
+      {error && <p className="text-destructive text-sm">{error}</p>}
+    </div>
+  );
+}
