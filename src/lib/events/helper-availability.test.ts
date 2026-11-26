@@ -18,6 +18,7 @@ describe("setHelperAvailability", () => {
   beforeEach(() => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
       event: { visibility: "INTERNAL", helpersWanted: false },
+      shifts: [],
     } as never);
   });
 
@@ -40,6 +41,52 @@ describe("setHelperAvailability", () => {
       error: "Bitte mindestens eine Rolle auswählen.",
     });
     expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+  });
+
+  describe("shift-time bounds (#674)", () => {
+    const shifts = [
+      {
+        targetStartsAt: new Date("2026-10-10T10:00:00Z"),
+        targetEndsAt: new Date("2026-10-10T14:00:00Z"),
+      },
+    ];
+    beforeEach(() => {
+      prismaMock.eventDay.findUnique.mockResolvedValue({
+        event: { visibility: "INTERNAL", helpersWanted: false },
+        shifts,
+      } as never);
+      prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
+    });
+
+    it("accepts availability exactly on the shift bounds", async () => {
+      const result = await setHelperAvailability(VALID_INPUT);
+
+      expect(result).toEqual({ success: true });
+    });
+
+    it("rejects availability outside the shift bounds", async () => {
+      const result = await setHelperAvailability({
+        ...VALID_INPUT,
+        endsAt: new Date("2026-10-10T15:00:00Z"),
+      });
+
+      expect(result).toHaveProperty("error");
+      expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+    });
+
+    it("applies no bound on a day without shifts", async () => {
+      prismaMock.eventDay.findUnique.mockResolvedValue({
+        event: { visibility: "INTERNAL", helpersWanted: false },
+        shifts: [],
+      } as never);
+
+      const result = await setHelperAvailability({
+        ...VALID_INPUT,
+        endsAt: new Date("2026-10-10T23:00:00Z"),
+      });
+
+      expect(result).toEqual({ success: true });
+    });
   });
 
   it("upserts on (meepleId, dayId), replacing prior role choices", async () => {
@@ -87,6 +134,7 @@ describe("setHelperAvailability", () => {
   it("rejects an Entwurf-Event without an open helper request", async () => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
       event: { visibility: "DRAFT", helpersWanted: false },
+      shifts: [],
     } as never);
 
     const result = await setHelperAvailability(VALID_INPUT);
@@ -100,6 +148,7 @@ describe("setHelperAvailability", () => {
   it("allows an Entwurf-Event once helpersWanted is set — recruiting may start before release", async () => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
       event: { visibility: "DRAFT", helpersWanted: true },
+      shifts: [],
     } as never);
     prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
 
@@ -111,6 +160,7 @@ describe("setHelperAvailability", () => {
   it("allows a PUBLIC event", async () => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
       event: { visibility: "PUBLIC", helpersWanted: false },
+      shifts: [],
     } as never);
     prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Check, Pencil } from "lucide-react";
 import { cardVariants } from "@/components/ui/card";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -33,7 +35,12 @@ import {
   type HelperRoleOption,
   type OwnAvailability,
 } from "@/components/feature/helfer/helper-availability-form";
+import { HelferCalendar } from "@/components/feature/helfer/helfer-calendar";
 import { PageContainer } from "@/components/ui/page-container";
+import {
+  collectHelperDayKeys,
+  filterEventsByDay,
+} from "@/lib/events/helfer-days";
 import {
   formatDateMedium,
   formatWeekdayDateTimeRange,
@@ -56,6 +63,7 @@ export type HelferEventGroup = {
   id: string;
   title: string;
   startsAt: string;
+  endsAt: string | null;
   location: string | null;
   days: EventDayOption[];
   isAttendingAsExplainer: boolean;
@@ -78,6 +86,9 @@ export function HelferView({
   isExplainer: boolean;
 }) {
   const { run, pending: isPending, error } = useAction();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const visibleEvents = filterEventsByDay(events, selectedDate);
 
   return (
     <PageContainer className="gap-6">
@@ -85,6 +96,24 @@ export function HelferView({
         eyebrow="Event-Betrieb"
         title="Helferplan"
         description="Melde deine Verfügbarkeit und bestätige zugewiesene Schichten."
+        action={
+          events.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setEditing((current) => !current)}
+            >
+              {editing ? (
+                <Check className="size-4" />
+              ) : (
+                <Pencil className="size-4" />
+              )}
+              {editing ? "Fertig" : "Bearbeiten"}
+            </Button>
+          )
+        }
       />
 
       {events.length === 0 ? (
@@ -92,67 +121,86 @@ export function HelferView({
           Aktuell ist kein Event geplant.
         </p>
       ) : (
-        <Accordion defaultValue={[events[0].id]}>
-          {events.map((event) => (
-            <AccordionItem
-              key={event.id}
-              value={event.id}
-              className={cardVariants({ size: "flush" })}
-            >
-              <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 hover:no-underline">
-                <span className="flex flex-wrap items-baseline gap-2 text-left">
-                  <span className="font-serif text-base font-bold">
-                    {event.title}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {formatDateMedium(event.startsAt)}
-                    {event.location ? ` · ${event.location}` : ""}
-                  </span>
-                </span>
-              </AccordionTrigger>
-              <AccordionPanel>
-                <div className="flex flex-col px-4">
-                  {event.days.map((day) => (
-                    <HelperAvailabilityForm
-                      key={day.id}
-                      day={day}
-                      dayRoles={dayRolesByDayId[day.id] ?? []}
-                      own={ownAvailabilityByDayId[day.id] ?? null}
-                    />
-                  ))}
-
-                  {isExplainer && event.isCurrentlyRunning && (
-                    <div className="bg-primary/10 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
-                      <span>
-                        {event.isAttendingAsExplainer
-                          ? "Du bist zu diesem Event als Erklärbär angemeldet."
-                          : "Du kannst dich für dieses Event als Erklärbär anmelden."}
+        <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
+          <div className="min-w-0 lg:order-1">
+            <Accordion defaultValue={[events[0].id]}>
+              {visibleEvents.map((event) => (
+                <AccordionItem
+                  key={event.id}
+                  value={event.id}
+                  className={cardVariants({ size: "flush" })}
+                >
+                  <AccordionTrigger className="hover:bg-muted/50 rounded-none px-4 py-3 hover:no-underline">
+                    <span className="flex flex-wrap items-baseline gap-2 text-left">
+                      <span className="font-serif text-base font-bold">
+                        {event.title}
                       </span>
-                      <Button
-                        size="sm"
-                        variant={
-                          event.isAttendingAsExplainer ? "outline" : "default"
-                        }
-                        disabled={isPending}
-                        onClick={() =>
-                          run(() =>
-                            event.isAttendingAsExplainer
-                              ? markNotAttending(event.id)
-                              : markAttending(event.id),
-                          )
-                        }
-                      >
-                        {event.isAttendingAsExplainer
-                          ? "Abmelden"
-                          : "Ich bin da"}
-                      </Button>
+                      <span className="text-muted-foreground text-xs">
+                        {event.endsAt
+                          ? formatWeekdayDateTimeRange(
+                              event.startsAt,
+                              event.endsAt,
+                            )
+                          : formatDateMedium(event.startsAt)}
+                        {event.location ? ` · ${event.location}` : ""}
+                      </span>
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionPanel>
+                    <div className="flex flex-col px-4">
+                      {event.days.map((day) => (
+                        <HelperAvailabilityForm
+                          key={day.id}
+                          day={day}
+                          dayRoles={dayRolesByDayId[day.id] ?? []}
+                          own={ownAvailabilityByDayId[day.id] ?? null}
+                          editing={editing}
+                        />
+                      ))}
+
+                      {isExplainer && event.isCurrentlyRunning && (
+                        <div className="bg-primary/10 mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
+                          <span>
+                            {event.isAttendingAsExplainer
+                              ? "Du bist zu diesem Event als Erklärbär angemeldet."
+                              : "Du kannst dich für dieses Event als Erklärbär anmelden."}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant={
+                              event.isAttendingAsExplainer
+                                ? "outline"
+                                : "default"
+                            }
+                            disabled={isPending}
+                            onClick={() =>
+                              run(() =>
+                                event.isAttendingAsExplainer
+                                  ? markNotAttending(event.id)
+                                  : markAttending(event.id),
+                              )
+                            }
+                          >
+                            {event.isAttendingAsExplainer
+                              ? "Abmelden"
+                              : "Ich bin da"}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </AccordionPanel>
-            </AccordionItem>
-          ))}
-        </Accordion>
+                  </AccordionPanel>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+          <div className="lg:order-2">
+            <HelferCalendar
+              dayKeys={collectHelperDayKeys(events)}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+            />
+          </div>
+        </div>
       )}
 
       {assignedShifts.length > 0 && (

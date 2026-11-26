@@ -155,6 +155,25 @@ export function isSlotStaffable(
 }
 
 /**
+ * Grid rows (1-based CSS grid lines, header row = 1) a Shift row occupies —
+ * a role with several Shift rows per day gets one drop zone per row instead
+ * of one for the whole column, so a drop lands on the Shift actually under
+ * the pointer (#620).
+ */
+export function shiftGridRows(
+  shift: { targetStartsAt: Date; targetEndsAt: Date },
+  rangeStart: Date,
+  stepMinutes = 30,
+): { rowStart: number; rowEnd: number } {
+  const stepMs = stepMinutes * 60 * 1000;
+  const rowForTime = (time: Date) =>
+    Math.round((time.getTime() - rangeStart.getTime()) / stepMs) + 2;
+  const rowStart = Math.max(2, rowForTime(shift.targetStartsAt));
+  const rowEnd = Math.max(rowStart + 1, rowForTime(shift.targetEndsAt));
+  return { rowStart, rowEnd };
+}
+
+/**
  * Turns a drag-selected pair of slot indices (Schnellanlage: Zellen in der
  * Uhrzeiten-Spalte selektieren) into the actual start/end instants for a new
  * Shift — the selection always spans full step-sized blocks, so the end
