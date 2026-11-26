@@ -85,12 +85,26 @@ export async function assignShiftBooking({
   }
 
   if (bookingId) {
-    // Re-times an existing block — `confirmedAt` bleibt unangetastet, ein
-    // Resize soll eine bereits erteilte Bestätigung nicht stillschweigend
-    // widerrufen.
+    // Re-times an existing block. Ändert sich der Zeitraum (#683), gilt eine
+    // erteilte Bestätigung nicht mehr — die Person hat einer anderen Zeit
+    // zugestimmt. Ein reiner Spaltenwechsel (`slotIndex`) lässt sie bestehen.
+    const existing = await prisma.shiftBooking.findUnique({
+      where: { id: bookingId },
+      select: { startsAt: true, endsAt: true },
+    });
+    const timesChanged =
+      existing !== null &&
+      existing !== undefined &&
+      (existing.startsAt.getTime() !== startsAt.getTime() ||
+        existing.endsAt.getTime() !== endsAt.getTime());
     await prisma.shiftBooking.update({
       where: { id: bookingId },
-      data: { startsAt, endsAt, ...(slotIndex !== undefined && { slotIndex }) },
+      data: {
+        startsAt,
+        endsAt,
+        ...(timesChanged && { confirmedAt: null }),
+        ...(slotIndex !== undefined && { slotIndex }),
+      },
     });
   } else {
     await prisma.shiftBooking.create({
