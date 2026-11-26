@@ -43,7 +43,7 @@ const BGG_DATA: BggGameData = {
 const FORM: BoardGameFormValues = {
   title: "Arche Nova",
   secondaryTitle: "",
-  ean: "",
+  eans: [],
   condition: "",
   value: "",
   acquiredOn: "",

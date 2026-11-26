@@ -16,7 +16,6 @@ import {
   searchBggGamesAction,
 } from "@/lib/ludothek/board-games-bgg-import";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
-import { isValidEan } from "@/lib/inventory/ean";
 import { versionInputFromBgg } from "@/lib/ludothek/board-game-versions";
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
 import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
@@ -32,6 +31,7 @@ import {
   boardGameToFormValues,
   versionInputToFormPatch,
   type BoardGameFormValues,
+  onlyValidEans,
 } from "@/components/widgets/board-game/board-game-form-values";
 import type {
   BggGameData,
@@ -84,7 +84,7 @@ export function CreateBoardGameDialog({
   const [isResolving, setIsResolving] = useState(false);
   const [form, setForm] = useState<BoardGameFormValues>({
     ...EMPTY_BOARD_GAME_FORM,
-    ean: defaultEan ?? "",
+    eans: defaultEan ? [defaultEan] : [],
   });
   const [placement, setPlacement] = useState<LocationPlacement | null>(null);
   const [inventoryNumber, setInventoryNumber] = useState(
@@ -112,7 +112,6 @@ export function CreateBoardGameDialog({
     error,
     setError,
     invalidEan,
-    lastHint,
     isSubmitting,
     resetSubmitState,
   } = useCreateBoardGameSubmit({
@@ -141,7 +140,10 @@ export function CreateBoardGameDialog({
     setSearchResults(null);
     setPreview(null);
     resetDuplicateGuard();
-    setForm({ ...EMPTY_BOARD_GAME_FORM, ean: defaultEan ?? "" });
+    setForm({
+      ...EMPTY_BOARD_GAME_FORM,
+      eans: defaultEan ? [defaultEan] : [],
+    });
     setInventoryNumber(initialInventoryNumber);
     resetSubmitState();
     setPlacement(null);
@@ -300,14 +302,11 @@ export function CreateBoardGameDialog({
     }
   }
 
-  /** Übernimmt Verlag, Sprache + Product Code (als EAN) der gewählten
-   * BGG-Edition (#205) — die EAN nur, wenn der Code gültig ist (#322). */
+  /** Übernimmt Verlag und Sprache der gewählten BGG-Edition (#205). Der
+   * Product Code ist keine EAN-Quelle (er entspricht meist nicht der EAN). */
   function handleSelectVersion(version: BggVersion) {
     patchForm({
       ...versionInputToFormPatch(versionInputFromBgg(version)),
-      ...(version.productCode && isValidEan(version.productCode)
-        ? { ean: version.productCode }
-        : {}),
     });
   }
 
@@ -409,7 +408,7 @@ export function CreateBoardGameDialog({
             (invalidEan ? (
               <InvalidEanRecovery
                 message={error}
-                onDeleteAndSave={() => handleSubmit("")}
+                onDeleteAndSave={() => handleSubmit(onlyValidEans(form.eans))}
                 onBack={() => setError(null)}
               />
             ) : (
@@ -430,7 +429,6 @@ export function CreateBoardGameDialog({
           />
         </DialogContent>
       </Dialog>
-      {lastHint && <p className="text-sm text-amber-600">{lastHint}</p>}
     </div>
   );
 }

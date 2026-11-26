@@ -1,3 +1,4 @@
+import { bggGameUrl } from "@/lib/bgg/url";
 import type { ReactNode } from "react";
 import { PageContainer } from "@/components/ui/page-container";
 import { PageTitle } from "@/components/ui/page-title";
@@ -30,7 +31,7 @@ export function CatalogTitleView({
   wantToPlay: SharedCollectionMeeple[];
   wantToPlayAction?: ReactNode;
 }) {
-  const bggUrl = bggId ? `https://boardgamegeek.com/boardgame/${bggId}` : null;
+  const bggUrl = bggGameUrl(bggId);
   return (
     <PageContainer className="grid grid-cols-1 gap-8 lg:grid-cols-[320px_1fr]">
       <div className="relative overflow-hidden rounded-md max-lg:mx-auto max-lg:w-fit">

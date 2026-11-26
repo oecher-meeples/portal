@@ -136,7 +136,7 @@ describe("CreateBoardGameExemplarStep — Version & Exemplar", () => {
   it("shows the EAN field for a new title", () => {
     renderStep();
 
-    expect(screen.getByLabelText("EAN")).toBeInTheDocument();
+    expect(screen.getByLabelText("EANs")).toBeInTheDocument();
   });
 
   it("hides the EAN field when only adding a copy to an existing title", () => {
@@ -144,7 +144,7 @@ describe("CreateBoardGameExemplarStep — Version & Exemplar", () => {
       existingBoardGame: { id: "game-1", title: "Ark Nova" } as never,
     });
 
-    expect(screen.queryByLabelText("EAN")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("EANs")).not.toBeInTheDocument();
   });
 
   it("does not flag publishers of the chosen BGG version as unknown", async () => {

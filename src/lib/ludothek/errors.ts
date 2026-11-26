@@ -29,6 +29,21 @@ export class UnitRetiredError extends UserFacingError {
   }
 }
 
+/** The EAN is already assigned to another title (#668, one EAN ↔ one title). */
+export class EanConflictError extends UserFacingError {
+  constructor(
+    readonly ean: string,
+    readonly ownerTitle?: string,
+  ) {
+    super(
+      ownerTitle
+        ? `Die EAN ${ean} gehört bereits zum Titel „${ownerTitle}“.`
+        : `Die EAN ${ean} gehört bereits zu einem anderen Titel.`,
+    );
+    this.name = "EanConflictError";
+  }
+}
+
 export class UnitNotFoundError extends UserFacingError {
   constructor(unitId: string) {
     super(`Aufbewahrungseinheit ${unitId} wurde nicht gefunden.`);

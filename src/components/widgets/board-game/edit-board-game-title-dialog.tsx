@@ -16,6 +16,7 @@ import {
   boardGameToFormValues,
   type BoardGameFormValues,
   type BoardGameRecord,
+  onlyValidEans,
 } from "@/components/widgets/board-game/board-game-form-values";
 import type { BggGameData } from "@/lib/bgg/client";
 
@@ -117,7 +118,7 @@ export function EditBoardGameTitleDialog({
     ) {
       return updateBoardGame(game.boardGameId, {
         ...boardGameFormToTitleInput(form),
-        ean: "",
+        eans: onlyValidEans(form.eans),
       });
     }
     return result;

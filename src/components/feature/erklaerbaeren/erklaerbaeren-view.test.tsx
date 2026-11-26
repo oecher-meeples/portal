@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-vi.mock("@/lib/members/contact-dialog", () => ({
-  fetchContactDialogMeeple: vi.fn(),
+const push = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
 }));
 
 afterEach(() => {
@@ -12,72 +13,35 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
-}));
-
-vi.mock("@/lib/explainer/actions", () => ({
-  addExplainerGame: vi.fn(),
-  updateExplainerGameLevel: vi.fn(),
-  removeExplainerGame: vi.fn(),
-}));
-
 const { ErklaerbaerenView } = await import("./erklaerbaeren-view");
 
-const DIRECTORY = [
-  {
-    boardGameId: "game-1",
-    boardGameTitle: "Arche Nova",
-    explainers: [
-      {
-        meepleId: "meeple-1",
-        displayName: "Anna",
-        level: "WITH_MANUAL" as const,
-        profilePictureUrl: null,
-        profilePictureVisibility: "INTERN" as const,
-      },
-    ],
-  },
-];
-
-describe("ErklaerbaerenView — Verzeichnis nur für Admins (#210)", () => {
-  it("hides the full directory section for a non-admin Meeple", () => {
+describe("ErklaerbaerenView", () => {
+  it("has no tab bar without events:manage", () => {
     render(
-      <ErklaerbaerenView
-        directory={DIRECTORY}
-        myGames={[]}
-        availableGames={[]}
-        isAdmin={false}
-      />,
+      <ErklaerbaerenView tab="meine" showDirectory={false}>
+        Inhalt
+      </ErklaerbaerenView>,
     );
 
-    expect(
-      screen.queryByRole("heading", { name: "Erklärbären-Verzeichnis" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Das kann ich erklären:" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByText("Inhalt")).toBeInTheDocument();
   });
 
-  it("shows the full directory section for an admin", async () => {
-    const user = userEvent.setup();
+  it("shows both tabs with events:manage and navigates on switch", async () => {
     render(
-      <ErklaerbaerenView
-        directory={DIRECTORY}
-        myGames={[]}
-        availableGames={[]}
-        isAdmin={true}
-      />,
+      <ErklaerbaerenView tab="meine" showDirectory>
+        Inhalt
+      </ErklaerbaerenView>,
     );
 
-    expect(
-      screen.getByRole("heading", { name: "Erklärbären-Verzeichnis" }),
-    ).toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole("button", { name: "Erklärbären-Verzeichnis" }),
+    expect(screen.getByRole("tab", { name: "Meine Spiele" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await userEvent.click(
+      screen.getByRole("tab", { name: "Erklärbär-Verzeichnis" }),
     );
 
-    expect(screen.getByText("Arche Nova")).toBeInTheDocument();
+    expect(push).toHaveBeenCalledWith("/erklaerbaeren?tab=verzeichnis");
   });
 });

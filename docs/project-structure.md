@@ -64,6 +64,8 @@ src/lib/
 │               │                      geteilt von `app/ludothek/page.tsx` und `loadMoreLudothekGames` (`feature/ludothek/actions.ts`)
 │               ├── board-game-versions.ts BGG-Versionen auswerten: deutsche bevorzugen, Verlag/Product-Code auflösen, BGG-Version → `VersionInput`
 │               ├── edition-language.ts BGG-Sprachname → Flaggen-Ländercode (Anzeige über `entities/edition-flag.tsx`)
+│               ├── board-game-eans.ts  EANs je Titel (#668, ADR 0016): Normalisieren/Validieren, `eanWhere()` für jeden EAN-Lookup, `assertEansAvailable`/`rethrowEanConflict` (eine EAN = ein Titel), `replaceBoardGameEans`
+│               ├── ean-search.ts       Quellen-Reihenfolge der Titelsuche: Spielemeta → UPCitemdb-Fallback, markiert vergebene EANs (`takenBy`); Kern in `ean-candidates.ts` (auch `findFreeEans` für den Massenimport)
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-external.ts Übergänge mit externem Ziel (#333): an extern weitergeben/ausgeben, Umbuchen, Rückgabe-von-extern-Bestätigung
 │               ├── holdings-lookup.ts  Leseseite (Zustand inkl. verfügbar/nicht-verfügbar, Scan auflösen, Verantwortliche)
@@ -91,6 +93,7 @@ src/lib/
 │               ├── storage-units.ts    Aufbewahrungseinheiten-CRUD (Code explizit oder `nextUnitCode`, Code-Lookup) — von `admin-einheiten` **und** dem Standort-Feld im Create-Dialog gebraucht, deshalb hier statt in `components/feature/`
 │               └── private-collection.ts  Crowdsourced-Suche über `PrivateGameCollectionEntry` — nie im öffentlichen Pfad (`toPublicGame`)
 ├── markt/      Kleinanzeigen-Marktplatz: Anzeigen-Form, Preis-/Zustand-Filter über `searchParams`
+├── spielemeta/ Client der Spielemeta-API (`client.ts`, #668): EAN-Titelsuche + EAN-Lookup, Bearer-Key `EAN_API_KEY`, Fehler als `SpielemetaError`
 ├── short-id/   QR-Short-IDs (Epic #542, `https://short.oecher-meeples.org/id/<präfix>-<id>`): Präfix-Registry, `buildShortIdUrl`/
 │               `parseShortId` (ignoriert alles vor `/id/`), Einheiten-Code-Mapping `box-0001` ↔ `OM-BOX-0001` (`short-id.ts`, rein,
 │               client-sicher); Router-Ziel je Präfix und Recht (`resolve.ts`, `resolveShortId`)
@@ -201,7 +204,7 @@ widgets/
     ├── edit-board-game-exemplar.tsx     Exemplar-Formularfelder (Version, Regelheft-Sprachen, Mängelvermerk) — pro `GameCopy`, nicht pro Titel
     ├── edition-fields.tsx               Versions-Dropdown: ohne Version / vorhandene / noch nicht gespeicherte BGG-Versionen / manuell (Verlag + Sprache der Version)
     ├── contributor-names-field.tsx      Namensliste für Mitwirkende mit Register-Abgleich (unbekannte Namen markiert, `knownNames` ausgenommen)
-    ├── ean-field.tsx                    EAN-Input + Scan-Icon + Dropdown bei mehreren Suchtreffern, geteilt von jedem Formular mit EAN-Feld
+    ├── ean-field.tsx                    EAN-Liste (hinzufügen/entfernen) + Scan-Icon + Mehrfachauswahl aus Suchtreffern (vergebene EANs gesperrt), geteilt von jedem Formular mit EAN-Feld
     ├── edit-board-game-title-dialog.tsx     Titel-Stammdaten bearbeiten (Detailseiten-Header, #121/#122)
     ├── edit-board-game-exemplar-dialog.tsx  Ein Exemplar bearbeiten (Listen-/Kompakt-Zeile, Exemplar-Tabelle)
     ├── edit-board-game-dialog.tsx       Titel **und** Exemplar in einem Formular (Admin-Bestand-Tabellenzeile, Grid-Kachel-Overlay)

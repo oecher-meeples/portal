@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -52,7 +53,21 @@ type DashboardViewProps = {
   isAusgetreten: boolean;
   /** Frühestes anstehendes Event mit `helpersWanted` (#155) — null blendet die Karte aus. */
   openHelperRequestEvent: { id: string; title: string } | null;
+  /** Gesuchte Spiele ohne mein Niveau (#666) — 0 blendet die Karte aus. */
+  wantedExplainerGamesCount: number;
 };
+
+/** Hinweis-Karte oben im Dashboard, die direkt zur passenden Seite führt. */
+function NoticeLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="bg-primary/10 hover:bg-primary/15 rounded-md p-4 text-sm transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
 
 export function DashboardView({
   user,
@@ -71,6 +86,7 @@ export function DashboardView({
   resignationNotice,
   isAusgetreten,
   openHelperRequestEvent,
+  wantedExplainerGamesCount,
 }: DashboardViewProps) {
   return (
     <PageContainer className="gap-6">
@@ -81,13 +97,18 @@ export function DashboardView({
       />
 
       {openHelperRequestEvent && (
-        <Link
-          href="/helfer"
-          className="bg-primary/10 hover:bg-primary/15 rounded-md p-4 text-sm transition-colors"
-        >
+        <NoticeLink href="/helfer">
           Für <strong>{openHelperRequestEvent.title}</strong> werden noch Helfer
           gesucht — jetzt eintragen.
-        </Link>
+        </NoticeLink>
+      )}
+
+      {wantedExplainerGamesCount > 0 && (
+        <NoticeLink href="/erklaerbaeren?filter=gesucht">
+          Für <strong>{wantedExplainerGamesCount}</strong>{" "}
+          {wantedExplainerGamesCount === 1 ? "Spiel werden" : "Spiele werden"}{" "}
+          Erklärer gesucht — kannst du eines erklären?
+        </NoticeLink>
       )}
 
       {resignationNotice && (

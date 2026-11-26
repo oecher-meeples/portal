@@ -4,7 +4,10 @@ import {
   type LanguageDependence,
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
-import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
+import {
+  addBoardGameEans,
+  normaliseAndValidateEans,
+} from "@/lib/ludothek/board-game-eans";
 import { uniqueSlug } from "@/lib/utils/slug";
 import { isCatalogStub } from "@/lib/ludothek/board-game-stub";
 import {
@@ -36,7 +39,8 @@ export type BoardGameTitleInput = {
    * einem englischen Haupttitel (#203). */
   secondaryTitle?: string | null;
   bggId?: number | null;
-  ean?: string | null;
+  /** Alle EANs des Titels (eine je Edition), global eindeutig (#668). */
+  eans?: string[];
   minPlayers?: number | null;
   maxPlayers?: number | null;
   playTimeMinutes?: number | null;
@@ -90,7 +94,6 @@ export function toBoardGameTitleData(input: BoardGameTitleInput) {
   return {
     secondaryTitle: input.secondaryTitle || null,
     bggId: input.bggId ?? null,
-    ean: input.ean ? normaliseEan(input.ean) : null,
     minPlayers: input.minPlayers ?? null,
     maxPlayers: input.maxPlayers ?? null,
     playTimeMinutes: input.playTimeMinutes ?? null,
@@ -116,7 +119,7 @@ export function validateBoardGameTitleInput(
   if (!input.title) {
     return { message: "Bitte einen Titel angeben." };
   }
-  if (input.ean && !isValidEan(input.ean)) {
+  if (normaliseAndValidateEans(input.eans).invalid.length > 0) {
     return {
       message: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
       invalidEan: true,
@@ -198,6 +201,11 @@ export async function findOrCreateBoardGameTitle(
               data: gaps,
             })
           : existing;
+      await addBoardGameEans(
+        tx,
+        existing.id,
+        normaliseAndValidateEans(input.eans).eans,
+      );
       if (upgrade) {
         await linkTitleRelations(tx, existing.id, input);
       } else {
@@ -212,6 +220,11 @@ export async function findOrCreateBoardGameTitle(
   const created = await tx.boardGame.create({
     data: { title: input.title, slug, ...toBoardGameTitleData(input) },
   });
+  await addBoardGameEans(
+    tx,
+    created.id,
+    normaliseAndValidateEans(input.eans).eans,
+  );
   await linkTitleRelations(tx, created.id, input);
   return created;
 }

@@ -935,8 +935,6 @@ model BoardGame {
   slug               String              @unique
   /// The single reliable product identity; unique now that copies live in GameCopy.
   bggId              Int?                @unique
-  /// The manufacturer barcode identifies the product, not the single copy — never unique.
-  ean                String?
   minPlayers         Int?
   maxPlayers         Int?
   playTimeMinutes    Int?
@@ -969,6 +967,9 @@ model BoardGame {
   /// Freier Admin-Hinweis je Titel (z. B. "App zwingend nötig") — nicht aus
   /// BGG automatisch befüllt, Titel-Ebene (nicht `GameCopy`).
   notes              String?
+  /// „Erklärer gesucht" (#660): globales Flag, vom Vorstand (`events:manage`)
+  /// gesetzt, ohne Event-Bezug. Steuert den Filter „Gesucht" der Erklärbären-Seite.
+  explainerWanted    Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -986,9 +987,22 @@ model BoardGame {
   contributors             BoardGameContributor[]
   tags                     BoardGameTag[]
   versions                 BoardGameVersion[]
+  eans                     BoardGameEan[]
 
-  @@index([ean])
   @@map("board_games")
+}
+
+/// One barcode of a title (one per edition/version). Globally unique: an EAN
+/// belongs to exactly one title (#668, supersedes the "EAN not unique" part of ADR 0001).
+model BoardGameEan {
+  id          String    @id @default(cuid())
+  boardGameId String
+  ean         String    @unique
+  createdAt   DateTime  @default(now())
+  boardGame   BoardGame @relation(fields: [boardGameId], references: [id], onDelete: Cascade)
+
+  @@index([boardGameId])
+  @@map("board_game_eans")
 }
 
 /// Pro-Trait editierbare Anzeige-Texte, von games:manage im Admin-Bereich

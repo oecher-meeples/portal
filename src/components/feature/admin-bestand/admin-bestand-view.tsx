@@ -186,7 +186,7 @@ export function AdminBestandView({
               <AdminBestandCsvExportDialog
                 filteredRows={filtered.map((game) => ({
                   title: game.title,
-                  ean: game.ean,
+                  eans: game.eans,
                   status: game.status,
                   zustand: game.zustand,
                   locationChain: game.locationChain,

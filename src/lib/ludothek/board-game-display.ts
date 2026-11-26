@@ -21,6 +21,7 @@ export const BOARD_GAME_DISPLAY_SELECT = {
     alternateNames: { select: { name: true } },
     contributors: CONTRIBUTOR_LINKS_INCLUDE,
     tags: TAG_LINKS_INCLUDE,
+    eans: { select: { ean: true }, orderBy: { createdAt: "asc" } },
   },
 } as const;
 
@@ -28,6 +29,7 @@ type DisplayBoardGame = BoardGame & {
   alternateNames: { name: string }[];
   contributors: ContributorLinkRow[];
   tags: TagLinkRow[];
+  eans: { ean: string }[];
 };
 
 /** Die titelbezogenen Anzeige-Felder eines Exemplars/Privateintrags — der
@@ -45,7 +47,7 @@ export function boardGameDisplayFields(boardGame: DisplayBoardGame) {
     weight: boardGame.weight,
     averageRating: boardGame.averageRating,
     ...tagLabelsByType(boardGame.tags),
-    ean: boardGame.ean,
+    eans: boardGame.eans.map((row) => row.ean),
     bggId: boardGame.bggId,
     alternateNames: boardGame.alternateNames.map((a) => a.name),
     description: boardGame.description,

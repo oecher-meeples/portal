@@ -65,7 +65,7 @@ describe("EditBoardGameTitle", () => {
     );
 
     expect(screen.getByLabelText("Titel")).toBeInTheDocument();
-    expect(screen.getByLabelText("EAN")).toBeInTheDocument();
+    expect(screen.getByLabelText("EANs")).toBeInTheDocument();
     expect(screen.getByLabelText("Art")).toBeInTheDocument();
     expect(screen.queryByLabelText("Mängelvermerk")).not.toBeInTheDocument();
   });
@@ -372,10 +372,10 @@ describe("EditBoardGameTitle", () => {
         />,
       );
 
-      expect(screen.getByLabelText("EAN")).not.toHaveClass(
+      expect(screen.getByLabelText("EANs")).not.toHaveClass(
         "border-emerald-600",
       );
-      expect(screen.getByLabelText("EAN")).not.toHaveClass("border-red-600");
+      expect(screen.getByLabelText("EANs")).not.toHaveClass("border-red-600");
     });
 
     it("leaves every field unstyled when compareStatus is not set", () => {
