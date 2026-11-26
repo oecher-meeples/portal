@@ -16,6 +16,10 @@ import {
   getPostPermissions,
   requirePostEditor,
 } from "@/lib/content/post-permissions";
+import {
+  deletePostWithImages,
+  syncPostImages,
+} from "@/lib/content/post-images-sync";
 import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
 import { normaliseBlobPath } from "@/lib/utils/blob-path";
@@ -173,6 +177,8 @@ export async function createPost(input: PostInput) {
     },
   });
 
+  await syncPostImages(post.id, input.body);
+
   if (shouldQueueNewsletter(input)) {
     await queueNewsletterForPost(post.id);
   }
@@ -233,6 +239,8 @@ export async function updatePost(id: string, input: PostInput) {
     },
   });
 
+  await syncPostImages(id, input.body);
+
   // Ein Entwurf mit gesetzter Checkbox, der jetzt veröffentlicht wird, löst
   // den Versand aus. Bereits queued/gesendete Beiträge werden nicht erneut
   // eingereiht, auch wenn die Checkbox weiterhin aktiv ist.
@@ -287,7 +295,7 @@ export async function deletePost(id: string) {
   const denied = await actionPermissionDenied("posts:delete");
   if (denied) return denied;
 
-  await prisma.post.delete({ where: { id } });
+  await deletePostWithImages(id);
 
   return { success: true as const };
 }
