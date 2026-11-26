@@ -264,6 +264,10 @@ _Avoid_: `GameHolding` (das ist Vereinsbestand-Nachverfolgung mit Standort), `Pr
 Ein Beitrag mit `status: DRAFT` — sichtbar nur im Redaktionsbereich, nie öffentlich oder intern, löst kein Instagram-Cross-Posting und keinen Newsletter-Versand aus. Erst „Absenden" (Status `PUBLISHED`) macht ihn sichtbar und löst beides ggf. aus.
 _Avoid_: unveröffentlichter Beitrag, Vorschau
 
+**Beitragsbild**:
+Ein per Upload im Beitrags-Editor eingebettetes Bild (`PostImage`), im Body als `![Alt](/api/blog-images/<id>)` referenziert. Es ist genau so sichtbar wie sein Beitrag (intern nur mit `news:internal:view`, Entwurf nur für Redaktion) und wird mit dem Beitrag gelöscht. Im Newsletter als Anhang eingebettet, auf Instagram Teil eines Karussells (Cover zuerst, max. 10). Nicht das **Cover-Bild** (`Post.coverImageUrl`).
+_Avoid_: Anhang, Blog-Foto
+
 **Newsletter-Abonnent**:
 Ein Eintrag mit E-Mail-Adresse, Kategorien und Bestätigungsstatus — entweder anonym über das öffentliche Formular (braucht Double-Opt-in) oder über den Profil-Toggle eines Meeples (bereits authentifiziert, kein Double-Opt-in nötig). Eine gemeinsame Tabelle für beide Quellen, verknüpft über ein optionales `meepleId`-Feld.
 _Avoid_: Newsletter-Kontakt (kein Fremdsystem, reine Portal-Tabelle), Mitglied (ein Abonnent muss kein Meeple sein)

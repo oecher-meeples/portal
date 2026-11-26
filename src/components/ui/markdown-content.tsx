@@ -34,7 +34,21 @@ export function MarkdownContent({
 }) {
   return (
     <div className={cn(MARKDOWN_CLASSES, className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          img: ({ src, alt }) => (
+            // eslint-disable-next-line @next/next/no-img-element -- /api/blog-images (#671), nicht der next/image-Loader
+            <img
+              src={typeof src === "string" ? src : undefined}
+              alt={alt ?? ""}
+              loading="lazy"
+            />
+          ),
+        }}
+      >
+        {body}
+      </ReactMarkdown>
     </div>
   );
 }

@@ -45,4 +45,10 @@ describe("stripMarkdown (#448)", () => {
       "Ganz normaler Text ohne Markdown.",
     );
   });
+
+  it("drops images entirely instead of leaving their alt text behind (#671)", () => {
+    expect(
+      stripMarkdown("![Sommerfest](/api/blog-images/abc)\nEs war schön."),
+    ).toBe("Es war schön.");
+  });
 });

@@ -3,6 +3,8 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InstagramApiError,
+  createCarouselContainer,
+  createCarouselItemContainer,
   createMediaContainer,
   exchangeCodeForShortLivedToken,
   getInstagramBusinessAccount,
@@ -133,6 +135,43 @@ describe("graph-client", () => {
         code: 4,
         type: "OAuthException",
       });
+    });
+  });
+
+  describe("carousel containers (#671)", () => {
+    it("creates a carousel item without caption", async () => {
+      const fetchMock = mockFetchOnce(true, 200, { id: "child-1" });
+
+      const result = await createCarouselItemContainer({
+        igBusinessAccountId: "17841400000000000",
+        imageUrl: "https://example.com/a.jpg",
+        accessToken: "token",
+      });
+
+      expect(result.creationId).toBe("child-1");
+      const url = new URL(fetchMock.mock.calls[0][0] as string);
+      expect(url.searchParams.get("is_carousel_item")).toBe("true");
+      expect(url.searchParams.get("image_url")).toBe(
+        "https://example.com/a.jpg",
+      );
+      expect(url.searchParams.has("caption")).toBe(false);
+    });
+
+    it("creates the carousel container from the children ids", async () => {
+      const fetchMock = mockFetchOnce(true, 200, { id: "carousel-1" });
+
+      const result = await createCarouselContainer({
+        igBusinessAccountId: "17841400000000000",
+        childrenIds: ["c1", "c2"],
+        caption: "Hallo",
+        accessToken: "token",
+      });
+
+      expect(result.creationId).toBe("carousel-1");
+      const url = new URL(fetchMock.mock.calls[0][0] as string);
+      expect(url.searchParams.get("media_type")).toBe("CAROUSEL");
+      expect(url.searchParams.get("children")).toBe("c1,c2");
+      expect(url.searchParams.get("caption")).toBe("Hallo");
     });
   });
 

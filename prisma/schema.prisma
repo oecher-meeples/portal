@@ -711,9 +711,28 @@ model Post {
   dispatchJobs     NewsletterDispatchJob[]
   instagramDetails PostInstagramDetails?
   surveyDetails    PostSurveyDetails?
+  images           PostImage[]
 
   @@index([type, internal, date])
   @@map("posts")
+}
+
+/// Per Upload eingebettetes Bild eines Beitrags (#671). Der Body verweist per
+/// `/api/blog-images/<id>` darauf. `postId` ist bis zum ersten Speichern des
+/// Beitrags `null` (hochgeladen, noch nicht verknüpft); unverknüpfte Bilder
+/// räumt der tägliche Cron auf. Die Datei liegt im privaten S3-Präfix
+/// `blog-images/`, ausgeliefert wird sie nur über die Route mit
+/// Sichtbarkeitsprüfung.
+model PostImage {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  postId    String?
+  createdAt DateTime @default(now())
+
+  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("post_images")
 }
 
 /// Ergebnis-/Status-Felder eines Instagram-Crossposts, ausgelagert aus `Post`

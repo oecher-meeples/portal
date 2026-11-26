@@ -7,7 +7,10 @@ import {
 import { prisma } from "@/lib/utils/prisma";
 import { decryptSecret, encryptSecret } from "@/lib/utils/crypto";
 import { resolveCoverImageUrl } from "@/lib/instagram/cover-image";
+import { extractPostImageIds, postImageUrl } from "@/lib/content/post-images";
 import {
+  createCarouselContainer,
+  createCarouselItemContainer,
   createMediaContainer,
   publishMedia,
   refreshLongLivedToken,
@@ -21,6 +24,36 @@ export type DuePost = Post & { instagramDetails: PostInstagramDetails };
 
 function buildCaption(post: Pick<Post, "title" | "excerpt" | "slug">): string {
   return `${post.title}\n\n${post.excerpt}\n\nMehr dazu: ${siteUrl()}/news/${post.slug}`;
+}
+
+/** Instagram erlaubt höchstens 10 Elemente pro Karussell. */
+const MAX_CAROUSEL_ITEMS = 10;
+
+/** Bild-URLs eines Beitrags in Karussell-Reihenfolge (#671): Cover zuerst,
+ * dann die Body-Bilder in Textreihenfolge. Body-Bilder kommen als JPEG
+ * (`?format=jpeg`) über die öffentliche Route — Instagram akzeptiert nur
+ * JPEG, und nur öffentliche Beiträge werden gepostet. */
+async function collectImageUrls(
+  post: Pick<Post, "id" | "body" | "coverImageUrl">,
+  resolveCover: () => Promise<string>,
+): Promise<string[]> {
+  const ids = extractPostImageIds(post.body);
+  const linked = ids.length
+    ? await prisma.postImage.findMany({
+        where: { id: { in: ids }, postId: post.id },
+        select: { id: true },
+      })
+    : [];
+  const linkedIds = new Set(linked.map((image) => image.id));
+  const bodyUrls = ids
+    .filter((id) => linkedIds.has(id))
+    .map((id) => `${siteUrl()}${postImageUrl(id)}?format=jpeg`);
+
+  if (bodyUrls.length === 0) return [await resolveCover()];
+  const urls = post.coverImageUrl
+    ? [await resolveCover(), ...bodyUrls]
+    : bodyUrls;
+  return urls.slice(0, MAX_CAROUSEL_ITEMS);
 }
 
 export function findDuePosts() {
@@ -43,18 +76,40 @@ export async function processPost(post: DuePost): Promise<boolean> {
       throw new Error("Keine aktive Instagram-Verbindung vorhanden.");
     }
 
-    const imageUrl = await resolveCoverImageUrl(post);
+    const imageUrls = await collectImageUrls(post, () =>
+      resolveCoverImageUrl(post),
+    );
     const caption = buildCaption(post);
     const accessToken = decryptSecret(connection.accessToken);
+    const igBusinessAccountId = connection.igBusinessAccountId;
 
-    const { creationId } = await createMediaContainer({
-      igBusinessAccountId: connection.igBusinessAccountId,
-      imageUrl,
-      caption,
-      accessToken,
-    });
+    let creationId: string;
+    if (imageUrls.length === 1) {
+      ({ creationId } = await createMediaContainer({
+        igBusinessAccountId,
+        imageUrl: imageUrls[0],
+        caption,
+        accessToken,
+      }));
+    } else {
+      const childrenIds: string[] = [];
+      for (const imageUrl of imageUrls) {
+        const child = await createCarouselItemContainer({
+          igBusinessAccountId,
+          imageUrl,
+          accessToken,
+        });
+        childrenIds.push(child.creationId);
+      }
+      ({ creationId } = await createCarouselContainer({
+        igBusinessAccountId,
+        childrenIds,
+        caption,
+        accessToken,
+      }));
+    }
     const { mediaId } = await publishMedia({
-      igBusinessAccountId: connection.igBusinessAccountId,
+      igBusinessAccountId,
       creationId,
       accessToken,
     });

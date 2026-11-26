@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
+vi.mock("@/lib/content/post-images-sync", () => ({
+  syncPostImages: vi.fn(),
+  deletePostWithImages: vi.fn(),
+}));
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 
 const getCurrentUserMock = vi.fn();

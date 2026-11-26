@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from "nodemailer";
+import type { EmailAttachment } from "@/lib/newsletter/post-email-body";
 import { UserFacingError } from "@/lib/utils/action-result";
 
 const DEFAULT_FROM = '"Oecher Meeples" <newsletter@oecher-meeples.org>';
@@ -67,10 +68,13 @@ export async function sendTransactionalEmail({
   to,
   subject,
   html,
+  attachments,
 }: {
   to: string;
   subject: string;
   html: string;
+  /** Inline-Anhänge, im HTML per `cid:<cid>` referenziert. */
+  attachments?: EmailAttachment[];
 }): Promise<void> {
   const config = readSmtpConfig();
   if (!config) {
@@ -85,6 +89,7 @@ export async function sendTransactionalEmail({
       to,
       subject,
       html,
+      attachments,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

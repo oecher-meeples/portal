@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import {
+  getBlob,
   getBlobPublicOrigin,
   getS3Client,
   keyFromPublicUrl,
@@ -112,5 +113,32 @@ describe("putBlob", () => {
     expect(command.input.Body).toBeInstanceOf(Uint8Array);
     expect(command.input.Key).toMatch(/^instagram-covers\/post-.+\.png$/);
     expect(key).toBe(command.input.Key);
+  });
+});
+
+describe("getBlob", () => {
+  it("returns bytes and content type of the object", async () => {
+    vi.spyOn(S3Client.prototype, "send").mockResolvedValue({
+      Body: { transformToByteArray: async () => new Uint8Array([1, 2]) },
+      ContentType: "image/png",
+    } as never);
+
+    const blob = await getBlob("blog-images/a.png");
+
+    expect(blob).toEqual({
+      bytes: new Uint8Array([1, 2]),
+      contentType: "image/png",
+    });
+  });
+
+  it("returns null for a missing object and rethrows other errors", async () => {
+    const send = vi.spyOn(S3Client.prototype, "send");
+    send.mockRejectedValueOnce(
+      Object.assign(new Error("gone"), { name: "NoSuchKey" }),
+    );
+    expect(await getBlob("blog-images/missing.png")).toBeNull();
+
+    send.mockRejectedValueOnce(new Error("boom"));
+    await expect(getBlob("blog-images/a.png")).rejects.toThrow("boom");
   });
 });

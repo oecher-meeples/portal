@@ -9,12 +9,22 @@ vi.mock("@/lib/newsletter/mailer", () => ({
     sendTransactionalEmailMock(...args),
 }));
 
+const buildPostEmailBodyMock = vi.fn();
+vi.mock("@/lib/newsletter/post-email-body", () => ({
+  buildPostEmailBody: (...args: unknown[]) => buildPostEmailBodyMock(...args),
+}));
+
 const { queueNewsletterForPost, processNewsletterQueue } =
   await import("./dispatch");
 
 beforeEach(() => {
   sendTransactionalEmailMock.mockReset();
   sendTransactionalEmailMock.mockResolvedValue(undefined);
+  buildPostEmailBodyMock.mockReset();
+  buildPostEmailBodyMock.mockResolvedValue({
+    html: "<p>Body</p>",
+    attachments: [],
+  });
 });
 
 function makeJob(overrides: Partial<Record<string, unknown>> = {}) {
@@ -32,6 +42,7 @@ function makeJob(overrides: Partial<Record<string, unknown>> = {}) {
       title: "Sommerfest",
       excerpt: "Es war toll",
       slug: "sommerfest",
+      body: "Ein **toller** Tag.",
     },
     subscriber: {
       id: "sub-1",
@@ -120,6 +131,63 @@ describe("processNewsletterQueue", () => {
     expect(prismaMock.newsletterDispatchJob.update).toHaveBeenCalledWith({
       where: { id: "job-1" },
       data: expect.objectContaining({ status: "SENT" }),
+    });
+  });
+
+  it("includes the rendered body and image attachments, escaping title and excerpt (#671)", async () => {
+    const attachments = [{ cid: "i1" }];
+    buildPostEmailBodyMock.mockResolvedValue({
+      html: '<p><img src="cid:i1"></p>',
+      attachments,
+    });
+    prismaMock.newsletterDispatchJob.findMany.mockResolvedValue([
+      makeJob({
+        post: {
+          id: "post-1",
+          title: "A <b> & B",
+          excerpt: "x",
+          slug: "s",
+          body: "b",
+        },
+      }),
+    ] as never);
+    prismaMock.newsletterDispatchJob.count.mockResolvedValue(0);
+
+    await processNewsletterQueue(10);
+
+    const mail = sendTransactionalEmailMock.mock.calls[0][0];
+    expect(mail.html).toContain("<h1>A &lt;b&gt; &amp; B</h1>");
+    expect(mail.html).toContain('<img src="cid:i1">');
+    expect(mail.attachments).toBe(attachments);
+  });
+
+  it("renders the body once per post, not once per subscriber", async () => {
+    prismaMock.newsletterDispatchJob.findMany.mockResolvedValue([
+      makeJob({ id: "job-1" }),
+      makeJob({ id: "job-2" }),
+    ] as never);
+    prismaMock.newsletterDispatchJob.count.mockResolvedValue(0);
+
+    await processNewsletterQueue(10);
+
+    expect(sendTransactionalEmailMock).toHaveBeenCalledTimes(2);
+    expect(buildPostEmailBodyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the job as failed attempt when the body cannot be built (missing image file)", async () => {
+    buildPostEmailBodyMock.mockRejectedValue(new Error("Bild fehlt"));
+    prismaMock.newsletterDispatchJob.findMany.mockResolvedValue([
+      makeJob(),
+    ] as never);
+    prismaMock.newsletterDispatchJob.count.mockResolvedValue(0);
+
+    const summary = await processNewsletterQueue(10);
+
+    expect(summary).toEqual({ processed: 1, succeeded: 0, failed: 1 });
+    expect(sendTransactionalEmailMock).not.toHaveBeenCalled();
+    expect(prismaMock.newsletterDispatchJob.update).toHaveBeenCalledWith({
+      where: { id: "job-1" },
+      data: expect.objectContaining({ attempts: 1, lastError: "Bild fehlt" }),
     });
   });
 

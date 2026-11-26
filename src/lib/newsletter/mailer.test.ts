@@ -75,6 +75,24 @@ describe("sendTransactionalEmail — SMTP configured", () => {
     });
   });
 
+  it("passes inline attachments through to the transport (#671)", async () => {
+    const { sendTransactionalEmail } = await loadMailer();
+    const attachments = [
+      {
+        filename: "a.png",
+        content: Buffer.from([1]),
+        cid: "i1",
+        contentType: "image/png",
+      },
+    ];
+
+    await sendTransactionalEmail({ ...MAIL, attachments });
+
+    expect(sendMailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ attachments }),
+    );
+  });
+
   it("reuses the transporter across calls", async () => {
     const { sendTransactionalEmail } = await loadMailer();
 

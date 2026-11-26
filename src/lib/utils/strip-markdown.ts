@@ -8,6 +8,7 @@
  */
 export function stripMarkdown(markdown: string): string {
   return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "") // images: ![alt](url) (#671)
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links: [text](url)
     .replace(/`([^`]*)`/g, "$1") // inline code: `code`
     .replace(/~~([^~]*)~~/g, "$1") // strikethrough: ~~text~~
@@ -15,5 +16,6 @@ export function stripMarkdown(markdown: string): string {
     .replace(/__([^_]*)__/g, "$1") // bold: __text__
     .replace(/\*([^*]*)\*/g, "$1") // italic: *text*
     .replace(/_([^_]*)_/g, "$1") // italic: _text_
-    .replace(/^#{1,6}\s+/gm, ""); // headings: # / ## / … at line start
+    .replace(/^#{1,6}\s+/gm, "") // headings: # / ## / … at line start
+    .trim();
 }

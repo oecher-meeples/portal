@@ -18,6 +18,14 @@ vi.mock("@/lib/newsletter/dispatch", () => ({
   queueNewsletterForPost: vi.fn(),
 }));
 
+const syncPostImagesMock = vi.fn();
+const deletePostWithImagesMock = vi.fn();
+vi.mock("@/lib/content/post-images-sync", () => ({
+  syncPostImages: (...args: unknown[]) => syncPostImagesMock(...args),
+  deletePostWithImages: (...args: unknown[]) =>
+    deletePostWithImagesMock(...args),
+}));
+
 const createBlobUploadTokenMock = vi.fn();
 vi.mock("@/lib/utils/blob-upload-token", () => ({
   createBlobUploadToken: (...args: unknown[]) =>
@@ -391,7 +399,7 @@ describe("deletePost", () => {
     const result = await deletePost("post-1");
 
     expect(result).toEqual({ error: "Keine Berechtigung." });
-    expect(prismaMock.post.delete).not.toHaveBeenCalled();
+    expect(deletePostWithImagesMock).not.toHaveBeenCalled();
   });
 
   it("deletes the post when authorized", async () => {
@@ -401,9 +409,30 @@ describe("deletePost", () => {
     const result = await deletePost("post-1");
 
     expect(result).toEqual({ success: true });
-    expect(prismaMock.post.delete).toHaveBeenCalledWith({
-      where: { id: "post-1" },
-    });
+    expect(deletePostWithImagesMock).toHaveBeenCalledWith("post-1");
+  });
+});
+
+describe("post image sync", () => {
+  it("links the images referenced in the body on create and update", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.post.create.mockResolvedValue({ id: "post-9" } as never);
+    prismaMock.post.findUnique.mockResolvedValue({ internal: null } as never);
+
+    await createPost({ ...VALID_INPUT, body: "![a](/api/blog-images/i1)" });
+    await updatePost("post-9", { ...VALID_INPUT, body: "neuer Text" });
+
+    expect(syncPostImagesMock).toHaveBeenNthCalledWith(
+      1,
+      "post-9",
+      "![a](/api/blog-images/i1)",
+    );
+    expect(syncPostImagesMock).toHaveBeenNthCalledWith(
+      2,
+      "post-9",
+      "neuer Text",
+    );
   });
 });
 
