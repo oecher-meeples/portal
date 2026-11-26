@@ -94,7 +94,12 @@ export default async function AdminEventDetailPage({
   const bookingsByDay: Record<string, PlanBooking[]> = {};
   for (const shift of event.shifts) {
     const forDay = (bookingsByDay[shift.dayId] ??= []);
+    const dayAvailabilities =
+      event.days.find((day) => day.id === shift.dayId)?.availabilities ?? [];
     for (const booking of shift.bookings) {
+      const availability = dayAvailabilities.find(
+        (entry) => entry.meeple.id === booking.meepleId,
+      );
       forDay.push({
         id: booking.id,
         shiftId: shift.id,
@@ -106,6 +111,8 @@ export default async function AdminEventDetailPage({
         endsAt: booking.endsAt.toISOString(),
         confirmedAt: booking.confirmedAt?.toISOString() ?? null,
         slotIndex: booking.slotIndex,
+        availabilityStartsAt: availability?.startsAt.toISOString() ?? null,
+        availabilityEndsAt: availability?.endsAt.toISOString() ?? null,
       });
     }
   }

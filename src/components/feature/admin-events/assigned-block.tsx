@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, TriangleAlert, X } from "lucide-react";
+import { Check, CircleAlert, TriangleAlert, X } from "lucide-react";
 import {
   exceedsRecommendedShiftLength,
   MAX_UNBROKEN_SHIFT_HOURS,
 } from "@/lib/events/shift-plan";
+import { isWithinAvailability } from "@/lib/events/booking-availability";
+import { formatTimePlain } from "@/lib/utils/format";
 import { helperColorClass } from "@/lib/events/helper-colors";
 import { cn } from "@/lib/utils/cn";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
@@ -177,6 +179,23 @@ export function AssignedBlock({
     new Date(booking.endsAt),
   );
 
+  // #684: Verfügbarkeit wurde nachträglich verkürzt/zurückgezogen — die
+  // Buchung bleibt bestehen, wird aber markiert (nicht blockierend).
+  const availability =
+    booking.availabilityStartsAt && booking.availabilityEndsAt
+      ? {
+          startsAt: new Date(booking.availabilityStartsAt),
+          endsAt: new Date(booking.availabilityEndsAt),
+        }
+      : null;
+  const outsideAvailability = !isWithinAvailability(
+    { startsAt: new Date(booking.startsAt), endsAt: new Date(booking.endsAt) },
+    availability,
+  );
+  const outsideHint = availability
+    ? `Außerhalb der gemeldeten Verfügbarkeit (${formatTimePlain(availability.startsAt)}–${formatTimePlain(availability.endsAt)})`
+    : "Keine Verfügbarkeit gemeldet";
+
   // Kein Factory-Muster (`edge => event => …`) — der Linter kann sonst nicht
   // ausschließen, dass der Ref-Zugriff synchron beim Rendern passiert (er tut
   // es nicht, nur beim tatsächlichen Pointerdown). Direkt aufgerufen aus den
@@ -208,13 +227,15 @@ export function AssignedBlock({
       tabIndex={0}
       role="button"
       aria-label={`${booking.displayName} — ${confirmed ? "bestätigt" : "unbestätigt"} — Entf zum Entfernen, Ziehen zum Verschieben`}
-      title={
+      title={[
+        confirmed ? "Bestätigt" : "Unbestätigt",
         tooLong
-          ? `${confirmed ? "Bestätigt" : "Unbestätigt"} — über ${MAX_UNBROKEN_SHIFT_HOURS}h am Stück, Pause einplanen`
-          : confirmed
-            ? "Bestätigt"
-            : "Unbestätigt"
-      }
+          ? `über ${MAX_UNBROKEN_SHIFT_HOURS}h am Stück, Pause einplanen`
+          : null,
+        outsideAvailability ? outsideHint : null,
+      ]
+        .filter(Boolean)
+        .join(" — ")}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       onPointerDown={(pointerEvent) => beginDrag("move", pointerEvent)}
@@ -236,6 +257,12 @@ export function AssignedBlock({
       }}
     >
       {confirmed && <Check className="absolute top-0.5 right-0.5 size-3" />}
+      {outsideAvailability && (
+        <CircleAlert
+          aria-label={outsideHint}
+          className="absolute top-0.5 right-4 size-3.5 text-red-600"
+        />
+      )}
       {tooLong && (
         <TriangleAlert className="absolute right-0.5 bottom-0.5 size-3 text-amber-500" />
       )}

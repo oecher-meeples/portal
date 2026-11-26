@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { isWithinAvailability } from "@/lib/events/booking-availability";
 import { formatTimePlain } from "@/lib/utils/format";
 
 export type ShiftBookingAssignmentResult =
@@ -59,7 +60,7 @@ export async function assignShiftBooking({
         "Dieses Meeple hat sich für diese Rolle an diesem Tag nicht als verfügbar gemeldet.",
     };
   }
-  if (availability.startsAt > startsAt || availability.endsAt < endsAt) {
+  if (!isWithinAvailability({ startsAt, endsAt }, availability)) {
     // Nennt die tatsächlichen Grenzen — sonst wirkt die Ablehnung
     // unerklärlich, wenn die Schicht selbst länger läuft als das, was diese
     // Person gemeldet hat (Bugreport: Schicht bis 19 Uhr, Person nur bis
