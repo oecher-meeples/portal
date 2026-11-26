@@ -105,6 +105,7 @@ describe("HelferView — Bearbeiten-Toggle (#674)", () => {
         dayRolesByDayId={{ "day-1": [{ id: "role-1", name: "Theke" }] }}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={false}
       />,
     );
