@@ -2,20 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { EventVisibility } from "@prisma/client";
+import type { EventVisibility, HelperPhase } from "@prisma/client";
 import { Plus, Pencil } from "lucide-react";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Field, TextField } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { Switch } from "@/components/ui/switch";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   createEvent,
   updateEvent,
 } from "@/components/feature/admin-events/actions";
 import { EVENT_VISIBILITY_LABELS } from "@/lib/events/visibility";
+import {
+  HELPER_PHASE_LABELS,
+  HELPER_PHASE_ORDER,
+} from "@/lib/events/helper-phase";
 
 export type EditableEvent = {
   id: string;
@@ -23,7 +25,7 @@ export type EditableEvent = {
   startsAt: string;
   endsAt: string | null;
   location: string | null;
-  helpersWanted: boolean;
+  helperPhase: HelperPhase;
   visibility: EventVisibility;
 };
 
@@ -44,8 +46,8 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
     event?.endsAt ? toDateInput(event.endsAt) : "",
   );
   const [location, setLocation] = useState(event?.location ?? "");
-  const [helpersWanted, setHelpersWanted] = useState(
-    event?.helpersWanted ?? false,
+  const [helperPhase, setHelperPhase] = useState<HelperPhase>(
+    event?.helperPhase ?? "PLANNING",
   );
   const [visibility, setVisibility] = useState<EventVisibility>(
     event?.visibility ?? "DRAFT",
@@ -56,7 +58,7 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
     setStartsAt(event ? toDateInput(event.startsAt) : "");
     setEndsAt(event?.endsAt ? toDateInput(event.endsAt) : "");
     setLocation(event?.location ?? "");
-    setHelpersWanted(event?.helpersWanted ?? false);
+    setHelperPhase(event?.helperPhase ?? "PLANNING");
     setVisibility(event?.visibility ?? "DRAFT");
   }
 
@@ -86,7 +88,8 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
           startsAt: new Date(startsAt),
           endsAt: endsAt ? new Date(endsAt) : null,
           location: location || null,
-          helpersWanted,
+          // Beim Anlegen gilt der Default (Planungsphase), siehe #676.
+          ...(isEdit ? { helperPhase } : {}),
           visibility,
         };
         if (event) return updateEvent(event.id, input);
@@ -146,14 +149,23 @@ export function EventDialog({ event }: { event?: EditableEvent }) {
             onChange={(fieldEvent) => setLocation(fieldEvent.target.value)}
             placeholder="z. B. Vereinsheim"
           />
-          <Label className="flex items-center justify-between gap-2 font-normal">
-            Helfer suchen
-            <Switch
-              id="event-helpers-wanted"
-              checked={helpersWanted}
-              onCheckedChange={setHelpersWanted}
-            />
-          </Label>
+          <Field label="Helfersichtbarkeit" htmlFor="event-helper-phase">
+            <NativeSelect
+              id="event-helper-phase"
+              size="md"
+              className="w-full"
+              value={helperPhase}
+              onChange={(fieldEvent) =>
+                setHelperPhase(fieldEvent.target.value as HelperPhase)
+              }
+            >
+              {HELPER_PHASE_ORDER.map((phase) => (
+                <option key={phase} value={phase}>
+                  {HELPER_PHASE_LABELS[phase]}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
         </>
       )}
     </ActionDialog>

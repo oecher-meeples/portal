@@ -17,7 +17,7 @@ const VALID_INPUT = {
 describe("setHelperAvailability", () => {
   beforeEach(() => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
-      event: { visibility: "INTERNAL", helpersWanted: false },
+      event: { visibility: "INTERNAL", helperPhase: "SEEKING" },
       shifts: [],
     } as never);
   });
@@ -52,7 +52,7 @@ describe("setHelperAvailability", () => {
     ];
     beforeEach(() => {
       prismaMock.eventDay.findUnique.mockResolvedValue({
-        event: { visibility: "INTERNAL", helpersWanted: false },
+        event: { visibility: "INTERNAL", helperPhase: "SEEKING" },
         shifts,
       } as never);
       prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
@@ -76,7 +76,7 @@ describe("setHelperAvailability", () => {
 
     it("applies no bound on a day without shifts", async () => {
       prismaMock.eventDay.findUnique.mockResolvedValue({
-        event: { visibility: "INTERNAL", helpersWanted: false },
+        event: { visibility: "INTERNAL", helperPhase: "SEEKING" },
         shifts: [],
       } as never);
 
@@ -131,9 +131,9 @@ describe("setHelperAvailability", () => {
     expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
   });
 
-  it("rejects an Entwurf-Event without an open helper request", async () => {
+  it("rejects an Entwurf-Event in the planning phase", async () => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
-      event: { visibility: "DRAFT", helpersWanted: false },
+      event: { visibility: "DRAFT", helperPhase: "PLANNING" },
       shifts: [],
     } as never);
 
@@ -145,9 +145,9 @@ describe("setHelperAvailability", () => {
     expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
   });
 
-  it("allows an Entwurf-Event once helpersWanted is set — recruiting may start before release", async () => {
+  it("allows an Entwurf-Event once the SEEKING phase is set — recruiting may start before release", async () => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
-      event: { visibility: "DRAFT", helpersWanted: true },
+      event: { visibility: "DRAFT", helperPhase: "SEEKING" },
       shifts: [],
     } as never);
     prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
@@ -157,9 +157,31 @@ describe("setHelperAvailability", () => {
     expect(result).toEqual({ success: true });
   });
 
+  it("rejects a non-Entwurf event while it is still in the planning phase (#676)", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "PUBLIC", helperPhase: "PLANNING" },
+      shifts: [],
+    } as never);
+
+    const result = await setHelperAvailability(VALID_INPUT);
+
+    expect(result).toHaveProperty("error");
+    expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+  });
+
+  it("allows reporting once confirmation is requested (#676, cumulative)", async () => {
+    prismaMock.eventDay.findUnique.mockResolvedValue({
+      event: { visibility: "INTERNAL", helperPhase: "CONFIRMATION_REQUESTED" },
+      shifts: [],
+    } as never);
+    prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
+
+    expect(await setHelperAvailability(VALID_INPUT)).toEqual({ success: true });
+  });
+
   it("allows a PUBLIC event", async () => {
     prismaMock.eventDay.findUnique.mockResolvedValue({
-      event: { visibility: "PUBLIC", helpersWanted: false },
+      event: { visibility: "PUBLIC", helperPhase: "SEEKING" },
       shifts: [],
     } as never);
     prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);

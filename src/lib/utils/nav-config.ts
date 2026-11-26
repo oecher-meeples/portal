@@ -46,7 +46,7 @@ export type NavItem = {
   /**
    * Extra data-dependent visibility gate on top of tier/permission —
    * "openHelperRequest" (#155, event-wide): hides "Helferplan" unless a
-   * future event has `Event.helpersWanted` set. "activeAusleiheShift"
+   * future event has `Event.helperPhase` at least "Helfer gesucht". "activeAusleiheShift"
    * (#433, per Nutzer): hides "Ausleihe & Rückgabe" unless the current
    * Meeple is inside a currently active "Leihe"-Schichtbuchung.
    * "activeMembership" (#537): hides the Scanner for an "ausgetreten"

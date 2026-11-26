@@ -1,6 +1,6 @@
 import { cardVariants } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import type { EventVisibility } from "@prisma/client";
+import type { EventVisibility, HelperPhase } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
   Accordion,
@@ -35,7 +35,7 @@ export function EventDetailView({
   eventStartsAt,
   eventEndsAt,
   eventLocation,
-  eventHelpersWanted,
+  eventHelperPhase,
   eventVisibility,
   days,
   shifts,
@@ -50,7 +50,7 @@ export function EventDetailView({
   eventStartsAt: string;
   eventEndsAt: string | null;
   eventLocation: string | null;
-  eventHelpersWanted: boolean;
+  eventHelperPhase: HelperPhase;
   eventVisibility: EventVisibility;
   days: EditableEventDay[];
   shifts: ShiftRow[];
@@ -83,7 +83,7 @@ export function EventDetailView({
               startsAt: eventStartsAt,
               endsAt: eventEndsAt,
               location: eventLocation,
-              helpersWanted: eventHelpersWanted,
+              helperPhase: eventHelperPhase,
               visibility: eventVisibility,
             }}
           />

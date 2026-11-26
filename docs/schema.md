@@ -357,7 +357,7 @@ erDiagram
         DateTime startsAt
         DateTime endsAt
         String location
-        Boolean helpersWanted
+        HelperPhase helperPhase
         String visibility "PUBLIC, INTERNAL, DRAFT"
     }
 

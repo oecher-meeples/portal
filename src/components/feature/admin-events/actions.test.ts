@@ -138,7 +138,7 @@ describe("createEvent", () => {
     });
   });
 
-  it("defaults helpersWanted to false when omitted (#155)", async () => {
+  it("defaults helperPhase to PLANNING when omitted (#155)", async () => {
     prismaMock.event.findUnique.mockResolvedValue(null);
     prismaMock.event.create.mockResolvedValue({
       id: "event-1",
@@ -148,21 +148,21 @@ describe("createEvent", () => {
     await createEvent(VALID_INPUT);
 
     expect(prismaMock.event.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ helpersWanted: false }),
+      data: expect.objectContaining({ helperPhase: "PLANNING" }),
     });
   });
 
-  it("stores helpersWanted when set (#155)", async () => {
+  it("stores helperPhase when set (#155)", async () => {
     prismaMock.event.findUnique.mockResolvedValue(null);
     prismaMock.event.create.mockResolvedValue({
       id: "event-1",
       slug: "spieletag-herbst",
     } as never);
 
-    await createEvent({ ...VALID_INPUT, helpersWanted: true });
+    await createEvent({ ...VALID_INPUT, helperPhase: "SEEKING" });
 
     expect(prismaMock.event.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ helpersWanted: true }),
+      data: expect.objectContaining({ helperPhase: "SEEKING" }),
     });
   });
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { EventVisibility } from "@prisma/client";
+import type { EventVisibility, HelperPhase } from "@prisma/client";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { uniqueSlug } from "@/lib/utils/slug";
@@ -12,7 +12,7 @@ export type EventInput = {
   startsAt: Date;
   endsAt?: Date | null;
   location?: string | null;
-  helpersWanted?: boolean;
+  helperPhase?: HelperPhase;
   visibility?: EventVisibility;
 };
 
@@ -72,7 +72,7 @@ export async function createEvent(input: EventInput) {
       startsAt: input.startsAt,
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
-      helpersWanted: input.helpersWanted ?? false,
+      helperPhase: input.helperPhase ?? "PLANNING",
       visibility: input.visibility ?? "DRAFT",
     },
   });
@@ -101,7 +101,9 @@ export async function updateEvent(id: string, input: EventInput) {
       startsAt: input.startsAt,
       endsAt: input.endsAt ? endOfUtcDay(input.endsAt) : null,
       location: input.location || null,
-      helpersWanted: input.helpersWanted ?? false,
+      // Nur setzen, wenn mitgegeben — sonst bliebe die Phase beim Bearbeiten
+      // anderer Felder nicht erhalten (#676).
+      ...(input.helperPhase ? { helperPhase: input.helperPhase } : {}),
       visibility: input.visibility ?? "DRAFT",
     },
   });

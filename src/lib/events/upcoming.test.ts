@@ -110,7 +110,7 @@ describe("isEventCurrentlyRunning", () => {
 });
 
 describe("hasOpenHelperRequest", () => {
-  it("is true when an upcoming event has helpersWanted set", async () => {
+  it("is true when an upcoming event is at least in the SEEKING phase", async () => {
     prismaMock.event.findFirst.mockResolvedValue({
       id: "event-1",
       title: "Spieletag",
@@ -118,7 +118,9 @@ describe("hasOpenHelperRequest", () => {
 
     expect(await hasOpenHelperRequest()).toBe(true);
     expect(prismaMock.event.findFirst).toHaveBeenCalledWith({
-      where: expect.objectContaining({ helpersWanted: true }),
+      where: expect.objectContaining({
+        helperPhase: { in: ["SEEKING", "CONFIRMATION_REQUESTED"] },
+      }),
       orderBy: { startsAt: "asc" },
       select: { id: true, title: true },
     });
@@ -149,7 +151,7 @@ describe("findOpenHelperRequestEvent", () => {
     expect(await findOpenHelperRequestEvent()).toBeNull();
   });
 
-  it("does not filter by visibility — an Entwurf-Event with helpersWanted still counts", async () => {
+  it("does not filter by visibility — an Entwurf-Event in the SEEKING phase still counts", async () => {
     await findOpenHelperRequestEvent();
 
     expect(prismaMock.event.findFirst).toHaveBeenCalledWith(
@@ -209,7 +211,7 @@ describe("findUpcomingEvents", () => {
 });
 
 describe("findUpcomingEventsVisibleToMembers", () => {
-  it("includes non-Entwurf events, or Entwurf events with helpersWanted", async () => {
+  it("includes non-Entwurf events, or Entwurf events in the SEEKING phase", async () => {
     prismaMock.event.findMany.mockResolvedValue([]);
 
     await findUpcomingEventsVisibleToMembers();
@@ -219,7 +221,10 @@ describe("findUpcomingEventsVisibleToMembers", () => {
         where: expect.objectContaining({
           AND: expect.arrayContaining([
             {
-              OR: [{ visibility: { not: "DRAFT" } }, { helpersWanted: true }],
+              OR: [
+                { visibility: { not: "DRAFT" } },
+                { helperPhase: { in: ["SEEKING", "CONFIRMATION_REQUESTED"] } },
+              ],
             },
           ]),
         }),

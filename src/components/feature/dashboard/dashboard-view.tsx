@@ -51,7 +51,7 @@ type DashboardViewProps = {
   resignationNotice: { endsAt: string; openHoldingsCount: number } | null;
   /** Ausgetreten (#537): kein Scanner, stattdessen der Abwicklungshinweis. */
   isAusgetreten: boolean;
-  /** Frühestes anstehendes Event mit `helpersWanted` (#155) — null blendet die Karte aus. */
+  /** Frühestes anstehendes Event in "Helfer gesucht" oder später (#155/#676) — null blendet die Karte aus. */
   openHelperRequestEvent: { id: string; title: string } | null;
   /** Gesuchte Spiele ohne mein Niveau (#666) — 0 blendet die Karte aus. */
   wantedExplainerGamesCount: number;
