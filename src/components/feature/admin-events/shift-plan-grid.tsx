@@ -12,6 +12,7 @@ import {
   isSlotStaffable,
   intersectTimeRanges,
   resolveSelectedTimeRange,
+  shiftGridRows,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
 import { formatTimePlain } from "@/lib/utils/format";
@@ -32,13 +33,6 @@ export type RoleDropData = {
   roleId: string;
   shiftId: string;
 };
-
-/** One role's column group, plus the specific Shift row it targets on drop —
- * only meaningful when a role has exactly one Shift row per day, the common
- * case; with several, the first is used (documented simplification, #159). */
-function primaryShiftFor(group: RoleColumnGroup, shifts: PlanShift[]) {
-  return shifts.find((shift) => shift.roleId === group.roleId);
-}
 
 /** "Voll geplant" (#162): every Shift row for this role on this day must be
  * gap-free covered by its own bookings — a role with several target windows
@@ -242,13 +236,21 @@ export function ShiftPlanGrid({
           );
         })}
 
-        {columns.map((group) => {
-          const shift = primaryShiftFor(group, shifts);
-          if (!shift) return null;
+        {shifts.map((shift) => {
+          const group = columns.find((g) => g.roleId === shift.roleId);
+          if (!group) return null;
+          const shiftRows = shiftGridRows(
+            {
+              targetStartsAt: new Date(shift.targetStartsAt),
+              targetEndsAt: new Date(shift.targetEndsAt),
+            },
+            range.start,
+            STEP_MINUTES,
+          );
 
           // Hervorhebungsbereich beim Drüberziehen: gemeldete Verfügbarkeit
-          // des gezogenen Meeples ∩ Ziel-Zeitraum der Schicht dieser Spalte —
-          // nur relevant, wenn der Drag überhaupt zu dieser Rolle gehört.
+          // des gezogenen Meeples ∩ Ziel-Zeitraum dieser Schicht — nur
+          // relevant, wenn der Drag zu dieser Rolle gehört.
           let highlightRows: { rowStart: number; rowEnd: number } | null = null;
           if (
             activeAvailability &&
@@ -267,25 +269,21 @@ export function ShiftPlanGrid({
               },
             );
             if (overlap) {
-              const rowStart = Math.max(
-                2,
-                rowForTime(overlap.start.toISOString()) + 2,
+              highlightRows = shiftGridRows(
+                { targetStartsAt: overlap.start, targetEndsAt: overlap.end },
+                range.start,
+                STEP_MINUTES,
               );
-              const rowEnd = Math.max(
-                rowStart + 1,
-                rowForTime(overlap.end.toISOString()) + 2,
-              );
-              highlightRows = { rowStart, rowEnd };
             }
           }
 
           return (
             <RoleDropZone
-              key={`drop-${group.roleId}`}
+              key={`drop-${shift.id}`}
               day={day}
               group={group}
               shiftId={shift.id}
-              rowCount={timeSlots.length}
+              rows={shiftRows}
               highlightRows={highlightRows}
             />
           );
@@ -375,20 +373,21 @@ function RoleDropZone({
   day,
   group,
   shiftId,
-  rowCount,
+  rows,
   highlightRows,
 }: {
   day: PlanDay;
   group: RoleColumnGroup;
   shiftId: string;
-  rowCount: number;
+  /** Zeilenbereich dieser Schicht — die Drop-Zone deckt nur ihn ab (#620). */
+  rows: { rowStart: number; rowEnd: number };
   /** Nur dieser Zeilenbereich wird beim Drüberziehen hervorgehoben —
    * fehlt er (kein passender Drag oder keine Überschneidung), bleibt die
    * Spalte beim Hovern unmarkiert statt komplett einheitlich zu leuchten. */
   highlightRows: { rowStart: number; rowEnd: number } | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({
-    id: `role::${day.id}::${group.roleId}`,
+    id: `role::${day.id}::${group.roleId}::${shiftId}`,
     data: {
       type: "role-column",
       dayId: day.id,
@@ -403,7 +402,7 @@ function RoleDropZone({
         ref={setNodeRef}
         style={{
           gridColumn: `${group.startColumn + 2} / span ${group.capacity}`,
-          gridRow: `2 / span ${rowCount}`,
+          gridRow: `${rows.rowStart} / ${rows.rowEnd}`,
         }}
       />
       {isOver && highlightRows && (
