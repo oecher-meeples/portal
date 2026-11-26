@@ -4,6 +4,7 @@ import { deleteExpiredBankDataAccessLogs } from "@/lib/members/bank-access-log";
 import { deleteExpiredLoginLogs } from "@/lib/auth/login-log";
 import { processNewsletterQueue } from "@/lib/newsletter/dispatch";
 import { resetExplainerAttendance } from "@/lib/explainer/attendance-cleanup";
+import { deleteOrphanedPostImages } from "@/lib/content/post-images-cleanup";
 import { requireCronAuth } from "@/lib/utils/cron-auth";
 
 // Brevo's free tier caps at 300 mails/day; this cron runs once a day (see docker/cron/crontab).
@@ -19,11 +20,13 @@ export async function GET(request: Request) {
   const bankLogCleanup = await deleteExpiredBankDataAccessLogs();
   const loginLogCleanup = await deleteExpiredLoginLogs();
   const explainerAttendanceCleanup = await resetExplainerAttendance();
+  const orphanedPostImagesDeleted = await deleteOrphanedPostImages();
   return NextResponse.json({
     ...summary,
     newsletter,
     bankLogCleanup,
     loginLogCleanup,
     explainerAttendanceCleanup,
+    orphanedPostImagesDeleted,
   });
 }

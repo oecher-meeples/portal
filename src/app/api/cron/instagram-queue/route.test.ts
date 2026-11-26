@@ -32,6 +32,12 @@ vi.mock("@/lib/explainer/attendance-cleanup", () => ({
     resetExplainerAttendanceMock(...args),
 }));
 
+const deleteOrphanedPostImagesMock = vi.fn();
+vi.mock("@/lib/content/post-images-cleanup", () => ({
+  deleteOrphanedPostImages: (...args: unknown[]) =>
+    deleteOrphanedPostImagesMock(...args),
+}));
+
 const { GET } = await import("./route");
 
 describe("GET /api/cron/instagram-queue", () => {
@@ -44,6 +50,8 @@ describe("GET /api/cron/instagram-queue", () => {
     deleteExpiredLoginLogsMock.mockResolvedValue({ deleted: 0 });
     resetExplainerAttendanceMock.mockReset();
     resetExplainerAttendanceMock.mockResolvedValue({ deleted: 0 });
+    deleteOrphanedPostImagesMock.mockReset();
+    deleteOrphanedPostImagesMock.mockResolvedValue(0);
     processNewsletterQueueMock.mockReset();
     processNewsletterQueueMock.mockResolvedValue({
       processed: 0,
@@ -112,6 +120,7 @@ describe("GET /api/cron/instagram-queue", () => {
       bankLogCleanup: { deleted: 0 },
       loginLogCleanup: { deleted: 0 },
       explainerAttendanceCleanup: { deleted: 0 },
+      orphanedPostImagesDeleted: 0,
     });
   });
 
@@ -195,5 +204,19 @@ describe("GET /api/cron/instagram-queue", () => {
 
     expect(resetExplainerAttendanceMock).toHaveBeenCalledTimes(1);
     expect(body.explainerAttendanceCleanup).toEqual({ deleted: 2 });
+  });
+
+  it("deletes orphaned blog images on every run (#671)", async () => {
+    processQueueMock.mockResolvedValue({ processed: 0 });
+    deleteOrphanedPostImagesMock.mockResolvedValue(3);
+    const request = new Request(
+      "https://example.com/api/cron/instagram-queue",
+      { headers: { authorization: "Bearer test-secret" } },
+    );
+
+    const body = await (await GET(request)).json();
+
+    expect(deleteOrphanedPostImagesMock).toHaveBeenCalledTimes(1);
+    expect(body.orphanedPostImagesDeleted).toBe(3);
   });
 });
