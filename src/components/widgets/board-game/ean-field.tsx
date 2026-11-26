@@ -11,7 +11,6 @@ import { searchEanForBoardGame } from "@/lib/ludothek/ean-search";
 import type { EanSearchResult } from "@/lib/upc-lookup/client";
 
 type SearchOptions = {
-  bggProductCode?: string | null;
   publisher?: string[];
   excludeBoardGameId?: string;
 };
@@ -45,7 +44,6 @@ export function EanField({
   title,
   autoSearchOnMount,
   alternateTitles,
-  bggProductCode,
   publisherForSorting,
   boardGameId,
 }: {
@@ -63,11 +61,7 @@ export function EanField({
   /** BGGs Alternativnamen (#187) — liefert `title` keinen Treffer, wird der
    * Reihe nach mit jedem dieser Namen weitergesucht (#197-Folgeanfrage). */
   alternateTitles?: string[];
-  /** Eindeutiger BGG-Product-Code über die (ggf. deutschen) Versionen (#205)
-   * — hat Vorrang vor der Titelsuche, siehe `searchEanForBoardGame()`. */
-  bggProductCode?: string | null;
-  /** Sortiert Kandidaten mit passendem `brand` nach oben (#205) — greift nur,
-   * wenn kein `bggProductCode` vorliegt. */
+  /** Sortiert Kandidaten mit passendem `brand` nach oben (#205). */
   publisherForSorting?: string[];
   /** Titel im Editor: seine eigenen EANs gelten in den Vorschlägen nicht als vergeben. */
   boardGameId?: string;
@@ -98,25 +92,19 @@ export function EanField({
     setDraft("");
   }
 
+  /** Übernimmt alle freien Treffer (#668); bei mehreren bleibt die Liste zum Abwählen offen. */
   function applyResults(results: EanSearchResult[]) {
-    setCandidates(null);
-    const available = results.filter((result) => !result.takenBy);
-    if (results.length === 0) {
-      setMessage("Keine EAN gefunden.");
-    } else if (results.length === 1 && available.length === 1) {
-      addEans([available[0].ean]);
-      setMessage(null);
-    } else {
-      setCandidates(results);
-      setMessage(null);
-    }
+    setCandidates(results.length > 1 ? results : null);
+    setMessage(results.length === 0 ? "Keine EAN gefunden." : null);
+    addEans(
+      results.filter((result) => !result.takenBy).map((result) => result.ean),
+    );
   }
 
   async function runSearch(trimmedTitle: string) {
     const result = await searchWithFallback(
       [trimmedTitle, ...(alternateTitles ?? [])],
       {
-        bggProductCode,
         publisher: publisherForSorting,
         excludeBoardGameId: boardGameId,
       },
@@ -154,7 +142,6 @@ export function EanField({
 
     let cancelled = false;
     searchWithFallback([trimmedTitle, ...(alternateTitles ?? [])], {
-      bggProductCode,
       publisher: publisherForSorting,
       excludeBoardGameId: boardGameId,
     }).then((result) => {
@@ -241,7 +228,7 @@ export function EanField({
       {candidates && candidates.length > 0 && (
         <fieldset className="flex flex-col gap-1 rounded-md border p-2">
           <legend className="text-muted-foreground px-1 text-xs">
-            {candidates.length} EAN-Vorschläge — beliebig viele auswählen
+            {candidates.length} EANs gefunden — nicht passende abwählen
           </legend>
           {candidates.map((candidate) => (
             <label

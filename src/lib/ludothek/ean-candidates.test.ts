@@ -12,7 +12,7 @@ vi.mock("@/lib/upc-lookup/client", () => ({
   searchEanByName: (...args: unknown[]) => searchEanByNameMock(...args),
 }));
 
-const { pickUnambiguousEan } = await import("./ean-candidates");
+const { findFreeEans } = await import("./ean-candidates");
 
 beforeEach(() => {
   prismaMock.boardGameEan.findMany.mockResolvedValue([]);
@@ -20,45 +20,41 @@ beforeEach(() => {
   searchEanByNameMock.mockResolvedValue([]);
 });
 
-describe("pickUnambiguousEan", () => {
-  it("takes the single free hit", async () => {
-    searchGamesByNameMock.mockResolvedValue([
-      { ean: "4015566600225", title: "Catan" },
-    ]);
-    expect(await pickUnambiguousEan(["Catan"])).toBe("4015566600225");
-  });
-
-  it("returns null for several editions", async () => {
+describe("findFreeEans", () => {
+  it("returns every free ean of the hits", async () => {
     searchGamesByNameMock.mockResolvedValue([
       { ean: "4015566600225", title: "Catan" },
       { ean: "9783897775329", title: "Catan 2" },
     ]);
-    expect(await pickUnambiguousEan(["Catan"])).toBeNull();
+    expect(await findFreeEans(["Catan"])).toEqual([
+      "4015566600225",
+      "9783897775329",
+    ]);
   });
 
-  it("ignores eans owned by another title", async () => {
+  it("skips eans owned by another title", async () => {
     searchGamesByNameMock.mockResolvedValue([
       { ean: "4015566600225", title: "Catan" },
+      { ean: "9783897775329", title: "Catan 2" },
     ]);
     prismaMock.boardGameEan.findMany.mockResolvedValue([
       { ean: "4015566600225", boardGame: { title: "Anderer" } },
     ] as never);
-    expect(await pickUnambiguousEan(["Catan"])).toBeNull();
+    expect(await findFreeEans(["Catan"])).toEqual(["9783897775329"]);
   });
 
   it("tries alternate titles when the first has no hit", async () => {
     searchGamesByNameMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ ean: "4015566600225", title: "Catan" }]);
-    searchEanByNameMock.mockResolvedValue([]);
-    expect(await pickUnambiguousEan(["Settlers", "Catan"])).toBe(
+    expect(await findFreeEans(["Settlers", "Catan"])).toEqual([
       "4015566600225",
-    );
+    ]);
   });
 
   it("swallows source failures", async () => {
     searchGamesByNameMock.mockRejectedValue(new Error("down"));
     searchEanByNameMock.mockRejectedValue(new Error("down"));
-    expect(await pickUnambiguousEan(["Catan"])).toBeNull();
+    expect(await findFreeEans(["Catan"])).toEqual([]);
   });
 });

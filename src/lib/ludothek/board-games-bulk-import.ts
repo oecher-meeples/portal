@@ -15,17 +15,13 @@ import { lookupEanTitle, UpcLookupError } from "@/lib/upc-lookup/client";
 import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
 import {
   bggDataToTitleInput,
-  resolveProductCodeFromVersions,
   resolvePublisherFromVersions,
 } from "@/lib/ludothek/board-game-versions";
 import {
   createBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
-import {
-  markTakenEans,
-  pickUnambiguousEan,
-} from "@/lib/ludothek/ean-candidates";
+import { markTakenEans, findFreeEans } from "@/lib/ludothek/ean-candidates";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
 import { getSuggestedInventoryNumber } from "@/lib/ludothek/game-copies";
 import {
@@ -88,10 +84,9 @@ function toCreateInput(
 }
 
 /**
- * EAN für einen neu importierten Titel (#668): eine als Zeile gegebene EAN
- * zählt direkt, sonst wird sie über Product-Code → Spielemeta → UPCitemdb
- * gesucht. Nur ein eindeutiger, noch freier Treffer wird übernommen — ein
- * Fehlschlag lässt den Import nie scheitern.
+ * EANs für einen neu importierten Titel (#668): eine als Zeile gegebene EAN
+ * zählt direkt, sonst werden alle freien EANs übernommen, die Spielemeta bzw.
+ * UPCitemdb zum Titel liefern. Ein Fehlschlag lässt den Import nie scheitern.
  */
 async function resolveImportEans(
   entry: string,
@@ -104,11 +99,9 @@ async function resolveImportEans(
     return checked.takenBy ? [] : [checked.ean];
   }
 
-  const ean = await pickUnambiguousEan([data.title, ...data.alternateNames], {
-    bggProductCode: resolveProductCodeFromVersions(data.versions).value,
+  return findFreeEans([data.title, ...data.alternateNames], {
     publisher: resolvePublisherFromVersions(data.versions).value ?? [],
   });
-  return ean ? [ean] : [];
 }
 
 /**

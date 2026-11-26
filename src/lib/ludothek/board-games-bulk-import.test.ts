@@ -45,10 +45,10 @@ vi.mock("@/lib/ludothek/game-copies", () => ({
 }));
 
 const markTakenEansMock = vi.fn();
-const pickUnambiguousEanMock = vi.fn();
+const findFreeEansMock = vi.fn();
 vi.mock("@/lib/ludothek/ean-candidates", () => ({
   markTakenEans: (...args: unknown[]) => markTakenEansMock(...args),
-  pickUnambiguousEan: (...args: unknown[]) => pickUnambiguousEanMock(...args),
+  findFreeEans: (...args: unknown[]) => findFreeEansMock(...args),
 }));
 
 const lookupEanTitleMock = vi.fn();
@@ -101,7 +101,7 @@ function beforeEachSetup() {
 
 beforeEach(() => {
   markTakenEansMock.mockImplementation(async (results: unknown[]) => results);
-  pickUnambiguousEanMock.mockResolvedValue(null);
+  findFreeEansMock.mockResolvedValue([]);
 });
 
 describe("bulkImportBoardGames", () => {

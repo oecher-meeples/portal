@@ -45,10 +45,10 @@ vi.mock("@/lib/ludothek/game-copies", () => ({
 }));
 
 const markTakenEansMock = vi.fn();
-const pickUnambiguousEanMock = vi.fn();
+const findFreeEansMock = vi.fn();
 vi.mock("@/lib/ludothek/ean-candidates", () => ({
   markTakenEans: (...args: unknown[]) => markTakenEansMock(...args),
-  pickUnambiguousEan: (...args: unknown[]) => pickUnambiguousEanMock(...args),
+  findFreeEans: (...args: unknown[]) => findFreeEansMock(...args),
 }));
 
 const lookupEanTitleMock = vi.fn();
@@ -99,14 +99,14 @@ function beforeEachSetup() {
 
 beforeEach(() => {
   markTakenEansMock.mockImplementation(async (results: unknown[]) => results);
-  pickUnambiguousEanMock.mockResolvedValue(null);
+  findFreeEansMock.mockResolvedValue([]);
 });
 
 // Split out of board-games-bulk-import.test.ts (#668) — 400-line limit.
 describe("bulkImportBoardGames — EAN stored with the title (#668)", () => {
-  it("searches an EAN for a title import and stores the unambiguous hit (#668)", async () => {
+  it("searches an EAN for a title import and stores every free hit (#668)", async () => {
     beforeEachSetup();
-    pickUnambiguousEanMock.mockResolvedValue(VALID_EAN);
+    findFreeEansMock.mockResolvedValue([VALID_EAN, "9783897775329"]);
     searchBggGamesExactMock.mockResolvedValue([
       { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
     ]);
@@ -121,12 +121,12 @@ describe("bulkImportBoardGames — EAN stored with the title (#668)", () => {
 
     await bulkImportBoardGames(["Ark Nova"]);
 
-    expect(pickUnambiguousEanMock).toHaveBeenCalledWith(
+    expect(findFreeEansMock).toHaveBeenCalledWith(
       ["Ark Nova", "Ark Nova (Deutsch)"],
       expect.any(Object),
     );
     expect(createBoardGameMock).toHaveBeenCalledWith(
-      expect.objectContaining({ eans: [VALID_EAN] }),
+      expect.objectContaining({ eans: [VALID_EAN, "9783897775329"] }),
     );
   });
 
@@ -171,7 +171,7 @@ describe("bulkImportBoardGames — EAN stored with the title (#668)", () => {
     expect(createBoardGameMock).toHaveBeenCalledWith(
       expect.objectContaining({ eans: [VALID_EAN] }),
     );
-    expect(pickUnambiguousEanMock).not.toHaveBeenCalled();
+    expect(findFreeEansMock).not.toHaveBeenCalled();
   });
 
   it("drops a scanned EAN that already belongs to another title", async () => {

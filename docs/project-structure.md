@@ -65,7 +65,7 @@ src/lib/
 │               ├── board-game-versions.ts BGG-Versionen auswerten: deutsche bevorzugen, Verlag/Product-Code auflösen, BGG-Version → `VersionInput`
 │               ├── edition-language.ts BGG-Sprachname → Flaggen-Ländercode (Anzeige über `entities/edition-flag.tsx`)
 │               ├── board-game-eans.ts  EANs je Titel (#668, ADR 0016): Normalisieren/Validieren, `eanWhere()` für jeden EAN-Lookup, `assertEansAvailable`/`rethrowEanConflict` (eine EAN = ein Titel), `replaceBoardGameEans`
-│               ├── ean-search.ts       Quellen-Reihenfolge der Titelsuche: BGG-Product-Code → Spielemeta → UPCitemdb-Fallback, markiert vergebene EANs (`takenBy`)
+│               ├── ean-search.ts       Quellen-Reihenfolge der Titelsuche: Spielemeta → UPCitemdb-Fallback, markiert vergebene EANs (`takenBy`); Kern in `ean-candidates.ts` (auch `findFreeEans` für den Massenimport)
 │               ├── holdings.ts         Zustandsübergänge (ausleihen, weitergeben, zurückgeben) — auf `GameCopy`
 │               ├── holdings-external.ts Übergänge mit externem Ziel (#333): an extern weitergeben/ausgeben, Umbuchen, Rückgabe-von-extern-Bestätigung
 │               ├── holdings-lookup.ts  Leseseite (Zustand inkl. verfügbar/nicht-verfügbar, Scan auflösen, Verantwortliche)

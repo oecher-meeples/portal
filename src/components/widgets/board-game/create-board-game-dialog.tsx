@@ -16,7 +16,6 @@ import {
   searchBggGamesAction,
 } from "@/lib/ludothek/board-games-bgg-import";
 import { extractBggIdFromLink, parseBggId } from "@/lib/ludothek/bgg-id";
-import { isValidEan } from "@/lib/inventory/ean";
 import { versionInputFromBgg } from "@/lib/ludothek/board-game-versions";
 import { CreateBoardGameBggImportStep } from "@/components/widgets/board-game/create-board-game-bgg-import-step";
 import { CreateBoardGameDialogFooter } from "@/components/widgets/board-game/create-board-game-dialog-footer";
@@ -303,16 +302,11 @@ export function CreateBoardGameDialog({
     }
   }
 
-  /** Übernimmt Verlag, Sprache + Product Code (als EAN) der gewählten
-   * BGG-Edition (#205) — die EAN nur, wenn der Code gültig ist (#322). */
+  /** Übernimmt Verlag und Sprache der gewählten BGG-Edition (#205). Der
+   * Product Code ist keine EAN-Quelle (er entspricht meist nicht der EAN). */
   function handleSelectVersion(version: BggVersion) {
     patchForm({
       ...versionInputToFormPatch(versionInputFromBgg(version)),
-      ...(version.productCode &&
-      isValidEan(version.productCode) &&
-      !form.eans.includes(version.productCode)
-        ? { eans: [...form.eans, version.productCode] }
-        : {}),
     });
   }
 

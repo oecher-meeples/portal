@@ -12,17 +12,11 @@ import { UpcLookupError } from "@/lib/upc-lookup/client";
  * zu Schritt 2 ausgelöst (nur wenn das EAN-Feld leer ist) und manuell über
  * das Lupen-Icon neben dem EAN-Feld, unabhängig vom aktuellen Feldinhalt.
  *
- * Reihenfolge (#668): gültiger BGG-Product-Code → Spielemeta → UPCitemdb
- * (Fallback bei leerem Ergebnis oder Spielemeta-Fehler). Treffer, deren EAN
- * schon einem anderen Titel gehört, tragen `takenBy`.
- *
- * Liegt ein eindeutiger, **gültiger** BGG-Product-Code vor
- * (`resolveProductCodeFromVersions()`), hat er Vorrang vor UPCitemdb (#205)
- * — der Code ist meist die echte Verpackungs-EAN. Erweist er sich als
- * ungültig (z. B. enthält Buchstaben, keine gültige Prüfziffer), fällt die
- * Suche stattdessen auf UPCitemdb zurück, statt ihn ungeprüft zu übernehmen
- * (#322). Ohne brauchbaren Product-Code bleibt UPCitemdb wie bisher die
- * Quelle, deren Kandidaten nach passendem Verlag sortiert werden.
+ * Reihenfolge (#668): Spielemeta → UPCitemdb (Fallback bei leerem Ergebnis
+ * oder Spielemeta-Fehler), Kandidaten nach passendem Verlag sortiert. Der
+ * BGG-Product-Code ist bewusst keine Quelle mehr — er entspricht meist
+ * nicht der EAN. Treffer, deren EAN schon einem anderen Titel gehört,
+ * tragen `takenBy`.
  */
 export async function searchEanForBoardGame(
   title: string,

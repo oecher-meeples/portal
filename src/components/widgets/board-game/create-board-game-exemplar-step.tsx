@@ -68,7 +68,7 @@ export function CreateBoardGameExemplarStep({
       {showEan && (
         <EanField
           // Neu mounten je Version: die automatische EAN-Suche läuft dann mit
-          // deren Product Code und Verlag erneut, sofern das Feld leer ist.
+          // deren Verlag erneut, sofern das Feld leer ist.
           key={values.bggVersion?.bggVersionId ?? values.editionMode}
           idPrefix="game"
           values={values.eans}
@@ -76,7 +76,6 @@ export function CreateBoardGameExemplarStep({
           title={values.title}
           autoSearchOnMount
           alternateTitles={preview?.alternateNames}
-          bggProductCode={values.bggVersion?.productCode ?? null}
           publisherForSorting={parseCommaSeparatedList(values.publisher)}
         />
       )}

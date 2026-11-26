@@ -90,67 +90,6 @@ describe("searchEanForBoardGame", () => {
     );
   });
 
-  describe("BGG-Product-Code-Priorität (#205)", () => {
-    it("returns a valid BGG product code directly, without calling UPCitemdb", async () => {
-      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      mockPermissionKeys("all");
-
-      const result = await searchEanForBoardGame("Ark Nova", {
-        bggProductCode: "0850000576407",
-        publisher: ["Feuerland Spiele"],
-      });
-
-      expect(searchEanByNameMock).not.toHaveBeenCalled();
-      expect(result).toEqual({
-        success: true,
-        results: [
-          {
-            ean: "0850000576407",
-            title: "Ark Nova",
-            brand: "Feuerland Spiele",
-          },
-        ],
-      });
-    });
-
-    it("falls back to UPCitemdb when no BGG product code is given", async () => {
-      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      mockPermissionKeys("all");
-      searchEanByNameMock.mockResolvedValue([
-        { ean: "0850000576407", title: "Ark Nova" },
-      ]);
-
-      const result = await searchEanForBoardGame("Ark Nova", {
-        bggProductCode: null,
-      });
-
-      expect(searchEanByNameMock).toHaveBeenCalledWith("Ark Nova");
-      expect(result.success && result.results).toEqual([
-        { ean: "0850000576407", title: "Ark Nova" },
-      ]);
-    });
-
-    it("falls back to UPCitemdb when the BGG product code is not a valid EAN (#322)", async () => {
-      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
-      mockPermissionKeys("all");
-      searchEanByNameMock.mockResolvedValue([
-        { ean: "0850000576407", title: "Ark Nova", brand: "Feuerland Spiele" },
-      ]);
-
-      const result = await searchEanForBoardGame("Ark Nova", {
-        // Real-world case (#322): BGG's German-edition product code, not a
-        // valid EAN (contains letters, wrong length).
-        bggProductCode: "FEU001",
-        publisher: ["Feuerland Spiele"],
-      });
-
-      expect(searchEanByNameMock).toHaveBeenCalledWith("Ark Nova");
-      expect(result.success && result.results).toEqual([
-        { ean: "0850000576407", title: "Ark Nova", brand: "Feuerland Spiele" },
-      ]);
-    });
-  });
-
   describe("Verlags-Sortierung der UPCitemdb-Kandidaten (#205)", () => {
     it("moves a hit with a matching brand to the front", async () => {
       getCurrentUserMock.mockResolvedValue({ id: "user-1" });
@@ -226,14 +165,6 @@ describe("searchEanForBoardGame", () => {
         ],
       });
       expect(searchEanByNameMock).not.toHaveBeenCalled();
-    });
-
-    it("prefers a valid BGG product code over spielemeta", async () => {
-      allowed();
-
-      await searchEanForBoardGame("Catan", { bggProductCode: "4015566600225" });
-
-      expect(searchGamesByNameMock).not.toHaveBeenCalled();
     });
 
     it("falls back to UPCitemdb when spielemeta has no hits", async () => {

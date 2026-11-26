@@ -1,10 +1,8 @@
-import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
 import { prisma } from "@/lib/utils/prisma";
 import { searchGamesByName } from "@/lib/spielemeta/client";
 import { searchEanByName, type EanSearchResult } from "@/lib/upc-lookup/client";
 
 export type EanCandidateOptions = {
-  bggProductCode?: string | null;
   publisher?: string[];
   /** Der gerade bearbeitete Titel — seine eigenen EANs gelten nicht als vergeben. */
   excludeBoardGameId?: string;
@@ -67,8 +65,7 @@ async function trySpielemeta(title: string): Promise<EanSearchResult[] | null> {
 }
 
 /**
- * Quellen-Reihenfolge (#668): gültiger BGG-Product-Code → Spielemeta →
- * UPCitemdb (Fallback bei leerem Ergebnis oder Spielemeta-Fehler). Ohne
+ * Quellen-Reihenfolge (#668): Spielemeta → UPCitemdb (Fallback bei leerem Ergebnis oder Spielemeta-Fehler). Ohne
  * Berechtigungsprüfung — Aufrufer sind selbst geschützt (Server Action bzw.
  * Massenimport). Wirft `UpcLookupError`, wenn auch der Fallback ausfällt.
  */
@@ -76,19 +73,6 @@ export async function findEanCandidates(
   title: string,
   options?: EanCandidateOptions,
 ): Promise<EanSearchResult[]> {
-  if (options?.bggProductCode && isValidEan(options.bggProductCode)) {
-    return markTakenEans(
-      [
-        {
-          ean: normaliseEan(options.bggProductCode),
-          title,
-          brand: options.publisher?.[0],
-        },
-      ],
-      options.excludeBoardGameId,
-    );
-  }
-
   const sort = (results: EanSearchResult[]) =>
     options?.publisher?.length
       ? sortByPublisherMatch(results, options.publisher)
@@ -100,26 +84,24 @@ export async function findEanCandidates(
 }
 
 /**
- * Unbeaufsichtigte Auswahl für den Massenimport: nur ein eindeutiger, noch
- * freier Treffer wird übernommen — bei mehreren Editionen entscheidet
- * niemand, also bleibt der Titel ohne EAN (nachträglich im Editor setzbar).
- * Sucht der Reihe nach mit allen Titeln, bis einer Treffer liefert.
+ * Unbeaufsichtigte Übernahme für den Massenimport: alle noch freien EANs, die
+ * die Quelle zum Titel liefert (#668). Sucht der Reihe nach mit allen Titeln,
+ * bis einer Treffer liefert; ein Suchfehler lässt den Import nie scheitern.
  */
-export async function pickUnambiguousEan(
+export async function findFreeEans(
   titles: string[],
   options?: EanCandidateOptions,
-): Promise<string | null> {
+): Promise<string[]> {
   try {
     for (const title of titles) {
       if (!title.trim()) continue;
-      const free = (await findEanCandidates(title, options)).filter(
-        (result) => !result.takenBy,
-      );
-      if (free.length === 1) return free[0].ean;
-      if (free.length > 1) return null;
+      const results = await findEanCandidates(title, options);
+      if (results.length > 0) {
+        return results.filter((r) => !r.takenBy).map((r) => r.ean);
+      }
     }
   } catch {
-    return null;
+    return [];
   }
-  return null;
+  return [];
 }

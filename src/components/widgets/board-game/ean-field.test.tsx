@@ -49,14 +49,13 @@ describe("EanField", () => {
 
     await waitFor(() =>
       expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova", {
-        bggProductCode: undefined,
         publisher: undefined,
       }),
     );
     expect(onChange).toHaveBeenCalledWith(["0850000576407"]);
   });
 
-  it("shows a selection list for more than one hit instead of auto-filling", async () => {
+  it("adds every free hit and keeps a list to deselect", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     searchEanForBoardGameMock.mockResolvedValue({
@@ -82,11 +81,7 @@ describe("EanField", () => {
 
     expect(await screen.findByText(/Ark Nova \(US\)/)).toBeInTheDocument();
     expect(screen.getByText(/Ark Nova \(DE\)/)).toBeInTheDocument();
-    expect(onChange).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("checkbox", { name: /Ark Nova \(DE\)/ }));
-
-    expect(onChange).toHaveBeenCalledWith(["4056282500000"]);
+    expect(onChange).toHaveBeenCalledWith(["0850000576407", "4056282500000"]);
   });
 
   it("lets the user tick several suggestions and keeps earlier ones", async () => {
@@ -262,7 +257,6 @@ describe("EanField", () => {
 
     await waitFor(() =>
       expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova", {
-        bggProductCode: undefined,
         publisher: undefined,
       }),
     );
@@ -296,8 +290,8 @@ describe("EanField", () => {
     expect(searchEanForBoardGameMock).not.toHaveBeenCalled();
   });
 
-  describe("BGG-Product-Code und Verlags-Sortierung (#205)", () => {
-    it("forwards the resolved BGG product code and publisher to the search", async () => {
+  describe("Verlags-Sortierung (#205)", () => {
+    it("forwards the publisher to the search", async () => {
       const user = userEvent.setup();
       searchEanForBoardGameMock.mockResolvedValue({
         success: true,
@@ -310,7 +304,6 @@ describe("EanField", () => {
           values={[]}
           onChange={vi.fn()}
           title="Ark Nova"
-          bggProductCode="FEU001"
           publisherForSorting={["Feuerland Spiele"]}
         />,
       );
@@ -321,7 +314,6 @@ describe("EanField", () => {
 
       await waitFor(() =>
         expect(searchEanForBoardGameMock).toHaveBeenCalledWith("Ark Nova", {
-          bggProductCode: "FEU001",
           publisher: ["Feuerland Spiele"],
         }),
       );

@@ -13,8 +13,8 @@ Issue #668. Jede Edition/Version eines Spiels trägt eine eigene EAN; die Spiele
 - Ordnet man eine bereits vergebene EAN einem zweiten Titel zu, ist das ein Fehler, der den besitzenden Titel nennt (`EanConflictError`); der DB-Unique-Verstoß (`P2002`, Race) wird auf denselben Fehler abgebildet. Das ersetzt den früheren, nur warnenden `duplicateEanHint`.
 - Jeder Lookup (Scan, Suche, Admin-Bestand) matcht über `eans: { some: { ean } }` (`eanWhere()`), findet den Titel also über jede seiner EANs.
 - Datenmigration: bestehende `board_games.ean` werden normalisiert nach `board_game_eans` kopiert. Ein Duplikat über mehrere Titel lässt die Migration hart fehlschlagen — nichts wird stillschweigend verworfen.
-- `BoardGameVersion.productCode` (BGG) bleibt unverändert; ein gültiger Code dient als EAN-Vorschlag, wird aber nicht automatisch gespiegelt.
+- `BoardGameVersion.productCode` (BGG) bleibt unverändert, ist aber **keine EAN-Quelle**: er entspricht in ~90 % der Fälle nicht der EAN.
 
-**EAN-Quellen** (`searchEanForBoardGame`): gültiger BGG-Product-Code → Spielemeta (`lib/spielemeta/client.ts`, Bearer-Key `EAN_API_KEY`) → UPCitemdb als Fallback bei leerem Ergebnis oder Spielemeta-Fehler. `PARENTEAN` der API wird ignoriert.
+**EAN-Quellen** (`searchEanForBoardGame`): Spielemeta (`lib/spielemeta/client.ts`, Bearer-Key `EAN_API_KEY`) → UPCitemdb als Fallback bei leerem Ergebnis oder Spielemeta-Fehler. Alle freien Treffer werden übernommen (Wizard: vorausgewählt, abwählbar; Massenimport: automatisch, `findFreeEans`). `PARENTEAN` der API wird ignoriert.
 
 **Nicht wieder vorschlagen:** ein erneutes „EAN nicht unique“ — Duplikate zwischen Titeln sind ein Datenfehler, der bewusst über eine Admin-Aktion aufgelöst wird, nie automatisch.
