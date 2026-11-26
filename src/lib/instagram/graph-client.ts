@@ -121,7 +121,19 @@ export async function refreshLongLivedToken(
   return { accessToken: body.access_token, expiresInSeconds: body.expires_in };
 }
 
-export async function createMediaContainer({
+async function postMedia(
+  igBusinessAccountId: string,
+  params: Record<string, string>,
+): Promise<{ creationId: string }> {
+  const response = await graphFetch(
+    graphApiUrl(`/${igBusinessAccountId}/media?${new URLSearchParams(params)}`),
+    { method: "POST" },
+  );
+  const body = await parseJsonOrThrow<{ id: string }>(response);
+  return { creationId: body.id };
+}
+
+export function createMediaContainer({
   igBusinessAccountId,
   imageUrl,
   caption,
@@ -132,17 +144,48 @@ export async function createMediaContainer({
   caption: string;
   accessToken: string;
 }): Promise<{ creationId: string }> {
-  const params = new URLSearchParams({
+  return postMedia(igBusinessAccountId, {
     image_url: imageUrl,
     caption,
     access_token: accessToken,
   });
-  const response = await graphFetch(
-    graphApiUrl(`/${igBusinessAccountId}/media?${params}`),
-    { method: "POST" },
-  );
-  const body = await parseJsonOrThrow<{ id: string }>(response);
-  return { creationId: body.id };
+}
+
+/** Einzelbild eines Karussells (#671) — ohne Caption, die gehört an den
+ * Karussell-Container. */
+export function createCarouselItemContainer({
+  igBusinessAccountId,
+  imageUrl,
+  accessToken,
+}: {
+  igBusinessAccountId: string;
+  imageUrl: string;
+  accessToken: string;
+}): Promise<{ creationId: string }> {
+  return postMedia(igBusinessAccountId, {
+    image_url: imageUrl,
+    is_carousel_item: "true",
+    access_token: accessToken,
+  });
+}
+
+export function createCarouselContainer({
+  igBusinessAccountId,
+  childrenIds,
+  caption,
+  accessToken,
+}: {
+  igBusinessAccountId: string;
+  childrenIds: string[];
+  caption: string;
+  accessToken: string;
+}): Promise<{ creationId: string }> {
+  return postMedia(igBusinessAccountId, {
+    media_type: "CAROUSEL",
+    children: childrenIds.join(","),
+    caption,
+    access_token: accessToken,
+  });
 }
 
 export async function getInstagramBusinessAccount(

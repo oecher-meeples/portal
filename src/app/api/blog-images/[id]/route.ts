@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getSessionTier } from "@/lib/auth/session";
 import { resolveNewsVisibility } from "@/lib/content/news-visibility";
@@ -15,7 +16,7 @@ const NOT_FOUND = () => new Response("Not found", { status: 404 });
  * sehen darf. Alles Nicht-Sichtbare ist ein 404 — nie 403, damit die
  * Existenz interner Bilder nicht verraten wird. */
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: RouteContext<"/api/blog-images/[id]">,
 ) {
   const { id } = await ctx.params;
@@ -49,9 +50,17 @@ export async function GET(
   if (!blob) return NOT_FOUND();
 
   const isPublic = image.post?.status === "PUBLISHED" && !image.post.internal;
-  return new Response(blob.bytes as BodyInit, {
+  // Instagram nimmt für `image_url` nur JPEG an (Meta Content Publishing).
+  const asJpeg = new URL(request.url).searchParams.get("format") === "jpeg";
+  const body = asJpeg
+    ? await sharp(blob.bytes)
+        .flatten({ background: "#ffffff" })
+        .jpeg({ quality: 90 })
+        .toBuffer()
+    : blob.bytes;
+  return new Response(body as BodyInit, {
     headers: {
-      "Content-Type": blob.contentType,
+      "Content-Type": asJpeg ? "image/jpeg" : blob.contentType,
       "Cache-Control": isPublic
         ? "public, max-age=3600"
         : "private, max-age=0, must-revalidate",

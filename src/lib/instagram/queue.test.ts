@@ -10,11 +10,17 @@ vi.mock("@/lib/instagram/cover-image", () => ({
 }));
 
 const createMediaContainerMock = vi.fn();
+const createCarouselItemContainerMock = vi.fn();
+const createCarouselContainerMock = vi.fn();
 const publishMediaMock = vi.fn();
 const refreshLongLivedTokenMock = vi.fn();
 vi.mock("@/lib/instagram/graph-client", () => ({
   createMediaContainer: (...args: unknown[]) =>
     createMediaContainerMock(...args),
+  createCarouselItemContainer: (...args: unknown[]) =>
+    createCarouselItemContainerMock(...args),
+  createCarouselContainer: (...args: unknown[]) =>
+    createCarouselContainerMock(...args),
   publishMedia: (...args: unknown[]) => publishMediaMock(...args),
   refreshLongLivedToken: (...args: unknown[]) =>
     refreshLongLivedTokenMock(...args),
@@ -116,6 +122,101 @@ describe("processPost", () => {
         postUrl: "https://www.instagram.com/p/media-1/",
         lastError: null,
       },
+    });
+  });
+
+  describe("images in the body (#671)", () => {
+    const ref = (id: string) => `![x](/api/blog-images/${id})`;
+
+    beforeEach(() => {
+      vi.stubEnv("PUBLIC_SITE_URL", "https://portal.example");
+      createCarouselItemContainerMock.mockReset();
+      createCarouselContainerMock.mockReset();
+      createCarouselItemContainerMock.mockImplementation(
+        async ({ imageUrl }: { imageUrl: string }) => ({
+          creationId: `child:${imageUrl}`,
+        }),
+      );
+      createCarouselContainerMock.mockResolvedValue({
+        creationId: "carousel-1",
+      });
+      publishMediaMock.mockResolvedValue({ mediaId: "media-1" });
+      createMediaContainerMock.mockResolvedValue({ creationId: "single-1" });
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    function linked(...ids: string[]) {
+      prismaMock.postImage.findMany.mockResolvedValue(
+        ids.map((id) => ({ id })) as never,
+      );
+    }
+
+    it("publishes a single body image as a normal post, as jpeg", async () => {
+      linked("a");
+
+      await processPost(makePost({}, { body: ref("a") }));
+
+      expect(createMediaContainerMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageUrl: "https://portal.example/api/blog-images/a?format=jpeg",
+        }),
+      );
+      expect(createCarouselContainerMock).not.toHaveBeenCalled();
+    });
+
+    it("builds a carousel with the cover first, then body images in order", async () => {
+      linked("b", "a");
+
+      const success = await processPost(
+        makePost(
+          {},
+          {
+            body: `${ref("a")} ${ref("b")}`,
+            coverImageUrl: "x",
+          },
+        ),
+      );
+
+      expect(success).toBe(true);
+      expect(createCarouselContainerMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          childrenIds: [
+            "child:https://example.com/cover.png",
+            "child:https://portal.example/api/blog-images/a?format=jpeg",
+            "child:https://portal.example/api/blog-images/b?format=jpeg",
+          ],
+        }),
+      );
+      expect(publishMediaMock).toHaveBeenCalledWith(
+        expect.objectContaining({ creationId: "carousel-1" }),
+      );
+    });
+
+    it("limits the carousel to 10 items", async () => {
+      const ids = Array.from({ length: 12 }, (_, i) => `i${i}`);
+      linked(...ids);
+
+      await processPost(
+        makePost({}, { body: ids.map(ref).join(" "), coverImageUrl: "x" }),
+      );
+
+      const call = createCarouselContainerMock.mock.calls[0][0];
+      expect(call.childrenIds).toHaveLength(10);
+      expect(call.childrenIds[1]).toContain("/api/blog-images/i0?");
+    });
+
+    it("ignores images that are not linked to the post", async () => {
+      linked();
+
+      await processPost(makePost({}, { body: ref("foreign") }));
+
+      expect(createMediaContainerMock).toHaveBeenCalledWith(
+        expect.objectContaining({ imageUrl: "https://example.com/cover.png" }),
+      );
+      expect(createCarouselContainerMock).not.toHaveBeenCalled();
     });
   });
 

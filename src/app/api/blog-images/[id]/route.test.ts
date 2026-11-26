@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import sharp from "sharp";
 import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
@@ -89,6 +90,30 @@ describe("GET /api/blog-images/[id]", () => {
     getSessionTierMock.mockResolvedValue("mitglied");
     mockPermissionKeys(["posts:internal"]);
     expect((await GET(request, ctx("img1"))).status).toBe(200);
+  });
+
+  it("converts to jpeg on request for Instagram", async () => {
+    image({ status: "PUBLISHED", internal: null });
+    const png = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 4,
+        background: { r: 255, g: 0, b: 0, alpha: 0.5 },
+      },
+    })
+      .png()
+      .toBuffer();
+    getBlobMock.mockResolvedValue({ bytes: png, contentType: "image/png" });
+
+    const response = await GET(
+      new Request("http://localhost/api/blog-images/img1?format=jpeg"),
+      ctx("img1"),
+    );
+
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    const bytes = Buffer.from(await response.arrayBuffer());
+    expect((await sharp(bytes).metadata()).format).toBe("jpeg");
   });
 
   it("404s when the file is missing in storage", async () => {
