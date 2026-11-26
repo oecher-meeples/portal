@@ -24,7 +24,7 @@ import { bggTagInputs } from "@/lib/ludothek/taxonomy/tags";
  * Owns the Anlegen-Dialog's Speichern-Flow — pulled out of
  * `create-board-game-dialog.tsx` purely for the file's size (ESLint
  * `max-lines`), not for reuse elsewhere. Includes the EAN-Recovery (#322):
- * `handleSubmit(eanOverride)` lets the caller resubmit with the EAN cleared
+ * `handleSubmit(eansOverride)` lets the caller resubmit without the invalid EANs
  * without waiting for a `patchForm` state update to land first.
  */
 export function useCreateBoardGameSubmit({
@@ -51,7 +51,6 @@ export function useCreateBoardGameSubmit({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [invalidEan, setInvalidEan] = useState(false);
-  const [lastHint, setLastHint] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function resetSubmitState() {
@@ -59,10 +58,10 @@ export function useCreateBoardGameSubmit({
     setInvalidEan(false);
   }
 
-  async function handleSubmit(eanOverride?: string) {
+  async function handleSubmit(eansOverride?: string[]) {
     resetSubmitState();
     setIsSubmitting(true);
-    const eanPatch = eanOverride !== undefined ? { ean: eanOverride } : {};
+    const eanPatch = eansOverride !== undefined ? { eans: eansOverride } : {};
     const parsedInventoryNumber = parseInventoryNumber(inventoryNumber);
 
     try {
@@ -90,7 +89,6 @@ export function useCreateBoardGameSubmit({
           setError(result.error);
           return;
         }
-        setLastHint(null);
         onCreated?.({ id: existingBoardGame.id, title: form.title });
       } else {
         const input: CreateBoardGameInput = {
@@ -108,10 +106,9 @@ export function useCreateBoardGameSubmit({
           setInvalidEan(Boolean(result.invalidEan));
           return;
         }
-        setLastHint(result.hint ?? null);
         // `result.error` above already excludes the error branch — TS just
         // doesn't narrow `boardGameId` off of it (a plain `string` field,
-        // not a literal discriminant), same gap `result.hint` silently has too.
+        // not a literal discriminant).
         onCreated?.({ id: result.boardGameId as string, title: form.title });
       }
 
@@ -133,7 +130,6 @@ export function useCreateBoardGameSubmit({
     error,
     setError,
     invalidEan,
-    lastHint,
     isSubmitting,
     resetSubmitState,
   };

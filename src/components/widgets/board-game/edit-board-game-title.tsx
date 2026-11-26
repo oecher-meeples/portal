@@ -247,8 +247,8 @@ export function EditBoardGameTitle({
       {!hideEan && (
         <EanField
           idPrefix={idPrefix}
-          value={values.ean}
-          onChange={(ean) => onChange({ ean })}
+          values={values.eans}
+          onChange={(eans) => onChange({ eans })}
           title={values.title}
           publisherForSorting={parseCommaSeparatedList(values.publisher)}
         />

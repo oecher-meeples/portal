@@ -32,6 +32,7 @@ import {
   boardGameToFormValues,
   versionInputToFormPatch,
   type BoardGameFormValues,
+  onlyValidEans,
 } from "@/components/widgets/board-game/board-game-form-values";
 import type {
   BggGameData,
@@ -84,7 +85,7 @@ export function CreateBoardGameDialog({
   const [isResolving, setIsResolving] = useState(false);
   const [form, setForm] = useState<BoardGameFormValues>({
     ...EMPTY_BOARD_GAME_FORM,
-    ean: defaultEan ?? "",
+    eans: defaultEan ? [defaultEan] : [],
   });
   const [placement, setPlacement] = useState<LocationPlacement | null>(null);
   const [inventoryNumber, setInventoryNumber] = useState(
@@ -112,7 +113,6 @@ export function CreateBoardGameDialog({
     error,
     setError,
     invalidEan,
-    lastHint,
     isSubmitting,
     resetSubmitState,
   } = useCreateBoardGameSubmit({
@@ -141,7 +141,10 @@ export function CreateBoardGameDialog({
     setSearchResults(null);
     setPreview(null);
     resetDuplicateGuard();
-    setForm({ ...EMPTY_BOARD_GAME_FORM, ean: defaultEan ?? "" });
+    setForm({
+      ...EMPTY_BOARD_GAME_FORM,
+      eans: defaultEan ? [defaultEan] : [],
+    });
     setInventoryNumber(initialInventoryNumber);
     resetSubmitState();
     setPlacement(null);
@@ -305,8 +308,10 @@ export function CreateBoardGameDialog({
   function handleSelectVersion(version: BggVersion) {
     patchForm({
       ...versionInputToFormPatch(versionInputFromBgg(version)),
-      ...(version.productCode && isValidEan(version.productCode)
-        ? { ean: version.productCode }
+      ...(version.productCode &&
+      isValidEan(version.productCode) &&
+      !form.eans.includes(version.productCode)
+        ? { eans: [...form.eans, version.productCode] }
         : {}),
     });
   }
@@ -409,7 +414,7 @@ export function CreateBoardGameDialog({
             (invalidEan ? (
               <InvalidEanRecovery
                 message={error}
-                onDeleteAndSave={() => handleSubmit("")}
+                onDeleteAndSave={() => handleSubmit(onlyValidEans(form.eans))}
                 onBack={() => setError(null)}
               />
             ) : (
@@ -430,7 +435,6 @@ export function CreateBoardGameDialog({
           />
         </DialogContent>
       </Dialog>
-      {lastHint && <p className="text-sm text-amber-600">{lastHint}</p>}
     </div>
   );
 }

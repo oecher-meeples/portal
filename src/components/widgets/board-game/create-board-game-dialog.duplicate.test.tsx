@@ -254,7 +254,7 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       title: "Arche Nova",
       secondaryTitle: null,
       languageDependence: null,
-      ean: "5901234123457",
+      eans: ["5901234123457"],
       kind: "BOARDGAME",
       bggId: 342942,
       minPlayers: 1,
@@ -310,7 +310,9 @@ describe("CreateBoardGameDialog — Duplikat-Erkennung (#183)", () => {
       within(dialog).getByRole("button", { name: "Exemplar anlegen…" }),
     );
     // Korrektur am Titel — die EAN des Bestands steht im Exemplar-Schritt.
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
+    expect(within(dialog).getByLabelText("Hinterlegte EANs")).toHaveTextContent(
+      "5901234123457",
+    );
     await user.click(
       within(dialog).getByRole("button", { name: /Spiel anlegen|Speichere/ }),
     );

@@ -17,7 +17,9 @@ afterEach(() => {
 
 describe("EanField", () => {
   it("disables the search button without a title", () => {
-    render(<EanField idPrefix="test" value="" onChange={vi.fn()} title="" />);
+    render(
+      <EanField idPrefix="test" values={[]} onChange={vi.fn()} title="" />,
+    );
 
     expect(
       screen.getByRole("button", { name: "EAN zum Titel suchen" }),
@@ -35,7 +37,7 @@ describe("EanField", () => {
     render(
       <EanField
         idPrefix="test"
-        value=""
+        values={[]}
         onChange={onChange}
         title="Ark Nova"
       />,
@@ -51,7 +53,7 @@ describe("EanField", () => {
         publisher: undefined,
       }),
     );
-    expect(onChange).toHaveBeenCalledWith("0850000576407");
+    expect(onChange).toHaveBeenCalledWith(["0850000576407"]);
   });
 
   it("shows a selection list for more than one hit instead of auto-filling", async () => {
@@ -68,7 +70,7 @@ describe("EanField", () => {
     render(
       <EanField
         idPrefix="test"
-        value=""
+        values={[]}
         onChange={onChange}
         title="Ark Nova"
       />,
@@ -82,12 +84,115 @@ describe("EanField", () => {
     expect(screen.getByText(/Ark Nova \(DE\)/)).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
 
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "EAN-Vorschlag auswählen" }),
-      "4056282500000",
+    await user.click(screen.getByRole("checkbox", { name: /Ark Nova \(DE\)/ }));
+
+    expect(onChange).toHaveBeenCalledWith(["4056282500000"]);
+  });
+
+  it("lets the user tick several suggestions and keeps earlier ones", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    searchEanForBoardGameMock.mockResolvedValue({
+      success: true,
+      results: [
+        { ean: "0850000576407", title: "Ark Nova (US)", year: 2021 },
+        { ean: "4056282500000", title: "Ark Nova (DE)", year: 2022 },
+      ],
+    });
+
+    render(
+      <EanField
+        idPrefix="test"
+        values={["4001504311892"]}
+        onChange={onChange}
+        title="Ark Nova"
+      />,
     );
 
-    expect(onChange).toHaveBeenCalledWith("4056282500000");
+    await user.click(
+      screen.getByRole("button", { name: "EAN zum Titel suchen" }),
+    );
+    await user.click(await screen.findByRole("checkbox", { name: /US/ }));
+
+    expect(onChange).toHaveBeenCalledWith(["4001504311892", "0850000576407"]);
+    expect(screen.getByText(/· 2022/)).toBeInTheDocument();
+  });
+
+  it("marks eans owned by another title and disables them", async () => {
+    const user = userEvent.setup();
+    searchEanForBoardGameMock.mockResolvedValue({
+      success: true,
+      results: [
+        {
+          ean: "0850000576407",
+          title: "Ark Nova (US)",
+          takenBy: "Ark Nova Deluxe",
+        },
+        { ean: "4056282500000", title: "Ark Nova (DE)" },
+      ],
+    });
+
+    render(
+      <EanField
+        idPrefix="test"
+        values={[]}
+        onChange={vi.fn()}
+        title="Ark Nova"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "EAN zum Titel suchen" }),
+    );
+
+    expect(
+      await screen.findByText("Bereits vergeben an „Ark Nova Deluxe“"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /US/ })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: /DE/ })).toBeEnabled();
+  });
+
+  it("adds a typed ean to the list and removes entries", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <EanField
+        idPrefix="test"
+        values={["4001504311892"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox"), "5901234123457");
+    await user.click(screen.getByRole("button", { name: "EAN hinzufügen" }));
+    expect(onChange).toHaveBeenLastCalledWith([
+      "4001504311892",
+      "5901234123457",
+    ]);
+
+    await user.click(
+      screen.getByRole("button", { name: "EAN 4001504311892 entfernen" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it("does not add the same ean twice", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <EanField
+        idPrefix="test"
+        values={["4001504311892"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.type(screen.getByRole("textbox"), "4001-504311892");
+    await user.click(screen.getByRole("button", { name: "EAN hinzufügen" }));
+
+    expect(onChange).toHaveBeenCalledWith(["4001504311892"]);
   });
 
   it("shows a message without an error for zero hits", async () => {
@@ -100,7 +205,7 @@ describe("EanField", () => {
     render(
       <EanField
         idPrefix="test"
-        value=""
+        values={[]}
         onChange={vi.fn()}
         title="Ein Titel ohne Treffer"
       />,
@@ -121,7 +226,12 @@ describe("EanField", () => {
     });
 
     render(
-      <EanField idPrefix="test" value="" onChange={vi.fn()} title="Ark Nova" />,
+      <EanField
+        idPrefix="test"
+        values={[]}
+        onChange={vi.fn()}
+        title="Ark Nova"
+      />,
     );
 
     await user.click(
@@ -143,7 +253,7 @@ describe("EanField", () => {
     render(
       <EanField
         idPrefix="test"
-        value=""
+        values={[]}
         onChange={onChange}
         title="Ark Nova"
         autoSearchOnMount
@@ -156,14 +266,14 @@ describe("EanField", () => {
         publisher: undefined,
       }),
     );
-    expect(onChange).toHaveBeenCalledWith("0850000576407");
+    expect(onChange).toHaveBeenCalledWith(["0850000576407"]);
   });
 
   it("does not auto-search when the field already has a value", () => {
     render(
       <EanField
         idPrefix="test"
-        value="4001504311892"
+        values={["4001504311892"]}
         onChange={vi.fn()}
         title="Catan"
         autoSearchOnMount
@@ -175,7 +285,12 @@ describe("EanField", () => {
 
   it("does not auto-search when autoSearchOnMount is not set", () => {
     render(
-      <EanField idPrefix="test" value="" onChange={vi.fn()} title="Ark Nova" />,
+      <EanField
+        idPrefix="test"
+        values={[]}
+        onChange={vi.fn()}
+        title="Ark Nova"
+      />,
     );
 
     expect(searchEanForBoardGameMock).not.toHaveBeenCalled();
@@ -192,7 +307,7 @@ describe("EanField", () => {
       render(
         <EanField
           idPrefix="test"
-          value=""
+          values={[]}
           onChange={vi.fn()}
           title="Ark Nova"
           bggProductCode="FEU001"
@@ -227,7 +342,7 @@ describe("EanField", () => {
       render(
         <EanField
           idPrefix="test"
-          value=""
+          values={[]}
           onChange={onChange}
           title="Ark Nova"
           alternateTitles={["Ark Nova (Deutsch)"]}
@@ -252,7 +367,7 @@ describe("EanField", () => {
           { bggProductCode: undefined, publisher: undefined },
         ),
       );
-      expect(onChange).toHaveBeenCalledWith("4056282500000");
+      expect(onChange).toHaveBeenCalledWith(["4056282500000"]);
     });
 
     it("stops trying further alternates once one yields a hit", async () => {
@@ -267,7 +382,7 @@ describe("EanField", () => {
       render(
         <EanField
           idPrefix="test"
-          value=""
+          values={[]}
           onChange={vi.fn()}
           title="Ark Nova"
           alternateTitles={["Ark Nova (Deutsch)", "Ark Nova Zoo Edition"]}
@@ -293,7 +408,7 @@ describe("EanField", () => {
       render(
         <EanField
           idPrefix="test"
-          value=""
+          values={[]}
           onChange={vi.fn()}
           title="Ark Nova"
           alternateTitles={["Ark Nova (Deutsch)"]}
@@ -320,7 +435,7 @@ describe("EanField", () => {
       render(
         <EanField
           idPrefix="test"
-          value=""
+          values={[]}
           onChange={vi.fn()}
           title="Ark Nova"
           alternateTitles={["Ark Nova (Deutsch)"]}

@@ -71,8 +71,8 @@ export function CreateBoardGameExemplarStep({
           // deren Product Code und Verlag erneut, sofern das Feld leer ist.
           key={values.bggVersion?.bggVersionId ?? values.editionMode}
           idPrefix="game"
-          value={values.ean}
-          onChange={(ean) => onChange({ ean })}
+          values={values.eans}
+          onChange={(eans) => onChange({ eans })}
           title={values.title}
           autoSearchOnMount
           alternateTitles={preview?.alternateNames}
