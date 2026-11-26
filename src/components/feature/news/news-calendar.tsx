@@ -2,11 +2,11 @@
 
 import { Card, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarPlus, Copy } from "lucide-react";
+import { CalendarPlus, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { CopyButton } from "@/components/ui/copy-button";
-import { cn } from "@/lib/utils/cn";
+import { MonthCalendar } from "@/components/ui/month-calendar";
 import type { ContentItem } from "@/lib/content/content-types";
 import { subscribeOwnInternalCalendar } from "@/components/feature/news/actions";
 
@@ -64,30 +64,6 @@ function InternalCalendarSubscribe({ hasToken }: { hasToken: boolean }) {
   );
 }
 
-const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-const MONTH_FORMATTER = new Intl.DateTimeFormat("de-DE", {
-  month: "long",
-  year: "numeric",
-});
-
-function toDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function buildMonthGrid(monthStart: Date) {
-  const year = monthStart.getFullYear();
-  const month = monthStart.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
-
-  const cells: (Date | null)[] = Array(firstWeekday).fill(null);
-  for (let day = 1; day <= daysInMonth; day++) {
-    cells.push(new Date(year, month, day));
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
-}
-
 export function NewsCalendar({
   items,
   selectedDate,
@@ -102,11 +78,6 @@ export function NewsCalendar({
   /** Nur für Meeple mit `news:internal:view` gesetzt (#439). */
   internalSubscription?: { hasToken: boolean };
 }) {
-  const [viewMonth, setViewMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
-
   // #10 (Folgefehler beim Live-Test): volle Zellfarbe (bg-secondary) machte
   // die Zifferfarbe auf sich selbst unlesbar (Weiß auf Weiß im Dark Mode, da
   // secondary = foreground-Farbe). Zwei kleine Punkte unter der Zahl statt
@@ -118,90 +89,28 @@ export function NewsCalendar({
   const internalEventDates = new Set(
     items.filter((item) => item.internal).map((item) => item.date),
   );
-  const cells = buildMonthGrid(viewMonth);
-  const todayKey = toDateKey(new Date());
 
   return (
     <Card className="mx-auto max-w-sm gap-0 self-start lg:sticky lg:top-24">
       <CardTitle>Google-Kalender</CardTitle>
 
-      <div className="mt-3 flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Vorheriger Monat"
-          onClick={() =>
-            setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))
-          }
-        >
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span className="text-sm font-medium capitalize">
-          {MONTH_FORMATTER.format(viewMonth)}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Nächster Monat"
-          onClick={() =>
-            setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))
-          }
-        >
-          <ChevronRight className="size-4" />
-        </Button>
-      </div>
-
-      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-xs">
-        {WEEKDAY_LABELS.map((label) => (
-          <span key={label} className="text-muted-foreground py-1">
-            {label}
+      <MonthCalendar
+        selectedDate={selectedDate}
+        onSelectDate={onSelectDate}
+        isDayEnabled={(key) =>
+          publicEventDates.has(key) || internalEventDates.has(key)
+        }
+        renderMarker={(key) => (
+          <span className="flex gap-0.5" aria-hidden>
+            {publicEventDates.has(key) && (
+              <span className="bg-event-public size-1.5 rounded-full" />
+            )}
+            {internalEventDates.has(key) && (
+              <span className="bg-event-internal size-1.5 rounded-full" />
+            )}
           </span>
-        ))}
-        {cells.map((date, index) => {
-          if (!date) return <span key={index} />;
-          const key = toDateKey(date);
-          const hasPublicEvent = publicEventDates.has(key);
-          const hasInternalEvent = internalEventDates.has(key);
-          const hasEvent = hasPublicEvent || hasInternalEvent;
-          const isSelected = selectedDate === key;
-          const isToday = key === todayKey;
-          // Aktiver Filter: alle anderen Tage mit Terminen treten optisch
-          // zurück, damit der ausgewählte Tag als einziger aktiver Filter
-          // erkennbar bleibt (statt gleichwertig neben ihm zu stehen).
-          const isDimmed = selectedDate !== null && !isSelected;
-
-          return (
-            <button
-              key={key}
-              type="button"
-              disabled={!hasEvent}
-              onClick={() => onSelectDate(isSelected ? null : key)}
-              className={cn(
-                "hover:bg-accent relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-md text-sm transition-[opacity,background-color]",
-                hasEvent && "font-semibold",
-                !hasEvent && "text-muted-foreground",
-                isSelected && "bg-primary text-primary-foreground",
-                isToday && !isSelected && "ring-primary ring-1",
-                isDimmed && "opacity-35",
-              )}
-            >
-              {date.getDate()}
-              {hasEvent && (
-                <span className="flex gap-0.5" aria-hidden>
-                  {hasPublicEvent && (
-                    <span className="bg-event-public size-1.5 rounded-full" />
-                  )}
-                  {hasInternalEvent && (
-                    <span className="bg-event-internal size-1.5 rounded-full" />
-                  )}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+        )}
+      />
 
       <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
         <span className="flex items-center gap-1.5">
