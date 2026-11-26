@@ -250,6 +250,7 @@ export function EditBoardGameTitle({
           values={values.eans}
           onChange={(eans) => onChange({ eans })}
           title={values.title}
+          boardGameId={boardGameId}
           publisherForSorting={parseCommaSeparatedList(values.publisher)}
         />
       )}

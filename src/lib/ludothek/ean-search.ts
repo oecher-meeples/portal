@@ -2,6 +2,8 @@
 
 import { findActionActor } from "@/lib/auth/action-guards";
 import { isValidEan } from "@/lib/inventory/ean";
+import { prisma } from "@/lib/utils/prisma";
+import { searchGamesByName } from "@/lib/spielemeta/client";
 import {
   searchEanByName,
   UpcLookupError,
@@ -30,10 +32,48 @@ function sortByPublisherMatch(
   );
 }
 
+/** Marks hits whose EAN already belongs to another title (#668), so the UI can disable them. */
+async function markTakenEans(
+  results: EanSearchResult[],
+  excludeBoardGameId?: string,
+): Promise<EanSearchResult[]> {
+  if (results.length === 0) return results;
+  const owners = await prisma.boardGameEan.findMany({
+    where: {
+      ean: { in: results.map((result) => result.ean) },
+      ...(excludeBoardGameId
+        ? { boardGameId: { not: excludeBoardGameId } }
+        : {}),
+    },
+    select: { ean: true, boardGame: { select: { title: true } } },
+  });
+  const titleByEan = new Map(
+    owners.map((owner) => [owner.ean, owner.boardGame.title]),
+  );
+  return results.map((result) => {
+    const takenBy = titleByEan.get(result.ean);
+    return takenBy ? { ...result, takenBy } : result;
+  });
+}
+
+/** Spielemeta first; any failure (401/5xx/timeout/missing key) yields `null` so UPCitemdb takes over. */
+async function trySpielemeta(title: string): Promise<EanSearchResult[] | null> {
+  try {
+    const results = await searchGamesByName(title);
+    return results.length > 0 ? results : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * EAN-Namenssuche für den Anlegen-Wizard (#197) — automatisch beim Wechsel
  * zu Schritt 2 ausgelöst (nur wenn das EAN-Feld leer ist) und manuell über
  * das Lupen-Icon neben dem EAN-Feld, unabhängig vom aktuellen Feldinhalt.
+ *
+ * Reihenfolge (#668): gültiger BGG-Product-Code → Spielemeta → UPCitemdb
+ * (Fallback bei leerem Ergebnis oder Spielemeta-Fehler). Treffer, deren EAN
+ * schon einem anderen Titel gehört, tragen `takenBy`.
  *
  * Liegt ein eindeutiger, **gültiger** BGG-Product-Code vor
  * (`resolveProductCodeFromVersions()`), hat er Vorrang vor UPCitemdb (#205)
@@ -45,7 +85,12 @@ function sortByPublisherMatch(
  */
 export async function searchEanForBoardGame(
   title: string,
-  options?: { bggProductCode?: string | null; publisher?: string[] },
+  options?: {
+    bggProductCode?: string | null;
+    publisher?: string[];
+    /** Der gerade bearbeitete Titel — seine eigenen EANs gelten nicht als vergeben. */
+    excludeBoardGameId?: string;
+  },
 ) {
   const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
@@ -55,13 +100,32 @@ export async function searchEanForBoardGame(
   if (options?.bggProductCode && isValidEan(options.bggProductCode)) {
     return {
       success: true as const,
-      results: [
-        {
-          ean: options.bggProductCode,
-          title,
-          brand: options.publisher?.[0],
-        },
-      ],
+      results: await markTakenEans(
+        [
+          {
+            ean: options.bggProductCode,
+            title,
+            brand: options.publisher?.[0],
+          },
+        ],
+        options.excludeBoardGameId,
+      ),
+    };
+  }
+
+  const sort = (results: EanSearchResult[]) =>
+    options?.publisher?.length
+      ? sortByPublisherMatch(results, options.publisher)
+      : results;
+
+  const spielemeta = await trySpielemeta(title);
+  if (spielemeta) {
+    return {
+      success: true as const,
+      results: await markTakenEans(
+        sort(spielemeta),
+        options?.excludeBoardGameId,
+      ),
     };
   }
 
@@ -69,9 +133,7 @@ export async function searchEanForBoardGame(
     const results = await searchEanByName(title);
     return {
       success: true as const,
-      results: options?.publisher?.length
-        ? sortByPublisherMatch(results, options.publisher)
-        : results,
+      results: await markTakenEans(sort(results), options?.excludeBoardGameId),
     };
   } catch (error) {
     if (error instanceof UpcLookupError) {

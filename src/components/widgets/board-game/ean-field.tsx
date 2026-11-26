@@ -10,7 +10,11 @@ import { normaliseEan } from "@/lib/inventory/ean";
 import { searchEanForBoardGame } from "@/lib/ludothek/ean-search";
 import type { EanSearchResult } from "@/lib/upc-lookup/client";
 
-type SearchOptions = { bggProductCode?: string | null; publisher?: string[] };
+type SearchOptions = {
+  bggProductCode?: string | null;
+  publisher?: string[];
+  excludeBoardGameId?: string;
+};
 
 /** Sucht der Reihe nach mit jedem Titel, bis einer Treffer liefert (#197-
  * Folgeanfrage) — z. B. wenn der (meist englische) Haupttitel nichts findet,
@@ -43,6 +47,7 @@ export function EanField({
   alternateTitles,
   bggProductCode,
   publisherForSorting,
+  boardGameId,
 }: {
   idPrefix: string;
   values: string[];
@@ -64,6 +69,8 @@ export function EanField({
   /** Sortiert Kandidaten mit passendem `brand` nach oben (#205) — greift nur,
    * wenn kein `bggProductCode` vorliegt. */
   publisherForSorting?: string[];
+  /** Titel im Editor: seine eigenen EANs gelten in den Vorschlägen nicht als vergeben. */
+  boardGameId?: string;
 }) {
   const [draft, setDraft] = useState("");
   const [isSearching, setIsSearching] = useState(false);
@@ -108,7 +115,11 @@ export function EanField({
   async function runSearch(trimmedTitle: string) {
     const result = await searchWithFallback(
       [trimmedTitle, ...(alternateTitles ?? [])],
-      { bggProductCode, publisher: publisherForSorting },
+      {
+        bggProductCode,
+        publisher: publisherForSorting,
+        excludeBoardGameId: boardGameId,
+      },
     );
     if (!result.success) {
       setMessage(result.error);
@@ -145,6 +156,7 @@ export function EanField({
     searchWithFallback([trimmedTitle, ...(alternateTitles ?? [])], {
       bggProductCode,
       publisher: publisherForSorting,
+      excludeBoardGameId: boardGameId,
     }).then((result) => {
       if (cancelled) return;
       if (!result.success) {

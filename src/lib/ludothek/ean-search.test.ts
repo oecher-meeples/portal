@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
@@ -24,7 +24,17 @@ vi.mock("@/lib/upc-lookup/client", async () => {
   };
 });
 
+const searchGamesByNameMock = vi.fn();
+vi.mock("@/lib/spielemeta/client", () => ({
+  searchGamesByName: (...args: unknown[]) => searchGamesByNameMock(...args),
+}));
+
 const { searchEanForBoardGame } = await import("./ean-search");
+
+beforeEach(() => {
+  prismaMock.boardGameEan.findMany.mockResolvedValue([]);
+  searchGamesByNameMock.mockResolvedValue([]);
+});
 
 describe("searchEanForBoardGame", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
@@ -192,6 +202,104 @@ describe("searchEanForBoardGame", () => {
         "US0001",
         "DE0001",
       ]);
+    });
+  });
+
+  describe("Spielemeta als primäre Quelle (#668)", () => {
+    function allowed() {
+      getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+      mockPermissionKeys("all");
+    }
+
+    it("uses spielemeta before UPCitemdb", async () => {
+      allowed();
+      searchGamesByNameMock.mockResolvedValue([
+        { ean: "4015566600225", title: "Catan", brand: "Kosmos", year: 2020 },
+      ]);
+
+      const result = await searchEanForBoardGame("Catan");
+
+      expect(result).toEqual({
+        success: true,
+        results: [
+          { ean: "4015566600225", title: "Catan", brand: "Kosmos", year: 2020 },
+        ],
+      });
+      expect(searchEanByNameMock).not.toHaveBeenCalled();
+    });
+
+    it("prefers a valid BGG product code over spielemeta", async () => {
+      allowed();
+
+      await searchEanForBoardGame("Catan", { bggProductCode: "4015566600225" });
+
+      expect(searchGamesByNameMock).not.toHaveBeenCalled();
+    });
+
+    it("falls back to UPCitemdb when spielemeta has no hits", async () => {
+      allowed();
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "0850000576407", title: "Ark Nova" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova");
+
+      expect(searchGamesByNameMock).toHaveBeenCalledWith("Ark Nova");
+      expect(result.success && result.results).toHaveLength(1);
+    });
+
+    it("falls back to UPCitemdb when spielemeta fails", async () => {
+      allowed();
+      searchGamesByNameMock.mockRejectedValue(new Error("401"));
+      searchEanByNameMock.mockResolvedValue([
+        { ean: "0850000576407", title: "Ark Nova" },
+      ]);
+
+      const result = await searchEanForBoardGame("Ark Nova");
+
+      expect(result.success && result.results[0].ean).toBe("0850000576407");
+    });
+
+    it("sorts spielemeta hits by matching publisher", async () => {
+      allowed();
+      searchGamesByNameMock.mockResolvedValue([
+        { ean: "4015566600225", title: "Catan (A)", brand: "Anderer" },
+        { ean: "9783897775329", title: "Catan (K)", brand: "Kosmos" },
+      ]);
+
+      const result = await searchEanForBoardGame("Catan", {
+        publisher: ["Kosmos"],
+      });
+
+      expect(result.success && result.results.map((r) => r.ean)).toEqual([
+        "9783897775329",
+        "4015566600225",
+      ]);
+    });
+
+    it("marks eans owned by another title", async () => {
+      allowed();
+      searchGamesByNameMock.mockResolvedValue([
+        { ean: "4015566600225", title: "Catan" },
+        { ean: "9783897775329", title: "Catan Edition" },
+      ]);
+      prismaMock.boardGameEan.findMany.mockResolvedValue([
+        { ean: "4015566600225", boardGame: { title: "Catan Basis" } },
+      ] as never);
+
+      const result = await searchEanForBoardGame("Catan", {
+        excludeBoardGameId: "own",
+      });
+
+      expect(result.success && result.results).toEqual([
+        { ean: "4015566600225", title: "Catan", takenBy: "Catan Basis" },
+        { ean: "9783897775329", title: "Catan Edition" },
+      ]);
+      expect(prismaMock.boardGameEan.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ boardGameId: { not: "own" } }),
+        }),
+      );
     });
   });
 });
