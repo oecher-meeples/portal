@@ -19,6 +19,17 @@ describe("buildPostEmailBody", () => {
     expect(prismaMock.postImage.findMany).not.toHaveBeenCalled();
   });
 
+  it("strips unsafe link protocols but keeps normal links", async () => {
+    const { html } = await buildPostEmailBody({
+      id: "p1",
+      body: "[bad](javascript:alert(1)) [ok](https://example.com) <script>x</script>",
+    });
+
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain("<script>");
+    expect(html).toContain('href="https://example.com"');
+  });
+
   it("embeds images of the post as cid attachments", async () => {
     prismaMock.postImage.findMany.mockResolvedValue([
       { id: "i1", key: "blog-images/foto-x.webp" },

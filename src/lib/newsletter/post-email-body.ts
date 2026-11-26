@@ -1,7 +1,9 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
+import type { Element, Root } from "hast";
+import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import { unified } from "unified";
 import {
   extractPostImageIds,
   mapPostImageRefs,
@@ -9,6 +11,37 @@ import {
 import { UserFacingError } from "@/lib/utils/action-result";
 import { prisma } from "@/lib/utils/prisma";
 import { getBlob } from "@/lib/utils/s3";
+
+const SAFE_URL = /^(https?:|mailto:|cid:|\/|#)/i;
+
+/** Entfernt `href`/`src` mit anderen Protokollen (z. B. `javascript:`),
+ * analog zum `urlTransform` von react-markdown. */
+function rehypeSafeUrls() {
+  return (tree: Root) => {
+    const walk = (node: Root | Element) => {
+      if (node.type === "element") {
+        for (const attr of ["href", "src"]) {
+          const value = node.properties?.[attr];
+          if (typeof value === "string" && !SAFE_URL.test(value.trim())) {
+            delete node.properties[attr];
+          }
+        }
+      }
+      for (const child of node.children) {
+        if (child.type === "element") walk(child);
+      }
+    };
+    walk(tree);
+  };
+}
+
+/** Kein `react-dom/server`: Next verbietet den Import im App-Router-Graph. */
+const markdownToHtml = unified()
+  .use(remarkParse)
+  .use(remarkGfm)
+  .use(remarkRehype)
+  .use(rehypeSafeUrls)
+  .use(rehypeStringify);
 
 export type EmailAttachment = {
   filename: string;
@@ -54,16 +87,6 @@ export async function buildPostEmailBody(post: {
   const markdown = mapPostImageRefs(post.body, (id, alt) =>
     known.has(id) ? `![${alt}](cid:${id})` : null,
   );
-  const html = renderToStaticMarkup(
-    createElement(
-      ReactMarkdown,
-      {
-        remarkPlugins: [remarkGfm],
-        urlTransform: (url: string) =>
-          url.startsWith("cid:") ? url : defaultUrlTransform(url),
-      },
-      markdown,
-    ),
-  );
+  const html = String(await markdownToHtml.process(markdown));
   return { html, attachments };
 }
