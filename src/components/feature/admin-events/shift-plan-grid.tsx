@@ -8,13 +8,13 @@ import {
   buildTimeSlots,
   buildRoleColumns,
   totalColumnCount,
-  computeShiftCoverage,
   isSlotStaffable,
   intersectTimeRanges,
   resolveSelectedTimeRange,
   shiftGridRows,
   type RoleColumnGroup,
 } from "@/lib/events/shift-plan";
+import { computeShiftFillStatus } from "@/lib/events/shift-capacity";
 import { formatTimePlain } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -34,9 +34,9 @@ export type RoleDropData = {
   shiftId: string;
 };
 
-/** "Voll geplant" (#162): every Shift row for this role on this day must be
- * gap-free covered by its own bookings — a role with several target windows
- * only counts once all of them are fully staffed. */
+/** "Voll geplant" (#162, #677): every Shift row for this role on this day
+ * must be full per the shared fill status (count reached and gap-free) — a
+ * role with several target windows only counts once all of them are staffed. */
 function isRoleFullyCovered(
   group: RoleColumnGroup,
   shifts: PlanShift[],
@@ -44,20 +44,21 @@ function isRoleFullyCovered(
 ): boolean {
   const roleShifts = shifts.filter((shift) => shift.roleId === group.roleId);
   if (roleShifts.length === 0) return false;
-  return roleShifts.every((shift) =>
-    computeShiftCoverage(
-      {
-        targetStartsAt: new Date(shift.targetStartsAt),
-        targetEndsAt: new Date(shift.targetEndsAt),
-        capacity: shift.capacity,
-      },
-      bookings
-        .filter((booking) => booking.shiftId === shift.id)
-        .map((booking) => ({
-          startsAt: new Date(booking.startsAt),
-          endsAt: new Date(booking.endsAt),
-        })),
-    ),
+  return roleShifts.every(
+    (shift) =>
+      computeShiftFillStatus(
+        {
+          capacity: shift.capacity,
+          targetStartsAt: new Date(shift.targetStartsAt),
+          targetEndsAt: new Date(shift.targetEndsAt),
+        },
+        bookings
+          .filter((booking) => booking.shiftId === shift.id)
+          .map((booking) => ({
+            startsAt: new Date(booking.startsAt),
+            endsAt: new Date(booking.endsAt),
+          })),
+      ).isFull,
   );
 }
 

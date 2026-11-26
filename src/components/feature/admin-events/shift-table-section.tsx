@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -23,15 +23,26 @@ import {
 } from "@/components/feature/admin-events/shift-dialog";
 import { ShiftTableEditor } from "@/components/feature/admin-events/shift-table-editor";
 import { deleteShift } from "@/components/feature/admin-events/shift-actions";
-import { computeShiftFillLevel } from "@/lib/events/shift-capacity";
+import { computeShiftFillStatus } from "@/lib/events/shift-capacity";
 import { formatTimeRange, formatWeekdayDate } from "@/lib/utils/format";
 
 export type ShiftRow = EditableShift & {
   dayDate: string;
-  bookings: { confirmedAt: Date | null }[];
+  bookings: { confirmedAt: Date | null; startsAt: Date; endsAt: Date }[];
 };
 
 type FillLevelFilter = "alle" | "unvollstaendig";
+
+function fillStatusOf(shift: ShiftRow) {
+  return computeShiftFillStatus(
+    {
+      capacity: shift.capacity,
+      targetStartsAt: new Date(shift.targetStartsAt),
+      targetEndsAt: new Date(shift.targetEndsAt),
+    },
+    shift.bookings,
+  );
+}
 
 /**
  * Schichten-Tabelle des Events (#150 ff.) — oberhalb Tag- und Schichten-
@@ -60,8 +71,7 @@ export function ShiftTableSection({
     if (filterDayId !== "alle" && shift.dayId !== filterDayId) return false;
     if (filterRoleId !== "alle" && shift.roleId !== filterRoleId) return false;
     if (filterFillLevel === "unvollstaendig") {
-      const fillLevel = computeShiftFillLevel(shift, shift.bookings);
-      if (fillLevel.isFull) return false;
+      if (fillStatusOf(shift).isFull) return false;
     }
     return true;
   });
@@ -165,10 +175,7 @@ export function ShiftTableSection({
                 </TableRow>
               ) : (
                 filteredShifts.map((shift) => {
-                  const fillLevel = computeShiftFillLevel(
-                    shift,
-                    shift.bookings,
-                  );
+                  const fillLevel = fillStatusOf(shift);
                   return (
                     <TableRow key={shift.id}>
                       <TableCell className="text-muted-foreground">
@@ -185,8 +192,16 @@ export function ShiftTableSection({
                         {fillLevel.isFull ? (
                           <StatusPill label="voll" tone="warning" />
                         ) : (
-                          <span>
+                          <span className="inline-flex items-center gap-1.5">
                             {fillLevel.booked} / {fillLevel.capacity}
+                            {fillLevel.hasGap && (
+                              <span title="Lücke">
+                                <AlertTriangle
+                                  className="size-4 text-amber-600"
+                                  aria-label="Lücke"
+                                />
+                              </span>
+                            )}
                           </span>
                         )}
                       </TableCell>
