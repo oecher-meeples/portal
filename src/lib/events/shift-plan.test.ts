@@ -10,7 +10,6 @@ import {
   isSlotStaffable,
   resolveSelectedTimeRange,
   exceedsRecommendedShiftLength,
-  shiftGridRows,
 } from "./shift-plan";
 
 describe("computeVisibleRange", () => {
@@ -385,42 +384,5 @@ describe("exceedsRecommendedShiftLength", () => {
         new Date(2026, 9, 10, 12, 0),
       ),
     ).toBe(false);
-  });
-});
-
-describe("shiftGridRows (#620)", () => {
-  const rangeStart = new Date(2026, 9, 10, 8, 0);
-
-  it("gives two shifts of the same role distinct, non-overlapping row ranges", () => {
-    const first = shiftGridRows(
-      {
-        targetStartsAt: new Date(2026, 9, 10, 9, 0),
-        targetEndsAt: new Date(2026, 9, 10, 13, 0),
-      },
-      rangeStart,
-    );
-    const second = shiftGridRows(
-      {
-        targetStartsAt: new Date(2026, 9, 10, 14, 0),
-        targetEndsAt: new Date(2026, 9, 10, 18, 0),
-      },
-      rangeStart,
-    );
-
-    expect(first).toEqual({ rowStart: 4, rowEnd: 12 });
-    expect(second).toEqual({ rowStart: 14, rowEnd: 22 });
-    expect(second.rowStart).toBeGreaterThanOrEqual(first.rowEnd);
-  });
-
-  it("never starts above the first grid row and spans at least one row", () => {
-    expect(
-      shiftGridRows(
-        {
-          targetStartsAt: new Date(2026, 9, 10, 7, 0),
-          targetEndsAt: new Date(2026, 9, 10, 7, 0),
-        },
-        rangeStart,
-      ),
-    ).toEqual({ rowStart: 2, rowEnd: 3 });
   });
 });

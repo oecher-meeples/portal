@@ -11,6 +11,7 @@ import { getNeonStorageUsage } from "@/lib/admin/neon-storage";
 import { getRateLimitAlerts } from "@/lib/auth/rate-limit-alerts";
 import { getRecentAdminLogins } from "@/lib/auth/login-log";
 import { listOpenPendingChanges } from "@/lib/members/pending-changes";
+import { findEventPlanningStatuses } from "@/lib/events/planning-status";
 import { countUnconfirmedHoldings } from "@/lib/ludothek/unconfirmed-holdings-queue";
 import { PendingChangeKind } from "@prisma/client";
 import { AdminDashboardView } from "@/components/feature/admin-dashboard/admin-dashboard-view";
@@ -26,11 +27,13 @@ export default async function AdminDashboardPage() {
   );
   // #440: je Kachel nur für die passende Berechtigung — je eigener Query,
   // damit niemand ohne bank:read z. B. IBAN-Antragszahlen sieht.
-  const [canReadBank, canManageMembers, canManageGames] = await Promise.all([
-    hasPermission(session.user.id, "bank:read"),
-    hasPermission(session.user.id, "members:manage"),
-    hasPermission(session.user.id, "games:manage"),
-  ]);
+  const [canReadBank, canManageMembers, canManageGames, canManageEvents] =
+    await Promise.all([
+      hasPermission(session.user.id, "bank:read"),
+      hasPermission(session.user.id, "members:manage"),
+      hasPermission(session.user.id, "games:manage"),
+      hasPermission(session.user.id, "events:manage"),
+    ]);
 
   const [
     meeples,
@@ -45,6 +48,7 @@ export default async function AdminDashboardPage() {
     recentAdminLogins,
     openPendingChanges,
     unconfirmedHoldings,
+    eventPlanning,
   ] = await Promise.all([
     prisma.meeple.findMany({
       select: {
@@ -91,6 +95,7 @@ export default async function AdminDashboardPage() {
       ? listOpenPendingChanges()
       : Promise.resolve([]),
     canManageGames ? countUnconfirmedHoldings() : Promise.resolve(0),
+    canManageEvents ? findEventPlanningStatuses() : Promise.resolve(null),
   ]);
 
   const activeMembers = meeples.filter(
@@ -126,6 +131,7 @@ export default async function AdminDashboardPage() {
         openChecks: uncheckedGames,
         activeEvents: countActiveEvents(events),
       }}
+      eventPlanning={eventPlanning}
       openRequestCounts={{
         ibanChanges: canReadBank ? ibanChanges : null,
         stammdatenChanges: canManageMembers ? stammdatenChanges : null,

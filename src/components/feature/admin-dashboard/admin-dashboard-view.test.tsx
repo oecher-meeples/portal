@@ -22,6 +22,7 @@ describe("AdminDashboardView — Stat-Tiles für offene Anträge (#440)", () => 
     render(
       <AdminDashboardView
         stats={STATS}
+        eventPlanning={null}
         openRequestCounts={{
           ibanChanges: 2,
           stammdatenChanges: 3,
@@ -45,6 +46,7 @@ describe("AdminDashboardView — Stat-Tiles für offene Anträge (#440)", () => 
     render(
       <AdminDashboardView
         stats={STATS}
+        eventPlanning={null}
         openRequestCounts={{
           ibanChanges: null,
           stammdatenChanges: 3,
@@ -72,6 +74,7 @@ describe("AdminDashboardView — Stat-Tiles für offene Anträge (#440)", () => 
     render(
       <AdminDashboardView
         stats={STATS}
+        eventPlanning={null}
         openRequestCounts={{
           ibanChanges: 0,
           stammdatenChanges: null,
@@ -85,5 +88,74 @@ describe("AdminDashboardView — Stat-Tiles für offene Anträge (#440)", () => 
     );
 
     expect(screen.getByText("Offene IBAN-Änderungen")).toBeInTheDocument();
+  });
+});
+
+describe("AdminDashboardView — Event-Planungs-Cards (#681)", () => {
+  const BASE = {
+    stats: STATS,
+    openRequestCounts: {
+      ibanChanges: null,
+      stammdatenChanges: null,
+      unconfirmedHoldings: null,
+    },
+    blobStorageUsage: null,
+    neonStorageUsage: null,
+    rateLimitAlerts: [],
+    recentAdminLogins: null,
+  };
+  const EVENT = {
+    id: "e1",
+    title: "Spieletag",
+    visibility: "DRAFT" as const,
+    helperPhase: "PLANNING" as const,
+    shiftCount: 5,
+    coveragePercent: 60,
+    bookingCount: 12,
+    confirmedCount: 9,
+  };
+
+  it("renders no section without events:manage (null)", () => {
+    render(<AdminDashboardView {...BASE} eventPlanning={null} />);
+
+    expect(screen.queryByText("Events in Planung")).not.toBeInTheDocument();
+  });
+
+  it("shows title link, visibility pill and coverage in the planning phase", () => {
+    render(<AdminDashboardView {...BASE} eventPlanning={[EVENT]} />);
+
+    expect(screen.getByRole("link", { name: "Spieletag" })).toHaveAttribute(
+      "href",
+      "/admin/events/e1",
+    );
+    expect(screen.getByText("Event-Entwurf")).toBeInTheDocument();
+    expect(screen.getByText("Planungsphase: 60 % von 5")).toBeInTheDocument();
+  });
+
+  it("shows confirmations a/b once confirmation is requested", () => {
+    render(
+      <AdminDashboardView
+        {...BASE}
+        eventPlanning={[{ ...EVENT, helperPhase: "CONFIRMATION_REQUESTED" }]}
+      />,
+    );
+
+    expect(screen.getByText("Bestätigungen: 9/12")).toBeInTheDocument();
+    expect(screen.queryByText(/Planungsphase:/)).not.toBeInTheDocument();
+  });
+
+  it("shows only title and pill for an event without shifts", () => {
+    render(
+      <AdminDashboardView
+        {...BASE}
+        eventPlanning={[
+          { ...EVENT, shiftCount: 0, coveragePercent: null, bookingCount: 0 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Event-Entwurf")).toBeInTheDocument();
+    expect(screen.queryByText(/Planungsphase:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bestätigungen:/)).not.toBeInTheDocument();
   });
 });

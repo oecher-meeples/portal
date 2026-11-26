@@ -11,12 +11,15 @@ const TONES: Record<EventVisibility, StatusTone> = {
 /** The one place that knows how an event's visibility looks. */
 export function EventVisibilityPill({
   visibility,
+  prefix = "",
 }: {
   visibility: EventVisibility;
+  /** z. B. "Event-" → "Event-Entwurf", wo der Kontext sonst unklar wäre. */
+  prefix?: string;
 }) {
   return (
     <StatusPill
-      label={EVENT_VISIBILITY_LABELS[visibility]}
+      label={`${prefix}${EVENT_VISIBILITY_LABELS[visibility]}`}
       tone={TONES[visibility]}
     />
   );

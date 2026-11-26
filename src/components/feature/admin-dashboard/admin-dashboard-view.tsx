@@ -5,6 +5,10 @@ import {
   Landmark,
   AlertTriangle,
 } from "lucide-react";
+import Link from "next/link";
+import { StatusPill } from "@/components/ui/status-pill";
+import { EventVisibilityPill } from "@/components/entities/event-visibility-pill";
+import type { EventPlanningStatus } from "@/lib/events/planning-status";
 import { PageHeading } from "@/components/ui/page-heading";
 import { Card, CardTitle } from "@/components/ui/card";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -57,6 +61,7 @@ export type OpenRequestCounts = {
 
 export function AdminDashboardView({
   stats,
+  eventPlanning,
   openRequestCounts,
   blobStorageUsage,
   neonStorageUsage,
@@ -64,6 +69,9 @@ export function AdminDashboardView({
   recentAdminLogins,
 }: {
   stats: AdminDashboardStats;
+  /** Planungsstand der kommenden Events (#681) — `null` ohne `events:manage`,
+   * dann wird der Bereich gar nicht erst geladen oder gerendert. */
+  eventPlanning: EventPlanningStatus[] | null;
   openRequestCounts: OpenRequestCounts;
   blobStorageUsage: BlobStorageUsage | null;
   neonStorageUsage: NeonStorageUsage | null;
@@ -156,6 +164,17 @@ export function AdminDashboardView({
         {neonStorageUsage && <NeonStorageUsageCard usage={neonStorageUsage} />}
       </div>
 
+      {eventPlanning && eventPlanning.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg font-bold">Events in Planung</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {eventPlanning.map((event) => (
+              <EventPlanningCard key={event.id} event={event} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         <h2 className="font-serif text-lg font-bold">Schnellaktionen</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -185,5 +204,40 @@ export function AdminDashboardView({
         </Card>
       )}
     </PageContainer>
+  );
+}
+
+/** Planungsstand eines Events (#681): je nach Helfersichtbarkeit Füllstand in
+ * Prozent oder Bestätigungsquote. Events ohne Schichten zeigen nur Titel und
+ * Sichtbarkeit. */
+function EventPlanningCard({ event }: { event: EventPlanningStatus }) {
+  const hasShifts = event.shiftCount > 0;
+  const confirmationRequested = event.helperPhase === "CONFIRMATION_REQUESTED";
+  const allConfirmed = event.confirmedCount === event.bookingCount;
+
+  return (
+    <Card className="gap-2">
+      <CardTitle>
+        <Link href={`/admin/events/${event.id}`} className="hover:underline">
+          {event.title}
+        </Link>
+      </CardTitle>
+      <div className="flex flex-wrap items-center gap-2">
+        <EventVisibilityPill visibility={event.visibility} prefix="Event-" />
+        {hasShifts &&
+          (confirmationRequested ? (
+            <StatusPill
+              label={`Bestätigungen: ${event.confirmedCount}/${event.bookingCount}`}
+              tone={allConfirmed ? "positive" : "info"}
+            />
+          ) : (
+            event.coveragePercent !== null && (
+              <span className="text-muted-foreground text-sm">
+                Planungsphase: {event.coveragePercent} % von {event.shiftCount}
+              </span>
+            )
+          ))}
+      </div>
+    </Card>
   );
 }
