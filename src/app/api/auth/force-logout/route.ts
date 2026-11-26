@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/server";
+import { safeInternalPath } from "@/lib/auth/safe-next-path";
 
 /**
  * Route Handler statt Server Component (#231, #242) — nur hier dürfen wir
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     headers: request.headers,
     returnHeaders: true,
   });
-  const next = request.nextUrl.searchParams.get("next") ?? "/login";
+  const next = safeInternalPath(request.nextUrl.searchParams.get("next"));
   const response = NextResponse.redirect(new URL(next, request.url));
   for (const cookie of authHeaders.getSetCookie()) {
     response.headers.append("set-cookie", cookie);
