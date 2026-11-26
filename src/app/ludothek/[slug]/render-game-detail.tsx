@@ -234,7 +234,7 @@ export async function renderGameDetail(slug: string, selectedCopyId?: string) {
         boardGameId: game.boardGameId,
         title: game.title,
         secondaryTitle: game.secondaryTitle,
-        ean: game.ean,
+        eans: game.eans,
         kind: game.kind,
         bggId: game.bggId,
         minPlayers: game.minPlayers,

@@ -29,7 +29,7 @@ const BASE_BOARD_GAME = {
   averageRating: null,
   mechanics: [],
   categories: [],
-  ean: null,
+  eans: [],
   bggId: null,
   secondaryTitle: null,
   description: null,

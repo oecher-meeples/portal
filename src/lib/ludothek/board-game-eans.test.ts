@@ -81,9 +81,7 @@ describe("rethrowEanConflict", () => {
       ean: VALID,
       boardGame: { title: "Catan" },
     } as never);
-    await expect(rethrowEanConflict(p2002, [VALID])).rejects.toThrow(
-      "„Catan“",
-    );
+    await expect(rethrowEanConflict(p2002, [VALID])).rejects.toThrow("„Catan“");
   });
 
   it("falls back to a generic conflict", async () => {

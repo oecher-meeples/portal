@@ -39,7 +39,7 @@ describe("exportBestandCsv scope: filtered", () => {
     const result = await exportBestandCsv("filtered", [
       {
         title: "Wingspan",
-        ean: "1234567890123",
+        eans: ["1234567890123"],
         status: "ACTIVE",
         zustand: "gut",
         locationChain: "Regal 2",
