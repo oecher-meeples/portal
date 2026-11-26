@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Dice5, ScanLine, Users, Tag } from "lucide-react";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -55,6 +56,8 @@ type DashboardViewProps = {
   openHelperRequestEvent: { id: string; title: string } | null;
   /** Gesuchte Spiele ohne mein Niveau (#666) — 0 blendet die Karte aus. */
   wantedExplainerGamesCount: number;
+  /** Eigene unbestätigte Schichten bei "Bestätigung angefragt" (#682) — 0 blendet die Karte aus. */
+  unconfirmedShiftCount: number;
 };
 
 /** Hinweis-Karte oben im Dashboard, die direkt zur passenden Seite führt. */
@@ -87,6 +90,7 @@ export function DashboardView({
   isAusgetreten,
   openHelperRequestEvent,
   wantedExplainerGamesCount,
+  unconfirmedShiftCount,
 }: DashboardViewProps) {
   return (
     <PageContainer className="gap-6">
@@ -100,6 +104,17 @@ export function DashboardView({
         <NoticeLink href="/helfer">
           Für <strong>{openHelperRequestEvent.title}</strong> werden noch Helfer
           gesucht — jetzt eintragen.
+        </NoticeLink>
+      )}
+
+      {unconfirmedShiftCount > 0 && (
+        <NoticeLink href="/helfer">
+          <span className="flex items-center justify-between gap-3">
+            Du hast Schichten, die noch bestätigt werden müssen.
+            <Badge aria-label={`${unconfirmedShiftCount} unbestätigt`}>
+              {unconfirmedShiftCount}
+            </Badge>
+          </span>
         </NoticeLink>
       )}
 

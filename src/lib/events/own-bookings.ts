@@ -34,3 +34,11 @@ export function findOwnVisibleShiftBookings(meepleId: string) {
     },
   });
 }
+
+/** Anzahl eigener sichtbarer, noch unbestätigter Zuweisungen (#682) — für die
+ * Dashboard-Card; dieselbe Definition von "sichtbar" wie `/helfer`. */
+export function countUnconfirmedOwnBookings(meepleId: string) {
+  return prisma.shiftBooking.count({
+    where: { ...visibleOwnBookingsWhere(meepleId), confirmedAt: null },
+  });
+}

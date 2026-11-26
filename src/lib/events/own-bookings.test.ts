@@ -45,3 +45,25 @@ describe("findOwnVisibleShiftBookings", () => {
     );
   });
 });
+
+describe("countUnconfirmedOwnBookings (#682)", () => {
+  it("counts only own, visible bookings without confirmation", async () => {
+    prismaMock.shiftBooking.count.mockResolvedValue(2);
+    const { countUnconfirmedOwnBookings } = await import("./own-bookings");
+
+    const count = await countUnconfirmedOwnBookings("meeple-1");
+
+    expect(count).toBe(2);
+    expect(prismaMock.shiftBooking.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        meepleId: "meeple-1",
+        confirmedAt: null,
+        shift: {
+          event: expect.objectContaining({
+            helperPhase: { in: ["CONFIRMATION_REQUESTED"] },
+          }),
+        },
+      }),
+    });
+  });
+});

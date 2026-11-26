@@ -16,7 +16,10 @@ afterEach(cleanup);
 
 const { DashboardView } = await import("./dashboard-view");
 
-function renderView(wantedExplainerGamesCount: number) {
+function renderView(
+  wantedExplainerGamesCount: number,
+  unconfirmedShiftCount = 0,
+) {
   return render(
     <DashboardView
       user={{ name: "Lea" } as never}
@@ -36,6 +39,7 @@ function renderView(wantedExplainerGamesCount: number) {
       isAusgetreten={false}
       openHelperRequestEvent={null}
       wantedExplainerGamesCount={wantedExplainerGamesCount}
+      unconfirmedShiftCount={unconfirmedShiftCount}
     />,
   );
 }
@@ -63,5 +67,21 @@ describe("DashboardView — Erklärer gesucht (#666)", () => {
     expect(
       screen.queryByRole("link", { name: /Erklärer gesucht/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("DashboardView — unbestätigte Schichten (#682)", () => {
+  it("shows a card with the count badge linking to /helfer", () => {
+    renderView(0, 2);
+
+    const link = screen.getByRole("link", { name: /bestätigt werden/ });
+    expect(link).toHaveAttribute("href", "/helfer");
+    expect(link).toHaveTextContent("2");
+  });
+
+  it("is hidden at 0", () => {
+    renderView(0, 0);
+
+    expect(screen.queryByText(/bestätigt werden/)).not.toBeInTheDocument();
   });
 });
