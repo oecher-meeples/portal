@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
+import { deleteBlobs } from "@/lib/utils/blob-delete";
 
 export type HelperRoleActionResult = { error: string } | { success: true };
 
@@ -95,6 +96,17 @@ export async function deleteHelperRole(
     };
   }
 
+  // Die FK sitzt an der Rolle (SetNull) — Download und Blob der Anleitung
+  // müssen hier explizit mit weg (#672).
+  const role = await prisma.helperRole.findUnique({
+    where: { id: roleId },
+    select: { guideDownload: { select: { id: true, fileKey: true } } },
+  });
+
   await prisma.helperRole.delete({ where: { id: roleId } });
+  if (role?.guideDownload) {
+    await prisma.download.delete({ where: { id: role.guideDownload.id } });
+    await deleteBlobs([role.guideDownload.fileKey]);
+  }
   return { success: true };
 }
