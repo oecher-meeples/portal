@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Pencil } from "lucide-react";
 import { cardVariants } from "@/components/ui/card";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -62,6 +63,7 @@ export type HelferEventGroup = {
   id: string;
   title: string;
   startsAt: string;
+  endsAt: string | null;
   location: string | null;
   days: EventDayOption[];
   isAttendingAsExplainer: boolean;
@@ -85,6 +87,7 @@ export function HelferView({
 }) {
   const { run, pending: isPending, error } = useAction();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const visibleEvents = filterEventsByDay(events, selectedDate);
 
   return (
@@ -93,6 +96,24 @@ export function HelferView({
         eyebrow="Event-Betrieb"
         title="Helferplan"
         description="Melde deine Verfügbarkeit und bestätige zugewiesene Schichten."
+        action={
+          events.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setEditing((current) => !current)}
+            >
+              {editing ? (
+                <Check className="size-4" />
+              ) : (
+                <Pencil className="size-4" />
+              )}
+              {editing ? "Fertig" : "Bearbeiten"}
+            </Button>
+          )
+        }
       />
 
       {events.length === 0 ? (
@@ -115,7 +136,12 @@ export function HelferView({
                         {event.title}
                       </span>
                       <span className="text-muted-foreground text-xs">
-                        {formatDateMedium(event.startsAt)}
+                        {event.endsAt
+                          ? formatWeekdayDateTimeRange(
+                              event.startsAt,
+                              event.endsAt,
+                            )
+                          : formatDateMedium(event.startsAt)}
                         {event.location ? ` · ${event.location}` : ""}
                       </span>
                     </span>
@@ -128,6 +154,7 @@ export function HelferView({
                           day={day}
                           dayRoles={dayRolesByDayId[day.id] ?? []}
                           own={ownAvailabilityByDayId[day.id] ?? null}
+                          editing={editing}
                         />
                       ))}
 

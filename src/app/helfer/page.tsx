@@ -115,6 +115,7 @@ export default async function HelferPage() {
     id: event.id,
     title: event.title,
     startsAt: event.startsAt.toISOString(),
+    endsAt: event.endsAt?.toISOString() ?? null,
     location: event.location,
     days: daysByEventId[event.id] ?? [],
     isAttendingAsExplainer: attendingEventIds.has(event.id),

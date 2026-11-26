@@ -17,6 +17,7 @@ export function RangeSlider({
   onValueCommitted,
   getAriaLabel,
   className,
+  disabled,
 }: {
   min: number;
   max: number;
@@ -30,9 +31,11 @@ export function RangeSlider({
   /** e.g. `(index) => (index === 0 ? "Von" : "Bis")` — required for screen readers. */
   getAriaLabel: (index: number) => string;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <SliderPrimitive.Root
+      disabled={disabled}
       min={min}
       max={max}
       step={step}

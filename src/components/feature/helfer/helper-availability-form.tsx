@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Save, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RangeSlider } from "@/components/ui/range-slider";
 import { useAction } from "@/components/ui/use-action";
@@ -36,16 +36,18 @@ export type OwnAvailability = {
 /** Pro Event-Tag: Verfügbarkeitsfenster (00:00–24:00-Regler) + Rollen-
  * Mehrfachauswahl (#156), beschränkt auf die Rollen, für die an diesem Tag
  * tatsächlich Schichten existieren — getrennt von der admin-seitigen
- * Zeitblock-Zuweisung (Schichtplan-Editor). Der Speichern-Button steht als
- * letzte Spalte im Grid. */
+ * Zeitblock-Zuweisung (Schichtplan-Editor). Im Bearbeiten-Modus (#674)
+ * speichert jede Änderung sofort; sonst ist das Formular schreibgeschützt. */
 export function HelperAvailabilityForm({
   day,
   dayRoles,
   own,
+  editing,
 }: {
   day: EventDayOption;
   dayRoles: HelperRoleOption[];
   own: OwnAvailability | null;
+  editing: boolean;
 }) {
   const [range, setRange] = useState<[number, number]>(
     own
@@ -58,21 +60,29 @@ export function HelperAvailabilityForm({
   const [roleIds, setRoleIds] = useState<string[]>(own?.roleIds ?? []);
   const { run, pending, error } = useAction();
 
-  function toggleRole(roleId: string, checked: boolean) {
-    setRoleIds((current) =>
-      checked ? [...current, roleId] : current.filter((id) => id !== roleId),
-    );
-  }
-
-  function save() {
+  /** Speichert sofort; ohne Rolle gibt es nichts anzubieten — dann wird eine
+   * bestehende Meldung zurückgezogen. */
+  function persist(nextRange: [number, number], nextRoleIds: string[]) {
+    if (nextRoleIds.length === 0) {
+      if (own) run(() => clearOwnHelperAvailability(day.id));
+      return;
+    }
     run(() =>
       setOwnHelperAvailability(
         day.id,
-        combineDateAndMinutes(day.date, range[0]),
-        combineDateAndMinutes(day.date, range[1]),
-        roleIds,
+        combineDateAndMinutes(day.date, nextRange[0]),
+        combineDateAndMinutes(day.date, nextRange[1]),
+        nextRoleIds,
       ),
     );
+  }
+
+  function toggleRole(roleId: string, checked: boolean) {
+    const next = checked
+      ? [...roleIds, roleId]
+      : roleIds.filter((id) => id !== roleId);
+    setRoleIds(next);
+    persist(range, next);
   }
 
   return (
@@ -85,6 +95,8 @@ export function HelperAvailabilityForm({
           step={15}
           value={range}
           onValueChange={setRange}
+          onValueCommitted={(next) => persist(next, roleIds)}
+          disabled={!editing}
           getAriaLabel={(index) => (index === 0 ? "Von" : "Bis")}
         />
         <span className="text-muted-foreground text-xs">
@@ -105,6 +117,7 @@ export function HelperAvailabilityForm({
               <input
                 type="checkbox"
                 checked={roleIds.includes(role.id)}
+                disabled={!editing || pending}
                 onChange={(event) => toggleRole(role.id, event.target.checked)}
               />
               {role.name}
@@ -113,11 +126,7 @@ export function HelperAvailabilityForm({
         )}
       </div>
       <div className="flex items-center gap-2">
-        <Button size="sm" disabled={pending} onClick={save}>
-          <Save className="size-4" />
-          Speichern
-        </Button>
-        {own && (
+        {editing && own && (
           <Button
             type="button"
             variant="ghost"
