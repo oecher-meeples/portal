@@ -20,7 +20,7 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
     averageRating: 8.5,
     mechanics: ["Engine-Building"],
     categories: [],
-    ean: null,
+    eans: [],
     condition: null,
     inventoryNumber: null,
     bggId: null,
@@ -59,8 +59,8 @@ function game(overrides: Partial<LudothekGame> = {}): LudothekGame {
 describe("filterLudothekGames — Textsuche", () => {
   it("matches an exact EAN", () => {
     const games = [
-      game({ title: "Arche Nova", ean: "4001504311892" }),
-      game({ title: "Wingspan", ean: "0700304142529" }),
+      game({ title: "Arche Nova", eans: ["4001504311892"] }),
+      game({ title: "Wingspan", eans: ["0700304142529"] }),
     ];
 
     const result = filterLudothekGames(games, { search: "4001504311892" });
@@ -68,8 +68,18 @@ describe("filterLudothekGames — Textsuche", () => {
     expect(result[0].title).toBe("Arche Nova");
   });
 
+  it("matches the second EAN of a title", () => {
+    const games = [
+      game({ title: "Catan", eans: ["4001504311892", "9783897775329"] }),
+      game({ title: "Wingspan", eans: ["0700304142529"] }),
+    ];
+
+    const result = filterLudothekGames(games, { search: "9783897775329" });
+    expect(result.map((g) => g.title)).toEqual(["Catan"]);
+  });
+
   it("does not match a partial EAN", () => {
-    const games = [game({ title: "Arche Nova", ean: "4001504311892" })];
+    const games = [game({ title: "Arche Nova", eans: ["4001504311892"] })];
 
     expect(filterLudothekGames(games, { search: "400150431" })).toHaveLength(0);
   });

@@ -12,7 +12,7 @@ export const BESTAND_CSV_COLUMNS = [
 /** One row shaped for the CSV export — a subset of `AdminBoardGameRow`. */
 export type BestandCsvRow = {
   title: string;
-  ean: string | null;
+  eans: string[];
   status: string;
   zustand: string;
   locationChain: string;
@@ -29,7 +29,7 @@ function csvCell(value: string | number) {
  */
 export function buildBestandCsv(rows: BestandCsvRow[]): string {
   const lines = rows.map((row) =>
-    [row.title, row.ean ?? "", row.status, row.zustand, row.locationChain]
+    [row.title, row.eans.join("; "), row.status, row.zustand, row.locationChain]
       .map(csvCell)
       .join(";"),
   );

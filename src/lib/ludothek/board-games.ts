@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { BoardGameKind, type RuleBookLanguage } from "@prisma/client";
 import { findActionActor } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
-import { normaliseEan } from "@/lib/inventory/ean";
+import {
+  normaliseAndValidateEans,
+  rethrowEanConflict,
+  replaceBoardGameEans,
+} from "@/lib/ludothek/board-game-eans";
+import { EanConflictError } from "@/lib/ludothek/errors";
 import {
   IN_INVENTORY_WHERE,
   isCatalogStub,
@@ -63,23 +68,19 @@ export type CreateBoardGameInput = BoardGameTitleInput & {
   acquiredOn?: Date | null;
 };
 
-/** Duplicate EANs are allowed by design (ADR 0001) — surfaced only as a hint. */
-async function duplicateEanHint(
-  ean: string | null | undefined,
-  excludeId?: string,
+/** Maps an EAN uniqueness violation (checked or raced) to a user-facing message; rethrows anything else. */
+async function eanConflictMessage(
+  error: unknown,
+  eans: readonly string[],
+  excludeBoardGameId?: string,
 ) {
-  if (!ean) return undefined;
-
-  const count = await prisma.boardGame.count({
-    where: {
-      ean: normaliseEan(ean),
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-    },
-  });
-
-  return count > 0
-    ? "Diese EAN ist bereits einem anderen Spiel zugeordnet — das ist bei mehreren Exemplaren desselben Titels normal."
-    : undefined;
+  try {
+    await rethrowEanConflict(error, eans, excludeBoardGameId);
+  } catch (mapped) {
+    if (mapped instanceof EanConflictError) return mapped.message;
+    throw mapped;
+  }
+  throw error;
 }
 
 /** Every title touched by an expansion assignment, revalidated via its own route. */
@@ -135,10 +136,7 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     }
   }
 
-  const [hint, actor] = await Promise.all([
-    duplicateEanHint(input.ean),
-    ensureMeeple(user),
-  ]);
+  const actor = await ensureMeeple(user);
 
   const resolvedOwn = await resolveOwnVereinsmitgliedIdForPlacement(
     input.placement,
@@ -150,8 +148,10 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     resolvedOwn.vereinsmitgliedId,
   );
 
-  const { copy, boardGameId, boardGameSlug } = await prisma.$transaction(
-    async (tx) => {
+  const eans = normaliseAndValidateEans(input.eans).eans;
+  let created;
+  try {
+    created = await prisma.$transaction(async (tx) => {
       const title = await findOrCreateBoardGameTitle(input, tx);
 
       if (!willReuseByBggId && input.alternateNames?.length) {
@@ -179,8 +179,11 @@ export async function createBoardGame(input: CreateBoardGameInput) {
         acquiredOn: input.acquiredOn,
       });
       return { copy, boardGameId: title.id, boardGameSlug: title.slug };
-    },
-  );
+    });
+  } catch (error) {
+    return { error: await eanConflictMessage(error, eans) };
+  }
+  const { copy, boardGameId, boardGameSlug } = created;
 
   revalidatePath("/ludothek");
   revalidatePath("/admin/bestand");
@@ -192,7 +195,6 @@ export async function createBoardGame(input: CreateBoardGameInput) {
     id: copy.id,
     boardGameId,
     boardGameSlug,
-    hint,
   };
 }
 
@@ -210,28 +212,33 @@ export async function updateBoardGame(id: string, input: BoardGameTitleInput) {
     };
   }
 
-  const hint = await duplicateEanHint(input.ean, id);
-
-  const game = await prisma.$transaction(async (tx) => {
-    const updated = await tx.boardGame.update({
-      where: { id },
-      data: { title: input.title, ...toBoardGameTitleData(input) },
+  const eans = normaliseAndValidateEans(input.eans).eans;
+  let game;
+  try {
+    game = await prisma.$transaction(async (tx) => {
+      const updated = await tx.boardGame.update({
+        where: { id },
+        data: { title: input.title, ...toBoardGameTitleData(input) },
+      });
+      await replaceAuthorIllustratorLinksByName(tx, id, {
+        author: input.author ?? [],
+        illustrator: input.illustrator ?? [],
+      });
+      await replaceTitleTagsByLabel(tx, id, {
+        mechanics: input.mechanics ?? [],
+        categories: input.categories ?? [],
+      });
+      await replaceBoardGameEans(tx, id, eans);
+      return updated;
     });
-    await replaceAuthorIllustratorLinksByName(tx, id, {
-      author: input.author ?? [],
-      illustrator: input.illustrator ?? [],
-    });
-    await replaceTitleTagsByLabel(tx, id, {
-      mechanics: input.mechanics ?? [],
-      categories: input.categories ?? [],
-    });
-    return updated;
-  });
+  } catch (error) {
+    return { error: await eanConflictMessage(error, eans, id) };
+  }
 
   revalidatePath("/ludothek");
   revalidatePath(`/ludothek/${game.slug}`);
   revalidatePath("/admin/bestand");
-  return { success: true as const, hint };
+  return { success: true as const };
 }
 
 /**
@@ -249,7 +256,7 @@ export async function getBoardGameTitleForEdit(id: string) {
     select: {
       title: true,
       secondaryTitle: true,
-      ean: true,
+      eans: { select: { ean: true }, orderBy: { createdAt: "asc" } },
       kind: true,
       languageDependence: true,
       bggId: true,
@@ -270,9 +277,10 @@ export async function getBoardGameTitleForEdit(id: string) {
   });
   if (!record) return null;
 
-  const { contributors, tags, ...rest } = record;
+  const { contributors, tags, eans, ...rest } = record;
   return {
     ...rest,
+    eans: eans.map((row) => row.ean),
     ...contributorNamesByRole(contributors),
     ...tagLabelsByType(tags),
   };

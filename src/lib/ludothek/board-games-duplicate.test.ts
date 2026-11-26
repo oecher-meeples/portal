@@ -238,7 +238,7 @@ describe("getBoardGameTitleForEdit", () => {
     mockPermissionKeys("all");
     prismaMock.boardGame.findUnique.mockResolvedValue({
       title: "Arche Nova",
-      ean: "5901234123457",
+      eans: [{ ean: "5901234123457" }],
       kind: "BOARDGAME",
       bggId: 342942,
       minPlayers: 1,

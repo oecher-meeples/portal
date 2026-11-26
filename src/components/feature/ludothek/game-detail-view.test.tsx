@@ -143,7 +143,7 @@ const TITLE_EDIT_FIXTURE = {
   illustrator: [],
   yearPublished: null,
   editionLanguages: [],
-  ean: null,
+  eans: [],
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
   minPlayers: 1,

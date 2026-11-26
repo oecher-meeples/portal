@@ -94,7 +94,7 @@ Was ein Exemplar wert ist (in Cent) und wann der Verein es erhalten hat — beid
 _Avoid_: Preis (das ist der Marktplatz), Euro-Beträge als Gleitkommazahl speichern
 
 **EAN**:
-Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt** (den Titel), nicht das einzelne Exemplar — mehrere Exemplare desselben Titels tragen dieselbe EAN, ein Scan kann daher mehrere Treffer liefern.
+Der Hersteller-Barcode auf der Spieleschachtel. Er kennzeichnet das **Produkt** (den Titel, je Edition eine EAN), nicht das einzelne Exemplar. Ein Titel kann mehrere EANs haben, aber jede EAN gehört global eindeutig zu genau einem Titel (ADR 0016); ein Scan findet den Titel über jede seiner EANs und kann mehrere Exemplare liefern.
 _Avoid_: Barcode als Exemplar-Schlüssel, Inventarnummer
 
 **Erweiterung** (`kind = BOARDGAME_EXPANSION`):

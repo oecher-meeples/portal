@@ -1,0 +1,35 @@
+name: Nightly
+
+# Prüfungen, die nicht jeden PR blockieren sollen: ein neues Advisory in einer
+# Fremd-Dependency oder ein Duplikat soll keinen unbeteiligten Feature-PR rot
+# machen. Läuft täglich gegen develop; Release prüft denselben Stand nicht neu.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+
+      - uses: pnpm/action-setup@v6.1.1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Allowlist bewusst offener Funde: pnpm-workspace.yaml (auditConfig.ignoreGhsas).
+      - name: Dependency-Vulnerability-Scan
+        run: pnpm audit --audit-level high
+
+      - name: Duplikate (DRY-Hinweis, nicht blockierend)
+        run: pnpm run dup
+        continue-on-error: true

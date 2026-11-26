@@ -48,7 +48,7 @@ export type AdminBoardGameRow = GameCopyAcquisition & {
   boardGameSlug: string;
   title: string;
   secondaryTitle: string | null;
-  ean: string | null;
+  eans: string[];
   status: "ACTIVE" | "MAINTENANCE" | "DEINVENTARISED";
   needsCompletenessCheck: boolean;
   lastCheckedAt: string | null;

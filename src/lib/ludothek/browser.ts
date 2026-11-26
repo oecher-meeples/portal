@@ -1,3 +1,4 @@
+import { normaliseEan } from "@/lib/inventory/ean";
 import type { GameZustand } from "@/lib/ludothek/holdings";
 import {
   BoardGameKind,
@@ -47,7 +48,7 @@ export type LudothekGame = {
   /** BGGs `boardgamecategory`-Links, analog `mechanics` (#404). */
   categories: string[];
   /** Only needed to seed the edit form for games:manage holders — not for display. */
-  ean: string | null;
+  eans: string[];
   condition: string | null;
   /** Inventarnummer des Exemplars (#270, ganzzahlig seit #543) — internes Identifikationsfeld. */
   inventoryNumber: number | null;
@@ -138,7 +139,7 @@ export type PublicLudothekGame = Omit<
   | "isUnconfirmed"
   | "unitChain"
   | "locationChain"
-  | "ean"
+  | "eans"
   | "condition"
   | "inventoryNumber"
   | "versionId"
@@ -158,7 +159,7 @@ export function toPublicGame(game: LudothekGame): PublicLudothekGame {
     isUnconfirmed: _isUnconfirmed,
     unitChain: _unitChain,
     locationChain: _locationChain,
-    ean: _ean,
+    eans: _eans,
     condition: _condition,
     inventoryNumber: _inventoryNumber,
     versionId: _versionId,
@@ -361,7 +362,7 @@ export function matchesLudothekSearch(
     LudothekGame,
     | "title"
     | "secondaryTitle"
-    | "ean"
+    | "eans"
     | "bggId"
     | "alternateNames"
     | "publisher"
@@ -375,7 +376,7 @@ export function matchesLudothekSearch(
 
   if (game.title.toLowerCase().includes(term)) return true;
   if (game.secondaryTitle?.toLowerCase().includes(term)) return true;
-  if (game.ean !== null && game.ean === search.trim()) return true;
+  if (game.eans.includes(normaliseEan(search))) return true;
   if (game.bggId !== null && String(game.bggId) === search.trim()) return true;
   if (game.alternateNames.some((name) => name.toLowerCase().includes(term)))
     return true;

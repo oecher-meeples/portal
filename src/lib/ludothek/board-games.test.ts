@@ -23,6 +23,7 @@ const { createBoardGame, updateBoardGame } = await import("./board-games");
 
 const VALID_INPUT = { title: "Arche Nova" };
 const VALID_EAN = "5901234123457";
+const VALID_EAN_2 = "9783897775329";
 
 beforeEach(() => {
   ensureMeepleMock.mockResolvedValue({ id: "meeple-1" });
@@ -75,7 +76,7 @@ describe("createBoardGame", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     mockPermissionKeys("all");
 
-    const result = await createBoardGame({ ...VALID_INPUT, ean: "12345" });
+    const result = await createBoardGame({ ...VALID_INPUT, eans: ["12345"] });
 
     expect(result).toEqual({
       error: "Diese EAN ist ungültig. Bitte die Prüfziffer kontrollieren.",
@@ -311,22 +312,54 @@ describe("createBoardGame", () => {
     expect(prismaMock.boardGame.findFirst).not.toHaveBeenCalled();
   });
 
-  it("accepts a duplicate ean and reports it as a hint, not an error", async () => {
+  it("stores several eans with the new title", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     mockPermissionKeys("all");
-    prismaMock.boardGame.count.mockResolvedValue(1);
     prismaMock.boardGame.create.mockResolvedValue({
       id: "game-2",
       title: "Arche Nova",
     } as never);
 
-    const result = await createBoardGame({ ...VALID_INPUT, ean: VALID_EAN });
+    const result = await createBoardGame({
+      ...VALID_INPUT,
+      eans: [VALID_EAN, VALID_EAN_2, VALID_EAN],
+    });
 
     expect(result.success).toBe(true);
-    expect(result.hint).toMatch(/bereits einem anderen Spiel/);
-    expect(prismaMock.boardGame.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ ean: VALID_EAN }),
+    expect(prismaMock.boardGameEan.createMany).toHaveBeenCalledWith({
+      data: [
+        { boardGameId: "game-2", ean: VALID_EAN },
+        { boardGameId: "game-2", ean: VALID_EAN_2 },
+      ],
+      skipDuplicates: true,
     });
+  });
+
+  it("creates without eans when none are given", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.create.mockResolvedValue({
+      id: "game-2",
+      title: "Arche Nova",
+    } as never);
+
+    await createBoardGame(VALID_INPUT);
+
+    expect(prismaMock.boardGameEan.createMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects an ean owned by another title and names it", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGame.create.mockResolvedValue({ id: "game-2" } as never);
+    prismaMock.boardGameEan.findFirst.mockResolvedValue({
+      ean: VALID_EAN,
+      boardGame: { title: "Catan" },
+    } as never);
+
+    const result = await createBoardGame({ ...VALID_INPUT, eans: [VALID_EAN] });
+
+    expect(result).toEqual({ error: expect.stringContaining("„Catan“") });
   });
 });
 
@@ -351,9 +384,11 @@ describe("updateBoardGame", () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     mockPermissionKeys("all");
 
+    prismaMock.boardGameEan.findMany.mockResolvedValue([] as never);
+
     const result = await updateBoardGame("game-1", VALID_INPUT);
 
-    expect(result).toEqual({ success: true, hint: undefined });
+    expect(result).toEqual({ success: true });
     expect(prismaMock.boardGame.update).toHaveBeenCalledWith({
       where: { id: "game-1" },
       data: expect.objectContaining({ title: "Arche Nova" }),
@@ -366,7 +401,7 @@ describe("updateBoardGame", () => {
 
     const result = await updateBoardGame("game-1", {
       ...VALID_INPUT,
-      ean: "x",
+      eans: ["x"],
     });
 
     expect(result).toEqual({
@@ -376,14 +411,62 @@ describe("updateBoardGame", () => {
     expect(prismaMock.boardGame.update).not.toHaveBeenCalled();
   });
 
-  it("excludes the title itself from the duplicate-ean check", async () => {
+  it("sets the title's eans, excluding itself from the conflict check", async () => {
     getCurrentUserMock.mockResolvedValue({ id: "user-1" });
     mockPermissionKeys("all");
+    prismaMock.boardGameEan.findMany.mockResolvedValue([
+      { ean: VALID_EAN },
+    ] as never);
 
-    await updateBoardGame("game-1", { ...VALID_INPUT, ean: VALID_EAN });
-
-    expect(prismaMock.boardGame.count).toHaveBeenCalledWith({
-      where: { ean: VALID_EAN, id: { not: "game-1" } },
+    await updateBoardGame("game-1", {
+      ...VALID_INPUT,
+      eans: [VALID_EAN, VALID_EAN_2],
     });
+
+    expect(prismaMock.boardGameEan.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          ean: { in: [VALID_EAN, VALID_EAN_2] },
+          boardGameId: { not: "game-1" },
+        },
+      }),
+    );
+    expect(prismaMock.boardGameEan.deleteMany).toHaveBeenCalledWith({
+      where: {
+        boardGameId: "game-1",
+        ean: { notIn: [VALID_EAN, VALID_EAN_2] },
+      },
+    });
+    expect(prismaMock.boardGameEan.createMany).toHaveBeenCalledWith({
+      data: [{ boardGameId: "game-1", ean: VALID_EAN_2 }],
+    });
+  });
+
+  it("removes all eans when none are given", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGameEan.findMany.mockResolvedValue([] as never);
+
+    await updateBoardGame("game-1", { ...VALID_INPUT, eans: [] });
+
+    expect(prismaMock.boardGameEan.deleteMany).toHaveBeenCalledWith({
+      where: { boardGameId: "game-1", ean: { notIn: [] } },
+    });
+  });
+
+  it("reports an ean conflict with the owning title", async () => {
+    getCurrentUserMock.mockResolvedValue({ id: "user-1" });
+    mockPermissionKeys("all");
+    prismaMock.boardGameEan.findFirst.mockResolvedValue({
+      ean: VALID_EAN,
+      boardGame: { title: "Catan" },
+    } as never);
+
+    const result = await updateBoardGame("game-1", {
+      ...VALID_INPUT,
+      eans: [VALID_EAN],
+    });
+
+    expect(result).toEqual({ error: expect.stringContaining("„Catan“") });
   });
 });
