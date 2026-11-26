@@ -17,7 +17,7 @@ const NOT_FOUND = () => new Response("Not found", { status: 404 });
  * Existenz interner Bilder nicht verraten wird. */
 export async function GET(
   request: Request,
-  ctx: RouteContext<"/api/blog-images/[id]">,
+  ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
   const image = await prisma.postImage.findUnique({
