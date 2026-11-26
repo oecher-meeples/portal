@@ -17,18 +17,22 @@ export function ContentListRow({
   item: Omit<ContentItem, "body">;
   canEdit?: boolean;
 }) {
+  // #678: Event-Termine sind Platzhalter — weder Link noch Hover-Effekt.
+  const clickable = !item.placeholder;
   return (
     <div
       className={cn(
         cardVariants({ size: "sm" }),
         "group flex-row gap-4",
-        CARD_HOVER_CLASS,
+        clickable && CARD_HOVER_CLASS,
         item.internal && "border-l-primary border-l-4",
       )}
     >
-      <Link href={`/news/${item.slug}`} className="absolute inset-0 z-0">
-        <span className="sr-only">{item.title} lesen</span>
-      </Link>
+      {clickable && (
+        <Link href={`/news/${item.slug}`} className="absolute inset-0 z-0">
+          <span className="sr-only">{item.title} lesen</span>
+        </Link>
+      )}
       <div className="relative w-20 shrink-0 sm:w-36">
         <CoverMedia
           sizes="144px"
@@ -65,7 +69,10 @@ export function ContentListRow({
         </span>
         <CardTitle
           as="h3"
-          className="group-hover:text-primary col-span-2 row-start-2 font-semibold"
+          className={cn(
+            "col-span-2 row-start-2 font-semibold",
+            clickable && "group-hover:text-primary",
+          )}
         >
           {item.title}
         </CardTitle>

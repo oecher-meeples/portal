@@ -1,7 +1,9 @@
 import ical, { type VEvent } from "node-ical";
 import { getAllContent, getUpcomingEvents } from "@/lib/content/content";
 import type { ContentItem } from "@/lib/content/content-types";
-import { findPublicUpcomingEvents } from "@/lib/events/upcoming";
+import { findCalendarUpcomingEvents } from "@/lib/events/upcoming";
+import { formatDateRange } from "@/lib/utils/format";
+import { isEventVisible } from "@/lib/events/visibility";
 
 const REVALIDATE_SECONDS = 15 * 60;
 const FETCH_TIMEOUT_MS = 8000;
@@ -227,20 +229,43 @@ export async function getUpcomingEventsWithCalendar(
     .slice(0, limit);
 }
 
-/** Öffentliche `Event`-Datensätze (Sichtbarkeit "Öffentlich", siehe
- * lib/events/visibility.ts) als ContentItem — kein `id`, damit sie wie
- * ICS-Termine nicht-editierbar bleiben (kein zugehöriger Post existiert). */
-async function getPublicDbEvents(limit = 50): Promise<ContentItem[]> {
-  const events = await findPublicUpcomingEvents(limit);
-  return events.map((event) => ({
-    slug: `event-${event.slug}`,
-    type: "termin" as const,
-    title: event.title,
-    excerpt: event.location ?? "",
-    body: event.location ?? "",
-    date: event.startsAt.toISOString().slice(0, 10),
-    location: event.location ?? undefined,
-  }));
+/** Von–bis und Ort, wie der Platzhalter es zeigt (#678). */
+function eventPlaceholderText(event: {
+  startsAt: Date;
+  endsAt: Date | null;
+  location: string | null;
+}): string {
+  const range = formatDateRange(
+    event.startsAt.toISOString(),
+    event.endsAt?.toISOString() ?? null,
+  );
+  return event.location ? `${range} · ${event.location}` : range;
+}
+
+/** `Event`-Datensätze als nicht anklickbare Platzhalter (#678): Entwurf nie,
+ * Intern nur für Meeples (`internal` — gefiltert wird downstream wie bei
+ * internen ICS-Terminen), Öffentlich für alle. Kein `id`, kein Link und kein
+ * Lazy-Post (`placeholder`) — bis der erklärende Beitrag existiert. */
+export async function getCalendarDbEvents(limit = 50): Promise<ContentItem[]> {
+  const events = await findCalendarUpcomingEvents(limit);
+  return events
+    .filter((event) =>
+      isEventVisible(event.visibility, {
+        tier: "mitglied",
+        canManageEvents: false,
+      }),
+    )
+    .map((event) => ({
+      slug: `event-${event.slug}`,
+      type: "termin" as const,
+      title: event.title,
+      excerpt: eventPlaceholderText(event),
+      body: eventPlaceholderText(event),
+      date: event.startsAt.toISOString().slice(0, 10),
+      location: event.location ?? undefined,
+      internal: event.visibility === "INTERNAL",
+      placeholder: true,
+    }));
 }
 
 export type ContentWithCalendarPage = {
@@ -275,7 +300,7 @@ export async function getAllContentWithCalendar(options?: {
     await Promise.all([
       getAllContent({ take, cursor }),
       isFirstPage ? getUpcomingCalendarEvents(50) : Promise.resolve([]),
-      isFirstPage ? getPublicDbEvents(50) : Promise.resolve([]),
+      isFirstPage ? getCalendarDbEvents(50) : Promise.resolve([]),
       isFirstPage
         ? fetchInternalEvents({ limit: 50 })
         : Promise.resolve([]),

@@ -120,13 +120,13 @@ export async function findCurrentEvent() {
   });
 }
 
-/** Öffentliche, noch kommende Events — Grundlage für die öffentliche
- * Termine-Seite (/news, siehe lib/content/calendar.ts). Entwurf/Intern
- * bleiben dort unsichtbar, siehe lib/events/visibility.ts. */
-export function findPublicUpcomingEvents(limit?: number) {
+/** Noch kommende Events für den Kalender auf /news (#678): alle außer
+ * Entwurf — ob ein Meeple oder Gast sie sieht, entscheidet `isEventVisible()`
+ * in `lib/content/calendar.ts`. */
+export function findCalendarUpcomingEvents(limit?: number) {
   return prisma.event.findMany({
     where: {
-      visibility: "PUBLIC",
+      visibility: { not: "DRAFT" },
       OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
     },
     orderBy: { startsAt: "asc" },
@@ -135,7 +135,9 @@ export function findPublicUpcomingEvents(limit?: number) {
       slug: true,
       title: true,
       startsAt: true,
+      endsAt: true,
       location: true,
+      visibility: true,
     },
   });
 }
