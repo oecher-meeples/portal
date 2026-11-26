@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FileField } from "@/components/ui/file-field";
@@ -10,6 +10,7 @@ import { MarkdownContent } from "@/components/ui/markdown-content";
 import { useBlobUpload } from "@/lib/utils/use-blob-upload";
 import { compressImage } from "@/lib/utils/compress-image";
 import { getUploadToken } from "@/components/feature/admin-news/actions";
+import { PostImageInsertButton } from "@/components/feature/admin-news/post-image-field";
 
 /**
  * Abschnitte von `post-form.tsx` mit eigenem UI-Zustand (#524): der Markdown-
@@ -25,6 +26,7 @@ export function PostBodyField({
   onChange: (value: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<"editor" | "preview">("editor");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -59,8 +61,12 @@ export function PostBodyField({
           </Button>
         </div>
       </div>
+      {activeTab === "editor" && (
+        <PostImageInsertButton textareaRef={textareaRef} onChange={onChange} />
+      )}
       {activeTab === "editor" ? (
         <Textarea
+          ref={textareaRef}
           id="body"
           value={value}
           onChange={(event) => onChange(event.target.value)}

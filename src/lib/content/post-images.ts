@@ -56,3 +56,16 @@ export function canViewPostImage({
   if (!post || post.status !== "PUBLISHED") return false;
   return post.internal ? visibility.canSeeInternal : true;
 }
+
+/** Alt-Text-Vorbelegung aus dem Dateinamen: ohne Endung, Trenner als Leerzeichen. */
+export function altTextFromFilename(filename: string): string {
+  return filename
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/[[\]()]/g, "")
+    .trim();
+}
+
+export function postImageMarkdown(alt: string, id: string): string {
+  return `![${alt.replace(/[[\]]/g, "")}](${postImageUrl(id)})`;
+}

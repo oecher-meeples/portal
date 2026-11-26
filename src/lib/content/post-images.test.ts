@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  altTextFromFilename,
+  postImageMarkdown,
   canViewPostImage,
   extractPostImageIds,
   findRemovedImageIds,
@@ -81,5 +83,19 @@ describe("canViewPostImage", () => {
     expect(
       canViewPostImage({ post: null, visibility: guest, canEdit: true }),
     ).toBe(true);
+  });
+});
+
+describe("altTextFromFilename / postImageMarkdown", () => {
+  it("derives alt text from the file name without extension", () => {
+    expect(altTextFromFilename("sommer_fest-2026.webp")).toBe(
+      "sommer fest 2026",
+    );
+  });
+
+  it("builds markdown that extractPostImageIds understands", () => {
+    const markdown = postImageMarkdown("Titel [x]", "abc");
+    expect(markdown).toBe("![Titel x](/api/blog-images/abc)");
+    expect(extractPostImageIds(markdown)).toEqual(["abc"]);
   });
 });

@@ -22,6 +22,11 @@ vi.mock("@/components/feature/admin-news/actions", () => ({
   retryInstagramPost: vi.fn(),
 }));
 
+vi.mock("@/components/feature/admin-news/post-image-actions", () => ({
+  getPostImageUploadToken: vi.fn(),
+  registerPostImage: vi.fn(),
+}));
+
 const { PostForm } = await import("./post-form");
 
 async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
