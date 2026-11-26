@@ -55,6 +55,24 @@ describe("searchGamesByName", () => {
     expect(init.headers).toEqual({ Authorization: `Bearer ${TEST_KEY}` });
   });
 
+  it("decodes html entities in names and publishers", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        games: [
+          {
+            EAN: VALID_EAN,
+            NAME: "The Others - V&ouml;llerei &bull; Erweiterung DE",
+            VERLAG: "Kosmos &amp; Co",
+          },
+        ],
+      }),
+    );
+
+    const [hit] = await searchGamesByName("Others");
+    expect(hit.title).toBe("The Others - Völlerei • Erweiterung DE");
+    expect(hit.brand).toBe("Kosmos & Co");
+  });
+
   it("falls back from VERLAG to HERAUSGEBER", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({

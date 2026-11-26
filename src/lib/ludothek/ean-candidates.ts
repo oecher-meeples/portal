@@ -83,10 +83,32 @@ export async function findEanCandidates(
   return markTakenEans(sort(results), options?.excludeBoardGameId);
 }
 
+const EXPANSION_PATTERN = /erweiterung|expansion/;
+
+function normaliseTitle(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/**
+ * Ohne Rückfrage übernommen werden nur Treffer, die zum gesuchten Titel
+ * gehören: der Name beginnt mit dem Titel, und Erweiterungen werden nur
+ * zugelassen, wenn der Titel selbst eine ist.
+ */
+export function matchesSearchedTitle(hitTitle: string, searched: string) {
+  const hit = normaliseTitle(hitTitle);
+  const wanted = normaliseTitle(searched);
+  if (!wanted || !hit.startsWith(wanted)) return false;
+  return EXPANSION_PATTERN.test(wanted) || !EXPANSION_PATTERN.test(hit);
+}
+
 /**
  * Unbeaufsichtigte Übernahme für den Massenimport: alle noch freien EANs, die
- * die Quelle zum Titel liefert (#668). Sucht der Reihe nach mit allen Titeln,
- * bis einer Treffer liefert; ein Suchfehler lässt den Import nie scheitern.
+ * die Quelle zum Titel liefert (#668) — ohne fremde Titel und Erweiterungen
+ * (`matchesSearchedTitle`). Sucht der Reihe nach mit allen Titeln, bis einer
+ * passende Treffer liefert; ein Suchfehler lässt den Import nie scheitern.
  */
 export async function findFreeEans(
   titles: string[],
@@ -95,10 +117,11 @@ export async function findFreeEans(
   try {
     for (const title of titles) {
       if (!title.trim()) continue;
-      const results = await findEanCandidates(title, options);
-      if (results.length > 0) {
-        return results.filter((r) => !r.takenBy).map((r) => r.ean);
-      }
+      const results = (await findEanCandidates(title, options)).filter(
+        (result) =>
+          !result.takenBy && matchesSearchedTitle(result.title, title),
+      );
+      if (results.length > 0) return results.map((r) => r.ean);
     }
   } catch {
     return [];

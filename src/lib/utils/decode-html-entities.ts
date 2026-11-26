@@ -8,7 +8,17 @@ const HTML_ENTITY_MAP: Record<string, string> = {
   "&mdash;": "—",
   "&ndash;": "–",
   "&hellip;": "…",
+  "&auml;": "ä",
+  "&ouml;": "ö",
+  "&uuml;": "ü",
+  "&Auml;": "Ä",
+  "&Ouml;": "Ö",
+  "&Uuml;": "Ü",
+  "&szlig;": "ß",
+  "&bull;": "•",
 };
+
+const ENTITY_PATTERN = new RegExp(Object.keys(HTML_ENTITY_MAP).join("|"), "g");
 
 /**
  * Dekodiert HTML-Entities in Freitext aus externen APIs — ursprünglich für
@@ -19,10 +29,7 @@ const HTML_ENTITY_MAP: Record<string, string> = {
  */
 export function decodeHtmlEntities(input: string): string {
   return input
-    .replace(
-      /&amp;|&quot;|&apos;|&lt;|&gt;|&nbsp;|&mdash;|&ndash;|&hellip;/g,
-      (match) => HTML_ENTITY_MAP[match],
-    )
+    .replace(ENTITY_PATTERN, (match) => HTML_ENTITY_MAP[match])
     .replace(/&#(\d+);/g, (_, code: string) =>
       String.fromCharCode(Number(code)),
     );

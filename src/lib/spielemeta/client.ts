@@ -1,4 +1,5 @@
 import { isValidEan, normaliseEan } from "@/lib/inventory/ean";
+import { decodeHtmlEntities } from "@/lib/utils/decode-html-entities";
 import { requireEnv } from "@/lib/utils/require-env";
 import type { EanSearchResult } from "@/lib/upc-lookup/client";
 
@@ -68,14 +69,17 @@ async function fetchSpielemeta(path: string, params: URLSearchParams) {
 
 function toResult(game: SpielemetaGame): EanSearchResult | null {
   const ean = normaliseEan(String(game.EAN ?? ""));
-  const title = game.NAME?.trim();
+  const title = game.NAME ? decodeHtmlEntities(game.NAME).trim() : "";
   if (!title || !isValidEan(ean)) return null;
 
   const year = Number(game.YEAR);
   return {
     ean,
     title,
-    brand: game.VERLAG?.trim() || game.HERAUSGEBER?.trim() || undefined,
+    brand:
+      decodeHtmlEntities(game.VERLAG ?? "").trim() ||
+      decodeHtmlEntities(game.HERAUSGEBER ?? "").trim() ||
+      undefined,
     ...(Number.isInteger(year) && year > 0 ? { year } : {}),
   };
 }

@@ -12,7 +12,7 @@ vi.mock("@/lib/upc-lookup/client", () => ({
   searchEanByName: (...args: unknown[]) => searchEanByNameMock(...args),
 }));
 
-const { findFreeEans } = await import("./ean-candidates");
+const { findFreeEans, matchesSearchedTitle } = await import("./ean-candidates");
 
 beforeEach(() => {
   prismaMock.boardGameEan.findMany.mockResolvedValue([]);
@@ -43,6 +43,15 @@ describe("findFreeEans", () => {
     expect(await findFreeEans(["Catan"])).toEqual(["9783897775329"]);
   });
 
+  it("drops hits for other titles and expansions", async () => {
+    searchGamesByNameMock.mockResolvedValue([
+      { ean: "4015566600225", title: "Catan - Deutschlandedition" },
+      { ean: "9783897775329", title: "Catan - Erweiterung" },
+      { ean: "0850000576407", title: "Carcassonne" },
+    ]);
+    expect(await findFreeEans(["Catan"])).toEqual(["4015566600225"]);
+  });
+
   it("tries alternate titles when the first has no hit", async () => {
     searchGamesByNameMock
       .mockResolvedValueOnce([])
@@ -56,5 +65,33 @@ describe("findFreeEans", () => {
     searchGamesByNameMock.mockRejectedValue(new Error("down"));
     searchEanByNameMock.mockRejectedValue(new Error("down"));
     expect(await findFreeEans(["Catan"])).toEqual([]);
+  });
+});
+
+describe("matchesSearchedTitle", () => {
+  it("accepts editions that start with the title", () => {
+    expect(matchesSearchedTitle("Catan - Deutschlandedition", "Catan")).toBe(
+      true,
+    );
+    expect(
+      matchesSearchedTitle("DIE SIEDLER VON CATAN", "Die Siedler von Catan"),
+    ).toBe(true);
+  });
+
+  it("rejects other titles and expansions", () => {
+    expect(matchesSearchedTitle("Carcassonne", "Catan")).toBe(false);
+    expect(
+      matchesSearchedTitle("Catan - Erweiterung 5-6 Spieler", "Catan"),
+    ).toBe(false);
+    expect(matchesSearchedTitle("Catan Expansion", "Catan")).toBe(false);
+  });
+
+  it("allows expansions when the searched title is one", () => {
+    expect(
+      matchesSearchedTitle(
+        "Catan Seefahrer Erweiterung",
+        "Catan Seefahrer Erweiterung",
+      ),
+    ).toBe(true);
   });
 });
