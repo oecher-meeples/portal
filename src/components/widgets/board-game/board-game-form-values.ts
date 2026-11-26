@@ -15,6 +15,7 @@ import type {
   BoardGameTitleInput,
   CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
+import { isValidEan } from "@/lib/inventory/ean";
 import type { GameCopyInput } from "@/lib/ludothek/game-copies";
 import { parseInventoryNumber } from "@/lib/ludothek/game-copy-inventory-number";
 import {
@@ -46,7 +47,7 @@ export type EditionMode = "none" | "existing" | "new";
 export type BoardGameFormValues = {
   title: string;
   secondaryTitle: string;
-  ean: string;
+  eans: string[];
   condition: string;
   kind: BoardGameKind;
   bggId: string;
@@ -98,7 +99,7 @@ export type BoardGameFormValues = {
 export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
   title: "",
   secondaryTitle: "",
-  ean: "",
+  eans: [],
   condition: "",
   kind: BoardGameKind.BOARDGAME,
   bggId: "",
@@ -132,7 +133,7 @@ export const EMPTY_BOARD_GAME_FORM: BoardGameFormValues = {
 export type BoardGameRecord = {
   title: string;
   secondaryTitle: string | null;
-  ean: string | null;
+  eans: string[];
   condition: string | null;
   kind: BoardGameKind;
   bggId: number | null;
@@ -161,7 +162,7 @@ export function boardGameToFormValues(
   return {
     title: game.title,
     secondaryTitle: game.secondaryTitle ?? "",
-    ean: game.ean ?? "",
+    eans: game.eans,
     condition: game.condition ?? "",
     kind: game.kind,
     bggId: game.bggId?.toString() ?? "",
@@ -294,7 +295,7 @@ export function boardGameFormToTitleInput(
   return {
     title: form.title,
     secondaryTitle: form.secondaryTitle || undefined,
-    ean: form.ean || undefined,
+    eans: form.eans,
     kind: form.kind,
     bggId: form.bggId ? parseBggId(form.bggId) : undefined,
     minPlayers: form.minPlayers ? Number(form.minPlayers) : undefined,
@@ -330,4 +331,9 @@ export function boardGameFormToInput(
     ruleBookLanguages: form.ruleBookLanguages,
     ...exemplarAcquisitionFromForm(form),
   };
+}
+
+/** Recovery for #322: drops the EANs with a bad check digit, keeps the rest. */
+export function onlyValidEans(eans: string[]): string[] {
+  return eans.filter((ean) => isValidEan(ean));
 }

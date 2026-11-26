@@ -65,7 +65,7 @@ const GAME_WITHOUT_BGG_ID = {
   illustrator: [],
   yearPublished: null,
   editionLanguages: [],
-  ean: null,
+  eans: [],
   kind: BoardGameKind.BOARDGAME,
   bggId: null,
   minPlayers: 1,
@@ -209,7 +209,9 @@ describe("EditBoardGameTitleDialog — ungültige EAN beim Speichern (#322)", ()
       .mockResolvedValueOnce({ success: true });
 
     render(
-      <EditBoardGameTitleDialog game={{ ...GAME_WITHOUT_BGG_ID, ean: "x" }} />,
+      <EditBoardGameTitleDialog
+        game={{ ...GAME_WITHOUT_BGG_ID, eans: ["x"] }}
+      />,
     );
     await openDialog(user);
     await user.click(screen.getByRole("button", { name: "Speichern" }));
@@ -218,7 +220,7 @@ describe("EditBoardGameTitleDialog — ungültige EAN beim Speichern (#322)", ()
     expect(updateBoardGameMock).toHaveBeenCalledTimes(2);
     expect(updateBoardGameMock).toHaveBeenLastCalledWith(
       "title-1",
-      expect.objectContaining({ ean: "" }),
+      expect.objectContaining({ eans: [] }),
     );
     confirmSpy.mockRestore();
   });
@@ -232,7 +234,9 @@ describe("EditBoardGameTitleDialog — ungültige EAN beim Speichern (#322)", ()
     });
 
     render(
-      <EditBoardGameTitleDialog game={{ ...GAME_WITHOUT_BGG_ID, ean: "x" }} />,
+      <EditBoardGameTitleDialog
+        game={{ ...GAME_WITHOUT_BGG_ID, eans: ["x"] }}
+      />,
     );
     await openDialog(user);
     await user.click(screen.getByRole("button", { name: "Speichern" }));

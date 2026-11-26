@@ -1,6 +1,6 @@
 ---
 status: accepted
-superseded-by: 0008-boardgame-titel-exemplar-trennung.md (Titel-/Exemplar-Trennung)
+superseded-by: 0008-boardgame-titel-exemplar-trennung.md (Titel-/Exemplar-Trennung), 0016-mehrere-eans-je-titel-eindeutig.md (EAN eindeutig je Titel)
 ---
 
 # Ludothek-Datenmodell: Aufenthalte statt Exemplare

@@ -188,7 +188,7 @@ export async function buildPrivateLudothekGames({
       ...boardGameDisplayFields(boardGame),
       slug: entry.id,
       // Privatbesitz hat kein Vereins-Exemplar — exemplarbezogene Felder leer.
-      ean: null,
+      eans: [],
       condition: null,
       inventoryNumber: null,
       ruleBookLanguages: [],

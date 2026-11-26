@@ -1,3 +1,4 @@
+import { eanWhere } from "@/lib/ludothek/board-game-eans";
 import {
   GameInventoryStatus,
   StorageUnitKind,
@@ -197,7 +198,7 @@ export async function resolveScannedCode(raw: string): Promise<ResolvedScan> {
     // a scan can resolve to several copies of the same title.
     const copies = await prisma.gameCopy.findMany({
       where: {
-        boardGame: { ean: parsed.value },
+        boardGame: eanWhere(parsed.value),
         status: { not: GameInventoryStatus.DEINVENTARISED },
       },
       include: { boardGame: true },

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { matchesAdminBestandSearch } from "./admin-bestand-search";
 
-const game = { title: "Catan", ean: "4001504311892", bggId: 13 };
+const game = { title: "Catan", eans: ["4001504311892"], bggId: 13 };
 
 describe("matchesAdminBestandSearch", () => {
   it("matches on a title substring, case-insensitively", () => {
@@ -11,6 +11,11 @@ describe("matchesAdminBestandSearch", () => {
 
   it("matches on an exact EAN", () => {
     expect(matchesAdminBestandSearch(game, "4001504311892")).toBe(true);
+  });
+
+  it("matches on any of several EANs, normalised", () => {
+    const multi = { ...game, eans: ["4001504311892", "9783897775329"] };
+    expect(matchesAdminBestandSearch(multi, "978-3897775329")).toBe(true);
   });
 
   it("does not match on a partial EAN", () => {
@@ -32,7 +37,7 @@ describe("matchesAdminBestandSearch", () => {
   it("does not match a numeric search against a null EAN/BGG-ID", () => {
     expect(
       matchesAdminBestandSearch(
-        { title: "Catan", ean: null, bggId: null },
+        { title: "Catan", eans: [], bggId: null },
         "13",
       ),
     ).toBe(false);

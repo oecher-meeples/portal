@@ -206,7 +206,7 @@ export const LudothekResults = memo(function LudothekResults({
             game={game}
             traitTexts={traitTexts}
             actions={
-              canManageGames && "ean" in game ? (
+              canManageGames && "eans" in game ? (
                 <div className="flex items-center gap-1">
                   <GameCardEditOverlay
                     game={game}

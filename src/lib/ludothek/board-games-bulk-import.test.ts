@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
@@ -42,6 +42,13 @@ vi.mock("@/lib/ludothek/board-games", () => ({
 const getSuggestedInventoryNumberMock = vi.fn();
 vi.mock("@/lib/ludothek/game-copies", () => ({
   getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
+}));
+
+const markTakenEansMock = vi.fn();
+const findFreeEansMock = vi.fn();
+vi.mock("@/lib/ludothek/ean-candidates", () => ({
+  markTakenEans: (...args: unknown[]) => markTakenEansMock(...args),
+  findFreeEans: (...args: unknown[]) => findFreeEansMock(...args),
 }));
 
 const lookupEanTitleMock = vi.fn();
@@ -91,6 +98,11 @@ function beforeEachSetup() {
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
   getSuggestedInventoryNumberMock.mockResolvedValue("1");
 }
+
+beforeEach(() => {
+  markTakenEansMock.mockImplementation(async (results: unknown[]) => results);
+  findFreeEansMock.mockResolvedValue([]);
+});
 
 describe("bulkImportBoardGames", () => {
   it("rejects when the user lacks the games:manage permission", async () => {

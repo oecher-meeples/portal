@@ -236,6 +236,20 @@ describe("resolveScannedCode", () => {
     });
   });
 
+  it("looks the ean up across all eans of a title", async () => {
+    prismaMock.gameCopy.findMany.mockResolvedValue([{ id: GAME_ID }] as never);
+
+    await resolveScannedCode("9783897775329");
+
+    expect(prismaMock.gameCopy.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          boardGame: { eans: { some: { ean: "9783897775329" } } },
+        }),
+      }),
+    );
+  });
+
   it("resolves an ean with one match", async () => {
     prismaMock.gameCopy.findMany.mockResolvedValue([{ id: GAME_ID }] as never);
 

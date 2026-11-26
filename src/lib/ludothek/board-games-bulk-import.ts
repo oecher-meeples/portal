@@ -21,6 +21,7 @@ import {
   createBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
+import { markTakenEans, findFreeEans } from "@/lib/ludothek/ean-candidates";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
 import { getSuggestedInventoryNumber } from "@/lib/ludothek/game-copies";
 import {
@@ -72,12 +73,35 @@ function toCreateInput(
   bggId: number,
   data: BggGameData,
   inventoryNumber?: number,
+  eans: string[] = [],
 ): CreateBoardGameInput {
   return {
     ...bggDataToTitleInput(bggId, data),
     alternateNames: data.alternateNames,
     inventoryNumber,
+    eans,
   };
+}
+
+/**
+ * EANs für einen neu importierten Titel (#668): eine als Zeile gegebene EAN
+ * zählt direkt, sonst werden alle freien EANs übernommen, die Spielemeta bzw.
+ * UPCitemdb zum Titel liefern. Ein Fehlschlag lässt den Import nie scheitern.
+ */
+async function resolveImportEans(
+  entry: string,
+  data: BggGameData,
+): Promise<string[]> {
+  if (isValidEan(entry)) {
+    const [checked] = await markTakenEans([
+      { ean: normaliseEan(entry), title: data.title },
+    ]);
+    return checked.takenBy ? [] : [checked.ean];
+  }
+
+  return findFreeEans([data.title, ...data.alternateNames], {
+    publisher: resolvePublisherFromVersions(data.versions).value ?? [],
+  });
 }
 
 /**
@@ -176,7 +200,12 @@ async function finishImport(
     inventoryNumber ?? (await getSuggestedInventoryNumber());
 
   const created = await createBoardGame(
-    toCreateInput(bggId, preview.data, resolvedInventoryNumber),
+    toCreateInput(
+      bggId,
+      preview.data,
+      resolvedInventoryNumber,
+      await resolveImportEans(entry, preview.data),
+    ),
   );
   if (created.error) {
     return {

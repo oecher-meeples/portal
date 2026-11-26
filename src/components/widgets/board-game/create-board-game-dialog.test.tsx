@@ -110,14 +110,16 @@ describe("CreateBoardGameDialog — manueller Wizard-Durchlauf (EAN-Scan)", () =
     await user.type(within(dialog).getByLabelText("Titel"), "Arche Nova");
     await goNext(dialog, user);
     // EAN gehört zur Version — sie steht erst im Exemplar-Schritt.
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue("5901234123457");
+    expect(within(dialog).getByLabelText("Hinterlegte EANs")).toHaveTextContent(
+      "5901234123457",
+    );
     await user.click(submitButton(dialog));
 
     await waitFor(() => expect(createBoardGameMock).toHaveBeenCalledTimes(1));
     expect(createBoardGameMock).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Arche Nova",
-        ean: "5901234123457",
+        eans: ["5901234123457"],
         condition: undefined,
       }),
     );
@@ -135,7 +137,9 @@ describe("CreateBoardGameDialog — manueller Wizard-Durchlauf (EAN-Scan)", () =
 
     await user.click(within(dialog).getByText("simulate-scan"));
 
-    expect(within(dialog).getByLabelText("EAN")).toHaveValue("4001504311892");
+    expect(within(dialog).getByLabelText("Hinterlegte EANs")).toHaveTextContent(
+      "4001504311892",
+    );
   });
 
   it("shows the server error instead of crashing when the session has expired", async () => {
@@ -189,7 +193,7 @@ describe("CreateBoardGameDialog — ungültige EAN beim Speichern (#322)", () =>
 
     await waitFor(() => expect(createBoardGameMock).toHaveBeenCalledTimes(2));
     expect(createBoardGameMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ title: "Arche Nova", ean: "" }),
+      expect.objectContaining({ title: "Arche Nova", eans: [] }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

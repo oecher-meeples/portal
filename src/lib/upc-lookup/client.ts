@@ -12,6 +12,10 @@ export interface EanSearchResult {
   ean: string;
   title: string;
   brand?: string;
+  /** Erscheinungsjahr der Edition — nur zur Unterscheidung im Dropdown (Spielemeta). */
+  year?: number;
+  /** Titel, dem die EAN bereits gehört (#668) — solche Treffer sind nicht wählbar. */
+  takenBy?: string;
 }
 
 const UPC_ITEM_DB_SEARCH_URL = "https://api.upcitemdb.com/prod/trial/search";
