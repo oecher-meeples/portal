@@ -46,7 +46,8 @@ src/lib/
 │               Kassenansicht als auch die neue Verkäufer-Registrierungsseite (`feature/bringbuy`) darauf zugreifen
 │               und die Layer-Regel keinen Cross-Feature-Import erlaubt (#266). Lesefunktionen ohne Guard (Token-Lookup,
 │               eigene Artikel, reservierte Warenkörbe) liegen in `queries.ts` **ohne** `"use server"` (#519)
-├── content/    News/Content (`CONTENT_TYPE_LABELS` in `content-types.ts`; inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG
+├── content/    News/Content (`CONTENT_TYPE_LABELS` in `content-types.ts`; inkl. `Post.status` DRAFT/PUBLISHED — Entwürfe werden aus jeder öffentlichen/internen Query gefiltert), LFG.
+│               **Beitragsbilder (#671):** Modell `PostImage` (`postId` nullable bis zum ersten Speichern, `onDelete: Cascade`), Datei im privaten S3-Präfix `blog-images/`. `post-images.ts` (`postImageUrl`/`extractPostImageIds`/`canViewPostImage`, Body speichert `![Alt](/api/blog-images/<id>)`), `post-images-sync.ts` (`syncPostImages` verknüpft beim Speichern und löscht nicht mehr referenzierte Bilder, `deletePostWithImages`), `post-images-cleanup.ts` (täglicher Cron löscht unverknüpfte Bilder > 24 h). Ausgeliefert nur über `app/api/blog-images/[id]/route.ts` (Sichtbarkeit wie der Beitrag, sonst 404; `?format=jpeg` für Instagram). Newsletter bettet Bilder als `cid:`-Anhänge ein (`lib/newsletter/post-email-body.ts`), Instagram baut aus Cover + Body-Bildern ein Karussell (max. 10, `lib/instagram/queue.ts`). Upload-Actions: `feature/admin-news/post-image-actions.ts`, UI: `post-image-field.tsx`. LFG
 ├── events/     Events, Schichten, Kapazität, Schicht-Labels
 ├── inventory/  Code-Format (OM-BOX-…), Bestandsregeln, Ersatzteillager-Schreibseite (`spare-part-listings.ts`) und -Leseseite (`spare-parts.ts`)
 ├── legal/      Rechtliches-Dokumente (Satzung/Datenschutz/Impressum/Beitragsordnung, feste Slugs): PDF-Text-Extraktion
