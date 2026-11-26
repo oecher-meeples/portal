@@ -33,6 +33,10 @@ import {
   type HelperRoleOption,
   type OwnAvailability,
 } from "@/components/feature/helfer/helper-availability-form";
+import {
+  HelperGuideDownloads,
+  type HelperGuideLink,
+} from "@/components/feature/helfer/helper-guide-downloads";
 import { PageContainer } from "@/components/ui/page-container";
 import {
   formatDateMedium,
@@ -69,12 +73,14 @@ export function HelferView({
   dayRolesByDayId,
   ownAvailabilityByDayId,
   assignedShifts,
+  guides,
   isExplainer,
 }: {
   events: HelferEventGroup[];
   dayRolesByDayId: Record<string, HelperRoleOption[]>;
   ownAvailabilityByDayId: Record<string, OwnAvailability>;
   assignedShifts: HelferShiftRow[];
+  guides: HelperGuideLink[];
   isExplainer: boolean;
 }) {
   const { run, pending: isPending, error } = useAction();
@@ -86,6 +92,8 @@ export function HelferView({
         title="Helferplan"
         description="Melde deine Verfügbarkeit und bestätige zugewiesene Schichten."
       />
+
+      <HelperGuideDownloads guides={guides} />
 
       {events.length === 0 ? (
         <p className="text-muted-foreground text-sm">

@@ -1,5 +1,6 @@
 import { requireMember } from "@/lib/auth/session";
 import { prisma } from "@/lib/utils/prisma";
+import { signedBlobUrl } from "@/lib/utils/blob-access";
 import {
   findUpcomingEventsVisibleToMembers,
   isEventRunningAt,
@@ -9,6 +10,7 @@ import {
   type HelferEventGroup,
   type HelferShiftRow,
 } from "@/components/feature/helfer/helfer-view";
+import type { HelperGuideLink } from "@/components/feature/helfer/helper-guide-downloads";
 import type {
   EventDayOption,
   OwnAvailability,
@@ -32,6 +34,7 @@ export default async function HelferPage() {
     explainerGameCount,
     ownAttendances,
     ownBookings,
+    guideRoles,
   ] = await Promise.all([
     prisma.eventDay.findMany({
       where: { eventId: { in: eventIds } },
@@ -69,7 +72,28 @@ export default async function HelferPage() {
         },
       },
     }),
+    prisma.helperRole.findMany({
+      where: { guideDownloadId: { not: null } },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        guideDownload: { select: { fileKey: true } },
+      },
+    }),
   ]);
+
+  const guides: HelperGuideLink[] = guideRoles.flatMap((role) =>
+    role.guideDownload
+      ? [
+          {
+            roleId: role.id,
+            roleName: role.name,
+            url: signedBlobUrl(role.guideDownload.fileKey),
+          },
+        ]
+      : [],
+  );
 
   const ownAvailabilityByDayId: Record<string, OwnAvailability> =
     Object.fromEntries(
@@ -127,6 +151,7 @@ export default async function HelferPage() {
       dayRolesByDayId={dayRolesByDayId}
       ownAvailabilityByDayId={ownAvailabilityByDayId}
       assignedShifts={assignedShifts}
+      guides={guides}
       isExplainer={explainerGameCount > 0}
     />
   );

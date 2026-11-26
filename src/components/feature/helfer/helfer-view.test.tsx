@@ -44,6 +44,7 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
         dayRolesByDayId={{}}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={true}
       />,
     );
@@ -58,6 +59,7 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
         dayRolesByDayId={{}}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={true}
       />,
     );
@@ -74,6 +76,7 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
         dayRolesByDayId={{}}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={false}
       />,
     );
