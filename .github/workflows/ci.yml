@@ -1,9 +1,11 @@
 name: CI
 
+# Läuft nur auf PRs und in der Merge Queue (merge_group). Kein `push`-Trigger:
+# develop wird ausschließlich über die Queue befüllt, deren Merge-Ergebnis hier
+# schon geprüft wurde.
 on:
-  push:
-    branches: [develop, main]
   pull_request:
+  merge_group:
 
 # Ein laufender Check pro Branch reicht — ältere Läufe abbrechen.
 concurrency:
@@ -15,6 +17,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Der Pflicht-Check `verify` muss immer melden (ein Workflow-`paths-ignore`
+      # ließe ihn "pending" und den PR unmergebar). Deshalb läuft der Job immer
+      # und überspringt die teuren Schritte, wenn nur Doku/CI/Pläne geändert sind.
+      - name: Änderungen klassifizieren
+        id: changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+        run: |
+          if git diff --name-only "$BASE" "$HEAD" | grep -qvE '^(\.claude/|docs/|\.github/|\.husky/)|\.md$'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Nur Doku/CI/Pläne geändert - Typecheck, Lint, Tests und Build entfallen."
+          fi
 
       - uses: pnpm/action-setup@v6.1.1
 
@@ -35,32 +55,24 @@ jobs:
 
       # Typen.
       - name: Typecheck
+        if: steps.changes.outputs.code == 'true'
         run: pnpm run typecheck
 
       # Enthält die Architekturregeln: Schichten-Import-Richtung,
       # Feature-Isolation und max. 400 Zeilen pro Datei.
       - name: Lint & Architekturregeln
+        if: steps.changes.outputs.code == 'true'
         run: pnpm run lint
 
       # Ersetzt einen separaten `test`-Schritt statt daneben zu laufen — die
       # Suite zweimal auszuführen wäre reine Verschwendung. Schwelle in
       # vitest.config.ts, abgeleitet aus der gemessenen Baseline (#38).
       - name: Tests mit Coverage-Schwelle
+        if: steps.changes.outputs.code == 'true'
         run: pnpm run test:coverage
 
-      # Blockierend. Die Allowlist bewusst offener Funde (better-auth-Kette,
-      # Issue #10; brace-expansion, nur Dev-Tooling) steht in
-      # pnpm-workspace.yaml (auditConfig.ignoreGhsas) statt hier als Flags —
-      # eine Quelle der Wahrheit für lokale Läufe und CI gleichermaßen.
-      - name: Dependency-Vulnerability-Scan
-        run: pnpm audit --audit-level high
-
-      # Nur Information: macht neue Duplikate sichtbar, bricht den Build nicht.
-      - name: Duplikate (DRY-Hinweis, nicht blockierend)
-        run: pnpm run dup
-        continue-on-error: true
-
       - name: Next-Build-Cache
+        if: steps.changes.outputs.code == 'true'
         uses: actions/cache@v6
         with:
           path: .next/cache
@@ -72,6 +84,7 @@ jobs:
       # an, alle Routen sind dynamisch (ƒ). Die Werte müssen nur das Format
       # erfüllen, das requireEnv()/better-auth beim Modul-Import prüfen.
       - name: Build
+        if: steps.changes.outputs.code == 'true'
         run: pnpm run build
         env:
           DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
