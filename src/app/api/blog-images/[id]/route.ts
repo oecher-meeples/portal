@@ -1,4 +1,3 @@
-import sharp from "sharp";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getSessionTier } from "@/lib/auth/session";
 import { resolveNewsVisibility } from "@/lib/content/news-visibility";
@@ -9,6 +8,7 @@ import {
 } from "@/lib/content/post-permissions";
 import { prisma } from "@/lib/utils/prisma";
 import { getBlob } from "@/lib/utils/s3";
+import { toJpeg } from "@/lib/utils/to-jpeg";
 
 const NOT_FOUND = () => new Response("Not found", { status: 404 });
 
@@ -52,12 +52,7 @@ export async function GET(
   const isPublic = image.post?.status === "PUBLISHED" && !image.post.internal;
   // Instagram nimmt für `image_url` nur JPEG an (Meta Content Publishing).
   const asJpeg = new URL(request.url).searchParams.get("format") === "jpeg";
-  const body = asJpeg
-    ? await sharp(blob.bytes)
-        .flatten({ background: "#ffffff" })
-        .jpeg({ quality: 90 })
-        .toBuffer()
-    : blob.bytes;
+  const body = asJpeg ? await toJpeg(blob.bytes) : blob.bytes;
   return new Response(body as BodyInit, {
     headers: {
       "Content-Type": asJpeg ? "image/jpeg" : blob.contentType,
