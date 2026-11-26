@@ -1,7 +1,11 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { posix } from "node:path";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { requireEnv } from "@/lib/utils/require-env";
 import {
   getS3Bucket,
@@ -78,4 +82,24 @@ export async function putBlob(
     }),
   );
   return key;
+}
+
+/** Server-side read of a private object by key. Returns `null` when the
+ * object does not exist. */
+export async function getBlob(
+  key: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+  try {
+    const result = await getS3Client().send(
+      new GetObjectCommand({ Bucket: getS3Bucket(), Key: key }),
+    );
+    if (!result.Body) return null;
+    return {
+      bytes: await result.Body.transformToByteArray(),
+      contentType: result.ContentType ?? "application/octet-stream",
+    };
+  } catch (error) {
+    if ((error as { name?: string }).name === "NoSuchKey") return null;
+    throw error;
+  }
 }
