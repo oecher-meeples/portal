@@ -14,6 +14,7 @@ import { TYPE_TO_DB, type ContentType } from "@/lib/content/content-types";
 import {
   canManagePostType,
   getPostPermissions,
+  requirePostEditor,
 } from "@/lib/content/post-permissions";
 import { processPost, type DuePost } from "@/lib/instagram/queue";
 import { queueNewsletterForPost } from "@/lib/newsletter/dispatch";
@@ -243,11 +244,7 @@ export async function updatePost(id: string, input: PostInput) {
 }
 
 export async function getUploadToken(pathname: string, contentType: string) {
-  const user = (await findActionActor(POST_PERMISSIONS))?.user;
-  const perms = user ? await getPostPermissions(user.id) : null;
-  if (!perms || (!perms.canEditPublic && !perms.canEditInternal)) {
-    throw new Error("Keine Berechtigung.");
-  }
+  await requirePostEditor();
 
   return createBlobUploadToken({
     pathname: normaliseBlobPath(pathname, "instagram-covers"),
