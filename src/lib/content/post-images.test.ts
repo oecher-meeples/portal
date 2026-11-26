@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   altTextFromFilename,
+  mapPostImageRefs,
   postImageMarkdown,
   canViewPostImage,
   extractPostImageIds,
@@ -97,5 +98,16 @@ describe("altTextFromFilename / postImageMarkdown", () => {
     const markdown = postImageMarkdown("Titel [x]", "abc");
     expect(markdown).toBe("![Titel x](/api/blog-images/abc)");
     expect(extractPostImageIds(markdown)).toEqual(["abc"]);
+  });
+});
+
+describe("mapPostImageRefs", () => {
+  it("replaces known images and drops unknown ones", () => {
+    const body = "A ![x](/api/blog-images/a) B ![y](/api/blog-images/b) C";
+    expect(
+      mapPostImageRefs(body, (id, alt) =>
+        id === "a" ? `![${alt}](cid:${id})` : null,
+      ),
+    ).toBe("A ![x](cid:a) B  C");
   });
 });

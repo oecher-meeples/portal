@@ -69,3 +69,15 @@ export function altTextFromFilename(filename: string): string {
 export function postImageMarkdown(alt: string, id: string): string {
   return `![${alt.replace(/[[\]]/g, "")}](${postImageUrl(id)})`;
 }
+
+/** Ersetzt jede Bildsyntax auf ein Beitragsbild durch das Ergebnis von
+ * `replace` (`null` entfernt das Bild). */
+export function mapPostImageRefs(
+  body: string,
+  replace: (id: string, alt: string) => string | null,
+): string {
+  return body.replace(
+    /!\[([^\]]*)\]\(\/api\/blog-images\/([A-Za-z0-9_-]+)\)/g,
+    (_match, alt: string, id: string) => replace(id, alt) ?? "",
+  );
+}

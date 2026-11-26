@@ -7,18 +7,25 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/utils/prisma";
 import { sendTransactionalEmail } from "@/lib/newsletter/mailer";
+import {
+  buildPostEmailBody,
+  type PostEmailBody,
+} from "@/lib/newsletter/post-email-body";
+import { escapeHtml } from "@/lib/utils/escape-html";
 import { siteUrl } from "@/lib/utils/site-url";
 
 const MAX_ATTEMPTS = 3;
 
 function newsletterEmailHtml(
   post: Pick<Post, "title" | "excerpt" | "slug">,
+  body: string,
   manageToken: string,
 ): string {
   const manageUrl = `${siteUrl()}/newsletter/manage?token=${manageToken}`;
   return [
-    `<h1>${post.title}</h1>`,
-    `<p>${post.excerpt}</p>`,
+    `<h1>${escapeHtml(post.title)}</h1>`,
+    `<p>${escapeHtml(post.excerpt)}</p>`,
+    body,
     `<p><a href="${siteUrl()}/news/${post.slug}">Mehr dazu</a></p>`,
     `<p><a href="${manageUrl}">Newsletter-Einstellungen verwalten oder abbestellen</a></p>`,
   ].join("\n");
@@ -71,12 +78,27 @@ function findDueJobs(limit: number): Promise<DueJob[]> {
   });
 }
 
-async function processJob(job: DueJob): Promise<boolean> {
+/** Der Body (samt Bild-Anhängen) ist für alle Empfänger gleich — pro Beitrag
+ * und Cron-Lauf nur einmal rendern und aus dem Speicher laden. */
+type BodyCache = Map<string, Promise<PostEmailBody>>;
+
+function postEmailBody(cache: BodyCache, post: Post): Promise<PostEmailBody> {
+  let body = cache.get(post.id);
+  if (!body) {
+    body = buildPostEmailBody(post);
+    cache.set(post.id, body);
+  }
+  return body;
+}
+
+async function processJob(job: DueJob, cache: BodyCache): Promise<boolean> {
   try {
+    const { html, attachments } = await postEmailBody(cache, job.post);
     await sendTransactionalEmail({
       to: job.subscriber.email,
       subject: job.post.title,
-      html: newsletterEmailHtml(job.post, job.subscriber.manageToken),
+      html: newsletterEmailHtml(job.post, html, job.subscriber.manageToken),
+      attachments,
     });
     await prisma.newsletterDispatchJob.update({
       where: { id: job.id },
@@ -144,8 +166,9 @@ export async function processNewsletterQueue(limit: number): Promise<{
   let succeeded = 0;
   let failed = 0;
   const affectedPostIds = new Set<string>();
+  const bodyCache: BodyCache = new Map();
   for (const job of dueJobs) {
-    const success = await processJob(job);
+    const success = await processJob(job, bodyCache);
     if (success) succeeded++;
     else failed++;
     affectedPostIds.add(job.postId);
