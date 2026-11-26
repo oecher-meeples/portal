@@ -26,3 +26,19 @@ export function filterEventsByDay<T extends { days: { date: string }[] }>(
     event.days.some((day) => eventDayKey(day.date) === dayKey),
   );
 }
+
+/**
+ * Äußere Grenzen der Schichtzeiten eines Tages (#674): frühester Beginn bis
+ * spätestes Ende. Innerhalb dieser Grenzen kann Verfügbarkeit gemeldet
+ * werden — Client (Slider-Min/Max) und Server nutzen dieselbe Funktion.
+ * `null`, wenn der Tag keine Schichten hat (dann gilt keine Grenze).
+ */
+export function computeDayShiftBounds(
+  shifts: { targetStartsAt: Date; targetEndsAt: Date }[],
+): { start: Date; end: Date } | null {
+  if (shifts.length === 0) return null;
+  return {
+    start: new Date(Math.min(...shifts.map((s) => s.targetStartsAt.getTime()))),
+    end: new Date(Math.max(...shifts.map((s) => s.targetEndsAt.getTime()))),
+  };
+}

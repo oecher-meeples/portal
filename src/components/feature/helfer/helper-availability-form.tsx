@@ -19,7 +19,14 @@ import {
 
 export type HelperRoleOption = { id: string; name: string };
 
-export type EventDayOption = { id: string; date: string };
+export type EventDayOption = {
+  id: string;
+  date: string;
+  /** Verfügbarkeit nur innerhalb der Schichtzeiten des Tages meldbar (#674),
+   * in Minuten seit Mitternacht. */
+  minMinutes: number;
+  maxMinutes: number;
+};
 
 export type OwnAvailability = {
   startsAt: string;

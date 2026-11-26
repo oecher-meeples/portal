@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { collectHelperDayKeys, filterEventsByDay } from "./helfer-days";
+import {
+  collectHelperDayKeys,
+  computeDayShiftBounds,
+  filterEventsByDay,
+} from "./helfer-days";
 
 const events = [
   {
@@ -39,5 +43,22 @@ describe("collectHelperDayKeys", () => {
       "2026-10-11",
       "2026-11-01",
     ]);
+  });
+});
+
+describe("computeDayShiftBounds", () => {
+  const at = (hour: number) => new Date(2026, 9, 10, hour, 0);
+
+  it("returns null for a day without shifts", () => {
+    expect(computeDayShiftBounds([])).toBeNull();
+  });
+
+  it("spans the earliest start to the latest end", () => {
+    expect(
+      computeDayShiftBounds([
+        { targetStartsAt: at(14), targetEndsAt: at(18) },
+        { targetStartsAt: at(9), targetEndsAt: at(13) },
+      ]),
+    ).toEqual({ start: at(9), end: at(18) });
   });
 });
