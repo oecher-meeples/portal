@@ -52,4 +52,7 @@ next-env.d.ts
 .claude/TODO.md
 .claude/epics.md
 .claude/progress.md
+.claude/plans/*.md
 .idea/
+
+public/downloads/How to*.pdf
