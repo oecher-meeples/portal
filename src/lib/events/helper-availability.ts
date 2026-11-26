@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/utils/prisma";
+import { computeDayShiftBounds } from "@/lib/events/helfer-days";
+import { formatTimePlain } from "@/lib/utils/format";
 
 export type HelperAvailabilityActionResult =
   { error: string } | { success: true };
@@ -35,7 +37,10 @@ export async function setHelperAvailability({
 
   const day = await prisma.eventDay.findUnique({
     where: { id: dayId },
-    select: { event: { select: { visibility: true, helpersWanted: true } } },
+    select: {
+      event: { select: { visibility: true, helpersWanted: true } },
+      shifts: { select: { targetStartsAt: true, targetEndsAt: true } },
+    },
   });
   if (!day) {
     return { error: "Tag nicht gefunden." };
@@ -46,6 +51,15 @@ export async function setHelperAvailability({
   if (day.event.visibility === "DRAFT" && !day.event.helpersWanted) {
     return {
       error: "Für dieses Event ist die Helferplanung noch nicht freigegeben.",
+    };
+  }
+
+  // #674: nur innerhalb der Schichtzeiten des Tages meldbar; Tage ohne
+  // Schichten haben keine Grenze.
+  const bounds = computeDayShiftBounds(day.shifts);
+  if (bounds && (startsAt < bounds.start || endsAt > bounds.end)) {
+    return {
+      error: `Die Verfügbarkeit muss innerhalb der Schichtzeiten des Tages liegen (${formatTimePlain(bounds.start)}–${formatTimePlain(bounds.end)}).`,
     };
   }
 

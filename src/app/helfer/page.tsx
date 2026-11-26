@@ -1,4 +1,6 @@
 import { requireMember } from "@/lib/auth/session";
+import { computeDayShiftBounds } from "@/lib/events/helfer-days";
+import { MINUTES_PER_DAY, minutesSinceMidnight } from "@/lib/utils/time-of-day";
 import { prisma } from "@/lib/utils/prisma";
 import { signedBlobUrl } from "@/lib/utils/blob-access";
 import {
@@ -117,7 +119,16 @@ export default async function HelferPage() {
     if (day.shifts.length === 0) continue;
 
     const forEvent = (daysByEventId[day.eventId] ??= []);
-    forEvent.push({ id: day.id, date: day.date.toISOString() });
+    const bounds = computeDayShiftBounds(day.shifts);
+    forEvent.push({
+      id: day.id,
+      date: day.date.toISOString(),
+      minMinutes: bounds ? minutesSinceMidnight(bounds.start.toISOString()) : 0,
+      // 00:00 als Ende heißt Mitternacht des Folgetags, nicht Tagesbeginn.
+      maxMinutes: bounds
+        ? minutesSinceMidnight(bounds.end.toISOString()) || MINUTES_PER_DAY
+        : MINUTES_PER_DAY,
+    });
     const rolesById = new Map(
       day.shifts.map((shift) => [shift.role.id, shift.role]),
     );
@@ -128,6 +139,7 @@ export default async function HelferPage() {
     id: event.id,
     title: event.title,
     startsAt: event.startsAt.toISOString(),
+    endsAt: event.endsAt?.toISOString() ?? null,
     location: event.location,
     days: daysByEventId[event.id] ?? [],
     isAttendingAsExplainer: attendingEventIds.has(event.id),

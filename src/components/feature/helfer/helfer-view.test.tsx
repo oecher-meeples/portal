@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { HelferView, type HelferEventGroup } from "./helfer-view";
 
 vi.mock("next/navigation", () => ({
@@ -28,6 +28,7 @@ function makeEvent(
     id: "event-1",
     title: "Test",
     startsAt: "2026-10-14T10:00:00.000Z",
+    endsAt: null,
     location: null,
     days: [],
     isAttendingAsExplainer: false,
@@ -82,5 +83,45 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
     );
 
     expect(screen.queryByText("Ich bin da")).not.toBeInTheDocument();
+  });
+});
+
+describe("HelferView — Bearbeiten-Toggle (#674)", () => {
+  function renderWithDay() {
+    render(
+      <HelferView
+        events={[
+          makeEvent({
+            days: [
+              {
+                id: "day-1",
+                date: "2026-10-14T00:00:00.000Z",
+                minMinutes: 540,
+                maxMinutes: 1080,
+              },
+            ],
+          }),
+        ]}
+        dayRolesByDayId={{ "day-1": [{ id: "role-1", name: "Theke" }] }}
+        ownAvailabilityByDayId={{}}
+        assignedShifts={[]}
+        isExplainer={false}
+      />,
+    );
+  }
+
+  it("shows the availability read-only without a save button by default", () => {
+    renderWithDay();
+
+    expect(screen.queryByRole("button", { name: /Speichern/ })).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "Theke" })).toBeDisabled();
+  });
+
+  it("enables the role checkboxes after switching to edit mode", () => {
+    renderWithDay();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+
+    expect(screen.getByRole("checkbox", { name: "Theke" })).toBeEnabled();
   });
 });
