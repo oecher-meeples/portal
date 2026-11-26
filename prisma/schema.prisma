@@ -1499,6 +1499,12 @@ model HelperRole {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  /// Optionale Anleitung (PDF) als internes `Download` (#672) — erscheint
+  /// zusätzlich auf /downloads. SetNull: ein Löschen auf /downloads lässt die
+  /// Rolle bestehen; beim Löschen der Rolle entfernt die Action den Download.
+  guideDownloadId String?   @unique
+  guideDownload   Download? @relation(fields: [guideDownloadId], references: [id], onDelete: SetNull)
+
   shifts              Shift[]
   availabilityChoices HelperAvailabilityRole[]
 
@@ -1762,6 +1768,8 @@ model Download {
   /// from `updatedAt`, which also ticks on rename/status/order changes that
   /// have nothing to do with the file's content. See #201.
   fileUpdatedAt DateTime       @default(now())
+
+  helperRoleGuide HelperRole?
 
   @@index([status])
   @@map("downloads")
