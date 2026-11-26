@@ -45,6 +45,7 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
         dayRolesByDayId={{}}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={true}
       />,
     );
@@ -59,6 +60,7 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
         dayRolesByDayId={{}}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={true}
       />,
     );
@@ -75,6 +77,7 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
         dayRolesByDayId={{}}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={false}
       />,
     );
@@ -102,6 +105,7 @@ describe("HelferView — Bearbeiten-Toggle (#674)", () => {
         dayRolesByDayId={{ "day-1": [{ id: "role-1", name: "Theke" }] }}
         ownAvailabilityByDayId={{}}
         assignedShifts={[]}
+        guides={[]}
         isExplainer={false}
       />,
     );

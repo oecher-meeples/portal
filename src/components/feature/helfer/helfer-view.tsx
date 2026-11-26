@@ -35,6 +35,10 @@ import {
   type HelperRoleOption,
   type OwnAvailability,
 } from "@/components/feature/helfer/helper-availability-form";
+import {
+  HelperGuideDownloads,
+  type HelperGuideLink,
+} from "@/components/feature/helfer/helper-guide-downloads";
 import { HelferCalendar } from "@/components/feature/helfer/helfer-calendar";
 import { PageContainer } from "@/components/ui/page-container";
 import {
@@ -77,12 +81,14 @@ export function HelferView({
   dayRolesByDayId,
   ownAvailabilityByDayId,
   assignedShifts,
+  guides,
   isExplainer,
 }: {
   events: HelferEventGroup[];
   dayRolesByDayId: Record<string, HelperRoleOption[]>;
   ownAvailabilityByDayId: Record<string, OwnAvailability>;
   assignedShifts: HelferShiftRow[];
+  guides: HelperGuideLink[];
   isExplainer: boolean;
 }) {
   const { run, pending: isPending, error } = useAction();
@@ -115,6 +121,8 @@ export function HelferView({
           )
         }
       />
+
+      <HelperGuideDownloads guides={guides} />
 
       {events.length === 0 ? (
         <p className="text-muted-foreground text-sm">

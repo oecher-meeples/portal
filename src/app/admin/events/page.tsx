@@ -13,7 +13,10 @@ export default async function AdminEventsPage() {
       orderBy: { startsAt: "desc" },
       include: { _count: { select: { shifts: true } } },
     }),
-    prisma.helperRole.findMany({ orderBy: { name: "asc" } }),
+    prisma.helperRole.findMany({
+      orderBy: { name: "asc" },
+      include: { guideDownload: { select: { fileName: true } } },
+    }),
     prisma.permission.findMany({ orderBy: { key: "asc" } }),
   ]);
 
@@ -31,7 +34,12 @@ export default async function AdminEventsPage() {
   return (
     <AdminEventsView
       events={rows}
-      helperRoles={helperRoles}
+      helperRoles={helperRoles.map((role) => ({
+        id: role.id,
+        name: role.name,
+        grantsPermissionKey: role.grantsPermissionKey,
+        guideFileName: role.guideDownload?.fileName ?? null,
+      }))}
       permissions={permissions}
     />
   );

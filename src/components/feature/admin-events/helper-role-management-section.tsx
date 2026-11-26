@@ -14,6 +14,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { NativeSelect } from "@/components/ui/native-select";
+import { HelperRoleGuideField } from "@/components/feature/admin-events/helper-role-guide-field";
 import {
   createHelperRoleAction,
   updateHelperRoleAction,
@@ -24,6 +25,8 @@ export type HelperRoleRow = {
   id: string;
   name: string;
   grantsPermissionKey: string | null;
+  /** Dateiname der hinterlegten Anleitung (#672), sonst `null`. */
+  guideFileName: string | null;
 };
 
 export type PermissionOption = { key: string; description: string };
@@ -164,6 +167,12 @@ function HelperRoleDialog({
           ))}
         </NativeSelect>
       </Field>
+      {role && (
+        <HelperRoleGuideField
+          roleId={role.id}
+          guideFileName={role.guideFileName}
+        />
+      )}
     </ActionDialog>
   );
 }
