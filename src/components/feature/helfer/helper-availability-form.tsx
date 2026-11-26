@@ -11,7 +11,6 @@ import {
 } from "@/components/feature/helfer/availability-actions";
 import { formatWeekdayDate } from "@/lib/utils/format";
 import {
-  MINUTES_PER_DAY,
   combineDateAndMinutes,
   formatMinutesAsTime,
   minutesSinceMidnight,
@@ -51,7 +50,10 @@ export function HelperAvailabilityForm({
   const [range, setRange] = useState<[number, number]>(
     own
       ? [minutesSinceMidnight(own.startsAt), minutesSinceMidnight(own.endsAt)]
-      : [9 * 60, 18 * 60],
+      : [
+          Math.max(day.minMinutes, Math.min(9 * 60, day.maxMinutes)),
+          Math.min(day.maxMinutes, Math.max(18 * 60, day.minMinutes)),
+        ],
   );
   const [roleIds, setRoleIds] = useState<string[]>(own?.roleIds ?? []);
   const { run, pending, error } = useAction();
@@ -78,8 +80,8 @@ export function HelperAvailabilityForm({
       <span className="text-sm font-medium">{formatWeekdayDate(day.date)}</span>
       <div className="flex flex-col gap-1">
         <RangeSlider
-          min={0}
-          max={MINUTES_PER_DAY}
+          min={day.minMinutes}
+          max={day.maxMinutes}
           step={15}
           value={range}
           onValueChange={setRange}
