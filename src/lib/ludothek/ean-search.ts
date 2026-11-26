@@ -1,70 +1,11 @@
 "use server";
 
 import { findActionActor } from "@/lib/auth/action-guards";
-import { isValidEan } from "@/lib/inventory/ean";
-import { prisma } from "@/lib/utils/prisma";
-import { searchGamesByName } from "@/lib/spielemeta/client";
 import {
-  searchEanByName,
-  UpcLookupError,
-  type EanSearchResult,
-} from "@/lib/upc-lookup/client";
-
-/** Treffer mit `brand` passend zu einem der Verlage zuerst — UPCitemdb ist
- * ein US-lastiger Retail-Katalog, der Verlagsname erhöht bei mehreren
- * Kandidaten die Trefferwahrscheinlichkeit deutlich (#205). Stabil sortiert,
- * sonst bleibt UPCitemdbs eigene Reihenfolge erhalten. */
-function sortByPublisherMatch(
-  results: EanSearchResult[],
-  publisher: string[],
-): EanSearchResult[] {
-  const normalisedPublishers = publisher.map((p) => p.toLowerCase());
-  const matches = (brand: string | undefined) =>
-    brand !== undefined &&
-    normalisedPublishers.some(
-      (p) =>
-        p.length > 0 &&
-        (brand.toLowerCase().includes(p) || p.includes(brand.toLowerCase())),
-    );
-
-  return [...results].sort(
-    (a, b) => Number(matches(b.brand)) - Number(matches(a.brand)),
-  );
-}
-
-/** Marks hits whose EAN already belongs to another title (#668), so the UI can disable them. */
-async function markTakenEans(
-  results: EanSearchResult[],
-  excludeBoardGameId?: string,
-): Promise<EanSearchResult[]> {
-  if (results.length === 0) return results;
-  const owners = await prisma.boardGameEan.findMany({
-    where: {
-      ean: { in: results.map((result) => result.ean) },
-      ...(excludeBoardGameId
-        ? { boardGameId: { not: excludeBoardGameId } }
-        : {}),
-    },
-    select: { ean: true, boardGame: { select: { title: true } } },
-  });
-  const titleByEan = new Map(
-    owners.map((owner) => [owner.ean, owner.boardGame.title]),
-  );
-  return results.map((result) => {
-    const takenBy = titleByEan.get(result.ean);
-    return takenBy ? { ...result, takenBy } : result;
-  });
-}
-
-/** Spielemeta first; any failure (401/5xx/timeout/missing key) yields `null` so UPCitemdb takes over. */
-async function trySpielemeta(title: string): Promise<EanSearchResult[] | null> {
-  try {
-    const results = await searchGamesByName(title);
-    return results.length > 0 ? results : null;
-  } catch {
-    return null;
-  }
-}
+  findEanCandidates,
+  type EanCandidateOptions,
+} from "@/lib/ludothek/ean-candidates";
+import { UpcLookupError } from "@/lib/upc-lookup/client";
 
 /**
  * EAN-Namenssuche für den Anlegen-Wizard (#197) — automatisch beim Wechsel
@@ -85,55 +26,17 @@ async function trySpielemeta(title: string): Promise<EanSearchResult[] | null> {
  */
 export async function searchEanForBoardGame(
   title: string,
-  options?: {
-    bggProductCode?: string | null;
-    publisher?: string[];
-    /** Der gerade bearbeitete Titel — seine eigenen EANs gelten nicht als vergeben. */
-    excludeBoardGameId?: string;
-  },
+  options?: EanCandidateOptions,
 ) {
   const user = (await findActionActor("games:manage"))?.user;
   if (!user) {
     return { success: false as const, error: "Keine Berechtigung." };
   }
 
-  if (options?.bggProductCode && isValidEan(options.bggProductCode)) {
-    return {
-      success: true as const,
-      results: await markTakenEans(
-        [
-          {
-            ean: options.bggProductCode,
-            title,
-            brand: options.publisher?.[0],
-          },
-        ],
-        options.excludeBoardGameId,
-      ),
-    };
-  }
-
-  const sort = (results: EanSearchResult[]) =>
-    options?.publisher?.length
-      ? sortByPublisherMatch(results, options.publisher)
-      : results;
-
-  const spielemeta = await trySpielemeta(title);
-  if (spielemeta) {
-    return {
-      success: true as const,
-      results: await markTakenEans(
-        sort(spielemeta),
-        options?.excludeBoardGameId,
-      ),
-    };
-  }
-
   try {
-    const results = await searchEanByName(title);
     return {
       success: true as const,
-      results: await markTakenEans(sort(results), options?.excludeBoardGameId),
+      results: await findEanCandidates(title, options),
     };
   } catch (error) {
     if (error instanceof UpcLookupError) {

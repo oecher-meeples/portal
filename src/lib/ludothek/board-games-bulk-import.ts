@@ -15,12 +15,17 @@ import { lookupEanTitle, UpcLookupError } from "@/lib/upc-lookup/client";
 import { previewBggImport } from "@/lib/ludothek/board-games-bgg-import";
 import {
   bggDataToTitleInput,
+  resolveProductCodeFromVersions,
   resolvePublisherFromVersions,
 } from "@/lib/ludothek/board-game-versions";
 import {
   createBoardGame,
   type CreateBoardGameInput,
 } from "@/lib/ludothek/board-games";
+import {
+  markTakenEans,
+  pickUnambiguousEan,
+} from "@/lib/ludothek/ean-candidates";
 import { dedupeBulkImportEntries } from "@/lib/ludothek/bulk-import-entries";
 import { getSuggestedInventoryNumber } from "@/lib/ludothek/game-copies";
 import {
@@ -72,12 +77,38 @@ function toCreateInput(
   bggId: number,
   data: BggGameData,
   inventoryNumber?: number,
+  eans: string[] = [],
 ): CreateBoardGameInput {
   return {
     ...bggDataToTitleInput(bggId, data),
     alternateNames: data.alternateNames,
     inventoryNumber,
+    eans,
   };
+}
+
+/**
+ * EAN für einen neu importierten Titel (#668): eine als Zeile gegebene EAN
+ * zählt direkt, sonst wird sie über Product-Code → Spielemeta → UPCitemdb
+ * gesucht. Nur ein eindeutiger, noch freier Treffer wird übernommen — ein
+ * Fehlschlag lässt den Import nie scheitern.
+ */
+async function resolveImportEans(
+  entry: string,
+  data: BggGameData,
+): Promise<string[]> {
+  if (isValidEan(entry)) {
+    const [checked] = await markTakenEans([
+      { ean: normaliseEan(entry), title: data.title },
+    ]);
+    return checked.takenBy ? [] : [checked.ean];
+  }
+
+  const ean = await pickUnambiguousEan([data.title, ...data.alternateNames], {
+    bggProductCode: resolveProductCodeFromVersions(data.versions).value,
+    publisher: resolvePublisherFromVersions(data.versions).value ?? [],
+  });
+  return ean ? [ean] : [];
 }
 
 /**
@@ -176,7 +207,12 @@ async function finishImport(
     inventoryNumber ?? (await getSuggestedInventoryNumber());
 
   const created = await createBoardGame(
-    toCreateInput(bggId, preview.data, resolvedInventoryNumber),
+    toCreateInput(
+      bggId,
+      preview.data,
+      resolvedInventoryNumber,
+      await resolveImportEans(entry, preview.data),
+    ),
   );
   if (created.error) {
     return {

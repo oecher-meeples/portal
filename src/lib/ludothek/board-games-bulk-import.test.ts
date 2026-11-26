@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockPermissionKeys, prismaMock } from "@/lib/__mocks__/prisma";
 
 afterEach(() => {
@@ -42,6 +42,13 @@ vi.mock("@/lib/ludothek/board-games", () => ({
 const getSuggestedInventoryNumberMock = vi.fn();
 vi.mock("@/lib/ludothek/game-copies", () => ({
   getSuggestedInventoryNumber: () => getSuggestedInventoryNumberMock(),
+}));
+
+const markTakenEansMock = vi.fn();
+const pickUnambiguousEanMock = vi.fn();
+vi.mock("@/lib/ludothek/ean-candidates", () => ({
+  markTakenEans: (...args: unknown[]) => markTakenEansMock(...args),
+  pickUnambiguousEan: (...args: unknown[]) => pickUnambiguousEanMock(...args),
 }));
 
 const lookupEanTitleMock = vi.fn();
@@ -91,6 +98,11 @@ function beforeEachSetup() {
   prismaMock.boardGame.findUnique.mockResolvedValue(null);
   getSuggestedInventoryNumberMock.mockResolvedValue("1");
 }
+
+beforeEach(() => {
+  markTakenEansMock.mockImplementation(async (results: unknown[]) => results);
+  pickUnambiguousEanMock.mockResolvedValue(null);
+});
 
 describe("bulkImportBoardGames", () => {
   it("rejects when the user lacks the games:manage permission", async () => {
@@ -291,6 +303,53 @@ describe("bulkImportBoardGames", () => {
     expect(searchBggGamesExactMock).toHaveBeenCalledTimes(1);
   });
 
+  it("searches an EAN for a title import and stores the unambiguous hit (#668)", async () => {
+    beforeEachSetup();
+    pickUnambiguousEanMock.mockResolvedValue(VALID_EAN);
+    searchBggGamesExactMock.mockResolvedValue([
+      { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+    ]);
+    previewBggImportMock.mockResolvedValue({
+      success: true,
+      data: VALID_BGG_DATA,
+    });
+    createBoardGameMock.mockResolvedValue({
+      success: true,
+      boardGameSlug: "ark-nova",
+    });
+
+    await bulkImportBoardGames(["Ark Nova"]);
+
+    expect(pickUnambiguousEanMock).toHaveBeenCalledWith(
+      ["Ark Nova", "Ark Nova (Deutsch)"],
+      expect.any(Object),
+    );
+    expect(createBoardGameMock).toHaveBeenCalledWith(
+      expect.objectContaining({ eans: [VALID_EAN] }),
+    );
+  });
+
+  it("imports without an EAN when none is unambiguous", async () => {
+    beforeEachSetup();
+    searchBggGamesExactMock.mockResolvedValue([
+      { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+    ]);
+    previewBggImportMock.mockResolvedValue({
+      success: true,
+      data: VALID_BGG_DATA,
+    });
+    createBoardGameMock.mockResolvedValue({
+      success: true,
+      boardGameSlug: "ark-nova",
+    });
+
+    await bulkImportBoardGames(["Ark Nova"]);
+
+    expect(createBoardGameMock).toHaveBeenCalledWith(
+      expect.objectContaining({ eans: [] }),
+    );
+  });
+
   describe("EAN entries (#186-Folge)", () => {
     it("resolves an EAN to a title via UPCitemdb before searching BGG", async () => {
       beforeEachSetup();
@@ -323,6 +382,57 @@ describe("bulkImportBoardGames", () => {
             slug: "ark-nova",
           },
         ],
+      });
+    });
+
+    it("stores the scanned EAN with the imported title", async () => {
+      beforeEachSetup();
+      lookupEanTitleMock.mockResolvedValue("Ark Nova");
+      searchBggGamesExactMock.mockResolvedValue([
+        { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      ]);
+      previewBggImportMock.mockResolvedValue({
+        success: true,
+        data: VALID_BGG_DATA,
+      });
+      createBoardGameMock.mockResolvedValue({
+        success: true,
+        boardGameSlug: "ark-nova",
+      });
+
+      await bulkImportBoardGames([VALID_EAN]);
+
+      expect(createBoardGameMock).toHaveBeenCalledWith(
+        expect.objectContaining({ eans: [VALID_EAN] }),
+      );
+      expect(pickUnambiguousEanMock).not.toHaveBeenCalled();
+    });
+
+    it("drops a scanned EAN that already belongs to another title", async () => {
+      beforeEachSetup();
+      markTakenEansMock.mockImplementation(async (results: object[]) =>
+        results.map((r) => ({ ...r, takenBy: "Anderer Titel" })),
+      );
+      lookupEanTitleMock.mockResolvedValue("Ark Nova");
+      searchBggGamesExactMock.mockResolvedValue([
+        { bggId: 342942, title: "Ark Nova", yearPublished: 2021 },
+      ]);
+      previewBggImportMock.mockResolvedValue({
+        success: true,
+        data: VALID_BGG_DATA,
+      });
+      createBoardGameMock.mockResolvedValue({
+        success: true,
+        boardGameSlug: "ark-nova",
+      });
+
+      const result = await bulkImportBoardGames([VALID_EAN]);
+
+      expect(createBoardGameMock).toHaveBeenCalledWith(
+        expect.objectContaining({ eans: [] }),
+      );
+      expect(result).toMatchObject({
+        results: [{ status: "imported" }],
       });
     });
 
