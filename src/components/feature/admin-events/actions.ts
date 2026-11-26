@@ -5,6 +5,7 @@ import type { EventVisibility, HelperPhase } from "@prisma/client";
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { uniqueSlug } from "@/lib/utils/slug";
+import { HELPER_PHASE_ORDER } from "@/lib/events/helper-phase";
 import { enumerateEventDates, endOfUtcDay } from "@/lib/events/event-days";
 
 export type EventInput = {
@@ -132,5 +133,29 @@ export async function deleteEvent(id: string) {
   await prisma.event.delete({ where: { id } });
 
   revalidatePath("/admin/events");
+  return { success: true as const };
+}
+
+/**
+ * Setzt die Helfersichtbarkeit (#676) — geteilt vom Schalter "Schichten
+ * anfragen" und der Stammdaten-Combobox, damit beide dasselbe Feld über
+ * dieselbe Logik schreiben. Zurückschalten blendet Zuweisungen nur aus,
+ * `confirmedAt` bleibt erhalten.
+ */
+export async function setEventHelperPhase(eventId: string, phase: HelperPhase) {
+  await requireActionPermission("events:manage");
+
+  if (!HELPER_PHASE_ORDER.includes(phase)) {
+    return { error: "Ungültige Helfersichtbarkeit." };
+  }
+
+  await prisma.event.update({
+    where: { id: eventId },
+    data: { helperPhase: phase },
+  });
+
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/helfer");
   return { success: true as const };
 }

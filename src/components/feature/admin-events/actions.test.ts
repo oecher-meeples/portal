@@ -11,7 +11,8 @@ vi.mock("@/lib/auth/action-guards", async () =>
 
 const requirePermissionMock = vi.fn();
 
-const { createEvent, updateEvent, deleteEvent } = await import("./actions");
+const { createEvent, updateEvent, deleteEvent, setEventHelperPhase } =
+  await import("./actions");
 
 class ForbiddenError extends Error {}
 
@@ -281,5 +282,46 @@ describe("deleteEvent", () => {
     expect(prismaMock.event.delete).toHaveBeenCalledWith({
       where: { id: "event-1" },
     });
+  });
+});
+
+describe("setEventHelperPhase (#676)", () => {
+  it("requires events:manage and changes nothing without it", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(
+      setEventHelperPhase("event-1", "CONFIRMATION_REQUESTED"),
+    ).rejects.toThrow(ForbiddenError);
+    expect(prismaMock.event.update).not.toHaveBeenCalled();
+  });
+
+  it("writes the phase to the event", async () => {
+    prismaMock.event.update.mockResolvedValue({} as never);
+
+    const result = await setEventHelperPhase(
+      "event-1",
+      "CONFIRMATION_REQUESTED",
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.event.update).toHaveBeenCalledWith({
+      where: { id: "event-1" },
+      data: { helperPhase: "CONFIRMATION_REQUESTED" },
+    });
+  });
+
+  it("does not touch bookings when switching back (confirmedAt is kept)", async () => {
+    prismaMock.event.update.mockResolvedValue({} as never);
+
+    await setEventHelperPhase("event-1", "SEEKING");
+
+    expect(prismaMock.shiftBooking.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown phase", async () => {
+    const result = await setEventHelperPhase("event-1", "BOGUS" as never);
+
+    expect(result).toEqual({ error: "Ungültige Helfersichtbarkeit." });
+    expect(prismaMock.event.update).not.toHaveBeenCalled();
   });
 });

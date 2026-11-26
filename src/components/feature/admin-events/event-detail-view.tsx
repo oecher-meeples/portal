@@ -126,6 +126,7 @@ export function EventDetailView({
           <AccordionPanel>
             <ShiftTableSection
               eventId={eventId}
+              helperPhase={eventHelperPhase}
               days={days}
               shifts={shifts}
               helperRoles={helperRoles}
