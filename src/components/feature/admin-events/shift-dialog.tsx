@@ -189,7 +189,7 @@ export function ShiftDialog({
         label="Stellenzahl"
         type="number"
         min={0}
-        hint="0 = unbegrenzt (nur Listen-Rollen)"
+        hint="0 = unbegrenzt (Rollen ohne Schichtplanung)"
         value={capacity}
         onChange={(event) => setCapacity(event.target.value)}
         required
