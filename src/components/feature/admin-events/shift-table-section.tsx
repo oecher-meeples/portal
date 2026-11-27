@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, Send, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -10,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { HelperPhase } from "@prisma/client";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/ui/action-button";
@@ -23,6 +25,7 @@ import {
 } from "@/components/feature/admin-events/shift-dialog";
 import { ShiftTableEditor } from "@/components/feature/admin-events/shift-table-editor";
 import { deleteShift } from "@/components/feature/admin-events/shift-actions";
+import { setEventHelperPhase } from "@/components/feature/admin-events/actions";
 import { computeShiftFillStatus } from "@/lib/events/shift-capacity";
 import { formatTimeRange, formatWeekdayDate } from "@/lib/utils/format";
 
@@ -52,11 +55,13 @@ function fillStatusOf(shift: ShiftRow) {
  */
 export function ShiftTableSection({
   eventId,
+  helperPhase,
   days,
   shifts,
   helperRoles,
 }: {
   eventId: string;
+  helperPhase: HelperPhase;
   days: EventDayOption[];
   shifts: ShiftRow[];
   helperRoles: HelperRoleOption[];
@@ -125,17 +130,20 @@ export function ShiftTableSection({
               </NativeSelect>
             </Field>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setEditing(true)}
-            disabled={shifts.length === 0}
-          >
-            <Pencil className="size-4" />
-            Schichten bearbeiten
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <RequestShiftsToggle eventId={eventId} helperPhase={helperPhase} />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setEditing(true)}
+              disabled={shifts.length === 0}
+            >
+              <Pencil className="size-4" />
+              Schichten bearbeiten
+            </Button>
+          </div>
         </div>
       )}
 
@@ -233,5 +241,47 @@ export function ShiftTableSection({
         </div>
       )}
     </div>
+  );
+}
+
+/** Schalter "Schichten anfragen" (#676): "Bestätigung angefragt" ein/aus.
+ * Aus fällt auf "Helfer gesucht" zurück — Zuweisungen werden für Meeples
+ * ausgeblendet, Bestätigungen bleiben erhalten. */
+function RequestShiftsToggle({
+  eventId,
+  helperPhase,
+}: {
+  eventId: string;
+  helperPhase: HelperPhase;
+}) {
+  const requested = helperPhase === "CONFIRMATION_REQUESTED";
+
+  return (
+    <ActionDialog
+      refresh
+      trigger={
+        <Button type="button" variant="outline" size="sm" className="gap-2">
+          <Send className="size-4" />
+          Schichten anfragen
+          <StatusPill
+            label={requested ? "Angefragt" : "Planung"}
+            tone={requested ? "positive" : "warning"}
+          />
+        </Button>
+      }
+      title={requested ? "Schichtanfrage zurücknehmen?" : "Schichten anfragen?"}
+      description={
+        requested
+          ? "Zuweisungen werden für die Meeples wieder ausgeblendet. Bestätigungen bleiben erhalten."
+          : "Alle Zuweisungen werden für die Meeples sichtbar und müssen bestätigt werden. (Ich bin fertig mit Planung, jetzt Schichten anfragen.)"
+      }
+      submitLabel={requested ? "Zurücknehmen" : "Jetzt anfragen"}
+      action={() =>
+        setEventHelperPhase(
+          eventId,
+          requested ? "SEEKING" : "CONFIRMATION_REQUESTED",
+        )
+      }
+    />
   );
 }

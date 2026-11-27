@@ -253,3 +253,54 @@ export function exceedsRecommendedShiftLength(
   const hours = (endsAt.getTime() - startsAt.getTime()) / (60 * 60 * 1000);
   return hours > MAX_UNBROKEN_SHIFT_HOURS;
 }
+
+/**
+ * Zeitgewichtete Abdeckung mehrerer Schichten in Prozent (#681): pro Schicht
+ * zählt zu jedem Zeitpunkt des Ziel-Zeitraums `min(aktive Buchungen,
+ * capacity)`; Ergebnis = besetzte Personenstunden / Summe aus
+ * `capacity × Dauer`, gerundet. 100 % heißt alle Schichten lückenfrei voll
+ * (konsistent mit `computeShiftCoverage`). `null` ohne Schichten bzw. ohne
+ * Soll-Stunden.
+ */
+export function computeCoveragePercent(
+  shifts: {
+    targetStartsAt: Date;
+    targetEndsAt: Date;
+    capacity: number;
+    bookings: { startsAt: Date; endsAt: Date }[];
+  }[],
+): number | null {
+  let occupied = 0;
+  let required = 0;
+
+  for (const shift of shifts) {
+    const from = shift.targetStartsAt.getTime();
+    const to = shift.targetEndsAt.getTime();
+    if (to <= from || shift.capacity <= 0) continue;
+    required += shift.capacity * (to - from);
+
+    const boundaries = new Set<number>([from, to]);
+    for (const booking of shift.bookings) {
+      const start = Math.max(booking.startsAt.getTime(), from);
+      const end = Math.min(booking.endsAt.getTime(), to);
+      if (end > start) {
+        boundaries.add(start);
+        boundaries.add(end);
+      }
+    }
+    const sorted = [...boundaries].sort((a, b) => a - b);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const [segmentStart, segmentEnd] = [sorted[i], sorted[i + 1]];
+      const active = shift.bookings.filter(
+        (b) =>
+          b.startsAt.getTime() <= segmentStart &&
+          b.endsAt.getTime() >= segmentEnd,
+      ).length;
+      occupied +=
+        Math.min(active, shift.capacity) * (segmentEnd - segmentStart);
+    }
+  }
+
+  if (required === 0) return null;
+  return Math.round((occupied / required) * 100);
+}

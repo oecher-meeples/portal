@@ -1,6 +1,6 @@
 import { cardVariants } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import type { EventVisibility } from "@prisma/client";
+import type { EventVisibility, HelperPhase } from "@prisma/client";
 import { PageHeading } from "@/components/ui/page-heading";
 import {
   Accordion,
@@ -8,7 +8,7 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { EventDialog } from "@/components/feature/admin-events/event-dialog";
+import { EventMasterDataForm } from "@/components/feature/admin-events/event-master-data-form";
 import type { HelperRoleOption } from "@/components/feature/admin-events/shift-dialog";
 import {
   ShiftTableSection,
@@ -35,7 +35,7 @@ export function EventDetailView({
   eventStartsAt,
   eventEndsAt,
   eventLocation,
-  eventHelpersWanted,
+  eventHelperPhase,
   eventVisibility,
   days,
   shifts,
@@ -50,7 +50,7 @@ export function EventDetailView({
   eventStartsAt: string;
   eventEndsAt: string | null;
   eventLocation: string | null;
-  eventHelpersWanted: boolean;
+  eventHelperPhase: HelperPhase;
   eventVisibility: EventVisibility;
   days: EditableEventDay[];
   shifts: ShiftRow[];
@@ -75,19 +75,6 @@ export function EventDetailView({
         eyebrow="Event-Betrieb"
         title={eventTitle}
         description="Schichten mit Zeitfenster, Kapazität und Füllstand."
-        action={
-          <EventDialog
-            event={{
-              id: eventId,
-              title: eventTitle,
-              startsAt: eventStartsAt,
-              endsAt: eventEndsAt,
-              location: eventLocation,
-              helpersWanted: eventHelpersWanted,
-              visibility: eventVisibility,
-            }}
-          />
-        }
       />
 
       {/* #459: `multiple` fehlte — ohne dieses Prop fällt base-ui nach der
@@ -107,11 +94,27 @@ export function EventDetailView({
             Stammdaten
           </AccordionTrigger>
           <AccordionPanel>
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
-              {days.map((day) => (
-                <EventDayTimeForm key={day.id} day={day} />
-              ))}
+            <div className="grid gap-6 pb-2 md:grid-cols-2">
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
+                {days.map((day) => (
+                  <EventDayTimeForm key={day.id} day={day} />
+                ))}
+              </div>
+              {/* key: nach dem Speichern + Refresh den Formularstand neu
+                  aus den frisch geladenen Stammdaten aufbauen. */}
+              <EventMasterDataForm
+                key={`${eventTitle}|${eventStartsAt}|${eventEndsAt}|${eventLocation}|${eventVisibility}|${eventHelperPhase}`}
+                event={{
+                  id: eventId,
+                  title: eventTitle,
+                  startsAt: eventStartsAt,
+                  endsAt: eventEndsAt,
+                  location: eventLocation,
+                  helperPhase: eventHelperPhase,
+                  visibility: eventVisibility,
+                }}
+              />
             </div>
           </AccordionPanel>
         </AccordionItem>
@@ -126,6 +129,7 @@ export function EventDetailView({
           <AccordionPanel>
             <ShiftTableSection
               eventId={eventId}
+              helperPhase={eventHelperPhase}
               days={days}
               shifts={shifts}
               helperRoles={helperRoles}

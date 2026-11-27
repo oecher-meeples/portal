@@ -60,9 +60,14 @@ export function ContentTimelineEntry({
         </div>
       </div>
       <CardTitle as="h3" className="text-xl tracking-tight">
-        <Link href={`/news/${item.slug}`} className="hover:text-primary">
-          {item.title}
-        </Link>
+        {item.placeholder ? (
+          // #678: Event-Termin als Platzhalter — kein Link.
+          item.title
+        ) : (
+          <Link href={`/news/${item.slug}`} className="hover:text-primary">
+            {item.title}
+          </Link>
+        )}
       </CardTitle>
       <MarkdownContent body={item.body} />
     </article>

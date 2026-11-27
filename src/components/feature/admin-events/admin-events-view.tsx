@@ -1,5 +1,6 @@
 "use client";
 
+import type { HelperPhase } from "@prisma/client";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -46,7 +47,7 @@ export type EventRow = {
   startsAt: string;
   endsAt: string | null;
   location: string | null;
-  helpersWanted: boolean;
+  helperPhase: HelperPhase;
   visibility: EventVisibility;
   shiftCount: number;
 };

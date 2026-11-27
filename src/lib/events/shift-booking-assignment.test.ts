@@ -203,6 +203,73 @@ describe("assignShiftBooking", () => {
   });
 });
 
+describe("confirmedAt reset on re-timing (#683)", () => {
+  const OLD_START = new Date("2026-10-10T10:00:00Z");
+  const OLD_END = new Date("2026-10-10T14:00:00Z");
+
+  function mockExisting() {
+    prismaMock.shiftBooking.findUnique.mockResolvedValue({
+      startsAt: OLD_START,
+      endsAt: OLD_END,
+    } as never);
+  }
+
+  it("resets confirmedAt when startsAt changes", async () => {
+    mockExisting();
+
+    await assignShiftBooking({
+      shiftId: "shift-1",
+      meepleId: "meeple-1",
+      startsAt: new Date("2026-10-10T11:00:00Z"),
+      endsAt: OLD_END,
+      bookingId: "booking-1",
+    });
+
+    expect(prismaMock.shiftBooking.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: expect.objectContaining({ confirmedAt: null }),
+    });
+  });
+
+  it("resets confirmedAt when endsAt changes", async () => {
+    mockExisting();
+
+    await assignShiftBooking({
+      shiftId: "shift-1",
+      meepleId: "meeple-1",
+      startsAt: OLD_START,
+      endsAt: new Date("2026-10-10T15:00:00Z"),
+      bookingId: "booking-1",
+    });
+
+    expect(prismaMock.shiftBooking.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: expect.objectContaining({ confirmedAt: null }),
+    });
+  });
+
+  it("keeps confirmedAt on a pure slotIndex change", async () => {
+    mockExisting();
+
+    await assignShiftBooking({
+      shiftId: "shift-1",
+      meepleId: "meeple-1",
+      startsAt: OLD_START,
+      endsAt: OLD_END,
+      bookingId: "booking-1",
+      slotIndex: 2,
+    });
+
+    const call = prismaMock.shiftBooking.update.mock.calls[0][0];
+    expect(call.data).toEqual({
+      startsAt: OLD_START,
+      endsAt: OLD_END,
+      slotIndex: 2,
+    });
+    expect(call.data).not.toHaveProperty("confirmedAt");
+  });
+});
+
 describe("unassignShiftBooking", () => {
   it("deletes the specific booking", async () => {
     prismaMock.shiftBooking.deleteMany.mockResolvedValue({

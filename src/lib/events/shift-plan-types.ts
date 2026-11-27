@@ -41,4 +41,9 @@ export type PlanBooking = {
   /** Rein optische Spaltenposition innerhalb der Rollen-Spaltengruppe, per
    * Drag gesetzt — null lässt sie aus der Buchungsreihenfolge ableiten. */
   slotIndex: number | null;
+  /** Aktuell gemeldete Verfügbarkeit der Person an diesem Tag, `null` wenn
+   * keine (mehr) vorhanden — Grundlage für die Markierung "außerhalb der
+   * Verfügbarkeit" (#684). */
+  availabilityStartsAt: string | null;
+  availabilityEndsAt: string | null;
 };

@@ -53,6 +53,9 @@ export type ContentItem = {
    * `Post.sourceIcsUid`/`sourceEventId` gesetzt) — steuert, ob die
    * Detailseite den nachgelagerten Existenz-/Sync-Check auslöst. */
   hasEventSource?: boolean;
+  /** Event-Termin ohne eigene Detailseite (#678): wird nur als Platzhalter
+   * angezeigt — kein Link, kein Lazy-Anlegen eines Posts durch Klick. */
+  placeholder?: boolean;
 };
 
 export const TYPE_TO_DB: Record<

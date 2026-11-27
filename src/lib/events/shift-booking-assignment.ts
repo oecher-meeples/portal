@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { isWithinAvailability } from "@/lib/events/booking-availability";
 import { formatTimePlain } from "@/lib/utils/format";
 
 export type ShiftBookingAssignmentResult =
@@ -59,7 +60,7 @@ export async function assignShiftBooking({
         "Dieses Meeple hat sich für diese Rolle an diesem Tag nicht als verfügbar gemeldet.",
     };
   }
-  if (availability.startsAt > startsAt || availability.endsAt < endsAt) {
+  if (!isWithinAvailability({ startsAt, endsAt }, availability)) {
     // Nennt die tatsächlichen Grenzen — sonst wirkt die Ablehnung
     // unerklärlich, wenn die Schicht selbst länger läuft als das, was diese
     // Person gemeldet hat (Bugreport: Schicht bis 19 Uhr, Person nur bis
@@ -85,12 +86,26 @@ export async function assignShiftBooking({
   }
 
   if (bookingId) {
-    // Re-times an existing block — `confirmedAt` bleibt unangetastet, ein
-    // Resize soll eine bereits erteilte Bestätigung nicht stillschweigend
-    // widerrufen.
+    // Re-times an existing block. Ändert sich der Zeitraum (#683), gilt eine
+    // erteilte Bestätigung nicht mehr — die Person hat einer anderen Zeit
+    // zugestimmt. Ein reiner Spaltenwechsel (`slotIndex`) lässt sie bestehen.
+    const existing = await prisma.shiftBooking.findUnique({
+      where: { id: bookingId },
+      select: { startsAt: true, endsAt: true },
+    });
+    const timesChanged =
+      existing !== null &&
+      existing !== undefined &&
+      (existing.startsAt.getTime() !== startsAt.getTime() ||
+        existing.endsAt.getTime() !== endsAt.getTime());
     await prisma.shiftBooking.update({
       where: { id: bookingId },
-      data: { startsAt, endsAt, ...(slotIndex !== undefined && { slotIndex }) },
+      data: {
+        startsAt,
+        endsAt,
+        ...(timesChanged && { confirmedAt: null }),
+        ...(slotIndex !== undefined && { slotIndex }),
+      },
     });
   } else {
     await prisma.shiftBooking.create({

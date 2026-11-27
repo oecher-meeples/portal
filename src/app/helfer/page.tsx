@@ -1,6 +1,7 @@
 import { requireMember } from "@/lib/auth/session";
 import { computeDayShiftBounds } from "@/lib/events/helfer-days";
 import { MINUTES_PER_DAY, minutesSinceMidnight } from "@/lib/utils/time-of-day";
+import { findOwnVisibleShiftBookings } from "@/lib/events/own-bookings";
 import { prisma } from "@/lib/utils/prisma";
 import { signedBlobUrl } from "@/lib/utils/blob-access";
 import {
@@ -55,25 +56,7 @@ export default async function HelferPage() {
     prisma.explainerAttendance.findMany({
       where: { meepleId: meeple.id, eventId: { in: eventIds } },
     }),
-    prisma.shiftBooking.findMany({
-      where: {
-        meepleId: meeple.id,
-        shift: {
-          event: {
-            OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
-          },
-        },
-      },
-      orderBy: { startsAt: "asc" },
-      include: {
-        shift: {
-          include: {
-            role: { select: { name: true } },
-            event: { select: { title: true } },
-          },
-        },
-      },
-    }),
+    findOwnVisibleShiftBookings(meeple.id),
     prisma.helperRole.findMany({
       where: { guideDownloadId: { not: null } },
       orderBy: { name: "asc" },

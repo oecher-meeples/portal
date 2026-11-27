@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { helperPhasesAtLeast } from "@/lib/events/helper-phase";
 
 /**
  * "Kommend" heißt: noch nicht beendet — inklusive Events ohne Enddatum.
@@ -54,7 +55,7 @@ export async function isEventCurrentlyRunning(
 
 /**
  * True while at least one upcoming event has an open helper request
- * (`Event.helpersWanted`, #155) — gates both the Dashboard-Karte and the
+ * (`Event.helperPhase` ab "Helfer gesucht", #155/#676) — gates both the Dashboard-Karte and the
  * "Helferplan" nav entry (see sidebar.tsx/app-shell.tsx).
  */
 export async function hasOpenHelperRequest(): Promise<boolean> {
@@ -63,14 +64,14 @@ export async function hasOpenHelperRequest(): Promise<boolean> {
 }
 
 /** The earliest upcoming event with an open helper request, if any — feeds
- * the Dashboard-Karte's link target (#155). `helpersWanted` itself is the
+ * the Dashboard-Karte's link target (#155). the helper phase is the
  * signal an admin uses to open Helferplanung to Meeples early, so it applies
  * regardless of visibility — even an Entwurf-Event recruits helpers once
  * this flag is set (see setHelperAvailability, same rule server-side). */
 export async function findOpenHelperRequestEvent() {
   return prisma.event.findFirst({
     where: {
-      helpersWanted: true,
+      helperPhase: { in: helperPhasesAtLeast("SEEKING") },
       OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
     },
     orderBy: { startsAt: "asc" },
@@ -89,7 +90,12 @@ export function findUpcomingEventsVisibleToMembers<
   return prisma.event.findMany({
     where: {
       AND: [
-        { OR: [{ visibility: { not: "DRAFT" } }, { helpersWanted: true }] },
+        {
+          OR: [
+            { visibility: { not: "DRAFT" } },
+            { helperPhase: { in: helperPhasesAtLeast("SEEKING") } },
+          ],
+        },
         { OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }] },
       ],
     },
@@ -114,13 +120,13 @@ export async function findCurrentEvent() {
   });
 }
 
-/** Öffentliche, noch kommende Events — Grundlage für die öffentliche
- * Termine-Seite (/news, siehe lib/content/calendar.ts). Entwurf/Intern
- * bleiben dort unsichtbar, siehe lib/events/visibility.ts. */
-export function findPublicUpcomingEvents(limit?: number) {
+/** Noch kommende Events für den Kalender auf /news (#678): alle außer
+ * Entwurf — ob ein Meeple oder Gast sie sieht, entscheidet `isEventVisible()`
+ * in `lib/content/calendar.ts`. */
+export function findCalendarUpcomingEvents(limit?: number) {
   return prisma.event.findMany({
     where: {
-      visibility: "PUBLIC",
+      visibility: { not: "DRAFT" },
       OR: [{ endsAt: null }, { endsAt: { gte: new Date() } }],
     },
     orderBy: { startsAt: "asc" },
@@ -129,7 +135,9 @@ export function findPublicUpcomingEvents(limit?: number) {
       slug: true,
       title: true,
       startsAt: true,
+      endsAt: true,
       location: true,
+      visibility: true,
     },
   });
 }

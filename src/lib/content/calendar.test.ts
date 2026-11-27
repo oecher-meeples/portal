@@ -7,7 +7,7 @@ vi.mock("@/lib/content/content", async (importOriginal) => ({
   getAllContent: vi.fn(),
 }));
 vi.mock("@/lib/events/upcoming", () => ({
-  findPublicUpcomingEvents: vi.fn().mockResolvedValue([]),
+  findCalendarUpcomingEvents: vi.fn().mockResolvedValue([]),
 }));
 
 const { getAllContent } = await import("@/lib/content/content");
@@ -323,5 +323,50 @@ describe("fetchPublicEvents", () => {
 
     expect(publicEvents).toHaveLength(2);
     expect(internalEvents).toEqual([]);
+  });
+});
+
+describe("getCalendarDbEvents (#678)", () => {
+  const BASE = {
+    slug: "spieletag",
+    title: "Spieletag",
+    startsAt: new Date("2026-10-10T10:00:00Z"),
+    endsAt: new Date("2026-10-11T18:00:00Z"),
+    location: "Vereinsheim",
+  };
+
+  async function eventsFor(visibilities: ("DRAFT" | "INTERNAL" | "PUBLIC")[]) {
+    const { findCalendarUpcomingEvents } = await import("@/lib/events/upcoming");
+    vi.mocked(findCalendarUpcomingEvents).mockResolvedValue(
+      visibilities.map((visibility) => ({
+        ...BASE,
+        slug: `e-${visibility}`,
+        visibility,
+      })) as never,
+    );
+    const { getCalendarDbEvents } = await import("@/lib/content/calendar");
+    return getCalendarDbEvents();
+  }
+
+  it("never lists an Entwurf event", async () => {
+    expect(await eventsFor(["DRAFT"])).toEqual([]);
+  });
+
+  it("marks Intern as internal (visible to Meeples only downstream) and Öffentlich as public", async () => {
+    const items = await eventsFor(["INTERNAL", "PUBLIC"]);
+
+    expect(items.map((item) => [item.slug, item.internal])).toEqual([
+      ["event-e-INTERNAL", true],
+      ["event-e-PUBLIC", false],
+    ]);
+  });
+
+  it("returns non-clickable placeholders with range and location, no id", async () => {
+    const [item] = await eventsFor(["PUBLIC"]);
+
+    expect(item.placeholder).toBe(true);
+    expect(item.id).toBeUndefined();
+    expect(item.excerpt).toContain("Vereinsheim");
+    expect(item.title).toBe("Spieletag");
   });
 });

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/utils/prisma";
+import { isHelperPhaseAtLeast } from "@/lib/events/helper-phase";
 import { computeDayShiftBounds } from "@/lib/events/helfer-days";
 import { formatTimePlain } from "@/lib/utils/format";
 
@@ -38,17 +39,16 @@ export async function setHelperAvailability({
   const day = await prisma.eventDay.findUnique({
     where: { id: dayId },
     select: {
-      event: { select: { visibility: true, helpersWanted: true } },
+      event: { select: { visibility: true, helperPhase: true } },
       shifts: { select: { targetStartsAt: true, targetEndsAt: true } },
     },
   });
   if (!day) {
     return { error: "Tag nicht gefunden." };
   }
-  // Entwurf ist normalerweise nur für events:manage sichtbar — "Helfer
-  // suchen" ist die bewusste Ausnahme, die Helferplanung schon vor der
-  // eigentlichen Freigabe öffnet (siehe findUpcomingEventsVisibleToMembers).
-  if (day.event.visibility === "DRAFT" && !day.event.helpersWanted) {
+  // Verfügbarkeit melden gibt es erst ab "Helfer gesucht" (#676) — auch bei
+  // einem Entwurf-Event, siehe findUpcomingEventsVisibleToMembers.
+  if (!isHelperPhaseAtLeast(day.event.helperPhase, "SEEKING")) {
     return {
       error: "Für dieses Event ist die Helferplanung noch nicht freigegeben.",
     };
