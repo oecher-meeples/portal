@@ -25,7 +25,24 @@ export type HelperOverviewRow = {
   roleNames: string[];
   /** Ganze Prozent (0–100) der angebotenen Zeit dieses Tages, die verplant ist. */
   utilizationPercent: number;
+  /** Verplante bzw. angebotene Minuten dieses Tages (Basis der Prozentzahl). */
+  bookedMinutes: number;
+  offeredMinutes: number;
 };
+
+function formatHours(minutes: number): string {
+  return Number((minutes / 60).toFixed(2)).toLocaleString("de-DE");
+}
+
+/** "2/4h (50%)" — verplante/angebotene Stunden und Prozent. */
+export function formatUtilization(
+  row: Pick<
+    HelperOverviewRow,
+    "bookedMinutes" | "offeredMinutes" | "utilizationPercent"
+  >,
+): string {
+  return `${formatHours(row.bookedMinutes)}/${formatHours(row.offeredMinutes)}h (${row.utilizationPercent}%)`;
+}
 
 export type HelperOverviewGroup = {
   helperId: string;
@@ -64,6 +81,54 @@ function bookedMinutesWithin(
     }
   }
   return total / MINUTE_MS;
+}
+
+/** Durchschnitt der verplanten Minuten je Helfer-Tag (eine Tabellenzeile). */
+export function averageBookedMinutes(groups: HelperOverviewGroup[]): number {
+  const rows = groups.flatMap((group) => group.rows);
+  if (rows.length === 0) return 0;
+  return rows.reduce((sum, row) => sum + row.bookedMinutes, 0) / rows.length;
+}
+
+/** Verplante Minuten einer Person über alle ihre Tage. */
+export function totalBookedMinutes(group: HelperOverviewGroup): number {
+  return group.rows.reduce((sum, row) => sum + row.bookedMinutes, 0);
+}
+
+/** Durchschnitt der Gesamt-Minuten je Person (über alle Tage). */
+export function averageBookedMinutesPerHelper(
+  groups: HelperOverviewGroup[],
+): number {
+  if (groups.length === 0) return 0;
+  return (
+    groups.reduce((sum, group) => sum + totalBookedMinutes(group), 0) /
+    groups.length
+  );
+}
+
+/** Verlauf Rot (0 h) → Grün (Durchschnitt und darüber) als CSS-Farbe. Ist der
+ * Durchschnitt 0, sind alle gleichauf und damit grün. */
+export function utilizationColor(
+  bookedMinutes: number,
+  averageMinutes: number,
+): string {
+  const ratio =
+    averageMinutes <= 0 ? 1 : Math.min(1, bookedMinutes / averageMinutes);
+  return `hsl(${Math.round(ratio * 120)} 70% 45%)`;
+}
+
+/** "2,5h" — Stunden mit deutschem Komma. */
+export function formatHoursLabel(minutes: number): string {
+  return `${formatHours(minutes)}h`;
+}
+
+/** Angebotene Minuten eines Zeitfensters. */
+function offeredMinutesOf(window: { startsAt: string; endsAt: string }) {
+  return Math.max(
+    0,
+    (new Date(window.endsAt).getTime() - new Date(window.startsAt).getTime()) /
+      MINUTE_MS,
+  );
 }
 
 /** Auslastung eines Tages in ganzen Prozent, defensiv auf 0–100 begrenzt. */
@@ -112,16 +177,84 @@ export function buildHelperOverview(
       };
       groups.push(group);
     }
+    const dayBookings = bookings.filter((b) => b.helperId === entry.helperId);
     group.rows.push({
       dayDate: entry.dayDate,
       startsAt: entry.startsAt,
       endsAt: entry.endsAt,
       roleNames: entry.roleIds.map((id) => roleNames.get(id) ?? id),
-      utilizationPercent: dayUtilizationPercent(
-        entry,
-        bookings.filter((b) => b.helperId === entry.helperId),
-      ),
+      utilizationPercent: dayUtilizationPercent(entry, dayBookings),
+      bookedMinutes: bookedMinutesWithin(entry, dayBookings),
+      offeredMinutes: offeredMinutesOf(entry),
     });
   }
   return groups;
+}
+
+/** Tageseinträge (Tabellenzeilen) je Seite der Helfer-Tabelle. */
+export const OVERVIEW_PAGE_ROWS = 20;
+
+export type OverviewFilter = {
+  /** `dayDate` eines Tages oder `null` für alle Tage. */
+  dayDate: string | null;
+  /** Rollenname oder `null` für alle Rollen. */
+  roleName: string | null;
+  /** Namenssuche (Teilstring, ohne Groß-/Kleinschreibung); leer = alle. */
+  query?: string;
+};
+
+/** Behält je Person nur die Tageseinträge, die Tag- und Rollenfilter
+ * erfüllen; Personen ohne passenden Eintrag entfallen. */
+export function filterOverviewGroups(
+  groups: HelperOverviewGroup[],
+  filter: OverviewFilter,
+): HelperOverviewGroup[] {
+  const query = filter.query?.trim().toLowerCase() ?? "";
+  return groups
+    .filter(
+      (group) => !query || group.displayName.toLowerCase().includes(query),
+    )
+    .map((group) => ({
+      ...group,
+      rows: group.rows.filter(
+        (row) =>
+          (filter.dayDate === null || row.dayDate === filter.dayDate) &&
+          (filter.roleName === null || row.roleNames.includes(filter.roleName)),
+      ),
+    }))
+    .filter((group) => group.rows.length > 0);
+}
+
+/** Teilt Personen so auf Seiten auf, dass keine Person auf zwei Seiten
+ * landet und eine Seite höchstens `maxRows` Tageseinträge hat. Eine einzelne
+ * Person mit mehr Einträgen bekommt eine eigene (längere) Seite. */
+export function paginateOverviewGroups(
+  groups: HelperOverviewGroup[],
+  maxRows = OVERVIEW_PAGE_ROWS,
+): HelperOverviewGroup[][] {
+  const pages: HelperOverviewGroup[][] = [];
+  let current: HelperOverviewGroup[] = [];
+  let used = 0;
+  for (const group of groups) {
+    if (current.length > 0 && used + group.rows.length > maxRows) {
+      pages.push(current);
+      current = [];
+      used = 0;
+    }
+    current.push(group);
+    used += group.rows.length;
+  }
+  if (current.length > 0) pages.push(current);
+  return pages;
+}
+
+/** Wertebereich der Filter: alle vorkommenden Tage und Rollen. */
+export function overviewFilterOptions(groups: HelperOverviewGroup[]) {
+  const rows = groups.flatMap((group) => group.rows);
+  return {
+    days: [...new Set(rows.map((row) => row.dayDate))].sort(),
+    roles: [...new Set(rows.flatMap((row) => row.roleNames))].sort((a, b) =>
+      a.localeCompare(b, "de"),
+    ),
+  };
 }
