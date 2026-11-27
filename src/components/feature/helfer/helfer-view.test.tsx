@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { HelferView, type HelferEventGroup } from "./helfer-view";
 
 vi.mock("next/navigation", () => ({
@@ -86,8 +86,10 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
   });
 });
 
-describe("HelferView — Bearbeiten-Toggle (#674)", () => {
-  function renderWithDay() {
+describe("HelferView — Verfügbarkeitsformular (#674)", () => {
+  function renderWithDay(
+    own: { startsAt: string; endsAt: string; roleIds: string[] } | null = null,
+  ) {
     render(
       <HelferView
         events={[
@@ -103,7 +105,7 @@ describe("HelferView — Bearbeiten-Toggle (#674)", () => {
           }),
         ]}
         dayRolesByDayId={{ "day-1": [{ id: "role-1", name: "Theke" }] }}
-        ownAvailabilityByDayId={{}}
+        ownAvailabilityByDayId={own ? { "day-1": own } : {}}
         assignedShifts={[]}
         guides={[]}
         isExplainer={false}
@@ -111,18 +113,27 @@ describe("HelferView — Bearbeiten-Toggle (#674)", () => {
     );
   }
 
-  it("shows the availability read-only without a save button by default", () => {
+  it("has no edit toggle and no save button; inputs are always usable", () => {
     renderWithDay();
 
+    expect(screen.queryByRole("button", { name: "Bearbeiten" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Speichern/ })).toBeNull();
-    expect(screen.getByRole("checkbox", { name: "Theke" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Theke" })).toBeEnabled();
   });
 
-  it("enables the role checkboxes after switching to edit mode", () => {
+  it("warns without blocking when the availability is under two hours", () => {
+    renderWithDay({
+      startsAt: "2026-10-14T10:00:00.000Z",
+      endsAt: "2026-10-14T10:30:00.000Z",
+      roleIds: ["role-1"],
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(/2 Stunden/);
+  });
+
+  it("shows no warning for the default window", () => {
     renderWithDay();
 
-    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
-
-    expect(screen.getByRole("checkbox", { name: "Theke" })).toBeEnabled();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

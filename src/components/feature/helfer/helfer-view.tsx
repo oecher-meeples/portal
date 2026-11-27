@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil } from "lucide-react";
 import { cardVariants } from "@/components/ui/card";
 import { useAction } from "@/components/ui/use-action";
 import { PageHeading } from "@/components/ui/page-heading";
@@ -39,6 +38,7 @@ import {
   HelperGuideDownloads,
   type HelperGuideLink,
 } from "@/components/feature/helfer/helper-guide-downloads";
+import { FilterResetRow } from "@/components/ui/filter-reset-row";
 import { HelferCalendar } from "@/components/feature/helfer/helfer-calendar";
 import { PageContainer } from "@/components/ui/page-container";
 import {
@@ -46,6 +46,7 @@ import {
   filterEventsByDay,
 } from "@/lib/events/helfer-days";
 import {
+  formatDate,
   formatDateMedium,
   formatWeekdayDateTimeRange,
 } from "@/lib/utils/format";
@@ -93,7 +94,6 @@ export function HelferView({
 }) {
   const { run, pending: isPending, error } = useAction();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
   const visibleEvents = filterEventsByDay(events, selectedDate);
 
   return (
@@ -102,24 +102,6 @@ export function HelferView({
         eyebrow="Event-Betrieb"
         title="Helferplan"
         description="Melde deine Verfügbarkeit und bestätige zugewiesene Schichten."
-        action={
-          events.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => setEditing((current) => !current)}
-            >
-              {editing ? (
-                <Check className="size-4" />
-              ) : (
-                <Pencil className="size-4" />
-              )}
-              {editing ? "Fertig" : "Bearbeiten"}
-            </Button>
-          )
-        }
       />
 
       <HelperGuideDownloads guides={guides} />
@@ -131,6 +113,14 @@ export function HelferView({
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
           <div className="min-w-0 lg:order-1">
+            {selectedDate && (
+              <div className="mb-3">
+                <FilterResetRow
+                  value={formatDate(selectedDate)}
+                  onReset={() => setSelectedDate(null)}
+                />
+              </div>
+            )}
             <Accordion defaultValue={[events[0].id]}>
               {visibleEvents.map((event) => (
                 <AccordionItem
@@ -162,7 +152,6 @@ export function HelferView({
                           day={day}
                           dayRoles={dayRolesByDayId[day.id] ?? []}
                           own={ownAvailabilityByDayId[day.id] ?? null}
-                          editing={editing}
                         />
                       ))}
 
