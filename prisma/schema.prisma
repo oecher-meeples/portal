@@ -1505,6 +1505,10 @@ model HelperRole {
   id                  String   @id @default(cuid())
   name                String   @unique
   grantsPermissionKey String?
+  /// `false` = Listen-Rolle (Erklärer/Aufbau/Abbau, #697): keine zeitgenaue
+  /// Planung im Schichtplan-Grid, ihre Schichten haben `capacity = 0`
+  /// (= unbegrenzt) und der Export listet die Namen aus den Verfügbarkeiten.
+  hasShifts           Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

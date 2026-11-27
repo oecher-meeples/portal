@@ -11,7 +11,8 @@ vi.mock("@/lib/auth/action-guards", async () =>
 const requirePermissionMock = vi.fn();
 
 const { SHIFT_PLAN_CSV_COLUMNS } = await import("./shift-plan-csv-columns");
-const { exportShiftPlanDayCsv } = await import("./shift-plan-export-actions");
+const { exportShiftPlanDayCsv, exportShiftPlanPdf } =
+  await import("./shift-plan-export-actions");
 
 class ForbiddenError extends Error {}
 
@@ -87,6 +88,69 @@ describe("exportShiftPlanDayCsv", () => {
     expect(result).toMatchObject({ success: true, rowCount: 0 });
     expect((result as { csv: string }).csv).toBe(
       SHIFT_PLAN_CSV_COLUMNS.join(";"),
+    );
+  });
+});
+
+describe("exportShiftPlanPdf", () => {
+  const day = { id: "d1", date: new Date(2026, 11, 4), availabilities: [] };
+
+  it("requires the events:manage permission", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+
+    await expect(exportShiftPlanPdf("event-1")).rejects.toThrow(ForbiddenError);
+    expect(prismaMock.event.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("errors for an unknown event and for an event without shifts", async () => {
+    prismaMock.event.findUnique.mockResolvedValueOnce(null);
+    expect(await exportShiftPlanPdf("event-1")).toEqual({
+      error: "Event wurde nicht gefunden.",
+    });
+
+    prismaMock.event.findUnique.mockResolvedValueOnce({
+      title: "Spieletage",
+      days: [day],
+      shifts: [],
+    } as never);
+    expect(await exportShiftPlanPdf("event-1")).toEqual({
+      error: "Es sind noch keine Schichten angelegt.",
+    });
+  });
+
+  it("returns a base64 PDF named after the event", async () => {
+    prismaMock.event.findUnique.mockResolvedValue({
+      title: "Spieletage 2026",
+      days: [day],
+      shifts: [
+        {
+          dayId: "d1",
+          roleId: "r1",
+          capacity: 1,
+          targetStartsAt: new Date(2026, 11, 4, 10),
+          targetEndsAt: new Date(2026, 11, 4, 14),
+          role: { name: "Küche" },
+          bookings: [
+            {
+              meepleId: null,
+              guestId: "g1",
+              startsAt: new Date(2026, 11, 4, 10),
+              endsAt: new Date(2026, 11, 4, 14),
+              slotIndex: null,
+              meeple: null,
+              guest: { name: "Max" },
+            },
+          ],
+        },
+      ],
+    } as never);
+
+    const result = await exportShiftPlanPdf("event-1");
+
+    if ("error" in result) throw new Error(result.error);
+    expect(result.filename).toBe("schichtplan-spieletage-2026.pdf");
+    expect(Buffer.from(result.base64, "base64").subarray(0, 5).toString()).toBe(
+      "%PDF-",
     );
   });
 });

@@ -12,6 +12,33 @@ import {
   exceedsRecommendedShiftLength,
 } from "./shift-plan";
 
+describe("computeVisibleRange without padding", () => {
+  it("spans exactly the earliest start to the latest end", () => {
+    const day = { date: new Date(2026, 9, 10) };
+    const shifts = [
+      {
+        targetStartsAt: new Date(2026, 9, 10, 10, 0),
+        targetEndsAt: new Date(2026, 9, 10, 14, 0),
+      },
+    ];
+    expect(computeVisibleRange(day, shifts, { pad: false })).toEqual({
+      start: new Date(2026, 9, 10, 10, 0),
+      end: new Date(2026, 9, 10, 14, 0),
+    });
+  });
+});
+
+describe("buildRoleColumns with unlimited shifts", () => {
+  it("gives capacity 0 shifts no column", () => {
+    expect(
+      buildRoleColumns([
+        { roleId: "a", roleName: "A", capacity: 0 },
+        { roleId: "b", roleName: "B", capacity: 2 },
+      ]).map((g) => [g.roleId, g.startColumn]),
+    ).toEqual([["b", 0]]);
+  });
+});
+
 describe("computeVisibleRange", () => {
   it("spans the earliest shift start -1h to the latest shift end +1h", () => {
     const day = { date: new Date(2026, 9, 10) };

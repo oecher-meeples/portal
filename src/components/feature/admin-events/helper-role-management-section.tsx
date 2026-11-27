@@ -25,6 +25,7 @@ export type HelperRoleRow = {
   id: string;
   name: string;
   grantsPermissionKey: string | null;
+  hasShifts: boolean;
   /** Dateiname der hinterlegten Anleitung (#672), sonst `null`. */
   guideFileName: string | null;
 };
@@ -101,7 +102,10 @@ function HelperRoleDialog({
     role?.grantsPermissionKey ?? "",
   );
 
+  const [hasShifts, setHasShifts] = useState(role?.hasShifts ?? true);
+
   function reset() {
+    setHasShifts(role?.hasShifts ?? true);
     setName(role?.name ?? "");
     setGrantsPermissionKey(role?.grantsPermissionKey ?? "");
   }
@@ -132,8 +136,13 @@ function HelperRoleDialog({
       onReset={reset}
       action={() =>
         isEdit
-          ? updateHelperRoleAction(role!.id, name, grantsPermissionKey || null)
-          : createHelperRoleAction(name, grantsPermissionKey || null)
+          ? updateHelperRoleAction(
+              role!.id,
+              name,
+              grantsPermissionKey || null,
+              hasShifts,
+            )
+          : createHelperRoleAction(name, grantsPermissionKey || null, hasShifts)
       }
     >
       <TextField
@@ -143,6 +152,14 @@ function HelperRoleDialog({
         onChange={(event) => setName(event.target.value)}
         autoComplete="off"
       />
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={!hasShifts}
+          onChange={(event) => setHasShifts(!event.target.checked)}
+        />
+        Listen-Rolle (keine zeitgenaue Planung, Export listet Namen)
+      </label>
       <Field
         label="Gewährte Permission"
         htmlFor={`helper-role-permission-${role?.id ?? "new"}`}

@@ -192,7 +192,7 @@ export function ShiftTableEditor({
               <Input
                 aria-label="Stellenzahl"
                 type="number"
-                min={1}
+                min={0}
                 value={row.capacity}
                 onChange={(event) =>
                   updateRow(row.key, { capacity: event.target.value })

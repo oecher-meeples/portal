@@ -1,0 +1,1 @@
+ALTER TABLE "helper_roles" ADD COLUMN "hasShifts" BOOLEAN NOT NULL DEFAULT true;

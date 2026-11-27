@@ -18,10 +18,11 @@ import { toStoredBlobRef } from "@/lib/utils/blob-access";
 export async function createHelperRoleAction(
   name: string,
   grantsPermissionKey: string | null,
+  hasShifts: boolean,
 ) {
   await requireActionPermission("events:manage");
 
-  const result = await createHelperRole(name, grantsPermissionKey);
+  const result = await createHelperRole(name, grantsPermissionKey, hasShifts);
   if ("error" in result) return result;
 
   revalidatePath("/admin/events");
@@ -32,10 +33,16 @@ export async function updateHelperRoleAction(
   roleId: string,
   name: string,
   grantsPermissionKey: string | null,
+  hasShifts: boolean,
 ) {
   await requireActionPermission("events:manage");
 
-  const result = await updateHelperRole(roleId, name, grantsPermissionKey);
+  const result = await updateHelperRole(
+    roleId,
+    name,
+    grantsPermissionKey,
+    hasShifts,
+  );
   if ("error" in result) return result;
 
   revalidatePath("/admin/events");

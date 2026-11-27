@@ -23,6 +23,7 @@ function isUniqueConstraintError(error: unknown) {
 export async function createHelperRole(
   name: string,
   grantsPermissionKey: string | null,
+  hasShifts = true,
 ): Promise<HelperRoleActionResult> {
   const trimmedName = name.trim();
   if (!trimmedName) {
@@ -34,6 +35,7 @@ export async function createHelperRole(
       data: {
         name: trimmedName,
         grantsPermissionKey: grantsPermissionKey || null,
+        hasShifts,
       },
     });
   } catch (error) {
@@ -53,6 +55,7 @@ export async function updateHelperRole(
   roleId: string,
   name: string,
   grantsPermissionKey: string | null,
+  hasShifts = true,
 ): Promise<HelperRoleActionResult> {
   const trimmedName = name.trim();
   if (!trimmedName) {
@@ -65,6 +68,7 @@ export async function updateHelperRole(
       data: {
         name: trimmedName,
         grantsPermissionKey: grantsPermissionKey || null,
+        hasShifts,
       },
     });
   } catch (error) {

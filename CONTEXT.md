@@ -281,3 +281,7 @@ _Avoid_: PostType (das ist die Inhalts-Klassifikation, nicht das Abonnenten-Inte
 ## Gast-Helfer
 
 Person ohne Portal-Account (`Guest`), die per CSV-Import (`Name;Tag;Von;Bis;Rollen`) am Event-Detail als Helfer mit Verfügbarkeit angelegt wird und im Schichtplan wie ein Meeple buchbar ist (Anzeige mit Suffix „ (Gast)", Zuweisung sofort bestätigt). Identität über `Guest.nameKey` (normalisierter Name); an `HelperAvailability`/`ShiftBooking` gilt `meepleId` vor `guestId`.
+
+## Listen-Rolle
+
+Helferrolle mit `hasShifts = false` (z. B. Erklärer, Aufbau, Abbau): keine zeitgenaue Planung im Schichtplan-Grid; ihre Schichten haben `capacity = 0` (= unbegrenzt) und der PDF-Export listet die Namen aus den gemeldeten Verfügbarkeiten unter dem Raster.
