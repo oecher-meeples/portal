@@ -8,6 +8,7 @@ import {
 import type { EditableEventDay } from "@/components/feature/admin-events/event-day-time-form";
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
+import { buildHelperOverview } from "@/lib/events/helper-overview";
 
 export default async function AdminEventDetailPage({
   params,
@@ -28,7 +29,14 @@ export default async function AdminEventDetailPage({
               select: {
                 startsAt: true,
                 endsAt: true,
-                meeple: { select: { id: true, displayName: true } },
+                meeple: {
+                  select: {
+                    id: true,
+                    displayName: true,
+                    profilePictureUrl: true,
+                    profilePictureVisibility: true,
+                  },
+                },
                 roles: { select: { roleId: true } },
               },
             },
@@ -154,6 +162,29 @@ export default async function AdminEventDetailPage({
     (shelf) => !assignedShelfIds.has(shelf.id),
   );
 
+  const helperOverview = buildHelperOverview(
+    event.days.flatMap((day) =>
+      day.availabilities.map((availability) => ({
+        meepleId: availability.meeple.id,
+        displayName: availability.meeple.displayName,
+        profilePictureUrl: availability.meeple.profilePictureUrl,
+        profilePictureVisibility: availability.meeple.profilePictureVisibility,
+        dayDate: day.date.toISOString(),
+        startsAt: availability.startsAt.toISOString(),
+        endsAt: availability.endsAt.toISOString(),
+        roleIds: availability.roles.map((role) => role.roleId),
+      })),
+    ),
+    event.shifts.flatMap((shift) =>
+      shift.bookings.map((booking) => ({
+        meepleId: booking.meepleId,
+        startsAt: booking.startsAt.toISOString(),
+        endsAt: booking.endsAt.toISOString(),
+      })),
+    ),
+    new Map(helperRoles.map((role) => [role.id, role.name])),
+  );
+
   return (
     <EventDetailView
       eventId={event.id}
@@ -166,6 +197,7 @@ export default async function AdminEventDetailPage({
       days={days}
       shifts={shifts}
       helperRoles={helperRoles}
+      helperOverview={helperOverview}
       pool={pool}
       bookingsByDay={bookingsByDay}
       assignedShelves={assignedShelves}
