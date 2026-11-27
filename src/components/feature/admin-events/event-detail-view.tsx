@@ -10,7 +10,7 @@ import {
   AccordionPanel,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { EventMasterDataForm } from "@/components/feature/admin-events/event-master-data-form";
+import { EventStammdaten } from "@/components/feature/admin-events/event-stammdaten";
 import type { HelperRoleOption } from "@/components/feature/admin-events/shift-dialog";
 import {
   ShiftTableSection,
@@ -100,28 +100,18 @@ export function EventDetailView({
             Stammdaten
           </AccordionTrigger>
           <AccordionPanel>
-            <div className="grid gap-6 pb-2 md:grid-cols-2">
-              {/* key: nach dem Speichern + Refresh den Formularstand neu
-                  aus den frisch geladenen Stammdaten aufbauen. */}
-              <EventMasterDataForm
-                key={`${eventTitle}|${eventStartsAt}|${eventEndsAt}|${eventLocation}|${eventVisibility}|${eventHelperPhase}`}
-                event={{
-                  id: eventId,
-                  title: eventTitle,
-                  startsAt: eventStartsAt,
-                  endsAt: eventEndsAt,
-                  location: eventLocation,
-                  helperPhase: eventHelperPhase,
-                  visibility: eventVisibility,
-                }}
-              />
-              <div className="flex flex-col gap-3">
-                <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
-                {days.map((day) => (
-                  <EventDayTimeForm key={day.id} day={day} />
-                ))}
-              </div>
-            </div>
+            <EventStammdaten
+              event={{
+                id: eventId,
+                title: eventTitle,
+                startsAt: eventStartsAt,
+                endsAt: eventEndsAt,
+                location: eventLocation,
+                helperPhase: eventHelperPhase,
+                visibility: eventVisibility,
+              }}
+              days={days}
+            />
           </AccordionPanel>
         </AccordionItem>
 

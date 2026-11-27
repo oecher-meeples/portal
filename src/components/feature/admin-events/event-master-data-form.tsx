@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/components/ui/use-action";
 import {
@@ -18,17 +17,25 @@ import {
  * die Felder freischaltet; "Speichern" persistiert und aktualisiert die Seite
  * (angepasste Öffnungszeiten je Tag). Die Helfersichtbarkeit läuft über
  * dieselbe Action wie der Schalter "Schichten anfragen" (#676). */
-export function EventMasterDataForm({ event }: { event: EditableEvent }) {
-  const [editing, setEditing] = useState(false);
+export function EventMasterDataForm({
+  event,
+  editing,
+  onEditingChange,
+}: {
+  event: EditableEvent;
+  /** Bearbeiten-Modus, gemeinsam mit den Öffnungszeiten (`EventStammdaten`). */
+  editing: boolean;
+  onEditingChange: (editing: boolean) => void;
+}) {
   const [values, setValues] = useState(eventFormValues(event));
   const { run, pending, error } = useAction({
     refresh: true,
-    onSuccess: () => setEditing(false),
+    onSuccess: () => onEditingChange(false),
   });
 
   function cancel() {
     setValues(eventFormValues(event));
-    setEditing(false);
+    onEditingChange(false);
   }
 
   function save() {
@@ -50,21 +57,7 @@ export function EventMasterDataForm({ event }: { event: EditableEvent }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Event-Daten</h3>
-        {!editing && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setEditing(true)}
-          >
-            <Pencil className="size-4" />
-            Bearbeiten
-          </Button>
-        )}
-      </div>
+      <h3 className="text-sm font-semibold">Event-Daten</h3>
       <EventFormFields
         idPrefix={`event-${event.id}`}
         values={values}
