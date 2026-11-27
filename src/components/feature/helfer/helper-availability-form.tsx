@@ -4,11 +4,13 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RangeSlider } from "@/components/ui/range-slider";
+import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/components/ui/use-action";
 import {
   setOwnHelperAvailability,
   clearOwnHelperAvailability,
 } from "@/components/feature/helfer/availability-actions";
+import { AVAILABILITY_COMMENT_MAX_LENGTH } from "@/lib/events/helper-availability-comment";
 import { isAvailabilityTooShort } from "@/lib/events/helfer-days";
 import { formatWeekdayDate } from "@/lib/utils/format";
 import {
@@ -32,6 +34,7 @@ export type OwnAvailability = {
   startsAt: string;
   endsAt: string;
   roleIds: string[];
+  comment: string | null;
 };
 
 /** Pro Event-Tag: Verfügbarkeitsfenster (00:00–24:00-Regler) + Rollen-
@@ -57,11 +60,16 @@ export function HelperAvailabilityForm({
         ],
   );
   const [roleIds, setRoleIds] = useState<string[]>(own?.roleIds ?? []);
+  const [comment, setComment] = useState(own?.comment ?? "");
   const { run, pending, error } = useAction();
 
   /** Speichert sofort; ohne Rolle gibt es nichts anzubieten — dann wird eine
    * bestehende Meldung zurückgezogen. */
-  function persist(nextRange: [number, number], nextRoleIds: string[]) {
+  function persist(
+    nextRange: [number, number],
+    nextRoleIds: string[],
+    nextComment = comment,
+  ) {
     if (nextRoleIds.length === 0) {
       if (own) run(() => clearOwnHelperAvailability(day.id));
       return;
@@ -72,6 +80,7 @@ export function HelperAvailabilityForm({
         combineDateAndMinutes(day.date, nextRange[0]),
         combineDateAndMinutes(day.date, nextRange[1]),
         nextRoleIds,
+        nextComment,
       ),
     );
   }
@@ -145,6 +154,24 @@ export function HelperAvailabilityForm({
           </Button>
         )}
       </div>
+      {roleIds.length > 0 && (
+        <div className="col-span-4">
+          <Textarea
+            aria-label={`Kommentar für ${formatWeekdayDate(day.date)}`}
+            placeholder="Kommentar (optional), z. B. „ab 13 Uhr mit Kindern“"
+            rows={2}
+            maxLength={AVAILABILITY_COMMENT_MAX_LENGTH}
+            value={comment}
+            disabled={pending}
+            onChange={(event) => setComment(event.target.value)}
+            onBlur={() => {
+              if (comment.trim() !== (own?.comment ?? "")) {
+                persist(range, roleIds, comment);
+              }
+            }}
+          />
+        </div>
+      )}
       {error && (
         <span className="text-destructive col-span-4 text-xs">{error}</span>
       )}

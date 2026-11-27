@@ -1555,6 +1555,8 @@ model HelperAvailability {
   dayId     String
   startsAt  DateTime
   endsAt    DateTime
+  /// Freier Hinweis der Person für die Planung (#700), max. 250 Zeichen.
+  comment   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

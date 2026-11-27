@@ -43,6 +43,47 @@ describe("setHelperAvailability", () => {
     expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
   });
 
+  describe("comment (#700)", () => {
+    beforeEach(() => {
+      prismaMock.helperAvailability.upsert.mockResolvedValue({} as never);
+    });
+
+    it("rejects a comment over 250 characters", async () => {
+      const result = await setHelperAvailability({
+        ...VALID_INPUT,
+        comment: "x".repeat(251),
+      });
+
+      expect(result).toEqual({
+        error: "Der Kommentar darf höchstens 250 Zeichen lang sein.",
+      });
+      expect(prismaMock.helperAvailability.upsert).not.toHaveBeenCalled();
+    });
+
+    it("stores a trimmed comment and null for an empty one", async () => {
+      await setHelperAvailability({ ...VALID_INPUT, comment: "  ab 10 Uhr " });
+      expect(prismaMock.helperAvailability.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ comment: "ab 10 Uhr" }),
+          update: expect.objectContaining({ comment: "ab 10 Uhr" }),
+        }),
+      );
+
+      await setHelperAvailability({ ...VALID_INPUT, comment: "   " });
+      expect(prismaMock.helperAvailability.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ comment: null }),
+        }),
+      );
+    });
+
+    it("leaves an existing comment untouched when none is passed", async () => {
+      await setHelperAvailability(VALID_INPUT);
+      const call = prismaMock.helperAvailability.upsert.mock.calls.at(-1)![0];
+      expect(call.update).not.toHaveProperty("comment");
+    });
+  });
+
   describe("shift-time bounds (#674)", () => {
     const shifts = [
       {

@@ -155,10 +155,10 @@ function HelperRoleDialog({
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          checked={!hasShifts}
-          onChange={(event) => setHasShifts(!event.target.checked)}
+          checked={hasShifts}
+          onChange={(event) => setHasShifts(event.target.checked)}
         />
-        Listen-Rolle (keine zeitgenaue Planung, Export listet Namen)
+        Schichtplanung nötig
       </label>
       <Field
         label="Gewährte Permission"

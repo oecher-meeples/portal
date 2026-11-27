@@ -35,9 +35,13 @@ describe("setOwnHelperAvailability", () => {
     const startsAt = new Date("2026-10-10T10:00:00Z");
     const endsAt = new Date("2026-10-10T14:00:00Z");
 
-    const result = await setOwnHelperAvailability("day-1", startsAt, endsAt, [
-      "role-1",
-    ]);
+    const result = await setOwnHelperAvailability(
+      "day-1",
+      startsAt,
+      endsAt,
+      ["role-1"],
+      "ab 10 Uhr",
+    );
 
     expect(result).toEqual({ success: true });
     expect(setHelperAvailabilityMock).toHaveBeenCalledWith({
@@ -46,6 +50,7 @@ describe("setOwnHelperAvailability", () => {
       startsAt,
       endsAt,
       roleIds: ["role-1"],
+      comment: "ab 10 Uhr",
     });
   });
 });

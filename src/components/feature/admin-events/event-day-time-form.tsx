@@ -5,7 +5,7 @@ import { RangeSlider } from "@/components/ui/range-slider";
 import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import { useAction } from "@/components/ui/use-action";
 import { updateEventDayTimes } from "@/components/feature/admin-events/event-day-actions";
-import { formatDateMedium } from "@/lib/utils/format";
+import { formatWeekdayDate } from "@/lib/utils/format";
 import {
   MINUTES_PER_DAY,
   formatMinutesAsTime,
@@ -61,6 +61,7 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
 
   return (
     <div className="flex flex-col gap-1">
+      <span className="text-sm font-medium">{formatWeekdayDate(day.date)}</span>
       <div className="flex flex-wrap items-end gap-3">
         <TimePicker
           id={`event-day-${day.id}-starts`}
@@ -80,9 +81,6 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
           fieldClassName="w-32"
           disabled={pending}
         />
-        <span className="w-32 pb-2 text-sm font-medium">
-          {formatDateMedium(day.date)}
-        </span>
         {pending && (
           <span className="text-muted-foreground pb-2 text-xs">Speichert…</span>
         )}

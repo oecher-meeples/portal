@@ -12,6 +12,7 @@ export async function setOwnHelperAvailability(
   startsAt: Date,
   endsAt: Date,
   roleIds: string[],
+  comment?: string,
 ) {
   const meeple = await requireMeeple();
 
@@ -21,6 +22,7 @@ export async function setOwnHelperAvailability(
     startsAt,
     endsAt,
     roleIds,
+    comment,
   });
   if ("success" in result) revalidatePath("/helfer");
   return result;

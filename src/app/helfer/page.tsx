@@ -88,6 +88,7 @@ export default async function HelferPage() {
           startsAt: availability.startsAt.toISOString(),
           endsAt: availability.endsAt.toISOString(),
           roleIds: availability.roles.map((r) => r.roleId),
+          comment: availability.comment,
         },
       ]),
     );

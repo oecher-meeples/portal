@@ -1,5 +1,6 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import type { RoleColumnGroup } from "@/lib/events/shift-plan";
 import { helperColorClass } from "@/lib/events/helper-colors";
@@ -19,6 +20,8 @@ export type PoolMeeple = {
    * Zeit hat. */
   availabilityStartsAt: string;
   availabilityEndsAt: string;
+  /** Freier Hinweis der Person (#700) — Tooltip + blaues Info-Icon. */
+  comment?: string | null;
 };
 
 export type PoolDragData = {
@@ -29,6 +32,19 @@ export type PoolDragData = {
   roleId: string;
   dayId: string;
 };
+
+/** Tooltip eines Pool-Eintrags: Verfügbarkeit, ggf. "bereits verplant" und
+ * der Kommentar der Person (#700). */
+export function poolEntryTitle(entry: PoolMeeple): string {
+  const parts = [
+    `Verfügbar ${formatTimePlain(entry.availabilityStartsAt)}–${formatTimePlain(entry.availabilityEndsAt)}`,
+  ];
+  if (entry.alreadyPlanned) {
+    parts.push(`${entry.displayName} ist an diesem Tag bereits verplant.`);
+  }
+  if (entry.comment) parts.push(`Kommentar: ${entry.comment}`);
+  return parts.join(" · ");
+}
 
 /**
  * Leiste oberhalb des Kalenders (#158): für jeden Tag alle verfügbaren
@@ -130,16 +146,18 @@ function PoolEntry({
       type="button"
       {...listeners}
       {...attributes}
-      title={`Verfügbar ${formatTimePlain(entry.availabilityStartsAt)}–${formatTimePlain(entry.availabilityEndsAt)}${
-        entry.alreadyPlanned
-          ? ` · ${entry.displayName} ist an diesem Tag bereits verplant.`
-          : ""
-      }`}
+      title={poolEntryTitle(entry)}
       className={`rounded px-2 py-1 text-xs font-medium ${helperColorClass(entry.helperId)} ${
         isSameHelperDragging ? "ring-2 ring-rose-500" : ""
       } ${entry.alreadyPlanned ? "ring-2 ring-amber-500 ring-offset-1" : ""}`}
     >
       {entry.displayName}
+      {entry.comment && (
+        <Info
+          className="ml-1 inline size-3 text-sky-600 dark:text-sky-400"
+          aria-label="Kommentar vorhanden"
+        />
+      )}
     </button>
   );
 }
