@@ -101,12 +101,6 @@ export function EventDetailView({
           </AccordionTrigger>
           <AccordionPanel>
             <div className="grid gap-6 pb-2 md:grid-cols-2">
-              <div className="flex flex-col gap-3">
-                <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
-                {days.map((day) => (
-                  <EventDayTimeForm key={day.id} day={day} />
-                ))}
-              </div>
               {/* key: nach dem Speichern + Refresh den Formularstand neu
                   aus den frisch geladenen Stammdaten aufbauen. */}
               <EventMasterDataForm
@@ -121,6 +115,12 @@ export function EventDetailView({
                   visibility: eventVisibility,
                 }}
               />
+              <div className="flex flex-col gap-3">
+                <h3 className="text-sm font-semibold">Öffnungszeiten je Tag</h3>
+                {days.map((day) => (
+                  <EventDayTimeForm key={day.id} day={day} />
+                ))}
+              </div>
             </div>
           </AccordionPanel>
         </AccordionItem>
