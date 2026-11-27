@@ -13,18 +13,30 @@ export function collectHelperDayKeys(
 }
 
 /**
- * Tagesfilter des Helferplans (#674): nur Events, die an `dayKey` eine
- * Schicht-Tag-Zeile haben; ohne Auswahl bleiben alle erhalten. Die Tage je
- * Event enthalten bereits nur Tage mit Schichten.
+ * Tagesfilter des Helferplans (#674): Events ohne Schicht-Tag an `dayKey`
+ * entfallen, bei den übrigen bleiben nur die Tage dieses Tages erhalten.
+ * Ohne Auswahl bleibt alles unverändert. Die Tage je Event enthalten bereits
+ * nur Tage mit Schichten.
  */
 export function filterEventsByDay<T extends { days: { date: string }[] }>(
   events: T[],
   dayKey: string | null,
 ): T[] {
   if (dayKey === null) return events;
-  return events.filter((event) =>
-    event.days.some((day) => eventDayKey(day.date) === dayKey),
-  );
+  return events
+    .map((event) => ({
+      ...event,
+      days: event.days.filter((day) => eventDayKey(day.date) === dayKey),
+    }))
+    .filter((event) => event.days.length > 0);
+}
+
+/** Empfohlene Mindestdauer einer gemeldeten Verfügbarkeit (#674), in Minuten. */
+export const MIN_AVAILABILITY_MINUTES = 120;
+
+/** Nicht blockierender Hinweis: gemeldetes Fenster kürzer als die Empfehlung. */
+export function isAvailabilityTooShort(range: [number, number]): boolean {
+  return range[1] - range[0] < MIN_AVAILABILITY_MINUTES;
 }
 
 /**

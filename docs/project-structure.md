@@ -137,6 +137,7 @@ Design-System-Bausteine (shadcn-Stil auf Base-UI) plus fachfreie Bausteine mit V
 | --- | --- |
 | `button`, `input`, `label`, `textarea`, `dialog`, `table`, `tabs`, `badge`, `avatar`, `tooltip`, `separator`, `dropdown-menu` | Primitives |
 | `card.tsx` | **Einzige Card-Hülle des Portals** (#580): `Card` im Portalstil (`rounded-lg`, `border`, `p-5`), `size="sm"` (`p-4`) / `"flush"` (ohne Padding, für `divide-y`-Listen, Tabellen, Accordions), `variant="destructive"`, `layout="tile"` (zentrierte Icon-Kachel). `CardHeader` + `CardAction` stellen Aktionen per Container-Query unter Titel/Beschreibung, wenn der Kopf schmaler als `@md` ist. `CardTitle` rendert `<h2>` (`as="h3"` möglich). Für Hüllen, die kein `div` sind (`Link`, `form`, `li`, Accordion-Root), liefert `cardVariants({ … })` dieselben Klassen. Bewusst eigene Bausteine bleiben: `game-list-row` (randlose Listenzeile) und Innen-/Overlay-Flächen. |
+| `filter-reset-row.tsx` | `FilterResetRow` — „Gefiltert auf … · Alle anzeigen“-Zeile für aktive Filter (`/news`, Helferplan) |
 | `field.tsx` | `Field` / `TextField` / `TextAreaField` — Label-über-Control-Zeile (ersetzt ~60 handkopierte Wrapper) |
 | `password-input.tsx` | `PasswordInput` / `PasswordField` — Passwortfeld mit Augen-Button (Tap = dauerhaft sichtbar, Longpress = solange gedrückt) (#633) |
 | `native-select.tsx` | `NativeSelect` — natives `<select>` im `Input`-Stil für Filter, Sortierung, Vorschlagslisten |

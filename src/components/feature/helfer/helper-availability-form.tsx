@@ -9,6 +9,7 @@ import {
   setOwnHelperAvailability,
   clearOwnHelperAvailability,
 } from "@/components/feature/helfer/availability-actions";
+import { isAvailabilityTooShort } from "@/lib/events/helfer-days";
 import { formatWeekdayDate } from "@/lib/utils/format";
 import {
   combineDateAndMinutes,
@@ -36,18 +37,16 @@ export type OwnAvailability = {
 /** Pro Event-Tag: Verfügbarkeitsfenster (00:00–24:00-Regler) + Rollen-
  * Mehrfachauswahl (#156), beschränkt auf die Rollen, für die an diesem Tag
  * tatsächlich Schichten existieren — getrennt von der admin-seitigen
- * Zeitblock-Zuweisung (Schichtplan-Editor). Im Bearbeiten-Modus (#674)
- * speichert jede Änderung sofort; sonst ist das Formular schreibgeschützt. */
+ * Zeitblock-Zuweisung (Schichtplan-Editor). Jede Änderung
+ * wird sofort gespeichert (#674). */
 export function HelperAvailabilityForm({
   day,
   dayRoles,
   own,
-  editing,
 }: {
   day: EventDayOption;
   dayRoles: HelperRoleOption[];
   own: OwnAvailability | null;
-  editing: boolean;
 }) {
   const [range, setRange] = useState<[number, number]>(
     own
@@ -96,12 +95,19 @@ export function HelperAvailabilityForm({
           value={range}
           onValueChange={setRange}
           onValueCommitted={(next) => persist(next, roleIds)}
-          disabled={!editing}
           getAriaLabel={(index) => (index === 0 ? "Von" : "Bis")}
         />
         <span className="text-muted-foreground text-xs">
           {formatMinutesAsTime(range[0])} – {formatMinutesAsTime(range[1])}
         </span>
+        {isAvailabilityTooShort(range) && (
+          <span
+            role="status"
+            className="text-xs text-amber-700 dark:text-amber-400"
+          >
+            Empfohlen sind mindestens 2 Stunden Verfügbarkeit.
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-2">
         {dayRoles.length === 0 ? (
@@ -117,7 +123,7 @@ export function HelperAvailabilityForm({
               <input
                 type="checkbox"
                 checked={roleIds.includes(role.id)}
-                disabled={!editing || pending}
+                disabled={pending}
                 onChange={(event) => toggleRole(role.id, event.target.checked)}
               />
               {role.name}
@@ -126,7 +132,7 @@ export function HelperAvailabilityForm({
         )}
       </div>
       <div className="flex items-center gap-2">
-        {editing && own && (
+        {own && (
           <Button
             type="button"
             variant="ghost"

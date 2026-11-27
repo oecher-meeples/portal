@@ -15,6 +15,7 @@ import {
   BottomSheetContent,
 } from "@/components/ui/bottom-sheet";
 import { getContentTypeIcon } from "@/components/entities/content-type-icon";
+import { FilterResetRow } from "@/components/ui/filter-reset-row";
 import { formatDate } from "@/lib/utils/format";
 import { NewsCalendar } from "@/components/feature/news/news-calendar";
 import {
@@ -166,21 +167,10 @@ export function NewsBrowser({
           </BottomSheet>
         </div>
         {selectedDate && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">
-              Gefiltert auf{" "}
-              <strong className="text-foreground">
-                {formatDate(selectedDate)}
-              </strong>
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectedDate(null)}
-              className="text-primary shrink-0 hover:underline"
-            >
-              Alle anzeigen
-            </button>
-          </div>
+          <FilterResetRow
+            value={formatDate(selectedDate)}
+            onReset={() => setSelectedDate(null)}
+          />
         )}
       </div>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
