@@ -43,7 +43,7 @@ export function HelperOverviewSection({
         <TableBody>
           {groups.flatMap((group) =>
             group.rows.map((row, index) => (
-              <TableRow key={`${group.meepleId}-${row.dayDate}`}>
+              <TableRow key={`${group.helperId}-${row.dayDate}`}>
                 {index === 0 && (
                   <TableCell rowSpan={group.rows.length}>
                     <span className="inline-flex items-center gap-1.5 font-medium">

@@ -36,7 +36,7 @@ describe("without the events:manage permission", () => {
     requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
 
     await expect(
-      assignHelperToShift("shift-1", "meeple-1", new Date(), new Date()),
+      assignHelperToShift("shift-1", "meeple-1", false, new Date(), new Date()),
     ).rejects.toThrow(ForbiddenError);
     await expect(
       unassignHelperFromShift("booking-1", "shift-1"),
@@ -56,6 +56,7 @@ describe("assignHelperToShift", () => {
     const result = await assignHelperToShift(
       "shift-1",
       "meeple-1",
+      false,
       startsAt,
       endsAt,
     );
@@ -63,7 +64,8 @@ describe("assignHelperToShift", () => {
     expect(result).toEqual({ success: true });
     expect(assignShiftBookingMock).toHaveBeenCalledWith({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
+      isGuest: false,
       startsAt,
       endsAt,
       bookingId: undefined,
@@ -76,6 +78,7 @@ describe("assignHelperToShift", () => {
     const result = await assignHelperToShift(
       "shift-1",
       "meeple-1",
+      false,
       new Date(),
       new Date(),
     );

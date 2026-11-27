@@ -6,7 +6,8 @@ import { helperColorClass } from "@/lib/events/helper-colors";
 import { formatTimePlain } from "@/lib/utils/format";
 
 export type PoolMeeple = {
-  meepleId: string;
+  helperId: string;
+  isGuest: boolean;
   displayName: string;
   /** One row per (meeple, role) — a meeple available for several roles
    * appears once per role, per AC (#158). */
@@ -22,7 +23,8 @@ export type PoolMeeple = {
 
 export type PoolDragData = {
   type: "pool";
-  meepleId: string;
+  helperId: string;
+  isGuest: boolean;
   displayName: string;
   roleId: string;
   dayId: string;
@@ -35,7 +37,7 @@ export type PoolDragData = {
  * ausgerichtet sind. Farbige Rechtecke je Helfer (`helperColorClass`,
  * konsistent über Pool und spätere Zuweisung hinweg). Jedes Rechteck ist ein
  * @dnd-kit-Draggable (#159); während des Drags werden andere Vorkommen
- * derselben Person rot markiert (`activeMeepleId`). Dauerhaft gelb markiert
+ * derselben Person rot markiert (`activeHelperId`). Dauerhaft gelb markiert
  * (`alreadyPlanned`, #161), solange die Person an diesem Tag mindestens
  * eine Zuweisung hat.
  */
@@ -43,12 +45,12 @@ export function HelperPoolBar({
   dayId,
   columns,
   pool,
-  activeMeepleId,
+  activeHelperId,
 }: {
   dayId: string;
   columns: RoleColumnGroup[];
   pool: PoolMeeple[];
-  activeMeepleId: string | null;
+  activeHelperId: string | null;
 }) {
   if (columns.length === 0) return null;
 
@@ -77,11 +79,11 @@ export function HelperPoolBar({
             ) : (
               forRole.map((entry) => (
                 <PoolEntry
-                  key={`${entry.meepleId}-${entry.roleId}`}
+                  key={`${entry.helperId}-${entry.roleId}`}
                   dayId={dayId}
                   entry={entry}
                   isSameHelperDragging={
-                    activeMeepleId !== null && activeMeepleId === entry.meepleId
+                    activeHelperId !== null && activeHelperId === entry.helperId
                   }
                 />
               ))
@@ -105,12 +107,13 @@ function PoolEntry({
    * shows it instead), the others get the red "already elsewhere" marker. */
   isSameHelperDragging: boolean;
 }) {
-  const dragId = `pool::${dayId}::${entry.roleId}::${entry.meepleId}`;
+  const dragId = `pool::${dayId}::${entry.roleId}::${entry.helperId}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: {
       type: "pool",
-      meepleId: entry.meepleId,
+      helperId: entry.helperId,
+      isGuest: entry.isGuest,
       displayName: entry.displayName,
       roleId: entry.roleId,
       dayId,
@@ -132,7 +135,7 @@ function PoolEntry({
           ? ` · ${entry.displayName} ist an diesem Tag bereits verplant.`
           : ""
       }`}
-      className={`rounded px-2 py-1 text-xs font-medium ${helperColorClass(entry.meepleId)} ${
+      className={`rounded px-2 py-1 text-xs font-medium ${helperColorClass(entry.helperId)} ${
         isSameHelperDragging ? "ring-2 ring-rose-500" : ""
       } ${entry.alreadyPlanned ? "ring-2 ring-amber-500 ring-offset-1" : ""}`}
     >

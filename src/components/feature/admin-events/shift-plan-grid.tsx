@@ -76,7 +76,7 @@ export function ShiftPlanGrid({
   shifts: PlanShift[];
   bookings: PlanBooking[];
   /** Entf-Taste bzw. sichtbarer Button auf einem fokussierten Block (#161
-   * Unassign) — zielt auf die konkrete Buchung, nicht nur (shiftId, meepleId),
+   * Unassign) — zielt auf die konkrete Buchung, nicht nur (shiftId, helperId),
    * da ein Meeple mehrere Blöcke auf derselben Schicht haben kann. */
   onUnassign: (booking: PlanBooking) => void;
   /** Griffpunkte oben/unten auf einem fokussierten Block (#160 Resize). */
@@ -297,7 +297,7 @@ export function ShiftPlanGrid({
           // aus der Reihenfolge der Buchungen dieser Rolle ableiten.
           const sameRole = bookings.filter((b) => b.roleId === booking.roleId);
           const autoSlot = sameRole.findIndex(
-            (b) => b.meepleId === booking.meepleId,
+            (b) => b.helperId === booking.helperId,
           );
           const slot = Math.min(
             Math.max(booking.slotIndex ?? autoSlot, 0),

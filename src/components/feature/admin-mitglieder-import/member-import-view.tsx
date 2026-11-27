@@ -14,8 +14,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useAction } from "@/components/ui/use-action";
+import { decodeCsvBuffer } from "@/lib/utils/csv";
 import {
-  decodeMemberCsv,
   parseMemberImportCsv,
   type MemberImportLineError,
   type MemberImportRow,
@@ -101,7 +101,7 @@ export function MemberImportView() {
     setLoaded(null);
     setCreated(null);
     const { rows, errors } = parseMemberImportCsv(
-      decodeMemberCsv(await file.arrayBuffer()),
+      decodeCsvBuffer(await file.arrayBuffer()),
     );
     await previewAction.run(async () => {
       const result = await previewMemberImport(rows);

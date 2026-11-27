@@ -9,6 +9,33 @@ import type { EditableEventDay } from "@/components/feature/admin-events/event-d
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
 import { buildHelperOverview } from "@/lib/events/helper-overview";
+import {
+  helperDisplayName,
+  helperKey,
+  isGuest,
+} from "@/lib/events/helper-identity";
+
+type AvailabilityWithHelper = {
+  meeple: { id: string; displayName: string } | null;
+  guest: { id: string; name: string } | null;
+};
+
+/** Identität + Anzeigename eines Verfügbarkeits-Eintrags (Meeple oder Gast,
+ * #698) — gemeinsame Grundlage für Pool und Helfer-Übersicht. */
+function availabilityHelper(availability: AvailabilityWithHelper) {
+  const ref = {
+    meepleId: availability.meeple?.id,
+    guestId: availability.guest?.id,
+  };
+  return {
+    helperId: helperKey(ref),
+    isGuest: isGuest(ref),
+    displayName: helperDisplayName(
+      ref,
+      availability.meeple?.displayName ?? availability.guest?.name ?? "",
+    ),
+  };
+}
 
 export default async function AdminEventDetailPage({
   params,
@@ -37,6 +64,7 @@ export default async function AdminEventDetailPage({
                     profilePictureVisibility: true,
                   },
                 },
+                guest: { select: { id: true, name: true } },
                 roles: { select: { roleId: true } },
               },
             },
@@ -52,10 +80,12 @@ export default async function AdminEventDetailPage({
                 id: true,
                 confirmedAt: true,
                 meepleId: true,
+                guestId: true,
                 startsAt: true,
                 endsAt: true,
                 slotIndex: true,
                 meeple: { select: { displayName: true } },
+                guest: { select: { name: true } },
               },
             },
           },
@@ -105,16 +135,21 @@ export default async function AdminEventDetailPage({
     const dayAvailabilities =
       event.days.find((day) => day.id === shift.dayId)?.availabilities ?? [];
     for (const booking of shift.bookings) {
+      const key = helperKey(booking);
       const availability = dayAvailabilities.find(
-        (entry) => entry.meeple.id === booking.meepleId,
+        (entry) => availabilityHelper(entry).helperId === key,
       );
       forDay.push({
         id: booking.id,
         shiftId: shift.id,
         roleId: shift.roleId,
         dayId: shift.dayId,
-        meepleId: booking.meepleId,
-        displayName: booking.meeple.displayName,
+        helperId: key,
+        isGuest: isGuest(booking),
+        displayName: helperDisplayName(
+          booking,
+          booking.meeple?.displayName ?? booking.guest?.name ?? "",
+        ),
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),
         confirmedAt: booking.confirmedAt?.toISOString() ?? null,
@@ -130,7 +165,7 @@ export default async function AdminEventDetailPage({
   const plannedMeepleIdsByDay: Record<string, Set<string>> = Object.fromEntries(
     Object.entries(bookingsByDay).map(([dayId, bookings]) => [
       dayId,
-      new Set(bookings.map((b) => b.meepleId)),
+      new Set(bookings.map((b) => b.helperId)),
     ]),
   );
 
@@ -139,11 +174,12 @@ export default async function AdminEventDetailPage({
       day.id,
       day.availabilities.flatMap((availability) =>
         availability.roles.map((role) => ({
-          meepleId: availability.meeple.id,
-          displayName: availability.meeple.displayName,
+          ...availabilityHelper(availability),
           roleId: role.roleId,
           alreadyPlanned:
-            plannedMeepleIdsByDay[day.id]?.has(availability.meeple.id) ?? false,
+            plannedMeepleIdsByDay[day.id]?.has(
+              availabilityHelper(availability).helperId,
+            ) ?? false,
           availabilityStartsAt: availability.startsAt.toISOString(),
           availabilityEndsAt: availability.endsAt.toISOString(),
         })),
@@ -165,10 +201,10 @@ export default async function AdminEventDetailPage({
   const helperOverview = buildHelperOverview(
     event.days.flatMap((day) =>
       day.availabilities.map((availability) => ({
-        meepleId: availability.meeple.id,
-        displayName: availability.meeple.displayName,
-        profilePictureUrl: availability.meeple.profilePictureUrl,
-        profilePictureVisibility: availability.meeple.profilePictureVisibility,
+        ...availabilityHelper(availability),
+        profilePictureUrl: availability.meeple?.profilePictureUrl ?? null,
+        profilePictureVisibility:
+          availability.meeple?.profilePictureVisibility ?? "INTERN",
         dayDate: day.date.toISOString(),
         startsAt: availability.startsAt.toISOString(),
         endsAt: availability.endsAt.toISOString(),
@@ -177,7 +213,7 @@ export default async function AdminEventDetailPage({
     ),
     event.shifts.flatMap((shift) =>
       shift.bookings.map((booking) => ({
-        meepleId: booking.meepleId,
+        helperId: helperKey(booking),
         startsAt: booking.startsAt.toISOString(),
         endsAt: booking.endsAt.toISOString(),
       })),

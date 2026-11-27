@@ -3,6 +3,7 @@
 import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { escapeCsvField } from "@/lib/utils/csv";
+import { helperDisplayName } from "@/lib/events/helper-identity";
 import { formatTimePlain } from "@/lib/utils/format";
 import { SHIFT_PLAN_CSV_COLUMNS } from "@/components/feature/admin-events/shift-plan-csv-columns";
 
@@ -29,7 +30,10 @@ export async function exportShiftPlanDayCsv(dayId: string) {
       startsAt: true,
       endsAt: true,
       confirmedAt: true,
+      meepleId: true,
+      guestId: true,
       meeple: { select: { displayName: true } },
+      guest: { select: { name: true } },
       shift: { select: { role: { select: { name: true } } } },
     },
   });
@@ -39,7 +43,10 @@ export async function exportShiftPlanDayCsv(dayId: string) {
       booking.shift.role.name,
       formatTimePlain(booking.startsAt),
       formatTimePlain(booking.endsAt),
-      booking.meeple.displayName,
+      helperDisplayName(
+        booking,
+        booking.meeple?.displayName ?? booking.guest?.name ?? "",
+      ),
       booking.confirmedAt ? "bestätigt" : "offen",
     ]
       .map(csvCell)

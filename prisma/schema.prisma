@@ -1520,6 +1520,22 @@ model HelperRole {
   @@map("helper_roles")
 }
 
+/// Gast-Helfer (#698): Person ohne Portal-Account, per CSV-Import mit
+/// Verfügbarkeit angelegt. `nameKey` = normalisierter Name (getrimmt,
+/// Whitespace gekürzt, kleingeschrieben) und eindeutig; `name` = erste
+/// Schreibweise.
+model Guest {
+  id        String   @id @default(cuid())
+  name      String
+  nameKey   String   @unique
+  createdAt DateTime @default(now())
+
+  availabilities HelperAvailability[]
+  bookings       ShiftBooking[]
+
+  @@map("guests")
+}
+
 /// Ein Meeple meldet sich für einen Event-Tag als Helfer verfügbar (#156) —
 /// eigenes Verfügbarkeitsfenster (`startsAt`/`endsAt`) plus Mehrfachauswahl
 /// der Rollen, die es an diesem Tag übernehmen würde. Getrennt von der
@@ -1528,18 +1544,23 @@ model HelperRole {
 /// eine Zusage pro Tag (`@@unique`); erneutes Absenden ersetzt sie.
 model HelperAvailability {
   id        String   @id @default(cuid())
-  meepleId  String
+  /// Genau eines von `meepleId`/`guestId` ist gesetzt (#698); Vorrang hat
+  /// `meepleId` (siehe `lib/events/helper-identity.ts`), kein CHECK.
+  meepleId  String?
+  guestId   String?
   dayId     String
   startsAt  DateTime
   endsAt    DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  meeple Meeple                   @relation("HelperAvailabilityMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  meeple Meeple?                  @relation("HelperAvailabilityMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  guest  Guest?                   @relation(fields: [guestId], references: [id], onDelete: Cascade)
   day    EventDay                 @relation(fields: [dayId], references: [id], onDelete: Cascade)
   roles  HelperAvailabilityRole[]
 
   @@unique([meepleId, dayId])
+  @@unique([guestId, dayId])
   @@map("helper_availabilities")
 }
 
@@ -1597,7 +1618,9 @@ model Shift {
 model ShiftBooking {
   id          String    @id @default(cuid())
   shiftId     String
-  meepleId    String
+  /// Genau eines von `meepleId`/`guestId` (#698), Vorrang `meepleId`.
+  meepleId    String?
+  guestId     String?
   startsAt    DateTime
   endsAt      DateTime
   confirmedAt DateTime?
@@ -1608,12 +1631,14 @@ model ShiftBooking {
   createdAt   DateTime  @default(now())
 
   shift  Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
-  meeple Meeple @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  meeple Meeple? @relation("ShiftBookingMeeple", fields: [meepleId], references: [id], onDelete: Cascade)
+  guest  Guest?  @relation(fields: [guestId], references: [id], onDelete: Cascade)
 
   // Kein @@id([shiftId, meepleId]) mehr — ein Meeple kann in derselben Schicht
   // mehrfach mit unterschiedlichen, nicht überlappenden Zeitblöcken
   // eingetragen sein (z. B. eine Pausenablösung durch dieselbe Person).
   @@index([shiftId, meepleId])
+  @@index([shiftId, guestId])
   @@map("shift_bookings")
 }
 

@@ -24,17 +24,45 @@ function availability(overrides: Partial<Record<string, unknown>> = {}) {
 
 beforeEach(() => {
   prismaMock.shift.findUnique.mockResolvedValue(SHIFT as never);
-  prismaMock.helperAvailability.findUnique.mockResolvedValue(
+  prismaMock.helperAvailability.findFirst.mockResolvedValue(
     availability() as never,
   );
   prismaMock.shiftBooking.findFirst.mockResolvedValue(null);
 });
 
 describe("assignShiftBooking", () => {
+  it("books a guest with guestId and an already confirmed block", async () => {
+    prismaMock.helperAvailability.findFirst.mockResolvedValue(
+      availability({ meepleId: null, guestId: "guest-1" }) as never,
+    );
+
+    const result = await assignShiftBooking({
+      shiftId: "shift-1",
+      helperId: "guest-1",
+      isGuest: true,
+      startsAt: START,
+      endsAt: END,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.helperAvailability.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { guestId: "guest-1", dayId: "day-1" },
+      }),
+    );
+    expect(prismaMock.shiftBooking.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        shiftId: "shift-1",
+        guestId: "guest-1",
+        confirmedAt: expect.any(Date),
+      }),
+    });
+  });
+
   it("rejects an end before or equal to the start", async () => {
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: END,
       endsAt: START,
     });
@@ -48,7 +76,7 @@ describe("assignShiftBooking", () => {
 
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -57,11 +85,11 @@ describe("assignShiftBooking", () => {
   });
 
   it("rejects when the meeple has no availability for that day", async () => {
-    prismaMock.helperAvailability.findUnique.mockResolvedValue(null);
+    prismaMock.helperAvailability.findFirst.mockResolvedValue(null);
 
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -73,13 +101,13 @@ describe("assignShiftBooking", () => {
   });
 
   it("rejects when the availability doesn't include this role", async () => {
-    prismaMock.helperAvailability.findUnique.mockResolvedValue(
+    prismaMock.helperAvailability.findFirst.mockResolvedValue(
       availability({ roles: [{ roleId: "role-abbau" }] }) as never,
     );
 
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -93,13 +121,13 @@ describe("assignShiftBooking", () => {
   it("rejects a block outside the reported availability window, naming the actual bounds", async () => {
     const availabilityStartsAt = new Date("2026-10-10T11:00:00Z");
     const availabilityEndsAt = new Date("2026-10-10T18:00:00Z");
-    prismaMock.helperAvailability.findUnique.mockResolvedValue(
+    prismaMock.helperAvailability.findFirst.mockResolvedValue(
       availability({ startsAt: availabilityStartsAt }) as never,
     );
 
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -117,7 +145,7 @@ describe("assignShiftBooking", () => {
 
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -132,7 +160,7 @@ describe("assignShiftBooking", () => {
   it("checks for overlaps across all of the person's bookings, any shift", async () => {
     await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -149,7 +177,7 @@ describe("assignShiftBooking", () => {
   it("excludes the booking's own row from the overlap check when resizing", async () => {
     await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
       bookingId: "booking-1",
@@ -168,7 +196,7 @@ describe("assignShiftBooking", () => {
   it("creates a new booking when no bookingId is given", async () => {
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
     });
@@ -188,7 +216,7 @@ describe("assignShiftBooking", () => {
   it("re-times the exact booking when a bookingId is given", async () => {
     const result = await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: START,
       endsAt: END,
       bookingId: "booking-1",
@@ -219,7 +247,7 @@ describe("confirmedAt reset on re-timing (#683)", () => {
 
     await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: new Date("2026-10-10T11:00:00Z"),
       endsAt: OLD_END,
       bookingId: "booking-1",
@@ -236,7 +264,7 @@ describe("confirmedAt reset on re-timing (#683)", () => {
 
     await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: OLD_START,
       endsAt: new Date("2026-10-10T15:00:00Z"),
       bookingId: "booking-1",
@@ -253,7 +281,7 @@ describe("confirmedAt reset on re-timing (#683)", () => {
 
     await assignShiftBooking({
       shiftId: "shift-1",
-      meepleId: "meeple-1",
+      helperId: "meeple-1",
       startsAt: OLD_START,
       endsAt: OLD_END,
       bookingId: "booking-1",

@@ -14,7 +14,7 @@ function availability(
   overrides: Partial<OverviewAvailability>,
 ): OverviewAvailability {
   return {
-    meepleId: "m1",
+    helperId: "m1",
     displayName: "Anna",
     profilePictureUrl: null,
     profilePictureVisibility: "INTERN",
@@ -34,7 +34,7 @@ describe("dayUtilizationPercent", () => {
     expect(
       dayUtilizationPercent(window, [
         {
-          meepleId: "m1",
+          helperId: "m1",
           startsAt: "2026-10-10T08:00:00.000Z",
           endsAt: "2026-10-10T12:00:00.000Z",
         },
@@ -44,7 +44,7 @@ describe("dayUtilizationPercent", () => {
 
   it("counts overlapping bookings once and clamps to 100", () => {
     const full = {
-      meepleId: "m1",
+      helperId: "m1",
       startsAt: "2026-10-10T06:00:00.000Z",
       endsAt: "2026-10-10T20:00:00.000Z",
     };
@@ -61,7 +61,7 @@ describe("buildHelperOverview", () => {
   it("groups by person sorted by name, then day, with role names", () => {
     const groups = buildHelperOverview(
       [
-        availability({ meepleId: "m2", displayName: "Berta" }),
+        availability({ helperId: "m2", displayName: "Berta" }),
         availability({
           dayDate: "2026-10-11T00:00:00.000Z",
           roleIds: ["r1", "r2"],
@@ -91,12 +91,12 @@ describe("buildHelperOverview", () => {
       ],
       [
         {
-          meepleId: "m1",
+          helperId: "m1",
           startsAt: "2026-10-10T08:00:00.000Z",
           endsAt: "2026-10-10T12:00:00.000Z",
         },
         {
-          meepleId: "m2",
+          helperId: "m2",
           startsAt: "2026-10-11T08:00:00.000Z",
           endsAt: "2026-10-11T16:00:00.000Z",
         },

@@ -1,3 +1,4 @@
+import { GuestImportDialog } from "@/components/feature/admin-events/guest-import-dialog";
 import { cardVariants } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 import type { EventVisibility, HelperPhase } from "@prisma/client";
@@ -149,6 +150,13 @@ export function EventDetailView({
             Helfer
           </AccordionTrigger>
           <AccordionPanel>
+            <div className="mb-3">
+              <GuestImportDialog
+                eventId={eventId}
+                days={days}
+                helperRoles={helperRoles}
+              />
+            </div>
             <HelperOverviewSection groups={helperOverview} />
           </AccordionPanel>
         </AccordionItem>

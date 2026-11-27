@@ -247,7 +247,7 @@ export function AssignedBlock({
       }}
       className={cn(
         "focus-visible:ring-ring relative m-0.5 cursor-grab rounded px-1.5 py-1 text-xs font-medium outline-none focus-visible:ring-2",
-        helperColorClass(booking.meepleId),
+        helperColorClass(booking.helperId),
         !confirmed && "border-foreground/50 border-2 border-dashed",
         tooLong && "ring-2 ring-amber-500",
       )}
