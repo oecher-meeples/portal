@@ -290,12 +290,6 @@ export function ShiftPlanEditor({
             >
               <div className="flex justify-end gap-2">
                 <ShiftPlanCsvExportButton dayId={day.id} />
-                <ShiftDialog
-                  eventId={eventId}
-                  helperRoles={helperRoles}
-                  days={days}
-                  defaultDayId={day.id}
-                />
               </div>
               {pendingRange?.dayId === day.id && (
                 <ShiftDialog

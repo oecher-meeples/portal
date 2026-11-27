@@ -23,6 +23,7 @@ import {
   type EventDayOption,
   type HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
+import { ShiftMatrixDialog } from "@/components/feature/admin-events/shift-matrix-dialog";
 import { ShiftTableEditor } from "@/components/feature/admin-events/shift-table-editor";
 import { deleteShift } from "@/components/feature/admin-events/shift-actions";
 import { setEventHelperPhase } from "@/components/feature/admin-events/actions";
@@ -132,6 +133,13 @@ export function ShiftTableSection({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <RequestShiftsToggle eventId={eventId} helperPhase={helperPhase} />
+            <ShiftMatrixDialog
+              key={shifts.map((shift) => shift.id).join(",")}
+              eventId={eventId}
+              days={days}
+              shifts={shifts}
+              helperRoles={helperRoles}
+            />
             <Button
               type="button"
               variant="outline"
