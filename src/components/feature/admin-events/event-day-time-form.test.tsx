@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { EventDayTimeForm } from "@/components/feature/admin-events/event-day-time-form";
 import { timeInputValue } from "@/components/ui/time-picker";
 
@@ -53,5 +53,37 @@ describe("EventDayTimeForm — Öffnungszeiten-Vorbelegung (#459)", () => {
       timeInputValue(startsAt),
     );
     expect(screen.getByLabelText("Ende")).toHaveValue(timeInputValue(endsAt));
+  });
+});
+
+describe("EventDayTimeForm — Regler (#691)", () => {
+  const day = {
+    id: "day-1",
+    date: "2026-10-10T00:00:00.000Z",
+    startsAt: null,
+    endsAt: null,
+  };
+
+  it("renders a two-thumb slider that mirrors the time fields", () => {
+    render(<EventDayTimeForm day={day} />);
+
+    expect(screen.getByRole("slider", { name: "Beginn-Regler" })).toHaveValue(
+      "720",
+    );
+    expect(screen.getByRole("slider", { name: "Ende-Regler" })).toHaveValue(
+      "720",
+    );
+  });
+
+  it("updates the time field and saves when the slider is moved", async () => {
+    const { updateEventDayTimes } =
+      await import("@/components/feature/admin-events/event-day-actions");
+    render(<EventDayTimeForm day={day} />);
+
+    const end = screen.getByRole("slider", { name: "Ende-Regler" });
+    fireEvent.keyDown(end, { key: "ArrowRight" });
+
+    expect(screen.getByLabelText("Ende")).toHaveValue("12:15");
+    expect(updateEventDayTimes).toHaveBeenCalledTimes(1);
   });
 });
