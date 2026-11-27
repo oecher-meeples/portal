@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  decodeMemberCsv,
-  groupByEmail,
-  parseMemberImportCsv,
-} from "./member-import-csv";
+import { groupByEmail, parseMemberImportCsv } from "./member-import-csv";
+import { decodeCsvBuffer } from "@/lib/utils/csv";
 
 const HEADER = "mitglied_email;mitglied_name;mitglied_vorname;mitglied_nr";
 
@@ -21,16 +18,16 @@ function windows1252(text: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-describe("decodeMemberCsv", () => {
+describe("decodeCsvBuffer", () => {
   it("decodes Windows-1252 umlauts", () => {
-    expect(decodeMemberCsv(windows1252("Müller;Jörg"))).toBe("Müller;Jörg");
+    expect(decodeCsvBuffer(windows1252("Müller;Jörg"))).toBe("Müller;Jörg");
   });
 
   it("decodes UTF-8 and strips a BOM", () => {
     const buffer = new TextEncoder().encode(
       `${String.fromCharCode(0xfeff)}Müller;Jörg`,
     ).buffer;
-    expect(decodeMemberCsv(buffer)).toBe("Müller;Jörg");
+    expect(decodeCsvBuffer(buffer)).toBe("Müller;Jörg");
   });
 });
 
@@ -53,7 +50,7 @@ describe("parseMemberImportCsv", () => {
   });
 
   it("parses a Windows-1252 file end to end", () => {
-    const text = decodeMemberCsv(
+    const text = decodeCsvBuffer(
       windows1252(csv("jo@example.com;Müller;Jörg;OEMe.V.001")),
     );
 

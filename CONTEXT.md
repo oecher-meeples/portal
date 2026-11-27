@@ -277,3 +277,7 @@ _Avoid_: Newsletter-Kontakt (kein Fremdsystem, reine Portal-Tabelle), Mitglied (
 **Newsletter-Kategorie**:
 Termine, News, Turniere oder Berichte zu vergangenen Events — das Abonnenten-Interesse, entkoppelt vom `PostType` eines Beitrags (Inhalts-Klassifikation). Ein Beitrag bekommt beim Anlegen eine Default-Kategorie aus seinem Typ, bleibt aber überschreibbar.
 _Avoid_: PostType (das ist die Inhalts-Klassifikation, nicht das Abonnenten-Interesse)
+
+## Gast-Helfer
+
+Person ohne Portal-Account (`Guest`), die per CSV-Import (`Name;Tag;Von;Bis;Rollen`) am Event-Detail als Helfer mit Verfügbarkeit angelegt wird und im Schichtplan wie ein Meeple buchbar ist (Anzeige mit Suffix „ (Gast)", Zuweisung sofort bestätigt). Identität über `Guest.nameKey` (normalisierter Name); an `HelperAvailability`/`ShiftBooking` gilt `meepleId` vor `guestId`.

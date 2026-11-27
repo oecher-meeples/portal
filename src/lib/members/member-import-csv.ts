@@ -18,8 +18,6 @@ export const MEMBER_IMPORT_HEADER = [
   "mitglied_nr",
 ] as const;
 
-const BYTE_ORDER_MARK = 0xfeff;
-
 /** `OEMe.V.076` → 76. */
 const MEMBER_NUMBER_PATTERN = /^OEMe\.V\.(\d+)$/;
 
@@ -40,19 +38,6 @@ export type ParsedMemberImport = {
   rows: MemberImportRow[];
   errors: MemberImportLineError[];
 };
-
-/** Dekodiert die hochgeladene Datei: erst strikt als UTF-8, bei Fehlschlag
- * als Windows-1252 (so exportiert die Vereinsverwaltung, sonst gehen
- * Umlaute kaputt). Ein BOM wird entfernt. */
-export function decodeMemberCsv(buffer: ArrayBuffer): string {
-  let text: string;
-  try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-  } catch {
-    text = new TextDecoder("windows-1252").decode(buffer);
-  }
-  return text.charCodeAt(0) === BYTE_ORDER_MARK ? text.slice(1) : text;
-}
 
 function emptyToNull(value: string | undefined): string | null {
   const trimmed = value?.trim() ?? "";

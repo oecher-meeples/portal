@@ -81,3 +81,18 @@ export function parseCsvRows(text: string, delimiter: string): string[][] {
 
   return rows.filter((r) => !(r.length === 1 && r[0] === ""));
 }
+
+const BYTE_ORDER_MARK = 0xfeff;
+
+/** Dekodiert die hochgeladene Datei: erst strikt als UTF-8, bei Fehlschlag
+ * als Windows-1252 (so exportiert die Vereinsverwaltung, sonst gehen
+ * Umlaute kaputt). Ein BOM wird entfernt. */
+export function decodeCsvBuffer(buffer: ArrayBuffer): string {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch {
+    text = new TextDecoder("windows-1252").decode(buffer);
+  }
+  return text.charCodeAt(0) === BYTE_ORDER_MARK ? text.slice(1) : text;
+}
