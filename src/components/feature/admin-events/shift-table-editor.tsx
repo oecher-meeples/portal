@@ -25,6 +25,7 @@ import type {
   HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
 import type { ShiftRow } from "@/components/feature/admin-events/shift-table-section";
+import { defaultRangeForDay } from "@/lib/events/shift-defaults";
 import { formatWeekdayDate } from "@/lib/utils/format";
 import {
   MINUTES_PER_DAY,
@@ -42,20 +43,6 @@ type EditRow = {
   endMinutes: number;
   capacity: string;
 };
-
-/** Fallback für einen Tag ohne hinterlegte Öffnungszeiten — dieselben
- * Default-Zeiten wie beim Helferplan-Verfügbarkeitsformular. */
-const DEFAULT_RANGE: [number, number] = [9 * 60, 18 * 60];
-
-function defaultRangeForDay(day: EventDayOption | undefined): [number, number] {
-  if (day?.startsAt && day.endsAt) {
-    return [
-      minutesSinceMidnight(day.startsAt),
-      minutesSinceMidnight(day.endsAt),
-    ];
-  }
-  return DEFAULT_RANGE;
-}
 
 function rowFromShift(shift: ShiftRow): EditRow {
   return {

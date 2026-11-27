@@ -83,3 +83,37 @@ export async function deleteShift(shiftId: string) {
   revalidatePath(`/admin/events/${shift.eventId}`);
   return { success: true as const };
 }
+
+/** Tag×Rolle-Matrix (#693): legt die per Häkchen neu gewählten Schichten an
+ * und löscht die abgewählten (samt Zuweisungen, wie `deleteShift`) in einer
+ * Transaktion. Die Zeiten kommen vom Client (Öffnungszeiten des Tages bzw.
+ * Fallback, `defaultRangeForDay`), die Stellenzahl startet bei 1. */
+export async function applyShiftMatrix(
+  eventId: string,
+  changes: {
+    add: Omit<ShiftInput, "capacity">[];
+    removeShiftIds: string[];
+  },
+) {
+  await requireActionPermission("events:manage");
+
+  const data = changes.add.map((entry) => ({
+    ...entry,
+    eventId,
+    capacity: 1,
+  }));
+  for (const entry of data) {
+    const validationError = validateShiftInput(entry);
+    if (validationError) return { error: validationError };
+  }
+
+  await prisma.$transaction([
+    prisma.shift.deleteMany({
+      where: { id: { in: changes.removeShiftIds }, eventId },
+    }),
+    prisma.shift.createMany({ data }),
+  ]);
+
+  revalidatePath(`/admin/events/${eventId}`);
+  return { success: true as const };
+}

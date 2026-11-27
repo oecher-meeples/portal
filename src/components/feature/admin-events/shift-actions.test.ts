@@ -11,7 +11,7 @@ vi.mock("@/lib/auth/action-guards", async () =>
 
 const requirePermissionMock = vi.fn();
 
-const { createShift, updateShift, deleteShift } =
+const { createShift, updateShift, deleteShift, applyShiftMatrix } =
   await import("./shift-actions");
 
 class ForbiddenError extends Error {}
@@ -138,5 +138,49 @@ describe("deleteShift", () => {
     expect(prismaMock.shift.delete).toHaveBeenCalledWith({
       where: { id: "shift-1" },
     });
+  });
+});
+
+describe("applyShiftMatrix", () => {
+  const add = [
+    {
+      dayId: "day-1",
+      roleId: "role-theke",
+      targetStartsAt: VALID_INPUT.targetStartsAt,
+      targetEndsAt: VALID_INPUT.targetEndsAt,
+    },
+  ];
+
+  it("creates added cells with capacity 1 and deletes removed shifts of the event", async () => {
+    const result = await applyShiftMatrix("event-1", {
+      add,
+      removeShiftIds: ["shift-9"],
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.shift.deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ["shift-9"] }, eventId: "event-1" },
+    });
+    expect(prismaMock.shift.createMany).toHaveBeenCalledWith({
+      data: [{ ...add[0], eventId: "event-1", capacity: 1 }],
+    });
+  });
+
+  it("writes nothing for an invalid time range", async () => {
+    const result = await applyShiftMatrix("event-1", {
+      add: [{ ...add[0], targetEndsAt: add[0].targetStartsAt }],
+      removeShiftIds: ["shift-9"],
+    });
+
+    expect(result).toEqual({ error: "Das Ende muss nach dem Beginn liegen." });
+    expect(prismaMock.shift.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("requires the events:manage permission", async () => {
+    requirePermissionMock.mockRejectedValue(new ForbiddenError("/403"));
+    await expect(
+      applyShiftMatrix("event-1", { add, removeShiftIds: [] }),
+    ).rejects.toThrow(ForbiddenError);
+    expect(prismaMock.shift.createMany).not.toHaveBeenCalled();
   });
 });
