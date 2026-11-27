@@ -25,6 +25,8 @@ import {
 import { ShiftPlanEditor } from "@/components/feature/admin-events/shift-plan-editor";
 import type { PlanShift, PlanBooking } from "@/lib/events/shift-plan-types";
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
+import { HelperOverviewSection } from "@/components/feature/admin-events/helper-overview-section";
+import type { HelperOverviewGroup } from "@/lib/events/helper-overview";
 import { PageContainer } from "@/components/ui/page-container";
 
 export type { ShiftRow };
@@ -40,6 +42,7 @@ export function EventDetailView({
   days,
   shifts,
   helperRoles,
+  helperOverview,
   pool,
   bookingsByDay,
   assignedShelves,
@@ -55,6 +58,7 @@ export function EventDetailView({
   days: EditableEventDay[];
   shifts: ShiftRow[];
   helperRoles: HelperRoleOption[];
+  helperOverview: HelperOverviewGroup[];
   pool: Record<string, PoolMeeple[]>;
   bookingsByDay: Record<string, PlanBooking[]>;
   assignedShelves: ShelfOption[];
@@ -134,6 +138,18 @@ export function EventDetailView({
               shifts={shifts}
               helperRoles={helperRoles}
             />
+          </AccordionPanel>
+        </AccordionItem>
+
+        <AccordionItem
+          value="helfer"
+          className={cn(cardVariants({ size: "flush" }), "px-4")}
+        >
+          <AccordionTrigger className="font-serif text-lg font-bold hover:no-underline">
+            Helfer
+          </AccordionTrigger>
+          <AccordionPanel>
+            <HelperOverviewSection groups={helperOverview} />
           </AccordionPanel>
         </AccordionItem>
 
