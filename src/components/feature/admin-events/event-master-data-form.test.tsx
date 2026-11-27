@@ -7,7 +7,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { EventMasterDataForm } from "./event-master-data-form";
+import { EventStammdaten } from "./event-stammdaten";
 
 const refreshMock = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -19,6 +19,10 @@ const setHelperPhaseMock = vi.fn();
 vi.mock("@/components/feature/admin-events/actions", () => ({
   updateEvent: (...args: unknown[]) => updateEventMock(...args),
   setEventHelperPhase: (...args: unknown[]) => setHelperPhaseMock(...args),
+}));
+
+vi.mock("@/components/feature/admin-events/event-day-actions", () => ({
+  updateEventDayTimes: vi.fn(),
 }));
 
 afterEach(() => {
@@ -36,9 +40,9 @@ const EVENT = {
   visibility: "DRAFT" as const,
 };
 
-describe("EventMasterDataForm (#680)", () => {
+describe("Stammdaten: Event-Daten (#680)", () => {
   it("is readonly until Bearbeiten is clicked", () => {
-    render(<EventMasterDataForm event={EVENT} />);
+    render(<EventStammdaten event={EVENT} days={[]} />);
 
     expect(screen.getByLabelText("Titel")).toBeDisabled();
     expect(screen.getByLabelText("Eventsichtbarkeit")).toBeDisabled();
@@ -51,10 +55,38 @@ describe("EventMasterDataForm (#680)", () => {
     expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
   });
 
+  it("unlocks the opening hours and their sliders together with Bearbeiten", () => {
+    render(
+      <EventStammdaten
+        event={EVENT}
+        days={[
+          {
+            id: "day-1",
+            date: "2026-10-10T00:00:00.000Z",
+            startsAt: null,
+            endsAt: null,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByLabelText("Beginn")).toBeDisabled();
+    expect(screen.queryByRole("slider")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+
+    expect(screen.getByLabelText("Beginn")).toBeEnabled();
+    expect(screen.getAllByRole("slider")).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(screen.getByLabelText("Beginn")).toBeDisabled();
+    expect(screen.queryByRole("slider")).toBeNull();
+  });
+
   it("saves via updateEvent and the shared helper-phase action, then refreshes", async () => {
     updateEventMock.mockResolvedValue({ success: true });
     setHelperPhaseMock.mockResolvedValue({ success: true });
-    render(<EventMasterDataForm event={EVENT} />);
+    render(<EventStammdaten event={EVENT} days={[]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     fireEvent.change(screen.getByLabelText("Helfersichtbarkeit"), {
@@ -74,7 +106,7 @@ describe("EventMasterDataForm (#680)", () => {
 
   it("does not call the helper-phase action when the phase is unchanged", async () => {
     updateEventMock.mockResolvedValue({ success: true });
-    render(<EventMasterDataForm event={EVENT} />);
+    render(<EventStammdaten event={EVENT} days={[]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));

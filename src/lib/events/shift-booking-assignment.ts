@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/utils/prisma";
 import { isWithinAvailability } from "@/lib/events/booking-availability";
 import { formatTimePlain } from "@/lib/utils/format";
+import { effectiveShiftCapacity } from "@/lib/events/shift-capacity";
 import { helperRefData } from "@/lib/events/helper-identity";
 
 export type ShiftBookingAssignmentResult =
@@ -46,7 +47,10 @@ export async function assignShiftBooking({
     return { error: "Das Ende muss nach dem Beginn liegen." };
   }
 
-  const shift = await prisma.shift.findUnique({ where: { id: shiftId } });
+  const shift = await prisma.shift.findUnique({
+    where: { id: shiftId },
+    include: { role: { select: { hasShifts: true } } },
+  });
   if (!shift) {
     return { error: "Schicht nicht gefunden." };
   }
@@ -75,19 +79,37 @@ export async function assignShiftBooking({
     };
   }
 
-  const overlapping = await prisma.shiftBooking.findFirst({
-    where: {
-      ...ref,
-      ...(bookingId ? { id: { not: bookingId } } : {}),
-      startsAt: { lt: endsAt },
-      endsAt: { gt: startsAt },
-    },
-  });
-  if (overlapping) {
-    return {
-      error:
-        "Überschneidet sich zeitlich mit einer anderen Zuweisung dieser Person.",
-    };
+  // Rollen ohne Schichtplanung (`capacity = 0`, "Füller") belegen die ganze
+  // Verfügbarkeit, blockieren aber nichts und werden nicht blockiert:
+  // andere Rollen haben immer Vorrang.
+  const isFiller = effectiveShiftCapacity(shift) === 0;
+  if (isFiller) {
+    const alreadyAssigned = await prisma.shiftBooking.findFirst({
+      where: {
+        ...ref,
+        shiftId,
+        ...(bookingId ? { id: { not: bookingId } } : {}),
+      },
+    });
+    if (alreadyAssigned) {
+      return { error: "Diese Person ist dieser Rolle bereits zugewiesen." };
+    }
+  } else {
+    const overlapping = await prisma.shiftBooking.findFirst({
+      where: {
+        ...ref,
+        ...(bookingId ? { id: { not: bookingId } } : {}),
+        shift: { role: { hasShifts: true } },
+        startsAt: { lt: endsAt },
+        endsAt: { gt: startsAt },
+      },
+    });
+    if (overlapping) {
+      return {
+        error:
+          "Überschneidet sich zeitlich mit einer anderen Zuweisung dieser Person.",
+      };
+    }
   }
 
   if (bookingId) {

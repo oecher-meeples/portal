@@ -7,7 +7,13 @@ vi.mock("@/lib/utils/prisma", () => ({ prisma: prismaMock }));
 const { assignShiftBooking, unassignShiftBooking } =
   await import("./shift-booking-assignment");
 
-const SHIFT = { id: "shift-1", dayId: "day-1", roleId: "role-kueche" };
+const SHIFT = {
+  id: "shift-1",
+  dayId: "day-1",
+  roleId: "role-kueche",
+  capacity: 2,
+  role: { hasShifts: true },
+};
 const START = new Date("2026-10-10T10:00:00Z");
 const END = new Date("2026-10-10T14:00:00Z");
 
@@ -28,6 +34,47 @@ beforeEach(() => {
     availability() as never,
   );
   prismaMock.shiftBooking.findFirst.mockResolvedValue(null);
+});
+
+describe("assignShiftBooking for filler roles (capacity 0)", () => {
+  beforeEach(() => {
+    prismaMock.shift.findUnique.mockResolvedValue({
+      ...SHIFT,
+      role: { hasShifts: false },
+    } as never);
+  });
+
+  it("ignores overlaps with other bookings and books the given window", async () => {
+    const result = await assignShiftBooking({
+      shiftId: "shift-1",
+      helperId: "meeple-1",
+      startsAt: START,
+      endsAt: END,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledTimes(1);
+    expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith({
+      where: { meepleId: "meeple-1", shiftId: "shift-1" },
+    });
+    expect(prismaMock.shiftBooking.create).toHaveBeenCalled();
+  });
+
+  it("rejects a second assignment of the same person to the role", async () => {
+    prismaMock.shiftBooking.findFirst.mockResolvedValue({ id: "b" } as never);
+
+    const result = await assignShiftBooking({
+      shiftId: "shift-1",
+      helperId: "meeple-1",
+      startsAt: START,
+      endsAt: END,
+    });
+
+    expect(result).toEqual({
+      error: "Diese Person ist dieser Rolle bereits zugewiesen.",
+    });
+    expect(prismaMock.shiftBooking.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("assignShiftBooking", () => {
@@ -168,6 +215,7 @@ describe("assignShiftBooking", () => {
     expect(prismaMock.shiftBooking.findFirst).toHaveBeenCalledWith({
       where: {
         meepleId: "meeple-1",
+        shift: { role: { hasShifts: true } },
         startsAt: { lt: END },
         endsAt: { gt: START },
       },
@@ -187,6 +235,7 @@ describe("assignShiftBooking", () => {
       where: {
         meepleId: "meeple-1",
         id: { not: "booking-1" },
+        shift: { role: { hasShifts: true } },
         startsAt: { lt: END },
         endsAt: { gt: START },
       },

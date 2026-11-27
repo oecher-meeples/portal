@@ -29,12 +29,21 @@ const booking = (
   ...extra,
 });
 
+const listed = (dayId: string, roleId: string, name: string) => ({
+  dayId,
+  roleId,
+  helperId: name,
+  name,
+  startsAt: at(4, 10),
+  endsAt: at(4, 18),
+  slotIndex: null,
+});
+
 describe("buildExportDays", () => {
   it("omits days without shifts", () => {
     const result = buildExportDays(
       [day("d1", 4), day("d2", 5)],
       [kitchen("d1", 10, 12)],
-      [],
       [],
     );
     expect(result.map((d) => d.dayId)).toEqual(["d1"]);
@@ -44,7 +53,6 @@ describe("buildExportDays", () => {
     const [result] = buildExportDays(
       [day("d1", 4)],
       [kitchen("d1", 10, 12)],
-      [],
       [],
     );
     expect(result.timeSlots).toHaveLength(4);
@@ -56,7 +64,6 @@ describe("buildExportDays", () => {
       [day("d1", 4)],
       [kitchen("d1", 10, 14)],
       [booking("anna", 10, 12), booking("anna", 12, 14)],
-      [],
     );
     expect(result.blocks).toEqual([
       { column: 0, startRow: 0, rowSpan: 8, label: "anna" },
@@ -68,7 +75,6 @@ describe("buildExportDays", () => {
       [day("d1", 4)],
       [kitchen("d1", 10, 14, 2)],
       [booking("anna", 10, 14), booking("ben", 10, 12)],
-      [],
     );
     expect(result.columnCount).toBe(2);
     expect(result.blocks.map((b) => [b.label, b.column])).toEqual([
@@ -82,13 +88,12 @@ describe("buildExportDays", () => {
       [day("d1", 4)],
       [kitchen("d1", 10, 14), kitchen("d1", 12, 14)],
       [],
-      [],
     );
     // 2 Stellen, die zweite nur 12–14 → Spalte 1 grau in den ersten 4 Zeilen
     expect(result.greyCells).toEqual([{ column: 1, startRow: 0, rowSpan: 4 }]);
   });
 
-  it("builds lists for capacity 0 roles without a grid column", () => {
+  it("lists the assigned helpers of capacity 0 roles without a grid column", () => {
     const [result] = buildExportDays(
       [day("d1", 4)],
       [
@@ -102,12 +107,11 @@ describe("buildExportDays", () => {
           targetEndsAt: at(4, 18),
         },
       ],
-      [],
       [
-        { dayId: "d1", roleId: "erklaerer", name: "Zoe" },
-        { dayId: "d1", roleId: "erklaerer", name: "Max (Gast)" },
-        { dayId: "d2", roleId: "erklaerer", name: "Andere" },
-        { dayId: "d1", roleId: "kueche", name: "Nicht gelistet" },
+        listed("d1", "erklaerer", "Zoe"),
+        listed("d1", "erklaerer", "Max (Gast)"),
+        listed("d2", "erklaerer", "Andere"),
+        listed("d1", "kueche", "Im Grid, nicht gelistet"),
       ],
     );
     expect(result.columns.map((c) => c.roleId)).toEqual(["kueche"]);

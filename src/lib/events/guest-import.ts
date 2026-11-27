@@ -2,6 +2,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { UserFacingError } from "@/lib/utils/action-result";
 import {
   guestNameKey,
+  roleNameKey,
   normalizeWhitespace,
   type GuestImportRow,
 } from "@/lib/events/guest-import-csv";
@@ -9,6 +10,8 @@ import {
 export type GuestImportResult = {
   /** Neu angelegte Gäste (wiederverwendete zählen nicht). */
   guestsCreated: number;
+  /** Neu angelegte Helferrollen. */
+  rolesCreated: number;
   /** Geschriebene (Gast, Tag)-Meldungen — Re-Import ersetzt bestehende. */
   availabilities: number;
 };
@@ -25,14 +28,18 @@ export async function commitGuestImport(
 ): Promise<GuestImportResult> {
   const [days, roles] = await Promise.all([
     prisma.eventDay.findMany({ where: { eventId }, select: { id: true } }),
-    prisma.helperRole.findMany({ select: { id: true } }),
+    prisma.helperRole.findMany({ select: { id: true, name: true } }),
   ]);
   const dayIds = new Set(days.map((day) => day.id));
   const roleIds = new Set(roles.map((role) => role.id));
+  const roleIdByKey = new Map(
+    roles.map((role) => [roleNameKey(role.name), role.id]),
+  );
   for (const row of rows) {
     if (
       !dayIds.has(row.dayId) ||
       row.roleIds.some((id) => !roleIds.has(id)) ||
+      row.roleIds.length + row.newRoleNames.length === 0 ||
       new Date(row.endsAt) <= new Date(row.startsAt)
     ) {
       throw new UserFacingError("Ungültige Importdaten.");
@@ -40,6 +47,20 @@ export async function commitGuestImport(
   }
 
   return prisma.$transaction(async (tx) => {
+    // Neue Rollen einmalig anlegen (gleichnamige vorhandene werden genutzt).
+    let rolesCreated = 0;
+    for (const row of rows) {
+      for (const name of row.newRoleNames) {
+        const key = roleNameKey(name);
+        if (roleIdByKey.has(key)) continue;
+        const created = await tx.helperRole.create({
+          data: { name: normalizeWhitespace(name) },
+          select: { id: true },
+        });
+        roleIdByKey.set(key, created.id);
+        rolesCreated += 1;
+      }
+    }
     const guestIds = new Map<string, string>();
     let guestsCreated = 0;
     for (const row of rows) {
@@ -63,6 +84,14 @@ export async function commitGuestImport(
         guestIds.set(nameKey, guestId);
       }
 
+      const rowRoleIds = [
+        ...new Set([
+          ...row.roleIds,
+          ...row.newRoleNames.map((name) =>
+            roleIdByKey.get(roleNameKey(name))!,
+          ),
+        ]),
+      ];
       const startsAt = new Date(row.startsAt);
       const endsAt = new Date(row.endsAt);
       await tx.helperAvailability.upsert({
@@ -72,18 +101,18 @@ export async function commitGuestImport(
           dayId: row.dayId,
           startsAt,
           endsAt,
-          roles: { create: row.roleIds.map((roleId) => ({ roleId })) },
+          roles: { create: rowRoleIds.map((roleId) => ({ roleId })) },
         },
         update: {
           startsAt,
           endsAt,
           roles: {
             deleteMany: {},
-            create: row.roleIds.map((roleId) => ({ roleId })),
+            create: rowRoleIds.map((roleId) => ({ roleId })),
           },
         },
       });
     }
-    return { guestsCreated, availabilities: rows.length };
+    return { guestsCreated, rolesCreated, availabilities: rows.length };
   });
 }

@@ -8,6 +8,7 @@ import {
 import type { EditableEventDay } from "@/components/feature/admin-events/event-day-time-form";
 import type { PoolMeeple } from "@/components/feature/admin-events/helper-pool-bar";
 import type { PlanBooking } from "@/lib/events/shift-plan-types";
+import { effectiveShiftCapacity } from "@/lib/events/shift-capacity";
 import { buildHelperOverview } from "@/lib/events/helper-overview";
 import {
   helperDisplayName,
@@ -74,7 +75,7 @@ export default async function AdminEventDetailPage({
         shifts: {
           orderBy: { targetStartsAt: "asc" },
           include: {
-            role: { select: { id: true, name: true } },
+            role: { select: { id: true, name: true, hasShifts: true } },
             day: { select: { date: true } },
             bookings: {
               select: {
@@ -126,7 +127,7 @@ export default async function AdminEventDetailPage({
     roleName: shift.role.name,
     targetStartsAt: shift.targetStartsAt.toISOString(),
     targetEndsAt: shift.targetEndsAt.toISOString(),
-    capacity: shift.capacity,
+    capacity: effectiveShiftCapacity(shift),
     bookings: shift.bookings,
   }));
 
@@ -147,6 +148,7 @@ export default async function AdminEventDetailPage({
         dayId: shift.dayId,
         helperId: key,
         isGuest: isGuest(booking),
+        isFiller: effectiveShiftCapacity(shift) === 0,
         displayName: helperDisplayName(
           booking,
           booking.meeple?.displayName ?? booking.guest?.name ?? "",
@@ -162,11 +164,12 @@ export default async function AdminEventDetailPage({
   }
 
   /** Whoever has ≥1 assignment on a day gets the yellow "bereits verplant"
-   * marker in the pool bar (#161), regardless of which role it's for. */
+   * marker in the pool bar (#161), regardless of which role it's for.
+   * Füller-Rollen (ohne Schichtplanung) zählen nicht als verplant. */
   const plannedMeepleIdsByDay: Record<string, Set<string>> = Object.fromEntries(
     Object.entries(bookingsByDay).map(([dayId, bookings]) => [
       dayId,
-      new Set(bookings.map((b) => b.helperId)),
+      new Set(bookings.filter((b) => !b.isFiller).map((b) => b.helperId)),
     ]),
   );
 
@@ -213,6 +216,8 @@ export default async function AdminEventDetailPage({
         roleIds: availability.roles.map((role) => role.roleId),
       })),
     ),
+    // Auch Zuweisungen ohne Schichtplanung (Füller, ganze Verfügbarkeit)
+    // zählen als gebucht — die Person ist an dem Tag voll eingeplant.
     event.shifts.flatMap((shift) =>
       shift.bookings.map((booking) => ({
         helperId: helperKey(booking),

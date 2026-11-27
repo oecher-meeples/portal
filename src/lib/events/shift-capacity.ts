@@ -1,5 +1,15 @@
 import { computeShiftCoverage } from "@/lib/events/shift-plan";
 
+/** Wirksame Kapazität: Rollen ohne Schichtplanung (`hasShifts = false`)
+ * haben immer 0 (= unbegrenzt) — auch für Schichten, die vor dem Umstellen der
+ * Rolle mit einer Kapazität angelegt wurden. */
+export function effectiveShiftCapacity(shift: {
+  capacity: number;
+  role: { hasShifts: boolean };
+}): number {
+  return shift.role.hasShifts ? shift.capacity : 0;
+}
+
 /**
  * Füllstand einer Schicht — jede Zuweisung zählt zur Kapazität, unabhängig
  * vom Bestätigungsstatus (`confirmedAt`, siehe `docs/adr/0006`). Reine

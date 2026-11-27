@@ -17,7 +17,9 @@ const rowsSchema = z
       dayId: z.string().min(1),
       startsAt: z.string().datetime(),
       endsAt: z.string().datetime(),
-      roleIds: z.array(z.string().min(1)).min(1).max(50),
+      roleIds: z.array(z.string().min(1)).max(50),
+      newRoleNames: z.array(z.string().min(1).max(100)).max(50),
+      unknownRoleNames: z.array(z.string()).max(0),
     }),
   )
   .max(MAX_IMPORT_ROWS);

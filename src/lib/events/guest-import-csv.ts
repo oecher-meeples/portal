@@ -26,8 +26,22 @@ export type GuestImportRow = {
   dayId: string;
   startsAt: string;
   endsAt: string;
+  /** Bereits eindeutig zugeordnete Rollen. */
   roleIds: string[];
+  /** Rollen, die beim Import neu angelegt werden (nach der Zuordnung). */
+  newRoleNames: string[];
+  /** Noch nicht zugeordnete Rollennamen der Datei (Originalschreibweise) —
+   * `applyRoleChoices` löst sie auf. */
+  unknownRoleNames: string[];
 };
+
+/** Entscheidung pro unbekanntem Rollennamen im Import-Dialog. */
+export type GuestRoleChoice =
+  { kind: "role"; roleId: string } | { kind: "create" } | { kind: "skip" };
+
+export function roleNameKey(name: string): string {
+  return normalizeWhitespace(name).toLowerCase();
+}
 
 export type GuestImportLineError = { line: number; message: string };
 
@@ -99,7 +113,7 @@ export function parseGuestImportCsv(
   }
 
   const rolesByName = new Map(
-    context.roles.map((role) => [role.name.trim().toLowerCase(), role.id]),
+    context.roles.map((role) => [roleNameKey(role.name), role.id]),
   );
   const rows: GuestImportRow[] = [];
   const errors: GuestImportLineError[] = [];
@@ -135,11 +149,15 @@ export function parseGuestImportCsv(
 
     const roleNames = (rawRoles ?? "")
       .split(",")
-      .map((role) => role.trim().toLowerCase())
+      .map((role) => normalizeWhitespace(role))
       .filter(Boolean);
-    const roleIds = roleNames.map((role) => rolesByName.get(role));
-    if (roleIds.length === 0 || roleIds.some((id) => id === undefined)) {
-      return fail(line, "Rollen");
+    if (roleNames.length === 0) return fail(line, "Rollen");
+    const roleIds = new Set<string>();
+    const unknown = new Map<string, string>();
+    for (const roleName of roleNames) {
+      const id = rolesByName.get(roleNameKey(roleName));
+      if (id) roleIds.add(id);
+      else unknown.set(roleNameKey(roleName), roleName);
     }
 
     rows.push({
@@ -148,9 +166,72 @@ export function parseGuestImportCsv(
       dayId: day.id,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt.toISOString(),
-      roleIds: [...new Set(roleIds as string[])],
+      roleIds: [...roleIds],
+      newRoleNames: [],
+      unknownRoleNames: [...unknown.values()],
     });
   });
 
+  return { rows, errors };
+}
+
+/** Alle unbekannten Rollennamen der Zeilen, eindeutig (case-insensitiv). */
+export function collectUnknownRoleNames(rows: GuestImportRow[]): string[] {
+  const names = new Map<string, string>();
+  for (const row of rows) {
+    for (const name of row.unknownRoleNames) {
+      if (!names.has(roleNameKey(name))) names.set(roleNameKey(name), name);
+    }
+  }
+  return [...names.values()].sort((a, b) => a.localeCompare(b, "de"));
+}
+
+/** Vorschlag: eine vorhandene Rolle, deren Name den unbekannten enthält oder
+ * darin enthalten ist ("Aufbau" → "Aufbau/Abbau"), sonst neu anlegen. */
+export function suggestRoleChoice(
+  name: string,
+  roles: GuestImportContext["roles"],
+): GuestRoleChoice {
+  const key = roleNameKey(name);
+  const match = roles.find((role) => {
+    const roleKey = roleNameKey(role.name);
+    return roleKey.includes(key) || key.includes(roleKey);
+  });
+  return match ? { kind: "role", roleId: match.id } : { kind: "create" };
+}
+
+/** Löst die unbekannten Rollennamen per Entscheidung auf. Zeilen, die danach
+ * keine Rolle mehr haben, entfallen und werden als Fehler gemeldet. */
+export function applyRoleChoices(
+  parsed: ParsedGuestImport,
+  choices: Record<string, GuestRoleChoice>,
+): ParsedGuestImport {
+  const rows: GuestImportRow[] = [];
+  const errors = [...parsed.errors];
+  for (const row of parsed.rows) {
+    const roleIds = new Set(row.roleIds);
+    const newRoleNames = new Map<string, string>();
+    for (const name of row.unknownRoleNames) {
+      const choice = choices[roleNameKey(name)] ?? { kind: "create" };
+      if (choice.kind === "role") roleIds.add(choice.roleId);
+      else if (choice.kind === "create") {
+        newRoleNames.set(roleNameKey(name), name);
+      }
+    }
+    if (roleIds.size === 0 && newRoleNames.size === 0) {
+      errors.push({
+        line: row.line,
+        message: `Zeile ${row.line}: keine Rolle übrig.`,
+      });
+      continue;
+    }
+    rows.push({
+      ...row,
+      roleIds: [...roleIds],
+      newRoleNames: [...newRoleNames.values()],
+      unknownRoleNames: [],
+    });
+  }
+  errors.sort((a, b) => a.line - b.line);
   return { rows, errors };
 }

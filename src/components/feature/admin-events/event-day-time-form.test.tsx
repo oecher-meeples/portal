@@ -24,6 +24,7 @@ describe("EventDayTimeForm — Öffnungszeiten-Vorbelegung (#459)", () => {
           startsAt: null,
           endsAt: null,
         }}
+        editing
       />,
     );
 
@@ -43,6 +44,7 @@ describe("EventDayTimeForm — Öffnungszeiten-Vorbelegung (#459)", () => {
           startsAt,
           endsAt,
         }}
+        editing
       />,
     );
 
@@ -56,6 +58,23 @@ describe("EventDayTimeForm — Öffnungszeiten-Vorbelegung (#459)", () => {
   });
 });
 
+describe("EventDayTimeForm — Schreibschutz", () => {
+  const day = {
+    id: "day-1",
+    date: "2026-10-10T00:00:00.000Z",
+    startsAt: null,
+    endsAt: null,
+  };
+
+  it("is readonly and has no sliders outside the edit mode", () => {
+    render(<EventDayTimeForm day={day} editing={false} />);
+
+    expect(screen.getByLabelText("Beginn")).toBeDisabled();
+    expect(screen.getByLabelText("Ende")).toBeDisabled();
+    expect(screen.queryByRole("slider")).toBeNull();
+  });
+});
+
 describe("EventDayTimeForm — Regler (#691)", () => {
   const day = {
     id: "day-1",
@@ -65,7 +84,7 @@ describe("EventDayTimeForm — Regler (#691)", () => {
   };
 
   it("renders a two-thumb slider that mirrors the time fields", () => {
-    render(<EventDayTimeForm day={day} />);
+    render(<EventDayTimeForm day={day} editing />);
 
     expect(screen.getByRole("slider", { name: "Beginn-Regler" })).toHaveValue(
       "720",
@@ -78,7 +97,7 @@ describe("EventDayTimeForm — Regler (#691)", () => {
   it("updates the time field and saves when the slider is moved", async () => {
     const { updateEventDayTimes } =
       await import("@/components/feature/admin-events/event-day-actions");
-    render(<EventDayTimeForm day={day} />);
+    render(<EventDayTimeForm day={day} editing />);
 
     const end = screen.getByRole("slider", { name: "Ende-Regler" });
     fireEvent.keyDown(end, { key: "ArrowRight" });

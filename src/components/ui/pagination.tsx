@@ -16,6 +16,7 @@ export function Pagination({
   onPageSizeChange,
   totalItems,
   pageSizeOptions = PAGE_SIZE_OPTIONS,
+  showPageSize = true,
 }: {
   page: number;
   pageCount: number;
@@ -24,26 +25,30 @@ export function Pagination({
   onPageSizeChange: (pageSize: number) => void;
   totalItems: number;
   pageSizeOptions?: number[];
+  /** `false` blendet das Einträge-pro-Seite-Dropdown aus (feste Seitengröße). */
+  showPageSize?: boolean;
 }) {
   if (totalItems === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
-      <label className="text-muted-foreground flex items-center gap-2 text-sm">
-        Einträge pro Seite
-        <NativeSelect
-          value={pageSize}
-          onChange={(event) => onPageSizeChange(Number(event.target.value))}
-          aria-label="Einträge pro Seite"
-          size="compact"
-        >
-          {pageSizeOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </NativeSelect>
-      </label>
+      {showPageSize && (
+        <label className="text-muted-foreground flex items-center gap-2 text-sm">
+          Einträge pro Seite
+          <NativeSelect
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            aria-label="Einträge pro Seite"
+            size="compact"
+          >
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </NativeSelect>
+        </label>
+      )}
       {pageCount > 1 && (
         <>
           <span className="text-muted-foreground text-sm">

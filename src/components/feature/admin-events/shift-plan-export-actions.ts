@@ -4,6 +4,7 @@ import { requireActionPermission } from "@/lib/auth/action-guards";
 import { prisma } from "@/lib/utils/prisma";
 import { escapeCsvField } from "@/lib/utils/csv";
 import { helperDisplayName, helperKey } from "@/lib/events/helper-identity";
+import { effectiveShiftCapacity } from "@/lib/events/shift-capacity";
 import { buildExportDays } from "@/lib/events/shift-plan-export";
 import { renderShiftPlanPdf } from "@/lib/events/shift-plan-pdf";
 import { slugify } from "@/lib/utils/slug";
@@ -78,15 +79,6 @@ export async function exportShiftPlanPdf(eventId: string) {
         select: {
           id: true,
           date: true,
-          availabilities: {
-            select: {
-              meepleId: true,
-              guestId: true,
-              meeple: { select: { displayName: true } },
-              guest: { select: { name: true } },
-              roles: { select: { roleId: true } },
-            },
-          },
         },
       },
       shifts: {
@@ -96,7 +88,7 @@ export async function exportShiftPlanPdf(eventId: string) {
           capacity: true,
           targetStartsAt: true,
           targetEndsAt: true,
-          role: { select: { name: true } },
+          role: { select: { name: true, hasShifts: true } },
           bookings: {
             select: {
               meepleId: true,
@@ -120,7 +112,7 @@ export async function exportShiftPlanPdf(eventId: string) {
       dayId: shift.dayId,
       roleId: shift.roleId,
       roleName: shift.role.name,
-      capacity: shift.capacity,
+      capacity: effectiveShiftCapacity(shift),
       targetStartsAt: shift.targetStartsAt,
       targetEndsAt: shift.targetEndsAt,
     })),
@@ -137,18 +129,6 @@ export async function exportShiftPlanPdf(eventId: string) {
         endsAt: booking.endsAt,
         slotIndex: booking.slotIndex,
       })),
-    ),
-    event.days.flatMap((day) =>
-      day.availabilities.flatMap((availability) =>
-        availability.roles.map((role) => ({
-          dayId: day.id,
-          roleId: role.roleId,
-          name: helperDisplayName(
-            availability,
-            availability.meeple?.displayName ?? availability.guest?.name ?? "",
-          ),
-        })),
-      ),
     ),
   );
   if (exportDays.length === 0) {

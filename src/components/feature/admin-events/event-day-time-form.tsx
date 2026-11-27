@@ -36,7 +36,14 @@ function toDateTime(dateIso: string, time: string): Date | null {
  * bleiben unangetastet, `||` greift nur beim leeren String aus `null`. */
 const DEFAULT_OPENING_TIME = "12:00";
 
-export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
+export function EventDayTimeForm({
+  day,
+  editing,
+}: {
+  day: EditableEventDay;
+  /** Ohne Bearbeiten-Modus schreibgeschützt und ohne Regler. */
+  editing: boolean;
+}) {
   const [startsAt, setStartsAt] = useState(
     timeInputValue(day.startsAt) || DEFAULT_OPENING_TIME,
   );
@@ -70,7 +77,7 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
           onChange={setStartsAt}
           onBlur={() => save()}
           fieldClassName="w-32"
-          disabled={pending}
+          disabled={pending || !editing}
         />
         <TimePicker
           id={`event-day-${day.id}-ends`}
@@ -79,7 +86,7 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
           onChange={setEndsAt}
           onBlur={() => save()}
           fieldClassName="w-32"
-          disabled={pending}
+          disabled={pending || !editing}
         />
         {pending && (
           <span className="text-muted-foreground pb-2 text-xs">Speichert…</span>
@@ -88,23 +95,25 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
           <span className="text-destructive pb-2 text-xs">{error}</span>
         )}
       </div>
-      <RangeSlider
-        min={0}
-        max={MINUTES_PER_DAY}
-        step={15}
-        value={range}
-        onValueChange={([start, end]) => {
-          setStartsAt(formatMinutesAsTime(start));
-          setEndsAt(formatMinutesAsTime(end));
-        }}
-        onValueCommitted={([start, end]) =>
-          save(formatMinutesAsTime(start), formatMinutesAsTime(end))
-        }
-        disabled={pending}
-        getAriaLabel={(index) =>
-          index === 0 ? "Beginn-Regler" : "Ende-Regler"
-        }
-      />
+      {editing && (
+        <RangeSlider
+          min={0}
+          max={MINUTES_PER_DAY}
+          step={15}
+          value={range}
+          onValueChange={([start, end]) => {
+            setStartsAt(formatMinutesAsTime(start));
+            setEndsAt(formatMinutesAsTime(end));
+          }}
+          onValueCommitted={([start, end]) =>
+            save(formatMinutesAsTime(start), formatMinutesAsTime(end))
+          }
+          disabled={pending}
+          getAriaLabel={(index) =>
+            index === 0 ? "Beginn-Regler" : "Ende-Regler"
+          }
+        />
+      )}
     </div>
   );
 }

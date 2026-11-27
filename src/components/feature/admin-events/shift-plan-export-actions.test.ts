@@ -129,7 +129,7 @@ describe("exportShiftPlanPdf", () => {
           capacity: 1,
           targetStartsAt: new Date(2026, 11, 4, 10),
           targetEndsAt: new Date(2026, 11, 4, 14),
-          role: { name: "Küche" },
+          role: { name: "Küche", hasShifts: true },
           bookings: [
             {
               meepleId: null,
