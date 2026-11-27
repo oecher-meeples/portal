@@ -3,6 +3,7 @@ import {
   collectHelperDayKeys,
   computeDayShiftBounds,
   filterEventsByDay,
+  isAvailabilityTooShort,
 } from "./helfer-days";
 
 const events = [
@@ -29,6 +30,11 @@ describe("filterEventsByDay", () => {
     expect(filterEventsByDay(events, "2026-11-01").map((e) => e.id)).toEqual([
       "b",
     ]);
+  });
+
+  it("keeps only the days of the selected date inside a remaining event", () => {
+    const [event] = filterEventsByDay(events, "2026-10-10");
+    expect(event.days.map((d) => d.date)).toEqual(["2026-10-10T00:00:00.000Z"]);
   });
 
   it("returns nothing for a date without shifts", () => {
@@ -60,5 +66,13 @@ describe("computeDayShiftBounds", () => {
         { targetStartsAt: at(9), targetEndsAt: at(13) },
       ]),
     ).toEqual({ start: at(9), end: at(18) });
+  });
+});
+
+describe("isAvailabilityTooShort", () => {
+  it("warns below two hours only", () => {
+    expect(isAvailabilityTooShort([600, 719])).toBe(true);
+    expect(isAvailabilityTooShort([600, 720])).toBe(false);
+    expect(isAvailabilityTooShort([540, 1080])).toBe(false);
   });
 });
