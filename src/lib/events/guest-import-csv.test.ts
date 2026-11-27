@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { guestNameKey, parseGuestImportCsv } from "./guest-import-csv";
+import {
+  applyRoleChoices,
+  collectUnknownRoleNames,
+  guestNameKey,
+  parseGuestImportCsv,
+  suggestRoleChoice,
+} from "./guest-import-csv";
 
 const context = {
   days: [
@@ -45,7 +51,6 @@ describe("parseGuestImportCsv", () => {
         "B;01.01.2020;09:00;10:00;Küche",
         "C;04.12.2026;9;10:00;Küche",
         "D;04.12.2026;10:00;09:00;Küche",
-        "E;04.12.2026;09:00;10:00;Unbekannt",
         ";04.12.2026;09:00;10:00;Küche",
         "",
         "F;05.12.2026;09:00;10:00;Küche",
@@ -53,10 +58,61 @@ describe("parseGuestImportCsv", () => {
       context,
     );
     expect(rows.map((row) => row.name)).toEqual(["A", "F"]);
-    expect(errors.map((error) => error.line)).toEqual([3, 4, 5, 6, 7]);
+    expect(errors.map((error) => error.line)).toEqual([3, 4, 5, 6]);
     expect(errors.every((error) => !error.message.includes("Unbekannt"))).toBe(
       true,
     );
+  });
+});
+
+describe("unknown roles", () => {
+  const parsed = () =>
+    parseGuestImportCsv(
+      [
+        HEADER,
+        "A;04.12.2026;09:00;10:00;Küche, Bring & Buy",
+        "B;04.12.2026;09:00;10:00;bring  &  buy",
+        "C;04.12.2026;09:00;10:00;Erklärer",
+      ].join("\n"),
+      context,
+    );
+
+  it("keeps rows with unknown roles instead of dropping them", () => {
+    const { rows, errors } = parsed();
+    expect(errors).toEqual([]);
+    expect(rows[0].roleIds).toEqual(["r2"]);
+    expect(collectUnknownRoleNames(rows)).toEqual(["Bring & Buy", "Erklärer"]);
+  });
+
+  it("suggests a similar existing role, else creates", () => {
+    expect(suggestRoleChoice("Aufbau", context.roles)).toEqual({
+      kind: "role",
+      roleId: "r1",
+    });
+    expect(suggestRoleChoice("Erklärer", context.roles)).toEqual({
+      kind: "create",
+    });
+  });
+
+  it("applies create, map and skip choices", () => {
+    const { rows, errors } = applyRoleChoices(parsed(), {
+      "bring & buy": { kind: "role", roleId: "r1" },
+      erklärer: { kind: "skip" },
+    });
+    expect(rows.map((row) => [row.name, row.roleIds])).toEqual([
+      ["A", ["r2", "r1"]],
+      ["B", ["r1"]],
+    ]);
+    expect(errors).toEqual([
+      { line: 4, message: "Zeile 4: keine Rolle übrig." },
+    ]);
+
+    const created = applyRoleChoices(parsed(), {});
+    expect(created.rows.map((row) => row.newRoleNames)).toEqual([
+      ["Bring & Buy"],
+      ["bring & buy"],
+      ["Erklärer"],
+    ]);
   });
 });
 

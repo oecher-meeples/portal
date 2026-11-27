@@ -12,12 +12,16 @@ const row = (overrides = {}) => ({
   startsAt: "2026-12-04T09:00:00.000Z",
   endsAt: "2026-12-04T18:00:00.000Z",
   roleIds: ["r1"],
+  newRoleNames: [] as string[],
+  unknownRoleNames: [] as string[],
   ...overrides,
 });
 
 beforeEach(() => {
   prismaMock.eventDay.findMany.mockResolvedValue([{ id: "d1" }] as never);
-  prismaMock.helperRole.findMany.mockResolvedValue([{ id: "r1" }] as never);
+  prismaMock.helperRole.findMany.mockResolvedValue([
+    { id: "r1", name: "Küche" },
+  ] as never);
   prismaMock.$transaction.mockImplementation((arg) =>
     typeof arg === "function" ? arg(prismaMock) : Promise.all(arg as never),
   );
@@ -30,7 +34,11 @@ describe("commitGuestImport", () => {
 
     const result = await commitGuestImport("e1", [row()]);
 
-    expect(result).toEqual({ guestsCreated: 1, availabilities: 1 });
+    expect(result).toEqual({
+      guestsCreated: 1,
+      rolesCreated: 0,
+      availabilities: 1,
+    });
     expect(prismaMock.guest.create).toHaveBeenCalledWith({
       data: { name: "Max Mustermann", nameKey: "max mustermann" },
       select: { id: true },
@@ -56,6 +64,37 @@ describe("commitGuestImport", () => {
         }),
       }),
     );
+  });
+
+  it("creates new roles once and assigns them", async () => {
+    prismaMock.guest.findUnique.mockResolvedValue({ id: "g1" } as never);
+    prismaMock.helperRole.create.mockResolvedValue({ id: "r9" } as never);
+
+    const result = await commitGuestImport("e1", [
+      row({ roleIds: [], newRoleNames: ["Bring & Buy"] }),
+      row({ line: 3, dayId: "d1", roleIds: [], newRoleNames: ["bring & buy"] }),
+    ]);
+
+    expect(result.rolesCreated).toBe(1);
+    expect(prismaMock.helperRole.create).toHaveBeenCalledTimes(1);
+    expect(prismaMock.helperAvailability.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          roles: { create: [{ roleId: "r9" }] },
+        }),
+      }),
+    );
+  });
+
+  it("reuses an existing role with the same name instead of creating it", async () => {
+    prismaMock.guest.findUnique.mockResolvedValue({ id: "g1" } as never);
+
+    const result = await commitGuestImport("e1", [
+      row({ roleIds: [], newRoleNames: ["KÜCHE"] }),
+    ]);
+
+    expect(result.rolesCreated).toBe(0);
+    expect(prismaMock.helperRole.create).not.toHaveBeenCalled();
   });
 
   it("looks a guest up only once per import", async () => {
