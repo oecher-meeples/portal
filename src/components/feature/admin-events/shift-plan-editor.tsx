@@ -44,7 +44,8 @@ import { timeInputValue } from "@/components/ui/time-picker";
 export type { PlanDay, PlanShift };
 
 type ActiveDrag = {
-  meepleId: string;
+  helperId: string;
+  isGuest: boolean;
   displayName: string;
   roleId: string;
   startsAt: string;
@@ -106,11 +107,12 @@ export function ShiftPlanEditor({
     if (!data) return;
     const entry = pool[data.dayId]?.find(
       (candidate) =>
-        candidate.meepleId === data.meepleId &&
+        candidate.helperId === data.helperId &&
         candidate.roleId === data.roleId,
     );
     setActiveDrag({
-      meepleId: data.meepleId,
+      helperId: data.helperId,
+      isGuest: data.isGuest,
       displayName: data.displayName,
       roleId: data.roleId,
       startsAt: entry?.availabilityStartsAt ?? "",
@@ -143,7 +145,7 @@ export function ShiftPlanEditor({
     // Schnittmenge mit der eigenen Verfügbarkeit einengen.
     const poolEntry = pool[dropData.dayId]?.find(
       (candidate) =>
-        candidate.meepleId === dragData.meepleId &&
+        candidate.helperId === dragData.helperId &&
         candidate.roleId === dragData.roleId,
     );
     const targetRange = {
@@ -186,7 +188,8 @@ export function ShiftPlanEditor({
 
     const result = await assignHelperToShift(
       dropData.shiftId,
-      dragData.meepleId,
+      dragData.helperId,
+      dragData.isGuest,
       freeRange.start,
       freeRange.end,
     );
@@ -219,7 +222,8 @@ export function ShiftPlanEditor({
     // wird statt ein neuer zu entstehen.
     const result = await assignHelperToShift(
       booking.shiftId,
-      booking.meepleId,
+      booking.helperId,
+      booking.isGuest,
       startsAt,
       endsAt,
       booking.id,
@@ -242,7 +246,8 @@ export function ShiftPlanEditor({
     // wie Resize, die Spalte ist rein optisch und wird nur mitgeschrieben.
     const result = await assignHelperToShift(
       booking.shiftId,
-      booking.meepleId,
+      booking.helperId,
+      booking.isGuest,
       startsAt,
       endsAt,
       booking.id,
@@ -313,7 +318,7 @@ export function ShiftPlanEditor({
                 dayId={day.id}
                 columns={columns}
                 pool={pool[day.id] ?? []}
-                activeMeepleId={activeDrag?.meepleId ?? null}
+                activeHelperId={activeDrag?.helperId ?? null}
               />
               <ShiftPlanGrid
                 day={day}
@@ -342,7 +347,7 @@ export function ShiftPlanEditor({
       <DragOverlay>
         {activeDrag && (
           <span
-            className={`rounded px-2 py-1 text-xs font-medium shadow-lg ${helperColorClass(activeDrag.meepleId)}`}
+            className={`rounded px-2 py-1 text-xs font-medium shadow-lg ${helperColorClass(activeDrag.helperId)}`}
           >
             {activeDrag.displayName}
           </span>

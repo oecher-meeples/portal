@@ -64,7 +64,7 @@ export function summariseMemberHoldings(
 }
 
 export type DashboardShiftBooking = {
-  meepleId: string;
+  meepleId: string | null;
   shift: { targetEndsAt: Date };
 };
 

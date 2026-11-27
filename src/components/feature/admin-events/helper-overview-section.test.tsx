@@ -19,7 +19,8 @@ describe("HelperOverviewSection", () => {
       <HelperOverviewSection
         groups={[
           {
-            meepleId: "m1",
+            helperId: "m1",
+            isGuest: false,
             displayName: "Anna",
             profilePictureUrl: null,
             profilePictureVisibility: "INTERN",

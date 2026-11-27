@@ -25,13 +25,15 @@ export type PlanShift = {
 /** One meeple's individual, admin-assigned time block on a Shift (#159). Ein
  * Meeple kann mehrere Blöcke auf derselben Schicht haben (Pausenablösung
  * durch dieselbe Person) — `id` identifiziert die einzelne Buchung, nicht
- * das Paar (shiftId, meepleId). */
+ * das Paar (shiftId, helperId). */
 export type PlanBooking = {
   id: string;
   shiftId: string;
   roleId: string;
   dayId: string;
-  meepleId: string;
+  /** Meeple- oder (mit `isGuest`) Gast-ID, siehe helper-identity.ts (#698). */
+  helperId: string;
+  isGuest: boolean;
   displayName: string;
   startsAt: string;
   endsAt: string;

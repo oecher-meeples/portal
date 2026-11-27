@@ -18,7 +18,8 @@ async function revalidateEventPath(shiftId: string) {
 
 export async function assignHelperToShift(
   shiftId: string,
-  meepleId: string,
+  helperId: string,
+  isGuest: boolean,
   startsAt: Date,
   endsAt: Date,
   /** Re-times this exact booking (Resize/Move) statt eine neue anzulegen. */
@@ -30,7 +31,8 @@ export async function assignHelperToShift(
 
   const result = await assignShiftBooking({
     shiftId,
-    meepleId,
+    helperId,
+    isGuest,
     startsAt,
     endsAt,
     bookingId,

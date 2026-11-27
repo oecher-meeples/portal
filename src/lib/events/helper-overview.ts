@@ -1,7 +1,8 @@
 import type { ProfilePictureVisibility } from "@prisma/client";
 
 export type OverviewAvailability = {
-  meepleId: string;
+  helperId: string;
+  isGuest?: boolean;
   displayName: string;
   profilePictureUrl: string | null;
   profilePictureVisibility: ProfilePictureVisibility;
@@ -12,7 +13,7 @@ export type OverviewAvailability = {
 };
 
 export type OverviewBooking = {
-  meepleId: string;
+  helperId: string;
   startsAt: string;
   endsAt: string;
 };
@@ -27,7 +28,8 @@ export type HelperOverviewRow = {
 };
 
 export type HelperOverviewGroup = {
-  meepleId: string;
+  helperId: string;
+  isGuest: boolean;
   displayName: string;
   profilePictureUrl: string | null;
   profilePictureVisibility: ProfilePictureVisibility;
@@ -92,16 +94,17 @@ export function buildHelperOverview(
   const sorted = [...availabilities].sort(
     (a, b) =>
       a.displayName.localeCompare(b.displayName, "de") ||
-      a.meepleId.localeCompare(b.meepleId) ||
+      a.helperId.localeCompare(b.helperId) ||
       a.dayDate.localeCompare(b.dayDate),
   );
 
   const groups: HelperOverviewGroup[] = [];
   for (const entry of sorted) {
     let group = groups.at(-1);
-    if (group?.meepleId !== entry.meepleId) {
+    if (group?.helperId !== entry.helperId) {
       group = {
-        meepleId: entry.meepleId,
+        helperId: entry.helperId,
+        isGuest: entry.isGuest ?? false,
         displayName: entry.displayName,
         profilePictureUrl: entry.profilePictureUrl,
         profilePictureVisibility: entry.profilePictureVisibility,
@@ -116,7 +119,7 @@ export function buildHelperOverview(
       roleNames: entry.roleIds.map((id) => roleNames.get(id) ?? id),
       utilizationPercent: dayUtilizationPercent(
         entry,
-        bookings.filter((b) => b.meepleId === entry.meepleId),
+        bookings.filter((b) => b.helperId === entry.helperId),
       ),
     });
   }

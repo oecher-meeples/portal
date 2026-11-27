@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/utils/prisma";
 import { isWithinAvailability } from "@/lib/events/booking-availability";
 import { formatTimePlain } from "@/lib/utils/format";
+import { helperRefData } from "@/lib/events/helper-identity";
 
 export type ShiftBookingAssignmentResult =
   { error: string } | { success: true };
@@ -20,14 +21,17 @@ export type ShiftBookingAssignmentResult =
  */
 export async function assignShiftBooking({
   shiftId,
-  meepleId,
+  helperId,
+  isGuest = false,
   startsAt,
   endsAt,
   bookingId,
   slotIndex,
 }: {
   shiftId: string;
-  meepleId: string;
+  /** Meeple-ID oder — mit `isGuest` — Gast-ID (#698). */
+  helperId: string;
+  isGuest?: boolean;
   startsAt: Date;
   endsAt: Date;
   /** Re-times this exact booking instead of creating a new one — used by
@@ -47,8 +51,9 @@ export async function assignShiftBooking({
     return { error: "Schicht nicht gefunden." };
   }
 
-  const availability = await prisma.helperAvailability.findUnique({
-    where: { meepleId_dayId: { meepleId, dayId: shift.dayId } },
+  const ref = helperRefData(helperId, isGuest);
+  const availability = await prisma.helperAvailability.findFirst({
+    where: { ...ref, dayId: shift.dayId },
     include: { roles: { select: { roleId: true } } },
   });
   if (
@@ -72,7 +77,7 @@ export async function assignShiftBooking({
 
   const overlapping = await prisma.shiftBooking.findFirst({
     where: {
-      meepleId,
+      ...ref,
       ...(bookingId ? { id: { not: bookingId } } : {}),
       startsAt: { lt: endsAt },
       endsAt: { gt: startsAt },
@@ -111,9 +116,11 @@ export async function assignShiftBooking({
     await prisma.shiftBooking.create({
       data: {
         shiftId,
-        meepleId,
+        ...ref,
         startsAt,
         endsAt,
+        // Gäste haben keinen Account, der bestätigen könnte (#698).
+        ...(isGuest && { confirmedAt: new Date() }),
         ...(slotIndex !== undefined && { slotIndex }),
       },
     });
