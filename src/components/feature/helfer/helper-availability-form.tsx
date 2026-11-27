@@ -158,7 +158,7 @@ export function HelperAvailabilityForm({
         <div className="col-span-4">
           <Textarea
             aria-label={`Kommentar für ${formatWeekdayDate(day.date)}`}
-            placeholder="Kommentar (optional), z. B. „kann erst ab 10 Uhr“"
+            placeholder="Kommentar (optional), z. B. „ab 13 Uhr mit Kindern“"
             rows={2}
             maxLength={AVAILABILITY_COMMENT_MAX_LENGTH}
             value={comment}
