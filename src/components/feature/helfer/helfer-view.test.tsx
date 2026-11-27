@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { setOwnHelperAvailability } from "@/components/feature/helfer/availability-actions";
 import { HelferView, type HelferEventGroup } from "./helfer-view";
 
 vi.mock("next/navigation", () => ({
@@ -88,7 +89,12 @@ describe("HelferView — Erklärbär-An-/Abmelde-Banner (#338)", () => {
 
 describe("HelferView — Verfügbarkeitsformular (#674)", () => {
   function renderWithDay(
-    own: { startsAt: string; endsAt: string; roleIds: string[] } | null = null,
+    own: {
+      startsAt: string;
+      endsAt: string;
+      roleIds: string[];
+      comment: string | null;
+    } | null = null,
   ) {
     render(
       <HelferView
@@ -126,9 +132,35 @@ describe("HelferView — Verfügbarkeitsformular (#674)", () => {
       startsAt: "2026-10-14T10:00:00.000Z",
       endsAt: "2026-10-14T10:30:00.000Z",
       roleIds: ["role-1"],
+      comment: null,
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(/2 Stunden/);
+  });
+
+  it("saves a comment on blur and shows the field only with a chosen role (#700)", () => {
+    vi.mocked(setOwnHelperAvailability).mockResolvedValue({ success: true });
+    renderWithDay();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    cleanup();
+
+    renderWithDay({
+      startsAt: "2026-10-14T10:00:00.000Z",
+      endsAt: "2026-10-14T14:00:00.000Z",
+      roleIds: ["role-1"],
+      comment: null,
+    });
+    const field = screen.getByRole("textbox");
+    fireEvent.change(field, { target: { value: "ab 10 Uhr" } });
+    fireEvent.blur(field);
+
+    expect(setOwnHelperAvailability).toHaveBeenCalledWith(
+      "day-1",
+      expect.any(Date),
+      expect.any(Date),
+      ["role-1"],
+      "ab 10 Uhr",
+    );
   });
 
   it("shows no warning for the default window", () => {

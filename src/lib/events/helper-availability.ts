@@ -2,6 +2,7 @@ import { prisma } from "@/lib/utils/prisma";
 import { isHelperPhaseAtLeast } from "@/lib/events/helper-phase";
 import { computeDayShiftBounds } from "@/lib/events/helfer-days";
 import { formatTimePlain } from "@/lib/utils/format";
+import { AVAILABILITY_COMMENT_MAX_LENGTH } from "@/lib/events/helper-availability-comment";
 
 export type HelperAvailabilityActionResult =
   { error: string } | { success: true };
@@ -19,12 +20,15 @@ export async function setHelperAvailability({
   startsAt,
   endsAt,
   roleIds,
+  comment,
 }: {
   meepleId: string;
   dayId: string;
   startsAt: Date;
   endsAt: Date;
   roleIds: string[];
+  /** `undefined` lässt einen bestehenden Kommentar unangetastet. */
+  comment?: string | null;
 }): Promise<HelperAvailabilityActionResult> {
   if (!startsAt || !endsAt) {
     return { error: "Bitte Beginn und Ende der Verfügbarkeit angeben." };
@@ -35,6 +39,18 @@ export async function setHelperAvailability({
   if (roleIds.length === 0) {
     return { error: "Bitte mindestens eine Rolle auswählen." };
   }
+
+  const trimmedComment = comment?.trim();
+  if (
+    trimmedComment &&
+    trimmedComment.length > AVAILABILITY_COMMENT_MAX_LENGTH
+  ) {
+    return {
+      error: `Der Kommentar darf höchstens ${AVAILABILITY_COMMENT_MAX_LENGTH} Zeichen lang sein.`,
+    };
+  }
+  const commentData =
+    comment === undefined ? {} : { comment: trimmedComment || null };
 
   const day = await prisma.eventDay.findUnique({
     where: { id: dayId },
@@ -70,11 +86,13 @@ export async function setHelperAvailability({
       dayId,
       startsAt,
       endsAt,
+      ...commentData,
       roles: { create: roleIds.map((roleId) => ({ roleId })) },
     },
     update: {
       startsAt,
       endsAt,
+      ...commentData,
       roles: {
         deleteMany: {},
         create: roleIds.map((roleId) => ({ roleId })),
