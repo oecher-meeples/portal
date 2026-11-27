@@ -19,10 +19,25 @@ function validateShiftInput(input: ShiftInput) {
   if (input.targetEndsAt <= input.targetStartsAt) {
     return "Das Ende muss nach dem Beginn liegen.";
   }
-  if (!Number.isInteger(input.capacity) || input.capacity < 1) {
+  if (!Number.isInteger(input.capacity) || input.capacity < 0) {
     return "Die Kapazität muss mindestens 1 sein.";
   }
   return null;
+}
+
+/** Listen-Rollen (`hasShifts = false`, #697) haben immer `capacity = 0`
+ * (unbegrenzt), alle anderen mindestens 1. */
+async function resolveCapacity(
+  roleId: string,
+  capacity: number,
+): Promise<{ capacity: number } | { error: string }> {
+  const role = await prisma.helperRole.findUnique({
+    where: { id: roleId },
+    select: { hasShifts: true },
+  });
+  if (role && !role.hasShifts) return { capacity: 0 };
+  if (capacity < 1) return { error: "Die Kapazität muss mindestens 1 sein." };
+  return { capacity };
 }
 
 export async function createShift(eventId: string, input: ShiftInput) {
@@ -32,6 +47,8 @@ export async function createShift(eventId: string, input: ShiftInput) {
   if (validationError) {
     return { error: validationError };
   }
+  const resolved = await resolveCapacity(input.roleId, input.capacity);
+  if ("error" in resolved) return resolved;
 
   const shift = await prisma.shift.create({
     data: {
@@ -40,7 +57,7 @@ export async function createShift(eventId: string, input: ShiftInput) {
       roleId: input.roleId,
       targetStartsAt: input.targetStartsAt,
       targetEndsAt: input.targetEndsAt,
-      capacity: input.capacity,
+      capacity: resolved.capacity,
     },
   });
 
@@ -55,6 +72,8 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
   if (validationError) {
     return { error: validationError };
   }
+  const resolved = await resolveCapacity(input.roleId, input.capacity);
+  if ("error" in resolved) return resolved;
 
   const shift = await prisma.shift.update({
     where: { id: shiftId },
@@ -63,7 +82,7 @@ export async function updateShift(shiftId: string, input: ShiftInput) {
       roleId: input.roleId,
       targetStartsAt: input.targetStartsAt,
       targetEndsAt: input.targetEndsAt,
-      capacity: input.capacity,
+      capacity: resolved.capacity,
     },
   });
 
@@ -97,10 +116,15 @@ export async function applyShiftMatrix(
 ) {
   await requireActionPermission("events:manage");
 
+  const listRoles = await prisma.helperRole.findMany({
+    where: { hasShifts: false },
+    select: { id: true },
+  });
+  const listRoleIds = new Set(listRoles.map((role) => role.id));
   const data = changes.add.map((entry) => ({
     ...entry,
     eventId,
-    capacity: 1,
+    capacity: listRoleIds.has(entry.roleId) ? 0 : 1,
   }));
   for (const entry of data) {
     const validationError = validateShiftInput(entry);

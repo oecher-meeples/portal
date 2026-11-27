@@ -1,3 +1,4 @@
+import { ShiftPlanPdfExportButton } from "@/components/feature/admin-events/shift-plan-pdf-export-button";
 import { GuestImportDialog } from "@/components/feature/admin-events/guest-import-dialog";
 import { cardVariants } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
@@ -174,6 +175,9 @@ export function EventDetailView({
               würde — kleine Unschönheit beim Ein-/Ausklappen zugunsten des
               funktionierenden Sticky-Headers. */}
           <AccordionPanel className="overflow-visible">
+            <div className="mb-3 flex justify-end">
+              <ShiftPlanPdfExportButton eventId={eventId} />
+            </div>
             <ShiftPlanEditor
               eventId={eventId}
               days={days}

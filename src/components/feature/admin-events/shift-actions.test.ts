@@ -26,6 +26,10 @@ const VALID_INPUT = {
 
 beforeEach(() => {
   requirePermissionMock.mockResolvedValue({ id: "admin-user" });
+  prismaMock.helperRole.findMany.mockResolvedValue([]);
+  prismaMock.helperRole.findUnique.mockResolvedValue({
+    hasShifts: true,
+  } as never);
 });
 
 describe("without the events:manage permission", () => {
@@ -69,6 +73,19 @@ describe("createShift", () => {
       error: "Die Kapazität muss mindestens 1 sein.",
     });
     expect(prismaMock.shift.create).not.toHaveBeenCalled();
+  });
+
+  it("forces capacity 0 (unbegrenzt) for a list role", async () => {
+    prismaMock.helperRole.findUnique.mockResolvedValue({
+      hasShifts: false,
+    } as never);
+    prismaMock.shift.create.mockResolvedValue({ id: "shift-1" } as never);
+
+    await createShift("event-1", { ...VALID_INPUT, capacity: 3 });
+
+    expect(prismaMock.shift.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ capacity: 0 }),
+    });
   });
 
   it("creates a shift with valid input", async () => {
@@ -163,6 +180,18 @@ describe("applyShiftMatrix", () => {
     });
     expect(prismaMock.shift.createMany).toHaveBeenCalledWith({
       data: [{ ...add[0], eventId: "event-1", capacity: 1 }],
+    });
+  });
+
+  it("creates cells of list roles with capacity 0", async () => {
+    prismaMock.helperRole.findMany.mockResolvedValue([
+      { id: "role-theke" },
+    ] as never);
+
+    await applyShiftMatrix("event-1", { add, removeShiftIds: [] });
+
+    expect(prismaMock.shift.createMany).toHaveBeenCalledWith({
+      data: [{ ...add[0], eventId: "event-1", capacity: 0 }],
     });
   });
 

@@ -38,6 +38,7 @@ export default async function AdminEventsPage() {
         id: role.id,
         name: role.name,
         grantsPermissionKey: role.grantsPermissionKey,
+        hasShifts: role.hasShifts,
         guideFileName: role.guideDownload?.fileName ?? null,
       }))}
       permissions={permissions}

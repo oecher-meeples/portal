@@ -205,7 +205,11 @@ export function ShiftTableSection({
                         )}
                       </TableCell>
                       <TableCell>
-                        {fillLevel.isFull ? (
+                        {shift.capacity === 0 ? (
+                          <span className="text-muted-foreground">
+                            unbegrenzt
+                          </span>
+                        ) : fillLevel.isFull ? (
                           <StatusPill label="voll" tone="warning" />
                         ) : (
                           <span className="inline-flex items-center gap-1.5">

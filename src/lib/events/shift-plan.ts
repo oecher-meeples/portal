@@ -5,12 +5,15 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
  * Schicht minus 1h bis zur spätesten Schicht plus 1h, damit Auf-/Abbau kurz
  * vor bzw. nach der ersten/letzten Schicht noch Platz auf dem Grid hat.
  * Ohne angelegte Schichten ein wochentagsabhängiger Default — werktags
- * 16–24 Uhr (Feierabend-Aufbau), am Wochenende 8–24 Uhr.
+ * 16–24 Uhr (Feierabend-Aufbau), am Wochenende 8–24 Uhr. Mit
+ * `pad: false` (Export, #697) ohne die ±1 h um die Schichten.
  */
 export function computeVisibleRange(
   day: { date: Date },
   shiftsForDay: { targetStartsAt: Date; targetEndsAt: Date }[],
+  { pad = true }: { pad?: boolean } = {},
 ): { start: Date; end: Date } {
+  const padMs = pad ? ONE_HOUR_MS : 0;
   if (shiftsForDay.length > 0) {
     const earliestStart = shiftsForDay.reduce(
       (min, shift) => (shift.targetStartsAt < min ? shift.targetStartsAt : min),
@@ -21,8 +24,8 @@ export function computeVisibleRange(
       shiftsForDay[0].targetEndsAt,
     );
     return {
-      start: new Date(earliestStart.getTime() - ONE_HOUR_MS),
-      end: new Date(latestEnd.getTime() + ONE_HOUR_MS),
+      start: new Date(earliestStart.getTime() - padMs),
+      end: new Date(latestEnd.getTime() + padMs),
     };
   }
 
@@ -106,13 +109,15 @@ export type RoleColumnGroup = {
  * `capacity` columns wide — "Küche 2 Stellen + Abbau 5 Stellen" becomes a
  * 7-column grid split 2:5 (#157). Roles with the same id are summed instead
  * of creating a second group, so multiple Shift rows for the same role/day
- * (e.g. two separate target windows) still form one column group.
+ * (e.g. two separate target windows) still form one column group. Shifts
+ * with `capacity = 0` (Listen-Rollen, unbegrenzt, #697) haben keine Spalte.
  */
 export function buildRoleColumns(
   shiftsForDay: { roleId: string; roleName: string; capacity: number }[],
 ): RoleColumnGroup[] {
   const byRole = new Map<string, RoleColumnGroup>();
   for (const shift of shiftsForDay) {
+    if (shift.capacity <= 0) continue;
     const existing = byRole.get(shift.roleId);
     if (existing) {
       existing.capacity += shift.capacity;
