@@ -284,4 +284,4 @@ Person ohne Portal-Account (`Guest`), die per CSV-Import (`Name;Tag;Von;Bis;Roll
 
 ## Listen-Rolle
 
-Helferrolle mit `hasShifts = false` (z. B. Erklärer, Aufbau, Abbau): keine zeitgenaue Planung im Schichtplan-Grid; ihre Schichten haben `capacity = 0` (= unbegrenzt) und der PDF-Export listet die Namen aus den gemeldeten Verfügbarkeiten unter dem Raster.
+Helferrolle mit `hasShifts = false` („Schichtplanung nötig" abgewählt; z. B. Erklärer, Aufbau, Abbau): keine zeitgenaue Planung im Schichtplan-Grid; ihre Schichten haben `capacity = 0` (= unbegrenzt) und der PDF-Export listet die Namen aus den gemeldeten Verfügbarkeiten unter dem Raster.
