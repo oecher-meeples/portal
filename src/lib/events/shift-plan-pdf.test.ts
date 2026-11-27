@@ -25,7 +25,7 @@ function days(count: number) {
     endsAt: new Date(2026, 11, 4 + i, 14),
     slotIndex: null,
   }));
-  return buildExportDays(eventDays, shifts, bookings, []);
+  return buildExportDays(eventDays, shifts, bookings);
 }
 
 async function load(bytes: Uint8Array) {

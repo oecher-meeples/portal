@@ -38,6 +38,10 @@ import {
   ShiftDialog,
   type HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
+import {
+  HelperListRoles,
+  type ListRole,
+} from "@/components/feature/admin-events/helper-list-roles";
 import { ShiftPlanCsvExportButton } from "@/components/feature/admin-events/shift-plan-csv-export-button";
 import { timeInputValue } from "@/components/ui/time-picker";
 
@@ -200,6 +204,23 @@ export function ShiftPlanEditor({
     router.refresh();
   }
 
+  async function handleAssignListRole(role: ListRole, entry: PoolMeeple) {
+    setError(null);
+    // Füller: gesamte gemeldete Verfügbarkeit, blockiert nichts.
+    const result = await assignHelperToShift(
+      role.shiftId,
+      entry.helperId,
+      entry.isGuest,
+      new Date(entry.availabilityStartsAt),
+      new Date(entry.availabilityEndsAt),
+    );
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    router.refresh();
+  }
+
   async function handleUnassign(booking: PlanBooking) {
     setError(null);
     const result = await unassignHelperFromShift(booking.id, booking.shiftId);
@@ -286,7 +307,24 @@ export function ShiftPlanEditor({
         </TabsList>
         {days.map((day) => {
           const dayShifts = shifts.filter((shift) => shift.dayId === day.id);
-          const columns = buildRoleColumns(dayShifts);
+          // Rollen ohne Schichtplanung (capacity 0) stehen nicht im Grid,
+          // sondern als Listen darunter.
+          const gridShifts = dayShifts.filter((shift) => shift.capacity > 0);
+          const listRoles: ListRole[] = [];
+          for (const shift of dayShifts) {
+            if (
+              shift.capacity === 0 &&
+              !listRoles.some((role) => role.roleId === shift.roleId)
+            ) {
+              listRoles.push({
+                roleId: shift.roleId,
+                roleName: shift.roleName,
+                shiftId: shift.id,
+              });
+            }
+          }
+          const dayBookings = bookings[day.id] ?? [];
+          const columns = buildRoleColumns(gridShifts);
           return (
             <TabsContent
               key={day.id}
@@ -322,8 +360,8 @@ export function ShiftPlanEditor({
               />
               <ShiftPlanGrid
                 day={day}
-                shifts={dayShifts}
-                bookings={bookings[day.id] ?? []}
+                shifts={gridShifts}
+                bookings={dayBookings.filter((b) => !b.isFiller)}
                 onUnassign={handleUnassign}
                 onResize={handleResize}
                 onMove={handleMove}
@@ -339,6 +377,13 @@ export function ShiftPlanEditor({
                       }
                     : null
                 }
+              />
+              <HelperListRoles
+                roles={listRoles}
+                pool={pool[day.id] ?? []}
+                bookings={dayBookings.filter((b) => b.isFiller)}
+                onAssign={handleAssignListRole}
+                onUnassign={handleUnassign}
               />
             </TabsContent>
           );

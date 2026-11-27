@@ -34,6 +34,9 @@ export type PlanBooking = {
   /** Meeple- oder (mit `isGuest`) Gast-ID, siehe helper-identity.ts (#698). */
   helperId: string;
   isGuest: boolean;
+  /** Zuweisung einer Rolle ohne Schichtplanung (`capacity = 0`): belegt die
+   * ganze Verfügbarkeit, blockiert aber nichts und hat keinen Grid-Block. */
+  isFiller: boolean;
   displayName: string;
   startsAt: string;
   endsAt: string;

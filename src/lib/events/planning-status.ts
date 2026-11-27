@@ -27,6 +27,7 @@ type PlanningEventRow = {
   helperPhase: HelperPhase;
   shifts: {
     capacity: number;
+    role?: { hasShifts: boolean };
     targetStartsAt: Date;
     targetEndsAt: Date;
     bookings: { startsAt: Date; endsAt: Date; confirmedAt: Date | null }[];
@@ -44,7 +45,12 @@ export function summarizeEventPlanning(
     visibility: event.visibility,
     helperPhase: event.helperPhase,
     shiftCount: event.shifts.length,
-    coveragePercent: computeCoveragePercent(event.shifts),
+    coveragePercent: computeCoveragePercent(
+      event.shifts.map((shift) => ({
+        ...shift,
+        capacity: shift.role?.hasShifts === false ? 0 : shift.capacity,
+      })),
+    ),
     bookingCount: bookings.length,
     confirmedCount: bookings.filter((booking) => booking.confirmedAt).length,
   };
@@ -75,6 +81,7 @@ export async function findEventPlanningStatuses(
       shifts: {
         select: {
           capacity: true,
+          role: { select: { hasShifts: true } },
           targetStartsAt: true,
           targetEndsAt: true,
           bookings: {

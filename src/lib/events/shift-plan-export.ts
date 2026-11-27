@@ -30,13 +30,6 @@ export type ExportBooking = {
   slotIndex: number | null;
 };
 
-/** Verfügbarkeit je (Person, Tag, Rolle) — Quelle der Listen-Rollen. */
-export type ExportAvailability = {
-  dayId: string;
-  roleId: string;
-  name: string;
-};
-
 export type ExportBlock = {
   column: number;
   startRow: number;
@@ -177,14 +170,14 @@ function placeBookings(
 /**
  * Seitenmodell des Schichtplan-Exports (#697): je Event-Tag ein Raster mit
  * Rollen-Spalten, verschmolzenen Personenblöcken, grauen Feldern und den
- * Namenslisten der Listen-Rollen (Erklärer/Aufbau/Abbau, `capacity = 0`).
+ * Namenslisten der zugewiesenen Helfer von Rollen ohne Schichtplanung
+ * (Erklärer/Aufbau/Abbau, `capacity = 0`).
  * Tage ohne Schichten entfallen. Rein, ohne Prisma/PDF.
  */
 export function buildExportDays(
   days: { id: string; date: Date }[],
   shifts: ExportShift[],
   bookings: ExportBooking[],
-  availabilities: ExportAvailability[],
 ): ExportDay[] {
   const result: ExportDay[] = [];
   for (const day of days) {
@@ -197,9 +190,10 @@ export function buildExportDays(
       if (shift.capacity === 0) listRoles.set(shift.roleId, shift.roleName);
     }
     const lists: ExportList[] = [...listRoles].map(([roleId, roleName]) => {
-      const names = availabilities
-        .filter((a) => a.dayId === day.id && a.roleId === roleId)
-        .map((a) => a.name)
+      // Zugewiesene Helfer der Rolle (Füller, ganze Verfügbarkeit).
+      const names = bookings
+        .filter((b) => b.dayId === day.id && b.roleId === roleId)
+        .map((b) => b.name)
         .sort((a, b) => a.localeCompare(b, "de"));
       return { roleName, names, count: names.length };
     });

@@ -71,6 +71,14 @@ export async function updateHelperRole(
         hasShifts,
       },
     });
+    // Wieder planungsnötig: unbegrenzte Schichten (capacity 0) brauchen
+    // wieder mindestens eine Stelle.
+    if (hasShifts) {
+      await prisma.shift.updateMany({
+        where: { roleId, capacity: 0 },
+        data: { capacity: 1 },
+      });
+    }
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       return {
