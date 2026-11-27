@@ -101,7 +101,10 @@ export function HelperAvailabilityForm({
           {formatMinutesAsTime(range[0])} – {formatMinutesAsTime(range[1])}
         </span>
         {isAvailabilityTooShort(range) && (
-          <span role="status" className="text-xs text-amber-700 dark:text-amber-400">
+          <span
+            role="status"
+            className="text-xs text-amber-700 dark:text-amber-400"
+          >
             Empfohlen sind mindestens 2 Stunden Verfügbarkeit.
           </span>
         )}
