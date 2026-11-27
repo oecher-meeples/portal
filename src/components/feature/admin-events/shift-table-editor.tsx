@@ -5,14 +5,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RangeSlider } from "@/components/ui/range-slider";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useAction, type ActionResult } from "@/components/ui/use-action";
 import {
@@ -25,6 +17,8 @@ import type {
   HelperRoleOption,
 } from "@/components/feature/admin-events/shift-dialog";
 import type { ShiftRow } from "@/components/feature/admin-events/shift-table-section";
+import { defaultRangeForDay } from "@/lib/events/shift-defaults";
+import { groupRowsByDay } from "@/lib/events/shift-matrix";
 import { formatWeekdayDate } from "@/lib/utils/format";
 import {
   MINUTES_PER_DAY,
@@ -43,20 +37,6 @@ type EditRow = {
   capacity: string;
 };
 
-/** Fallback für einen Tag ohne hinterlegte Öffnungszeiten — dieselben
- * Default-Zeiten wie beim Helferplan-Verfügbarkeitsformular. */
-const DEFAULT_RANGE: [number, number] = [9 * 60, 18 * 60];
-
-function defaultRangeForDay(day: EventDayOption | undefined): [number, number] {
-  if (day?.startsAt && day.endsAt) {
-    return [
-      minutesSinceMidnight(day.startsAt),
-      minutesSinceMidnight(day.endsAt),
-    ];
-  }
-  return DEFAULT_RANGE;
-}
-
 function rowFromShift(shift: ShiftRow): EditRow {
   return {
     key: shift.id,
@@ -69,12 +49,10 @@ function rowFromShift(shift: ShiftRow): EditRow {
   };
 }
 
-/** Zeilenweise Bearbeitung aller Schichten eines Events auf einmal
- * (Schnellbearbeitung, statt einzeln über den Schicht-Dialog) — pro Zeile
- * Tag/Rolle/Ziel-Zeitraum (00:00–24:00-Regler)/Stellenzahl, plus eine
- * "weitere Schicht hinzufügen"-Zeile. Ein Tagwechsel füllt den Regler mit
- * den Öffnungszeiten des neu gewählten Tages, auch beim Anlegen einer neuen
- * Zeile. Speichern diffed gegen die ursprüngliche Liste und ruft dieselben
+/** Bearbeitung aller Schichten eines Events auf einmal, nach Tagen gruppiert
+ * (#693): alle Tage sichtbar, je Tag ein „+ Schicht“-Button (Regler startet
+ * mit den Öffnungszeiten des Tages), je Zeile Rolle/Ziel-Zeitraum
+ * (00:00–24:00-Regler)/Stellenzahl. Der Tag einer Schicht ist nicht änderbar. Speichern diffed gegen die ursprüngliche Liste und ruft dieselben
  * Actions wie der Schicht-Dialog auf (create/update/delete). */
 export function ShiftTableEditor({
   eventId,
@@ -101,22 +79,16 @@ export function ShiftTableEditor({
     );
   }
 
-  function handleDayChange(key: string, dayId: string) {
+  function addRow(dayId: string) {
     const [startMinutes, endMinutes] = defaultRangeForDay(
       days.find((day) => day.id === dayId),
     );
-    updateRow(key, { dayId, startMinutes, endMinutes });
-  }
-
-  function addRow() {
-    const day = days[0];
-    const [startMinutes, endMinutes] = defaultRangeForDay(day);
     setRows((current) => [
       ...current,
       {
         key: `new-${nextKey.current++}`,
         id: null,
-        dayId: day?.id ?? "",
+        dayId,
         roleId: helperRoles[0]?.id ?? "",
         startMinutes,
         endMinutes,
@@ -166,112 +138,91 @@ export function ShiftTableEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Tag</TableHead>
-              <TableHead>Rolle</TableHead>
-              <TableHead>Ziel-Zeitraum</TableHead>
-              <TableHead>Stellen</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.key}>
-                <TableCell>
-                  <NativeSelect
-                    aria-label="Tag"
-                    size="md"
-                    value={row.dayId}
-                    onChange={(event) =>
-                      handleDayChange(row.key, event.target.value)
-                    }
-                  >
-                    {days.map((day) => (
-                      <option key={day.id} value={day.id}>
-                        {formatWeekdayDate(day.date)}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </TableCell>
-                <TableCell>
-                  <NativeSelect
-                    aria-label="Rolle"
-                    size="md"
-                    value={row.roleId}
-                    onChange={(event) =>
-                      updateRow(row.key, { roleId: event.target.value })
-                    }
-                  >
-                    {helperRoles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </TableCell>
-                <TableCell className="min-w-48">
-                  <RangeSlider
-                    min={0}
-                    max={MINUTES_PER_DAY}
-                    step={15}
-                    value={[row.startMinutes, row.endMinutes]}
-                    onValueChange={([startMinutes, endMinutes]) =>
-                      updateRow(row.key, { startMinutes, endMinutes })
-                    }
-                    getAriaLabel={(index) =>
-                      index === 0 ? "Ziel-Beginn" : "Ziel-Ende"
-                    }
-                  />
-                  <span className="text-muted-foreground text-xs">
-                    {formatMinutesAsTime(row.startMinutes)} –{" "}
-                    {formatMinutesAsTime(row.endMinutes)}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Input
-                    aria-label="Stellenzahl"
-                    type="number"
-                    min={1}
-                    className="w-16"
-                    value={row.capacity}
-                    onChange={(event) =>
-                      updateRow(row.key, { capacity: event.target.value })
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Zeile entfernen"
-                    onClick={() => removeRow(row.key)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            <TableRow>
-              <TableCell colSpan={5}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={addRow}
-                >
-                  <Plus className="size-4" />
-                  Weitere Schicht hinzufügen
-                </Button>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+      {groupRowsByDay(days, rows).map(({ day, rows: dayRows }) => (
+        <section
+          key={day.id}
+          aria-label={formatWeekdayDate(day.date)}
+          className="flex flex-col gap-2 rounded-lg border p-3"
+        >
+          <h3 className="text-sm font-semibold">
+            {formatWeekdayDate(day.date)}
+          </h3>
+          {dayRows.length === 0 && (
+            <p className="text-muted-foreground text-sm">
+              Noch keine Schicht angelegt.
+            </p>
+          )}
+          {dayRows.map((row) => (
+            <div
+              key={row.key}
+              className="grid grid-cols-[10rem_1fr_5rem_auto] items-center gap-3"
+            >
+              <NativeSelect
+                aria-label="Rolle"
+                size="md"
+                value={row.roleId}
+                onChange={(event) =>
+                  updateRow(row.key, { roleId: event.target.value })
+                }
+              >
+                {helperRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </NativeSelect>
+              <div className="min-w-48">
+                <RangeSlider
+                  min={0}
+                  max={MINUTES_PER_DAY}
+                  step={15}
+                  value={[row.startMinutes, row.endMinutes]}
+                  onValueChange={([startMinutes, endMinutes]) =>
+                    updateRow(row.key, { startMinutes, endMinutes })
+                  }
+                  getAriaLabel={(index) =>
+                    index === 0 ? "Ziel-Beginn" : "Ziel-Ende"
+                  }
+                />
+                <span className="text-muted-foreground text-xs">
+                  {formatMinutesAsTime(row.startMinutes)} –{" "}
+                  {formatMinutesAsTime(row.endMinutes)}
+                </span>
+              </div>
+              <Input
+                aria-label="Stellenzahl"
+                type="number"
+                min={1}
+                value={row.capacity}
+                onChange={(event) =>
+                  updateRow(row.key, { capacity: event.target.value })
+                }
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon-sm"
+                aria-label="Zeile entfernen"
+                onClick={() => removeRow(row.key)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          ))}
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => addRow(day.id)}
+            >
+              <Plus className="size-4" />
+              Schicht
+            </Button>
+          </div>
+        </section>
+      ))}
 
       {error && <p className="text-destructive text-sm">{error}</p>}
 

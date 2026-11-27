@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { RangeSlider } from "@/components/ui/range-slider";
 import { TimePicker, timeInputValue } from "@/components/ui/time-picker";
 import { useAction } from "@/components/ui/use-action";
 import { updateEventDayTimes } from "@/components/feature/admin-events/event-day-actions";
 import { formatDateMedium } from "@/lib/utils/format";
+import {
+  MINUTES_PER_DAY,
+  formatMinutesAsTime,
+  timeStringToMinutes,
+} from "@/lib/utils/time-of-day";
 
 export type EditableEventDay = {
   id: string;
@@ -39,42 +45,68 @@ export function EventDayTimeForm({ day }: { day: EditableEventDay }) {
   );
   const { run, pending, error } = useAction();
 
-  function save() {
+  function save(nextStartsAt = startsAt, nextEndsAt = endsAt) {
     run(() =>
       updateEventDayTimes(day.id, {
-        startsAt: toDateTime(day.date, startsAt),
-        endsAt: toDateTime(day.date, endsAt),
+        startsAt: toDateTime(day.date, nextStartsAt),
+        endsAt: toDateTime(day.date, nextEndsAt),
       }),
     );
   }
 
+  const range: [number, number] = [
+    timeStringToMinutes(startsAt),
+    timeStringToMinutes(endsAt),
+  ];
+
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <span className="w-32 text-sm font-medium">
-        {formatDateMedium(day.date)}
-      </span>
-      <TimePicker
-        id={`event-day-${day.id}-starts`}
-        label="Beginn"
-        value={startsAt}
-        onChange={setStartsAt}
-        onBlur={save}
-        fieldClassName="w-32"
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-end gap-3">
+        <TimePicker
+          id={`event-day-${day.id}-starts`}
+          label="Beginn"
+          value={startsAt}
+          onChange={setStartsAt}
+          onBlur={() => save()}
+          fieldClassName="w-32"
+          disabled={pending}
+        />
+        <TimePicker
+          id={`event-day-${day.id}-ends`}
+          label="Ende"
+          value={endsAt}
+          onChange={setEndsAt}
+          onBlur={() => save()}
+          fieldClassName="w-32"
+          disabled={pending}
+        />
+        <span className="w-32 pb-2 text-sm font-medium">
+          {formatDateMedium(day.date)}
+        </span>
+        {pending && (
+          <span className="text-muted-foreground pb-2 text-xs">Speichert…</span>
+        )}
+        {error && (
+          <span className="text-destructive pb-2 text-xs">{error}</span>
+        )}
+      </div>
+      <RangeSlider
+        min={0}
+        max={MINUTES_PER_DAY}
+        step={15}
+        value={range}
+        onValueChange={([start, end]) => {
+          setStartsAt(formatMinutesAsTime(start));
+          setEndsAt(formatMinutesAsTime(end));
+        }}
+        onValueCommitted={([start, end]) =>
+          save(formatMinutesAsTime(start), formatMinutesAsTime(end))
+        }
         disabled={pending}
+        getAriaLabel={(index) =>
+          index === 0 ? "Beginn-Regler" : "Ende-Regler"
+        }
       />
-      <TimePicker
-        id={`event-day-${day.id}-ends`}
-        label="Ende"
-        value={endsAt}
-        onChange={setEndsAt}
-        onBlur={save}
-        fieldClassName="w-32"
-        disabled={pending}
-      />
-      {pending && (
-        <span className="text-muted-foreground text-xs">Speichert…</span>
-      )}
-      {error && <span className="text-destructive text-xs">{error}</span>}
     </div>
   );
 }

@@ -29,3 +29,10 @@ export function combineDateAndMinutes(dateIso: string, minutes: number): Date {
   date.setMinutes(minutes);
   return date;
 }
+
+/** Minutes since midnight from an "HH:mm" time-input value (inverse of
+ * {@link formatMinutesAsTime}); `fallback` for an empty/invalid value. */
+export function timeStringToMinutes(time: string, fallback = 0): number {
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : fallback;
+}
